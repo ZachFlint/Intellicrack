@@ -857,7 +857,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 24,
+                  "startLine": 23,
                   "startColumn": 8
                 }
               }
@@ -1130,7 +1130,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 352,
+                  "startLine": 358,
                   "startColumn": 9
                 }
               }
@@ -1151,7 +1151,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 353,
+                  "startLine": 359,
                   "startColumn": 9
                 }
               }
@@ -1172,7 +1172,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 357,
+                  "startLine": 363,
                   "startColumn": 9
                 }
               }
@@ -1309,6 +1309,27 @@
           "ruleId": "DEP003",
           "level": "warning",
           "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
             "text": "'huggingface_hub' imported but it is a transitive dependency"
           },
           "locations": [
@@ -1319,7 +1340,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 23,
                   "startColumn": 1
                 }
               }
@@ -1340,7 +1361,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 26,
+                  "startLine": 29,
                   "startColumn": 1
                 }
               }
@@ -4124,7 +4145,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:12:27.027899+00:00"
+          "endTimeUtc": "2026-04-24T21:10:39.333102+00:00"
         }
       ]
     }

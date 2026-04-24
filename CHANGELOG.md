@@ -164,6 +164,11 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Decommission basekit integration and update gitignore (`6ca4e36`)
+Remove deprecated basekit static assets and data files that are no longer required for the current production environment. This cleanup significantly reduces the repository footprint and streamlines the asset pipeline.
+- Delete basekit.html and related JSON data structures
+- Update .gitignore to exclude local environment artifacts
+
 - **hexcore:** Replace naive byte/block diff with real edit script  (`65bc654`)
 Rewrite diff_data_byte_level and diff_data_block to use similar's
 Myers-algorithm edit script (Equal/Delete/Insert/Replace) instead of the
@@ -239,11 +244,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Decommission basekit integration and update gitignore (``)
-Remove deprecated basekit static assets and data files that are no longer required for the current production environment. This cleanup significantly reduces the repository footprint and streamlines the asset pipeline.
-- Delete basekit.html and related JSON data structures
-- Update .gitignore to exclude local environment artifacts
 
 
 ### Documentation

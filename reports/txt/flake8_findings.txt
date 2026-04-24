@@ -1,82 +1,3 @@
-38 findings in src/intellicrack/main.py
-
-src/intellicrack/main.py:223:39: F821 undefined name 'ProcessManager'
-
-src/intellicrack/main.py:230:17: F821 undefined name 'ProcessManager'
-
-src/intellicrack/main.py:243:37: F821 undefined name 'SplashScreen'
-
-src/intellicrack/main.py:250:17: F821 undefined name 'SplashScreen'
-
-src/intellicrack/main.py:253:49: F821 undefined name 'ThemeManager'
-
-src/intellicrack/main.py:253:69: F821 undefined name 'IconManager'
-
-src/intellicrack/main.py:261:9: F821 undefined name 'ThemeManager'
-
-src/intellicrack/main.py:261:9: F821 undefined name 'IconManager'
-
-src/intellicrack/main.py:266:36: F821 undefined name 'Orchestrator'
-
-src/intellicrack/main.py:273:17: F821 undefined name 'Orchestrator'
-
-src/intellicrack/main.py:276:45: F821 undefined name 'SessionManager'
-
-src/intellicrack/main.py:276:67: F821 undefined name 'SessionStore'
-
-src/intellicrack/main.py:284:14: F821 undefined name 'SessionManager'
-
-src/intellicrack/main.py:285:14: F821 undefined name 'SessionStore'
-
-src/intellicrack/main.py:289:37: F821 undefined name 'ToolRegistry'
-
-src/intellicrack/main.py:296:17: F821 undefined name 'ToolRegistry'
-
-src/intellicrack/main.py:299:41: F821 undefined name 'CredentialLoader'
-
-src/intellicrack/main.py:306:17: F821 undefined name 'CredentialLoader'
-
-src/intellicrack/main.py:309:33: F821 undefined name 'ProviderRegistry'
-
-src/intellicrack/main.py:316:25: F821 undefined name 'ProviderRegistry'
-
-src/intellicrack/main.py:320:35: F821 undefined name 'MainWindow'
-
-src/intellicrack/main.py:327:17: F821 undefined name 'MainWindow'
-
-src/intellicrack/main.py:395:6: F821 undefined name 'SplashScreen'
-
-src/intellicrack/main.py:439:15: F821 undefined name 'ProviderRegistry'
-
-src/intellicrack/main.py:440:18: F821 undefined name 'CredentialLoader'
-
-src/intellicrack/main.py:462:27: F821 undefined name 'ProviderName'
-
-src/intellicrack/main.py:462:46: F821 undefined name 'LLMProviderBase'
-
-src/intellicrack/main.py:463:9: F821 undefined name 'ProviderName'
-
-src/intellicrack/main.py:463:9: F821 undefined name 'LLMProviderBase'
-
-src/intellicrack/main.py:476:40: F821 undefined name 'ProviderName'
-
-src/intellicrack/main.py:476:75: F821 undefined name 'LLMProviderBase'
-
-src/intellicrack/main.py:526:74: F821 undefined name 'ProcessManager'
-
-src/intellicrack/main.py:549:82: F821 undefined name 'ProcessManager'
-
-src/intellicrack/main.py:641:24: F821 undefined name 'ProviderRegistry'
-
-src/intellicrack/main.py:667:24: F821 undefined name 'ProviderRegistry'
-
-src/intellicrack/main.py:706:13: F821 undefined name 'SplashScreen'
-
-src/intellicrack/main.py:707:22: F821 undefined name 'ProcessManager'
-
-src/intellicrack/main.py:771:37: F821 undefined name 'ModelDiscovery'
-
-
 22 findings in tests/test_sandbox\test_analysis.py
 
 tests/test_sandbox\test_analysis.py:518:141: E501 line too long (141 > 140 characters)
@@ -254,7 +175,7 @@ src/intellicrack/bridges\process.py:798:141: E501 line too long (215 > 140 chara
 
 1 findings in src/intellicrack/bridges\x64dbg.py
 
-src/intellicrack/bridges\x64dbg.py:3889:141: E501 line too long (143 > 140 characters)
+src/intellicrack/bridges\x64dbg.py:4059:141: E501 line too long (143 > 140 characters)
 
 
 1 findings in src/intellicrack/core\config.py
@@ -269,7 +190,7 @@ src/intellicrack/core\hexpat\type_system.py:233:141: E501 line too long (160 > 1
 
 1 findings in src/intellicrack/providers\huggingface.py
 
-src/intellicrack/providers\huggingface.py:389:141: E501 line too long (188 > 140 characters)
+src/intellicrack/providers\huggingface.py:432:141: E501 line too long (188 > 140 characters)
 
 
 1 findings in src/intellicrack/sandbox\qemu.py

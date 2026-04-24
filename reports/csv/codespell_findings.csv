@@ -1,580 +1,290 @@
-tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack\bridges\process.py,9,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,511,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,515,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,706,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,798,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,1171,,,SPELL,SPELL,'re-declaring' ==> 'redeclaring',,,,,,,,,,,re-declaring,redeclaring
-
-codespell,src/intellicrack\bridges\process.py,3616,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,3620,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\process.py,3630,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
-
-codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
-
-codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
-
-codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
-
-codespell,src/intellicrack-hexcore\_typos.toml,14,,,SPELL,SPELL,'hsi' ==> 'his',,,,,,,,,,,hsi,his
-
-codespell,src/intellicrack-hexcore\_typos.toml,14,,,SPELL,SPELL,'hsi' ==> 'his',,,,,,,,,,,hsi,his
-
-codespell,src/intellicrack-hexcore\_typos.toml,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\_typos.toml,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,7,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,48,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,250,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,253,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,485,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack\bridges\x64dbg.py,1328,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\x64dbg.py,2461,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
-
-codespell,src/intellicrack\bridges\x64dbg.py,4373,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
-
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,163,,,SPELL,SPELL,'VAs' ==> 'was',,,,,,,,,,,VAs,was
-
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,172,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
-
-codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,173,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
-
-codespell,src/intellicrack\bridges\_win32_types.py,650,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,src/intellicrack\bridges\_win32_types.py,655,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,tests/test_bridges\test_process_bridge.py,1136,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,tests/test_bridges\test_process_bridge.py,1141,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
-
-codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,77,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
-
-codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,94,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
-
-codespell,tests/test_hexcore_e2e\test_encodings.py,59,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
-
-codespell,tests/test_hexcore_e2e\test_encodings.py,151,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
-
-codespell,tests/test_sandbox\test_base_types.py,226,,,SPELL,SPELL,"'te' ==> 'the, be, we, to'",,,,,,,,,,,te,"the, be, we, to"
-
-codespell,tests/test_sandbox\test_base_types.py,232,,,SPELL,SPELL,"'te' ==> 'the, be, we, to'",,,,,,,,,,,te,"the, be, we, to"
-
-codespell,scripts/sandbox\reporting.py,164,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
-
-codespell,src/intellicrack\sandbox\windows.py,2237,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
-
-codespell,tests/test_hexcore_e2e\test_bridge_new_capabilities.py,110,,,SPELL,SPELL,'Caf' ==> 'Calf',,,,,,,,,,,Caf,Calf
-
-codespell,tests/test_hexcore_e2e\test_bridge_search.py,208,,,SPELL,SPELL,"'nore' ==> 'nor, note, more, node'",,,,,,,,,,,nore,"nor, note, more, node"
-
+tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_core-d86809d9b0b73174.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d,17,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,13,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,14,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack\bridges\process.py,9,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,511,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,515,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,706,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,798,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,1171,,,SPELL,SPELL,'re-declaring' ==> 'redeclaring',,,,,,,,,,,re-declaring,redeclaring
+codespell,src/intellicrack\bridges\process.py,3616,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,3620,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\process.py,3630,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
+codespell,src/intellicrack-hexcore\_typos.toml,11,,,SPELL,SPELL,"'fo' ==> 'of, for, to, do, go'",,,,,,,,,,,fo,"of, for, to, do, go"
+codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
+codespell,src/intellicrack-hexcore\_typos.toml,13,,,SPELL,SPELL,"'ue' ==> 'use, due'",,,,,,,,,,,ue,"use, due"
+codespell,src/intellicrack-hexcore\_typos.toml,14,,,SPELL,SPELL,'hsi' ==> 'his',,,,,,,,,,,hsi,his
+codespell,src/intellicrack-hexcore\_typos.toml,14,,,SPELL,SPELL,'hsi' ==> 'his',,,,,,,,,,,hsi,his
+codespell,src/intellicrack-hexcore\_typos.toml,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\_typos.toml,15,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-2e8323744a019080.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,12,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d,18,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,10,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_json-ff3da71971c64cbb.d,16,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,7,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,48,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,250,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,253,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\ui\panels\process_panel\_threads_tab.py,485,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6efc8e3e44124257.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde-7d0f1529218a447f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,5,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\release\deps\inout-1bc1f231b1054c07.d,9,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,5,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d,11,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack\bridges\x64dbg.py,1464,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\x64dbg.py,2595,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
+codespell,src/intellicrack\bridges\x64dbg.py,4612,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,1,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,3,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d,7,,,SPELL,SPELL,"'inout' ==> 'input, in out'",,,,,,,,,,,inout,"input, in out"
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde-de53a3dd87f81052.d,9,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_derive-f8f79c2a108af0eb.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,1,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,3,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,src/intellicrack-hexcore\target\release\deps\serde_derive-4b52e8912be6d020.d,31,,,SPELL,SPELL,'ser' ==> 'set',,,,,,,,,,,ser,set
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,163,,,SPELL,SPELL,'VAs' ==> 'was',,,,,,,,,,,VAs,was
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,172,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
+codespell,tests/test_hexcore_e2e\test_bridge_va_mapping.py,173,,,SPELL,SPELL,'vas' ==> 'was',,,,,,,,,,,vas,was
+codespell,src/intellicrack\bridges\_win32_types.py,650,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,src/intellicrack\bridges\_win32_types.py,655,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,tests/test_bridges\test_process_bridge.py,1136,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,tests/test_bridges\test_process_bridge.py,1141,,,SPELL,SPELL,'SEH' ==> 'SHE',,,,,,,,,,,SEH,SHE
+codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,77,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
+codespell,tests/test_hexcore_e2e\test_bridge_encoding_decoding.py,94,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
+codespell,tests/test_hexcore_e2e\test_encodings.py,59,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
+codespell,tests/test_hexcore_e2e\test_encodings.py,151,,,SPELL,SPELL,'caf' ==> 'calf',,,,,,,,,,,caf,calf
+codespell,tests/test_sandbox\test_base_types.py,226,,,SPELL,SPELL,"'te' ==> 'the, be, we, to'",,,,,,,,,,,te,"the, be, we, to"
+codespell,tests/test_sandbox\test_base_types.py,232,,,SPELL,SPELL,"'te' ==> 'the, be, we, to'",,,,,,,,,,,te,"the, be, we, to"
+codespell,scripts/sandbox\reporting.py,164,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
+codespell,src/intellicrack\sandbox\windows.py,2237,,,SPELL,SPELL,'unparseable' ==> 'unparsable',,,,,,,,,,,unparseable,unparsable
+codespell,tests/test_hexcore_e2e\test_bridge_new_capabilities.py,110,,,SPELL,SPELL,'Caf' ==> 'Calf',,,,,,,,,,,Caf,Calf
+codespell,tests/test_hexcore_e2e\test_bridge_search.py,208,,,SPELL,SPELL,"'nore' ==> 'nor, note, more, node'",,,,,,,,,,,nore,"nor, note, more, node"

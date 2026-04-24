@@ -559,11 +559,11 @@ src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:11: ser ==
 
 3 findings in src/intellicrack\bridges\x64dbg.py
 
-src/intellicrack\bridges\x64dbg.py:1328: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:1464: SEH ==> SHE
 
-src/intellicrack\bridges\x64dbg.py:2461: unparseable ==> unparsable
+src/intellicrack\bridges\x64dbg.py:2595: unparseable ==> unparsable
 
-src/intellicrack\bridges\x64dbg.py:4373: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:4612: SEH ==> SHE
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d

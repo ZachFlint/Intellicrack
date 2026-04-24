@@ -271,6 +271,13 @@ reports/csv/yamllint_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line 
 .complexipy_cache/c4ed0630d647fefad77d0754b11ca463.json: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/csv/codespell_findings.csv
+
+reports/csv/codespell_findings.csv: [end-of-file-fixer] [FIXED] Fixed
+
+reports/csv/codespell_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/json/bandit_findings.json
 
 reports/json/bandit_findings.json: [end-of-file-fixer] [FIXED] Fixed
@@ -824,6 +831,13 @@ reports/txt/blinter_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/blinter_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+2 findings in reports/txt/clippy_findings.txt
+
+reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/clippy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 2 findings in reports/txt/complexipy_findings.txt
 
 reports/txt/complexipy_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -929,13 +943,6 @@ reports/txt/radon_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-2 findings in reports/txt/ruff_findings.txt
-
-reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 2 findings in reports/txt/semgrep_findings.txt
 
 reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -948,6 +955,13 @@ reports/txt/semgrep_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line e
 reports/txt/ty_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 reports/txt/ty_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+2 findings in reports/txt/typos_findings.txt
+
+reports/txt/typos_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+reports/txt/typos_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 2 findings in reports/txt/uncalled_findings.txt
@@ -992,6 +1006,11 @@ reports/json/rust_clippy_findings.json: [mixed-line-ending] [FIXED] fixed mixed 
 reports/json/rust_clippy_findings.json: [check-json] Failed to json decode (Extra data: line 2 column 1 (char 932))
 
 
+1 findings in notebooks/hexcore_tutorial.ipynb
+
+notebooks/hexcore_tutorial.ipynb: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/txt/basedpyright_findings.txt
 
 reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -1000,11 +1019,6 @@ reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/txt/cargo-deny_findings.txt
 
 reports/txt/cargo-deny_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in reports/txt/clippy_findings.txt
-
-reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/jsonlint_findings.txt
@@ -1027,6 +1041,11 @@ reports/txt/machete_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 reports/txt/nextest_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
+1 findings in reports/txt/ruff_findings.txt
+
+reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed
+
+
 1 findings in reports/txt/rust-code-analysis_findings.txt
 
 reports/txt/rust-code-analysis_findings.txt: [end-of-file-fixer] [FIXED] Fixed
@@ -1045,11 +1064,6 @@ reports/txt/skylos_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/txt/taplo_findings.txt
 
 reports/txt/taplo_findings.txt: [end-of-file-fixer] [FIXED] Fixed
-
-
-1 findings in reports/txt/typos_findings.txt
-
-reports/txt/typos_findings.txt: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/txt/vermin_findings.txt
@@ -1080,6 +1094,11 @@ reports/xml/cargo-deny_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 1 findings in reports/xml/clippy_findings.xml
 
 reports/xml/clippy_findings.xml: [end-of-file-fixer] [FIXED] Fixed
+
+
+1 findings in reports/xml/codespell_findings.xml
+
+reports/xml/codespell_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 
 
 1 findings in reports/xml/complexipy_findings.xml
@@ -1267,6 +1286,11 @@ reports/xml/yamllint_findings.xml: [end-of-file-fixer] [FIXED] Fixed
 .claude/commands/typecheck.md: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in .dead-allowlist
+
+.dead-allowlist: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in .github/dependabot.yml
 
 .github/dependabot.yml: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -1442,24 +1466,14 @@ QWEN.md: [mixed-line-ending] [FIXED] fixed mixed line endings
 README.md: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-1 findings in basekit-data-content.json
-
-basekit-data-content.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in basekit-products.json
-
-basekit-products.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
-1 findings in basekit.json
-
-basekit.json: [mixed-line-ending] [FIXED] fixed mixed line endings
-
-
 1 findings in data/model_discovery_cache.json
 
 data/model_discovery_cache.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in dead_allowlist.txt
+
+dead_allowlist.txt: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in justfile
@@ -1492,9 +1506,9 @@ qodana.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings
 remediation-audit-results.md: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
-1 findings in reports/csv/codespell_findings.csv
+1 findings in remediation-prompt.md
 
-reports/csv/codespell_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings
+remediation-prompt.md: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in reports/csv/liccheck_findings.csv
@@ -1997,6 +2011,11 @@ src/intellicrack/core/tools.py: [mixed-line-ending] [FIXED] fixed mixed line end
 src/intellicrack/core/transform_pipeline.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in src/intellicrack/core/types.py
+
+src/intellicrack/core/types.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in src/intellicrack/credentials/env_loader.py
 
 src/intellicrack/credentials/env_loader.py: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -2387,6 +2406,36 @@ tests/test_bridges/test_frida_bridge.py: [mixed-line-ending] [FIXED] fixed mixed
 tests/test_bridges/test_ghidra.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in tests/test_bridges/test_process_bridge.py
+
+tests/test_bridges/test_process_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_bridges/test_x64dbg.py
+
+tests/test_bridges/test_x64dbg.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_bridges/test_x64dbg_new_methods.py
+
+tests/test_bridges/test_x64dbg_new_methods.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_core/test_logging.py
+
+tests/test_core/test_logging.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_core/test_main.py
+
+tests/test_core/test_main.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_core/test_types.py
+
+tests/test_core/test_types.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in tests/test_credentials/test_credential_store_live.py
 
 tests/test_credentials/test_credential_store_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings
@@ -2402,9 +2451,19 @@ tests/test_credentials/test_env_loader_roundtrip_live.py: [mixed-line-ending] [F
 tests/test_credentials/test_oauth_manager_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
+1 findings in tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py
+
+tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
 1 findings in tests/test_providers/test_anthropic_buffers_live.py
 
 tests/test_providers/test_anthropic_buffers_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in tests/test_providers/test_e2e_chat.py
+
+tests/test_providers/test_e2e_chat.py: [mixed-line-ending] [FIXED] fixed mixed line endings
 
 
 1 findings in tests/test_providers/test_google_chat_live.py
@@ -2585,3 +2644,8 @@ tools/resource_hacker/samples/sample1.rc: [mixed-line-ending] [FIXED] fixed mixe
 1 findings in tools/x64dbg/release/mnemdb.json
 
 tools/x64dbg/release/mnemdb.json: [mixed-line-ending] [FIXED] fixed mixed line endings
+
+
+1 findings in vulture_whitelist.py
+
+vulture_whitelist.py: [mixed-line-ending] [FIXED] fixed mixed line endings

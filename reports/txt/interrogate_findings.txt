@@ -1,48 +1,48 @@
 22 findings in ui\app.py
 
-ui\app.py:763: INT001 Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'
+ui\app.py:793: INT001 Missing docstring for 'MainWindow._setup_toolbar._auto_approve_slot'
 
-ui\app.py:773: INT001 Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'
+ui\app.py:803: INT001 Missing docstring for 'MainWindow._setup_toolbar._sandbox_slot'
 
-ui\app.py:814: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'
+ui\app.py:844: INT001 Missing docstring for 'MainWindow._refresh_system_status.fetch_status'
 
-ui\app.py:970: INT001 Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'
+ui\app.py:1000: INT001 Missing docstring for 'MainWindow._request_tool_confirmation.show_dialog'
 
-ui\app.py:997: INT001 Missing docstring for 'MainWindow._on_user_message.process'
+ui\app.py:1027: INT001 Missing docstring for 'MainWindow._on_user_message.process'
 
-ui\app.py:1137: INT001 Missing docstring for 'MainWindow._load_binary.load'
+ui\app.py:1167: INT001 Missing docstring for 'MainWindow._load_binary.load'
 
-ui\app.py:1186: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'
+ui\app.py:1216: INT001 Missing docstring for 'MainWindow._on_new_session.create_session'
 
-ui\app.py:1206: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'
+ui\app.py:1236: INT001 Missing docstring for 'MainWindow._on_load_session.load_session'
 
-ui\app.py:1217: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'
+ui\app.py:1247: INT001 Missing docstring for 'MainWindow._on_save_session.save_session'
 
-ui\app.py:1278: INT001 Missing docstring for 'MainWindow._on_export_session._on_export_done'
+ui\app.py:1308: INT001 Missing docstring for 'MainWindow._on_export_session._on_export_done'
 
-ui\app.py:1282: INT001 Missing docstring for 'MainWindow._on_export_session._on_export_failed'
+ui\app.py:1312: INT001 Missing docstring for 'MainWindow._on_export_session._on_export_failed'
 
-ui\app.py:1344: INT001 Missing docstring for 'MainWindow._start_session_import._on_import_done'
+ui\app.py:1374: INT001 Missing docstring for 'MainWindow._start_session_import._on_import_done'
 
-ui\app.py:1348: INT001 Missing docstring for 'MainWindow._start_session_import._on_import_failed'
+ui\app.py:1378: INT001 Missing docstring for 'MainWindow._start_session_import._on_import_failed'
 
-ui\app.py:1512: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'
+ui\app.py:1542: INT001 Missing docstring for 'MainWindow._apply_tool_settings._reinit_tools'
 
-ui\app.py:1596: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'
+ui\app.py:1626: INT001 Missing docstring for 'MainWindow._apply_provider_settings._reconnect_providers'
 
-ui\app.py:1685: INT001 Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'
+ui\app.py:1715: INT001 Missing docstring for 'MainWindow._on_refresh_models._refresh_slot'
 
-ui\app.py:1716: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'
+ui\app.py:1746: INT001 Missing docstring for 'MainWindow._on_browse_models.fetch'
 
-ui\app.py:1929: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'
+ui\app.py:1959: INT001 Missing docstring for 'MainWindow._on_open_sandbox.open_sandbox'
 
-ui\app.py:1935: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'
+ui\app.py:1965: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_opened'
 
-ui\app.py:1953: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'
+ui\app.py:1983: INT001 Missing docstring for 'MainWindow._on_open_sandbox.on_sandbox_error'
 
-ui\app.py:2223: INT001 Missing docstring for 'MainWindow._on_process_attached._on_done'
+ui\app.py:2253: INT001 Missing docstring for 'MainWindow._on_process_attached._on_done'
 
-ui\app.py:2355: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'
+ui\app.py:2385: INT001 Missing docstring for 'MainWindow._on_cancel.cancel'
 
 
 14 findings in core\hexpat\evaluator.py
@@ -238,13 +238,13 @@ ui\panels\hex_editor\panel.py:982: INT001 Missing docstring for 'HexEditorPanel.
 
 4 findings in credentials\store.py
 
-credentials\store.py:287: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'
+credentials\store.py:312: INT001 Missing docstring for 'CredentialStore._get_from_keyring._fetch'
 
-credentials\store.py:338: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'
+credentials\store.py:363: INT001 Missing docstring for 'CredentialStore._set_to_keyring._store'
 
-credentials\store.py:365: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'
+credentials\store.py:390: INT001 Missing docstring for 'CredentialStore._get_metadata._fetch'
 
-credentials\store.py:478: INT001 Missing docstring for 'CredentialStore.delete._delete'
+credentials\store.py:503: INT001 Missing docstring for 'CredentialStore.delete._delete'
 
 
 4 findings in sandbox\qemu.py
@@ -260,20 +260,20 @@ sandbox\qemu.py:3259: INT001 Missing docstring for 'QEMUSandbox.yara_scan._extra
 
 3 findings in bridges\x64dbg.py
 
-bridges\x64dbg.py:304: INT001 Missing docstring for '_extract_command_line_from_peb.ProcessBasicInformation'
+bridges\x64dbg.py:440: INT001 Missing docstring for '_extract_command_line_from_peb.ProcessBasicInformation'
 
-bridges\x64dbg.py:5433: INT001 Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'
+bridges\x64dbg.py:5672: INT001 Missing docstring for 'X64DbgBridge._parse_stack_frame_entry._parse_int'
 
-bridges\x64dbg.py:5507: INT001 Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'
+bridges\x64dbg.py:5746: INT001 Missing docstring for 'X64DbgBridge._get_parent_pid.ProcessEntry32W'
 
 
 3 findings in providers\huggingface.py
 
-providers\huggingface.py:73: INT001 Missing docstring for '_ChatCompletionCallable.__call__'
+providers\huggingface.py:76: INT001 Missing docstring for '_ChatCompletionCallable.__call__'
 
-providers\huggingface.py:86: INT001 Missing docstring for '_ChatCompletionCallable.__call__'
+providers\huggingface.py:89: INT001 Missing docstring for '_ChatCompletionCallable.__call__'
 
-providers\huggingface.py:102: INT001 Missing docstring for '_WhoamiCallable.__call__'
+providers\huggingface.py:105: INT001 Missing docstring for '_WhoamiCallable.__call__'
 
 
 3 findings in sandbox\analysis.py
@@ -349,7 +349,7 @@ ui\panels\hex_editor\_data_inspector.py:130: INT001 Missing docstring for 'DataI
 
 1 findings in main.py
 
-main.py:476: INT001 Missing docstring for '_initialize_providers._init_one'
+main.py:482: INT001 Missing docstring for '_initialize_providers._init_one'
 
 
 1 findings in bridges\cutter.py
@@ -364,7 +364,7 @@ core\hexpat\stdlib.py:2225: INT001 Missing docstring for 'BuiltinFunctions._form
 
 1 findings in credentials\oauth.py
 
-credentials\oauth.py:468: INT001 Missing docstring for 'OAuthCallbackServer.start.serve'
+credentials\oauth.py:515: INT001 Missing docstring for 'OAuthCallbackServer.start.serve'
 
 
 1 findings in ui\chat.py

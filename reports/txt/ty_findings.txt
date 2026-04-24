@@ -1,82 +1,3 @@
-38 findings in src\intellicrack\main.py
-
-src\intellicrack\main.py:223:39: error[unresolved-reference] Name `ProcessManager` used when not defined
-
-src\intellicrack\main.py:230:23: error[unresolved-reference] Name `ProcessManager` used when not defined
-
-src\intellicrack\main.py:243:37: error[unresolved-reference] Name `SplashScreen` used when not defined
-
-src\intellicrack\main.py:250:23: error[unresolved-reference] Name `SplashScreen` used when not defined
-
-src\intellicrack\main.py:253:49: error[unresolved-reference] Name `ThemeManager` used when not defined
-
-src\intellicrack\main.py:253:69: error[unresolved-reference] Name `IconManager` used when not defined
-
-src\intellicrack\main.py:261:21: error[unresolved-reference] Name `ThemeManager` used when not defined
-
-src\intellicrack\main.py:261:41: error[unresolved-reference] Name `IconManager` used when not defined
-
-src\intellicrack\main.py:266:36: error[unresolved-reference] Name `Orchestrator` used when not defined
-
-src\intellicrack\main.py:273:23: error[unresolved-reference] Name `Orchestrator` used when not defined
-
-src\intellicrack\main.py:276:45: error[unresolved-reference] Name `SessionManager` used when not defined
-
-src\intellicrack\main.py:276:67: error[unresolved-reference] Name `SessionStore` used when not defined
-
-src\intellicrack\main.py:284:20: error[unresolved-reference] Name `SessionManager` used when not defined
-
-src\intellicrack\main.py:285:20: error[unresolved-reference] Name `SessionStore` used when not defined
-
-src\intellicrack\main.py:289:37: error[unresolved-reference] Name `ToolRegistry` used when not defined
-
-src\intellicrack\main.py:296:23: error[unresolved-reference] Name `ToolRegistry` used when not defined
-
-src\intellicrack\main.py:299:41: error[unresolved-reference] Name `CredentialLoader` used when not defined
-
-src\intellicrack\main.py:306:23: error[unresolved-reference] Name `CredentialLoader` used when not defined
-
-src\intellicrack\main.py:309:33: error[unresolved-reference] Name `ProviderRegistry` used when not defined
-
-src\intellicrack\main.py:316:39: error[unresolved-reference] Name `ProviderRegistry` used when not defined
-
-src\intellicrack\main.py:320:35: error[unresolved-reference] Name `MainWindow` used when not defined
-
-src\intellicrack\main.py:327:23: error[unresolved-reference] Name `MainWindow` used when not defined
-
-src\intellicrack\main.py:395:6: error[unresolved-reference] Name `SplashScreen` used when not defined
-
-src\intellicrack\main.py:439:15: error[unresolved-reference] Name `ProviderRegistry` used when not defined
-
-src\intellicrack\main.py:440:18: error[unresolved-reference] Name `CredentialLoader` used when not defined
-
-src\intellicrack\main.py:462:27: error[unresolved-reference] Name `ProviderName` used when not defined
-
-src\intellicrack\main.py:462:46: error[unresolved-reference] Name `LLMProviderBase` used when not defined
-
-src\intellicrack\main.py:463:21: error[unresolved-reference] Name `ProviderName` used when not defined
-
-src\intellicrack\main.py:463:40: error[unresolved-reference] Name `LLMProviderBase` used when not defined
-
-src\intellicrack\main.py:476:40: error[unresolved-reference] Name `ProviderName` used when not defined
-
-src\intellicrack\main.py:476:75: error[unresolved-reference] Name `LLMProviderBase` used when not defined
-
-src\intellicrack\main.py:526:74: error[unresolved-reference] Name `ProcessManager` used when not defined
-
-src\intellicrack\main.py:549:82: error[unresolved-reference] Name `ProcessManager` used when not defined
-
-src\intellicrack\main.py:641:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined
-
-src\intellicrack\main.py:667:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined
-
-src\intellicrack\main.py:706:13: error[unresolved-reference] Name `SplashScreen` used when not defined
-
-src\intellicrack\main.py:707:22: error[unresolved-reference] Name `ProcessManager` used when not defined
-
-src\intellicrack\main.py:771:38: error[unresolved-reference] Name `ModelDiscovery` used when not defined
-
-
 28 findings in src\intellicrack\bridges\process.py
 
 src\intellicrack\bridges\process.py:936:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
@@ -144,7 +65,7 @@ tests\test_ui\test_sandbox_panel_fixes.py:64:18: error[unresolved-attribute] Obj
 
 tests\test_ui\test_sandbox_panel_fixes.py:76:16: error[unresolved-attribute] Object of type `SandboxPanel` has no attribute `sandbox_manager`
 
-tests\test_ui\test_sandbox_panel_fixes.py:80:39: error[invalid-argument-type] Argument to bound method `set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`
+tests\test_ui\test_sandbox_panel_fixes.py:80:39: error[invalid-argument-type] Argument to bound method `SandboxPanel.set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`
 
 tests\test_ui\test_sandbox_panel_fixes.py:81:16: error[unresolved-attribute] Object of type `SandboxPanel` has no attribute `sandbox_manager`
 
@@ -216,9 +137,9 @@ tests\test_ui\test_tools_logic.py:42:9: error[unresolved-attribute] Object of ty
 
 tests\test_ui\test_tools_logic.py:68:9: error[unresolved-attribute] Object of type `XRefPanel` has no attribute `on_item_clicked`
 
-tests\test_ui\test_tools_logic.py:109:29: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`
+tests\test_ui\test_tools_logic.py:109:29: error[invalid-argument-type] Argument to `MainWindow.__init__` is incorrect: Expected `Config`, found `object`
 
-tests\test_ui\test_tools_logic.py:109:42: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`
+tests\test_ui\test_tools_logic.py:109:42: error[invalid-argument-type] Argument to `MainWindow.__init__` is incorrect: Expected `Orchestrator`, found `object`
 
 tests\test_ui\test_tools_logic.py:217:9: error[unresolved-attribute] Object of type `ToolOutputPanel` has no attribute `on_tab_close_requested`
 
@@ -251,7 +172,7 @@ src\intellicrack\providers\local_transformers.py:839:13: error[invalid-assignmen
 
 src\intellicrack\providers\local_transformers.py:839:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\providers\local_transformers.py:849:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`
+src\intellicrack\providers\local_transformers.py:849:30: error[invalid-argument-type] Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`
 
 src\intellicrack\providers\local_transformers.py:865:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
@@ -263,7 +184,7 @@ src\intellicrack\providers\local_transformers.py:1039:35: error[invalid-assignme
 
 src\intellicrack\providers\local_transformers.py:1061:27: error[invalid-yield] Yield type `(str & ~AlwaysFalsy) | (list[str] & ~AlwaysFalsy)` does not match annotated yield type `str`
 
-src\intellicrack\providers\local_transformers.py:1165:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
+src\intellicrack\providers\local_transformers.py:1165:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding[Any]` is not assignable to `str | list[int]`
 
 
 11 findings in src\intellicrack\providers\model_loader.py
@@ -278,7 +199,7 @@ src\intellicrack\providers\model_loader.py:513:13: error[invalid-assignment] Obj
 
 src\intellicrack\providers\model_loader.py:513:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\providers\model_loader.py:533:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`
+src\intellicrack\providers\model_loader.py:533:30: error[invalid-argument-type] Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`
 
 src\intellicrack\providers\model_loader.py:543:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
@@ -328,11 +249,11 @@ src\intellicrack\providers\anthropic.py:548:98: error[unresolved-attribute] Attr
 
 src\intellicrack\providers\anthropic.py:549:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
 
-src\intellicrack\providers\anthropic.py:555:52: error[invalid-argument-type] Argument to bound method `append` is incorrect: Expected `str`, found `object`
+src\intellicrack\providers\anthropic.py:555:52: error[invalid-argument-type] Argument to bound method `list.append` is incorrect: Expected `str`, found `object`
 
 src\intellicrack\providers\anthropic.py:558:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`
 
-src\intellicrack\providers\anthropic.py:663:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
+src\intellicrack\providers\anthropic.py:663:17: error[invalid-argument-type] Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
 
 
 9 findings in tests\test_ui\test_app_embedded_tools.py
@@ -358,30 +279,30 @@ tests\test_ui\test_app_embedded_tools.py:472:9: error[unresolved-attribute] Obje
 
 8 findings in src\intellicrack\bridges\schemas.py
 
-src\intellicrack\bridges\schemas.py:605:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:605:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:607:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:607:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:609:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:609:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:611:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:611:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:613:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:613:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:615:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:615:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:617:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:617:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
-src\intellicrack\bridges\schemas.py:619:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\bridges\schemas.py:619:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
 
 7 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\sandbox\windows.py:248:17: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+src\intellicrack\sandbox\windows.py:248:17: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
 
 src\intellicrack\sandbox\windows.py:273:13: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `process` of type `Popen[bytes] | None`
 
-src\intellicrack\sandbox\windows.py:283:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+src\intellicrack\sandbox\windows.py:283:17: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
 src\intellicrack\sandbox\windows.py:300:45: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
@@ -422,6 +343,19 @@ tests\test_bridges\test_frida_bridge.py:589:15: warning[redundant-cast] Value is
 tests\test_bridges\test_frida_bridge.py:609:14: warning[redundant-cast] Value is already of type `list[SymbolInfo]`
 
 
+5 findings in src\intellicrack\main.py
+
+src\intellicrack\main.py:256:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`
+
+src\intellicrack\main.py:654:22: warning[redundant-cast] Value is already of type `ScriptManager`
+
+src\intellicrack\main.py:655:24: warning[redundant-cast] Value is already of type `ScriptValidator`
+
+src\intellicrack\main.py:656:24: warning[redundant-cast] Value is already of type `ScriptGenerator`
+
+src\intellicrack\main.py:696:18: warning[redundant-cast] Value is already of type `Path`
+
+
 4 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
 src\intellicrack\ui\panels\ghidra_panel.py:100:20: error[invalid-assignment] Object of type `None` is not assignable to `<class 'CFGGraphView'>`
@@ -430,7 +364,7 @@ src\intellicrack\ui\panels\ghidra_panel.py:105:31: error[invalid-assignment] Obj
 
 src\intellicrack\ui\panels\ghidra_panel.py:147:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
-src\intellicrack\ui\panels\ghidra_panel.py:1873:28: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\ghidra_panel.py:1873:28: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 4 findings in tests\test_ui\test_graph_view.py
@@ -446,7 +380,7 @@ tests\test_ui\test_graph_view.py:335:17: error[unresolved-attribute] Attribute `
 
 3 findings in src\intellicrack\bridges\installer.py
 
-src\intellicrack\bridges\installer.py:274:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+src\intellicrack\bridges\installer.py:274:35: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
 
 src\intellicrack\bridges\installer.py:659:49: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `(s: str, /) -> int`, found `(bound method TextIOWrapper[_WrappedBuffer].write(s: str, /) -> int) | (Overload[(s: Buffer, /) -> int, (s: bytes, /) -> int]) | (Overload[(s: Buffer, /) -> int, (s: Any, /) -> int])`
 
@@ -466,9 +400,9 @@ src\intellicrack\bridges\sandbox_bridge.py:1628:21: error[invalid-type-form] Inv
 
 src\intellicrack\bridges\x64dbg.py:92:12: error[unresolved-import] Cannot resolve imported module `yara`
 
-src\intellicrack\bridges\x64dbg.py:1786:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:1922:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
-src\intellicrack\bridges\x64dbg.py:1796:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:1932:13: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
 
 3 findings in src\intellicrack\ui\panels\cutter_panel.py
@@ -477,7 +411,7 @@ src\intellicrack\ui\panels\cutter_panel.py:126:9: error[invalid-method-override]
 
 src\intellicrack\ui\panels\cutter_panel.py:759:40: error[invalid-assignment] Object of type `list[object] | list[dict[str, Any]]` is not assignable to `list[dict[str, Any]]`
 
-src\intellicrack\ui\panels\cutter_panel.py:1217:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\cutter_panel.py:1217:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 3 findings in tests\test_credentials\test_oauth_manager_live.py
@@ -511,7 +445,7 @@ tests\test_ui\test_tool_panel_detach.py:157:9: error[unresolved-attribute] Objec
 
 src\intellicrack\core\process_manager.py:291:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
 
-src\intellicrack\core\process_manager.py:593:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
+src\intellicrack\core\process_manager.py:593:56: error[invalid-argument-type] Argument to function `ProcessManager._terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
 
 
 2 findings in src\intellicrack\credentials\store.py
@@ -523,7 +457,7 @@ src\intellicrack\credentials\store.py:38:30: error[invalid-assignment] Object of
 
 2 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:1229:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+src\intellicrack\sandbox\qemu.py:1229:35: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
 
 src\intellicrack\sandbox\qemu.py:3183:20: error[unresolved-import] Cannot resolve imported module `yara`
 
@@ -537,9 +471,9 @@ src\intellicrack\ui\app.py:69:29: error[invalid-assignment] Object of type `None
 
 2 findings in tests\test_providers\test_provider_bugfixes.py
 
-tests\test_providers\test_provider_bugfixes.py:77:36: error[invalid-argument-type] Argument to bound method `get` is incorrect: Expected `OAuthProvider`, found `object`
+tests\test_providers\test_provider_bugfixes.py:77:36: error[invalid-argument-type] Argument to bound method `dict.get` is incorrect: Expected `OAuthProvider`, found `object`
 
-tests\test_providers\test_provider_bugfixes.py:192:23: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`
+tests\test_providers\test_provider_bugfixes.py:192:23: error[invalid-argument-type] Argument to constructor `float.__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`
 
 
 2 findings in tests\test_sandbox\conftest.py
@@ -551,7 +485,7 @@ tests\test_sandbox\conftest.py:1214:5: error[invalid-assignment] Object of type 
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:3082:62: error[call-non-callable] Object of type `None` is not callable
+src\intellicrack\bridges\hex_editor.py:3083:62: error[call-non-callable] Object of type `None` is not callable
 
 
 1 findings in src\intellicrack\core\hexpat\data_reader.py
@@ -561,7 +495,7 @@ src\intellicrack\core\hexpat\data_reader.py:46:24: error[call-top-callable] Obje
 
 1 findings in src\intellicrack\core\logging.py
 
-src\intellicrack\core\logging.py:470:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`
+src\intellicrack\core\logging.py:455:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`
 
 
 1 findings in src\intellicrack\core\yara_scanner.py
@@ -571,7 +505,7 @@ src\intellicrack\core\yara_scanner.py:32:12: error[unresolved-import] Cannot res
 
 1 findings in src\intellicrack\providers\base.py
 
-src\intellicrack\providers\base.py:621:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`
+src\intellicrack\providers\base.py:621:21: error[invalid-argument-type] Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`
 
 
 1 findings in src\intellicrack\providers\xpu_utils.py
@@ -581,7 +515,7 @@ src\intellicrack\providers\xpu_utils.py:31:21: error[invalid-assignment] Object 
 
 1 findings in src\intellicrack\sandbox\analysis.py
 
-src\intellicrack\sandbox\analysis.py:1209:22: error[no-matching-overload] No overload of bound method `__init__` matches arguments
+src\intellicrack\sandbox\analysis.py:1209:22: error[no-matching-overload] No overload of `dict.__init__` matches arguments
 
 
 1 findings in src\intellicrack\ui\panels\frida_panel.py
@@ -601,7 +535,7 @@ src\intellicrack\ui\panels\hex_editor\_transforms.py:116:61: warning[redundant-c
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_yara.py
 
-src\intellicrack\ui\panels\hex_editor\_yara.py:154:56: error[invalid-argument-type] Argument to function `compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`
+src\intellicrack\ui\panels\hex_editor\_yara.py:154:56: error[invalid-argument-type] Argument to function `YaraScanner.compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\panel.py
@@ -611,7 +545,7 @@ src\intellicrack\ui\panels\hex_editor\panel.py:233:9: error[invalid-method-overr
 
 1 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_widget.py:2024:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\hex_editor_widget.py:2024:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 1 findings in src\intellicrack\ui\panels\process_panel\_base.py
@@ -631,7 +565,7 @@ src\intellicrack\ui\panels\x64dbg_panel.py:118:9: error[invalid-method-override]
 
 1 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1740:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\tools.py:1740:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 1 findings in tests\test_bridges\test_ghidra.py
@@ -646,7 +580,7 @@ tests\test_bridges\test_x64dbg.py:190:26: error[invalid-assignment] Object of ty
 
 1 findings in tests\test_core\test_process_manager.py
 
-tests\test_core\test_process_manager.py:628:34: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`
+tests\test_core\test_process_manager.py:628:34: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`
 
 
 1 findings in tests\test_ui\test_icon_manager.py

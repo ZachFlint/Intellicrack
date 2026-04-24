@@ -1,6 +1,6 @@
 {
   "tool": "codespell",
-  "generated": "2026-04-24T05:13:40.168461+00:00",
+  "generated": "2026-04-24T21:11:39.277330+00:00",
   "total_findings": 289,
   "total_files": 51,
   "files": [
@@ -2307,31 +2307,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 1328,
+          "line": 1464,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:1328: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:1464: SEH ==> SHE"
         },
         {
-          "line": 2461,
+          "line": 2595,
           "column": null,
           "code": "SPELL",
           "misspelling": "unparseable",
           "correction": "unparsable",
           "message": "'unparseable' ==> 'unparsable'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:2461: unparseable ==> unparsable"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:2595: unparseable ==> unparsable"
         },
         {
-          "line": 4373,
+          "line": 4612,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:4373: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:4612: SEH ==> SHE"
         }
       ]
     },

@@ -1,390 +1,390 @@
 {
   "tool": "dead",
-  "generated": "2026-04-24T05:11:27.360271+00:00",
-  "total_findings": 347,
-  "total_files": 53,
+  "generated": "2026-04-24T21:10:11.709939+00:00",
+  "total_findings": 346,
+  "total_files": 52,
   "files": [
     {
       "path": "src/intellicrack/bridges/frida_bridge.py",
       "count": 54,
       "findings": [
         {
-          "line": 2350,
+          "line": 2366,
           "column": null,
           "variable": "unload_all_scripts",
           "message": "'unload_all_scripts' is never read",
-          "raw": "unload_all_scripts is never read, defined in src/intellicrack/bridges/frida_bridge.py:2350"
+          "raw": "unload_all_scripts is never read, defined in src/intellicrack/bridges/frida_bridge.py:2366"
         },
         {
-          "line": 3693,
+          "line": 3677,
           "column": null,
           "variable": "post_message",
           "message": "'post_message' is never read",
-          "raw": "post_message is never read, defined in src/intellicrack/bridges/frida_bridge.py:3693"
+          "raw": "post_message is never read, defined in src/intellicrack/bridges/frida_bridge.py:3677"
         },
         {
-          "line": 3719,
+          "line": 3703,
           "column": null,
           "variable": "eternalize_script",
           "message": "'eternalize_script' is never read",
-          "raw": "eternalize_script is never read, defined in src/intellicrack/bridges/frida_bridge.py:3719"
+          "raw": "eternalize_script is never read, defined in src/intellicrack/bridges/frida_bridge.py:3703"
         },
         {
-          "line": 3742,
+          "line": 3726,
           "column": null,
           "variable": "rpc_call",
           "message": "'rpc_call' is never read",
-          "raw": "rpc_call is never read, defined in src/intellicrack/bridges/frida_bridge.py:3742"
+          "raw": "rpc_call is never read, defined in src/intellicrack/bridges/frida_bridge.py:3726"
         },
         {
-          "line": 3778,
+          "line": 3762,
           "column": null,
           "variable": "create_cancellable",
           "message": "'create_cancellable' is never read",
-          "raw": "create_cancellable is never read, defined in src/intellicrack/bridges/frida_bridge.py:3778"
+          "raw": "create_cancellable is never read, defined in src/intellicrack/bridges/frida_bridge.py:3762"
         },
         {
-          "line": 3898,
+          "line": 3882,
           "column": null,
           "variable": "patch_code",
           "message": "'patch_code' is never read",
-          "raw": "patch_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:3898"
+          "raw": "patch_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:3882"
         },
         {
-          "line": 3937,
+          "line": 3921,
           "column": null,
           "variable": "allocate_string",
           "message": "'allocate_string' is never read",
-          "raw": "allocate_string is never read, defined in src/intellicrack/bridges/frida_bridge.py:3937"
+          "raw": "allocate_string is never read, defined in src/intellicrack/bridges/frida_bridge.py:3921"
         },
         {
-          "line": 4004,
+          "line": 3988,
           "column": null,
           "variable": "enumerate_symbols",
           "message": "'enumerate_symbols' is never read",
-          "raw": "enumerate_symbols is never read, defined in src/intellicrack/bridges/frida_bridge.py:4004"
+          "raw": "enumerate_symbols is never read, defined in src/intellicrack/bridges/frida_bridge.py:3988"
         },
         {
-          "line": 4064,
+          "line": 4048,
           "column": null,
           "variable": "load_module",
           "message": "'load_module' is never read",
-          "raw": "load_module is never read, defined in src/intellicrack/bridges/frida_bridge.py:4064"
+          "raw": "load_module is never read, defined in src/intellicrack/bridges/frida_bridge.py:4048"
         },
         {
-          "line": 4106,
+          "line": 4090,
           "column": null,
           "variable": "find_module_by_address",
           "message": "'find_module_by_address' is never read",
-          "raw": "find_module_by_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:4106"
+          "raw": "find_module_by_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:4090"
         },
         {
-          "line": 4146,
+          "line": 4130,
           "column": null,
           "variable": "find_functions_matching",
           "message": "'find_functions_matching' is never read",
-          "raw": "find_functions_matching is never read, defined in src/intellicrack/bridges/frida_bridge.py:4146"
+          "raw": "find_functions_matching is never read, defined in src/intellicrack/bridges/frida_bridge.py:4130"
         },
         {
-          "line": 4203,
+          "line": 4187,
           "column": null,
           "variable": "disassemble_instruction",
           "message": "'disassemble_instruction' is never read",
-          "raw": "disassemble_instruction is never read, defined in src/intellicrack/bridges/frida_bridge.py:4203"
+          "raw": "disassemble_instruction is never read, defined in src/intellicrack/bridges/frida_bridge.py:4187"
         },
         {
-          "line": 4321,
+          "line": 4305,
           "column": null,
           "variable": "set_exception_handler",
           "message": "'set_exception_handler' is never read",
-          "raw": "set_exception_handler is never read, defined in src/intellicrack/bridges/frida_bridge.py:4321"
+          "raw": "set_exception_handler is never read, defined in src/intellicrack/bridges/frida_bridge.py:4305"
         },
         {
-          "line": 4374,
+          "line": 4358,
           "column": null,
           "variable": "revert_hook",
           "message": "'revert_hook' is never read",
-          "raw": "revert_hook is never read, defined in src/intellicrack/bridges/frida_bridge.py:4374"
+          "raw": "revert_hook is never read, defined in src/intellicrack/bridges/frida_bridge.py:4358"
         },
         {
-          "line": 4407,
+          "line": 4391,
           "column": null,
           "variable": "flush_interceptor",
           "message": "'flush_interceptor' is never read",
-          "raw": "flush_interceptor is never read, defined in src/intellicrack/bridges/frida_bridge.py:4407"
+          "raw": "flush_interceptor is never read, defined in src/intellicrack/bridges/frida_bridge.py:4391"
         },
         {
-          "line": 4431,
+          "line": 4415,
           "column": null,
           "variable": "call_system_function",
           "message": "'call_system_function' is never read",
-          "raw": "call_system_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:4431"
+          "raw": "call_system_function is never read, defined in src/intellicrack/bridges/frida_bridge.py:4415"
         },
         {
-          "line": 4501,
+          "line": 4485,
           "column": null,
           "variable": "stalker_add_call_probe",
           "message": "'stalker_add_call_probe' is never read",
-          "raw": "stalker_add_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:4501"
+          "raw": "stalker_add_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:4485"
         },
         {
-          "line": 4549,
+          "line": 4533,
           "column": null,
           "variable": "stalker_remove_call_probe",
           "message": "'stalker_remove_call_probe' is never read",
-          "raw": "stalker_remove_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:4549"
+          "raw": "stalker_remove_call_probe is never read, defined in src/intellicrack/bridges/frida_bridge.py:4533"
         },
         {
-          "line": 4660,
+          "line": 4644,
           "column": null,
           "variable": "objc_enumerate_classes",
           "message": "'objc_enumerate_classes' is never read",
-          "raw": "objc_enumerate_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4660"
+          "raw": "objc_enumerate_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4644"
         },
         {
-          "line": 4687,
+          "line": 4671,
           "column": null,
           "variable": "objc_enumerate_protocols",
           "message": "'objc_enumerate_protocols' is never read",
-          "raw": "objc_enumerate_protocols is never read, defined in src/intellicrack/bridges/frida_bridge.py:4687"
+          "raw": "objc_enumerate_protocols is never read, defined in src/intellicrack/bridges/frida_bridge.py:4671"
         },
         {
-          "line": 4714,
+          "line": 4698,
           "column": null,
           "variable": "objc_enumerate_loaded_classes",
           "message": "'objc_enumerate_loaded_classes' is never read",
-          "raw": "objc_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4714"
+          "raw": "objc_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4698"
         },
         {
-          "line": 4763,
+          "line": 4747,
           "column": null,
           "variable": "objc_choose",
           "message": "'objc_choose' is never read",
-          "raw": "objc_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4763"
+          "raw": "objc_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4747"
         },
         {
-          "line": 4811,
+          "line": 4795,
           "column": null,
           "variable": "objc_get_class_methods",
           "message": "'objc_get_class_methods' is never read",
-          "raw": "objc_get_class_methods is never read, defined in src/intellicrack/bridges/frida_bridge.py:4811"
+          "raw": "objc_get_class_methods is never read, defined in src/intellicrack/bridges/frida_bridge.py:4795"
         },
         {
-          "line": 4847,
+          "line": 4831,
           "column": null,
           "variable": "objc_hook_method",
           "message": "'objc_hook_method' is never read",
-          "raw": "objc_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4847"
+          "raw": "objc_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:4831"
         },
         {
-          "line": 4930,
+          "line": 4914,
           "column": null,
           "variable": "java_enumerate_loaded_classes",
           "message": "'java_enumerate_loaded_classes' is never read",
-          "raw": "java_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4930"
+          "raw": "java_enumerate_loaded_classes is never read, defined in src/intellicrack/bridges/frida_bridge.py:4914"
         },
         {
-          "line": 4979,
+          "line": 4963,
           "column": null,
           "variable": "java_choose",
           "message": "'java_choose' is never read",
-          "raw": "java_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4979"
+          "raw": "java_choose is never read, defined in src/intellicrack/bridges/frida_bridge.py:4963"
         },
         {
-          "line": 5024,
+          "line": 5008,
           "column": null,
           "variable": "java_use",
           "message": "'java_use' is never read",
-          "raw": "java_use is never read, defined in src/intellicrack/bridges/frida_bridge.py:5024"
+          "raw": "java_use is never read, defined in src/intellicrack/bridges/frida_bridge.py:5008"
         },
         {
-          "line": 5063,
+          "line": 5047,
           "column": null,
           "variable": "java_hook_method",
           "message": "'java_hook_method' is never read",
-          "raw": "java_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:5063"
+          "raw": "java_hook_method is never read, defined in src/intellicrack/bridges/frida_bridge.py:5047"
         },
         {
-          "line": 5153,
+          "line": 5137,
           "column": null,
           "variable": "java_deoptimize",
           "message": "'java_deoptimize' is never read",
-          "raw": "java_deoptimize is never read, defined in src/intellicrack/bridges/frida_bridge.py:5153"
+          "raw": "java_deoptimize is never read, defined in src/intellicrack/bridges/frida_bridge.py:5137"
         },
         {
-          "line": 5183,
+          "line": 5167,
           "column": null,
           "variable": "create_cmodule",
           "message": "'create_cmodule' is never read",
-          "raw": "create_cmodule is never read, defined in src/intellicrack/bridges/frida_bridge.py:5183"
+          "raw": "create_cmodule is never read, defined in src/intellicrack/bridges/frida_bridge.py:5167"
         },
         {
-          "line": 5245,
+          "line": 5229,
           "column": null,
           "variable": "kernel_enumerate_modules",
           "message": "'kernel_enumerate_modules' is never read",
-          "raw": "kernel_enumerate_modules is never read, defined in src/intellicrack/bridges/frida_bridge.py:5245"
+          "raw": "kernel_enumerate_modules is never read, defined in src/intellicrack/bridges/frida_bridge.py:5229"
         },
         {
-          "line": 5294,
+          "line": 5278,
           "column": null,
           "variable": "kernel_enumerate_ranges",
           "message": "'kernel_enumerate_ranges' is never read",
-          "raw": "kernel_enumerate_ranges is never read, defined in src/intellicrack/bridges/frida_bridge.py:5294"
+          "raw": "kernel_enumerate_ranges is never read, defined in src/intellicrack/bridges/frida_bridge.py:5278"
         },
         {
-          "line": 5350,
+          "line": 5334,
           "column": null,
           "variable": "kernel_read",
           "message": "'kernel_read' is never read",
-          "raw": "kernel_read is never read, defined in src/intellicrack/bridges/frida_bridge.py:5350"
+          "raw": "kernel_read is never read, defined in src/intellicrack/bridges/frida_bridge.py:5334"
         },
         {
-          "line": 5386,
+          "line": 5370,
           "column": null,
           "variable": "kernel_write",
           "message": "'kernel_write' is never read",
-          "raw": "kernel_write is never read, defined in src/intellicrack/bridges/frida_bridge.py:5386"
+          "raw": "kernel_write is never read, defined in src/intellicrack/bridges/frida_bridge.py:5370"
         },
         {
-          "line": 5419,
+          "line": 5403,
           "column": null,
           "variable": "kernel_alloc",
           "message": "'kernel_alloc' is never read",
-          "raw": "kernel_alloc is never read, defined in src/intellicrack/bridges/frida_bridge.py:5419"
+          "raw": "kernel_alloc is never read, defined in src/intellicrack/bridges/frida_bridge.py:5403"
         },
         {
-          "line": 5450,
+          "line": 5434,
           "column": null,
           "variable": "kernel_protect",
           "message": "'kernel_protect' is never read",
-          "raw": "kernel_protect is never read, defined in src/intellicrack/bridges/frida_bridge.py:5450"
+          "raw": "kernel_protect is never read, defined in src/intellicrack/bridges/frida_bridge.py:5434"
         },
         {
-          "line": 5484,
+          "line": 5468,
           "column": null,
           "variable": "socket_listen",
           "message": "'socket_listen' is never read",
-          "raw": "socket_listen is never read, defined in src/intellicrack/bridges/frida_bridge.py:5484"
+          "raw": "socket_listen is never read, defined in src/intellicrack/bridges/frida_bridge.py:5468"
         },
         {
-          "line": 5535,
+          "line": 5519,
           "column": null,
           "variable": "socket_connect",
           "message": "'socket_connect' is never read",
-          "raw": "socket_connect is never read, defined in src/intellicrack/bridges/frida_bridge.py:5535"
+          "raw": "socket_connect is never read, defined in src/intellicrack/bridges/frida_bridge.py:5519"
         },
         {
-          "line": 5574,
+          "line": 5558,
           "column": null,
           "variable": "socket_type",
           "message": "'socket_type' is never read",
-          "raw": "socket_type is never read, defined in src/intellicrack/bridges/frida_bridge.py:5574"
+          "raw": "socket_type is never read, defined in src/intellicrack/bridges/frida_bridge.py:5558"
         },
         {
-          "line": 5603,
+          "line": 5587,
           "column": null,
           "variable": "socket_local_address",
           "message": "'socket_local_address' is never read",
-          "raw": "socket_local_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5603"
+          "raw": "socket_local_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5587"
         },
         {
-          "line": 5633,
+          "line": 5617,
           "column": null,
           "variable": "socket_peer_address",
           "message": "'socket_peer_address' is never read",
-          "raw": "socket_peer_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5633"
+          "raw": "socket_peer_address is never read, defined in src/intellicrack/bridges/frida_bridge.py:5617"
         },
         {
-          "line": 5663,
+          "line": 5647,
           "column": null,
           "variable": "file_read_target",
           "message": "'file_read_target' is never read",
-          "raw": "file_read_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5663"
+          "raw": "file_read_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5647"
         },
         {
-          "line": 5701,
+          "line": 5685,
           "column": null,
           "variable": "file_write_target",
           "message": "'file_write_target' is never read",
-          "raw": "file_write_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5701"
+          "raw": "file_write_target is never read, defined in src/intellicrack/bridges/frida_bridge.py:5685"
         },
         {
-          "line": 5737,
+          "line": 5721,
           "column": null,
           "variable": "sqlite_open",
           "message": "'sqlite_open' is never read",
-          "raw": "sqlite_open is never read, defined in src/intellicrack/bridges/frida_bridge.py:5737"
+          "raw": "sqlite_open is never read, defined in src/intellicrack/bridges/frida_bridge.py:5721"
         },
         {
-          "line": 5812,
+          "line": 5796,
           "column": null,
           "variable": "sqlite_exec",
           "message": "'sqlite_exec' is never read",
-          "raw": "sqlite_exec is never read, defined in src/intellicrack/bridges/frida_bridge.py:5812"
+          "raw": "sqlite_exec is never read, defined in src/intellicrack/bridges/frida_bridge.py:5796"
         },
         {
-          "line": 5837,
+          "line": 5821,
           "column": null,
           "variable": "sqlite_dump",
           "message": "'sqlite_dump' is never read",
-          "raw": "sqlite_dump is never read, defined in src/intellicrack/bridges/frida_bridge.py:5837"
+          "raw": "sqlite_dump is never read, defined in src/intellicrack/bridges/frida_bridge.py:5821"
         },
         {
-          "line": 5869,
+          "line": 5853,
           "column": null,
           "variable": "write_code",
           "message": "'write_code' is never read",
-          "raw": "write_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:5869"
+          "raw": "write_code is never read, defined in src/intellicrack/bridges/frida_bridge.py:5853"
         },
         {
-          "line": 5934,
+          "line": 5942,
           "column": null,
           "variable": "cloak_add_thread",
           "message": "'cloak_add_thread' is never read",
-          "raw": "cloak_add_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5934"
+          "raw": "cloak_add_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5942"
         },
         {
-          "line": 5960,
+          "line": 5968,
           "column": null,
           "variable": "cloak_remove_thread",
           "message": "'cloak_remove_thread' is never read",
-          "raw": "cloak_remove_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5960"
+          "raw": "cloak_remove_thread is never read, defined in src/intellicrack/bridges/frida_bridge.py:5968"
         },
         {
-          "line": 5986,
+          "line": 5994,
           "column": null,
           "variable": "cloak_add_range",
           "message": "'cloak_add_range' is never read",
-          "raw": "cloak_add_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5986"
+          "raw": "cloak_add_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:5994"
         },
         {
-          "line": 6013,
+          "line": 6021,
           "column": null,
           "variable": "cloak_remove_range",
           "message": "'cloak_remove_range' is never read",
-          "raw": "cloak_remove_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:6013"
+          "raw": "cloak_remove_range is never read, defined in src/intellicrack/bridges/frida_bridge.py:6021"
         },
         {
-          "line": 6041,
+          "line": 6048,
           "column": null,
           "variable": "compile_typescript",
           "message": "'compile_typescript' is never read",
-          "raw": "compile_typescript is never read, defined in src/intellicrack/bridges/frida_bridge.py:6041"
+          "raw": "compile_typescript is never read, defined in src/intellicrack/bridges/frida_bridge.py:6048"
         },
         {
-          "line": 6097,
+          "line": 6142,
           "column": null,
           "variable": "monitor_path",
           "message": "'monitor_path' is never read",
-          "raw": "monitor_path is never read, defined in src/intellicrack/bridges/frida_bridge.py:6097"
+          "raw": "monitor_path is never read, defined in src/intellicrack/bridges/frida_bridge.py:6142"
         },
         {
-          "line": 6148,
+          "line": 6193,
           "column": null,
           "variable": "stop_monitor",
           "message": "'stop_monitor' is never read",
-          "raw": "stop_monitor is never read, defined in src/intellicrack/bridges/frida_bridge.py:6148"
+          "raw": "stop_monitor is never read, defined in src/intellicrack/bridges/frida_bridge.py:6193"
         }
       ]
     },
@@ -972,256 +972,256 @@
       "count": 36,
       "findings": [
         {
-          "line": 168,
+          "line": 189,
           "column": null,
           "variable": "MIN_LINE_PARTS",
           "message": "'MIN_LINE_PARTS' is never read",
-          "raw": "MIN_LINE_PARTS is never read, defined in src/intellicrack/bridges/x64dbg.py:168"
+          "raw": "MIN_LINE_PARTS is never read, defined in src/intellicrack/bridges/x64dbg.py:189"
         },
         {
-          "line": 3963,
+          "line": 4202,
           "column": null,
           "variable": "get_entry_point",
           "message": "'get_entry_point' is never read",
-          "raw": "get_entry_point is never read, defined in src/intellicrack/bridges/x64dbg.py:3963"
+          "raw": "get_entry_point is never read, defined in src/intellicrack/bridges/x64dbg.py:4202"
         },
         {
-          "line": 4097,
+          "line": 4336,
           "column": null,
           "variable": "get_module_imports",
           "message": "'get_module_imports' is never read",
-          "raw": "get_module_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:4097"
+          "raw": "get_module_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:4336"
         },
         {
-          "line": 4112,
+          "line": 4351,
           "column": null,
           "variable": "find_references",
           "message": "'find_references' is never read",
-          "raw": "find_references is never read, defined in src/intellicrack/bridges/x64dbg.py:4112"
+          "raw": "find_references is never read, defined in src/intellicrack/bridges/x64dbg.py:4351"
         },
         {
-          "line": 4130,
+          "line": 4369,
           "column": null,
           "variable": "find_string_references",
           "message": "'find_string_references' is never read",
-          "raw": "find_string_references is never read, defined in src/intellicrack/bridges/x64dbg.py:4130"
+          "raw": "find_string_references is never read, defined in src/intellicrack/bridges/x64dbg.py:4369"
         },
         {
-          "line": 4148,
+          "line": 4387,
           "column": null,
           "variable": "find_intermodular_calls",
           "message": "'find_intermodular_calls' is never read",
-          "raw": "find_intermodular_calls is never read, defined in src/intellicrack/bridges/x64dbg.py:4148"
+          "raw": "find_intermodular_calls is never read, defined in src/intellicrack/bridges/x64dbg.py:4387"
         },
         {
-          "line": 4183,
+          "line": 4422,
           "column": null,
           "variable": "get_function_cfg",
           "message": "'get_function_cfg' is never read",
-          "raw": "get_function_cfg is never read, defined in src/intellicrack/bridges/x64dbg.py:4183"
+          "raw": "get_function_cfg is never read, defined in src/intellicrack/bridges/x64dbg.py:4422"
         },
         {
-          "line": 4241,
+          "line": 4480,
           "column": null,
           "variable": "clear_database",
           "message": "'clear_database' is never read",
-          "raw": "clear_database is never read, defined in src/intellicrack/bridges/x64dbg.py:4241"
+          "raw": "clear_database is never read, defined in src/intellicrack/bridges/x64dbg.py:4480"
         },
         {
-          "line": 4281,
+          "line": 4520,
           "column": null,
           "variable": "restore_patch",
           "message": "'restore_patch' is never read",
-          "raw": "restore_patch is never read, defined in src/intellicrack/bridges/x64dbg.py:4281"
+          "raw": "restore_patch is never read, defined in src/intellicrack/bridges/x64dbg.py:4520"
         },
         {
-          "line": 4355,
+          "line": 4594,
           "column": null,
           "variable": "set_thread_name",
           "message": "'set_thread_name' is never read",
-          "raw": "set_thread_name is never read, defined in src/intellicrack/bridges/x64dbg.py:4355"
+          "raw": "set_thread_name is never read, defined in src/intellicrack/bridges/x64dbg.py:4594"
         },
         {
-          "line": 4438,
+          "line": 4677,
           "column": null,
           "variable": "get_pe_directories",
           "message": "'get_pe_directories' is never read",
-          "raw": "get_pe_directories is never read, defined in src/intellicrack/bridges/x64dbg.py:4438"
+          "raw": "get_pe_directories is never read, defined in src/intellicrack/bridges/x64dbg.py:4677"
         },
         {
-          "line": 4462,
+          "line": 4701,
           "column": null,
           "variable": "add_watch",
           "message": "'add_watch' is never read",
-          "raw": "add_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4462"
+          "raw": "add_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4701"
         },
         {
-          "line": 4484,
+          "line": 4723,
           "column": null,
           "variable": "remove_watch",
           "message": "'remove_watch' is never read",
-          "raw": "remove_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4484"
+          "raw": "remove_watch is never read, defined in src/intellicrack/bridges/x64dbg.py:4723"
         },
         {
-          "line": 4506,
+          "line": 4745,
           "column": null,
           "variable": "get_watches",
           "message": "'get_watches' is never read",
-          "raw": "get_watches is never read, defined in src/intellicrack/bridges/x64dbg.py:4506"
+          "raw": "get_watches is never read, defined in src/intellicrack/bridges/x64dbg.py:4745"
         },
         {
-          "line": 4527,
+          "line": 4766,
           "column": null,
           "variable": "set_logging_breakpoint",
           "message": "'set_logging_breakpoint' is never read",
-          "raw": "set_logging_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4527"
+          "raw": "set_logging_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4766"
         },
         {
-          "line": 4545,
+          "line": 4784,
           "column": null,
           "variable": "configure_breakpoint",
           "message": "'configure_breakpoint' is never read",
-          "raw": "configure_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4545"
+          "raw": "configure_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4784"
         },
         {
-          "line": 4577,
+          "line": 4816,
           "column": null,
           "variable": "set_dll_breakpoint",
           "message": "'set_dll_breakpoint' is never read",
-          "raw": "set_dll_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4577"
+          "raw": "set_dll_breakpoint is never read, defined in src/intellicrack/bridges/x64dbg.py:4816"
         },
         {
-          "line": 4628,
+          "line": 4867,
           "column": null,
           "variable": "get_trace_record",
           "message": "'get_trace_record' is never read",
-          "raw": "get_trace_record is never read, defined in src/intellicrack/bridges/x64dbg.py:4628"
+          "raw": "get_trace_record is never read, defined in src/intellicrack/bridges/x64dbg.py:4867"
         },
         {
-          "line": 4653,
+          "line": 4892,
           "column": null,
           "variable": "step_count",
           "message": "'step_count' is never read",
-          "raw": "step_count is never read, defined in src/intellicrack/bridges/x64dbg.py:4653"
+          "raw": "step_count is never read, defined in src/intellicrack/bridges/x64dbg.py:4892"
         },
         {
-          "line": 4668,
+          "line": 4907,
           "column": null,
           "variable": "animate_start",
           "message": "'animate_start' is never read",
-          "raw": "animate_start is never read, defined in src/intellicrack/bridges/x64dbg.py:4668"
+          "raw": "animate_start is never read, defined in src/intellicrack/bridges/x64dbg.py:4907"
         },
         {
-          "line": 4682,
+          "line": 4921,
           "column": null,
           "variable": "animate_stop",
           "message": "'animate_stop' is never read",
-          "raw": "animate_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:4682"
+          "raw": "animate_stop is never read, defined in src/intellicrack/bridges/x64dbg.py:4921"
         },
         {
-          "line": 4692,
+          "line": 4931,
           "column": null,
           "variable": "analyze_entropy",
           "message": "'analyze_entropy' is never read",
-          "raw": "analyze_entropy is never read, defined in src/intellicrack/bridges/x64dbg.py:4692"
+          "raw": "analyze_entropy is never read, defined in src/intellicrack/bridges/x64dbg.py:4931"
         },
         {
-          "line": 4824,
+          "line": 5063,
           "column": null,
           "variable": "script_load",
           "message": "'script_load' is never read",
-          "raw": "script_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4824"
+          "raw": "script_load is never read, defined in src/intellicrack/bridges/x64dbg.py:5063"
         },
         {
-          "line": 4837,
+          "line": 5076,
           "column": null,
           "variable": "script_run",
           "message": "'script_run' is never read",
-          "raw": "script_run is never read, defined in src/intellicrack/bridges/x64dbg.py:4837"
+          "raw": "script_run is never read, defined in src/intellicrack/bridges/x64dbg.py:5076"
         },
         {
-          "line": 4847,
+          "line": 5086,
           "column": null,
           "variable": "script_cmd",
           "message": "'script_cmd' is never read",
-          "raw": "script_cmd is never read, defined in src/intellicrack/bridges/x64dbg.py:4847"
+          "raw": "script_cmd is never read, defined in src/intellicrack/bridges/x64dbg.py:5086"
         },
         {
-          "line": 4860,
+          "line": 5099,
           "column": null,
           "variable": "script_abort",
           "message": "'script_abort' is never read",
-          "raw": "script_abort is never read, defined in src/intellicrack/bridges/x64dbg.py:4860"
+          "raw": "script_abort is never read, defined in src/intellicrack/bridges/x64dbg.py:5099"
         },
         {
-          "line": 4870,
+          "line": 5109,
           "column": null,
           "variable": "plugin_load",
           "message": "'plugin_load' is never read",
-          "raw": "plugin_load is never read, defined in src/intellicrack/bridges/x64dbg.py:4870"
+          "raw": "plugin_load is never read, defined in src/intellicrack/bridges/x64dbg.py:5109"
         },
         {
-          "line": 4883,
+          "line": 5122,
           "column": null,
           "variable": "plugin_unload",
           "message": "'plugin_unload' is never read",
-          "raw": "plugin_unload is never read, defined in src/intellicrack/bridges/x64dbg.py:4883"
+          "raw": "plugin_unload is never read, defined in src/intellicrack/bridges/x64dbg.py:5122"
         },
         {
-          "line": 4896,
+          "line": 5135,
           "column": null,
           "variable": "plugin_list",
           "message": "'plugin_list' is never read",
-          "raw": "plugin_list is never read, defined in src/intellicrack/bridges/x64dbg.py:4896"
+          "raw": "plugin_list is never read, defined in src/intellicrack/bridges/x64dbg.py:5135"
         },
         {
-          "line": 5049,
+          "line": 5288,
           "column": null,
           "variable": "detect_anti_debug",
           "message": "'detect_anti_debug' is never read",
-          "raw": "detect_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:5049"
+          "raw": "detect_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:5288"
         },
         {
-          "line": 5065,
+          "line": 5304,
           "column": null,
           "variable": "patch_anti_debug",
           "message": "'patch_anti_debug' is never read",
-          "raw": "patch_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:5065"
+          "raw": "patch_anti_debug is never read, defined in src/intellicrack/bridges/x64dbg.py:5304"
         },
         {
-          "line": 5128,
+          "line": 5367,
           "column": null,
           "variable": "reconstruct_imports",
           "message": "'reconstruct_imports' is never read",
-          "raw": "reconstruct_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:5128"
+          "raw": "reconstruct_imports is never read, defined in src/intellicrack/bridges/x64dbg.py:5367"
         },
         {
-          "line": 5180,
+          "line": 5419,
           "column": null,
           "variable": "goto_address",
           "message": "'goto_address' is never read",
-          "raw": "goto_address is never read, defined in src/intellicrack/bridges/x64dbg.py:5180"
+          "raw": "goto_address is never read, defined in src/intellicrack/bridges/x64dbg.py:5419"
         },
         {
-          "line": 5233,
+          "line": 5472,
           "column": null,
           "variable": "break_on_tls_callbacks",
           "message": "'break_on_tls_callbacks' is never read",
-          "raw": "break_on_tls_callbacks is never read, defined in src/intellicrack/bridges/x64dbg.py:5233"
+          "raw": "break_on_tls_callbacks is never read, defined in src/intellicrack/bridges/x64dbg.py:5472"
         },
         {
-          "line": 5290,
+          "line": 5529,
           "column": null,
           "variable": "get_privileges",
           "message": "'get_privileges' is never read",
-          "raw": "get_privileges is never read, defined in src/intellicrack/bridges/x64dbg.py:5290"
+          "raw": "get_privileges is never read, defined in src/intellicrack/bridges/x64dbg.py:5529"
         },
         {
-          "line": 5355,
+          "line": 5594,
           "column": null,
           "variable": "adjust_privilege",
           "message": "'adjust_privilege' is never read",
-          "raw": "adjust_privilege is never read, defined in src/intellicrack/bridges/x64dbg.py:5355"
+          "raw": "adjust_privilege is never read, defined in src/intellicrack/bridges/x64dbg.py:5594"
         }
       ]
     },
@@ -1230,207 +1230,207 @@
       "count": 29,
       "findings": [
         {
-          "line": 229,
+          "line": 228,
           "column": null,
           "variable": "_BYTE_MASK",
           "message": "'_BYTE_MASK' is never read",
-          "raw": "_BYTE_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:229, src/intellicrack/ui/panels/hex_editor/_transforms.py:47"
+          "raw": "_BYTE_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:228, src/intellicrack/ui/panels/hex_editor/_transforms.py:47"
+        },
+        {
+          "line": 229,
+          "column": null,
+          "variable": "_U16_MASK",
+          "message": "'_U16_MASK' is never read",
+          "raw": "_U16_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:229"
         },
         {
           "line": 230,
           "column": null,
-          "variable": "_U16_MASK",
-          "message": "'_U16_MASK' is never read",
-          "raw": "_U16_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:230"
+          "variable": "_U32_MASK",
+          "message": "'_U32_MASK' is never read",
+          "raw": "_U32_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:230"
         },
         {
           "line": 231,
           "column": null,
-          "variable": "_U32_MASK",
-          "message": "'_U32_MASK' is never read",
-          "raw": "_U32_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:231"
-        },
-        {
-          "line": 232,
-          "column": null,
           "variable": "_U64_MASK",
           "message": "'_U64_MASK' is never read",
-          "raw": "_U64_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:232"
+          "raw": "_U64_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:231"
         },
         {
-          "line": 239,
+          "line": 238,
           "column": null,
           "variable": "_PE_CHECKSUM_RELATIVE",
           "message": "'_PE_CHECKSUM_RELATIVE' is never read",
-          "raw": "_PE_CHECKSUM_RELATIVE is never read, defined in src/intellicrack/bridges/hex_editor.py:239"
+          "raw": "_PE_CHECKSUM_RELATIVE is never read, defined in src/intellicrack/bridges/hex_editor.py:238"
+        },
+        {
+          "line": 245,
+          "column": null,
+          "variable": "_MAX_BPS_DIFF_LEN",
+          "message": "'_MAX_BPS_DIFF_LEN' is never read",
+          "raw": "_MAX_BPS_DIFF_LEN is never read, defined in src/intellicrack/bridges/hex_editor.py:245"
         },
         {
           "line": 246,
           "column": null,
-          "variable": "_MAX_BPS_DIFF_LEN",
-          "message": "'_MAX_BPS_DIFF_LEN' is never read",
-          "raw": "_MAX_BPS_DIFF_LEN is never read, defined in src/intellicrack/bridges/hex_editor.py:246"
-        },
-        {
-          "line": 247,
-          "column": null,
           "variable": "_MIN_BPS_AHEAD_MATCH",
           "message": "'_MIN_BPS_AHEAD_MATCH' is never read",
-          "raw": "_MIN_BPS_AHEAD_MATCH is never read, defined in src/intellicrack/bridges/hex_editor.py:247"
+          "raw": "_MIN_BPS_AHEAD_MATCH is never read, defined in src/intellicrack/bridges/hex_editor.py:246"
         },
         {
-          "line": 254,
+          "line": 253,
           "column": null,
           "variable": "_UPS_MIN_PATCH_SIZE",
           "message": "'_UPS_MIN_PATCH_SIZE' is never read",
-          "raw": "_UPS_MIN_PATCH_SIZE is never read, defined in src/intellicrack/bridges/hex_editor.py:254"
+          "raw": "_UPS_MIN_PATCH_SIZE is never read, defined in src/intellicrack/bridges/hex_editor.py:253"
+        },
+        {
+          "line": 257,
+          "column": null,
+          "variable": "_NDB_MIN_FIELDS",
+          "message": "'_NDB_MIN_FIELDS' is never read",
+          "raw": "_NDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:257"
         },
         {
           "line": 258,
           "column": null,
-          "variable": "_NDB_MIN_FIELDS",
-          "message": "'_NDB_MIN_FIELDS' is never read",
-          "raw": "_NDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:258"
-        },
-        {
-          "line": 259,
-          "column": null,
           "variable": "_HDB_MIN_FIELDS",
           "message": "'_HDB_MIN_FIELDS' is never read",
-          "raw": "_HDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:259"
+          "raw": "_HDB_MIN_FIELDS is never read, defined in src/intellicrack/bridges/hex_editor.py:258"
         },
         {
-          "line": 2581,
+          "line": 2582,
           "column": null,
           "variable": "save_to_sandbox",
           "message": "'save_to_sandbox' is never read",
-          "raw": "save_to_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:2581"
+          "raw": "save_to_sandbox is never read, defined in src/intellicrack/bridges/hex_editor.py:2582"
         },
         {
-          "line": 2732,
+          "line": 2733,
           "column": null,
           "variable": "get_entropy",
           "message": "'get_entropy' is never read",
-          "raw": "get_entropy is never read, defined in src/intellicrack/bridges/hex_editor.py:2732"
+          "raw": "get_entropy is never read, defined in src/intellicrack/bridges/hex_editor.py:2733"
         },
         {
-          "line": 4341,
+          "line": 4249,
           "column": null,
           "variable": "set_va_base",
           "message": "'set_va_base' is never read",
-          "raw": "set_va_base is never read, defined in src/intellicrack/bridges/hex_editor.py:4341"
+          "raw": "set_va_base is never read, defined in src/intellicrack/bridges/hex_editor.py:4249"
         },
         {
-          "line": 4417,
+          "line": 4325,
           "column": null,
           "variable": "auto_detect_va_mappings",
           "message": "'auto_detect_va_mappings' is never read",
-          "raw": "auto_detect_va_mappings is never read, defined in src/intellicrack/bridges/hex_editor.py:4417"
+          "raw": "auto_detect_va_mappings is never read, defined in src/intellicrack/bridges/hex_editor.py:4325"
         },
         {
-          "line": 4631,
+          "line": 4539,
           "column": null,
           "variable": "get_strings",
           "message": "'get_strings' is never read",
-          "raw": "get_strings is never read, defined in src/intellicrack/bridges/hex_editor.py:4631"
+          "raw": "get_strings is never read, defined in src/intellicrack/bridges/hex_editor.py:4539"
         },
         {
-          "line": 4780,
+          "line": 4688,
           "column": null,
           "variable": "generate_structure_bookmarks",
           "message": "'generate_structure_bookmarks' is never read",
-          "raw": "generate_structure_bookmarks is never read, defined in src/intellicrack/bridges/hex_editor.py:4780"
+          "raw": "generate_structure_bookmarks is never read, defined in src/intellicrack/bridges/hex_editor.py:4688"
         },
         {
-          "line": 4947,
+          "line": 4855,
           "column": null,
           "variable": "export_annotated_html",
           "message": "'export_annotated_html' is never read",
-          "raw": "export_annotated_html is never read, defined in src/intellicrack/bridges/hex_editor.py:4947"
+          "raw": "export_annotated_html is never read, defined in src/intellicrack/bridges/hex_editor.py:4855"
         },
         {
-          "line": 4999,
+          "line": 4907,
           "column": null,
           "variable": "export_annotated_pdf",
           "message": "'export_annotated_pdf' is never read",
-          "raw": "export_annotated_pdf is never read, defined in src/intellicrack/bridges/hex_editor.py:4999"
+          "raw": "export_annotated_pdf is never read, defined in src/intellicrack/bridges/hex_editor.py:4907"
         },
         {
-          "line": 5134,
+          "line": 5042,
           "column": null,
           "variable": "snap_to_alignment",
           "message": "'snap_to_alignment' is never read",
-          "raw": "snap_to_alignment is never read, defined in src/intellicrack/bridges/hex_editor.py:5134"
+          "raw": "snap_to_alignment is never read, defined in src/intellicrack/bridges/hex_editor.py:5042"
         },
         {
-          "line": 5152,
+          "line": 5060,
           "column": null,
           "variable": "set_alignment_grid",
           "message": "'set_alignment_grid' is never read",
-          "raw": "set_alignment_grid is never read, defined in src/intellicrack/bridges/hex_editor.py:5152"
+          "raw": "set_alignment_grid is never read, defined in src/intellicrack/bridges/hex_editor.py:5060"
         },
         {
-          "line": 5284,
+          "line": 5192,
           "column": null,
           "variable": "base_convert",
           "message": "'base_convert' is never read",
-          "raw": "base_convert is never read, defined in src/intellicrack/bridges/hex_editor.py:5284"
+          "raw": "base_convert is never read, defined in src/intellicrack/bridges/hex_editor.py:5192"
         },
         {
-          "line": 5356,
+          "line": 5264,
           "column": null,
           "variable": "run_python_script",
           "message": "'run_python_script' is never read",
-          "raw": "run_python_script is never read, defined in src/intellicrack/bridges/hex_editor.py:5356"
+          "raw": "run_python_script is never read, defined in src/intellicrack/bridges/hex_editor.py:5264"
         },
         {
-          "line": 5558,
+          "line": 5466,
           "column": null,
           "variable": "set_chunk_size",
           "message": "'set_chunk_size' is never read",
-          "raw": "set_chunk_size is never read, defined in src/intellicrack/bridges/hex_editor.py:5558"
+          "raw": "set_chunk_size is never read, defined in src/intellicrack/bridges/hex_editor.py:5466"
         },
         {
-          "line": 5590,
+          "line": 5498,
           "column": null,
           "variable": "set_memory_budget",
           "message": "'set_memory_budget' is never read",
-          "raw": "set_memory_budget is never read, defined in src/intellicrack/bridges/hex_editor.py:5590"
+          "raw": "set_memory_budget is never read, defined in src/intellicrack/bridges/hex_editor.py:5498"
         },
         {
-          "line": 5604,
+          "line": 5512,
           "column": null,
           "variable": "set_color_mode",
           "message": "'set_color_mode' is never read",
-          "raw": "set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5604, src/intellicrack/ui/panels/hex_editor_widget.py:486"
+          "raw": "set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5512, src/intellicrack/ui/panels/hex_editor_widget.py:486"
         },
         {
-          "line": 5619,
+          "line": 5527,
           "column": null,
           "variable": "get_color_mode",
           "message": "'get_color_mode' is never read",
-          "raw": "get_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5619"
+          "raw": "get_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5527"
         },
         {
-          "line": 5627,
+          "line": 5535,
           "column": null,
           "variable": "scan_die_signatures",
           "message": "'scan_die_signatures' is never read",
-          "raw": "scan_die_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5627"
+          "raw": "scan_die_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5535"
         },
         {
-          "line": 5723,
+          "line": 5631,
           "column": null,
           "variable": "scan_clamav_signatures",
           "message": "'scan_clamav_signatures' is never read",
-          "raw": "scan_clamav_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5723"
+          "raw": "scan_clamav_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5631"
         },
         {
-          "line": 5849,
+          "line": 5757,
           "column": null,
           "variable": "scan_custom_signatures",
           "message": "'scan_custom_signatures' is never read",
-          "raw": "scan_custom_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5849"
+          "raw": "scan_custom_signatures is never read, defined in src/intellicrack/bridges/hex_editor.py:5757"
         }
       ]
     },
@@ -1518,16 +1518,16 @@
         {
           "line": 5370,
           "column": null,
-          "variable": "manage_thunks",
-          "message": "'manage_thunks' is never read",
-          "raw": "manage_thunks is never read, defined in src/intellicrack/bridges/ghidra.py:5370"
+          "variable": "get_thunk_info",
+          "message": "'get_thunk_info' is never read",
+          "raw": "get_thunk_info is never read, defined in src/intellicrack/bridges/ghidra.py:5370"
         },
         {
           "line": 5413,
           "column": null,
-          "variable": "manage_external_references",
-          "message": "'manage_external_references' is never read",
-          "raw": "manage_external_references is never read, defined in src/intellicrack/bridges/ghidra.py:5413"
+          "variable": "get_external_references",
+          "message": "'get_external_references' is never read",
+          "raw": "get_external_references is never read, defined in src/intellicrack/bridges/ghidra.py:5413"
         },
         {
           "line": 5726,
@@ -1575,7 +1575,7 @@
           "column": null,
           "variable": "set_color_mode",
           "message": "'set_color_mode' is never read",
-          "raw": "set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5604, src/intellicrack/ui/panels/hex_editor_widget.py:486"
+          "raw": "set_color_mode is never read, defined in src/intellicrack/bridges/hex_editor.py:5512, src/intellicrack/ui/panels/hex_editor_widget.py:486"
         },
         {
           "line": 165,
@@ -1888,39 +1888,39 @@
       "count": 5,
       "findings": [
         {
-          "line": 1597,
+          "line": 1602,
           "column": null,
           "variable": "ModelNotFoundError",
           "message": "'ModelNotFoundError' is never read",
-          "raw": "ModelNotFoundError is never read, defined in src/intellicrack/core/types.py:1597"
+          "raw": "ModelNotFoundError is never read, defined in src/intellicrack/core/types.py:1602"
         },
         {
-          "line": 1692,
+          "line": 1697,
           "column": null,
           "variable": "ToolNotFoundError",
           "message": "'ToolNotFoundError' is never read",
-          "raw": "ToolNotFoundError is never read, defined in src/intellicrack/core/types.py:1692"
+          "raw": "ToolNotFoundError is never read, defined in src/intellicrack/core/types.py:1697"
         },
         {
-          "line": 1735,
+          "line": 1740,
           "column": null,
           "variable": "InitializationError",
           "message": "'InitializationError' is never read",
-          "raw": "InitializationError is never read, defined in src/intellicrack/core/types.py:1735"
+          "raw": "InitializationError is never read, defined in src/intellicrack/core/types.py:1740"
         },
         {
-          "line": 1784,
+          "line": 1789,
           "column": null,
           "variable": "AttachError",
           "message": "'AttachError' is never read",
-          "raw": "AttachError is never read, defined in src/intellicrack/core/types.py:1784"
+          "raw": "AttachError is never read, defined in src/intellicrack/core/types.py:1789"
         },
         {
-          "line": 1919,
+          "line": 1924,
           "column": null,
           "variable": "ConfigurationError",
           "message": "'ConfigurationError' is never read",
-          "raw": "ConfigurationError is never read, defined in src/intellicrack/core/types.py:1919"
+          "raw": "ConfigurationError is never read, defined in src/intellicrack/core/types.py:1924"
         }
       ]
     },
@@ -1970,32 +1970,32 @@
       "count": 4,
       "findings": [
         {
-          "line": 387,
+          "line": 389,
           "column": null,
           "variable": "list_tags",
           "message": "'list_tags' is never read",
-          "raw": "list_tags is never read, defined in src/intellicrack/providers/ollama.py:387"
+          "raw": "list_tags is never read, defined in src/intellicrack/providers/ollama.py:389"
         },
         {
-          "line": 417,
+          "line": 419,
           "column": null,
           "variable": "list_running_models",
           "message": "'list_running_models' is never read",
-          "raw": "list_running_models is never read, defined in src/intellicrack/providers/ollama.py:417"
+          "raw": "list_running_models is never read, defined in src/intellicrack/providers/ollama.py:419"
         },
         {
-          "line": 448,
+          "line": 450,
           "column": null,
           "variable": "show_model",
           "message": "'show_model' is never read",
-          "raw": "show_model is never read, defined in src/intellicrack/providers/ollama.py:448"
+          "raw": "show_model is never read, defined in src/intellicrack/providers/ollama.py:450"
         },
         {
-          "line": 548,
+          "line": 550,
           "column": null,
           "variable": "embeddings",
           "message": "'embeddings' is never read",
-          "raw": "embeddings is never read, defined in src/intellicrack/providers/ollama.py:548"
+          "raw": "embeddings is never read, defined in src/intellicrack/providers/ollama.py:550"
         }
       ]
     },
@@ -2217,6 +2217,33 @@
       ]
     },
     {
+      "path": "src/intellicrack/main.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 767,
+          "column": null,
+          "variable": "init_model_discovery",
+          "message": "'init_model_discovery' is never read",
+          "raw": "init_model_discovery is never read, defined in src/intellicrack/main.py:767"
+        },
+        {
+          "line": 785,
+          "column": null,
+          "variable": "init_script_engine",
+          "message": "'init_script_engine' is never read",
+          "raw": "init_script_engine is never read, defined in src/intellicrack/main.py:785"
+        },
+        {
+          "line": 802,
+          "column": null,
+          "variable": "init_template_manager",
+          "message": "'init_template_manager' is never read",
+          "raw": "init_template_manager is never read, defined in src/intellicrack/main.py:802"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack/providers/base.py",
       "count": 3,
       "findings": [
@@ -2240,33 +2267,6 @@
           "variable": "_serialize_tool_result",
           "message": "'_serialize_tool_result' is never read",
           "raw": "_serialize_tool_result is never read, defined in src/intellicrack/providers/base.py:530"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/providers/huggingface.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": 69,
-          "column": null,
-          "variable": "_ChatCompletionCallable",
-          "message": "'_ChatCompletionCallable' is never read",
-          "raw": "_ChatCompletionCallable is never read, defined in src/intellicrack/providers/huggingface.py:69"
-        },
-        {
-          "line": 121,
-          "column": null,
-          "variable": "HTTP_INTERNAL_ERROR",
-          "message": "'HTTP_INTERNAL_ERROR' is never read",
-          "raw": "HTTP_INTERNAL_ERROR is never read, defined in src/intellicrack/providers/huggingface.py:121"
-        },
-        {
-          "line": 122,
-          "column": null,
-          "variable": "HTTP_SERVICE_UNAVAILABLE",
-          "message": "'HTTP_SERVICE_UNAVAILABLE' is never read",
-          "raw": "HTTP_SERVICE_UNAVAILABLE is never read, defined in src/intellicrack/providers/huggingface.py:122"
         }
       ]
     },
@@ -2362,38 +2362,38 @@
       "count": 2,
       "findings": [
         {
-          "line": 541,
+          "line": 526,
           "column": null,
           "variable": "log_binary_operation",
           "message": "'log_binary_operation' is never read",
-          "raw": "log_binary_operation is never read, defined in src/intellicrack/core/logging.py:541"
+          "raw": "log_binary_operation is never read, defined in src/intellicrack/core/logging.py:526"
         },
         {
-          "line": 608,
+          "line": 593,
           "column": null,
           "variable": "OperationTimer",
           "message": "'OperationTimer' is never read",
-          "raw": "OperationTimer is never read, defined in src/intellicrack/core/logging.py:608"
+          "raw": "OperationTimer is never read, defined in src/intellicrack/core/logging.py:593"
         }
       ]
     },
     {
-      "path": "src/intellicrack/credentials/oauth.py",
+      "path": "src/intellicrack/providers/huggingface.py",
       "count": 2,
       "findings": [
         {
-          "line": 173,
+          "line": 72,
           "column": null,
-          "variable": "needs_refresh",
-          "message": "'needs_refresh' is never read",
-          "raw": "needs_refresh is never read, defined in src/intellicrack/credentials/oauth.py:173"
+          "variable": "_ChatCompletionCallable",
+          "message": "'_ChatCompletionCallable' is never read",
+          "raw": "_ChatCompletionCallable is never read, defined in src/intellicrack/providers/huggingface.py:72"
         },
         {
-          "line": 599,
+          "line": 126,
           "column": null,
-          "variable": "_verify_pkce_pair",
-          "message": "'_verify_pkce_pair' is never read",
-          "raw": "_verify_pkce_pair is never read, defined in src/intellicrack/credentials/oauth.py:599"
+          "variable": "HTTP_INTERNAL_ERROR",
+          "message": "'HTTP_INTERNAL_ERROR' is never read",
+          "raw": "HTTP_INTERNAL_ERROR is never read, defined in src/intellicrack/providers/huggingface.py:126"
         }
       ]
     },
@@ -2442,18 +2442,18 @@
       "count": 2,
       "findings": [
         {
-          "line": 2026,
+          "line": 2056,
           "column": null,
           "variable": "on_open_x64dbg",
           "message": "'on_open_x64dbg' is never read",
-          "raw": "on_open_x64dbg is never read, defined in src/intellicrack/ui/app.py:2026"
+          "raw": "on_open_x64dbg is never read, defined in src/intellicrack/ui/app.py:2056"
         },
         {
-          "line": 2048,
+          "line": 2078,
           "column": null,
           "variable": "on_open_cutter",
           "message": "'on_open_cutter' is never read",
-          "raw": "on_open_cutter is never read, defined in src/intellicrack/ui/app.py:2048"
+          "raw": "on_open_cutter is never read, defined in src/intellicrack/ui/app.py:2078"
         }
       ]
     },
@@ -2526,7 +2526,7 @@
           "column": null,
           "variable": "_BYTE_MASK",
           "message": "'_BYTE_MASK' is never read",
-          "raw": "_BYTE_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:229, src/intellicrack/ui/panels/hex_editor/_transforms.py:47"
+          "raw": "_BYTE_MASK is never read, defined in src/intellicrack/bridges/hex_editor.py:228, src/intellicrack/ui/panels/hex_editor/_transforms.py:47"
         }
       ]
     },
@@ -2583,28 +2583,15 @@
       ]
     },
     {
-      "path": "src/intellicrack/core/template_manager.py",
+      "path": "src/intellicrack/credentials/oauth.py",
       "count": 1,
       "findings": [
         {
-          "line": 93,
+          "line": 651,
           "column": null,
-          "variable": "TemplateManager",
-          "message": "'TemplateManager' is never read",
-          "raw": "TemplateManager is never read, defined in src/intellicrack/core/template_manager.py:93"
-        }
-      ]
-    },
-    {
-      "path": "src/intellicrack/main.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 666,
-          "column": null,
-          "variable": "init_model_discovery",
-          "message": "'init_model_discovery' is never read",
-          "raw": "init_model_discovery is never read, defined in src/intellicrack/main.py:666"
+          "variable": "_verify_pkce_pair",
+          "message": "'_verify_pkce_pair' is never read",
+          "raw": "_verify_pkce_pair is never read, defined in src/intellicrack/credentials/oauth.py:651"
         }
       ]
     },
@@ -2613,11 +2600,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 67,
+          "line": 73,
           "column": null,
           "variable": "GrokMessage",
           "message": "'GrokMessage' is never read",
-          "raw": "GrokMessage is never read, defined in src/intellicrack/providers/grok.py:67"
+          "raw": "GrokMessage is never read, defined in src/intellicrack/providers/grok.py:73"
         }
       ]
     },

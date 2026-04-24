@@ -1,281 +1,9 @@
 {
   "tool": "ty",
-  "generated": "2026-04-24T05:10:10.528823+00:00",
-  "total_findings": 255,
+  "generated": "2026-04-24T21:08:46.783254+00:00",
+  "total_findings": 222,
   "total_files": 52,
   "files": [
-    {
-      "path": "src\\intellicrack\\main.py",
-      "count": 38,
-      "findings": [
-        {
-          "line": 223,
-          "column": 39,
-          "code": "unresolved-reference",
-          "message": "Name `ProcessManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:223:39: error[unresolved-reference] Name `ProcessManager` used when not defined"
-        },
-        {
-          "line": 230,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `ProcessManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:230:23: error[unresolved-reference] Name `ProcessManager` used when not defined"
-        },
-        {
-          "line": 243,
-          "column": 37,
-          "code": "unresolved-reference",
-          "message": "Name `SplashScreen` used when not defined",
-          "raw": "src\\intellicrack\\main.py:243:37: error[unresolved-reference] Name `SplashScreen` used when not defined"
-        },
-        {
-          "line": 250,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `SplashScreen` used when not defined",
-          "raw": "src\\intellicrack\\main.py:250:23: error[unresolved-reference] Name `SplashScreen` used when not defined"
-        },
-        {
-          "line": 253,
-          "column": 49,
-          "code": "unresolved-reference",
-          "message": "Name `ThemeManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:253:49: error[unresolved-reference] Name `ThemeManager` used when not defined"
-        },
-        {
-          "line": 253,
-          "column": 69,
-          "code": "unresolved-reference",
-          "message": "Name `IconManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:253:69: error[unresolved-reference] Name `IconManager` used when not defined"
-        },
-        {
-          "line": 261,
-          "column": 21,
-          "code": "unresolved-reference",
-          "message": "Name `ThemeManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:261:21: error[unresolved-reference] Name `ThemeManager` used when not defined"
-        },
-        {
-          "line": 261,
-          "column": 41,
-          "code": "unresolved-reference",
-          "message": "Name `IconManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:261:41: error[unresolved-reference] Name `IconManager` used when not defined"
-        },
-        {
-          "line": 266,
-          "column": 36,
-          "code": "unresolved-reference",
-          "message": "Name `Orchestrator` used when not defined",
-          "raw": "src\\intellicrack\\main.py:266:36: error[unresolved-reference] Name `Orchestrator` used when not defined"
-        },
-        {
-          "line": 273,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `Orchestrator` used when not defined",
-          "raw": "src\\intellicrack\\main.py:273:23: error[unresolved-reference] Name `Orchestrator` used when not defined"
-        },
-        {
-          "line": 276,
-          "column": 45,
-          "code": "unresolved-reference",
-          "message": "Name `SessionManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:276:45: error[unresolved-reference] Name `SessionManager` used when not defined"
-        },
-        {
-          "line": 276,
-          "column": 67,
-          "code": "unresolved-reference",
-          "message": "Name `SessionStore` used when not defined",
-          "raw": "src\\intellicrack\\main.py:276:67: error[unresolved-reference] Name `SessionStore` used when not defined"
-        },
-        {
-          "line": 284,
-          "column": 20,
-          "code": "unresolved-reference",
-          "message": "Name `SessionManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:284:20: error[unresolved-reference] Name `SessionManager` used when not defined"
-        },
-        {
-          "line": 285,
-          "column": 20,
-          "code": "unresolved-reference",
-          "message": "Name `SessionStore` used when not defined",
-          "raw": "src\\intellicrack\\main.py:285:20: error[unresolved-reference] Name `SessionStore` used when not defined"
-        },
-        {
-          "line": 289,
-          "column": 37,
-          "code": "unresolved-reference",
-          "message": "Name `ToolRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:289:37: error[unresolved-reference] Name `ToolRegistry` used when not defined"
-        },
-        {
-          "line": 296,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `ToolRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:296:23: error[unresolved-reference] Name `ToolRegistry` used when not defined"
-        },
-        {
-          "line": 299,
-          "column": 41,
-          "code": "unresolved-reference",
-          "message": "Name `CredentialLoader` used when not defined",
-          "raw": "src\\intellicrack\\main.py:299:41: error[unresolved-reference] Name `CredentialLoader` used when not defined"
-        },
-        {
-          "line": 306,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `CredentialLoader` used when not defined",
-          "raw": "src\\intellicrack\\main.py:306:23: error[unresolved-reference] Name `CredentialLoader` used when not defined"
-        },
-        {
-          "line": 309,
-          "column": 33,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:309:33: error[unresolved-reference] Name `ProviderRegistry` used when not defined"
-        },
-        {
-          "line": 316,
-          "column": 39,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:316:39: error[unresolved-reference] Name `ProviderRegistry` used when not defined"
-        },
-        {
-          "line": 320,
-          "column": 35,
-          "code": "unresolved-reference",
-          "message": "Name `MainWindow` used when not defined",
-          "raw": "src\\intellicrack\\main.py:320:35: error[unresolved-reference] Name `MainWindow` used when not defined"
-        },
-        {
-          "line": 327,
-          "column": 23,
-          "code": "unresolved-reference",
-          "message": "Name `MainWindow` used when not defined",
-          "raw": "src\\intellicrack\\main.py:327:23: error[unresolved-reference] Name `MainWindow` used when not defined"
-        },
-        {
-          "line": 395,
-          "column": 6,
-          "code": "unresolved-reference",
-          "message": "Name `SplashScreen` used when not defined",
-          "raw": "src\\intellicrack\\main.py:395:6: error[unresolved-reference] Name `SplashScreen` used when not defined"
-        },
-        {
-          "line": 439,
-          "column": 15,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:439:15: error[unresolved-reference] Name `ProviderRegistry` used when not defined"
-        },
-        {
-          "line": 440,
-          "column": 18,
-          "code": "unresolved-reference",
-          "message": "Name `CredentialLoader` used when not defined",
-          "raw": "src\\intellicrack\\main.py:440:18: error[unresolved-reference] Name `CredentialLoader` used when not defined"
-        },
-        {
-          "line": 462,
-          "column": 27,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderName` used when not defined",
-          "raw": "src\\intellicrack\\main.py:462:27: error[unresolved-reference] Name `ProviderName` used when not defined"
-        },
-        {
-          "line": 462,
-          "column": 46,
-          "code": "unresolved-reference",
-          "message": "Name `LLMProviderBase` used when not defined",
-          "raw": "src\\intellicrack\\main.py:462:46: error[unresolved-reference] Name `LLMProviderBase` used when not defined"
-        },
-        {
-          "line": 463,
-          "column": 21,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderName` used when not defined",
-          "raw": "src\\intellicrack\\main.py:463:21: error[unresolved-reference] Name `ProviderName` used when not defined"
-        },
-        {
-          "line": 463,
-          "column": 40,
-          "code": "unresolved-reference",
-          "message": "Name `LLMProviderBase` used when not defined",
-          "raw": "src\\intellicrack\\main.py:463:40: error[unresolved-reference] Name `LLMProviderBase` used when not defined"
-        },
-        {
-          "line": 476,
-          "column": 40,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderName` used when not defined",
-          "raw": "src\\intellicrack\\main.py:476:40: error[unresolved-reference] Name `ProviderName` used when not defined"
-        },
-        {
-          "line": 476,
-          "column": 75,
-          "code": "unresolved-reference",
-          "message": "Name `LLMProviderBase` used when not defined",
-          "raw": "src\\intellicrack\\main.py:476:75: error[unresolved-reference] Name `LLMProviderBase` used when not defined"
-        },
-        {
-          "line": 526,
-          "column": 74,
-          "code": "unresolved-reference",
-          "message": "Name `ProcessManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:526:74: error[unresolved-reference] Name `ProcessManager` used when not defined"
-        },
-        {
-          "line": 549,
-          "column": 82,
-          "code": "unresolved-reference",
-          "message": "Name `ProcessManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:549:82: error[unresolved-reference] Name `ProcessManager` used when not defined"
-        },
-        {
-          "line": 641,
-          "column": 24,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:641:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined"
-        },
-        {
-          "line": 667,
-          "column": 24,
-          "code": "unresolved-reference",
-          "message": "Name `ProviderRegistry` used when not defined",
-          "raw": "src\\intellicrack\\main.py:667:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined"
-        },
-        {
-          "line": 706,
-          "column": 13,
-          "code": "unresolved-reference",
-          "message": "Name `SplashScreen` used when not defined",
-          "raw": "src\\intellicrack\\main.py:706:13: error[unresolved-reference] Name `SplashScreen` used when not defined"
-        },
-        {
-          "line": 707,
-          "column": 22,
-          "code": "unresolved-reference",
-          "message": "Name `ProcessManager` used when not defined",
-          "raw": "src\\intellicrack\\main.py:707:22: error[unresolved-reference] Name `ProcessManager` used when not defined"
-        },
-        {
-          "line": 771,
-          "column": 38,
-          "code": "unresolved-reference",
-          "message": "Name `ModelDiscovery` used when not defined",
-          "raw": "src\\intellicrack\\main.py:771:38: error[unresolved-reference] Name `ModelDiscovery` used when not defined"
-        }
-      ]
-    },
     {
       "path": "src\\intellicrack\\bridges\\process.py",
       "count": 28,
@@ -507,8 +235,8 @@
           "line": 80,
           "column": 39,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`",
-          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:80:39: error[invalid-argument-type] Argument to bound method `set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`"
+          "message": "Argument to bound method `SandboxPanel.set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`",
+          "raw": "tests\\test_ui\\test_sandbox_panel_fixes.py:80:39: error[invalid-argument-type] Argument to bound method `SandboxPanel.set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`"
         },
         {
           "line": 81,
@@ -750,15 +478,15 @@
           "line": 109,
           "column": 29,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`",
-          "raw": "tests\\test_ui\\test_tools_logic.py:109:29: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`"
+          "message": "Argument to `MainWindow.__init__` is incorrect: Expected `Config`, found `object`",
+          "raw": "tests\\test_ui\\test_tools_logic.py:109:29: error[invalid-argument-type] Argument to `MainWindow.__init__` is incorrect: Expected `Config`, found `object`"
         },
         {
           "line": 109,
           "column": 42,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`",
-          "raw": "tests\\test_ui\\test_tools_logic.py:109:42: error[invalid-argument-type] Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`"
+          "message": "Argument to `MainWindow.__init__` is incorrect: Expected `Orchestrator`, found `object`",
+          "raw": "tests\\test_ui\\test_tools_logic.py:109:42: error[invalid-argument-type] Argument to `MainWindow.__init__` is incorrect: Expected `Orchestrator`, found `object`"
         },
         {
           "line": 217,
@@ -868,8 +596,8 @@
           "line": 849,
           "column": 30,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:849:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+          "message": "Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:849:30: error[invalid-argument-type] Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
         },
         {
           "line": 865,
@@ -910,8 +638,8 @@
           "line": 1165,
           "column": 47,
           "code": "invalid-assignment",
-          "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`",
-          "raw": "src\\intellicrack\\providers\\local_transformers.py:1165:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+          "message": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding[Any]` is not assignable to `str | list[int]`",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:1165:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding[Any]` is not assignable to `str | list[int]`"
         }
       ]
     },
@@ -958,8 +686,8 @@
           "line": 533,
           "column": 30,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:533:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+          "message": "Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:533:30: error[invalid-argument-type] Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
         },
         {
           "line": 543,
@@ -1124,8 +852,8 @@
           "line": 555,
           "column": 52,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `append` is incorrect: Expected `str`, found `object`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:555:52: error[invalid-argument-type] Argument to bound method `append` is incorrect: Expected `str`, found `object`"
+          "message": "Argument to bound method `list.append` is incorrect: Expected `str`, found `object`",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:555:52: error[invalid-argument-type] Argument to bound method `list.append` is incorrect: Expected `str`, found `object`"
         },
         {
           "line": 558,
@@ -1138,8 +866,8 @@
           "line": 663,
           "column": 17,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`",
-          "raw": "src\\intellicrack\\providers\\anthropic.py:663:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
+          "message": "Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`",
+          "raw": "src\\intellicrack\\providers\\anthropic.py:663:17: error[invalid-argument-type] Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
         }
       ]
     },
@@ -1220,57 +948,57 @@
           "line": 605,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:605:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:605:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 607,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:607:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:607:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 609,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:609:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:609:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 611,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:611:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:611:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 613,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:613:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:613:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 615,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:615:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:615:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 617,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:617:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:617:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         },
         {
           "line": 619,
           "column": 17,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\bridges\\schemas.py:619:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\bridges\\schemas.py:619:17: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         }
       ]
     },
@@ -1282,8 +1010,8 @@
           "line": 248,
           "column": 17,
           "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:248:17: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+          "message": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
+          "raw": "src\\intellicrack\\sandbox\\windows.py:248:17: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
         },
         {
           "line": 273,
@@ -1296,8 +1024,8 @@
           "line": 283,
           "column": 17,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\sandbox\\windows.py:283:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "message": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\sandbox\\windows.py:283:17: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         },
         {
           "line": 300,
@@ -1426,6 +1154,47 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\main.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": 256,
+          "column": 12,
+          "code": "",
+          "message": "warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`",
+          "raw": "src\\intellicrack\\main.py:256:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`"
+        },
+        {
+          "line": 654,
+          "column": 22,
+          "code": "",
+          "message": "warning[redundant-cast] Value is already of type `ScriptManager`",
+          "raw": "src\\intellicrack\\main.py:654:22: warning[redundant-cast] Value is already of type `ScriptManager`"
+        },
+        {
+          "line": 655,
+          "column": 24,
+          "code": "",
+          "message": "warning[redundant-cast] Value is already of type `ScriptValidator`",
+          "raw": "src\\intellicrack\\main.py:655:24: warning[redundant-cast] Value is already of type `ScriptValidator`"
+        },
+        {
+          "line": 656,
+          "column": 24,
+          "code": "",
+          "message": "warning[redundant-cast] Value is already of type `ScriptGenerator`",
+          "raw": "src\\intellicrack\\main.py:656:24: warning[redundant-cast] Value is already of type `ScriptGenerator`"
+        },
+        {
+          "line": 696,
+          "column": 18,
+          "code": "",
+          "message": "warning[redundant-cast] Value is already of type `Path`",
+          "raw": "src\\intellicrack\\main.py:696:18: warning[redundant-cast] Value is already of type `Path`"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py",
       "count": 4,
       "findings": [
@@ -1454,8 +1223,8 @@
           "line": 1873,
           "column": 28,
           "code": "invalid-argument-type",
-          "message": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`",
-          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:1873:28: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+          "message": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`",
+          "raw": "src\\intellicrack\\ui\\panels\\ghidra_panel.py:1873:28: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
         }
       ]
     },
@@ -1501,8 +1270,8 @@
           "line": 274,
           "column": 35,
           "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
-          "raw": "src\\intellicrack\\bridges\\installer.py:274:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+          "message": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
+          "raw": "src\\intellicrack\\bridges\\installer.py:274:35: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
         },
         {
           "line": 659,
@@ -1559,18 +1328,18 @@
           "raw": "src\\intellicrack\\bridges\\x64dbg.py:92:12: error[unresolved-import] Cannot resolve imported module `yara`"
         },
         {
-          "line": 1786,
+          "line": 1922,
           "column": 9,
           "code": "invalid-assignment",
           "message": "Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1786:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1922:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`"
         },
         {
-          "line": 1796,
+          "line": 1932,
           "column": 13,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
-          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1796:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+          "message": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:1932:13: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
         }
       ]
     },
@@ -1596,8 +1365,8 @@
           "line": 1217,
           "column": 19,
           "code": "invalid-argument-type",
-          "message": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`",
-          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1217:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+          "message": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`",
+          "raw": "src\\intellicrack\\ui\\panels\\cutter_panel.py:1217:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
         }
       ]
     },
@@ -1697,8 +1466,8 @@
           "line": 593,
           "column": 56,
           "code": "invalid-argument-type",
-          "message": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
-          "raw": "src\\intellicrack\\core\\process_manager.py:593:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+          "message": "Argument to function `ProcessManager._terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`",
+          "raw": "src\\intellicrack\\core\\process_manager.py:593:56: error[invalid-argument-type] Argument to function `ProcessManager._terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
         }
       ]
     },
@@ -1730,8 +1499,8 @@
           "line": 1229,
           "column": 35,
           "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:1229:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+          "message": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:1229:35: error[invalid-argument-type] Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
         },
         {
           "line": 3183,
@@ -1770,15 +1539,15 @@
           "line": 77,
           "column": 36,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `get` is incorrect: Expected `OAuthProvider`, found `object`",
-          "raw": "tests\\test_providers\\test_provider_bugfixes.py:77:36: error[invalid-argument-type] Argument to bound method `get` is incorrect: Expected `OAuthProvider`, found `object`"
+          "message": "Argument to bound method `dict.get` is incorrect: Expected `OAuthProvider`, found `object`",
+          "raw": "tests\\test_providers\\test_provider_bugfixes.py:77:36: error[invalid-argument-type] Argument to bound method `dict.get` is incorrect: Expected `OAuthProvider`, found `object`"
         },
         {
           "line": 192,
           "column": 23,
           "code": "invalid-argument-type",
-          "message": "Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`",
-          "raw": "tests\\test_providers\\test_provider_bugfixes.py:192:23: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`"
+          "message": "Argument to constructor `float.__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`",
+          "raw": "tests\\test_providers\\test_provider_bugfixes.py:192:23: error[invalid-argument-type] Argument to constructor `float.__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`"
         }
       ]
     },
@@ -1807,11 +1576,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 3082,
+          "line": 3083,
           "column": 62,
           "code": "call-non-callable",
           "message": "Object of type `None` is not callable",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:3082:62: error[call-non-callable] Object of type `None` is not callable"
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:3083:62: error[call-non-callable] Object of type `None` is not callable"
         }
       ]
     },
@@ -1833,11 +1602,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 470,
+          "line": 455,
           "column": 25,
           "code": "",
           "message": "warning[redundant-cast] Value is already of type `tuple[object, ...]`",
-          "raw": "src\\intellicrack\\core\\logging.py:470:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`"
+          "raw": "src\\intellicrack\\core\\logging.py:455:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`"
         }
       ]
     },
@@ -1862,8 +1631,8 @@
           "line": 621,
           "column": 21,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`",
-          "raw": "src\\intellicrack\\providers\\base.py:621:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
+          "message": "Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`",
+          "raw": "src\\intellicrack\\providers\\base.py:621:21: error[invalid-argument-type] Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
         }
       ]
     },
@@ -1888,8 +1657,8 @@
           "line": 1209,
           "column": 22,
           "code": "no-matching-overload",
-          "message": "No overload of bound method `__init__` matches arguments",
-          "raw": "src\\intellicrack\\sandbox\\analysis.py:1209:22: error[no-matching-overload] No overload of bound method `__init__` matches arguments"
+          "message": "No overload of `dict.__init__` matches arguments",
+          "raw": "src\\intellicrack\\sandbox\\analysis.py:1209:22: error[no-matching-overload] No overload of `dict.__init__` matches arguments"
         }
       ]
     },
@@ -1940,8 +1709,8 @@
           "line": 154,
           "column": 56,
           "code": "invalid-argument-type",
-          "message": "Argument to function `compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:154:56: error[invalid-argument-type] Argument to function `compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`"
+          "message": "Argument to function `YaraScanner.compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_yara.py:154:56: error[invalid-argument-type] Argument to function `YaraScanner.compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`"
         }
       ]
     },
@@ -1966,8 +1735,8 @@
           "line": 2024,
           "column": 19,
           "code": "invalid-argument-type",
-          "message": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`",
-          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:2024:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+          "message": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py:2024:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
         }
       ]
     },
@@ -2018,8 +1787,8 @@
           "line": 1740,
           "column": 19,
           "code": "invalid-argument-type",
-          "message": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`",
-          "raw": "src\\intellicrack\\ui\\tools.py:1740:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+          "message": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`",
+          "raw": "src\\intellicrack\\ui\\tools.py:1740:19: error[invalid-argument-type] Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
         }
       ]
     },
@@ -2057,8 +1826,8 @@
           "line": 628,
           "column": 34,
           "code": "invalid-argument-type",
-          "message": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`",
-          "raw": "tests\\test_core\\test_process_manager.py:628:34: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`"
+          "message": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`",
+          "raw": "tests\\test_core\\test_process_manager.py:628:34: error[invalid-argument-type] Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`"
         }
       ]
     },

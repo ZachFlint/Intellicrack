@@ -117,12 +117,6 @@
               }
             },
             {
-              "id": "WPS459",
-              "shortDescription": {
-                "text": "Found comparison with float or complex number"
-              }
-            },
-            {
               "id": "WPS460",
               "shortDescription": {
                 "text": "Found single element destructuring"
@@ -207,6 +201,12 @@
               }
             },
             {
+              "id": "WPS459",
+              "shortDescription": {
+                "text": "Found comparison with float or complex number"
+              }
+            },
+            {
               "id": "WPS473",
               "shortDescription": {
                 "text": "Found too many empty lines in `def`: 3 > 2"
@@ -216,12 +216,6 @@
               "id": "WPS117",
               "shortDescription": {
                 "text": "Found name reserved for first argument: cls"
-              }
-            },
-            {
-              "id": "WPS604",
-              "shortDescription": {
-                "text": "Found incorrect node inside `class` body"
               }
             },
             {
@@ -1385,7 +1379,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 19,
                   "startColumn": 1
                 }
               }
@@ -1406,7 +1400,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 114,
+                  "startLine": 113,
                   "startColumn": 39
                 }
               }
@@ -1427,8 +1421,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 135,
+                  "startLine": 134,
                   "startColumn": 46
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS527",
+          "level": "warning",
+          "message": {
+            "text": "Found not a tuple used as an argument"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 43
                 }
               }
             }
@@ -1470,27 +1485,6 @@
                 },
                 "region": {
                   "startLine": 145,
-                  "startColumn": 43
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS527",
-          "level": "warning",
-          "message": {
-            "text": "Found not a tuple used as an argument"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 146,
                   "startColumn": 41
                 }
               }
@@ -1511,7 +1505,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 147,
+                  "startLine": 146,
                   "startColumn": 45
                 }
               }
@@ -1532,7 +1526,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 148,
+                  "startLine": 147,
                   "startColumn": 43
                 }
               }
@@ -1553,7 +1547,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 158,
+                  "startLine": 157,
                   "startColumn": 42
                 }
               }
@@ -1574,7 +1568,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1200,
+                  "startLine": 1208,
                   "startColumn": 5
                 }
               }
@@ -1595,7 +1589,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1200,
+                  "startLine": 1208,
                   "startColumn": 5
                 }
               }
@@ -1616,7 +1610,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1926,
+                  "startLine": 1942,
                   "startColumn": 5
                 }
               }
@@ -1637,7 +1631,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2148,
+                  "startLine": 2164,
                   "startColumn": 5
                 }
               }
@@ -1658,7 +1652,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2188,
+                  "startLine": 2204,
                   "startColumn": 34
                 }
               }
@@ -1679,7 +1673,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2384,
+                  "startLine": 2400,
                   "startColumn": 5
                 }
               }
@@ -1700,7 +1694,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2678,
+                  "startLine": 2644,
                   "startColumn": 5
                 }
               }
@@ -1721,7 +1715,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3002,
+                  "startLine": 2968,
                   "startColumn": 5
                 }
               }
@@ -1742,7 +1736,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3169,
+                  "startLine": 3153,
                   "startColumn": 5
                 }
               }
@@ -1763,7 +1757,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3188,
+                  "startLine": 3172,
                   "startColumn": 13
                 }
               }
@@ -1784,7 +1778,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3189,
+                  "startLine": 3173,
                   "startColumn": 28
                 }
               }
@@ -1805,7 +1799,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3191,
+                  "startLine": 3175,
                   "startColumn": 28
                 }
               }
@@ -1826,7 +1820,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3193,
+                  "startLine": 3177,
                   "startColumn": 28
                 }
               }
@@ -1847,7 +1841,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3195,
+                  "startLine": 3179,
                   "startColumn": 28
                 }
               }
@@ -1868,7 +1862,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3197,
+                  "startLine": 3181,
                   "startColumn": 28
                 }
               }
@@ -1889,7 +1883,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3199,
+                  "startLine": 3183,
                   "startColumn": 28
                 }
               }
@@ -1910,7 +1904,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3201,
+                  "startLine": 3185,
                   "startColumn": 28
                 }
               }
@@ -1931,7 +1925,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3203,
+                  "startLine": 3187,
                   "startColumn": 28
                 }
               }
@@ -1952,7 +1946,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3205,
+                  "startLine": 3189,
                   "startColumn": 28
                 }
               }
@@ -1973,7 +1967,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3207,
+                  "startLine": 3191,
                   "startColumn": 28
                 }
               }
@@ -1994,7 +1988,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3209,
+                  "startLine": 3193,
                   "startColumn": 28
                 }
               }
@@ -2015,7 +2009,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3211,
+                  "startLine": 3195,
                   "startColumn": 28
                 }
               }
@@ -2036,7 +2030,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3213,
+                  "startLine": 3197,
                   "startColumn": 28
                 }
               }
@@ -2057,7 +2051,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3256,
+                  "startLine": 3240,
                   "startColumn": 5
                 }
               }
@@ -2078,7 +2072,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3256,
+                  "startLine": 3240,
                   "startColumn": 5
                 }
               }
@@ -2099,7 +2093,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3937,
+                  "startLine": 3921,
                   "startColumn": 5
                 }
               }
@@ -2120,7 +2114,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3937,
+                  "startLine": 3921,
                   "startColumn": 5
                 }
               }
@@ -2141,7 +2135,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4471,
+                  "startLine": 4455,
                   "startColumn": 34
                 }
               }
@@ -2162,7 +2156,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4847,
+                  "startLine": 4831,
                   "startColumn": 5
                 }
               }
@@ -2183,7 +2177,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4847,
+                  "startLine": 4831,
                   "startColumn": 5
                 }
               }
@@ -2204,7 +2198,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5063,
+                  "startLine": 5047,
                   "startColumn": 5
                 }
               }
@@ -2225,7 +2219,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5183,
+                  "startLine": 5167,
                   "startColumn": 5
                 }
               }
@@ -2246,7 +2240,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5737,
+                  "startLine": 5721,
                   "startColumn": 5
                 }
               }
@@ -2267,7 +2261,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5737,
+                  "startLine": 5721,
                   "startColumn": 5
                 }
               }
@@ -2771,7 +2765,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 255,
+                  "startLine": 254,
                   "startColumn": 21
                 }
               }
@@ -2792,7 +2786,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 270,
+                  "startLine": 269,
                   "startColumn": 43
                 }
               }
@@ -2813,7 +2807,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 289,
+                  "startLine": 288,
                   "startColumn": 43
                 }
               }
@@ -2834,7 +2828,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2287,
+                  "startLine": 2288,
                   "startColumn": 5
                 }
               }
@@ -2855,7 +2849,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2287,
+                  "startLine": 2288,
                   "startColumn": 5
                 }
               }
@@ -2876,7 +2870,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2355,
+                  "startLine": 2356,
                   "startColumn": 36
                 }
               }
@@ -2897,7 +2891,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2358,
+                  "startLine": 2359,
                   "startColumn": 36
                 }
               }
@@ -2918,7 +2912,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2361,
+                  "startLine": 2362,
                   "startColumn": 31
                 }
               }
@@ -2939,7 +2933,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2363,
+                  "startLine": 2364,
                   "startColumn": 36
                 }
               }
@@ -2960,7 +2954,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3199,
+                  "startLine": 3200,
                   "startColumn": 5
                 }
               }
@@ -2981,7 +2975,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3199,
+                  "startLine": 3200,
                   "startColumn": 5
                 }
               }
@@ -3002,7 +2996,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3342,
+                  "startLine": 3351,
                   "startColumn": 5
                 }
               }
@@ -3023,28 +3017,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3459,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'HexEditorBridge.search_numeric' is too complex (12)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3520,
+                  "startLine": 3487,
                   "startColumn": 5
                 }
               }
@@ -3065,29 +3038,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3520,
+                  "startLine": 3548,
                   "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS459",
-          "level": "warning",
-          "message": {
-            "text": "Found comparison with float or complex number"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3562,
-                  "startColumn": 38
                 }
               }
             }
@@ -3107,7 +3059,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3600,
+                  "startLine": 3603,
                   "startColumn": 5
                 }
               }
@@ -3128,50 +3080,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3656,
+                  "startLine": 3659,
                   "startColumn": 21
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS211",
-          "level": "warning",
-          "message": {
-            "text": "Found too many arguments: 6 > 5"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3725,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS509",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrectly nested ternary"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3763,
-                  "startColumn": 32
                 }
               }
             }
@@ -3191,7 +3101,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4104,
+                  "startLine": 4012,
                   "startColumn": 5
                 }
               }
@@ -3212,7 +3122,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4191,
+                  "startLine": 4099,
                   "startColumn": 5
                 }
               }
@@ -3233,7 +3143,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4216,
+                  "startLine": 4124,
                   "startColumn": 13
                 }
               }
@@ -3254,7 +3164,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4700,
+                  "startLine": 4608,
                   "startColumn": 5
                 }
               }
@@ -3275,7 +3185,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4757,
+                  "startLine": 4665,
                   "startColumn": 19
                 }
               }
@@ -3296,7 +3206,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4758,
+                  "startLine": 4666,
                   "startColumn": 34
                 }
               }
@@ -3317,7 +3227,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4758,
+                  "startLine": 4666,
                   "startColumn": 45
                 }
               }
@@ -3338,7 +3248,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4761,
+                  "startLine": 4669,
                   "startColumn": 41
                 }
               }
@@ -3359,7 +3269,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4763,
+                  "startLine": 4671,
                   "startColumn": 35
                 }
               }
@@ -3380,7 +3290,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4765,
+                  "startLine": 4673,
                   "startColumn": 54
                 }
               }
@@ -3401,7 +3311,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4768,
+                  "startLine": 4676,
                   "startColumn": 39
                 }
               }
@@ -3422,7 +3332,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5280,
+                  "startLine": 5188,
                   "startColumn": 9
                 }
               }
@@ -3443,7 +3353,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5284,
+                  "startLine": 5192,
                   "startColumn": 5
                 }
               }
@@ -3464,7 +3374,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5356,
+                  "startLine": 5264,
                   "startColumn": 5
                 }
               }
@@ -3485,7 +3395,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5375,
+                  "startLine": 5283,
                   "startColumn": 9
                 }
               }
@@ -3506,7 +3416,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5490,
+                  "startLine": 5398,
                   "startColumn": 59
                 }
               }
@@ -3527,7 +3437,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5515,
+                  "startLine": 5423,
                   "startColumn": 9
                 }
               }
@@ -3548,7 +3458,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5515,
+                  "startLine": 5423,
                   "startColumn": 9
                 }
               }
@@ -3569,7 +3479,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5516,
+                  "startLine": 5424,
                   "startColumn": 24
                 }
               }
@@ -3590,7 +3500,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5517,
+                  "startLine": 5425,
                   "startColumn": 13
                 }
               }
@@ -3611,7 +3521,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5520,
+                  "startLine": 5428,
                   "startColumn": 9
                 }
               }
@@ -3632,7 +3542,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5656,
+                  "startLine": 5564,
                   "startColumn": 5
                 }
               }
@@ -3653,7 +3563,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5785,
+                  "startLine": 5693,
                   "startColumn": 5
                 }
               }
@@ -3674,7 +3584,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5849,
+                  "startLine": 5757,
                   "startColumn": 5
                 }
               }
@@ -3695,7 +3605,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6216,
+                  "startLine": 6124,
                   "startColumn": 5
                 }
               }
@@ -3716,7 +3626,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6216,
+                  "startLine": 6124,
                   "startColumn": 5
                 }
               }
@@ -3737,7 +3647,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6322,
+                  "startLine": 6230,
                   "startColumn": 5
                 }
               }
@@ -3758,7 +3668,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6391,
+                  "startLine": 6299,
                   "startColumn": 1
                 }
               }
@@ -3779,7 +3689,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6481,
+                  "startLine": 6389,
                   "startColumn": 1
                 }
               }
@@ -4535,7 +4445,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 304,
+                  "startLine": 440,
                   "startColumn": 5
                 }
               }
@@ -4556,7 +4466,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 305,
+                  "startLine": 441,
                   "startColumn": 9
                 }
               }
@@ -4577,7 +4487,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 426,
+                  "startLine": 562,
                   "startColumn": 9
                 }
               }
@@ -4598,7 +4508,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2077,
+                  "startLine": 2211,
                   "startColumn": 5
                 }
               }
@@ -4619,7 +4529,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2286,
+                  "startLine": 2420,
                   "startColumn": 5
                 }
               }
@@ -4640,7 +4550,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2778,
+                  "startLine": 2905,
                   "startColumn": 5
                 }
               }
@@ -4661,7 +4571,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2798,
+                  "startLine": 2925,
                   "startColumn": 9
                 }
               }
@@ -4682,7 +4592,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2805,
+                  "startLine": 2932,
                   "startColumn": 13
                 }
               }
@@ -4703,7 +4613,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3002,
+                  "startLine": 3129,
                   "startColumn": 5
                 }
               }
@@ -4724,7 +4634,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3065,
+                  "startLine": 3192,
                   "startColumn": 46
                 }
               }
@@ -4745,7 +4655,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3281,
+                  "startLine": 3415,
                   "startColumn": 9
                 }
               }
@@ -4766,7 +4676,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3289,
+                  "startLine": 3423,
                   "startColumn": 13
                 }
               }
@@ -4787,7 +4697,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3359,
+                  "startLine": 3491,
                   "startColumn": 9
                 }
               }
@@ -4808,7 +4718,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3367,
+                  "startLine": 3499,
                   "startColumn": 13
                 }
               }
@@ -4829,7 +4739,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3466,
+                  "startLine": 3636,
                   "startColumn": 5
                 }
               }
@@ -4850,7 +4760,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3896,
+                  "startLine": 4066,
                   "startColumn": 35
                 }
               }
@@ -4871,8 +4781,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3921,
+                  "startLine": 4091,
                   "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS234",
+          "level": "warning",
+          "message": {
+            "text": "Found overly complex annotation: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4134,
+                  "startColumn": 5
                 }
               }
             }
@@ -4892,8 +4823,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3937,
-                  "startColumn": 13
+                  "startLine": 4154,
+                  "startColumn": 9
                 }
               }
             }
@@ -4913,7 +4844,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4710,
+                  "startLine": 4949,
                   "startColumn": 31
                 }
               }
@@ -4934,7 +4865,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4726,
+                  "startLine": 4965,
                   "startColumn": 5
                 }
               }
@@ -4955,7 +4886,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4726,
+                  "startLine": 4965,
                   "startColumn": 5
                 }
               }
@@ -4976,7 +4907,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5065,
+                  "startLine": 5304,
                   "startColumn": 5
                 }
               }
@@ -4997,7 +4928,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5121,
+                  "startLine": 5360,
                   "startColumn": 35
                 }
               }
@@ -5018,7 +4949,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5327,
+                  "startLine": 5566,
                   "startColumn": 21
                 }
               }
@@ -5039,7 +4970,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5336,
+                  "startLine": 5575,
                   "startColumn": 25
                 }
               }
@@ -5060,7 +4991,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5373,
+                  "startLine": 5612,
                   "startColumn": 13
                 }
               }
@@ -5081,7 +5012,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5382,
+                  "startLine": 5621,
                   "startColumn": 17
                 }
               }
@@ -5102,7 +5033,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5384,
+                  "startLine": 5623,
                   "startColumn": 13
                 }
               }
@@ -5123,7 +5054,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5392,
+                  "startLine": 5631,
                   "startColumn": 17
                 }
               }
@@ -5144,7 +5075,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5392,
+                  "startLine": 5631,
                   "startColumn": 17
                 }
               }
@@ -5165,7 +5096,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5434,
+                  "startLine": 5673,
                   "startColumn": 62
                 }
               }
@@ -5186,7 +5117,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5471,
+                  "startLine": 5710,
                   "startColumn": 68
                 }
               }
@@ -5207,7 +5138,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5507,
+                  "startLine": 5746,
                   "startColumn": 9
                 }
               }
@@ -5228,7 +5159,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5508,
+                  "startLine": 5747,
                   "startColumn": 13
                 }
               }
@@ -7559,7 +7490,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1129,
+                  "startLine": 1176,
                   "startColumn": 5
                 }
               }
@@ -7580,7 +7511,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1204,
+                  "startLine": 1251,
                   "startColumn": 5
                 }
               }
@@ -7601,7 +7532,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1272,
+                  "startLine": 1319,
                   "startColumn": 5
                 }
               }
@@ -7622,7 +7553,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1338,
+                  "startLine": 1385,
                   "startColumn": 13
                 }
               }
@@ -7643,7 +7574,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1508,
+                  "startLine": 1535,
                   "startColumn": 5
                 }
               }
@@ -7664,7 +7595,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1508,
+                  "startLine": 1535,
                   "startColumn": 5
                 }
               }
@@ -7748,7 +7679,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 461,
+                  "startLine": 446,
                   "startColumn": 9
                 }
               }
@@ -7769,7 +7700,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 652,
+                  "startLine": 637,
                   "startColumn": 12
                 }
               }
@@ -8399,7 +8330,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1519,
+                  "startLine": 1524,
                   "startColumn": 5
                 }
               }
@@ -8420,7 +8351,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1569,
+                  "startLine": 1574,
                   "startColumn": 5
                 }
               }
@@ -8441,7 +8372,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1618,
+                  "startLine": 1623,
                   "startColumn": 5
                 }
               }
@@ -8462,7 +8393,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1667,
+                  "startLine": 1672,
                   "startColumn": 5
                 }
               }
@@ -8483,7 +8414,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1711,
+                  "startLine": 1716,
                   "startColumn": 5
                 }
               }
@@ -8504,7 +8435,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1756,
+                  "startLine": 1761,
                   "startColumn": 5
                 }
               }
@@ -8525,7 +8456,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1808,
+                  "startLine": 1813,
                   "startColumn": 5
                 }
               }
@@ -8546,7 +8477,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1896,
+                  "startLine": 1901,
                   "startColumn": 5
                 }
               }
@@ -8567,7 +8498,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1940,
+                  "startLine": 1945,
                   "startColumn": 5
                 }
               }
@@ -8798,7 +8729,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 777,
+                  "startLine": 829,
                   "startColumn": 9
                 }
               }
@@ -8819,7 +8750,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 807,
+                  "startLine": 859,
                   "startColumn": 9
                 }
               }
@@ -8840,7 +8771,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 854,
+                  "startLine": 906,
                   "startColumn": 5
                 }
               }
@@ -8861,7 +8792,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 891,
+                  "startLine": 943,
                   "startColumn": 9
                 }
               }
@@ -8882,7 +8813,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 971,
+                  "startLine": 1027,
                   "startColumn": 9
                 }
               }
@@ -8903,7 +8834,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1010,
+                  "startLine": 1066,
                   "startColumn": 9
                 }
               }
@@ -8924,7 +8855,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1033,
+                  "startLine": 1099,
                   "startColumn": 13
                 }
               }
@@ -8945,7 +8876,196 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1046,
+                  "startLine": 1117,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS527",
+          "level": "warning",
+          "message": {
+            "text": "Found not a tuple used as an argument"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 129,
+                  "startColumn": 57
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS212",
+          "level": "warning",
+          "message": {
+            "text": "Found too many return statements: 6 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 134,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 5 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 157,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 286,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 5 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 319,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 370,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 397,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 506,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/store.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 511,
                   "startColumn": 13
                 }
               }
@@ -8966,154 +9086,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 154,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 261,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 5 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 294,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 345,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 372,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 481,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 486,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 5 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/store.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 572,
+                  "startLine": 597,
                   "startColumn": 17
                 }
               }
@@ -9134,7 +9107,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 578,
+                  "startLine": 603,
                   "startColumn": 5
                 }
               }
@@ -9155,281 +9128,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 591,
+                  "startLine": 616,
                   "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 51,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 52,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 53,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 54,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 55,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 56,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 57,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 58,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 59,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 60,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 61,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 62,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS604",
-          "level": "warning",
-          "message": {
-            "text": "Found incorrect node inside `class` body"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 63,
-                  "startColumn": 5
                 }
               }
             }
@@ -9449,7 +9149,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 155,
+                  "startLine": 161,
                   "startColumn": 34
                 }
               }
@@ -9470,7 +9170,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 462,
+                  "startLine": 468,
                   "startColumn": 5
                 }
               }
@@ -9491,8 +9191,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 497,
+                  "startLine": 503,
                   "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS211",
+          "level": "warning",
+          "message": {
+            "text": "Found too many arguments: 7 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 837,
+                  "startColumn": 1
                 }
               }
             }
@@ -9502,7 +9223,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'_run_application' is too complex (13)"
+            "text": "'_shutdown_application' is too complex (13)"
           },
           "locations": [
             {
@@ -9512,7 +9233,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 703,
+                  "startLine": 871,
                   "startColumn": 1
                 }
               }
@@ -9520,10 +9241,10 @@
           ]
         },
         {
-          "ruleId": "WPS217",
+          "ruleId": "WPS211",
           "level": "warning",
           "message": {
-            "text": "Found too many await expressions: 8 > 5"
+            "text": "Found too many arguments: 7 > 5"
           },
           "locations": [
             {
@@ -9533,7 +9254,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 703,
+                  "startLine": 871,
                   "startColumn": 1
                 }
               }
@@ -9974,8 +9695,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 60,
+                  "startLine": 58,
                   "startColumn": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS527",
+          "level": "warning",
+          "message": {
+            "text": "Found not a tuple used as an argument"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 35
                 }
               }
             }
@@ -10003,27 +9745,6 @@
           ]
         },
         {
-          "ruleId": "WPS527",
-          "level": "warning",
-          "message": {
-            "text": "Found not a tuple used as an argument"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 63,
-                  "startColumn": 35
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "WPS239",
           "level": "warning",
           "message": {
@@ -10037,7 +9758,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 136,
+                  "startLine": 134,
                   "startColumn": 9
                 }
               }
@@ -10055,237 +9776,6 @@
               "physicalLocation": {
                 "artifactLocation": {
                   "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 159,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 234,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'GoogleProvider.chat' is too complex (12)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 243,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS211",
-          "level": "warning",
-          "message": {
-            "text": "Found too many arguments: 8 > 5"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 243,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 384,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'GoogleProvider.chat_stream' is too complex (19)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 395,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS211",
-          "level": "warning",
-          "message": {
-            "text": "Found too many arguments: 8 > 5"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 395,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 535,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'GoogleProvider._convert_messages_to_provider_format' is too complex (11)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 736,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS441",
-          "level": "warning",
-          "message": {
-            "text": "Found control variable used after block: tc"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 780,
-                  "startColumn": 41
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS441",
-          "level": "warning",
-          "message": {
-            "text": "Found control variable used after block: tc"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 781,
-                  "startColumn": 41
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "WPS239",
-          "level": "warning",
-          "message": {
-            "text": "Found too many exceptions in `except` case: 4 > 3"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/grok.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
@@ -10306,11 +9796,242 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/grok.py",
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 232,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GoogleProvider.chat' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
                   "startLine": 241,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS211",
+          "level": "warning",
+          "message": {
+            "text": "Found too many arguments: 8 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 241,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 380,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GoogleProvider.chat_stream' is too complex (18)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS211",
+          "level": "warning",
+          "message": {
+            "text": "Found too many arguments: 8 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 391,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 525,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GoogleProvider._convert_messages_to_provider_format' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 726,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS441",
+          "level": "warning",
+          "message": {
+            "text": "Found control variable used after block: tc"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 770,
+                  "startColumn": 41
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS441",
+          "level": "warning",
+          "message": {
+            "text": "Found control variable used after block: tc"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 771,
+                  "startColumn": 41
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 163,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 4 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 268,
                   "startColumn": 9
                 }
               }
@@ -10331,7 +10052,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 245,
+                  "startLine": 272,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'GrokProvider._make_grok_api_call' is too complex (12)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 358,
                   "startColumn": 5
                 }
               }
@@ -10352,7 +10094,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 331,
+                  "startLine": 358,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS212",
+          "level": "warning",
+          "message": {
+            "text": "Found too many return statements: 6 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 358,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS217",
+          "level": "warning",
+          "message": {
+            "text": "Found too many await expressions: 6 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 358,
                   "startColumn": 5
                 }
               }
@@ -10373,7 +10157,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 362,
+                  "startLine": 391,
                   "startColumn": 9
                 }
               }
@@ -10394,7 +10178,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 395,
+                  "startLine": 448,
                   "startColumn": 9
                 }
               }
@@ -10405,7 +10189,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'GrokProvider.chat_stream' is too complex (21)"
+            "text": "'GrokProvider.chat_stream' is too complex (24)"
           },
           "locations": [
             {
@@ -10415,7 +10199,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 477,
+                  "startLine": 530,
                   "startColumn": 5
                 }
               }
@@ -10436,7 +10220,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 477,
+                  "startLine": 530,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS217",
+          "level": "warning",
+          "message": {
+            "text": "Found too many await expressions: 6 > 5"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 530,
                   "startColumn": 5
                 }
               }
@@ -10457,7 +10262,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 534,
+                  "startLine": 589,
                   "startColumn": 9
                 }
               }
@@ -10478,7 +10283,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 599,
+                  "startLine": 686,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS448",
+          "level": "warning",
+          "message": {
+            "text": "Found incorrect exception order"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 254,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 5 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 256,
                   "startColumn": 9
                 }
               }
@@ -10499,7 +10346,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 232,
+                  "startLine": 273,
                   "startColumn": 13
                 }
               }
@@ -10520,7 +10367,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 298,
+                  "startLine": 341,
                   "startColumn": 9
                 }
               }
@@ -10541,7 +10388,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 335,
+                  "startLine": 378,
                   "startColumn": 31
                 }
               }
@@ -10562,7 +10409,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 343,
+                  "startLine": 386,
                   "startColumn": 33
                 }
               }
@@ -10573,7 +10420,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'HuggingFaceProvider.chat' is too complex (13)"
+            "text": "'HuggingFaceProvider.chat' is too complex (14)"
           },
           "locations": [
             {
@@ -10583,7 +10430,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 408,
+                  "startLine": 451,
                   "startColumn": 5
                 }
               }
@@ -10604,7 +10451,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 408,
+                  "startLine": 451,
                   "startColumn": 5
                 }
               }
@@ -10625,7 +10472,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 468,
+                  "startLine": 511,
                   "startColumn": 9
                 }
               }
@@ -10636,7 +10483,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'HuggingFaceProvider.chat_stream' is too complex (27)"
+            "text": "'HuggingFaceProvider.chat_stream' is too complex (29)"
           },
           "locations": [
             {
@@ -10646,7 +10493,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 592,
                   "startColumn": 5
                 }
               }
@@ -10667,7 +10514,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 592,
                   "startColumn": 5
                 }
               }
@@ -10688,7 +10535,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 606,
+                  "startLine": 651,
                   "startColumn": 9
                 }
               }
@@ -10709,7 +10556,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 650,
+                  "startLine": 697,
                   "startColumn": 9
                 }
               }
@@ -10730,7 +10577,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 834,
+                  "startLine": 883,
                   "startColumn": 1
                 }
               }
@@ -11276,7 +11123,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 230,
+                  "startLine": 232,
                   "startColumn": 9
                 }
               }
@@ -11297,7 +11144,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 257,
+                  "startLine": 259,
                   "startColumn": 9
                 }
               }
@@ -11318,7 +11165,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 283,
+                  "startLine": 285,
                   "startColumn": 9
                 }
               }
@@ -11339,7 +11186,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 414,
+                  "startLine": 416,
                   "startColumn": 9
                 }
               }
@@ -11360,7 +11207,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 445,
+                  "startLine": 447,
                   "startColumn": 9
                 }
               }
@@ -11381,7 +11228,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 478,
+                  "startLine": 480,
                   "startColumn": 9
                 }
               }
@@ -11402,7 +11249,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 481,
+                  "startLine": 483,
                   "startColumn": 5
                 }
               }
@@ -11423,7 +11270,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 647,
+                  "startLine": 694,
                   "startColumn": 9
                 }
               }
@@ -11444,7 +11291,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 692,
+                  "startLine": 739,
                   "startColumn": 9
                 }
               }
@@ -11465,7 +11312,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 776,
+                  "startLine": 823,
                   "startColumn": 13
                 }
               }
@@ -11486,7 +11333,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 787,
+                  "startLine": 834,
                   "startColumn": 5
                 }
               }
@@ -11507,29 +11354,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 906,
+                  "startLine": 968,
                   "startColumn": 9
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "C901",
-          "level": "warning",
-          "message": {
-            "text": "'OllamaProvider.chat_stream' is too complex (19)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/ollama.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 985,
-                  "startColumn": 5
                 }
               }
             }
@@ -11549,7 +11375,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 985,
+                  "startLine": 1165,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'OllamaProvider._stream_native' is too complex (14)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1262,
                   "startColumn": 5
                 }
               }
@@ -11570,7 +11417,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1085,
+                  "startLine": 1324,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'OllamaProvider._stream_openai_compatible' is too complex (16)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1412,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 5 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1481,
                   "startColumn": 9
                 }
               }
@@ -11591,7 +11480,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1136,
+                  "startLine": 1592,
                   "startColumn": 5
                 }
               }
@@ -11612,7 +11501,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1177,
+                  "startLine": 1633,
                   "startColumn": 9
                 }
               }
@@ -11872,6 +11761,48 @@
           ]
         },
         {
+          "ruleId": "C901",
+          "level": "warning",
+          "message": {
+            "text": "'OpenRouterProvider.connect' is too complex (11)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 90,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "WPS239",
+          "level": "warning",
+          "message": {
+            "text": "Found too many exceptions in `except` case: 5 > 3"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 106,
+                  "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "WPS239",
           "level": "warning",
           "message": {
@@ -11885,7 +11816,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 128,
+                  "startLine": 139,
                   "startColumn": 9
                 }
               }
@@ -11906,7 +11837,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 153,
+                  "startLine": 164,
                   "startColumn": 9
                 }
               }
@@ -11927,7 +11858,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 157,
+                  "startLine": 168,
                   "startColumn": 5
                 }
               }
@@ -11948,7 +11879,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 225,
+                  "startLine": 236,
                   "startColumn": 9
                 }
               }
@@ -11969,7 +11900,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 234,
+                  "startLine": 245,
                   "startColumn": 5
                 }
               }
@@ -11990,7 +11921,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 234,
+                  "startLine": 245,
                   "startColumn": 5
                 }
               }
@@ -12001,7 +11932,7 @@
           "ruleId": "C901",
           "level": "warning",
           "message": {
-            "text": "'OpenRouterProvider.chat_stream' is too complex (20)"
+            "text": "'OpenRouterProvider.chat_stream' is too complex (22)"
           },
           "locations": [
             {
@@ -12011,7 +11942,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 465,
                   "startColumn": 5
                 }
               }
@@ -12032,7 +11963,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 465,
                   "startColumn": 5
                 }
               }
@@ -12053,7 +11984,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 508,
+                  "startLine": 551,
                   "startColumn": 17
                 }
               }
@@ -12074,7 +12005,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 551,
+                  "startLine": 596,
                   "startColumn": 9
                 }
               }
@@ -12095,7 +12026,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 635,
+                  "startLine": 680,
                   "startColumn": 9
                 }
               }
@@ -13954,7 +13885,7 @@
           "ruleId": "WPS203",
           "level": "warning",
           "message": {
-            "text": "Found module with too many imported names: 88 > 50"
+            "text": "Found module with too many imported names: 90 > 50"
           },
           "locations": [
             {
@@ -13975,7 +13906,7 @@
           "ruleId": "WPS230",
           "level": "warning",
           "message": {
-            "text": "Found too many public instance attributes: 13 > 6"
+            "text": "Found too many public instance attributes: 14 > 6"
           },
           "locations": [
             {
@@ -13985,7 +13916,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 179,
+                  "startLine": 180,
                   "startColumn": 1
                 }
               }
@@ -14006,7 +13937,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 314,
+                  "startLine": 317,
                   "startColumn": 5
                 }
               }
@@ -14027,7 +13958,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1443,
+                  "startLine": 1473,
                   "startColumn": 33
                 }
               }
@@ -14048,7 +13979,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1486,
+                  "startLine": 1516,
                   "startColumn": 5
                 }
               }
@@ -14069,7 +14000,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1559,
+                  "startLine": 1589,
                   "startColumn": 5
                 }
               }
@@ -14090,7 +14021,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1634,
+                  "startLine": 1664,
                   "startColumn": 5
                 }
               }
@@ -14111,7 +14042,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1839,
+                  "startLine": 1869,
                   "startColumn": 61
                 }
               }
@@ -14132,7 +14063,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2143,
+                  "startLine": 2173,
                   "startColumn": 5
                 }
               }
@@ -14153,7 +14084,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2143,
+                  "startLine": 2173,
                   "startColumn": 5
                 }
               }
@@ -14174,7 +14105,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2362,
+                  "startLine": 2392,
                   "startColumn": 5
                 }
               }
@@ -19289,7 +19220,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:09:22.621120+00:00"
+          "endTimeUtc": "2026-04-24T21:08:33.835079+00:00"
         }
       ]
     }

@@ -1,6 +1,6 @@
 {
   "tool": "pydoclint",
-  "generated": "2026-04-24T05:10:07.176408+00:00",
+  "generated": "2026-04-24T21:09:02.792208+00:00",
   "total_findings": 89,
   "total_files": 29,
   "files": [
@@ -176,81 +176,81 @@
       "count": 11,
       "findings": [
         {
-          "line": 1461,
+          "line": 1466,
           "column": null,
           "code": "DOC304",
           "message": "Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1461: DOC304: Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1466: DOC304: Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1498,
+          "line": 1503,
           "column": null,
           "code": "DOC304",
           "message": "Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1498: DOC304: Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1503: DOC304: Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1548,
+          "line": 1553,
           "column": null,
           "code": "DOC304",
           "message": "Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1548: DOC304: Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1553: DOC304: Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1597,
+          "line": 1602,
           "column": null,
           "code": "DOC304",
           "message": "Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1597: DOC304: Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1602: DOC304: Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1646,
+          "line": 1651,
           "column": null,
           "code": "DOC304",
           "message": "Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1646: DOC304: Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1651: DOC304: Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1692,
+          "line": 1697,
           "column": null,
           "code": "DOC304",
           "message": "Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1692: DOC304: Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1697: DOC304: Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1735,
+          "line": 1740,
           "column": null,
           "code": "DOC304",
           "message": "Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1735: DOC304: Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1740: DOC304: Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1784,
+          "line": 1789,
           "column": null,
           "code": "DOC304",
           "message": "Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1784: DOC304: Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1789: DOC304: Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1839,
+          "line": 1844,
           "column": null,
           "code": "DOC304",
           "message": "Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1839: DOC304: Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1844: DOC304: Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1879,
+          "line": 1884,
           "column": null,
           "code": "DOC304",
           "message": "Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1879: DOC304: Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1884: DOC304: Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1919,
+          "line": 1924,
           "column": null,
           "code": "DOC304",
           "message": "Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1919: DOC304: Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1924: DOC304: Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         }
       ]
     },
@@ -369,11 +369,11 @@
           "raw": "688: DOC304: Class `HexPatParser`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 1172,
+          "line": 1219,
           "column": null,
           "code": "DOC304",
           "message": "Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "1172: DOC304: Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "1219: DOC304: Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         }
       ]
     },
@@ -558,11 +558,11 @@
           "raw": "270: DOC304: Class `IntellicrackLogger`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         },
         {
-          "line": 608,
+          "line": 593,
           "column": null,
           "code": "DOC304",
           "message": "Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring",
-          "raw": "608: DOC304: Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
+          "raw": "593: DOC304: Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring"
         }
       ]
     },

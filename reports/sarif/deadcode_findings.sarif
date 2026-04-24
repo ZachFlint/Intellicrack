@@ -977,7 +977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 168,
+                  "startLine": 189,
                   "startColumn": 1
                 }
               }
@@ -1460,7 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 541,
+                  "startLine": 526,
                   "startColumn": 1
                 }
               }
@@ -1481,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 608,
+                  "startLine": 593,
                   "startColumn": 1
                 }
               }
@@ -1597,48 +1597,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mTemplateManager\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 93,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mbootstrap_builtins\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 124,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mlist_all_templates\u001b[0m` is never used"
           },
           "locations": [
@@ -1733,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1049,
+                  "startLine": 1054,
                   "startColumn": 1
                 }
               }
@@ -1754,7 +1712,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1064,
+                  "startLine": 1069,
                   "startColumn": 1
                 }
               }
@@ -1775,7 +1733,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1112,
+                  "startLine": 1117,
                   "startColumn": 1
                 }
               }
@@ -1796,7 +1754,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1113,
+                  "startLine": 1118,
                   "startColumn": 1
                 }
               }
@@ -1817,7 +1775,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1267,
+                  "startLine": 1272,
                   "startColumn": 1
                 }
               }
@@ -1838,7 +1796,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1285,
+                  "startLine": 1290,
                   "startColumn": 1
                 }
               }
@@ -1859,7 +1817,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1597,
+                  "startLine": 1602,
                   "startColumn": 1
                 }
               }
@@ -1880,7 +1838,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1692,
+                  "startLine": 1697,
                   "startColumn": 1
                 }
               }
@@ -1901,7 +1859,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1735,
+                  "startLine": 1740,
                   "startColumn": 1
                 }
               }
@@ -1922,7 +1880,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1784,
+                  "startLine": 1789,
                   "startColumn": 1
                 }
               }
@@ -1943,7 +1901,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1919,
+                  "startLine": 1924,
                   "startColumn": 1
                 }
               }
@@ -1964,7 +1922,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 599,
+                  "startLine": 651,
                   "startColumn": 1
                 }
               }
@@ -1985,7 +1943,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 666,
+                  "startLine": 767,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1minit_script_engine\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 785,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1minit_template_manager\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 802,
                   "startColumn": 1
                 }
               }
@@ -2006,28 +2006,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 121,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mHTTP_SERVICE_UNAVAILABLE\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/huggingface.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 122,
+                  "startLine": 126,
                   "startColumn": 1
                 }
               }
@@ -3383,7 +3362,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:11:36.985851+00:00"
+          "endTimeUtc": "2026-04-24T21:10:17.664689+00:00"
         }
       ]
     }

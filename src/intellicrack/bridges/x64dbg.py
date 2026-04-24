@@ -3229,10 +3229,7 @@ class X64DbgBridge(DebuggerBridge):
             msg = "scan_memory: pattern must be non-empty"
             raise ToolError(msg, tool_name="x64dbg")
         if len(pattern) < MIN_PATTERN_LENGTH:
-            msg = (
-                f"scan_memory: pattern too short for reliable scan "
-                f"(got {len(pattern)} bytes, need at least {MIN_PATTERN_LENGTH})"
-            )
+            msg = f"scan_memory: pattern too short for reliable scan (got {len(pattern)} bytes, need at least {MIN_PATTERN_LENGTH})"
             raise ToolError(msg, tool_name="x64dbg")
 
         regions = await self.get_memory_regions()

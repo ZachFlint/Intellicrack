@@ -1,6 +1,6 @@
 {
   "tool": "psscriptanalyzer",
-  "generated": "2026-04-24T05:14:45.185847+00:00",
+  "generated": "2026-04-24T21:12:09.696706+00:00",
   "total_findings": 173,
   "total_files": 33,
   "files": [
@@ -897,22 +897,6 @@
       "count": 5,
       "findings": [
         {
-          "line": 87,
-          "column": 1,
-          "severity": "Warning",
-          "rule": "PSUseDeclaredVarsMoreThanAssignments",
-          "message": "The variable 'lastContent' is assigned but never used.",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:87:1: [Warning] The variable 'lastContent' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
-        },
-        {
-          "line": 91,
-          "column": 11,
-          "severity": "Warning",
-          "rule": "PSReviewUnusedParameter",
-          "message": "The parameter 'sender' has been declared but not used.",
-          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:11: [Warning] The parameter 'sender' has been declared but not used. (PSReviewUnusedParameter)"
-        },
-        {
           "line": 93,
           "column": 5,
           "severity": "Error",
@@ -935,6 +919,22 @@
           "rule": "PSAvoidAssignmentToAutomaticVariable",
           "message": "The Variable 'eventArgs' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name.",
           "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:20: [Warning] The Variable 'eventArgs' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name. (PSAvoidAssignmentToAutomaticVariable)"
+        },
+        {
+          "line": 91,
+          "column": 11,
+          "severity": "Warning",
+          "rule": "PSReviewUnusedParameter",
+          "message": "The parameter 'sender' has been declared but not used.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:91:11: [Warning] The parameter 'sender' has been declared but not used. (PSReviewUnusedParameter)"
+        },
+        {
+          "line": 87,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSUseDeclaredVarsMoreThanAssignments",
+          "message": "The variable 'lastContent' is assigned but never used.",
+          "raw": "D:\\Intellicrack\\src\\intellicrack\\sandbox\\scripts\\clipboard_monitor.ps1:87:1: [Warning] The variable 'lastContent' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
         }
       ]
     },
@@ -982,22 +982,6 @@
       "findings": [
         {
           "line": 15,
-          "column": 5,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingInvokeExpression",
-          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\lint-check.ps1:15:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
-        },
-        {
-          "line": 23,
-          "column": 5,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingInvokeExpression",
-          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\lint-check.ps1:23:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
-        },
-        {
-          "line": 15,
           "column": 79,
           "severity": "Warning",
           "rule": "PSAvoidUsingWriteHost",
@@ -1011,6 +995,22 @@
           "rule": "PSAvoidUsingWriteHost",
           "message": "File 'lint-check.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
           "raw": "D:\\Intellicrack\\scripts\\lint-check.ps1:23:88: [Warning] File 'lint-check.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
+        },
+        {
+          "line": 15,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingInvokeExpression",
+          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
+          "raw": "D:\\Intellicrack\\scripts\\lint-check.ps1:15:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
+          "line": 23,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingInvokeExpression",
+          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
+          "raw": "D:\\Intellicrack\\scripts\\lint-check.ps1:23:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         }
       ]
     },
@@ -1057,6 +1057,14 @@
       "count": 4,
       "findings": [
         {
+          "line": 41,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingInvokeExpression",
+          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
+          "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:41:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
           "line": 6,
           "column": 1,
           "severity": "Warning",
@@ -1079,14 +1087,6 @@
           "rule": "PSReviewUnusedParameter",
           "message": "The parameter 'Flags' has been declared but not used.",
           "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:3:13: [Warning] The parameter 'Flags' has been declared but not used. (PSReviewUnusedParameter)"
-        },
-        {
-          "line": 41,
-          "column": 5,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingInvokeExpression",
-          "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
-          "raw": "D:\\Intellicrack\\scripts\\lint-psscriptanalyzer.ps1:41:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         }
       ]
     },
@@ -1209,20 +1209,20 @@
           "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:15:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
-          "line": 37,
-          "column": 1,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:37:1: [Warning] File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
           "line": 15,
           "column": 5,
           "severity": "Warning",
           "rule": "PSUseDeclaredVarsMoreThanAssignments",
           "message": "The variable 'output' is assigned but never used.",
           "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:15:5: [Warning] The variable 'output' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
+        },
+        {
+          "line": 37,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\generate-map.ps1:37:1: [Warning] File 'generate-map.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1239,20 +1239,20 @@
           "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:13:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
         },
         {
-          "line": 33,
-          "column": 1,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:33:1: [Warning] File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
           "line": 13,
           "column": 5,
           "severity": "Warning",
           "rule": "PSUseDeclaredVarsMoreThanAssignments",
           "message": "The variable 'output' is assigned but never used.",
           "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:13:5: [Warning] The variable 'output' is assigned but never used. (PSUseDeclaredVarsMoreThanAssignments)"
+        },
+        {
+          "line": 33,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\generate-structure.ps1:33:1: [Warning] File 'generate-structure.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1404,19 +1404,19 @@
       "findings": [
         {
           "line": 14,
-          "column": 111,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'docs-build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\docs-build.ps1:14:111: [Warning] File 'docs-build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
-          "line": 14,
           "column": 5,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
           "raw": "D:\\Intellicrack\\scripts\\docs-build.ps1:14:5: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
+          "line": 14,
+          "column": 111,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'docs-build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\docs-build.ps1:14:111: [Warning] File 'docs-build.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1447,20 +1447,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 28,
-          "column": 5,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'install-rust-tools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\install-rust-tools.ps1:28:5: [Warning] File 'install-rust-tools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
           "line": 30,
           "column": 9,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
           "raw": "D:\\Intellicrack\\scripts\\install-rust-tools.ps1:30:9: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
+          "line": 28,
+          "column": 5,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'install-rust-tools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\install-rust-tools.ps1:28:5: [Warning] File 'install-rust-tools.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },
@@ -1469,20 +1469,20 @@
       "count": 2,
       "findings": [
         {
-          "line": 29,
-          "column": 1,
-          "severity": "Warning",
-          "rule": "PSAvoidUsingWriteHost",
-          "message": "File 'nul-cleanup.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
-          "raw": "D:\\Intellicrack\\scripts\\nul-cleanup.ps1:29:1: [Warning] File 'nul-cleanup.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
-        },
-        {
           "line": 13,
           "column": 15,
           "severity": "Warning",
           "rule": "PSAvoidUsingInvokeExpression",
           "message": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead.",
           "raw": "D:\\Intellicrack\\scripts\\nul-cleanup.ps1:13:15: [Warning] Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead. (PSAvoidUsingInvokeExpression)"
+        },
+        {
+          "line": 29,
+          "column": 1,
+          "severity": "Warning",
+          "rule": "PSAvoidUsingWriteHost",
+          "message": "File 'nul-cleanup.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information.",
+          "raw": "D:\\Intellicrack\\scripts\\nul-cleanup.ps1:29:1: [Warning] File 'nul-cleanup.ps1' uses Write-Host. Avoid using Write-Host because it might not work in all hosts, does not work when there is no host, and (prior to PS 5.0) cannot be suppressed, captured, or redirected. Instead, use Write-Output, Write-Verbose, or Write-Information. (PSAvoidUsingWriteHost)"
         }
       ]
     },

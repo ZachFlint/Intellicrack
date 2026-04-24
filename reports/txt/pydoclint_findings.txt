@@ -49,27 +49,27 @@
 
 11 findings in src/intellicrack/core/types.py
 
-1461: DOC304: Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1466: DOC304: Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1498: DOC304: Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1503: DOC304: Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1548: DOC304: Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1553: DOC304: Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1597: DOC304: Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1602: DOC304: Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1646: DOC304: Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1651: DOC304: Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1692: DOC304: Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1697: DOC304: Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1735: DOC304: Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1740: DOC304: Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1784: DOC304: Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1789: DOC304: Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1839: DOC304: Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1844: DOC304: Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1879: DOC304: Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1884: DOC304: Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1919: DOC304: Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1924: DOC304: Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
 
 6 findings in src/intellicrack/sandbox/qemu.py
@@ -108,7 +108,7 @@
 
 688: DOC304: Class `HexPatParser`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-1172: DOC304: Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+1219: DOC304: Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
 
 4 findings in src/intellicrack/core/session.py
@@ -171,7 +171,7 @@
 
 270: DOC304: Class `IntellicrackLogger`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
-608: DOC304: Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+593: DOC304: Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
 
 
 2 findings in src/intellicrack/providers/discovery.py
