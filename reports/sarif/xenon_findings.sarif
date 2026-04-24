@@ -53,7 +53,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1200,
+                  "startLine": 1208,
                   "startColumn": 1
                 }
               }
@@ -74,7 +74,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3169,
+                  "startLine": 3153,
                   "startColumn": 1
                 }
               }
@@ -95,7 +95,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2148,
+                  "startLine": 2164,
                   "startColumn": 1
                 }
               }
@@ -116,7 +116,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4431,
+                  "startLine": 4415,
                   "startColumn": 1
                 }
               }
@@ -137,7 +137,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4254,
+                  "startLine": 4238,
                   "startColumn": 1
                 }
               }
@@ -158,7 +158,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4847,
+                  "startLine": 4831,
                   "startColumn": 1
                 }
               }
@@ -179,28 +179,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5063,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'enumerate_threads' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2567,
+                  "startLine": 5047,
                   "startColumn": 1
                 }
               }
@@ -221,7 +200,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2878,
+                  "startLine": 2844,
                   "startColumn": 1
                 }
               }
@@ -242,7 +221,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3256,
+                  "startLine": 3240,
                   "startColumn": 1
                 }
               }
@@ -263,7 +242,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3937,
+                  "startLine": 3921,
                   "startColumn": 1
                 }
               }
@@ -368,7 +347,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2287,
+                  "startLine": 2288,
                   "startColumn": 1
                 }
               }
@@ -389,28 +368,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4700,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'search_numeric' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3520,
+                  "startLine": 4608,
                   "startColumn": 1
                 }
               }
@@ -431,7 +389,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6216,
+                  "startLine": 6124,
                   "startColumn": 1
                 }
               }
@@ -452,7 +410,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5284,
+                  "startLine": 5192,
                   "startColumn": 1
                 }
               }
@@ -473,7 +431,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6094,
+                  "startLine": 6002,
                   "startColumn": 1
                 }
               }
@@ -494,28 +452,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3342,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_search_float_fallback' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3725,
+                  "startLine": 3351,
                   "startColumn": 1
                 }
               }
@@ -536,7 +473,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4104,
+                  "startLine": 4012,
                   "startColumn": 1
                 }
               }
@@ -557,7 +494,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4191,
+                  "startLine": 4099,
                   "startColumn": 1
                 }
               }
@@ -578,7 +515,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3600,
+                  "startLine": 3603,
                   "startColumn": 1
                 }
               }
@@ -599,7 +536,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3199,
+                  "startLine": 3200,
                   "startColumn": 1
                 }
               }
@@ -620,7 +557,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3459,
+                  "startLine": 3487,
                   "startColumn": 1
                 }
               }
@@ -641,7 +578,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5356,
+                  "startLine": 5264,
                   "startColumn": 1
                 }
               }
@@ -662,7 +599,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5656,
+                  "startLine": 5564,
                   "startColumn": 1
                 }
               }
@@ -683,7 +620,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5785,
+                  "startLine": 5693,
                   "startColumn": 1
                 }
               }
@@ -704,7 +641,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6322,
+                  "startLine": 6230,
                   "startColumn": 1
                 }
               }
@@ -725,7 +662,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2581,
+                  "startLine": 2582,
                   "startColumn": 1
                 }
               }
@@ -746,7 +683,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2952,
+                  "startLine": 2953,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'export_patches' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3293,
                   "startColumn": 1
                 }
               }
@@ -767,7 +725,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4631,
+                  "startLine": 4539,
                   "startColumn": 1
                 }
               }
@@ -788,7 +746,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5849,
+                  "startLine": 5757,
                   "startColumn": 1
                 }
               }
@@ -1082,7 +1040,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2286,
+                  "startLine": 2420,
                   "startColumn": 1
                 }
               }
@@ -1103,7 +1061,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3466,
+                  "startLine": 3636,
                   "startColumn": 1
                 }
               }
@@ -1124,7 +1082,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5065,
+                  "startLine": 5304,
                   "startColumn": 1
                 }
               }
@@ -1145,7 +1103,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2399,
+                  "startLine": 2533,
                   "startColumn": 1
                 }
               }
@@ -1166,7 +1124,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2778,
+                  "startLine": 2905,
                   "startColumn": 1
                 }
               }
@@ -1187,7 +1145,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2908,
+                  "startLine": 3035,
                   "startColumn": 1
                 }
               }
@@ -1208,7 +1166,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3002,
+                  "startLine": 3129,
                   "startColumn": 1
                 }
               }
@@ -1229,7 +1187,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4726,
+                  "startLine": 4965,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +1208,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 355,
+                  "startLine": 491,
                   "startColumn": 1
                 }
               }
@@ -1313,7 +1271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1272,
+                  "startLine": 1319,
                   "startColumn": 1
                 }
               }
@@ -1334,7 +1292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1508,
+                  "startLine": 1535,
                   "startColumn": 1
                 }
               }
@@ -1376,7 +1334,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1204,
+                  "startLine": 1251,
                   "startColumn": 1
                 }
               }
@@ -1418,7 +1376,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 450,
+                  "startLine": 435,
                   "startColumn": 1
                 }
               }
@@ -2363,7 +2321,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 897,
+                  "startLine": 949,
                   "startColumn": 1
                 }
               }
@@ -2384,7 +2342,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 578,
+                  "startLine": 603,
                   "startColumn": 1
                 }
               }
@@ -2531,7 +2489,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 395,
+                  "startLine": 391,
                   "startColumn": 1
                 }
               }
@@ -2552,7 +2510,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 243,
+                  "startLine": 241,
                   "startColumn": 1
                 }
               }
@@ -2573,7 +2531,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 699,
+                  "startLine": 689,
                   "startColumn": 1
                 }
               }
@@ -2594,7 +2552,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 736,
+                  "startLine": 726,
                   "startColumn": 1
                 }
               }
@@ -2615,7 +2573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 163,
+                  "startLine": 161,
                   "startColumn": 1
                 }
               }
@@ -2636,7 +2594,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 477,
+                  "startLine": 530,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_make_grok_api_call' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 358,
                   "startColumn": 1
                 }
               }
@@ -2657,7 +2636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 245,
+                  "startLine": 272,
                   "startColumn": 1
                 }
               }
@@ -2678,7 +2657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 592,
                   "startColumn": 1
                 }
               }
@@ -2699,7 +2678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 408,
+                  "startLine": 451,
                   "startColumn": 1
                 }
               }
@@ -2878,7 +2857,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'chat_stream' has rank C (complexity > threshold)"
+            "text": "'_stream_openai_compatible' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -2888,7 +2867,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 985,
+                  "startLine": 1412,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_stream_native' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1262,
                   "startColumn": 1
                 }
               }
@@ -2909,7 +2909,70 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 697,
+                  "startLine": 744,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'chat_stream' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1165,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_accumulate_native_tool_call_deltas' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1340,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_accumulate_openai_tool_call_deltas' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1490,
                   "startColumn": 1
                 }
               }
@@ -2972,7 +3035,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 433,
+                  "startLine": 465,
                   "startColumn": 1
                 }
               }
@@ -2993,7 +3056,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 234,
+                  "startLine": 245,
                   "startColumn": 1
                 }
               }
@@ -3014,7 +3077,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 157,
+                  "startLine": 168,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'connect' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 90,
                   "startColumn": 1
                 }
               }
@@ -3434,7 +3518,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 314,
+                  "startLine": 317,
                   "startColumn": 1
                 }
               }
@@ -3455,7 +3539,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1634,
+                  "startLine": 1664,
                   "startColumn": 1
                 }
               }
@@ -3476,7 +3560,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2143,
+                  "startLine": 2173,
                   "startColumn": 1
                 }
               }
@@ -3497,7 +3581,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1020,
+                  "startLine": 1050,
                   "startColumn": 1
                 }
               }
@@ -3518,7 +3602,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2362,
+                  "startLine": 2392,
                   "startColumn": 1
                 }
               }
@@ -5051,7 +5135,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 225,
+                  "startLine": 223,
                   "startColumn": 1
                 }
               }
@@ -5378,7 +5462,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:11:07.810059+00:00"
+          "endTimeUtc": "2026-04-24T21:09:48.691664+00:00"
         }
       ]
     }

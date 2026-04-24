@@ -148,13 +148,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: get_structlog_logger"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "Unused function: log_binary_operation"
           }
         },
@@ -191,13 +184,6 @@
           "level": "warning",
           "message": {
             "text": "Unused function: generate_x64dbg"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused function: bootstrap_builtins"
           }
         },
         {
@@ -275,13 +261,6 @@
           "level": "warning",
           "message": {
             "text": "Unused function: log_request"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "Unused function: needs_refresh"
           }
         },
         {
@@ -632,7 +611,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:11:36.647020+00:00"
+          "endTimeUtc": "2026-04-24T21:10:18.696347+00:00"
         }
       ]
     }

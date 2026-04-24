@@ -1,46 +1,44 @@
-21 findings in src\intellicrack\bridges\hex_editor.py
+20 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:2287: 'copy_as' has rank E
+src\intellicrack\bridges\hex_editor.py:2288: 'copy_as' has rank E
 
-src\intellicrack\bridges\hex_editor.py:4700: '_extract_strings_fallback' has rank C
+src\intellicrack\bridges\hex_editor.py:4608: '_extract_strings_fallback' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3520: 'search_numeric' has rank C
+src\intellicrack\bridges\hex_editor.py:6124: '_exec_bps_command' has rank C
 
-src\intellicrack\bridges\hex_editor.py:6216: '_exec_bps_command' has rank C
+src\intellicrack\bridges\hex_editor.py:5192: 'base_convert' has rank C
 
-src\intellicrack\bridges\hex_editor.py:5284: 'base_convert' has rank C
+src\intellicrack\bridges\hex_editor.py:6002: '_build_bps_patch' has rank C
 
-src\intellicrack\bridges\hex_editor.py:6094: '_build_bps_patch' has rank C
+src\intellicrack\bridges\hex_editor.py:3351: 'import_patches' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3342: 'import_patches' has rank C
+src\intellicrack\bridges\hex_editor.py:4012: 'apply_arithmetic_to_selection' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3725: '_search_float_fallback' has rank C
+src\intellicrack\bridges\hex_editor.py:4099: '_apply_arithmetic_fallback' has rank C
 
-src\intellicrack\bridges\hex_editor.py:4104: 'apply_arithmetic_to_selection' has rank C
+src\intellicrack\bridges\hex_editor.py:3603: 'search_numeric_range' has rank C
 
-src\intellicrack\bridges\hex_editor.py:4191: '_apply_arithmetic_fallback' has rank C
+src\intellicrack\bridges\hex_editor.py:3200: 'calculate_hash_custom_crc' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3600: 'search_numeric_range' has rank C
+src\intellicrack\bridges\hex_editor.py:3487: '_apply_ips_patches' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3199: 'calculate_hash_custom_crc' has rank C
+src\intellicrack\bridges\hex_editor.py:5264: 'run_python_script' has rank C
 
-src\intellicrack\bridges\hex_editor.py:3459: '_apply_ips_patches' has rank C
+src\intellicrack\bridges\hex_editor.py:5564: '_match_die_pattern' has rank C
 
-src\intellicrack\bridges\hex_editor.py:5356: 'run_python_script' has rank C
+src\intellicrack\bridges\hex_editor.py:5693: '_scan_clamav_ndb' has rank C
 
-src\intellicrack\bridges\hex_editor.py:5656: '_match_die_pattern' has rank C
+src\intellicrack\bridges\hex_editor.py:6230: '_apply_ups_patch' has rank C
 
-src\intellicrack\bridges\hex_editor.py:5785: '_scan_clamav_ndb' has rank C
+src\intellicrack\bridges\hex_editor.py:2582: 'save_to_sandbox' has rank C
 
-src\intellicrack\bridges\hex_editor.py:6322: '_apply_ups_patch' has rank C
+src\intellicrack\bridges\hex_editor.py:2953: 'yara_scan_files' has rank C
 
-src\intellicrack\bridges\hex_editor.py:2581: 'save_to_sandbox' has rank C
+src\intellicrack\bridges\hex_editor.py:3293: 'export_patches' has rank C
 
-src\intellicrack\bridges\hex_editor.py:2952: 'yara_scan_files' has rank C
+src\intellicrack\bridges\hex_editor.py:4539: 'get_strings' has rank C
 
-src\intellicrack\bridges\hex_editor.py:4631: 'get_strings' has rank C
-
-src\intellicrack\bridges\hex_editor.py:5849: 'scan_custom_signatures' has rank C
+src\intellicrack\bridges\hex_editor.py:5757: 'scan_custom_signatures' has rank C
 
 
 13 findings in src\intellicrack\core\hexpat\evaluator.py
@@ -72,29 +70,27 @@ src\intellicrack\core\hexpat\evaluator.py:1154: '_eval_array_type' has rank C
 src\intellicrack\core\hexpat\evaluator.py:1977: '_sizeof_type_node' has rank C
 
 
-11 findings in src\intellicrack\bridges\frida_bridge.py
+10 findings in src\intellicrack\bridges\frida_bridge.py
 
-src\intellicrack\bridges\frida_bridge.py:1200: 'shutdown' has rank D
+src\intellicrack\bridges\frida_bridge.py:1208: 'shutdown' has rank D
 
-src\intellicrack\bridges\frida_bridge.py:3169: '_escape_js_string' has rank C
+src\intellicrack\bridges\frida_bridge.py:3153: '_escape_js_string' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:2148: 'call_function' has rank C
+src\intellicrack\bridges\frida_bridge.py:2164: 'call_function' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:4431: 'call_system_function' has rank C
+src\intellicrack\bridges\frida_bridge.py:4415: 'call_system_function' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:4254: 'get_backtrace' has rank C
+src\intellicrack\bridges\frida_bridge.py:4238: 'get_backtrace' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:4847: 'objc_hook_method' has rank C
+src\intellicrack\bridges\frida_bridge.py:4831: 'objc_hook_method' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:5063: 'java_hook_method' has rank C
+src\intellicrack\bridges\frida_bridge.py:5047: 'java_hook_method' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:2567: 'enumerate_threads' has rank C
+src\intellicrack\bridges\frida_bridge.py:2844: 'find_functions_named' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:2878: 'find_functions_named' has rank C
+src\intellicrack\bridges\frida_bridge.py:3240: 'stalker_follow' has rank C
 
-src\intellicrack\bridges\frida_bridge.py:3256: 'stalker_follow' has rank C
-
-src\intellicrack\bridges\frida_bridge.py:3937: 'allocate_string' has rank C
+src\intellicrack\bridges\frida_bridge.py:3921: 'allocate_string' has rank C
 
 
 9 findings in src\intellicrack\bridges\process.py
@@ -120,23 +116,23 @@ src\intellicrack\bridges\process.py:3748: 'get_environment' has rank C
 
 9 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:2286: 'get_breakpoints' has rank C
+src\intellicrack\bridges\x64dbg.py:2420: 'get_breakpoints' has rank C
 
-src\intellicrack\bridges\x64dbg.py:3466: 'find_pattern' has rank C
+src\intellicrack\bridges\x64dbg.py:3636: 'find_pattern' has rank C
 
-src\intellicrack\bridges\x64dbg.py:5065: 'patch_anti_debug' has rank C
+src\intellicrack\bridges\x64dbg.py:5304: 'patch_anti_debug' has rank C
 
-src\intellicrack\bridges\x64dbg.py:2399: 'get_watchpoints' has rank C
+src\intellicrack\bridges\x64dbg.py:2533: 'get_watchpoints' has rank C
 
-src\intellicrack\bridges\x64dbg.py:2778: 'get_memory_regions' has rank C
+src\intellicrack\bridges\x64dbg.py:2905: 'get_memory_regions' has rank C
 
-src\intellicrack\bridges\x64dbg.py:2908: 'disassemble_at' has rank C
+src\intellicrack\bridges\x64dbg.py:3035: 'disassemble_at' has rank C
 
-src\intellicrack\bridges\x64dbg.py:3002: 'get_stack_trace' has rank C
+src\intellicrack\bridges\x64dbg.py:3129: 'get_stack_trace' has rank C
 
-src\intellicrack\bridges\x64dbg.py:4726: 'yara_scan' has rank C
+src\intellicrack\bridges\x64dbg.py:4965: 'yara_scan' has rank C
 
-src\intellicrack\bridges\x64dbg.py:355: '_read_unicode_string_from_params' has rank C
+src\intellicrack\bridges\x64dbg.py:491: '_read_unicode_string_from_params' has rank C
 
 
 8 findings in src\intellicrack\core\hexpat\preprocessor.py
@@ -207,6 +203,21 @@ src\intellicrack\providers\local_transformers.py:255: 'connect' has rank C
 src\intellicrack\providers\local_transformers.py:425: 'list_models' has rank C
 
 
+6 findings in src\intellicrack\providers\ollama.py
+
+src\intellicrack\providers\ollama.py:1412: '_stream_openai_compatible' has rank C
+
+src\intellicrack\providers\ollama.py:1262: '_stream_native' has rank C
+
+src\intellicrack\providers\ollama.py:744: '_get_client_and_model' has rank C
+
+src\intellicrack\providers\ollama.py:1165: 'chat_stream' has rank C
+
+src\intellicrack\providers\ollama.py:1340: '_accumulate_native_tool_call_deltas' has rank C
+
+src\intellicrack\providers\ollama.py:1490: '_accumulate_openai_tool_call_deltas' has rank C
+
+
 6 findings in src\intellicrack\sandbox\windows.py
 
 src\intellicrack\sandbox\windows.py:2031: 'yara_scan' has rank C
@@ -239,13 +250,13 @@ src\intellicrack\ui\panels\hex_editor_widget.py:1941: 'contextMenuEvent' has ran
 
 5 findings in src\intellicrack\core\hexpat_compiler.py
 
-src\intellicrack\core\hexpat_compiler.py:1272: '_gen_regular_field' has rank D
+src\intellicrack\core\hexpat_compiler.py:1319: '_gen_regular_field' has rank D
 
-src\intellicrack\core\hexpat_compiler.py:1508: '_eval_const_expr' has rank C
+src\intellicrack\core\hexpat_compiler.py:1535: '_eval_const_expr' has rank C
 
 src\intellicrack\core\hexpat_compiler.py:517: '_read_multi_char_operator' has rank C
 
-src\intellicrack\core\hexpat_compiler.py:1204: 'generate' has rank C
+src\intellicrack\core\hexpat_compiler.py:1251: 'generate' has rank C
 
 src\intellicrack\core\hexpat_compiler.py:599: '_skip_whitespace_and_comments' has rank C
 
@@ -265,15 +276,15 @@ src\intellicrack\core\hexpat\parser.py:362: '_parse_type' has rank C
 
 5 findings in src\intellicrack\providers\google.py
 
-src\intellicrack\providers\google.py:395: 'chat_stream' has rank D
+src\intellicrack\providers\google.py:391: 'chat_stream' has rank D
 
-src\intellicrack\providers\google.py:243: 'chat' has rank C
+src\intellicrack\providers\google.py:241: 'chat' has rank C
 
-src\intellicrack\providers\google.py:699: '_parse_response' has rank C
+src\intellicrack\providers\google.py:689: '_parse_response' has rank C
 
-src\intellicrack\providers\google.py:736: '_convert_messages_to_provider_format' has rank C
+src\intellicrack\providers\google.py:726: '_convert_messages_to_provider_format' has rank C
 
-src\intellicrack\providers\google.py:163: 'list_models' has rank C
+src\intellicrack\providers\google.py:161: 'list_models' has rank C
 
 
 5 findings in src\intellicrack\sandbox\analysis.py
@@ -304,15 +315,15 @@ src\intellicrack\sandbox\qemu.py:2925: 'apply_anti_evasion' has rank C
 
 5 findings in src\intellicrack\ui\app.py
 
-src\intellicrack\ui\app.py:314: '_restore_window_state' has rank C
+src\intellicrack\ui\app.py:317: '_restore_window_state' has rank C
 
-src\intellicrack\ui\app.py:1634: '_on_refresh_models' has rank C
+src\intellicrack\ui\app.py:1664: '_on_refresh_models' has rank C
 
-src\intellicrack\ui\app.py:2143: '_on_process_attached' has rank C
+src\intellicrack\ui\app.py:2173: '_on_process_attached' has rank C
 
-src\intellicrack\ui\app.py:1020: '_on_tool_result' has rank C
+src\intellicrack\ui\app.py:1050: '_on_tool_result' has rank C
 
-src\intellicrack\ui\app.py:2362: 'closeEvent' has rank C
+src\intellicrack\ui\app.py:2392: 'closeEvent' has rank C
 
 
 5 findings in src\intellicrack\ui\session_manager.py
@@ -337,6 +348,17 @@ src\intellicrack\bridges\ghidra.py:1778: '_query_ghidra_arch' has rank D
 src\intellicrack\bridges\ghidra.py:2306: 'search_bytes' has rank D
 
 src\intellicrack\bridges\ghidra.py:3401: 'write_bytes' has rank C
+
+
+4 findings in src\intellicrack\providers\openrouter.py
+
+src\intellicrack\providers\openrouter.py:465: 'chat_stream' has rank D
+
+src\intellicrack\providers\openrouter.py:245: 'chat' has rank C
+
+src\intellicrack\providers\openrouter.py:168: 'list_models' has rank C
+
+src\intellicrack\providers\openrouter.py:90: 'connect' has rank C
 
 
 4 findings in src\intellicrack\ui\provider_config.py
@@ -397,13 +419,13 @@ src\intellicrack\providers\discovery.py:691: 'get_recommended_model' has rank C
 src\intellicrack\providers\discovery.py:490: 'discover_provider' has rank C
 
 
-3 findings in src\intellicrack\providers\openrouter.py
+3 findings in src\intellicrack\providers\grok.py
 
-src\intellicrack\providers\openrouter.py:433: 'chat_stream' has rank D
+src\intellicrack\providers\grok.py:530: 'chat_stream' has rank D
 
-src\intellicrack\providers\openrouter.py:234: 'chat' has rank C
+src\intellicrack\providers\grok.py:358: '_make_grok_api_call' has rank C
 
-src\intellicrack\providers\openrouter.py:157: 'list_models' has rank C
+src\intellicrack\providers\grok.py:272: 'chat' has rank C
 
 
 3 findings in src\intellicrack\ui\tool_config.py
@@ -482,18 +504,11 @@ src\intellicrack\providers\anthropic.py:472: 'chat_stream' has rank D
 src\intellicrack\providers\anthropic.py:212: '_build_api_kwargs' has rank C
 
 
-2 findings in src\intellicrack\providers\grok.py
-
-src\intellicrack\providers\grok.py:477: 'chat_stream' has rank D
-
-src\intellicrack\providers\grok.py:245: 'chat' has rank C
-
-
 2 findings in src\intellicrack\providers\huggingface.py
 
-src\intellicrack\providers\huggingface.py:547: 'chat_stream' has rank D
+src\intellicrack\providers\huggingface.py:592: 'chat_stream' has rank D
 
-src\intellicrack\providers\huggingface.py:408: 'chat' has rank C
+src\intellicrack\providers\huggingface.py:451: 'chat' has rank C
 
 
 2 findings in src\intellicrack\providers\model_loader.py
@@ -501,13 +516,6 @@ src\intellicrack\providers\huggingface.py:408: 'chat' has rank C
 src\intellicrack\providers\model_loader.py:455: 'load_model_for_xpu' has rank C
 
 src\intellicrack\providers\model_loader.py:569: 'load_model_for_cpu' has rank C
-
-
-2 findings in src\intellicrack\providers\ollama.py
-
-src\intellicrack\providers\ollama.py:985: 'chat_stream' has rank C
-
-src\intellicrack\providers\ollama.py:697: '_get_client_and_model' has rank C
 
 
 2 findings in src\intellicrack\providers\openai.py
@@ -622,7 +630,7 @@ src\intellicrack\bridges\cutter.py:2179: 'resolve_flag' has rank C
 
 1 findings in src\intellicrack\core\logging.py
 
-src\intellicrack\core\logging.py:450: '_sanitize_arguments' has rank C
+src\intellicrack\core\logging.py:435: '_sanitize_arguments' has rank C
 
 
 1 findings in src\intellicrack\core\script_gen.py
@@ -642,12 +650,12 @@ src\intellicrack\core\tools.py:446: 'execute_tool_call' has rank C
 
 1 findings in src\intellicrack\credentials\oauth.py
 
-src\intellicrack\credentials\oauth.py:897: 'get_token' has rank C
+src\intellicrack\credentials\oauth.py:949: 'get_token' has rank C
 
 
 1 findings in src\intellicrack\credentials\store.py
 
-src\intellicrack\credentials\store.py:578: 'validate' has rank C
+src\intellicrack\credentials\store.py:603: 'validate' has rank C
 
 
 1 findings in src\intellicrack\providers\base.py
@@ -732,7 +740,7 @@ tests\test_core\test_script_gen.py:107: 'test_script_context_defaults' has rank 
 
 1 findings in tests\test_core\test_types.py
 
-tests\test_core\test_types.py:225: 'test_bridge_analysis_summary_creation' has rank C
+tests\test_core\test_types.py:223: 'test_bridge_analysis_summary_creation' has rank C
 
 
 1 findings in tests\test_providers\test_anthropic_buffers_live.py

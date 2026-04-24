@@ -1,7 +1,7 @@
 {
   "tool": "mypy",
-  "generated": "2026-04-24T05:11:09.357156+00:00",
-  "total_findings": 288,
+  "generated": "2026-04-24T21:10:06.406845+00:00",
+  "total_findings": 251,
   "total_files": 48,
   "files": [
     {
@@ -535,316 +535,6 @@
           "code": "",
           "message": "Perhaps you need \"Callable[...]\" or a callback protocol?",
           "raw": "src\\intellicrack\\bridges\\process.py:4828: note: Perhaps you need \"Callable[...]\" or a callback protocol?"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\main.py",
-      "count": 38,
-      "findings": [
-        {
-          "line": 223,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProcessManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:223: error: Name \"ProcessManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 230,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProcessManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:230: error: Name \"ProcessManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 243,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SplashScreen\" is not defined",
-          "raw": "src\\intellicrack\\main.py:243: error: Name \"SplashScreen\" is not defined  [name-defined]"
-        },
-        {
-          "line": 250,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SplashScreen\" is not defined",
-          "raw": "src\\intellicrack\\main.py:250: error: Name \"SplashScreen\" is not defined  [name-defined]"
-        },
-        {
-          "line": 253,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ThemeManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:253: error: Name \"ThemeManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 253,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"IconManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:253: error: Name \"IconManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 261,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ThemeManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:261: error: Name \"ThemeManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 261,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"IconManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:261: error: Name \"IconManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 266,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"Orchestrator\" is not defined",
-          "raw": "src\\intellicrack\\main.py:266: error: Name \"Orchestrator\" is not defined  [name-defined]"
-        },
-        {
-          "line": 273,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"Orchestrator\" is not defined",
-          "raw": "src\\intellicrack\\main.py:273: error: Name \"Orchestrator\" is not defined  [name-defined]"
-        },
-        {
-          "line": 276,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SessionManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:276: error: Name \"SessionManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 276,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SessionStore\" is not defined",
-          "raw": "src\\intellicrack\\main.py:276: error: Name \"SessionStore\" is not defined  [name-defined]"
-        },
-        {
-          "line": 284,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SessionManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:284: error: Name \"SessionManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 285,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SessionStore\" is not defined",
-          "raw": "src\\intellicrack\\main.py:285: error: Name \"SessionStore\" is not defined  [name-defined]"
-        },
-        {
-          "line": 289,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ToolRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:289: error: Name \"ToolRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 296,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ToolRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:296: error: Name \"ToolRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 299,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"CredentialLoader\" is not defined",
-          "raw": "src\\intellicrack\\main.py:299: error: Name \"CredentialLoader\" is not defined  [name-defined]"
-        },
-        {
-          "line": 306,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"CredentialLoader\" is not defined",
-          "raw": "src\\intellicrack\\main.py:306: error: Name \"CredentialLoader\" is not defined  [name-defined]"
-        },
-        {
-          "line": 309,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:309: error: Name \"ProviderRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 316,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:316: error: Name \"ProviderRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 320,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"MainWindow\" is not defined",
-          "raw": "src\\intellicrack\\main.py:320: error: Name \"MainWindow\" is not defined  [name-defined]"
-        },
-        {
-          "line": 327,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"MainWindow\" is not defined",
-          "raw": "src\\intellicrack\\main.py:327: error: Name \"MainWindow\" is not defined  [name-defined]"
-        },
-        {
-          "line": 395,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SplashScreen\" is not defined",
-          "raw": "src\\intellicrack\\main.py:395: error: Name \"SplashScreen\" is not defined  [name-defined]"
-        },
-        {
-          "line": 439,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:439: error: Name \"ProviderRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 440,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"CredentialLoader\" is not defined",
-          "raw": "src\\intellicrack\\main.py:440: error: Name \"CredentialLoader\" is not defined  [name-defined]"
-        },
-        {
-          "line": 462,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderName\" is not defined",
-          "raw": "src\\intellicrack\\main.py:462: error: Name \"ProviderName\" is not defined  [name-defined]"
-        },
-        {
-          "line": 462,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"LLMProviderBase\" is not defined",
-          "raw": "src\\intellicrack\\main.py:462: error: Name \"LLMProviderBase\" is not defined  [name-defined]"
-        },
-        {
-          "line": 463,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderName\" is not defined",
-          "raw": "src\\intellicrack\\main.py:463: error: Name \"ProviderName\" is not defined  [name-defined]"
-        },
-        {
-          "line": 463,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"LLMProviderBase\" is not defined",
-          "raw": "src\\intellicrack\\main.py:463: error: Name \"LLMProviderBase\" is not defined  [name-defined]"
-        },
-        {
-          "line": 476,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderName\" is not defined",
-          "raw": "src\\intellicrack\\main.py:476: error: Name \"ProviderName\" is not defined  [name-defined]"
-        },
-        {
-          "line": 476,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"LLMProviderBase\" is not defined",
-          "raw": "src\\intellicrack\\main.py:476: error: Name \"LLMProviderBase\" is not defined  [name-defined]"
-        },
-        {
-          "line": 526,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProcessManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:526: error: Name \"ProcessManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 549,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProcessManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:549: error: Name \"ProcessManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 641,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:641: error: Name \"ProviderRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 667,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProviderRegistry\" is not defined",
-          "raw": "src\\intellicrack\\main.py:667: error: Name \"ProviderRegistry\" is not defined  [name-defined]"
-        },
-        {
-          "line": 706,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"SplashScreen\" is not defined",
-          "raw": "src\\intellicrack\\main.py:706: error: Name \"SplashScreen\" is not defined  [name-defined]"
-        },
-        {
-          "line": 707,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ProcessManager\" is not defined",
-          "raw": "src\\intellicrack\\main.py:707: error: Name \"ProcessManager\" is not defined  [name-defined]"
-        },
-        {
-          "line": 771,
-          "column": null,
-          "severity": "error",
-          "code": "name-defined",
-          "message": "Name \"ModelDiscovery\" is not defined",
-          "raw": "src\\intellicrack\\main.py:771: error: Name \"ModelDiscovery\" is not defined  [name-defined]"
         }
       ]
     },
@@ -1837,12 +1527,12 @@
           "raw": "src\\intellicrack\\credentials\\store.py:53: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 141,
+          "line": 152,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\credentials\\store.py:141: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\credentials\\store.py:152: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -2019,20 +1709,20 @@
           "raw": "src\\intellicrack\\ui\\app.py:69: error: Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")  [assignment]"
         },
         {
-          "line": 381,
+          "line": 411,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:381: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:411: error: Statement is unreachable  [unreachable]"
         },
         {
-          "line": 833,
+          "line": 863,
           "column": null,
           "severity": "error",
           "code": "unreachable",
           "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\ui\\app.py:833: error: Statement is unreachable  [unreachable]"
+          "raw": "src\\intellicrack\\ui\\app.py:863: error: Statement is unreachable  [unreachable]"
         }
       ]
     },
@@ -2157,28 +1847,6 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_font_manager.py",
-      "count": 2,
-      "findings": [
-        {
-          "line": 178,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:178: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        },
-        {
-          "line": 243,
-          "column": null,
-          "severity": "error",
-          "code": "comparison-overlap",
-          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
-          "raw": "tests\\test_ui\\test_font_manager.py:243: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\providers\\xpu_utils.py",
       "count": 2,
       "findings": [
@@ -2197,6 +1865,28 @@
           "code": "unreachable",
           "message": "Statement is unreachable",
           "raw": "src\\intellicrack\\providers\\xpu_utils.py:76: error: Statement is unreachable  [unreachable]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_ui\\test_font_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 178,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:178: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
+        },
+        {
+          "line": 243,
+          "column": null,
+          "severity": "error",
+          "code": "comparison-overlap",
+          "message": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")",
+          "raw": "tests\\test_ui\\test_font_manager.py:243: error: Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")  [comparison-overlap]"
         }
       ]
     },
@@ -2245,6 +1935,28 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\core\\template_manager.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 422,
+          "column": null,
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"PatternRegistry | None\"",
+          "raw": "src\\intellicrack\\core\\template_manager.py:422: error: Returning Any from function declared to return \"PatternRegistry | None\"  [no-any-return]"
+        },
+        {
+          "line": 434,
+          "column": null,
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"PatternRegistry | None\"",
+          "raw": "src\\intellicrack\\core\\template_manager.py:434: error: Returning Any from function declared to return \"PatternRegistry | None\"  [no-any-return]"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\sandbox_bridge.py",
       "count": 2,
       "findings": [
@@ -2267,24 +1979,16 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\template_manager.py",
-      "count": 2,
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
+      "count": 1,
       "findings": [
         {
-          "line": 422,
+          "line": 1700,
           "column": null,
           "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"PatternRegistry | None\"",
-          "raw": "src\\intellicrack\\core\\template_manager.py:422: error: Returning Any from function declared to return \"PatternRegistry | None\"  [no-any-return]"
-        },
-        {
-          "line": 434,
-          "column": null,
-          "severity": "error",
-          "code": "no-any-return",
-          "message": "Returning Any from function declared to return \"PatternRegistry | None\"",
-          "raw": "src\\intellicrack\\core\\template_manager.py:434: error: Returning Any from function declared to return \"PatternRegistry | None\"  [no-any-return]"
+          "code": "unreachable",
+          "message": "Right operand of \"or\" is never evaluated",
+          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1700: error: Right operand of \"or\" is never evaluated  [unreachable]"
         }
       ]
     },
@@ -2317,34 +2021,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 1700,
-          "column": null,
-          "severity": "error",
-          "code": "unreachable",
-          "message": "Right operand of \"or\" is never evaluated",
-          "raw": "src\\intellicrack\\core\\hexpat\\evaluator.py:1700: error: Right operand of \"or\" is never evaluated  [unreachable]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\sandbox\\qemu.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 400,
-          "column": null,
-          "severity": "error",
-          "code": "union-attr",
-          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
-          "raw": "src\\intellicrack\\sandbox\\qemu.py:400: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\hexpat\\stdlib.py",
       "count": 1,
       "findings": [
@@ -2359,16 +2035,30 @@
       ]
     },
     {
-      "path": "tests\\test_ui\\test_icon_manager.py",
+      "path": "src\\intellicrack\\providers\\ollama.py",
       "count": 1,
       "findings": [
         {
-          "line": 348,
+          "line": 1077,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?",
-          "raw": "tests\\test_ui\\test_icon_manager.py:348: error: \"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?  [attr-defined]"
+          "code": "redundant-cast",
+          "message": "Redundant cast to \"list[Any]\"",
+          "raw": "src\\intellicrack\\providers\\ollama.py:1077: error: Redundant cast to \"list[Any]\"  [redundant-cast]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\sandbox\\qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 400,
+          "column": null,
+          "severity": "error",
+          "code": "union-attr",
+          "message": "Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"",
+          "raw": "src\\intellicrack\\sandbox\\qemu.py:400: error: Item \"None\" of \"StreamReader | None\" has no attribute \"readline\"  [union-attr]"
         }
       ]
     },
@@ -2401,16 +2091,30 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
+      "path": "src\\intellicrack\\providers\\model_loader.py",
       "count": 1,
       "findings": [
         {
-          "line": 108,
+          "line": 27,
           "column": null,
           "severity": "error",
-          "code": "unreachable",
-          "message": "Statement is unreachable",
-          "raw": "src\\intellicrack\\credentials\\oauth.py:108: error: Statement is unreachable  [unreachable]"
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
+          "raw": "src\\intellicrack\\providers\\model_loader.py:27: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\bridges\\x64dbg.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 3598,
+          "column": null,
+          "severity": "error",
+          "code": "no-any-return",
+          "message": "Returning Any from function declared to return \"int\"",
+          "raw": "src\\intellicrack\\bridges\\x64dbg.py:3598: error: Returning Any from function declared to return \"int\"  [no-any-return]"
         }
       ]
     },
@@ -2443,62 +2147,6 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_google_provider.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 22,
-          "column": null,
-          "severity": "error",
-          "code": "attr-defined",
-          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
-          "raw": "tests\\test_providers\\test_google_provider.py:22: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\model_loader.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 27,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"None\", variable has type Module)",
-          "raw": "src\\intellicrack\\providers\\model_loader.py:27: error: Incompatible types in assignment (expression has type \"None\", variable has type Module)  [assignment]"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\providers\\huggingface.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 231,
-          "column": null,
-          "severity": "error",
-          "code": "no-untyped-call",
-          "message": "Call to untyped function \"close\" in typed context",
-          "raw": "src\\intellicrack\\providers\\huggingface.py:231: error: Call to untyped function \"close\" in typed context  [no-untyped-call]"
-        }
-      ]
-    },
-    {
-      "path": "tests\\test_bridges\\test_x64dbg.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": 190,
-          "column": null,
-          "severity": "error",
-          "code": "assignment",
-          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
-          "raw": "tests\\test_bridges\\test_x64dbg.py:190: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
-        }
-      ]
-    },
-    {
       "path": "tests\\test_providers\\test_anthropic_provider.py",
       "count": 1,
       "findings": [
@@ -2513,30 +2161,30 @@
       ]
     },
     {
-      "path": "tests\\test_providers\\test_model_discovery.py",
+      "path": "tests\\test_ui\\test_icon_manager.py",
       "count": 1,
       "findings": [
         {
-          "line": 21,
+          "line": 348,
           "column": null,
           "severity": "error",
           "code": "attr-defined",
-          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
-          "raw": "tests\\test_providers\\test_model_discovery.py:21: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
+          "message": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?",
+          "raw": "tests\\test_ui\\test_icon_manager.py:348: error: \"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?  [attr-defined]"
         }
       ]
     },
     {
-      "path": "tests\\test_providers\\test_huggingface_provider.py",
+      "path": "tests\\test_bridges\\test_x64dbg.py",
       "count": 1,
       "findings": [
         {
-          "line": 22,
+          "line": 190,
           "column": null,
           "severity": "error",
-          "code": "attr-defined",
-          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
-          "raw": "tests\\test_providers\\test_huggingface_provider.py:22: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
+          "code": "assignment",
+          "message": "Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")",
+          "raw": "tests\\test_bridges\\test_x64dbg.py:190: error: Incompatible types in assignment (expression has type \"dict[str, object]\", variable has type \"WatchpointInfo\")  [assignment]"
         }
       ]
     },
@@ -2559,12 +2207,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 2327,
+          "line": 2328,
           "column": null,
           "severity": "error",
           "code": "no-redef",
-          "message": "Name \"data\" already defined on line 2321",
-          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2327: error: Name \"data\" already defined on line 2321  [no-redef]"
+          "message": "Name \"data\" already defined on line 2322",
+          "raw": "src\\intellicrack\\bridges\\hex_editor.py:2328: error: Name \"data\" already defined on line 2322  [no-redef]"
         }
       ]
     },
@@ -2579,6 +2227,62 @@
           "code": "attr-defined",
           "message": "\"XPUStatusDialog\" has no attribute \"status_label\"; maybe \"_status_label\"?",
           "raw": "tests\\test_ui\\test_xpu_status.py:249: error: \"XPUStatusDialog\" has no attribute \"status_label\"; maybe \"_status_label\"?  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\huggingface.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 272,
+          "column": null,
+          "severity": "error",
+          "code": "no-untyped-call",
+          "message": "Call to untyped function \"close\" in typed context",
+          "raw": "src\\intellicrack\\providers\\huggingface.py:272: error: Call to untyped function \"close\" in typed context  [no-untyped-call]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_huggingface_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 22,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
+          "raw": "tests\\test_providers\\test_huggingface_provider.py:22: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_model_discovery.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 21,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
+          "raw": "tests\\test_providers\\test_model_discovery.py:21: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
+        }
+      ]
+    },
+    {
+      "path": "tests\\test_providers\\test_google_provider.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 22,
+          "column": null,
+          "severity": "error",
+          "code": "attr-defined",
+          "message": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"",
+          "raw": "tests\\test_providers\\test_google_provider.py:22: error: Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\"  [attr-defined]"
         }
       ]
     },

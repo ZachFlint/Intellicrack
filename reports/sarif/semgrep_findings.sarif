@@ -1994,7 +1994,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 64,
                   "startColumn": 1
                 }
               }
@@ -2015,7 +2015,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1107,
+                  "startLine": 1115,
                   "startColumn": 1
                 }
               }
@@ -2036,7 +2036,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1239,
+                  "startLine": 1247,
                   "startColumn": 1
                 }
               }
@@ -2057,7 +2057,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1598,
+                  "startLine": 1614,
                   "startColumn": 1
                 }
               }
@@ -2078,7 +2078,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1799,
+                  "startLine": 1815,
                   "startColumn": 1
                 }
               }
@@ -2099,7 +2099,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1802,
+                  "startLine": 1818,
                   "startColumn": 1
                 }
               }
@@ -2120,7 +2120,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1923,
+                  "startLine": 1939,
                   "startColumn": 1
                 }
               }
@@ -2141,7 +2141,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2074,
+                  "startLine": 2090,
                   "startColumn": 1
                 }
               }
@@ -2162,7 +2162,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2434,
+                  "startLine": 2450,
                   "startColumn": 1
                 }
               }
@@ -2183,7 +2183,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2439,
+                  "startLine": 2455,
                   "startColumn": 1
                 }
               }
@@ -2204,7 +2204,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2444,
+                  "startLine": 2460,
                   "startColumn": 1
                 }
               }
@@ -2225,7 +2225,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2563,
+                  "startLine": 2579,
                   "startColumn": 1
                 }
               }
@@ -2246,7 +2246,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2827,
+                  "startLine": 2793,
                   "startColumn": 1
                 }
               }
@@ -2267,7 +2267,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3134,
+                  "startLine": 3100,
                   "startColumn": 1
                 }
               }
@@ -2288,7 +2288,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3660,
+                  "startLine": 3644,
                   "startColumn": 1
                 }
               }
@@ -2309,7 +2309,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3719,
+                  "startLine": 3703,
                   "startColumn": 1
                 }
               }
@@ -2330,7 +2330,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4061,
+                  "startLine": 4045,
                   "startColumn": 1
                 }
               }
@@ -2351,7 +2351,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4106,
+                  "startLine": 4090,
                   "startColumn": 1
                 }
               }
@@ -2372,7 +2372,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4106,
+                  "startLine": 4090,
                   "startColumn": 1
                 }
               }
@@ -2393,7 +2393,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4371,
+                  "startLine": 4355,
                   "startColumn": 1
                 }
               }
@@ -2414,7 +2414,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4431,
+                  "startLine": 4415,
                   "startColumn": 1
                 }
               }
@@ -2435,7 +2435,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5222,
+                  "startLine": 5206,
                   "startColumn": 1
                 }
               }
@@ -2456,7 +2456,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5245,
+                  "startLine": 5229,
                   "startColumn": 1
                 }
               }
@@ -2477,7 +2477,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5484,
+                  "startLine": 5468,
                   "startColumn": 1
                 }
               }
@@ -2498,7 +2498,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5535,
+                  "startLine": 5519,
                   "startColumn": 1
                 }
               }
@@ -2519,7 +2519,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6085,
+                  "startLine": 6103,
                   "startColumn": 1
                 }
               }
@@ -2918,7 +2918,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 298,
+                  "startLine": 297,
                   "startColumn": 1
                 }
               }
@@ -2939,7 +2939,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 340,
+                  "startLine": 339,
                   "startColumn": 1
                 }
               }
@@ -2960,7 +2960,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 348,
+                  "startLine": 347,
                   "startColumn": 1
                 }
               }
@@ -2981,7 +2981,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1494,
+                  "startLine": 1493,
                   "startColumn": 1
                 }
               }
@@ -3002,7 +3002,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1517,
+                  "startLine": 1518,
                   "startColumn": 1
                 }
               }
@@ -3023,7 +3023,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1576,
+                  "startLine": 1577,
                   "startColumn": 1
                 }
               }
@@ -3044,27 +3044,6 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1615,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
                   "startLine": 1616,
                   "startColumn": 1
                 }
@@ -3073,6 +3052,27 @@
           ]
         },
         {
+          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1617,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "intellicrack-logging-d5-raise-without-preceding-log",
           "level": "error",
           "message": {
@@ -3086,7 +3086,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1621,
+                  "startLine": 1622,
                   "startColumn": 1
                 }
               }
@@ -3107,7 +3107,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1663,
+                  "startLine": 1664,
                   "startColumn": 1
                 }
               }
@@ -3128,7 +3128,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1683,
+                  "startLine": 1684,
                   "startColumn": 1
                 }
               }
@@ -3149,7 +3149,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1707,
+                  "startLine": 1708,
                   "startColumn": 1
                 }
               }
@@ -3170,7 +3170,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1715,
+                  "startLine": 1716,
                   "startColumn": 1
                 }
               }
@@ -3191,7 +3191,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1945,
+                  "startLine": 1946,
                   "startColumn": 1
                 }
               }
@@ -3212,7 +3212,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1981,
+                  "startLine": 1982,
                   "startColumn": 1
                 }
               }
@@ -3233,7 +3233,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2022,
+                  "startLine": 2023,
                   "startColumn": 1
                 }
               }
@@ -3254,7 +3254,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2084,
+                  "startLine": 2085,
                   "startColumn": 1
                 }
               }
@@ -3275,7 +3275,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2158,
+                  "startLine": 2159,
                   "startColumn": 1
                 }
               }
@@ -3296,7 +3296,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2158,
+                  "startLine": 2159,
                   "startColumn": 1
                 }
               }
@@ -3317,7 +3317,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2174,
+                  "startLine": 2175,
                   "startColumn": 1
                 }
               }
@@ -3338,7 +3338,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2190,
+                  "startLine": 2191,
                   "startColumn": 1
                 }
               }
@@ -3359,7 +3359,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2190,
+                  "startLine": 2191,
                   "startColumn": 1
                 }
               }
@@ -3380,7 +3380,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2207,
+                  "startLine": 2208,
                   "startColumn": 1
                 }
               }
@@ -3401,7 +3401,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2418,
+                  "startLine": 2419,
                   "startColumn": 1
                 }
               }
@@ -3422,7 +3422,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2467,
+                  "startLine": 2468,
                   "startColumn": 1
                 }
               }
@@ -3443,7 +3443,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2478,
+                  "startLine": 2479,
                   "startColumn": 1
                 }
               }
@@ -3464,7 +3464,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2505,
+                  "startLine": 2506,
                   "startColumn": 1
                 }
               }
@@ -3485,7 +3485,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2651,
+                  "startLine": 2652,
                   "startColumn": 1
                 }
               }
@@ -3506,7 +3506,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2732,
+                  "startLine": 2733,
                   "startColumn": 1
                 }
               }
@@ -3527,7 +3527,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2896,
+                  "startLine": 2897,
                   "startColumn": 1
                 }
               }
@@ -3548,7 +3548,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2909,
+                  "startLine": 2910,
                   "startColumn": 1
                 }
               }
@@ -3569,7 +3569,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3025,
+                  "startLine": 3026,
                   "startColumn": 1
                 }
               }
@@ -3590,7 +3590,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3042,
+                  "startLine": 3043,
                   "startColumn": 1
                 }
               }
@@ -3611,7 +3611,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3042,
+                  "startLine": 3043,
                   "startColumn": 1
                 }
               }
@@ -3632,7 +3632,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3045,
+                  "startLine": 3046,
                   "startColumn": 1
                 }
               }
@@ -3653,7 +3653,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3091,
+                  "startLine": 3092,
                   "startColumn": 1
                 }
               }
@@ -3674,7 +3674,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3107,
+                  "startLine": 3108,
                   "startColumn": 1
                 }
               }
@@ -3695,7 +3695,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3289,
+                  "startLine": 3290,
                   "startColumn": 1
                 }
               }
@@ -3716,7 +3716,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3292,
+                  "startLine": 3293,
                   "startColumn": 1
                 }
               }
@@ -3737,7 +3737,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3404,
+                  "startLine": 3416,
                   "startColumn": 1
                 }
               }
@@ -3758,7 +3758,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3413,
+                  "startLine": 3425,
                   "startColumn": 1
                 }
               }
@@ -3779,7 +3779,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3459,
+                  "startLine": 3487,
                   "startColumn": 1
                 }
               }
@@ -3800,7 +3800,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3516,
+                  "startLine": 3544,
                   "startColumn": 1
                 }
               }
@@ -3821,7 +3821,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3520,
+                  "startLine": 3603,
                   "startColumn": 1
                 }
               }
@@ -3842,7 +3842,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3655,
+                  "startLine": 3658,
                   "startColumn": 1
                 }
               }
@@ -3863,7 +3863,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3671,
+                  "startLine": 3674,
                   "startColumn": 1
                 }
               }
@@ -3884,7 +3884,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3832,
+                  "startLine": 3740,
                   "startColumn": 1
                 }
               }
@@ -3905,7 +3905,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3865,
+                  "startLine": 3773,
                   "startColumn": 1
                 }
               }
@@ -3926,7 +3926,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3873,
+                  "startLine": 3781,
                   "startColumn": 1
                 }
               }
@@ -3947,7 +3947,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3991,
+                  "startLine": 3899,
                   "startColumn": 1
                 }
               }
@@ -3968,7 +3968,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3998,
+                  "startLine": 3906,
                   "startColumn": 1
                 }
               }
@@ -3989,7 +3989,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4020,
+                  "startLine": 3928,
                   "startColumn": 1
                 }
               }
@@ -4010,7 +4010,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4027,
+                  "startLine": 3935,
                   "startColumn": 1
                 }
               }
@@ -4031,7 +4031,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4049,
+                  "startLine": 3957,
                   "startColumn": 1
                 }
               }
@@ -4052,7 +4052,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4050,
+                  "startLine": 3958,
                   "startColumn": 1
                 }
               }
@@ -4073,7 +4073,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4058,
+                  "startLine": 3966,
                   "startColumn": 1
                 }
               }
@@ -4094,7 +4094,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4095,
+                  "startLine": 4003,
                   "startColumn": 1
                 }
               }
@@ -4115,7 +4115,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4096,
+                  "startLine": 4004,
                   "startColumn": 1
                 }
               }
@@ -4136,7 +4136,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4104,
+                  "startLine": 4012,
                   "startColumn": 1
                 }
               }
@@ -4157,7 +4157,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4164,
+                  "startLine": 4072,
                   "startColumn": 1
                 }
               }
@@ -4178,7 +4178,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4172,
+                  "startLine": 4080,
                   "startColumn": 1
                 }
               }
@@ -4199,7 +4199,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4183,
+                  "startLine": 4091,
                   "startColumn": 1
                 }
               }
@@ -4220,7 +4220,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4185,
+                  "startLine": 4093,
                   "startColumn": 1
                 }
               }
@@ -4241,7 +4241,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4190,
+                  "startLine": 4098,
                   "startColumn": 1
                 }
               }
@@ -4262,7 +4262,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4241,
+                  "startLine": 4149,
                   "startColumn": 1
                 }
               }
@@ -4283,7 +4283,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4269,
+                  "startLine": 4177,
                   "startColumn": 1
                 }
               }
@@ -4304,7 +4304,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4299,
+                  "startLine": 4207,
                   "startColumn": 1
                 }
               }
@@ -4325,7 +4325,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4306,
+                  "startLine": 4214,
                   "startColumn": 1
                 }
               }
@@ -4346,7 +4346,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4335,
+                  "startLine": 4243,
                   "startColumn": 1
                 }
               }
@@ -4367,7 +4367,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4341,
+                  "startLine": 4249,
                   "startColumn": 1
                 }
               }
@@ -4388,7 +4388,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4379,
+                  "startLine": 4287,
                   "startColumn": 1
                 }
               }
@@ -4409,7 +4409,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4417,
+                  "startLine": 4325,
                   "startColumn": 1
                 }
               }
@@ -4430,7 +4430,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4417,
+                  "startLine": 4325,
                   "startColumn": 1
                 }
               }
@@ -4451,7 +4451,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4631,
+                  "startLine": 4539,
                   "startColumn": 1
                 }
               }
@@ -4472,7 +4472,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4780,
+                  "startLine": 4688,
                   "startColumn": 1
                 }
               }
@@ -4493,7 +4493,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4947,
+                  "startLine": 4855,
                   "startColumn": 1
                 }
               }
@@ -4514,7 +4514,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5242,
+                  "startLine": 5150,
                   "startColumn": 1
                 }
               }
@@ -4535,7 +4535,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5356,
+                  "startLine": 5264,
                   "startColumn": 1
                 }
               }
@@ -4556,7 +4556,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5407,
+                  "startLine": 5315,
                   "startColumn": 1
                 }
               }
@@ -4577,7 +4577,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5515,
+                  "startLine": 5423,
                   "startColumn": 1
                 }
               }
@@ -4598,7 +4598,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5572,
+                  "startLine": 5480,
                   "startColumn": 1
                 }
               }
@@ -4619,7 +4619,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5627,
+                  "startLine": 5535,
                   "startColumn": 1
                 }
               }
@@ -4640,7 +4640,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5680,
+                  "startLine": 5588,
                   "startColumn": 1
                 }
               }
@@ -4661,7 +4661,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5680,
+                  "startLine": 5588,
                   "startColumn": 1
                 }
               }
@@ -4682,7 +4682,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5708,
+                  "startLine": 5616,
                   "startColumn": 1
                 }
               }
@@ -4703,7 +4703,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5708,
+                  "startLine": 5616,
                   "startColumn": 1
                 }
               }
@@ -4724,7 +4724,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5723,
+                  "startLine": 5631,
                   "startColumn": 1
                 }
               }
@@ -4745,7 +4745,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5723,
+                  "startLine": 5631,
                   "startColumn": 1
                 }
               }
@@ -4766,7 +4766,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5769,
+                  "startLine": 5677,
                   "startColumn": 1
                 }
               }
@@ -4787,7 +4787,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5769,
+                  "startLine": 5677,
                   "startColumn": 1
                 }
               }
@@ -4808,7 +4808,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5805,
+                  "startLine": 5713,
                   "startColumn": 1
                 }
               }
@@ -4829,7 +4829,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5805,
+                  "startLine": 5713,
                   "startColumn": 1
                 }
               }
@@ -4850,7 +4850,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5832,
+                  "startLine": 5740,
                   "startColumn": 1
                 }
               }
@@ -4871,7 +4871,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5832,
+                  "startLine": 5740,
                   "startColumn": 1
                 }
               }
@@ -4892,7 +4892,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5849,
+                  "startLine": 5757,
                   "startColumn": 1
                 }
               }
@@ -4913,7 +4913,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5877,
+                  "startLine": 5785,
                   "startColumn": 1
                 }
               }
@@ -4934,7 +4934,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5877,
+                  "startLine": 5785,
                   "startColumn": 1
                 }
               }
@@ -4955,7 +4955,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5903,
+                  "startLine": 5811,
                   "startColumn": 1
                 }
               }
@@ -4976,7 +4976,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5903,
+                  "startLine": 5811,
                   "startColumn": 1
                 }
               }
@@ -4997,7 +4997,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5920,
+                  "startLine": 5828,
                   "startColumn": 1
                 }
               }
@@ -5018,7 +5018,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5944,
+                  "startLine": 5852,
                   "startColumn": 1
                 }
               }
@@ -5039,7 +5039,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5947,
+                  "startLine": 5855,
                   "startColumn": 1
                 }
               }
@@ -5060,7 +5060,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5971,
+                  "startLine": 5879,
                   "startColumn": 1
                 }
               }
@@ -5081,7 +5081,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5979,
+                  "startLine": 5887,
                   "startColumn": 1
                 }
               }
@@ -5102,7 +5102,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6003,
+                  "startLine": 5911,
                   "startColumn": 1
                 }
               }
@@ -5123,7 +5123,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6006,
+                  "startLine": 5914,
                   "startColumn": 1
                 }
               }
@@ -5144,7 +5144,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6030,
+                  "startLine": 5938,
                   "startColumn": 1
                 }
               }
@@ -5165,7 +5165,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6195,
+                  "startLine": 6103,
                   "startColumn": 1
                 }
               }
@@ -6341,7 +6341,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 390,
+                  "startLine": 526,
                   "startColumn": 1
                 }
               }
@@ -6362,7 +6362,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 446,
+                  "startLine": 582,
                   "startColumn": 1
                 }
               }
@@ -6383,7 +6383,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 464,
+                  "startLine": 600,
                   "startColumn": 1
                 }
               }
@@ -6404,7 +6404,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 482,
+                  "startLine": 618,
                   "startColumn": 1
                 }
               }
@@ -6425,7 +6425,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 683,
                   "startColumn": 1
                 }
               }
@@ -6446,7 +6446,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 574,
+                  "startLine": 710,
                   "startColumn": 1
                 }
               }
@@ -6467,7 +6467,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 592,
+                  "startLine": 728,
                   "startColumn": 1
                 }
               }
@@ -6488,7 +6488,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1737,
+                  "startLine": 1873,
                   "startColumn": 1
                 }
               }
@@ -6509,7 +6509,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1751,
+                  "startLine": 1887,
                   "startColumn": 1
                 }
               }
@@ -6530,7 +6530,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1879,
+                  "startLine": 2013,
                   "startColumn": 1
                 }
               }
@@ -6551,7 +6551,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1902,
+                  "startLine": 2036,
                   "startColumn": 1
                 }
               }
@@ -6572,7 +6572,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2004,
+                  "startLine": 2138,
                   "startColumn": 1
                 }
               }
@@ -6593,7 +6593,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2086,
+                  "startLine": 2220,
                   "startColumn": 1
                 }
               }
@@ -6614,7 +6614,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2134,
+                  "startLine": 2268,
                   "startColumn": 1
                 }
               }
@@ -6635,7 +6635,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2411,
+                  "startLine": 2545,
                   "startColumn": 1
                 }
               }
@@ -6656,7 +6656,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2473,
+                  "startLine": 2607,
                   "startColumn": 1
                 }
               }
@@ -6677,7 +6677,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2662,
+                  "startLine": 2792,
                   "startColumn": 1
                 }
               }
@@ -6698,7 +6698,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2829,
+                  "startLine": 2956,
                   "startColumn": 1
                 }
               }
@@ -6719,7 +6719,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2927,
+                  "startLine": 3054,
                   "startColumn": 1
                 }
               }
@@ -6740,7 +6740,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2965,
+                  "startLine": 3092,
                   "startColumn": 1
                 }
               }
@@ -6761,7 +6761,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3011,
+                  "startLine": 3138,
                   "startColumn": 1
                 }
               }
@@ -6782,49 +6782,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3422,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-d6-bridge-method-no-entry-log",
-          "level": "error",
-          "message": {
-            "text": "A public method on a Bridge class has no log call at all. Every bridge method crosses the boundary"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3430,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-d6-bridge-method-no-entry-log",
-          "level": "error",
-          "message": {
-            "text": "A public method on a Bridge class has no log call at all. Every bridge method crosses the boundary"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3438,
+                  "startLine": 3206,
                   "startColumn": 1
                 }
               }
@@ -6845,7 +6803,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3511,
+                  "startLine": 3586,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-d6-bridge-method-no-entry-log",
+          "level": "error",
+          "message": {
+            "text": "A public method on a Bridge class has no log call at all. Every bridge method crosses the boundary"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3600,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-d6-bridge-method-no-entry-log",
+          "level": "error",
+          "message": {
+            "text": "A public method on a Bridge class has no log call at all. Every bridge method crosses the boundary"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3608,
                   "startColumn": 1
                 }
               }
@@ -6866,7 +6866,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3620,
+                  "startLine": 3681,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3790,
                   "startColumn": 1
                 }
               }
@@ -6887,7 +6908,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3637,
+                  "startLine": 3807,
                   "startColumn": 1
                 }
               }
@@ -6908,7 +6929,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3637,
+                  "startLine": 3807,
                   "startColumn": 1
                 }
               }
@@ -6929,7 +6950,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3669,
+                  "startLine": 3839,
                   "startColumn": 1
                 }
               }
@@ -6950,7 +6971,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3686,
+                  "startLine": 3856,
                   "startColumn": 1
                 }
               }
@@ -6971,7 +6992,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3686,
+                  "startLine": 3856,
                   "startColumn": 1
                 }
               }
@@ -6992,7 +7013,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3862,
+                  "startLine": 4032,
                   "startColumn": 1
                 }
               }
@@ -7013,28 +7034,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3881,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
-          "level": "error",
-          "message": {
-            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3932,
+                  "startLine": 4051,
                   "startColumn": 1
                 }
               }
@@ -7055,7 +7055,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3936,
+                  "startLine": 4118,
                   "startColumn": 1
                 }
               }
@@ -7076,28 +7076,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3939,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-d1-silent-except-block",
-          "level": "error",
-          "message": {
-            "text": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3948,
+                  "startLine": 4123,
                   "startColumn": 1
                 }
               }
@@ -7118,7 +7097,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4004,
+                  "startLine": 4187,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4191,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
+          "level": "error",
+          "message": {
+            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4194,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
+          "level": "error",
+          "message": {
+            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4199,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
+          "level": "error",
+          "message": {
+            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4243,
                   "startColumn": 1
                 }
               }
@@ -7139,7 +7202,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4019,
+                  "startLine": 4258,
                   "startColumn": 1
                 }
               }
@@ -7160,7 +7223,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4063,
+                  "startLine": 4302,
                   "startColumn": 1
                 }
               }
@@ -7181,7 +7244,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4106,
+                  "startLine": 4345,
                   "startColumn": 1
                 }
               }
@@ -7193,216 +7256,6 @@
           "level": "error",
           "message": {
             "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4140,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
-          "level": "error",
-          "message": {
-            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4158,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4213,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4232,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4251,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4256,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4270,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4275,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4294,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4299,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
           },
           "locations": [
             {
@@ -7420,48 +7273,6 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4400,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-e2-debug-inside-except",
-          "level": "error",
-          "message": {
-            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4427,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
           "level": "error",
           "message": {
@@ -7475,7 +7286,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4450,
+                  "startLine": 4397,
                   "startColumn": 1
                 }
               }
@@ -7496,7 +7307,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4451,
+                  "startLine": 4452,
                   "startColumn": 1
                 }
               }
@@ -7517,7 +7328,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4475,
+                  "startLine": 4471,
                   "startColumn": 1
                 }
               }
@@ -7538,7 +7349,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4497,
+                  "startLine": 4490,
                   "startColumn": 1
                 }
               }
@@ -7559,7 +7370,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4502,
+                  "startLine": 4495,
                   "startColumn": 1
                 }
               }
@@ -7580,7 +7391,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4516,
+                  "startLine": 4509,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4514,
                   "startColumn": 1
                 }
               }
@@ -7601,7 +7433,238 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4642,
+                  "startLine": 4533,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4538,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4618,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4639,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4666,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c3-reserved-logrecord-key",
+          "level": "error",
+          "message": {
+            "text": "The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler,"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4689,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4690,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4714,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4736,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4741,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4755,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4881,
                   "startColumn": 1
                 }
               }
@@ -7622,7 +7685,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4726,
+                  "startLine": 4965,
                   "startColumn": 1
                 }
               }
@@ -7643,7 +7706,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4906,
+                  "startLine": 5145,
                   "startColumn": 1
                 }
               }
@@ -7664,7 +7727,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5085,
+                  "startLine": 5324,
                   "startColumn": 1
                 }
               }
@@ -7685,7 +7748,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5098,
+                  "startLine": 5337,
                   "startColumn": 1
                 }
               }
@@ -7706,7 +7769,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5106,
+                  "startLine": 5345,
                   "startColumn": 1
                 }
               }
@@ -7727,7 +7790,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5114,
+                  "startLine": 5353,
                   "startColumn": 1
                 }
               }
@@ -7748,7 +7811,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5149,
+                  "startLine": 5388,
                   "startColumn": 1
                 }
               }
@@ -7769,7 +7832,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5202,
+                  "startLine": 5441,
                   "startColumn": 1
                 }
               }
@@ -7790,7 +7853,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5242,
+                  "startLine": 5481,
                   "startColumn": 1
                 }
               }
@@ -7811,7 +7874,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5260,
+                  "startLine": 5499,
                   "startColumn": 1
                 }
               }
@@ -8756,7 +8819,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1204,
+                  "startLine": 1251,
                   "startColumn": 1
                 }
               }
@@ -8777,7 +8840,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1204,
+                  "startLine": 1251,
                   "startColumn": 1
                 }
               }
@@ -8861,7 +8924,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 436,
+                  "startLine": 421,
                   "startColumn": 1
                 }
               }
@@ -8882,7 +8945,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 502,
+                  "startLine": 487,
                   "startColumn": 1
                 }
               }
@@ -8903,7 +8966,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 528,
+                  "startLine": 513,
                   "startColumn": 1
                 }
               }
@@ -8924,7 +8987,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 553,
+                  "startLine": 538,
                   "startColumn": 1
                 }
               }
@@ -8936,6 +8999,27 @@
           "level": "error",
           "message": {
             "text": "The first argument to a structlog logger call is the EVENT NAME and must be a constant snake_case `_logger.info(\"process_attached\", pid=pid)`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/core/logging.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 539,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
+          "level": "error",
+          "message": {
+            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
           },
           "locations": [
             {
@@ -8953,10 +9037,10 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
+          "ruleId": "intellicrack-logging-b1-no-fstring-event-name",
           "level": "error",
           "message": {
-            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
+            "text": "The first argument to a structlog logger call is the EVENT NAME and must be a constant snake_case `_logger.info(\"process_attached\", pid=pid)`."
           },
           "locations": [
             {
@@ -8966,7 +9050,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 569,
+                  "startLine": 555,
                   "startColumn": 1
                 }
               }
@@ -8974,10 +9058,10 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-b1-no-fstring-event-name",
+          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
           "level": "error",
           "message": {
-            "text": "The first argument to a structlog logger call is the EVENT NAME and must be a constant snake_case `_logger.info(\"process_attached\", pid=pid)`."
+            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
           },
           "locations": [
             {
@@ -8995,10 +9079,10 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
+          "ruleId": "intellicrack-logging-b1-no-fstring-event-name",
           "level": "error",
           "message": {
-            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
+            "text": "The first argument to a structlog logger call is the EVENT NAME and must be a constant snake_case `_logger.info(\"process_attached\", pid=pid)`."
           },
           "locations": [
             {
@@ -9008,7 +9092,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 585,
+                  "startLine": 574,
                   "startColumn": 1
                 }
               }
@@ -9016,10 +9100,10 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-b1-no-fstring-event-name",
+          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
           "level": "error",
           "message": {
-            "text": "The first argument to a structlog logger call is the EVENT NAME and must be a constant snake_case `_logger.info(\"process_attached\", pid=pid)`."
+            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
           },
           "locations": [
             {
@@ -9037,27 +9121,6 @@
           ]
         },
         {
-          "ruleId": "intellicrack-logging-a3-get-logger-requires-dunder-name",
-          "level": "error",
-          "message": {
-            "text": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/core/logging.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 604,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "intellicrack-logging-b1-no-fstring-event-name",
           "level": "error",
           "message": {
@@ -9071,7 +9134,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 605,
+                  "startLine": 590,
                   "startColumn": 1
                 }
               }
@@ -9092,7 +9155,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 608,
+                  "startLine": 593,
                   "startColumn": 1
                 }
               }
@@ -9113,7 +9176,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 663,
+                  "startLine": 648,
                   "startColumn": 1
                 }
               }
@@ -9134,7 +9197,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 682,
+                  "startLine": 667,
                   "startColumn": 1
                 }
               }
@@ -9155,7 +9218,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 689,
+                  "startLine": 674,
                   "startColumn": 1
                 }
               }
@@ -10415,7 +10478,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1461,
+                  "startLine": 1466,
                   "startColumn": 1
                 }
               }
@@ -10688,7 +10751,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 95,
+                  "startLine": 108,
                   "startColumn": 1
                 }
               }
@@ -10709,7 +10772,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 417,
+                  "startLine": 465,
                   "startColumn": 1
                 }
               }
@@ -10730,7 +10793,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 469,
+                  "startLine": 516,
                   "startColumn": 1
                 }
               }
@@ -10751,7 +10814,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 478,
+                  "startLine": 525,
                   "startColumn": 1
                 }
               }
@@ -10772,7 +10835,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 520,
+                  "startLine": 574,
                   "startColumn": 1
                 }
               }
@@ -10793,7 +10856,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 523,
+                  "startLine": 577,
                   "startColumn": 1
                 }
               }
@@ -10814,7 +10877,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 533,
+                  "startLine": 585,
                   "startColumn": 1
                 }
               }
@@ -10835,7 +10898,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 613,
+                  "startLine": 665,
                   "startColumn": 1
                 }
               }
@@ -10898,7 +10961,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 298,
+                  "startLine": 323,
                   "startColumn": 1
                 }
               }
@@ -10919,7 +10982,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 398,
+                  "startLine": 423,
                   "startColumn": 1
                 }
               }
@@ -10940,7 +11003,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 398,
+                  "startLine": 423,
                   "startColumn": 1
                 }
               }
@@ -10961,7 +11024,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 430,
+                  "startLine": 455,
                   "startColumn": 1
                 }
               }
@@ -10982,7 +11045,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 430,
+                  "startLine": 455,
                   "startColumn": 1
                 }
               }
@@ -11003,7 +11066,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 430,
+                  "startLine": 455,
                   "startColumn": 1
                 }
               }
@@ -11024,7 +11087,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 458,
+                  "startLine": 483,
                   "startColumn": 1
                 }
               }
@@ -11045,7 +11108,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 458,
+                  "startLine": 483,
                   "startColumn": 1
                 }
               }
@@ -11066,7 +11129,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 482,
+                  "startLine": 507,
                   "startColumn": 1
                 }
               }
@@ -11087,7 +11150,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 487,
+                  "startLine": 512,
                   "startColumn": 1
                 }
               }
@@ -11108,7 +11171,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 496,
+                  "startLine": 521,
                   "startColumn": 1
                 }
               }
@@ -11129,7 +11192,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 496,
+                  "startLine": 521,
                   "startColumn": 1
                 }
               }
@@ -11150,7 +11213,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 525,
+                  "startLine": 550,
                   "startColumn": 1
                 }
               }
@@ -11171,7 +11234,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 525,
+                  "startLine": 550,
                   "startColumn": 1
                 }
               }
@@ -11192,7 +11255,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 525,
+                  "startLine": 550,
                   "startColumn": 1
                 }
               }
@@ -11213,7 +11276,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 193,
+                  "startLine": 199,
                   "startColumn": 1
                 }
               }
@@ -11234,7 +11297,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 385,
+                  "startLine": 391,
                   "startColumn": 1
                 }
               }
@@ -11255,7 +11318,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 521,
+                  "startLine": 527,
                   "startColumn": 1
                 }
               }
@@ -11276,7 +11339,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 571,
+                  "startLine": 577,
                   "startColumn": 1
                 }
               }
@@ -11297,7 +11360,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 571,
+                  "startLine": 577,
                   "startColumn": 1
                 }
               }
@@ -11318,7 +11381,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 616,
+                  "startLine": 622,
                   "startColumn": 1
                 }
               }
@@ -11339,7 +11402,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 616,
+                  "startLine": 622,
                   "startColumn": 1
                 }
               }
@@ -11360,7 +11423,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 666,
+                  "startLine": 767,
                   "startColumn": 1
                 }
               }
@@ -11381,7 +11444,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 698,
+                  "startLine": 832,
                   "startColumn": 1
                 }
               }
@@ -11402,7 +11465,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 822,
+                  "startLine": 936,
                   "startColumn": 1
                 }
               }
@@ -11696,7 +11759,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 73,
+                  "startLine": 71,
                   "startColumn": 1
                 }
               }
@@ -11717,7 +11780,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 84,
+                  "startLine": 82,
                   "startColumn": 1
                 }
               }
@@ -11738,7 +11801,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 592,
+                  "startLine": 582,
                   "startColumn": 1
                 }
               }
@@ -11759,7 +11822,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 77,
+                  "startLine": 83,
                   "startColumn": 1
                 }
               }
@@ -11780,7 +11843,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 95,
+                  "startLine": 101,
                   "startColumn": 1
                 }
               }
@@ -11801,7 +11864,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 245,
+                  "startLine": 272,
                   "startColumn": 1
                 }
               }
@@ -11822,7 +11885,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 128,
+                  "startLine": 133,
                   "startColumn": 1
                 }
               }
@@ -11843,7 +11906,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 152,
+                  "startLine": 158,
                   "startColumn": 1
                 }
               }
@@ -11864,7 +11927,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 230,
+                  "startLine": 271,
                   "startColumn": 1
                 }
               }
@@ -11885,7 +11948,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 233,
+                  "startLine": 274,
                   "startColumn": 1
                 }
               }
@@ -11906,7 +11969,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 650,
+                  "startLine": 697,
                   "startColumn": 1
                 }
               }
@@ -12431,7 +12494,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 126,
+                  "startLine": 128,
                   "startColumn": 1
                 }
               }
@@ -12452,7 +12515,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 151,
+                  "startLine": 153,
                   "startColumn": 1
                 }
               }
@@ -12473,7 +12536,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 218,
+                  "startLine": 220,
                   "startColumn": 1
                 }
               }
@@ -12494,7 +12557,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 360,
+                  "startLine": 362,
                   "startColumn": 1
                 }
               }
@@ -12515,7 +12578,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 481,
+                  "startLine": 483,
                   "startColumn": 1
                 }
               }
@@ -12536,7 +12599,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 548,
+                  "startLine": 550,
                   "startColumn": 1
                 }
               }
@@ -12557,7 +12620,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 760,
+                  "startLine": 807,
                   "startColumn": 1
                 }
               }
@@ -12578,7 +12641,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 787,
+                  "startLine": 834,
                   "startColumn": 1
                 }
               }
@@ -12599,7 +12662,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1075,
+                  "startLine": 1305,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1460,
                   "startColumn": 1
                 }
               }
@@ -12620,7 +12704,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1094,
+                  "startLine": 1550,
                   "startColumn": 1
                 }
               }
@@ -12704,7 +12788,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 61,
+                  "startLine": 62,
                   "startColumn": 1
                 }
               }
@@ -12725,7 +12809,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 78,
+                  "startLine": 79,
                   "startColumn": 1
                 }
               }
@@ -12746,7 +12830,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 520,
+                  "startLine": 104,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e6-debug-on-destructive-op",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 107,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-d5-raise-without-preceding-log",
+          "level": "error",
+          "message": {
+            "text": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 389,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-f5-logging-raw-bytes-payload",
+          "level": "error",
+          "message": {
+            "text": "`head_hex=data[:16].hex()`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 544,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-e2-debug-inside-except",
+          "level": "error",
+          "message": {
+            "text": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/providers/openrouter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 563,
                   "startColumn": 1
                 }
               }
@@ -14279,7 +14447,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 83,
+                  "startLine": 84,
                   "startColumn": 1
                 }
               }
@@ -14300,7 +14468,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 103,
+                  "startLine": 104,
                   "startColumn": 1
                 }
               }
@@ -14321,7 +14489,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 164,
+                  "startLine": 165,
                   "startColumn": 1
                 }
               }
@@ -14342,7 +14510,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 885,
+                  "startLine": 915,
                   "startColumn": 1
                 }
               }
@@ -14363,7 +14531,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 905,
+                  "startLine": 935,
                   "startColumn": 1
                 }
               }
@@ -14384,7 +14552,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1018,
+                  "startLine": 1048,
                   "startColumn": 1
                 }
               }
@@ -14405,7 +14573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1027,
+                  "startLine": 1057,
                   "startColumn": 1
                 }
               }
@@ -14426,7 +14594,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1033,
+                  "startLine": 1063,
                   "startColumn": 1
                 }
               }
@@ -14447,7 +14615,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1052,
+                  "startLine": 1082,
                   "startColumn": 1
                 }
               }
@@ -14468,7 +14636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1864,
+                  "startLine": 1894,
                   "startColumn": 1
                 }
               }
@@ -14489,7 +14657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1864,
+                  "startLine": 1894,
                   "startColumn": 1
                 }
               }
@@ -14510,49 +14678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2045,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-c4-redundant-error-on-exception",
-          "level": "error",
-          "message": {
-            "text": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2061,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "intellicrack-logging-c4-redundant-error-on-exception",
-          "level": "error",
-          "message": {
-            "text": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2079,
+                  "startLine": 2075,
                   "startColumn": 1
                 }
               }
@@ -14615,7 +14741,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2127,
+                  "startLine": 2121,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c4-redundant-error-on-exception",
+          "level": "error",
+          "message": {
+            "text": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2139,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "intellicrack-logging-c4-redundant-error-on-exception",
+          "level": "error",
+          "message": {
+            "text": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2157,
                   "startColumn": 1
                 }
               }
@@ -14636,7 +14804,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2143,
+                  "startLine": 2173,
                   "startColumn": 1
                 }
               }
@@ -20864,7 +21032,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:12:56.270883+00:00"
+          "endTimeUtc": "2026-04-24T21:11:18.600587+00:00"
         }
       ]
     }

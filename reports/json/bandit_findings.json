@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-04-24T05:11:59.762277+00:00",
+  "generated": "2026-04-24T21:10:31.975974+00:00",
   "total_findings": 7,
   "total_files": 5,
   "files": [
@@ -9,22 +9,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 5517,
+          "line": 5425,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B102:exec_used",
           "message": "Use of exec detected.",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5517: [Medium] B102:exec_used: Use of exec detected."
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5425: [Medium] B102:exec_used: Use of exec detected."
         },
         {
-          "line": 5758,
+          "line": 5666,
           "column": null,
           "severity": "High",
           "confidence": "High",
           "code": "B324:hashlib",
           "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5758: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5666: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
         }
       ]
     },

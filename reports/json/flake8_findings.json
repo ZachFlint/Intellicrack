@@ -1,281 +1,9 @@
 {
   "tool": "flake8",
-  "generated": "2026-04-24T05:09:20.371139+00:00",
-  "total_findings": 112,
-  "total_files": 25,
+  "generated": "2026-04-24T21:08:37.956342+00:00",
+  "total_findings": 74,
+  "total_files": 24,
   "files": [
-    {
-      "path": "src/intellicrack/main.py",
-      "count": 38,
-      "findings": [
-        {
-          "line": 223,
-          "column": 39,
-          "code": "F821",
-          "message": "undefined name 'ProcessManager'",
-          "raw": "src/intellicrack/main.py:223:39: F821 undefined name 'ProcessManager'"
-        },
-        {
-          "line": 230,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'ProcessManager'",
-          "raw": "src/intellicrack/main.py:230:17: F821 undefined name 'ProcessManager'"
-        },
-        {
-          "line": 243,
-          "column": 37,
-          "code": "F821",
-          "message": "undefined name 'SplashScreen'",
-          "raw": "src/intellicrack/main.py:243:37: F821 undefined name 'SplashScreen'"
-        },
-        {
-          "line": 250,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'SplashScreen'",
-          "raw": "src/intellicrack/main.py:250:17: F821 undefined name 'SplashScreen'"
-        },
-        {
-          "line": 253,
-          "column": 49,
-          "code": "F821",
-          "message": "undefined name 'ThemeManager'",
-          "raw": "src/intellicrack/main.py:253:49: F821 undefined name 'ThemeManager'"
-        },
-        {
-          "line": 253,
-          "column": 69,
-          "code": "F821",
-          "message": "undefined name 'IconManager'",
-          "raw": "src/intellicrack/main.py:253:69: F821 undefined name 'IconManager'"
-        },
-        {
-          "line": 261,
-          "column": 9,
-          "code": "F821",
-          "message": "undefined name 'ThemeManager'",
-          "raw": "src/intellicrack/main.py:261:9: F821 undefined name 'ThemeManager'"
-        },
-        {
-          "line": 261,
-          "column": 9,
-          "code": "F821",
-          "message": "undefined name 'IconManager'",
-          "raw": "src/intellicrack/main.py:261:9: F821 undefined name 'IconManager'"
-        },
-        {
-          "line": 266,
-          "column": 36,
-          "code": "F821",
-          "message": "undefined name 'Orchestrator'",
-          "raw": "src/intellicrack/main.py:266:36: F821 undefined name 'Orchestrator'"
-        },
-        {
-          "line": 273,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'Orchestrator'",
-          "raw": "src/intellicrack/main.py:273:17: F821 undefined name 'Orchestrator'"
-        },
-        {
-          "line": 276,
-          "column": 45,
-          "code": "F821",
-          "message": "undefined name 'SessionManager'",
-          "raw": "src/intellicrack/main.py:276:45: F821 undefined name 'SessionManager'"
-        },
-        {
-          "line": 276,
-          "column": 67,
-          "code": "F821",
-          "message": "undefined name 'SessionStore'",
-          "raw": "src/intellicrack/main.py:276:67: F821 undefined name 'SessionStore'"
-        },
-        {
-          "line": 284,
-          "column": 14,
-          "code": "F821",
-          "message": "undefined name 'SessionManager'",
-          "raw": "src/intellicrack/main.py:284:14: F821 undefined name 'SessionManager'"
-        },
-        {
-          "line": 285,
-          "column": 14,
-          "code": "F821",
-          "message": "undefined name 'SessionStore'",
-          "raw": "src/intellicrack/main.py:285:14: F821 undefined name 'SessionStore'"
-        },
-        {
-          "line": 289,
-          "column": 37,
-          "code": "F821",
-          "message": "undefined name 'ToolRegistry'",
-          "raw": "src/intellicrack/main.py:289:37: F821 undefined name 'ToolRegistry'"
-        },
-        {
-          "line": 296,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'ToolRegistry'",
-          "raw": "src/intellicrack/main.py:296:17: F821 undefined name 'ToolRegistry'"
-        },
-        {
-          "line": 299,
-          "column": 41,
-          "code": "F821",
-          "message": "undefined name 'CredentialLoader'",
-          "raw": "src/intellicrack/main.py:299:41: F821 undefined name 'CredentialLoader'"
-        },
-        {
-          "line": 306,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'CredentialLoader'",
-          "raw": "src/intellicrack/main.py:306:17: F821 undefined name 'CredentialLoader'"
-        },
-        {
-          "line": 309,
-          "column": 33,
-          "code": "F821",
-          "message": "undefined name 'ProviderRegistry'",
-          "raw": "src/intellicrack/main.py:309:33: F821 undefined name 'ProviderRegistry'"
-        },
-        {
-          "line": 316,
-          "column": 25,
-          "code": "F821",
-          "message": "undefined name 'ProviderRegistry'",
-          "raw": "src/intellicrack/main.py:316:25: F821 undefined name 'ProviderRegistry'"
-        },
-        {
-          "line": 320,
-          "column": 35,
-          "code": "F821",
-          "message": "undefined name 'MainWindow'",
-          "raw": "src/intellicrack/main.py:320:35: F821 undefined name 'MainWindow'"
-        },
-        {
-          "line": 327,
-          "column": 17,
-          "code": "F821",
-          "message": "undefined name 'MainWindow'",
-          "raw": "src/intellicrack/main.py:327:17: F821 undefined name 'MainWindow'"
-        },
-        {
-          "line": 395,
-          "column": 6,
-          "code": "F821",
-          "message": "undefined name 'SplashScreen'",
-          "raw": "src/intellicrack/main.py:395:6: F821 undefined name 'SplashScreen'"
-        },
-        {
-          "line": 439,
-          "column": 15,
-          "code": "F821",
-          "message": "undefined name 'ProviderRegistry'",
-          "raw": "src/intellicrack/main.py:439:15: F821 undefined name 'ProviderRegistry'"
-        },
-        {
-          "line": 440,
-          "column": 18,
-          "code": "F821",
-          "message": "undefined name 'CredentialLoader'",
-          "raw": "src/intellicrack/main.py:440:18: F821 undefined name 'CredentialLoader'"
-        },
-        {
-          "line": 462,
-          "column": 27,
-          "code": "F821",
-          "message": "undefined name 'ProviderName'",
-          "raw": "src/intellicrack/main.py:462:27: F821 undefined name 'ProviderName'"
-        },
-        {
-          "line": 462,
-          "column": 46,
-          "code": "F821",
-          "message": "undefined name 'LLMProviderBase'",
-          "raw": "src/intellicrack/main.py:462:46: F821 undefined name 'LLMProviderBase'"
-        },
-        {
-          "line": 463,
-          "column": 9,
-          "code": "F821",
-          "message": "undefined name 'ProviderName'",
-          "raw": "src/intellicrack/main.py:463:9: F821 undefined name 'ProviderName'"
-        },
-        {
-          "line": 463,
-          "column": 9,
-          "code": "F821",
-          "message": "undefined name 'LLMProviderBase'",
-          "raw": "src/intellicrack/main.py:463:9: F821 undefined name 'LLMProviderBase'"
-        },
-        {
-          "line": 476,
-          "column": 40,
-          "code": "F821",
-          "message": "undefined name 'ProviderName'",
-          "raw": "src/intellicrack/main.py:476:40: F821 undefined name 'ProviderName'"
-        },
-        {
-          "line": 476,
-          "column": 75,
-          "code": "F821",
-          "message": "undefined name 'LLMProviderBase'",
-          "raw": "src/intellicrack/main.py:476:75: F821 undefined name 'LLMProviderBase'"
-        },
-        {
-          "line": 526,
-          "column": 74,
-          "code": "F821",
-          "message": "undefined name 'ProcessManager'",
-          "raw": "src/intellicrack/main.py:526:74: F821 undefined name 'ProcessManager'"
-        },
-        {
-          "line": 549,
-          "column": 82,
-          "code": "F821",
-          "message": "undefined name 'ProcessManager'",
-          "raw": "src/intellicrack/main.py:549:82: F821 undefined name 'ProcessManager'"
-        },
-        {
-          "line": 641,
-          "column": 24,
-          "code": "F821",
-          "message": "undefined name 'ProviderRegistry'",
-          "raw": "src/intellicrack/main.py:641:24: F821 undefined name 'ProviderRegistry'"
-        },
-        {
-          "line": 667,
-          "column": 24,
-          "code": "F821",
-          "message": "undefined name 'ProviderRegistry'",
-          "raw": "src/intellicrack/main.py:667:24: F821 undefined name 'ProviderRegistry'"
-        },
-        {
-          "line": 706,
-          "column": 13,
-          "code": "F821",
-          "message": "undefined name 'SplashScreen'",
-          "raw": "src/intellicrack/main.py:706:13: F821 undefined name 'SplashScreen'"
-        },
-        {
-          "line": 707,
-          "column": 22,
-          "code": "F821",
-          "message": "undefined name 'ProcessManager'",
-          "raw": "src/intellicrack/main.py:707:22: F821 undefined name 'ProcessManager'"
-        },
-        {
-          "line": 771,
-          "column": 37,
-          "code": "F821",
-          "message": "undefined name 'ModelDiscovery'",
-          "raw": "src/intellicrack/main.py:771:37: F821 undefined name 'ModelDiscovery'"
-        }
-      ]
-    },
     {
       "path": "tests/test_sandbox\\test_analysis.py",
       "count": 22,
@@ -826,11 +554,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 3889,
+          "line": 4059,
           "column": 141,
           "code": "E501",
           "message": "line too long (143 > 140 characters)",
-          "raw": "src/intellicrack/bridges\\x64dbg.py:3889:141: E501 line too long (143 > 140 characters)"
+          "raw": "src/intellicrack/bridges\\x64dbg.py:4059:141: E501 line too long (143 > 140 characters)"
         }
       ]
     },
@@ -865,11 +593,11 @@
       "count": 1,
       "findings": [
         {
-          "line": 389,
+          "line": 432,
           "column": 141,
           "code": "E501",
           "message": "line too long (188 > 140 characters)",
-          "raw": "src/intellicrack/providers\\huggingface.py:389:141: E501 line too long (188 > 140 characters)"
+          "raw": "src/intellicrack/providers\\huggingface.py:432:141: E501 line too long (188 > 140 characters)"
         }
       ]
     },

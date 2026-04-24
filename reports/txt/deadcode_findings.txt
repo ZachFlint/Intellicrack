@@ -114,27 +114,27 @@ src\intellicrack\ui\tools.py:2121:4: [91mDC04[0m Method `[1mwire_sandbox_back
 
 11 findings in src\intellicrack\core\types.py
 
-src\intellicrack\core\types.py:1049:4: [91mDC01[0m Variable `[1mmethods[0m` is never used
+src\intellicrack\core\types.py:1054:4: [91mDC01[0m Variable `[1mmethods[0m` is never used
 
-src\intellicrack\core\types.py:1064:4: [91mDC01[0m Variable `[1mmethods[0m` is never used
+src\intellicrack\core\types.py:1069:4: [91mDC01[0m Variable `[1mmethods[0m` is never used
 
-src\intellicrack\core\types.py:1112:4: [91mDC01[0m Variable `[1mjump[0m` is never used
+src\intellicrack\core\types.py:1117:4: [91mDC01[0m Variable `[1mjump[0m` is never used
 
-src\intellicrack\core\types.py:1113:4: [91mDC01[0m Variable `[1mfail[0m` is never used
+src\intellicrack\core\types.py:1118:4: [91mDC01[0m Variable `[1mfail[0m` is never used
 
-src\intellicrack\core\types.py:1267:4: [91mDC01[0m Variable `[1mnext_address[0m` is never used
+src\intellicrack\core\types.py:1272:4: [91mDC01[0m Variable `[1mnext_address[0m` is never used
 
-src\intellicrack\core\types.py:1285:4: [91mDC01[0m Variable `[1merrno[0m` is never used
+src\intellicrack\core\types.py:1290:4: [91mDC01[0m Variable `[1merrno[0m` is never used
 
-src\intellicrack\core\types.py:1597:0: [91mDC03[0m Class `[1mModelNotFoundError[0m` is never used
+src\intellicrack\core\types.py:1602:0: [91mDC03[0m Class `[1mModelNotFoundError[0m` is never used
 
-src\intellicrack\core\types.py:1692:0: [91mDC03[0m Class `[1mToolNotFoundError[0m` is never used
+src\intellicrack\core\types.py:1697:0: [91mDC03[0m Class `[1mToolNotFoundError[0m` is never used
 
-src\intellicrack\core\types.py:1735:0: [91mDC03[0m Class `[1mInitializationError[0m` is never used
+src\intellicrack\core\types.py:1740:0: [91mDC03[0m Class `[1mInitializationError[0m` is never used
 
-src\intellicrack\core\types.py:1784:0: [91mDC03[0m Class `[1mAttachError[0m` is never used
+src\intellicrack\core\types.py:1789:0: [91mDC03[0m Class `[1mAttachError[0m` is never used
 
-src\intellicrack\core\types.py:1919:0: [91mDC03[0m Class `[1mConfigurationError[0m` is never used
+src\intellicrack\core\types.py:1924:0: [91mDC03[0m Class `[1mConfigurationError[0m` is never used
 
 
 7 findings in src\intellicrack\ui\panels\hex_editor_widget.py
@@ -152,21 +152,6 @@ src\intellicrack\ui\panels\hex_editor_widget.py:1038:4: [91mDC04[0m Method `[
 src\intellicrack\ui\panels\hex_editor_widget.py:1287:4: [91mDC04[0m Method `[1mkeyPressEvent[0m` is never used
 
 src\intellicrack\ui\panels\hex_editor_widget.py:2056:4: [91mDC04[0m Method `[1mclear_highlights[0m` is never used
-
-
-6 findings in src\intellicrack\core\template_manager.py
-
-src\intellicrack\core\template_manager.py:93:0: [91mDC03[0m Class `[1mTemplateManager[0m` is never used
-
-src\intellicrack\core\template_manager.py:124:4: [91mDC04[0m Method `[1mbootstrap_builtins[0m` is never used
-
-src\intellicrack\core\template_manager.py:237:4: [91mDC04[0m Method `[1mlist_all_templates[0m` is never used
-
-src\intellicrack\core\template_manager.py:279:4: [91mDC04[0m Method `[1msave_user_template[0m` is never used
-
-src\intellicrack\core\template_manager.py:331:4: [91mDC04[0m Method `[1mdelete_user_template[0m` is never used
-
-src\intellicrack\core\template_manager.py:458:4: [91mDC04[0m Method `[1mlist_hexpat_by_category[0m` is never used
 
 
 5 findings in src\intellicrack\core\_subprocess.py
@@ -271,6 +256,17 @@ src\intellicrack\core\hexpat\stdlib.py:258:4: [91mDC04[0m Method `[1mset_refl
 src\intellicrack\core\hexpat\stdlib.py:2257:4: [91mDC04[0m Method `[1m_read_struct_field[0m` is never used
 
 
+4 findings in src\intellicrack\core\template_manager.py
+
+src\intellicrack\core\template_manager.py:237:4: [91mDC04[0m Method `[1mlist_all_templates[0m` is never used
+
+src\intellicrack\core\template_manager.py:279:4: [91mDC04[0m Method `[1msave_user_template[0m` is never used
+
+src\intellicrack\core\template_manager.py:331:4: [91mDC04[0m Method `[1mdelete_user_template[0m` is never used
+
+src\intellicrack\core\template_manager.py:458:4: [91mDC04[0m Method `[1mlist_hexpat_by_category[0m` is never used
+
+
 3 findings in src\intellicrack\core\disassembler.py
 
 src\intellicrack\core\disassembler.py:256:4: [91mDC04[0m Method `[1mdisassemble_to_lines[0m` is never used
@@ -287,6 +283,15 @@ src\intellicrack\core\hexpat\interpreter.py:145:4: [91mDC04[0m Method `[1mexe
 src\intellicrack\core\hexpat\interpreter.py:189:4: [91mDC04[0m Method `[1mcan_compile_to_json[0m` is never used
 
 src\intellicrack\core\hexpat\interpreter.py:215:4: [91mDC04[0m Method `[1mcompile_to_json[0m` is never used
+
+
+3 findings in src\intellicrack\main.py
+
+src\intellicrack\main.py:767:0: [91mDC02[0m Function `[1minit_model_discovery[0m` is never used
+
+src\intellicrack\main.py:785:0: [91mDC02[0m Function `[1minit_script_engine[0m` is never used
+
+src\intellicrack\main.py:802:0: [91mDC02[0m Function `[1minit_template_manager[0m` is never used
 
 
 3 findings in src\intellicrack\ui\win32_embed.py
@@ -321,16 +326,9 @@ src\intellicrack\core\hexpat\pattern_registry.py:200:4: [91mDC04[0m Method `[
 
 2 findings in src\intellicrack\core\logging.py
 
-src\intellicrack\core\logging.py:541:0: [91mDC02[0m Function `[1mlog_binary_operation[0m` is never used
+src\intellicrack\core\logging.py:526:0: [91mDC02[0m Function `[1mlog_binary_operation[0m` is never used
 
-src\intellicrack\core\logging.py:608:0: [91mDC03[0m Class `[1mOperationTimer[0m` is never used
-
-
-2 findings in src\intellicrack\providers\huggingface.py
-
-src\intellicrack\providers\huggingface.py:121:0: [91mDC01[0m Variable `[1mHTTP_INTERNAL_ERROR[0m` is never used
-
-src\intellicrack\providers\huggingface.py:122:0: [91mDC01[0m Variable `[1mHTTP_SERVICE_UNAVAILABLE[0m` is never used
+src\intellicrack\core\logging.py:593:0: [91mDC03[0m Class `[1mOperationTimer[0m` is never used
 
 
 2 findings in src\intellicrack\sandbox\qemu.py
@@ -373,7 +371,7 @@ src\intellicrack\bridges\hex_state.py:142:4: [91mDC04[0m Method `[1mget_curre
 
 1 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:168:0: [91mDC01[0m Variable `[1mMIN_LINE_PARTS[0m` is never used
+src\intellicrack\bridges\x64dbg.py:189:0: [91mDC01[0m Variable `[1mMIN_LINE_PARTS[0m` is never used
 
 
 1 findings in src\intellicrack\core\hexpat\ast_nodes.py
@@ -393,12 +391,12 @@ src\intellicrack\core\hexpat\type_system.py:77:4: [91mDC04[0m Method `[1mall_
 
 1 findings in src\intellicrack\credentials\oauth.py
 
-src\intellicrack\credentials\oauth.py:599:4: [91mDC04[0m Method `[1m_verify_pkce_pair[0m` is never used
+src\intellicrack\credentials\oauth.py:651:4: [91mDC04[0m Method `[1m_verify_pkce_pair[0m` is never used
 
 
-1 findings in src\intellicrack\main.py
+1 findings in src\intellicrack\providers\huggingface.py
 
-src\intellicrack\main.py:666:0: [91mDC02[0m Function `[1minit_model_discovery[0m` is never used
+src\intellicrack\providers\huggingface.py:126:0: [91mDC01[0m Variable `[1mHTTP_INTERNAL_ERROR[0m` is never used
 
 
 1 findings in src\intellicrack\sandbox\base.py

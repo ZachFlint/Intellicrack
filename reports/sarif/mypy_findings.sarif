@@ -9,6 +9,12 @@
           "version": "1.0.0",
           "rules": [
             {
+              "id": "unreachable",
+              "shortDescription": {
+                "text": "Right operand of \"or\" is never evaluated"
+              }
+            },
+            {
               "id": "no-any-return",
               "shortDescription": {
                 "text": "Returning Any from function declared to return \"HexDocument\""
@@ -21,21 +27,9 @@
               }
             },
             {
-              "id": "unreachable",
-              "shortDescription": {
-                "text": "Right operand of \"or\" is never evaluated"
-              }
-            },
-            {
-              "id": "comparison-overlap",
-              "shortDescription": {
-                "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
-              }
-            },
-            {
               "id": "assignment",
               "shortDescription": {
-                "text": "Incompatible types in assignment (expression has type \"RegistryChange\", variable has type \"FileChange\")"
+                "text": "Incompatible types in assignment (expression has type \"IO[Any]\", variable has type \"BinaryIO\")"
               }
             },
             {
@@ -48,6 +42,12 @@
               "id": "arg-type",
               "shortDescription": {
                 "text": "Argument 1 to \"_scan_text\" has incompatible type \"object\"; expected \"str\""
+              }
+            },
+            {
+              "id": "redundant-cast",
+              "shortDescription": {
+                "text": "Redundant cast to \"list[Any]\""
               }
             },
             {
@@ -81,21 +81,15 @@
               }
             },
             {
-              "id": "redundant-cast",
+              "id": "comparison-overlap",
               "shortDescription": {
-                "text": "Redundant cast to \"list[Any]\""
+                "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
               }
             },
             {
               "id": "index",
               "shortDescription": {
                 "text": "Value of type \"list?[intellicrack.core.types.ThreadInfo]\" is not indexable"
-              }
-            },
-            {
-              "id": "no-untyped-call",
-              "shortDescription": {
-                "text": "Call to untyped function \"close\" in typed context"
               }
             },
             {
@@ -107,19 +101,40 @@
             {
               "id": "no-redef",
               "shortDescription": {
-                "text": "Name \"data\" already defined on line 2321"
+                "text": "Name \"data\" already defined on line 2322"
               }
             },
             {
-              "id": "name-defined",
+              "id": "no-untyped-call",
               "shortDescription": {
-                "text": "Name \"ProcessManager\" is not defined"
+                "text": "Call to untyped function \"close\" in typed context"
               }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "unreachable",
+          "level": "error",
+          "message": {
+            "text": "Right operand of \"or\" is never evaluated"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1700,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
         {
           "ruleId": "no-any-return",
           "level": "error",
@@ -163,62 +178,20 @@
           ]
         },
         {
-          "ruleId": "unreachable",
+          "ruleId": "assignment",
           "level": "error",
           "message": {
-            "text": "Right operand of \"or\" is never evaluated"
+            "text": "Incompatible types in assignment (expression has type \"IO[Any]\", variable has type \"BinaryIO\")"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1700,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "comparison-overlap",
-          "level": "error",
-          "message": {
-            "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_font_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 178,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "comparison-overlap",
-          "level": "error",
-          "message": {
-            "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_font_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 243,
+                  "startLine": 1475,
                   "startColumn": 1
                 }
               }
@@ -282,6 +255,27 @@
                 },
                 "region": {
                   "startLine": 507,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "redundant-cast",
+          "level": "error",
+          "message": {
+            "text": "Redundant cast to \"list[Any]\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1077,
                   "startColumn": 1
                 }
               }
@@ -365,7 +359,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 141,
+                  "startLine": 152,
                   "startColumn": 1
                 }
               }
@@ -1990,20 +1984,20 @@
           ]
         },
         {
-          "ruleId": "assignment",
+          "ruleId": "comparison-overlap",
           "level": "error",
           "message": {
-            "text": "Incompatible types in assignment (expression has type \"IO[Any]\", variable has type \"BinaryIO\")"
+            "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uri": "tests/test_ui/test_font_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1475,
+                  "startLine": 178,
                   "startColumn": 1
                 }
               }
@@ -2011,104 +2005,20 @@
           ]
         },
         {
-          "ruleId": "attr-defined",
+          "ruleId": "comparison-overlap",
           "level": "error",
           "message": {
-            "text": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?"
+            "text": "Non-overlapping equality check (left operand type: \"StyleHint\", right operand type: \"int\")"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_ui/test_icon_manager.py",
+                  "uri": "tests/test_ui/test_font_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 348,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 256,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 270,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 280,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "union-attr",
-          "level": "error",
-          "message": {
-            "text": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_graph_view.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 335,
+                  "startLine": 243,
                   "startColumn": 1
                 }
               }
@@ -2158,90 +2068,6 @@
           ]
         },
         {
-          "ruleId": "unreachable",
-          "level": "error",
-          "message": {
-            "text": "Statement is unreachable"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/credentials/oauth.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 108,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_providers/test_openai_provider.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 22,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_providers/test_grok_provider.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 22,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_providers/test_google_provider.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 22,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "assignment",
           "level": "error",
           "message": {
@@ -2256,6 +2082,27 @@
                 },
                 "region": {
                   "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-any-return",
+          "level": "error",
+          "message": {
+            "text": "Returning Any from function declared to return \"int\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3598,
                   "startColumn": 1
                 }
               }
@@ -2851,20 +2698,167 @@
           ]
         },
         {
-          "ruleId": "no-untyped-call",
+          "ruleId": "attr-defined",
           "level": "error",
           "message": {
-            "text": "Call to untyped function \"close\" in typed context"
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uri": "tests/test_providers/test_openai_provider.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 231,
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_grok_provider.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_anthropic_provider.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"IconManager\" has no attribute \"load_icon\"; maybe \"_load_icon\" or \"preload_icons\"?"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_icon_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 348,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 256,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 270,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "\"type[CFGGraphScene]\" has no attribute \"compute_layers\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 280,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "union-attr",
+          "level": "error",
+          "message": {
+            "text": "Item \"None\" of \"QGraphicsScene | None\" has no attribute \"items\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_ui/test_graph_view.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 335,
                   "startColumn": 1
                 }
               }
@@ -3313,20 +3307,20 @@
           ]
         },
         {
-          "ruleId": "attr-defined",
+          "ruleId": "no-any-return",
           "level": "error",
           "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_providers/test_anthropic_provider.py",
+                  "uri": "src/intellicrack/core/template_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 22,
+                  "startLine": 422,
                   "startColumn": 1
                 }
               }
@@ -3334,41 +3328,20 @@
           ]
         },
         {
-          "ruleId": "attr-defined",
+          "ruleId": "no-any-return",
           "level": "error",
           "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "tests/test_providers/test_model_discovery.py",
+                  "uri": "src/intellicrack/core/template_manager.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_providers/test_huggingface_provider.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 22,
+                  "startLine": 434,
                   "startColumn": 1
                 }
               }
@@ -3901,52 +3874,10 @@
           ]
         },
         {
-          "ruleId": "no-any-return",
-          "level": "error",
-          "message": {
-            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 422,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "no-any-return",
-          "level": "error",
-          "message": {
-            "text": "Returning Any from function declared to return \"PatternRegistry | None\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/template_manager.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 434,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "no-redef",
           "level": "error",
           "message": {
-            "text": "Name \"data\" already defined on line 2321"
+            "text": "Name \"data\" already defined on line 2322"
           },
           "locations": [
             {
@@ -3956,7 +3887,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2327,
+                  "startLine": 2328,
                   "startColumn": 1
                 }
               }
@@ -3978,6 +3909,27 @@
                 },
                 "region": {
                   "startLine": 249,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "no-untyped-call",
+          "level": "error",
+          "message": {
+            "text": "Call to untyped function \"close\" in typed context"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 272,
                   "startColumn": 1
                 }
               }
@@ -4489,6 +4441,69 @@
           ]
         },
         {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_huggingface_provider.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_model_discovery.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "attr-defined",
+          "level": "error",
+          "message": {
+            "text": "Module \"intellicrack.credentials.store\" does not explicitly export attribute \"CredentialLoader\""
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_google_provider.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 22,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "assignment",
           "level": "error",
           "message": {
@@ -4545,27 +4560,6 @@
                 },
                 "region": {
                   "startLine": 229,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "attr-defined",
-          "level": "error",
-          "message": {
-            "text": "\"DetachedPanelWindow\" has no attribute \"on_redock\"; maybe \"_on_redock\"?"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "tests/test_ui/test_panel_dock.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 91,
                   "startColumn": 1
                 }
               }
@@ -4636,6 +4630,90 @@
           ]
         },
         {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], ModelCache]\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "assignment",
+          "level": "error",
+          "message": {
+            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 69,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unreachable",
+          "level": "error",
+          "message": {
+            "text": "Statement is unreachable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 411,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "unreachable",
+          "level": "error",
+          "message": {
+            "text": "Statement is unreachable"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 863,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "attr-defined",
           "level": "error",
           "message": {
@@ -4699,83 +4777,20 @@
           ]
         },
         {
-          "ruleId": "assignment",
+          "ruleId": "attr-defined",
           "level": "error",
           "message": {
-            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[], ModelCache]\")"
+            "text": "\"DetachedPanelWindow\" has no attribute \"on_redock\"; maybe \"_on_redock\"?"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/app.py",
+                  "uri": "tests/test_ui/test_panel_dock.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 68,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "assignment",
-          "level": "error",
-          "message": {
-            "text": "Incompatible types in assignment (expression has type \"None\", variable has type \"Callable[[int], None]\")"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 69,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unreachable",
-          "level": "error",
-          "message": {
-            "text": "Statement is unreachable"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 381,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unreachable",
-          "level": "error",
-          "message": {
-            "text": "Statement is unreachable"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/app.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 833,
+                  "startLine": 91,
                   "startColumn": 1
                 }
               }
@@ -5369,811 +5384,13 @@
               }
             }
           ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProcessManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 223,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProcessManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 230,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SplashScreen\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 243,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SplashScreen\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 250,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ThemeManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 253,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"IconManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 253,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ThemeManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 261,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"IconManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 261,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"Orchestrator\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 266,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"Orchestrator\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 273,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SessionManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 276,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SessionStore\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 276,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SessionManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 284,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SessionStore\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 285,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ToolRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 289,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ToolRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 296,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"CredentialLoader\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 299,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"CredentialLoader\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 306,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 309,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 316,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"MainWindow\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 320,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"MainWindow\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 327,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SplashScreen\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 395,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 439,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"CredentialLoader\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 440,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderName\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 462,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"LLMProviderBase\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 462,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderName\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 463,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"LLMProviderBase\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 463,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderName\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 476,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"LLMProviderBase\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 476,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProcessManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 526,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProcessManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 549,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 641,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProviderRegistry\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 667,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"SplashScreen\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 706,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ProcessManager\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 707,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "name-defined",
-          "level": "error",
-          "message": {
-            "text": "Name \"ModelDiscovery\" is not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 771,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
         }
       ],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:11:09.357156+00:00"
+          "endTimeUtc": "2026-04-24T21:10:06.406845+00:00"
         }
       ]
     }

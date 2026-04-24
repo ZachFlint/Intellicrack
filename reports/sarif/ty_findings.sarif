@@ -17,7 +17,7 @@
             {
               "id": "invalid-argument-type",
               "shortDescription": {
-                "text": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+                "text": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
               }
             },
             {
@@ -29,7 +29,7 @@
             {
               "id": "no-matching-overload",
               "shortDescription": {
-                "text": "No overload of bound method `__init__` matches arguments"
+                "text": "No overload of `dict.__init__` matches arguments"
               }
             },
             {
@@ -54,12 +54,6 @@
               "id": "general",
               "shortDescription": {
                 "text": "warning[redundant-cast] Value is already of type `tuple[object, ...]`"
-              }
-            },
-            {
-              "id": "unresolved-reference",
-              "shortDescription": {
-                "text": "Name `ProcessManager` used when not defined"
               }
             },
             {
@@ -104,7 +98,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3082,
+                  "startLine": 3083,
                   "startColumn": 62
                 }
               }
@@ -115,7 +109,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+            "text": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
           },
           "locations": [
             {
@@ -829,7 +823,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -850,7 +844,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -871,7 +865,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -892,7 +886,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -913,7 +907,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -934,7 +928,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -955,7 +949,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -976,7 +970,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -1028,7 +1022,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1786,
+                  "startLine": 1922,
                   "startColumn": 9
                 }
               }
@@ -1039,7 +1033,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+            "text": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
           },
           "locations": [
             {
@@ -1049,7 +1043,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1796,
+                  "startLine": 1932,
                   "startColumn": 13
                 }
               }
@@ -1091,7 +1085,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 470,
+                  "startLine": 455,
                   "startColumn": 25
                 }
               }
@@ -1123,7 +1117,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
+            "text": "Argument to function `ProcessManager._terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`"
           },
           "locations": [
             {
@@ -1204,10 +1198,10 @@
           ]
         },
         {
-          "ruleId": "unresolved-reference",
+          "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Name `ProcessManager` used when not defined"
+            "text": "warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`"
           },
           "locations": [
             {
@@ -1217,18 +1211,18 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 223,
-                  "startColumn": 39
+                  "startLine": 256,
+                  "startColumn": 12
                 }
               }
             }
           ]
         },
         {
-          "ruleId": "unresolved-reference",
+          "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Name `ProcessManager` used when not defined"
+            "text": "warning[redundant-cast] Value is already of type `ScriptManager`"
           },
           "locations": [
             {
@@ -1238,742 +1232,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 230,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SplashScreen` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 243,
-                  "startColumn": 37
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SplashScreen` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 250,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ThemeManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 253,
-                  "startColumn": 49
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `IconManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 253,
-                  "startColumn": 69
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ThemeManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 261,
-                  "startColumn": 21
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `IconManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 261,
-                  "startColumn": 41
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `Orchestrator` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 266,
-                  "startColumn": 36
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `Orchestrator` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 273,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SessionManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 276,
-                  "startColumn": 45
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SessionStore` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 276,
-                  "startColumn": 67
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SessionManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 284,
-                  "startColumn": 20
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SessionStore` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 285,
-                  "startColumn": 20
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ToolRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 289,
-                  "startColumn": 37
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ToolRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 296,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `CredentialLoader` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 299,
-                  "startColumn": 41
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `CredentialLoader` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 306,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 309,
-                  "startColumn": 33
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 316,
-                  "startColumn": 39
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `MainWindow` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 320,
-                  "startColumn": 35
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `MainWindow` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 327,
-                  "startColumn": 23
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SplashScreen` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 395,
-                  "startColumn": 6
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 439,
-                  "startColumn": 15
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `CredentialLoader` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 440,
-                  "startColumn": 18
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderName` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 462,
-                  "startColumn": 27
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `LLMProviderBase` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 462,
-                  "startColumn": 46
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderName` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 463,
-                  "startColumn": 21
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `LLMProviderBase` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 463,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderName` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 476,
-                  "startColumn": 40
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `LLMProviderBase` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 476,
-                  "startColumn": 75
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProcessManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 526,
-                  "startColumn": 74
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProcessManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 549,
-                  "startColumn": 82
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 641,
-                  "startColumn": 24
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProviderRegistry` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 667,
-                  "startColumn": 24
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `SplashScreen` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 706,
-                  "startColumn": 13
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "unresolved-reference",
-          "level": "warning",
-          "message": {
-            "text": "Name `ProcessManager` used when not defined"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/main.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 707,
+                  "startLine": 654,
                   "startColumn": 22
                 }
               }
@@ -1981,10 +1240,10 @@
           ]
         },
         {
-          "ruleId": "unresolved-reference",
+          "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Name `ModelDiscovery` used when not defined"
+            "text": "warning[redundant-cast] Value is already of type `ScriptValidator`"
           },
           "locations": [
             {
@@ -1994,8 +1253,50 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 771,
-                  "startColumn": 38
+                  "startLine": 655,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[redundant-cast] Value is already of type `ScriptGenerator`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 656,
+                  "startColumn": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "warning[redundant-cast] Value is already of type `Path`"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/main.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 696,
+                  "startColumn": 18
                 }
               }
             }
@@ -2131,7 +1432,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `append` is incorrect: Expected `str`, found `object`"
+            "text": "Argument to bound method `list.append` is incorrect: Expected `str`, found `object`"
           },
           "locations": [
             {
@@ -2173,7 +1474,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
+            "text": "Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`"
           },
           "locations": [
             {
@@ -2194,7 +1495,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
+            "text": "Argument to bound method `list.extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`"
           },
           "locations": [
             {
@@ -2299,7 +1600,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+            "text": "Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
           },
           "locations": [
             {
@@ -2425,7 +1726,7 @@
           "ruleId": "invalid-assignment",
           "level": "warning",
           "message": {
-            "text": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`"
+            "text": "Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding[Any]` is not assignable to `str | list[int]`"
           },
           "locations": [
             {
@@ -2551,7 +1852,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
+            "text": "Argument to bound method `_Wrapped.__call__` is incorrect: Expected `PreTrainedModel`, found `device`"
           },
           "locations": [
             {
@@ -2698,7 +1999,7 @@
           "ruleId": "no-matching-overload",
           "level": "warning",
           "message": {
-            "text": "No overload of bound method `__init__` matches arguments"
+            "text": "No overload of `dict.__init__` matches arguments"
           },
           "locations": [
             {
@@ -2719,7 +2020,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+            "text": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
           },
           "locations": [
             {
@@ -2761,7 +2062,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
+            "text": "Argument to constructor `Path.__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`"
           },
           "locations": [
             {
@@ -2803,7 +2104,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
+            "text": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`"
           },
           "locations": [
             {
@@ -2992,7 +2293,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+            "text": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
           },
           "locations": [
             {
@@ -3097,7 +2398,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+            "text": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
           },
           "locations": [
             {
@@ -3160,7 +2461,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`"
+            "text": "Argument to function `YaraScanner.compile_rules` is incorrect: Expected `list[str | Path]`, found `list[str] & ~AlwaysFalsy`"
           },
           "locations": [
             {
@@ -3202,7 +2503,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+            "text": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
           },
           "locations": [
             {
@@ -3580,7 +2881,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`"
+            "text": "Argument to function `QMenu.exec` is incorrect: Expected `QMenu`, found `QPoint`"
           },
           "locations": [
             {
@@ -3895,7 +3196,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`"
+            "text": "Argument to bound method `ProcessManager.register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[str] | Popen[bytes] | Popen[Any]`"
           },
           "locations": [
             {
@@ -4189,7 +3490,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `get` is incorrect: Expected `OAuthProvider`, found `object`"
+            "text": "Argument to bound method `dict.get` is incorrect: Expected `OAuthProvider`, found `object`"
           },
           "locations": [
             {
@@ -4210,7 +3511,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to function `__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`"
+            "text": "Argument to constructor `float.__new__` is incorrect: Expected `str | Buffer | SupportsFloat | SupportsIndex`, found `None`"
           },
           "locations": [
             {
@@ -4651,7 +3952,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`"
+            "text": "Argument to bound method `SandboxPanel.set_sandbox_manager` is incorrect: Expected `SandboxManager`, found `object`"
           },
           "locations": [
             {
@@ -5176,7 +4477,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `__init__` is incorrect: Expected `Config`, found `object`"
+            "text": "Argument to `MainWindow.__init__` is incorrect: Expected `Config`, found `object`"
           },
           "locations": [
             {
@@ -5197,7 +4498,7 @@
           "ruleId": "invalid-argument-type",
           "level": "warning",
           "message": {
-            "text": "Argument to bound method `__init__` is incorrect: Expected `Orchestrator`, found `object`"
+            "text": "Argument to `MainWindow.__init__` is incorrect: Expected `Orchestrator`, found `object`"
           },
           "locations": [
             {
@@ -5450,7 +4751,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-24T05:10:10.528823+00:00"
+          "endTimeUtc": "2026-04-24T21:08:46.783254+00:00"
         }
       ]
     }

@@ -1,7 +1,7 @@
 {
   "tool": "uncalled",
-  "generated": "2026-04-24T05:11:36.647020+00:00",
-  "total_findings": 87,
+  "generated": "2026-04-24T21:10:18.696347+00:00",
+  "total_findings": 84,
   "total_files": 31,
   "files": [
     {
@@ -101,48 +101,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\template_manager.py",
-      "count": 6,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: bootstrap_builtins",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function bootstrap_builtins"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: delete_user_template",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function delete_user_template"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: list_all_templates",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_all_templates"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: list_hexpat_by_category",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_hexpat_by_category"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: load_template",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function load_template"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: save_user_template",
-          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function save_user_template"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py",
       "count": 6,
       "findings": [
@@ -217,6 +175,42 @@
           "column": null,
           "message": "Unused function: generate_x64dbg",
           "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_x64dbg"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\template_manager.py",
+      "count": 5,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: delete_user_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function delete_user_template"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_all_templates",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_all_templates"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: list_hexpat_by_category",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function list_hexpat_by_category"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: load_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function load_template"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: save_user_template",
+          "raw": "src\\intellicrack\\core\\template_manager.py: Unused function save_user_template"
         }
       ]
     },
@@ -371,30 +365,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\credentials\\oauth.py",
-      "count": 3,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: do_GET",
-          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function do_GET"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: log_request",
-          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function log_request"
-        },
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: needs_refresh",
-          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function needs_refresh"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\bridges\\_win32_types.py",
       "count": 2,
       "findings": [
@@ -485,20 +455,20 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\logging.py",
+      "path": "src\\intellicrack\\credentials\\oauth.py",
       "count": 2,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: get_structlog_logger",
-          "raw": "src\\intellicrack\\core\\logging.py: Unused function get_structlog_logger"
+          "message": "Unused function: do_GET",
+          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function do_GET"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: log_binary_operation",
-          "raw": "src\\intellicrack\\core\\logging.py: Unused function log_binary_operation"
+          "message": "Unused function: log_request",
+          "raw": "src\\intellicrack\\credentials\\oauth.py: Unused function log_request"
         }
       ]
     },
@@ -649,6 +619,18 @@
           "column": null,
           "message": "Unused function: all_names",
           "raw": "src\\intellicrack\\core\\hexpat\\type_system.py: Unused function all_names"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\logging.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: log_binary_operation",
+          "raw": "src\\intellicrack\\core\\logging.py: Unused function log_binary_operation"
         }
       ]
     },

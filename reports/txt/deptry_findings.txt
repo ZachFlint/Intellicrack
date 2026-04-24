@@ -246,11 +246,11 @@ src\intellicrack\ui\provider_config.py:21:1: DEP003 'PyQt6' imported but it is a
 
 3 findings in src\intellicrack\main.py
 
-src\intellicrack\main.py:352:9: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\main.py:358:9: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\main.py:353:9: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\main.py:359:9: DEP003 'PyQt6' imported but it is a transitive dependency
 
-src\intellicrack\main.py:357:9: DEP003 'PyQt6' imported but it is a transitive dependency
+src\intellicrack\main.py:363:9: DEP003 'PyQt6' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\providers\google.py
@@ -260,6 +260,15 @@ src\intellicrack\providers\google.py:19:1: DEP003 'google' imported but it is a 
 src\intellicrack\providers\google.py:20:1: DEP003 'google' imported but it is a transitive dependency
 
 src\intellicrack\providers\google.py:21:1: DEP003 'google' imported but it is a transitive dependency
+
+
+3 findings in src\intellicrack\providers\huggingface.py
+
+src\intellicrack\providers\huggingface.py:22:8: DEP003 'httpx' imported but it is a transitive dependency
+
+src\intellicrack\providers\huggingface.py:23:1: DEP003 'huggingface_hub' imported but it is a transitive dependency
+
+src\intellicrack\providers\huggingface.py:29:1: DEP003 'huggingface_hub' imported but it is a transitive dependency
 
 
 3 findings in src\intellicrack\providers\openai.py
@@ -425,13 +434,6 @@ src\intellicrack\bridges\x64dbg.py:84:12: DEP003 'keystone' imported but it is a
 src\intellicrack\providers\anthropic.py:15:8: DEP003 'anthropic' imported but it is a transitive dependency
 
 src\intellicrack\providers\anthropic.py:16:1: DEP003 'anthropic' imported but it is a transitive dependency
-
-
-2 findings in src\intellicrack\providers\huggingface.py
-
-src\intellicrack\providers\huggingface.py:20:1: DEP003 'huggingface_hub' imported but it is a transitive dependency
-
-src\intellicrack\providers\huggingface.py:26:1: DEP003 'huggingface_hub' imported but it is a transitive dependency
 
 
 2 findings in src\intellicrack\ui\chat.py
@@ -640,7 +642,7 @@ src\intellicrack\bridges\cutter.py:22:8: DEP003 'r2pipe' imported but it is a tr
 
 1 findings in src\intellicrack\bridges\frida_bridge.py
 
-src\intellicrack\bridges\frida_bridge.py:24:8: DEP003 'frida' imported but it is a transitive dependency
+src\intellicrack\bridges\frida_bridge.py:23:8: DEP003 'frida' imported but it is a transitive dependency
 
 
 1 findings in src\intellicrack\bridges\installer.py

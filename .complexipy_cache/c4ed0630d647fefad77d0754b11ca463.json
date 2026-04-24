@@ -1311,6 +1311,12 @@
     {
       "complexity": 2,
       "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::_compiler_build_with_cancellable",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::_make_payload_waiter",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
@@ -1663,12 +1669,6 @@
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
-      "complexity": 5,
-      "file_name": "frida_bridge.py",
-      "function_name": "FridaBridge::write_code",
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
-    },
-    {
       "complexity": 6,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::_build_scan_results",
@@ -1705,6 +1705,18 @@
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
+      "complexity": 7,
+      "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::compile_typescript",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::write_code",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
       "complexity": 8,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::detach",
@@ -1719,12 +1731,6 @@
     {
       "complexity": 11,
       "file_name": "frida_bridge.py",
-      "function_name": "FridaBridge::compile_typescript",
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
-    },
-    {
-      "complexity": 11,
-      "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::enumerate_modules",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
@@ -1732,6 +1738,12 @@
       "complexity": 11,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::enumerate_symbols",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::enumerate_threads",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
@@ -1816,12 +1828,6 @@
       "complexity": 16,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::call_system_function",
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
-    },
-    {
-      "complexity": 16,
-      "file_name": "frida_bridge.py",
-      "function_name": "FridaBridge::enumerate_threads",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
@@ -2169,6 +2175,12 @@
     {
       "complexity": 4,
       "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::get_external_references",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "ghidra.py",
       "function_name": "GhidraBridge::get_function",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
@@ -2265,6 +2277,12 @@
     {
       "complexity": 4,
       "file_name": "ghidra.py",
+      "function_name": "GhidraBridge::get_thunk_info",
+      "path": "src\\intellicrack\\bridges\\ghidra.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "ghidra.py",
       "function_name": "GhidraBridge::get_xrefs_from",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
@@ -2272,18 +2290,6 @@
       "complexity": 4,
       "file_name": "ghidra.py",
       "function_name": "GhidraBridge::get_xrefs_to",
-      "path": "src\\intellicrack\\bridges\\ghidra.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::manage_external_references",
-      "path": "src\\intellicrack\\bridges\\ghidra.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "ghidra.py",
-      "function_name": "GhidraBridge::manage_thunks",
       "path": "src\\intellicrack\\bridges\\ghidra.py"
     },
     {
@@ -2668,6 +2674,12 @@
       "complexity": 1,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::_read_all_doc_bytes",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::_resolve_patch_source",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -3159,6 +3171,12 @@
     {
       "complexity": 5,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::search_numeric",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "hex_editor.py",
       "function_name": "_pdf_render_bookmarks",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -3255,12 +3273,6 @@
     {
       "complexity": 8,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::_pack_numeric_needle",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::export_annotated_html",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -3286,12 +3298,6 @@
       "complexity": 9,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::disassemble",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::export_patches",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -3334,6 +3340,12 @@
       "complexity": 13,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::_render_hex_rows",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::export_patches",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -3415,21 +3427,9 @@
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
-      "complexity": 20,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::_search_float_fallback",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
       "complexity": 23,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::_build_ups_patch",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 24,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::search_numeric",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -4899,12 +4899,6 @@
     {
       "complexity": 0,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::get_modules",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_threads",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -5241,6 +5235,12 @@
     {
       "complexity": 1,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::get_modules",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_process_info",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -5325,6 +5325,12 @@
     {
       "complexity": 2,
       "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_read_module_entry_point",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_read_pe_header",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -5338,6 +5344,12 @@
       "complexity": 2,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_handles",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::get_module_exports",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -5359,9 +5371,27 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
+      "complexity": 2,
+      "file_name": "x64dbg.py",
+      "function_name": "_configure_win32_apis",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_build_export_entries",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
       "complexity": 3,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_extend_matches_from_buffer",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_read_export_name",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -5409,12 +5439,6 @@
     {
       "complexity": 3,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::get_module_exports",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::load_database",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -5440,6 +5464,12 @@
       "complexity": 3,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::skip_instruction",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "x64dbg.py",
+      "function_name": "_compute_invalid_handle_value",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7905,6 +7935,24 @@
     {
       "complexity": 1,
       "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_bitwise_and",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_bitwise_or",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatParser::_parse_bitwise_xor",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "hexpat_compiler.py",
       "function_name": "HexPatParser::_parse_comparison",
       "path": "src\\intellicrack\\core\\hexpat_compiler.py"
     },
@@ -8031,6 +8079,12 @@
     {
       "complexity": 10,
       "file_name": "hexpat_compiler.py",
+      "function_name": "HexPatCodegen::_gen_conditional",
+      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "hexpat_compiler.py",
       "function_name": "HexPatLexer::_read_number",
       "path": "src\\intellicrack\\core\\hexpat_compiler.py"
     },
@@ -8038,12 +8092,6 @@
       "complexity": 11,
       "file_name": "hexpat_compiler.py",
       "function_name": "HexPatLexer::tokenize",
-      "path": "src\\intellicrack\\core\\hexpat_compiler.py"
-    },
-    {
-      "complexity": 12,
-      "file_name": "hexpat_compiler.py",
-      "function_name": "HexPatCodegen::_gen_conditional",
       "path": "src\\intellicrack\\core\\hexpat_compiler.py"
     },
     {
@@ -8098,12 +8146,6 @@
       "complexity": 0,
       "file_name": "logging.py",
       "function_name": "_default_log_dir",
-      "path": "src\\intellicrack\\core\\logging.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "logging.py",
-      "function_name": "get_structlog_logger",
       "path": "src\\intellicrack\\core\\logging.py"
     },
     {
@@ -10329,12 +10371,6 @@
     {
       "complexity": 7,
       "file_name": "oauth.py",
-      "function_name": "OAuthCallbackServer::wait_for_callback",
-      "path": "src\\intellicrack\\credentials\\oauth.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "oauth.py",
       "function_name": "OAuthManager::_load_token",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
@@ -10347,7 +10383,13 @@
     {
       "complexity": 8,
       "file_name": "oauth.py",
-      "function_name": "OAuthManager::revoke_token",
+      "function_name": "OAuthCallbackServer::wait_for_callback",
+      "path": "src\\intellicrack\\credentials\\oauth.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "oauth.py",
+      "function_name": "OAuthCallbackHandler::do_GET",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
@@ -10357,15 +10399,15 @@
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
-      "complexity": 10,
+      "complexity": 9,
       "file_name": "oauth.py",
-      "function_name": "OAuthManager::get_token",
+      "function_name": "OAuthManager::revoke_token",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
-      "complexity": 11,
+      "complexity": 10,
       "file_name": "oauth.py",
-      "function_name": "OAuthCallbackHandler::do_GET",
+      "function_name": "OAuthManager::get_token",
       "path": "src\\intellicrack\\credentials\\oauth.py"
     },
     {
@@ -10471,7 +10513,7 @@
       "path": "src\\intellicrack\\credentials\\store.py"
     },
     {
-      "complexity": 7,
+      "complexity": 8,
       "file_name": "store.py",
       "function_name": "CredentialStore::_check_keyring",
       "path": "src\\intellicrack\\credentials\\store.py"
@@ -10593,7 +10635,31 @@
     {
       "complexity": 0,
       "file_name": "main.py",
+      "function_name": "_run_application",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "main.py",
       "function_name": "init_model_discovery",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "main.py",
+      "function_name": "init_script_engine",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "main.py",
+      "function_name": "init_template_manager",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "main.py",
+      "function_name": "_create_main_window",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -10624,6 +10690,12 @@
       "complexity": 3,
       "file_name": "main.py",
       "function_name": "_resolve_config_path",
+      "path": "src\\intellicrack\\main.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "main.py",
+      "function_name": "_init_template_manager",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -10665,7 +10737,7 @@
     {
       "complexity": 8,
       "file_name": "main.py",
-      "function_name": "_run_application",
+      "function_name": "_shutdown_application",
       "path": "src\\intellicrack\\main.py"
     },
     {
@@ -11197,7 +11269,7 @@
       "path": "src\\intellicrack\\providers\\google.py"
     },
     {
-      "complexity": 50,
+      "complexity": 47,
       "file_name": "google.py",
       "function_name": "GoogleProvider::chat_stream",
       "path": "src\\intellicrack\\providers\\google.py"
@@ -11241,19 +11313,19 @@
     {
       "complexity": 1,
       "file_name": "grok.py",
-      "function_name": "GrokProvider::disconnect",
+      "function_name": "GrokProvider::_supports_max_completion_tokens",
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
-      "complexity": 2,
+      "complexity": 1,
       "file_name": "grok.py",
-      "function_name": "GrokProvider::cancel_request",
+      "function_name": "GrokProvider::disconnect",
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
       "complexity": 3,
       "file_name": "grok.py",
-      "function_name": "GrokProvider::_infer_context_window",
+      "function_name": "GrokProvider::cancel_request",
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
@@ -11266,6 +11338,12 @@
       "complexity": 4,
       "file_name": "grok.py",
       "function_name": "GrokProvider::_build_usage_from_completion",
+      "path": "src\\intellicrack\\providers\\grok.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "grok.py",
+      "function_name": "GrokProvider::_infer_context_window",
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
@@ -11293,13 +11371,13 @@
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
-      "complexity": 10,
+      "complexity": 18,
       "file_name": "grok.py",
       "function_name": "GrokProvider::_make_grok_api_call",
       "path": "src\\intellicrack\\providers\\grok.py"
     },
     {
-      "complexity": 40,
+      "complexity": 49,
       "file_name": "grok.py",
       "function_name": "GrokProvider::chat_stream",
       "path": "src\\intellicrack\\providers\\grok.py"
@@ -11389,13 +11467,19 @@
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
-      "complexity": 6,
+      "complexity": 8,
+      "file_name": "huggingface.py",
+      "function_name": "HuggingFaceProvider::_extract_503_message",
+      "path": "src\\intellicrack\\providers\\huggingface.py"
+    },
+    {
+      "complexity": 8,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::connect",
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
-      "complexity": 6,
+      "complexity": 8,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::list_models",
       "path": "src\\intellicrack\\providers\\huggingface.py"
@@ -11407,13 +11491,13 @@
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
-      "complexity": 16,
+      "complexity": 18,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::chat",
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
-      "complexity": 41,
+      "complexity": 45,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::chat_stream",
       "path": "src\\intellicrack\\providers\\huggingface.py"
@@ -11769,6 +11853,12 @@
     {
       "complexity": 0,
       "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_is_cloud_url",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "ollama.py",
       "function_name": "OllamaProvider::cancel_request",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
@@ -11793,6 +11883,12 @@
     {
       "complexity": 1,
       "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_chat_endpoint",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "ollama.py",
       "function_name": "OllamaProvider::_convert_tools_to_provider_format",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
@@ -11805,7 +11901,19 @@
     {
       "complexity": 2,
       "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_is_cloud_endpoint",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "ollama.py",
       "function_name": "OllamaProvider::_make_ollama_api_call",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_record_usage_from_chat",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
@@ -11887,15 +11995,15 @@
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
-      "complexity": 6,
+      "complexity": 7,
       "file_name": "ollama.py",
-      "function_name": "OllamaProvider::chat",
+      "function_name": "OllamaProvider::_connect_cloud",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
       "complexity": 7,
       "file_name": "ollama.py",
-      "function_name": "OllamaProvider::_connect_cloud",
+      "function_name": "OllamaProvider::_finalize_native_tool_calls",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
@@ -11905,9 +12013,39 @@
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
+      "complexity": 7,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_record_usage_from_openai_payload",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_finalize_openai_tool_calls",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_parse_openai_compatible_tool_calls",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
       "complexity": 9,
       "file_name": "ollama.py",
       "function_name": "OllamaProvider::_get_source_client",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::chat",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_parse_chat_response",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
@@ -11923,15 +12061,39 @@
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
+      "complexity": 13,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::chat_stream",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_accumulate_native_tool_call_deltas",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_accumulate_openai_tool_call_deltas",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
       "complexity": 18,
       "file_name": "ollama.py",
       "function_name": "OllamaProvider::pull_model",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
-      "complexity": 33,
+      "complexity": 31,
       "file_name": "ollama.py",
-      "function_name": "OllamaProvider::chat_stream",
+      "function_name": "OllamaProvider::_stream_native",
+      "path": "src\\intellicrack\\providers\\ollama.py"
+    },
+    {
+      "complexity": 41,
+      "file_name": "ollama.py",
+      "function_name": "OllamaProvider::_stream_openai_compatible",
       "path": "src\\intellicrack\\providers\\ollama.py"
     },
     {
@@ -12073,6 +12235,12 @@
       "path": "src\\intellicrack\\providers\\openrouter.py"
     },
     {
+      "complexity": 2,
+      "file_name": "openrouter.py",
+      "function_name": "OpenRouterProvider::_raise_stream_http_error",
+      "path": "src\\intellicrack\\providers\\openrouter.py"
+    },
+    {
       "complexity": 3,
       "file_name": "openrouter.py",
       "function_name": "OpenRouterProvider::disconnect",
@@ -12091,7 +12259,7 @@
       "path": "src\\intellicrack\\providers\\openrouter.py"
     },
     {
-      "complexity": 9,
+      "complexity": 11,
       "file_name": "openrouter.py",
       "function_name": "OpenRouterProvider::connect",
       "path": "src\\intellicrack\\providers\\openrouter.py"
@@ -12109,7 +12277,7 @@
       "path": "src\\intellicrack\\providers\\openrouter.py"
     },
     {
-      "complexity": 66,
+      "complexity": 70,
       "file_name": "openrouter.py",
       "function_name": "OpenRouterProvider::chat_stream",
       "path": "src\\intellicrack\\providers\\openrouter.py"
@@ -13774,6 +13942,18 @@
       "complexity": 0,
       "file_name": "app.py",
       "function_name": "MainWindow::set_model_discovery",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::set_script_generator",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
+      "function_name": "MainWindow::set_template_manager",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {

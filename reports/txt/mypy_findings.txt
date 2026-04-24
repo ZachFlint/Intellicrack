@@ -133,85 +133,6 @@ src\intellicrack\bridges\process.py:4828: error: Function "intellicrack.bridges.
 src\intellicrack\bridges\process.py:4828: note: Perhaps you need "Callable[...]" or a callback protocol?
 
 
-38 findings in src\intellicrack\main.py
-
-src\intellicrack\main.py:223: error: Name "ProcessManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:230: error: Name "ProcessManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:243: error: Name "SplashScreen" is not defined  [name-defined]
-
-src\intellicrack\main.py:250: error: Name "SplashScreen" is not defined  [name-defined]
-
-src\intellicrack\main.py:253: error: Name "ThemeManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:253: error: Name "IconManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:261: error: Name "ThemeManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:261: error: Name "IconManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:266: error: Name "Orchestrator" is not defined  [name-defined]
-
-src\intellicrack\main.py:273: error: Name "Orchestrator" is not defined  [name-defined]
-
-src\intellicrack\main.py:276: error: Name "SessionManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:276: error: Name "SessionStore" is not defined  [name-defined]
-
-src\intellicrack\main.py:284: error: Name "SessionManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:285: error: Name "SessionStore" is not defined  [name-defined]
-
-src\intellicrack\main.py:289: error: Name "ToolRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:296: error: Name "ToolRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:299: error: Name "CredentialLoader" is not defined  [name-defined]
-
-src\intellicrack\main.py:306: error: Name "CredentialLoader" is not defined  [name-defined]
-
-src\intellicrack\main.py:309: error: Name "ProviderRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:316: error: Name "ProviderRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:320: error: Name "MainWindow" is not defined  [name-defined]
-
-src\intellicrack\main.py:327: error: Name "MainWindow" is not defined  [name-defined]
-
-src\intellicrack\main.py:395: error: Name "SplashScreen" is not defined  [name-defined]
-
-src\intellicrack\main.py:439: error: Name "ProviderRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:440: error: Name "CredentialLoader" is not defined  [name-defined]
-
-src\intellicrack\main.py:462: error: Name "ProviderName" is not defined  [name-defined]
-
-src\intellicrack\main.py:462: error: Name "LLMProviderBase" is not defined  [name-defined]
-
-src\intellicrack\main.py:463: error: Name "ProviderName" is not defined  [name-defined]
-
-src\intellicrack\main.py:463: error: Name "LLMProviderBase" is not defined  [name-defined]
-
-src\intellicrack\main.py:476: error: Name "ProviderName" is not defined  [name-defined]
-
-src\intellicrack\main.py:476: error: Name "LLMProviderBase" is not defined  [name-defined]
-
-src\intellicrack\main.py:526: error: Name "ProcessManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:549: error: Name "ProcessManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:641: error: Name "ProviderRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:667: error: Name "ProviderRegistry" is not defined  [name-defined]
-
-src\intellicrack\main.py:706: error: Name "SplashScreen" is not defined  [name-defined]
-
-src\intellicrack\main.py:707: error: Name "ProcessManager" is not defined  [name-defined]
-
-src\intellicrack\main.py:771: error: Name "ModelDiscovery" is not defined  [name-defined]
-
-
 22 findings in tests\test_bridges\test_process_bridge.py
 
 tests\test_bridges\test_process_bridge.py:256: error: Returning Any from function declared to return "int"  [no-any-return]
@@ -472,7 +393,7 @@ src\intellicrack\credentials\store.py:38: error: Incompatible types in assignmen
 
 src\intellicrack\credentials\store.py:53: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\credentials\store.py:141: error: Statement is unreachable  [unreachable]
+src\intellicrack\credentials\store.py:152: error: Statement is unreachable  [unreachable]
 
 
 4 findings in tests\test_ui\test_graph_view.py
@@ -525,9 +446,9 @@ src\intellicrack\ui\app.py:68: error: Incompatible types in assignment (expressi
 
 src\intellicrack\ui\app.py:69: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\app.py:381: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:411: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\app.py:833: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:863: error: Statement is unreachable  [unreachable]
 
 
 3 findings in src\intellicrack\sandbox\analysis.py
@@ -566,18 +487,18 @@ tests\test_ui\test_search_async.py:147: error: "SearchWorker" has no attribute "
 tests\test_ui\test_search_async.py:149: error: "SearchWorker" has no attribute "encoding"; maybe "_encoding"?  [attr-defined]
 
 
-2 findings in tests\test_ui\test_font_manager.py
-
-tests\test_ui\test_font_manager.py:178: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-tests\test_ui\test_font_manager.py:243: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
-
-
 2 findings in src\intellicrack\providers\xpu_utils.py
 
 src\intellicrack\providers\xpu_utils.py:31: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
 
 src\intellicrack\providers\xpu_utils.py:76: error: Statement is unreachable  [unreachable]
+
+
+2 findings in tests\test_ui\test_font_manager.py
+
+tests\test_ui\test_font_manager.py:178: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
+
+tests\test_ui\test_font_manager.py:243: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
 2 findings in src\intellicrack\ui\panels\ghidra_panel.py
@@ -594,6 +515,13 @@ src\intellicrack\ui\panels\x64dbg_panel.py:2498: error: "appendPlainText" of "QP
 src\intellicrack\ui\panels\x64dbg_panel.py:2498: error: "_refresh_state" of "X64DbgPanel" does not return a value (it only ever returns None)  [func-returns-value]
 
 
+2 findings in src\intellicrack\core\template_manager.py
+
+src\intellicrack\core\template_manager.py:422: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+
+src\intellicrack\core\template_manager.py:434: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+
+
 2 findings in src\intellicrack\bridges\sandbox_bridge.py
 
 src\intellicrack\bridges\sandbox_bridge.py:1628: error: Function "intellicrack.bridges.sandbox_bridge.SandboxBridge.list" is not valid as a type  [valid-type]
@@ -601,11 +529,9 @@ src\intellicrack\bridges\sandbox_bridge.py:1628: error: Function "intellicrack.b
 src\intellicrack\bridges\sandbox_bridge.py:1628: note: Perhaps you need "Callable[...]" or a callback protocol?
 
 
-2 findings in src\intellicrack\core\template_manager.py
+1 findings in src\intellicrack\core\hexpat\evaluator.py
 
-src\intellicrack\core\template_manager.py:422: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
-
-src\intellicrack\core\template_manager.py:434: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+src\intellicrack\core\hexpat\evaluator.py:1700: error: Right operand of "or" is never evaluated  [unreachable]
 
 
 1 findings in tests\test_hexcore_e2e\test_data_inspector.py
@@ -618,24 +544,19 @@ tests\test_hexcore_e2e\test_data_inspector.py:173: error: Returning Any from fun
 src\intellicrack\core\process_manager.py:171: error: Cannot determine type of "_initialized"  [has-type]
 
 
-1 findings in src\intellicrack\core\hexpat\evaluator.py
-
-src\intellicrack\core\hexpat\evaluator.py:1700: error: Right operand of "or" is never evaluated  [unreachable]
-
-
-1 findings in src\intellicrack\sandbox\qemu.py
-
-src\intellicrack\sandbox\qemu.py:400: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
-
-
 1 findings in src\intellicrack\core\hexpat\stdlib.py
 
 src\intellicrack\core\hexpat\stdlib.py:1475: error: Incompatible types in assignment (expression has type "IO[Any]", variable has type "BinaryIO")  [assignment]
 
 
-1 findings in tests\test_ui\test_icon_manager.py
+1 findings in src\intellicrack\providers\ollama.py
 
-tests\test_ui\test_icon_manager.py:348: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
+src\intellicrack\providers\ollama.py:1077: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+
+1 findings in src\intellicrack\sandbox\qemu.py
+
+src\intellicrack\sandbox\qemu.py:400: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
 1 findings in tests\test_providers\test_ollama_chat_live.py
@@ -648,9 +569,14 @@ tests\test_providers\test_ollama_chat_live.py:61: error: Redundant cast to "list
 tests\test_providers\test_openrouter_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in src\intellicrack\credentials\oauth.py
+1 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\credentials\oauth.py:108: error: Statement is unreachable  [unreachable]
+src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in src\intellicrack\bridges\x64dbg.py
+
+src\intellicrack\bridges\x64dbg.py:3598: error: Returning Any from function declared to return "int"  [no-any-return]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
@@ -663,39 +589,19 @@ tests\test_providers\test_openai_provider.py:22: error: Module "intellicrack.cre
 tests\test_providers\test_grok_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in tests\test_providers\test_google_provider.py
-
-tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
-
-
-1 findings in src\intellicrack\providers\model_loader.py
-
-src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-
-1 findings in src\intellicrack\providers\huggingface.py
-
-src\intellicrack\providers\huggingface.py:231: error: Call to untyped function "close" in typed context  [no-untyped-call]
-
-
-1 findings in tests\test_bridges\test_x64dbg.py
-
-tests\test_bridges\test_x64dbg.py:190: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
-
-
 1 findings in tests\test_providers\test_anthropic_provider.py
 
 tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in tests\test_providers\test_model_discovery.py
+1 findings in tests\test_ui\test_icon_manager.py
 
-tests\test_providers\test_model_discovery.py:21: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+tests\test_ui\test_icon_manager.py:348: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
 
 
-1 findings in tests\test_providers\test_huggingface_provider.py
+1 findings in tests\test_bridges\test_x64dbg.py
 
-tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+tests\test_bridges\test_x64dbg.py:190: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
 
 
 1 findings in tests\test_credentials\test_oauth_manager_live.py
@@ -705,12 +611,32 @@ tests\test_credentials\test_oauth_manager_live.py:56: error: Returning Any from 
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:2327: error: Name "data" already defined on line 2321  [no-redef]
+src\intellicrack\bridges\hex_editor.py:2328: error: Name "data" already defined on line 2322  [no-redef]
 
 
 1 findings in tests\test_ui\test_xpu_status.py
 
 tests\test_ui\test_xpu_status.py:249: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
+
+
+1 findings in src\intellicrack\providers\huggingface.py
+
+src\intellicrack\providers\huggingface.py:272: error: Call to untyped function "close" in typed context  [no-untyped-call]
+
+
+1 findings in tests\test_providers\test_huggingface_provider.py
+
+tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+
+1 findings in tests\test_providers\test_model_discovery.py
+
+tests\test_providers\test_model_discovery.py:21: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+
+1 findings in tests\test_providers\test_google_provider.py
+
+tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_ui\test_panel_dock.py

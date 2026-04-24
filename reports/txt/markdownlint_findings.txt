@@ -573,171 +573,181 @@ vendor/ImHex-Patterns/README.md:350:63 error MD060/table-column-style Table colu
 vendor/ImHex-Patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
 
 
-82 findings in CHANGELOG.md
+87 findings in CHANGELOG.md
 
-CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 291]
+CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 339]
 
-CHANGELOG.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+CHANGELOG.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 291]
 
-CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
+CHANGELOG.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
 
-CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+CHANGELOG.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
 
-CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
+CHANGELOG.md:33:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
 
-CHANGELOG.md:95:81 error MD013/line-length Line length [Expected: 80; Actual: 647]
+CHANGELOG.md:101:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
 
-CHANGELOG.md:97:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
+CHANGELOG.md:102:81 error MD013/line-length Line length [Expected: 80; Actual: 647]
 
-CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 180]
+CHANGELOG.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
 
-CHANGELOG.md:99:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
+CHANGELOG.md:105:81 error MD013/line-length Line length [Expected: 80; Actual: 180]
 
-CHANGELOG.md:100:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:106:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
 
-CHANGELOG.md:102:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:103:81 error MD013/line-length Line length [Expected: 80; Actual: 163]
+CHANGELOG.md:109:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 163]
 
-CHANGELOG.md:105:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+CHANGELOG.md:111:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
 
-CHANGELOG.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
+CHANGELOG.md:112:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
 
-CHANGELOG.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+CHANGELOG.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
 
-CHANGELOG.md:109:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+CHANGELOG.md:115:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
 
-CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
+CHANGELOG.md:116:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
 
-CHANGELOG.md:112:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+CHANGELOG.md:117:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
 
-CHANGELOG.md:113:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:119:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
 
-CHANGELOG.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+CHANGELOG.md:120:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:116:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
+CHANGELOG.md:121:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
 
-CHANGELOG.md:117:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+CHANGELOG.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
 
-CHANGELOG.md:118:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
+CHANGELOG.md:124:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
 
-CHANGELOG.md:119:81 error MD013/line-length Line length [Expected: 80; Actual: 135]
+CHANGELOG.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
 
-CHANGELOG.md:121:81 error MD013/line-length Line length [Expected: 80; Actual: 146]
+CHANGELOG.md:126:81 error MD013/line-length Line length [Expected: 80; Actual: 135]
 
-CHANGELOG.md:122:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
+CHANGELOG.md:128:81 error MD013/line-length Line length [Expected: 80; Actual: 146]
 
-CHANGELOG.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+CHANGELOG.md:129:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
 
-CHANGELOG.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+CHANGELOG.md:130:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
 
-CHANGELOG.md:139:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
+CHANGELOG.md:132:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
 
-CHANGELOG.md:146:81 error MD013/line-length Line length [Expected: 80; Actual: 250]
+CHANGELOG.md:146:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
 
-CHANGELOG.md:148:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+CHANGELOG.md:153:81 error MD013/line-length Line length [Expected: 80; Actual: 250]
 
-CHANGELOG.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
+CHANGELOG.md:155:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
 
-CHANGELOG.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+CHANGELOG.md:156:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
 
-CHANGELOG.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:157:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
 
-CHANGELOG.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
+CHANGELOG.md:158:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:189:81 error MD013/line-length Line length [Expected: 80; Actual: 271]
+CHANGELOG.md:159:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
 
-CHANGELOG.md:197:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
+CHANGELOG.md:196:81 error MD013/line-length Line length [Expected: 80; Actual: 271]
 
-CHANGELOG.md:202:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:204:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
 
-CHANGELOG.md:205:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
+CHANGELOG.md:209:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
+CHANGELOG.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
 
-CHANGELOG.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+CHANGELOG.md:217:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
 
-CHANGELOG.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+CHANGELOG.md:218:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
 
-CHANGELOG.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+CHANGELOG.md:219:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
 
-CHANGELOG.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CHANGELOG.md:221:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
 
-CHANGELOG.md:224:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
+CHANGELOG.md:223:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-CHANGELOG.md:237:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+CHANGELOG.md:231:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
 
-CHANGELOG.md:293:81 error MD013/line-length Line length [Expected: 80; Actual: 157]
+CHANGELOG.md:243:81 error MD013/line-length Line length [Expected: 80; Actual: 218]
 
-CHANGELOG.md:295:81 error MD013/line-length Line length [Expected: 80; Actual: 152]
+CHANGELOG.md:249:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
 
-CHANGELOG.md:297:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CHANGELOG.md:305:81 error MD013/line-length Line length [Expected: 80; Actual: 139]
 
-CHANGELOG.md:299:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+CHANGELOG.md:327:19 error MD033/no-inline-html Inline HTML [Element: attr]
 
-CHANGELOG.md:305:81 error MD013/line-length Line length [Expected: 80; Actual: 127]
+CHANGELOG.md:330:81 error MD013/line-length Line length [Expected: 80; Actual: 120]
 
-CHANGELOG.md:307:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+CHANGELOG.md:381:81 error MD013/line-length Line length [Expected: 80; Actual: 222]
 
-CHANGELOG.md:309:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+CHANGELOG.md:382:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
 
-CHANGELOG.md:311:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
+CHANGELOG.md:386:81 error MD013/line-length Line length [Expected: 80; Actual: 157]
 
-CHANGELOG.md:313:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+CHANGELOG.md:388:81 error MD013/line-length Line length [Expected: 80; Actual: 152]
 
-CHANGELOG.md:315:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+CHANGELOG.md:390:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-CHANGELOG.md:319:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+CHANGELOG.md:392:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
 
-CHANGELOG.md:321:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+CHANGELOG.md:398:81 error MD013/line-length Line length [Expected: 80; Actual: 127]
 
-CHANGELOG.md:323:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+CHANGELOG.md:400:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
 
-CHANGELOG.md:327:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+CHANGELOG.md:402:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
 
-CHANGELOG.md:331:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CHANGELOG.md:404:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
 
-CHANGELOG.md:335:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+CHANGELOG.md:406:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
 
-CHANGELOG.md:337:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+CHANGELOG.md:408:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
 
-CHANGELOG.md:339:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+CHANGELOG.md:412:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
 
-CHANGELOG.md:341:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:414:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
 
-CHANGELOG.md:363:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+CHANGELOG.md:416:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
 
-CHANGELOG.md:389:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+CHANGELOG.md:420:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
 
-CHANGELOG.md:401:81 error MD013/line-length Line length [Expected: 80; Actual: 113]
+CHANGELOG.md:424:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 
-CHANGELOG.md:425:81 error MD013/line-length Line length [Expected: 80; Actual: 124]
+CHANGELOG.md:428:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
 
-CHANGELOG.md:427:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+CHANGELOG.md:430:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
 
-CHANGELOG.md:429:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+CHANGELOG.md:432:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
 
-CHANGELOG.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:434:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:506:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:456:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
 
-CHANGELOG.md:514:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+CHANGELOG.md:482:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
 
-CHANGELOG.md:585:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+CHANGELOG.md:494:81 error MD013/line-length Line length [Expected: 80; Actual: 113]
 
-CHANGELOG.md:587:81 error MD013/line-length Line length [Expected: 80; Actual: 114]
+CHANGELOG.md:518:81 error MD013/line-length Line length [Expected: 80; Actual: 124]
 
-CHANGELOG.md:695:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+CHANGELOG.md:520:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
 
-CHANGELOG.md:718:81 error MD013/line-length Line length [Expected: 80; Actual: 234]
+CHANGELOG.md:522:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
 
-CHANGELOG.md:720:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+CHANGELOG.md:567:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:728:81 error MD013/line-length Line length [Expected: 80; Actual: 222]
+CHANGELOG.md:599:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:729:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+CHANGELOG.md:607:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+
+CHANGELOG.md:678:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+CHANGELOG.md:680:81 error MD013/line-length Line length [Expected: 80; Actual: 114]
+
+CHANGELOG.md:788:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+CHANGELOG.md:811:81 error MD013/line-length Line length [Expected: 80; Actual: 234]
+
+CHANGELOG.md:813:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
 
 
 36 findings in remediation-audit-results.md
