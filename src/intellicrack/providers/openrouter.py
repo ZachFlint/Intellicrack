@@ -54,6 +54,7 @@ _ERR_NO_RESPONSE_CHOICES = "No response choices returned"
 _ERR_STREAM_FAILED = "OpenRouter stream failed: %s"
 _ERR_GET_GENERATION_FAILED = "Failed to get generation: %s"
 
+HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_RATE_LIMITED = 429
 
@@ -98,6 +99,16 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if not credentials.api_key:
             raise AuthenticationError(_ERR_KEY_REQUIRED)
+
+        if self.client is not None:
+            try:
+                await self.client.aclose()
+            except (ConnectionError, TimeoutError, OSError, RuntimeError, httpx.HTTPError) as exc:
+                self._logger.debug(
+                    "openrouter_existing_client_close_error",
+                    error=str(exc),
+                )
+            self.client = None
 
         try:
             self._api_key = credentials.api_key
@@ -376,6 +387,27 @@ class OpenRouterProvider(LLMProviderBase):
         return message, tool_calls or None
 
     @staticmethod
+    def _raise_stream_http_error(status_code: int, body_text: str) -> None:
+        """Translate a stream HTTP error into the appropriate typed exception.
+
+        Args:
+            status_code: HTTP status code returned by OpenRouter.
+            body_text: Decoded response body text from OpenRouter.
+
+        Raises:
+            AuthenticationError: If OpenRouter returned HTTP 401.
+            RateLimitError: If OpenRouter returned HTTP 429.
+            ProviderError: For any other non-success HTTP status.
+        """
+        if status_code == HTTP_UNAUTHORIZED:
+            msg = f"{_ERR_INVALID_KEY % status_code}: {body_text}"
+            raise AuthenticationError(msg)
+        if status_code == HTTP_RATE_LIMITED:
+            msg = f"{_ERR_RATE_LIMITED}: {body_text}"
+            raise RateLimitError(msg)
+        raise ProviderError(_ERR_STREAM_FAILED % f"HTTP {status_code}: {body_text}")
+
+    @staticmethod
     def _build_usage_from_data(data: dict[str, Any]) -> UsageInfo | None:
         """Extract token-usage statistics from an OpenRouter response body.
 
@@ -458,6 +490,8 @@ class OpenRouterProvider(LLMProviderBase):
             str: Text chunks as they arrive.
 
         Raises:
+            AuthenticationError: If the API key is rejected by OpenRouter.
+            RateLimitError: If OpenRouter returns HTTP 429 during streaming.
             ProviderError: If not connected or request fails.
         """
         if not self.connected or self.client is None:
@@ -504,7 +538,16 @@ class OpenRouterProvider(LLMProviderBase):
                 f"{self.BASE_URL}/chat/completions",
                 json=request_body,
             ) as response:
-                response.raise_for_status()
+                if response.status_code >= HTTP_BAD_REQUEST:
+                    body_bytes = await response.aread()
+                    body_text = body_bytes.decode("utf-8", errors="replace")
+                    self._logger.warning(
+                        "openrouter_chat_stream_http_error",
+                        model=model,
+                        status_code=response.status_code,
+                        body=body_text[:1024],
+                    )
+                    self._raise_stream_http_error(response.status_code, body_text)
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
                         self._logger.info(
@@ -548,6 +591,8 @@ class OpenRouterProvider(LLMProviderBase):
                 chunks_yielded=chunks_yielded,
             )
 
+        except (AuthenticationError, RateLimitError, ProviderError):
+            raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             if not self._cancel_requested:
                 self._logger.warning(

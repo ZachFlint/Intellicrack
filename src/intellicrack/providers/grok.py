@@ -37,6 +37,12 @@ from intellicrack.providers.base import (
 )
 
 
+_GROK_4_CONTEXT_WINDOW = 256000
+_GROK_3_CONTEXT_WINDOW = 131072
+_GROK_2_CONTEXT_WINDOW = 131072
+_GROK_1_CONTEXT_WINDOW = 8192
+_GROK_DEFAULT_CONTEXT_WINDOW = 131072
+
 _ERR_KEY_REQUIRED = "Grok API key is required"
 _ERR_NOT_CONNECTED = "Not connected to Grok API"
 _ERR_INVALID_API_KEY = "Invalid Grok API key: %s"
@@ -185,11 +191,32 @@ class GrokProvider(LLMProviderBase):
         Returns:
             int: Estimated context window in tokens.
         """
+        if "grok-4" in model_id:
+            return _GROK_4_CONTEXT_WINDOW
         if "grok-3" in model_id:
-            return 131072
+            return _GROK_3_CONTEXT_WINDOW
         if "grok-2" in model_id:
-            return 131072
-        return 8192 if "grok-1" in model_id else 131072
+            return _GROK_2_CONTEXT_WINDOW
+        if "grok-1" in model_id:
+            return _GROK_1_CONTEXT_WINDOW
+        return _GROK_DEFAULT_CONTEXT_WINDOW
+
+    @staticmethod
+    def _supports_max_completion_tokens(model_id: str) -> bool:
+        """Determine whether a model uses ``max_completion_tokens``.
+
+        Grok-4 and any future newer Grok generation use OpenAI's newer
+        ``max_completion_tokens`` request field instead of the legacy
+        ``max_tokens`` parameter.  Older Grok generations continue to use
+        ``max_tokens``.
+
+        Args:
+            model_id: Grok model identifier.
+
+        Returns:
+            bool: True if the model expects ``max_completion_tokens``.
+        """
+        return "grok-4" in model_id or "grok-5" in model_id or "grok-6" in model_id
 
     @staticmethod
     def _infer_supports_vision(model_id: str) -> bool:
@@ -359,8 +386,19 @@ class GrokProvider(LLMProviderBase):
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+
         try:
             if tools is not None and tool_choice is not None:
+                if use_max_completion_tokens:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                    )
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -370,12 +408,27 @@ class GrokProvider(LLMProviderBase):
                     tool_choice=tool_choice,
                 )
             if tools is not None:
+                if use_max_completion_tokens:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        tools=tools,
+                    )
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     tools=tools,
+                )
+            if use_max_completion_tokens:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
                 )
             return await self.client.chat.completions.create(
                 model=model,
@@ -531,27 +584,61 @@ class GrokProvider(LLMProviderBase):
                 self._convert_tool_choice_to_openai_format(tool_choice),
             )
 
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+
         try:
             if grok_tools_typed and tool_choice_value is not None:
-                stream = await self.client.chat.completions.create(
-                    model=model,
-                    messages=grok_messages_typed,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=True,
-                    stream_options={"include_usage": True},
-                    tools=grok_tools_typed,
-                    tool_choice=tool_choice_value,
-                )
+                if use_max_completion_tokens:
+                    stream = await self.client.chat.completions.create(
+                        model=model,
+                        messages=grok_messages_typed,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options={"include_usage": True},
+                        tools=grok_tools_typed,
+                        tool_choice=tool_choice_value,
+                    )
+                else:
+                    stream = await self.client.chat.completions.create(
+                        model=model,
+                        messages=grok_messages_typed,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        stream=True,
+                        stream_options={"include_usage": True},
+                        tools=grok_tools_typed,
+                        tool_choice=tool_choice_value,
+                    )
             elif grok_tools_typed:
+                if use_max_completion_tokens:
+                    stream = await self.client.chat.completions.create(
+                        model=model,
+                        messages=grok_messages_typed,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options={"include_usage": True},
+                        tools=grok_tools_typed,
+                    )
+                else:
+                    stream = await self.client.chat.completions.create(
+                        model=model,
+                        messages=grok_messages_typed,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        stream=True,
+                        stream_options={"include_usage": True},
+                        tools=grok_tools_typed,
+                    )
+            elif use_max_completion_tokens:
                 stream = await self.client.chat.completions.create(
                     model=model,
                     messages=grok_messages_typed,
                     temperature=temperature,
-                    max_tokens=max_tokens,
+                    max_completion_tokens=max_tokens,
                     stream=True,
                     stream_options={"include_usage": True},
-                    tools=grok_tools_typed,
                 )
             else:
                 stream = await self.client.chat.completions.create(
@@ -604,8 +691,13 @@ class GrokProvider(LLMProviderBase):
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
         self._cancel_requested = True
-        if self._current_task is not None and not self._current_task.done():
+        had_active_task = self._current_task is not None and not self._current_task.done()
+        if had_active_task and self._current_task is not None:
             self._current_task.cancel()
+        self._logger.info(
+            "grok_request_cancelled",
+            had_active_task=had_active_task,
+        )
 
     @override
     def _convert_messages_to_provider_format(

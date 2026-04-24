@@ -6,17 +6,20 @@
 
 This module provides integration with HuggingFace's Inference API using the
 official ``huggingface_hub.AsyncInferenceClient`` and its ``chat_completion``
-method.  The client targets the HuggingFace router (serverless providers via
-``provider="auto"``) so requests are routed to a warm provider for the given
-model.
+method.  The client targets the HuggingFace first-party router endpoint at
+``https://router.huggingface.co/hf-inference`` via the ``provider="hf-inference"``
+selector, which replaces the deprecated ``api-inference.huggingface.co`` host
+and provides direct access to HuggingFace-hosted serverless endpoints.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, cast, overload, override
 
+import httpx
 from huggingface_hub import (
     AsyncInferenceClient,
     ChatCompletionInputFunctionName,
@@ -102,6 +105,8 @@ class _WhoamiCallable(Protocol):
     def __call__(self) -> dict[str, Any]: ...
 
 
+_ERR_MODEL_LOADING = "HuggingFace model is loading and not yet ready: %s"
+
 _ERR_NOT_CONNECTED = "Not connected to HuggingFace"
 _ERR_CREDENTIAL_REQUIRED = "HuggingFace API token is required"
 _ERR_CREDENTIAL_INVALID = "Invalid HuggingFace API token: %s"
@@ -130,15 +135,16 @@ class HuggingFaceProvider(LLMProviderBase):
 
     Uses ``huggingface_hub.AsyncInferenceClient.chat_completion`` for both
     blocking and streaming requests.  The client is configured with
-    ``provider="auto"`` so HuggingFace's router selects a warm serverless
-    provider for each model.
+    ``provider="hf-inference"`` so requests are routed through HuggingFace's
+    first-party router at ``https://router.huggingface.co/hf-inference``,
+    replacing the deprecated ``api-inference.huggingface.co`` host.
 
     Attributes:
         DEFAULT_PROVIDER: HuggingFace inference-provider routing strategy.
         MODELS_LIST_LIMIT: Maximum number of models fetched from ``HfApi``.
     """
 
-    DEFAULT_PROVIDER: ClassVar[Literal["auto"]] = "auto"
+    DEFAULT_PROVIDER: ClassVar[Literal["hf-inference"]] = "hf-inference"
     MODELS_LIST_LIMIT: ClassVar[int] = _MODEL_LIST_LIMIT
 
     def __init__(self) -> None:
@@ -205,6 +211,8 @@ class HuggingFaceProvider(LLMProviderBase):
             await self._close_client()
             if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            if status_code == HTTP_SERVICE_UNAVAILABLE:
+                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
             raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
         except (ConnectionError, TimeoutError, OSError) as exc:
             self._logger.warning(
@@ -223,6 +231,39 @@ class HuggingFaceProvider(LLMProviderBase):
             user=str(user_name) if user_name else None,
             has_custom_base=credentials.api_base is not None,
         )
+
+    @staticmethod
+    def _extract_503_message(exc: HfHubHTTPError) -> str:
+        """Extract a human-readable message from a 503 service-unavailable error.
+
+        HuggingFace returns 503 when a model is still loading.  The body is
+        usually JSON (``{"error": "...", "estimated_time": ...}``), but the
+        router occasionally returns HTML, which raises ``json.JSONDecodeError``
+        / ``httpx.DecodingError`` / ``ValueError``.  This helper guards the
+        decode and falls back to a generic "Model is loading" message.
+
+        Args:
+            exc: The HfHubHTTPError raised by the SDK.
+
+        Returns:
+            str: A human-readable error message describing the 503 cause.
+        """
+        response = getattr(exc, "response", None)
+        if response is None:
+            return "Model is loading and not yet ready"
+        try:
+            body = response.json()
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError, TypeError, httpx.DecodingError):
+            return "Model is loading and not yet ready"
+        if isinstance(body, dict):
+            body_dict = cast("dict[str, Any]", body)
+            error_msg = body_dict.get("error")
+            estimated = body_dict.get("estimated_time")
+            if isinstance(error_msg, str) and isinstance(estimated, (int, float)):
+                return f"{error_msg} (estimated_time={estimated}s)"
+            if isinstance(error_msg, str):
+                return error_msg
+        return "Model is loading and not yet ready"
 
     async def _close_client(self) -> None:
         """Close the inference client if present, ignoring shutdown errors."""
@@ -294,6 +335,8 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
+            if status_code == HTTP_SERVICE_UNAVAILABLE:
+                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
         except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
             self._logger.warning(
@@ -493,6 +536,8 @@ class HuggingFaceProvider(LLMProviderBase):
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
             if status_code == HTTP_RATE_LIMITED:
                 raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            if status_code == HTTP_SERVICE_UNAVAILABLE:
+                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             self._logger.warning(
@@ -631,6 +676,8 @@ class HuggingFaceProvider(LLMProviderBase):
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
             if status_code == HTTP_RATE_LIMITED:
                 raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            if status_code == HTTP_SERVICE_UNAVAILABLE:
+                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             self._logger.warning(
@@ -710,6 +757,8 @@ class HuggingFaceProvider(LLMProviderBase):
                 raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
             if status_code == HTTP_RATE_LIMITED:
                 raise RateLimitError(_ERR_RATE_LIMITED) from exc
+            if status_code == HTTP_SERVICE_UNAVAILABLE:
+                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             if self._cancel_requested:

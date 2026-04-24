@@ -57,7 +57,7 @@ OPENAI_MODEL = "gpt-4o-mini"
 GOOGLE_MODEL = "gemini-2.0-flash-lite"
 GROK_MODEL = "grok-3-mini"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
-HUGGINGFACE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+HUGGINGFACE_MODEL = "katanemo/Arch-Router-1.5B"
 
 _OLLAMA_URL = "http://localhost:11434"
 _OLLAMA_TAGS_URL = f"{_OLLAMA_URL}/api/tags"
