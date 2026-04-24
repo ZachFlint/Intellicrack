@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """VNC viewer widget for QEMU sandbox display.
 
-Implements a subset of the RFB protocol (RFC 6143) for receiving framebuffer
-updates from a VNC server and rendering them in a Qt widget. Supports Raw
-encoding, VNC Authentication (type 2) via DES, pointer events, and key events.
-Long-running server pumping is performed on the shared bridge event loop to
-avoid blocking the Qt main thread.
+Implements a subset of the RFB protocol (RFC 6143) for receiving framebuffer updates from a VNC server and rendering them in a Qt widget.
+Supports Raw encoding, VNC Authentication (type 2) via DES, pointer events, and key events. Long-running server pumping is performed on the
+shared bridge event loop to avoid blocking the Qt main thread.
 """
 
 from __future__ import annotations

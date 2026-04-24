@@ -1,3 +1,141 @@
+38 findings in src\intellicrack\main.py
+
+src\intellicrack\main.py:223:39: error[unresolved-reference] Name `ProcessManager` used when not defined
+
+src\intellicrack\main.py:230:23: error[unresolved-reference] Name `ProcessManager` used when not defined
+
+src\intellicrack\main.py:243:37: error[unresolved-reference] Name `SplashScreen` used when not defined
+
+src\intellicrack\main.py:250:23: error[unresolved-reference] Name `SplashScreen` used when not defined
+
+src\intellicrack\main.py:253:49: error[unresolved-reference] Name `ThemeManager` used when not defined
+
+src\intellicrack\main.py:253:69: error[unresolved-reference] Name `IconManager` used when not defined
+
+src\intellicrack\main.py:261:21: error[unresolved-reference] Name `ThemeManager` used when not defined
+
+src\intellicrack\main.py:261:41: error[unresolved-reference] Name `IconManager` used when not defined
+
+src\intellicrack\main.py:266:36: error[unresolved-reference] Name `Orchestrator` used when not defined
+
+src\intellicrack\main.py:273:23: error[unresolved-reference] Name `Orchestrator` used when not defined
+
+src\intellicrack\main.py:276:45: error[unresolved-reference] Name `SessionManager` used when not defined
+
+src\intellicrack\main.py:276:67: error[unresolved-reference] Name `SessionStore` used when not defined
+
+src\intellicrack\main.py:284:20: error[unresolved-reference] Name `SessionManager` used when not defined
+
+src\intellicrack\main.py:285:20: error[unresolved-reference] Name `SessionStore` used when not defined
+
+src\intellicrack\main.py:289:37: error[unresolved-reference] Name `ToolRegistry` used when not defined
+
+src\intellicrack\main.py:296:23: error[unresolved-reference] Name `ToolRegistry` used when not defined
+
+src\intellicrack\main.py:299:41: error[unresolved-reference] Name `CredentialLoader` used when not defined
+
+src\intellicrack\main.py:306:23: error[unresolved-reference] Name `CredentialLoader` used when not defined
+
+src\intellicrack\main.py:309:33: error[unresolved-reference] Name `ProviderRegistry` used when not defined
+
+src\intellicrack\main.py:316:39: error[unresolved-reference] Name `ProviderRegistry` used when not defined
+
+src\intellicrack\main.py:320:35: error[unresolved-reference] Name `MainWindow` used when not defined
+
+src\intellicrack\main.py:327:23: error[unresolved-reference] Name `MainWindow` used when not defined
+
+src\intellicrack\main.py:395:6: error[unresolved-reference] Name `SplashScreen` used when not defined
+
+src\intellicrack\main.py:439:15: error[unresolved-reference] Name `ProviderRegistry` used when not defined
+
+src\intellicrack\main.py:440:18: error[unresolved-reference] Name `CredentialLoader` used when not defined
+
+src\intellicrack\main.py:462:27: error[unresolved-reference] Name `ProviderName` used when not defined
+
+src\intellicrack\main.py:462:46: error[unresolved-reference] Name `LLMProviderBase` used when not defined
+
+src\intellicrack\main.py:463:21: error[unresolved-reference] Name `ProviderName` used when not defined
+
+src\intellicrack\main.py:463:40: error[unresolved-reference] Name `LLMProviderBase` used when not defined
+
+src\intellicrack\main.py:476:40: error[unresolved-reference] Name `ProviderName` used when not defined
+
+src\intellicrack\main.py:476:75: error[unresolved-reference] Name `LLMProviderBase` used when not defined
+
+src\intellicrack\main.py:526:74: error[unresolved-reference] Name `ProcessManager` used when not defined
+
+src\intellicrack\main.py:549:82: error[unresolved-reference] Name `ProcessManager` used when not defined
+
+src\intellicrack\main.py:641:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined
+
+src\intellicrack\main.py:667:24: error[unresolved-reference] Name `ProviderRegistry` used when not defined
+
+src\intellicrack\main.py:706:13: error[unresolved-reference] Name `SplashScreen` used when not defined
+
+src\intellicrack\main.py:707:22: error[unresolved-reference] Name `ProcessManager` used when not defined
+
+src\intellicrack\main.py:771:38: error[unresolved-reference] Name `ModelDiscovery` used when not defined
+
+
+28 findings in src\intellicrack\bridges\process.py
+
+src\intellicrack\bridges\process.py:936:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:955:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:991:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:1041:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:1694:71: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:1762:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:1828:24: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
+
+src\intellicrack\bridges\process.py:1830:18: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
+
+src\intellicrack\bridges\process.py:1917:60: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:1970:60: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2228:69: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2272:72: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2440:60: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2508:60: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2578:69: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:2643:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3086:58: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3335:45: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3417:57: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3455:56: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3511:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3619:48: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:3976:70: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:4013:10: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:4060:22: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
+
+src\intellicrack\bridges\process.py:4656:53: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:4705:55: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+src\intellicrack\bridges\process.py:4828:70: error[invalid-type-form] Invalid subscript of object of type `def list(self, filter_name: str | None = None) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+
+
 20 findings in tests\test_ui\test_sandbox_panel_fixes.py
 
 tests\test_ui\test_sandbox_panel_fixes.py:56:18: error[unresolved-attribute] Object of type `SandboxPanel` has no attribute `selected_sandbox_type`
@@ -41,6 +179,37 @@ tests\test_ui\test_sandbox_panel_fixes.py:170:9: error[unresolved-attribute] Obj
 tests\test_ui\test_sandbox_panel_fixes.py:172:16: error[unresolved-attribute] Object of type `SandboxPanel` has no attribute `status_indicator`
 
 
+14 findings in src\intellicrack\ui\provider_config.py
+
+src\intellicrack\ui\provider_config.py:67:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`
+
+src\intellicrack\ui\provider_config.py:73:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`
+
+src\intellicrack\ui\provider_config.py:79:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`
+
+src\intellicrack\ui\provider_config.py:85:20: error[invalid-assignment] Object of type `None` is not assignable to `<class 'GrokProvider'>`
+
+src\intellicrack\ui\provider_config.py:99:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
+
+src\intellicrack\ui\provider_config.py:100:23: error[invalid-assignment] Object of type `None` is not assignable to `def clear_xpu_cache() -> None`
+
+src\intellicrack\ui\provider_config.py:101:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
+
+src\intellicrack\ui\provider_config.py:102:28: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_count() -> int`
+
+src\intellicrack\ui\provider_config.py:103:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
+
+src\intellicrack\ui\provider_config.py:104:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
+
+src\intellicrack\ui\provider_config.py:105:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
+
+src\intellicrack\ui\provider_config.py:114:26: error[invalid-assignment] Object of type `None` is not assignable to `def clear_global_cache() -> None`
+
+src\intellicrack\ui\provider_config.py:115:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`
+
+src\intellicrack\ui\provider_config.py:2578:50: warning[redundant-cast] Value is already of type `tuple[object, ...]`
+
+
 14 findings in tests\test_ui\test_tools_logic.py
 
 tests\test_ui\test_tools_logic.py:42:9: error[unresolved-attribute] Object of type `FunctionListPanel` has no attribute `on_item_double_clicked`
@@ -72,31 +241,29 @@ tests\test_ui\test_tools_logic.py:313:9: error[unresolved-attribute] Object of t
 tests\test_ui\test_tools_logic.py:316:9: error[unresolved-attribute] Object of type `ToolOutputPanel` has no attribute `on_tab_close_requested`
 
 
-12 findings in src\intellicrack\ui\provider_config.py
+11 findings in src\intellicrack\providers\local_transformers.py
 
-src\intellicrack\ui\provider_config.py:67:33: error[invalid-assignment] Object of type `None` is not assignable to `<class 'LocalTransformersProvider'>`
+src\intellicrack\providers\local_transformers.py:67:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
 
-src\intellicrack\ui\provider_config.py:73:22: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OllamaProvider'>`
+src\intellicrack\providers\local_transformers.py:838:12: error[unresolved-attribute] Attribute `pad_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\ui\provider_config.py:79:26: error[invalid-assignment] Object of type `None` is not assignable to `<class 'OpenRouterProvider'>`
+src\intellicrack\providers\local_transformers.py:839:13: error[invalid-assignment] Object of type `Unknown` is not assignable to attribute `pad_token` on type `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\ui\provider_config.py:93:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
+src\intellicrack\providers\local_transformers.py:839:35: error[unresolved-attribute] Attribute `eos_token` is not defined on `None` in union `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\ui\provider_config.py:94:23: error[invalid-assignment] Object of type `None` is not assignable to `def clear_xpu_cache() -> None`
+src\intellicrack\providers\local_transformers.py:849:30: error[invalid-argument-type] Argument to bound method `__call__` is incorrect: Expected `PreTrainedModel`, found `device`
 
-src\intellicrack\ui\provider_config.py:95:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
+src\intellicrack\providers\local_transformers.py:865:13: error[invalid-argument-type] Argument is incorrect: Expected `PreTrainedTokenizerBase`, found `Unknown | TokenizersBackend | None | SentencePieceBackend`
 
-src\intellicrack\ui\provider_config.py:96:28: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_count() -> int`
+src\intellicrack\providers\local_transformers.py:922:23: error[call-non-callable] Object of type `Tensor` is not callable
 
-src\intellicrack\ui\provider_config.py:97:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
+src\intellicrack\providers\local_transformers.py:1038:26: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
 
-src\intellicrack\ui\provider_config.py:98:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
+src\intellicrack\providers\local_transformers.py:1039:35: error[invalid-assignment] Object of type `Cache | None` is not assignable to `tuple[tuple[Tensor, ...], ...] | None`
 
-src\intellicrack\ui\provider_config.py:99:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
+src\intellicrack\providers\local_transformers.py:1061:27: error[invalid-yield] Yield type `(str & ~AlwaysFalsy) | (list[str] & ~AlwaysFalsy)` does not match annotated yield type `str`
 
-src\intellicrack\ui\provider_config.py:108:26: error[invalid-assignment] Object of type `None` is not assignable to `def clear_global_cache() -> None`
-
-src\intellicrack\ui\provider_config.py:109:29: error[invalid-assignment] Object of type `None` is not assignable to `def set_global_cache_size(max_memory_bytes: int) -> None`
+src\intellicrack\providers\local_transformers.py:1165:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
 
 
 11 findings in src\intellicrack\providers\model_loader.py
@@ -147,6 +314,27 @@ tests\test_core\test_script_gen.py:278:19: error[invalid-argument-type] Argument
 tests\test_core\test_script_gen.py:278:19: error[invalid-argument-type] Argument is incorrect: Expected `dict[str, Any]`, found `Any | str | int | ScriptLanguage`
 
 
+9 findings in src\intellicrack\providers\anthropic.py
+
+src\intellicrack\providers\anthropic.py:544:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:547:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:548:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:548:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:548:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:549:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+
+src\intellicrack\providers\anthropic.py:555:52: error[invalid-argument-type] Argument to bound method `append` is incorrect: Expected `str`, found `object`
+
+src\intellicrack\providers\anthropic.py:558:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`
+
+src\intellicrack\providers\anthropic.py:663:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
+
+
 9 findings in tests\test_ui\test_app_embedded_tools.py
 
 tests\test_ui\test_app_embedded_tools.py:285:9: error[unresolved-attribute] Object of type `MainWindow` has no attribute `on_debug_current_binary`
@@ -187,113 +375,62 @@ src\intellicrack\bridges\schemas.py:617:17: error[no-matching-overload] No overl
 src\intellicrack\bridges\schemas.py:619:17: error[no-matching-overload] No overload of bound method `__init__` matches arguments
 
 
-8 findings in src\intellicrack\providers\anthropic.py
+7 findings in src\intellicrack\sandbox\windows.py
 
-src\intellicrack\providers\anthropic.py:490:60: error[unresolved-attribute] Attribute `input` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:248:17: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
 
-src\intellicrack\providers\anthropic.py:493:40: error[unresolved-attribute] Attribute `id` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:273:13: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `process` of type `Popen[bytes] | None`
 
-src\intellicrack\providers\anthropic.py:494:47: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:283:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
-src\intellicrack\providers\anthropic.py:494:82: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:300:45: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
-src\intellicrack\providers\anthropic.py:494:98: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:308:30: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
-src\intellicrack\providers\anthropic.py:495:51: error[unresolved-attribute] Attribute `name` is not defined on `ParsedTextBlock[Any]`, `ThinkingBlock`, `RedactedThinkingBlock`, `WebSearchToolResultBlock` in union `ParsedTextBlock[Any] | ThinkingBlock | RedactedThinkingBlock | ... omitted 3 union elements`
+src\intellicrack\sandbox\windows.py:310:57: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
 
-src\intellicrack\providers\anthropic.py:502:44: error[invalid-argument-type] Argument to function `len` is incorrect: Expected `Sized`, found `object`
-
-src\intellicrack\providers\anthropic.py:588:17: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str | dict[str, Any]], None, None]`
-
-
-8 findings in tests\test_ui\test_vnc_widget.py
-
-tests\test_ui\test_vnc_widget.py:96:9: error[invalid-assignment] Cannot assign to read-only property `connected` on object of type `RFBClient`: Attempted assignment to `RFBClient.connected` here
-
-tests\test_ui\test_vnc_widget.py:98:9: error[invalid-assignment] Cannot assign to read-only property `connected` on object of type `RFBClient`: Attempted assignment to `RFBClient.connected` here
-
-tests\test_ui\test_vnc_widget.py:105:80: error[unknown-argument] Argument `timeout` does not match any known parameter of bound method `connect`
-
-tests\test_ui\test_vnc_widget.py:199:9: error[unresolved-attribute] Object of type `RFBClient` has no attribute `apply_raw_rect`
-
-tests\test_ui\test_vnc_widget.py:214:9: error[unresolved-attribute] Object of type `RFBClient` has no attribute `apply_raw_rect`
-
-tests\test_ui\test_vnc_widget.py:220:9: error[unresolved-attribute] Object of type `RFBClient` has no attribute `apply_raw_rect`
-
-tests\test_ui\test_vnc_widget.py:230:9: error[unresolved-attribute] Object of type `RFBClient` has no attribute `apply_raw_rect`
-
-tests\test_ui\test_vnc_widget.py:357:25: error[unresolved-attribute] Class `VNCWidget` has no attribute `button_mask`
-
-
-6 findings in src\intellicrack\providers\local_transformers.py
-
-src\intellicrack\providers\local_transformers.py:64:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
-
-src\intellicrack\providers\local_transformers.py:624:23: error[call-non-callable] Object of type `Tensor` is not callable
-
-src\intellicrack\providers\local_transformers.py:716:21: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `tuple[tuple[Tensor, ...], ...] | None`, found `None | Cache`
-
-src\intellicrack\providers\local_transformers.py:719:22: error[not-subscriptable] Cannot subscript object of type `None` with no `__getitem__` method
-
-src\intellicrack\providers\local_transformers.py:741:23: error[invalid-yield] Yield type `(str & ~AlwaysFalsy) | (list[str] & ~AlwaysFalsy)` does not match annotated yield type `str`
-
-src\intellicrack\providers\local_transformers.py:838:47: error[invalid-assignment] Object of type `str | list[int] | list[str] | list[list[int]] | BatchEncoding` is not assignable to `str | list[int]`
-
-
-6 findings in src\intellicrack\sandbox\windows.py
-
-src\intellicrack\sandbox\windows.py:197:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
-
-src\intellicrack\sandbox\windows.py:220:13: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `process` of type `Popen[bytes] | None`
-
-src\intellicrack\sandbox\windows.py:230:17: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
-
-src\intellicrack\sandbox\windows.py:243:30: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
-
-src\intellicrack\sandbox\windows.py:245:57: error[unresolved-attribute] Attribute `pid` is not defined on `None` in union `Popen[bytes] | None`
-
-src\intellicrack\sandbox\windows.py:1245:20: error[unresolved-import] Cannot resolve imported module `yara`
+src\intellicrack\sandbox\windows.py:2049:20: error[unresolved-import] Cannot resolve imported module `yara`
 
 
 6 findings in src\intellicrack\ui\xpu_status.py
 
-src\intellicrack\ui\xpu_status.py:46:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
+src\intellicrack\ui\xpu_status.py:48:34: error[invalid-assignment] Object of type `None` is not assignable to `def check_windows_requirements() -> tuple[bool, list[str]]`
 
-src\intellicrack\ui\xpu_status.py:47:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
+src\intellicrack\ui\xpu_status.py:49:33: error[invalid-assignment] Object of type `None` is not assignable to `def get_optimal_dtype_for_xpu() -> str`
 
-src\intellicrack\ui\xpu_status.py:48:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
+src\intellicrack\ui\xpu_status.py:50:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None`
 
-src\intellicrack\ui\xpu_status.py:49:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
+src\intellicrack\ui\xpu_status.py:51:27: error[invalid-assignment] Object of type `None` is not assignable to `def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]`
 
-src\intellicrack\ui\xpu_status.py:50:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
+src\intellicrack\ui\xpu_status.py:52:24: error[invalid-assignment] Object of type `None` is not assignable to `def is_xpu_available() -> bool`
 
-src\intellicrack\ui\xpu_status.py:56:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
+src\intellicrack\ui\xpu_status.py:58:30: error[invalid-assignment] Object of type `None` is not assignable to `def get_global_model_cache() -> ModelCache`
 
 
 6 findings in tests\test_bridges\test_frida_bridge.py
 
-tests\test_bridges\test_frida_bridge.py:451:14: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:451:14: warning[redundant-cast] Value is already of type `list[FridaDeviceInfo]`
 
-tests\test_bridges\test_frida_bridge.py:481:14: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:481:14: warning[redundant-cast] Value is already of type `list[ThreadInfo]`
 
-tests\test_bridges\test_frida_bridge.py:498:14: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:498:14: warning[redundant-cast] Value is already of type `list[ImportInfo]`
 
-tests\test_bridges\test_frida_bridge.py:572:14: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:572:14: warning[redundant-cast] Value is already of type `list[ApiResolverMatch]`
 
-tests\test_bridges\test_frida_bridge.py:589:15: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:589:15: warning[redundant-cast] Value is already of type `list[ApiResolverMatch]`
 
-tests\test_bridges\test_frida_bridge.py:609:14: error[unresolved-reference] Name `cast` used when not defined
+tests\test_bridges\test_frida_bridge.py:609:14: warning[redundant-cast] Value is already of type `list[SymbolInfo]`
 
 
 4 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\ghidra_panel.py:99:20: error[invalid-assignment] Object of type `None` is not assignable to `<class 'CFGGraphView'>`
+src\intellicrack\ui\panels\ghidra_panel.py:100:20: error[invalid-assignment] Object of type `None` is not assignable to `<class 'CFGGraphView'>`
 
-src\intellicrack\ui\panels\ghidra_panel.py:104:31: error[invalid-assignment] Object of type `None` is not assignable to `<class 'PythonSyntaxHighlighter'>`
+src\intellicrack\ui\panels\ghidra_panel.py:105:31: error[invalid-assignment] Object of type `None` is not assignable to `<class 'PythonSyntaxHighlighter'>`
 
-src\intellicrack\ui\panels\ghidra_panel.py:151:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\ghidra_panel.py:147:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
-src\intellicrack\ui\panels\ghidra_panel.py:1867:28: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\ghidra_panel.py:1873:28: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 4 findings in tests\test_ui\test_graph_view.py
@@ -307,31 +444,49 @@ tests\test_ui\test_graph_view.py:280:18: error[unresolved-attribute] Class `CFGG
 tests\test_ui\test_graph_view.py:335:17: error[unresolved-attribute] Attribute `items` is not defined on `None` in union `QGraphicsScene | None`
 
 
+3 findings in src\intellicrack\bridges\installer.py
+
+src\intellicrack\bridges\installer.py:274:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+
+src\intellicrack\bridges\installer.py:659:49: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `(s: str, /) -> int`, found `(bound method TextIOWrapper[_WrappedBuffer].write(s: str, /) -> int) | (Overload[(s: Buffer, /) -> int, (s: bytes, /) -> int]) | (Overload[(s: Buffer, /) -> int, (s: Any, /) -> int])`
+
+src\intellicrack\bridges\installer.py:659:68: error[invalid-argument-type] Argument to function `to_thread` is incorrect: Expected `str`, found `bytes & ~AlwaysFalsy`
+
+
 3 findings in src\intellicrack\bridges\sandbox_bridge.py
 
-src\intellicrack\bridges\sandbox_bridge.py:776:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
+src\intellicrack\bridges\sandbox_bridge.py:807:15: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
 
-src\intellicrack\bridges\sandbox_bridge.py:970:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
+src\intellicrack\bridges\sandbox_bridge.py:1014:29: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a return type annotation
 
-src\intellicrack\bridges\sandbox_bridge.py:1577:21: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
+src\intellicrack\bridges\sandbox_bridge.py:1628:21: error[invalid-type-form] Invalid subscript of object of type `def list(self) -> CoroutineType[Any, Any, Unknown]` in a parameter annotation
 
 
 3 findings in src\intellicrack\bridges\x64dbg.py
 
-src\intellicrack\bridges\x64dbg.py:1731:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:92:12: error[unresolved-import] Cannot resolve imported module `yara`
 
-src\intellicrack\bridges\x64dbg.py:1741:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
+src\intellicrack\bridges\x64dbg.py:1786:9: error[invalid-assignment] Object of type `Popen[str] | Popen[bytes] | Popen[Any]` is not assignable to attribute `_process` of type `Popen[bytes] | None`
 
-src\intellicrack\bridges\x64dbg.py:4316:20: error[unresolved-import] Cannot resolve imported module `yara`
+src\intellicrack\bridges\x64dbg.py:1796:13: error[invalid-argument-type] Argument to bound method `register` is incorrect: Expected `Popen[bytes] | Process`, found `Popen[bytes] | None`
 
 
 3 findings in src\intellicrack\ui\panels\cutter_panel.py
 
-src\intellicrack\ui\panels\cutter_panel.py:131:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\cutter_panel.py:126:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
-src\intellicrack\ui\panels\cutter_panel.py:736:40: error[invalid-assignment] Object of type `list[object] | list[dict[str, Any]]` is not assignable to `list[dict[str, Any]]`
+src\intellicrack\ui\panels\cutter_panel.py:759:40: error[invalid-assignment] Object of type `list[object] | list[dict[str, Any]]` is not assignable to `list[dict[str, Any]]`
 
-src\intellicrack\ui\panels\cutter_panel.py:1167:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\cutter_panel.py:1217:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+
+
+3 findings in tests\test_credentials\test_oauth_manager_live.py
+
+tests\test_credentials\test_oauth_manager_live.py:261:12: error[invalid-argument-type] Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `Literal["grant_type"]` on object of type `Top[dict[Unknown, Unknown]]`
+
+tests\test_credentials\test_oauth_manager_live.py:262:12: error[invalid-argument-type] Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `Literal["code"]` on object of type `Top[dict[Unknown, Unknown]]`
+
+tests\test_credentials\test_oauth_manager_live.py:263:12: error[invalid-argument-type] Method `__getitem__` of type `bound method Top[dict[Unknown, Unknown]].__getitem__(key: Never, /) -> object` cannot be called with key of type `Literal["code_verifier"]` on object of type `Top[dict[Unknown, Unknown]]`
 
 
 3 findings in tests\test_ui\test_search_async.py
@@ -354,16 +509,23 @@ tests\test_ui\test_tool_panel_detach.py:157:9: error[unresolved-attribute] Objec
 
 2 findings in src\intellicrack\core\process_manager.py
 
-src\intellicrack\core\process_manager.py:269:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
+src\intellicrack\core\process_manager.py:291:13: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
 
-src\intellicrack\core\process_manager.py:552:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
+src\intellicrack\core\process_manager.py:593:56: error[invalid-argument-type] Argument to function `_terminate_subprocess` is incorrect: Expected `Popen[bytes]`, found `Popen[bytes] | (Process & Top[Popen[Unknown]])`
+
+
+2 findings in src\intellicrack\credentials\store.py
+
+src\intellicrack\credentials\store.py:37:23: error[invalid-assignment] Object of type `None` is not assignable to `<module 'keyring'>`
+
+src\intellicrack\credentials\store.py:38:30: error[invalid-assignment] Object of type `None` is not assignable to `<module 'keyring.errors'>`
 
 
 2 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:1132:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+src\intellicrack\sandbox\qemu.py:1229:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
 
-src\intellicrack\sandbox\qemu.py:2795:20: error[unresolved-import] Cannot resolve imported module `yara`
+src\intellicrack\sandbox\qemu.py:3183:20: error[unresolved-import] Cannot resolve imported module `yara`
 
 
 2 findings in src\intellicrack\ui\app.py
@@ -389,17 +551,17 @@ tests\test_sandbox\conftest.py:1214:5: error[invalid-assignment] Object of type 
 
 1 findings in src\intellicrack\bridges\hex_editor.py
 
-src\intellicrack\bridges\hex_editor.py:3015:62: error[call-non-callable] Object of type `None` is not callable
+src\intellicrack\bridges\hex_editor.py:3082:62: error[call-non-callable] Object of type `None` is not callable
 
 
-1 findings in src\intellicrack\bridges\installer.py
+1 findings in src\intellicrack\core\hexpat\data_reader.py
 
-src\intellicrack\bridges\installer.py:265:35: error[invalid-argument-type] Argument to function `__new__` is incorrect: Expected `str | PathLike[str]`, found `str | bytes`
+src\intellicrack\core\hexpat\data_reader.py:46:24: error[call-top-callable] Object of type `Top[(...) -> object]` is not safe to call; its signature is not known
 
 
 1 findings in src\intellicrack\core\logging.py
 
-src\intellicrack\core\logging.py:452:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`
+src\intellicrack\core\logging.py:470:25: warning[redundant-cast] Value is already of type `tuple[object, ...]`
 
 
 1 findings in src\intellicrack\core\yara_scanner.py
@@ -407,24 +569,14 @@ src\intellicrack\core\logging.py:452:25: warning[redundant-cast] Value is alread
 src\intellicrack\core\yara_scanner.py:32:12: error[unresolved-import] Cannot resolve imported module `yara`
 
 
-1 findings in src\intellicrack\credentials\store.py
-
-src\intellicrack\credentials\store.py:35:23: error[invalid-assignment] Object of type `None` is not assignable to `<module 'keyring'>`
-
-
-1 findings in src\intellicrack\main.py
-
-src\intellicrack\main.py:205:12: warning[redundant-cast] Value is already of type `<class 'SplashScreen'>`
-
-
 1 findings in src\intellicrack\providers\base.py
 
-src\intellicrack\providers\base.py:566:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`
+src\intellicrack\providers\base.py:621:21: error[invalid-argument-type] Argument to bound method `extend` is incorrect: Expected `Iterable[dict[str, object]]`, found `GeneratorType[dict[str, str], None, None]`
 
 
 1 findings in src\intellicrack\providers\xpu_utils.py
 
-src\intellicrack\providers\xpu_utils.py:28:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
+src\intellicrack\providers\xpu_utils.py:31:21: error[invalid-assignment] Object of type `None` is not assignable to `<module 'torch'>`
 
 
 1 findings in src\intellicrack\sandbox\analysis.py
@@ -434,12 +586,17 @@ src\intellicrack\sandbox\analysis.py:1209:22: error[no-matching-overload] No ove
 
 1 findings in src\intellicrack\ui\panels\frida_panel.py
 
-src\intellicrack\ui\panels\frida_panel.py:121:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\frida_panel.py:118:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_base.py
 
 src\intellicrack\ui\panels\hex_editor\_base.py:60:14: error[invalid-assignment] Object of type `None` is not assignable to `<module 'pefile'>`
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_transforms.py
+
+src\intellicrack\ui\panels\hex_editor\_transforms.py:116:61: warning[redundant-cast] Value is already of type `tuple[object, ...]`
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor\_yara.py
@@ -449,37 +606,37 @@ src\intellicrack\ui\panels\hex_editor\_yara.py:154:56: error[invalid-argument-ty
 
 1 findings in src\intellicrack\ui\panels\hex_editor\panel.py
 
-src\intellicrack\ui\panels\hex_editor\panel.py:235:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\hex_editor\panel.py:233:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\hex_editor_widget.py
 
-src\intellicrack\ui\panels\hex_editor_widget.py:1934:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\panels\hex_editor_widget.py:2024:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 1 findings in src\intellicrack\ui\panels\process_panel\_base.py
 
-src\intellicrack\ui\panels\process_panel\_base.py:120:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\process_panel\_base.py:117:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\sandbox_panel.py
 
-src\intellicrack\ui\panels\sandbox_panel.py:101:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\sandbox_panel.py:100:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
-src\intellicrack\ui\panels\x64dbg_panel.py:122:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
+src\intellicrack\ui\panels\x64dbg_panel.py:118:9: error[invalid-method-override] Invalid override of method `_populate_toolbar`: Definition is incompatible with `AnalysisPanelBase._populate_toolbar`
 
 
 1 findings in src\intellicrack\ui\tools.py
 
-src\intellicrack\ui\tools.py:1758:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
+src\intellicrack\ui\tools.py:1740:19: error[invalid-argument-type] Argument to function `exec` is incorrect: Expected `QMenu`, found `QPoint`
 
 
 1 findings in tests\test_bridges\test_ghidra.py
 
-tests\test_bridges\test_ghidra.py:416:9: error[invalid-assignment] Invalid subscript assignment with key of type `Literal["ghidra_bridge"]` and value of type `None` on object of type `dict[str, ModuleType]`
+tests\test_bridges\test_ghidra.py:424:9: error[invalid-assignment] Invalid subscript assignment with key of type `Literal["ghidra_bridge"]` and value of type `None` on object of type `dict[str, ModuleType]`
 
 
 1 findings in tests\test_bridges\test_x64dbg.py

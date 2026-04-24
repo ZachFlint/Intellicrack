@@ -1930,7 +1930,7 @@ packages:
 - pypi: ./
   name: intellicrack
   version: 0.1.0a1
-  sha256: 7e3ac955cc2d9a1fe5fcee7314ce1df26993ce3f1ab36377b11c4adac70e70ca
+  sha256: 18c14ea73d2e82f33aa8299781841ab459dffe33aa1bcf78db97486bab2ffea5
   requires_dist:
   - keyring>=25.7.0,<26
   - psutil>=7.2.2,<8

@@ -274,7 +274,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mProcessWow64Information\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIMAGE_FILE_MACHINE_ARM\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -284,7 +284,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 104,
+                  "startLine": 137,
                   "startColumn": 1
                 }
               }
@@ -295,49 +295,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSC_MANAGER_ALL_ACCESS\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 135,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSERVICE_ACTIVE\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 138,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSERVICE_INACTIVE\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIMAGE_FILE_MACHINE_ARMNT\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -358,7 +316,49 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mProcessMitigationOptionsMask\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIMAGE_FILE_MACHINE_IA64\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 140,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSC_MANAGER_ALL_ACCESS\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSERVICE_ACTIVE\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -379,7 +379,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mProcessExtensionPointDisablePolicy\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mSERVICE_INACTIVE\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -400,28 +400,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mINFINITE\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 159,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_OBJECT_0\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mProcessMitigationOptionsMask\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -442,7 +421,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_TIMEOUT\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mProcessExtensionPointDisablePolicy\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -463,91 +442,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_FAILED\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 162,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_ACCESS_DUPLEX\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 167,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_READMODE_BYTE\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 168,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_WAIT\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 169,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mNMPWAIT_WAIT_FOREVER\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mINFINITE\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -568,7 +463,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mNMPWAIT_USE_DEFAULT_WAIT\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_OBJECT_0\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -589,7 +484,133 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_SZ\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_TIMEOUT\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mWAIT_FAILED\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 173,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_ACCESS_DUPLEX\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 178,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_READMODE_BYTE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mPIPE_WAIT\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 180,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mNMPWAIT_WAIT_FOREVER\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mNMPWAIT_USE_DEFAULT_WAIT\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -610,133 +631,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_EXPAND_SZ\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 183,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_BINARY\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 184,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_DWORD\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 185,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_QWORD\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 186,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_MULTI_SZ\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 187,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mJobObjectBasicLimitInformation\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 198,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mJobObjectExtendedLimitInformation\u001b[0m` is never used"
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_SZ\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -757,6 +652,111 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_EXPAND_SZ\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 200,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_BINARY\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_DWORD\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 202,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_QWORD\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 203,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mREG_MULTI_SZ\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 204,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mTHREAD_STATE_NAMES\u001b[0m` is never used"
           },
           "locations": [
@@ -767,7 +767,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 213,
+                  "startLine": 230,
                   "startColumn": 1
                 }
               }
@@ -788,28 +788,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 353,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mSYSTEM_HANDLE_INFORMATION_EX\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 410,
+                  "startLine": 370,
                   "startColumn": 1
                 }
               }
@@ -830,7 +809,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 436,
+                  "startLine": 453,
                   "startColumn": 1
                 }
               }
@@ -851,28 +830,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 657,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC03\u001b[0m Class `\u001b[1mJOBOBJECT_EXTENDED_LIMIT_INFORMATION\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 701,
+                  "startLine": 685,
                   "startColumn": 1
                 }
               }
@@ -893,7 +851,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 804,
+                  "startLine": 832,
                   "startColumn": 1
                 }
               }
@@ -914,7 +872,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 864,
+                  "startLine": 892,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mcontext_before\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 192,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mcontext_after\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 193,
                   "startColumn": 1
                 }
               }
@@ -935,7 +935,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 80,
                   "startColumn": 1
                 }
               }
@@ -977,7 +977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 142,
+                  "startLine": 168,
                   "startColumn": 1
                 }
               }
@@ -988,17 +988,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mparse_providers\u001b[0m` is never used"
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mhStdInput\u001b[0m` is never used"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
+                  "uri": "src/intellicrack/core/_subprocess.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 479,
+                  "startLine": 36,
                   "startColumn": 1
                 }
               }
@@ -1009,17 +1009,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mparse_tools\u001b[0m` is never used"
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mhStdOutput\u001b[0m` is never used"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
+                  "uri": "src/intellicrack/core/_subprocess.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 491,
+                  "startLine": 37,
                   "startColumn": 1
                 }
               }
@@ -1030,17 +1030,59 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mparse_sub_configs\u001b[0m` is never used"
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mhStdError\u001b[0m` is never used"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
+                  "uri": "src/intellicrack/core/_subprocess.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 503,
+                  "startLine": 38,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mwShowWindow\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/_subprocess.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 39,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1mlpAttributeList\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/_subprocess.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 40,
                   "startColumn": 1
                 }
               }
@@ -1114,6 +1156,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "4: \u001b[91mDC01\u001b[0m Variable `\u001b[1mvalue_end\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/ast_nodes.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 778,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mread_fixed_string\u001b[0m` is never used"
           },
           "locations": [
@@ -1124,7 +1187,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 340,
+                  "startLine": 374,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1mspan\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/errors.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC08\u001b[0m Property `\u001b[1mdata_span\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/errors.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 149,
                   "startColumn": 1
                 }
               }
@@ -1145,7 +1250,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 155,
+                  "startLine": 145,
                   "startColumn": 1
                 }
               }
@@ -1166,7 +1271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 209,
+                  "startLine": 189,
                   "startColumn": 1
                 }
               }
@@ -1187,7 +1292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 235,
+                  "startLine": 215,
                   "startColumn": 1
                 }
               }
@@ -1208,7 +1313,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 125,
+                  "startLine": 128,
                   "startColumn": 1
                 }
               }
@@ -1229,7 +1334,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 189,
+                  "startLine": 200,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1mset_print_sink\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 79,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +1376,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 72,
+                  "startLine": 250,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mset_reflection_provider\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 258,
                   "startColumn": 1
                 }
               }
@@ -1271,7 +1418,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 544,
+                  "startLine": 2257,
                   "startColumn": 1
                 }
               }
@@ -1313,7 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 523,
+                  "startLine": 541,
                   "startColumn": 1
                 }
               }
@@ -1334,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 590,
+                  "startLine": 608,
                   "startColumn": 1
                 }
               }
@@ -1345,7 +1492,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mprepare_ai_prompt\u001b[0m` is never used"
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_frida\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -1355,7 +1502,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 769,
+                  "startLine": 863,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_ghidra\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 874,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_python\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 885,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_cutter\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 896,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1mgenerate_x64dbg\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 907,
                   "startColumn": 1
                 }
               }
@@ -1376,7 +1607,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 63,
+                  "startLine": 93,
                   "startColumn": 1
                 }
               }
@@ -1397,7 +1628,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 93,
+                  "startLine": 124,
                   "startColumn": 1
                 }
               }
@@ -1418,7 +1649,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 143,
+                  "startLine": 237,
                   "startColumn": 1
                 }
               }
@@ -1439,7 +1670,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 185,
+                  "startLine": 279,
                   "startColumn": 1
                 }
               }
@@ -1460,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 237,
+                  "startLine": 331,
                   "startColumn": 1
                 }
               }
@@ -1481,7 +1712,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 358,
+                  "startLine": 458,
                   "startColumn": 1
                 }
               }
@@ -1723,6 +1954,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_verify_pkce_pair\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 599,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1minit_model_discovery\u001b[0m` is never used"
           },
           "locations": [
@@ -1733,7 +1985,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 572,
+                  "startLine": 666,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mHTTP_INTERNAL_ERROR\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 121,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mHTTP_SERVICE_UNAVAILABLE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 122,
                   "startColumn": 1
                 }
               }
@@ -1775,7 +2069,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 371,
+                  "startLine": 384,
                   "startColumn": 1
                 }
               }
@@ -1796,7 +2090,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 106,
+                  "startLine": 126,
                   "startColumn": 1
                 }
               }
@@ -1817,7 +2111,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 107,
+                  "startLine": 127,
                   "startColumn": 1
                 }
               }
@@ -1838,7 +2132,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 324,
+                  "startLine": 321,
                   "startColumn": 1
                 }
               }
@@ -1859,7 +2153,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 333,
+                  "startLine": 330,
                   "startColumn": 1
                 }
               }
@@ -1880,7 +2174,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 347,
+                  "startLine": 344,
                   "startColumn": 1
                 }
               }
@@ -1901,7 +2195,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 388,
+                  "startLine": 385,
                   "startColumn": 1
                 }
               }
@@ -1922,28 +2216,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 480,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "0: \u001b[91mDC02\u001b[0m Function `\u001b[1mensure_loop\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/async_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 83,
+                  "startLine": 477,
                   "startColumn": 1
                 }
               }
@@ -1964,7 +2237,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 127,
+                  "startLine": 122,
                   "startColumn": 1
                 }
               }
@@ -1985,7 +2258,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 145,
+                  "startLine": 140,
                   "startColumn": 1
                 }
               }
@@ -2006,7 +2279,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 150,
+                  "startLine": 145,
                   "startColumn": 1
                 }
               }
@@ -2027,7 +2300,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 152,
+                  "startLine": 147,
                   "startColumn": 1
                 }
               }
@@ -2048,7 +2321,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 450,
+                  "startLine": 445,
                   "startColumn": 1
                 }
               }
@@ -2069,7 +2342,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 234,
+                  "startLine": 231,
                   "startColumn": 1
                 }
               }
@@ -2090,7 +2363,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 178,
+                  "startLine": 174,
                   "startColumn": 1
                 }
               }
@@ -2111,7 +2384,112 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 179,
+                  "startLine": 175,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIPS_OFFSET_SIZE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 143,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIPS32_OFFSET_SIZE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 144,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIPS_LENGTH_FIELD_SIZE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 145,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mIPS_HEADER_SIZE\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "0: \u001b[91mDC01\u001b[0m Variable `\u001b[1mENCODING_ENTRIES\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 429,
                   "startColumn": 1
                 }
               }
@@ -2153,7 +2531,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 398,
+                  "startLine": 395,
                   "startColumn": 1
                 }
               }
@@ -2174,7 +2552,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 399,
+                  "startLine": 396,
                   "startColumn": 1
                 }
               }
@@ -2185,7 +2563,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_entropy_cache\u001b[0m` is never used"
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_ensure_entropy_cache\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -2195,7 +2573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 400,
+                  "startLine": 506,
                   "startColumn": 1
                 }
               }
@@ -2206,7 +2584,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_content_class_cache\u001b[0m` is never used"
+            "text": "4: \u001b[91mDC04\u001b[0m Method `\u001b[1m_ensure_content_class_cache\u001b[0m` is never used"
           },
           "locations": [
             {
@@ -2216,91 +2594,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 401,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "20: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_entropy_cache\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 503,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "20: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_entropy_cache\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 505,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "20: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_content_class_cache\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 511,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "20: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_content_class_cache\u001b[0m` is never used"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 513,
+                  "startLine": 524,
                   "startColumn": 1
                 }
               }
@@ -2321,7 +2615,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 999,
+                  "startLine": 1038,
                   "startColumn": 1
                 }
               }
@@ -2342,7 +2636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1203,
+                  "startLine": 1287,
                   "startColumn": 1
                 }
               }
@@ -2363,7 +2657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1966,
+                  "startLine": 2056,
                   "startColumn": 1
                 }
               }
@@ -2384,7 +2678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 89,
+                  "startLine": 90,
                   "startColumn": 1
                 }
               }
@@ -2510,7 +2804,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 85,
+                  "startLine": 83,
                   "startColumn": 1
                 }
               }
@@ -2531,7 +2825,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 89,
+                  "startLine": 87,
                   "startColumn": 1
                 }
               }
@@ -2552,7 +2846,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 355,
+                  "startLine": 354,
                   "startColumn": 1
                 }
               }
@@ -2573,7 +2867,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 364,
+                  "startLine": 363,
                   "startColumn": 1
                 }
               }
@@ -2594,7 +2888,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 370,
+                  "startLine": 369,
                   "startColumn": 1
                 }
               }
@@ -2615,7 +2909,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 199,
+                  "startLine": 212,
                   "startColumn": 1
                 }
               }
@@ -2636,7 +2930,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 280,
+                  "startLine": 289,
                   "startColumn": 1
                 }
               }
@@ -2657,7 +2951,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 456,
+                  "startLine": 622,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "8: \u001b[91mDC05\u001b[0m Attribute `\u001b[1m_xpu_group\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1771,
                   "startColumn": 1
                 }
               }
@@ -2741,7 +3056,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 437,
+                  "startLine": 433,
                   "startColumn": 1
                 }
               }
@@ -2762,7 +3077,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1014,
+                  "startLine": 996,
                   "startColumn": 1
                 }
               }
@@ -2783,7 +3098,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1015,
+                  "startLine": 997,
                   "startColumn": 1
                 }
               }
@@ -2804,7 +3119,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1017,
+                  "startLine": 999,
                   "startColumn": 1
                 }
               }
@@ -2825,7 +3140,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1218,
+                  "startLine": 1200,
                   "startColumn": 1
                 }
               }
@@ -2846,7 +3161,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1265,
+                  "startLine": 1247,
                   "startColumn": 1
                 }
               }
@@ -2867,7 +3182,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1367,
+                  "startLine": 1349,
                   "startColumn": 1
                 }
               }
@@ -2888,7 +3203,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1859,
+                  "startLine": 1842,
                   "startColumn": 1
                 }
               }
@@ -2909,7 +3224,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1935,
+                  "startLine": 1918,
                   "startColumn": 1
                 }
               }
@@ -2930,7 +3245,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1944,
+                  "startLine": 1927,
                   "startColumn": 1
                 }
               }
@@ -2951,7 +3266,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1969,
+                  "startLine": 1952,
                   "startColumn": 1
                 }
               }
@@ -2972,7 +3287,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1980,
+                  "startLine": 1963,
                   "startColumn": 1
                 }
               }
@@ -2993,7 +3308,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2129,
+                  "startLine": 2121,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "26: \u001b[91mDC07\u001b[0m Import `\u001b[1mvoidptr\u001b[0m` is never used"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/win32_embed.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 29,
                   "startColumn": 1
                 }
               }
@@ -3014,7 +3350,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 36,
+                  "startLine": 39,
                   "startColumn": 1
                 }
               }
@@ -3035,7 +3371,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 37,
+                  "startLine": 40,
                   "startColumn": 1
                 }
               }
@@ -3047,7 +3383,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:37:41.459590+00:00"
+          "endTimeUtc": "2026-04-24T05:11:36.985851+00:00"
         }
       ]
     }

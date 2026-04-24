@@ -25,8 +25,7 @@ from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
 class HashingMixin:
     """Mixin providing hash computation for the hex editor panel.
 
-    All hash and PE-checksum work is delegated to the hexcore document
-    so that the UI thread never has to materialise the full file in
+    All hash and PE-checksum work is delegated to the hexcore document so that the UI thread never has to materialise the full file in
     Python. The mixin only formats the returned values for display.
     """
 

@@ -335,8 +335,7 @@ if TYPE_CHECKING:
 class _PythonSyntaxHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Python source code in the scripting editor.
 
-    Highlights keywords, built-in names, strings, comments,
-    numbers, and decorators using distinct color formats.
+    Highlights keywords, built-in names, strings, comments, numbers, and decorators using distinct color formats.
     """
 
     def __init__(self, parent: QTextDocument) -> None:
@@ -404,8 +403,7 @@ class _PythonSyntaxHighlighter(QSyntaxHighlighter):
 class _DocAPI:
     """Restricted document API exposed to user scripts.
 
-    Provides safe read/write/search operations on the hex document
-    without exposing the full document interface.
+    Provides safe read/write/search operations on the hex document without exposing the full document interface.
     """
 
     _doc: _HexDocumentProtocol

@@ -13,6 +13,36 @@
               "shortDescription": {
                 "text": "Unix line endings detected"
               }
+            },
+            {
+              "id": "W001",
+              "shortDescription": {
+                "text": "Missing exit code"
+              }
+            },
+            {
+              "id": "W025",
+              "shortDescription": {
+                "text": "Missing error handling"
+              }
+            },
+            {
+              "id": "S011",
+              "shortDescription": {
+                "text": "Line exceeds maximum length"
+              }
+            },
+            {
+              "id": "S020",
+              "shortDescription": {
+                "text": "Long line without continuation"
+              }
+            },
+            {
+              "id": "SEC009",
+              "shortDescription": {
+                "text": "PowerShell execution policy bypass"
+              }
             }
           ]
         }
@@ -80,13 +110,118 @@
               }
             }
           ]
+        },
+        {
+          "ruleId": "W001",
+          "level": "warning",
+          "message": {
+            "text": "Missing exit code"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "W025",
+          "level": "warning",
+          "message": {
+            "text": "Missing error handling"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "S011",
+          "level": "note",
+          "message": {
+            "text": "Line exceeds maximum length"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "S020",
+          "level": "note",
+          "message": {
+            "text": "Long line without continuation"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "SEC009",
+          "level": "warning",
+          "message": {
+            "text": "PowerShell execution policy bypass"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
         }
       ],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:38:56.913693+00:00"
+          "endTimeUtc": "2026-04-24T05:13:18.469157+00:00"
         }
       ]
     }

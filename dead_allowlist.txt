@@ -149,7 +149,6 @@ get_segments
 get_selected_id
 get_selection
 get_status_info
-get_structlog_logger
 get_structures
 get_watchpoints
 get_x64dbg_bridge

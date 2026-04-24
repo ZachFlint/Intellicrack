@@ -154,6 +154,13 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- Implement BitAndZero opcode in hexcore and compiler (``)
+Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
+* Implement BitAndZero logic in TemplateEvaluator and ConditionOp
+* Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
+* Refactor various UI components and docstrings for consistent line length and formatting
+* Update linting reports and semgrep rules to reflect recent codebase changes
+
 
 ### Changed
 
@@ -292,6 +299,12 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- Improve ghidra error handling and logging initialization (`461d962`)
+Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
+* Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
+* Fix type signature and call site for logging setup to correctly pass the log directory
+* Replace legacy fix tracking with formal remediation audit results
 
 - **ui/ghidra_panel:** Dataclass program info, scoped refresh errors, non-empty xrefs, JSON analyzer options, batched comments (E31,E33-E37g,E41) (`765b774`)
 
@@ -726,11 +739,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- Improve ghidra error handling and logging initialization (``)
-Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
-* Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
-* Fix type signature and call site for logging setup to correctly pass the log directory
-* Replace legacy fix tracking with formal remediation audit results
 
 

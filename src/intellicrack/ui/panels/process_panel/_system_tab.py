@@ -48,8 +48,8 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 class SystemTab(QWidget):
     """Tab for system-level process inspection and operations.
 
-    Provides sub-tabs for token/privileges, windows, services, PEB/TEB,
-    pipes, mitigations, and advanced operations (registry, resources, raw query).
+    Provides sub-tabs for token/privileges, windows, services, PEB/TEB, pipes, mitigations, and advanced operations (registry, resources,
+    raw query).
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

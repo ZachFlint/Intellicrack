@@ -7,44 +7,15 @@
         "driver": {
           "name": "basedpyright",
           "version": "1.0.0",
-          "rules": [
-            {
-              "id": "reportIncompatibleVariableOverride",
-              "shortDescription": {
-                "text": "\"_fields_\" overrides symbol of same name in class \"Structure\"\n\u00a0\u00a0Variable is mutable so its type is invariant\n\u00a0\u00a0\u00a0\u00a0Override type \"list[tuple[str, type]]\" is not the same as base type \"Sequence[tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]]] | tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]], int]]\""
-              }
-            }
-          ]
+          "rules": []
         }
       },
-      "results": [
-        {
-          "ruleId": "reportIncompatibleVariableOverride",
-          "level": "error",
-          "message": {
-            "text": "\"_fields_\" overrides symbol of same name in class \"Structure\"\n\u00a0\u00a0Variable is mutable so its type is invariant\n\u00a0\u00a0\u00a0\u00a0Override type \"list[tuple[str, type]]\" is not the same as base type \"Sequence[tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]]] | tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]], int]]\""
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "d:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_process_memory.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 54,
-                  "startColumn": 9
-                }
-              }
-            }
-          ]
-        }
-      ],
+      "results": [],
       "columnKind": "utf16CodeUnits",
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:36:53.378139+00:00"
+          "endTimeUtc": "2026-04-24T05:09:49.550311+00:00"
         }
       ]
     }

@@ -1,8 +1,8 @@
 {
   "tool": "codespell",
-  "generated": "2026-04-17T05:39:18.570451+00:00",
-  "total_findings": 227,
-  "total_files": 40,
+  "generated": "2026-04-24T05:13:40.168461+00:00",
+  "total_findings": 289,
+  "total_files": 51,
   "files": [
     {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-4fc3a9a4bb9c9a32.d",
@@ -151,6 +151,156 @@
           "correction": "set",
           "message": "'ser' ==> 'set'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-4fc3a9a4bb9c9a32.d:17: ser ==> set"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d",
+      "count": 16,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:3: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:5: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:5: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:5: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:5: ser ==> set"
+        },
+        {
+          "line": 14,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:14: ser ==> set"
+        },
+        {
+          "line": 15,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:15: ser ==> set"
+        },
+        {
+          "line": 16,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:16: ser ==> set"
+        },
+        {
+          "line": 17,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-cf81c84a3550377d.d:17: ser ==> set"
         }
       ]
     },
@@ -605,6 +755,120 @@
       ]
     },
     {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d",
+      "count": 12,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:3: ser ==> set"
+        },
+        {
+          "line": 12,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:12: ser ==> set"
+        },
+        {
+          "line": 13,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:13: ser ==> set"
+        },
+        {
+          "line": 14,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:14: ser ==> set"
+        },
+        {
+          "line": 15,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-1ff2024c4d775afc.d:15: ser ==> set"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_core-2028d3412432f3f9.d",
       "count": 12,
       "findings": [
@@ -834,7 +1098,7 @@
     },
     {
       "path": "src/intellicrack\\bridges\\process.py",
-      "count": 8,
+      "count": 9,
       "findings": [
         {
           "line": 9,
@@ -846,67 +1110,76 @@
           "raw": "src/intellicrack\\bridges\\process.py:9: SEH ==> SHE"
         },
         {
-          "line": 469,
+          "line": 511,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:469: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:511: SEH ==> SHE"
         },
         {
-          "line": 473,
+          "line": 515,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:473: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:515: SEH ==> SHE"
         },
         {
-          "line": 664,
+          "line": 706,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:664: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:706: SEH ==> SHE"
         },
         {
-          "line": 756,
+          "line": 798,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:756: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:798: SEH ==> SHE"
         },
         {
-          "line": 2835,
+          "line": 1171,
           "column": null,
           "code": "SPELL",
-          "misspelling": "SEH",
-          "correction": "SHE",
-          "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:2835: SEH ==> SHE"
+          "misspelling": "re-declaring",
+          "correction": "redeclaring",
+          "message": "'re-declaring' ==> 'redeclaring'",
+          "raw": "src/intellicrack\\bridges\\process.py:1171: re-declaring ==> redeclaring"
         },
         {
-          "line": 2839,
+          "line": 3616,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:2839: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:3616: SEH ==> SHE"
         },
         {
-          "line": 2849,
+          "line": 3620,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\process.py:2849: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\process.py:3620: SEH ==> SHE"
+        },
+        {
+          "line": 3630,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "SEH",
+          "correction": "SHE",
+          "message": "'SEH' ==> 'SHE'",
+          "raw": "src/intellicrack\\bridges\\process.py:3630: SEH ==> SHE"
         }
       ]
     },
@@ -1145,6 +1418,84 @@
       ]
     },
     {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d",
+      "count": 8,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:3: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:5: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:5: ser ==> set"
+        },
+        {
+          "line": 12,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:12: ser ==> set"
+        },
+        {
+          "line": 18,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-d3e2b787eb9af5fc.d:18: ser ==> set"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack-hexcore\\target\\llvm-cov-target\\debug\\deps\\serde_json-2e8323744a019080.d",
       "count": 8,
       "findings": [
@@ -1301,6 +1652,66 @@
       ]
     },
     {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d",
+      "count": 6,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:1: ser ==> set"
+        },
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:3: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:3: ser ==> set"
+        },
+        {
+          "line": 10,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:10: ser ==> set"
+        },
+        {
+          "line": 16,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-73d66bd94ff7db04.d:16: ser ==> set"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_json-9c1e4cfcd0d5b9b1.d",
       "count": 6,
       "findings": [
@@ -1443,31 +1854,31 @@
           "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:48: SEH ==> SHE"
         },
         {
-          "line": 242,
+          "line": 250,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:242: SEH ==> SHE"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:250: SEH ==> SHE"
         },
         {
-          "line": 245,
+          "line": 253,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:245: SEH ==> SHE"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:253: SEH ==> SHE"
         },
         {
-          "line": 474,
+          "line": 485,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:474: SEH ==> SHE"
+          "raw": "src/intellicrack\\ui\\panels\\process_panel\\_threads_tab.py:485: SEH ==> SHE"
         }
       ]
     },
@@ -1510,6 +1921,48 @@
           "correction": "input, in out",
           "message": "'inout' ==> 'input, in out'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-184b7e41a5dc3483.d:9: inout ==> input, in out"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-a3ab05ce946cfbff.d",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-a3ab05ce946cfbff.d:1: inout ==> input, in out"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-a3ab05ce946cfbff.d:3: inout ==> input, in out"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-a3ab05ce946cfbff.d:5: inout ==> input, in out"
+        },
+        {
+          "line": 9,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-a3ab05ce946cfbff.d:9: inout ==> input, in out"
         }
       ]
     },
@@ -1636,6 +2089,48 @@
           "correction": "set",
           "message": "'ser' ==> 'set'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-7d0f1529218a447f.d:11: ser ==> set"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-a69d48844ad78271.d",
+      "count": 4,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-a69d48844ad78271.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-a69d48844ad78271.d:3: ser ==> set"
+        },
+        {
+          "line": 5,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-a69d48844ad78271.d:5: ser ==> set"
+        },
+        {
+          "line": 11,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-a69d48844ad78271.d:11: ser ==> set"
         }
       ]
     },
@@ -1812,31 +2307,31 @@
       "count": 3,
       "findings": [
         {
-          "line": 1279,
+          "line": 1328,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:1279: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:1328: SEH ==> SHE"
         },
         {
-          "line": 2338,
+          "line": 2461,
           "column": null,
           "code": "SPELL",
           "misspelling": "unparseable",
           "correction": "unparsable",
           "message": "'unparseable' ==> 'unparsable'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:2338: unparseable ==> unparsable"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:2461: unparseable ==> unparsable"
         },
         {
-          "line": 3981,
+          "line": 4373,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\x64dbg.py:3981: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\x64dbg.py:4373: SEH ==> SHE"
         }
       ]
     },
@@ -1874,6 +2369,39 @@
       ]
     },
     {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-964c33ec394638fd.d",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-964c33ec394638fd.d:1: inout ==> input, in out"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-964c33ec394638fd.d:3: inout ==> input, in out"
+        },
+        {
+          "line": 7,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "inout",
+          "correction": "input, in out",
+          "message": "'inout' ==> 'input, in out'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-964c33ec394638fd.d:7: inout ==> input, in out"
+        }
+      ]
+    },
+    {
       "path": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-bf44c4e3ebd981c3.d",
       "count": 3,
       "findings": [
@@ -1903,6 +2431,39 @@
           "correction": "input, in out",
           "message": "'inout' ==> 'input, in out'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\inout-bf44c4e3ebd981c3.d:7: inout ==> input, in out"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-6d58608743fd6fc6.d",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-6d58608743fd6fc6.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-6d58608743fd6fc6.d:3: ser ==> set"
+        },
+        {
+          "line": 9,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde-6d58608743fd6fc6.d:9: ser ==> set"
         }
       ]
     },
@@ -2002,6 +2563,39 @@
           "correction": "set",
           "message": "'ser' ==> 'set'",
           "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_derive-4d3dc0a78c25b9b0.d:31: ser ==> set"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_derive-bc6fe4635ef75c20.d",
+      "count": 3,
+      "findings": [
+        {
+          "line": 1,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_derive-bc6fe4635ef75c20.d:1: ser ==> set"
+        },
+        {
+          "line": 3,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_derive-bc6fe4635ef75c20.d:3: ser ==> set"
+        },
+        {
+          "line": 31,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "ser",
+          "correction": "set",
+          "message": "'ser' ==> 'set'",
+          "raw": "src/intellicrack-hexcore\\target\\debug\\deps\\serde_derive-bc6fe4635ef75c20.d:31: ser ==> set"
         }
       ]
     },
@@ -2142,22 +2736,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 622,
+          "line": 650,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\_win32_types.py:622: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\_win32_types.py:650: SEH ==> SHE"
         },
         {
-          "line": 627,
+          "line": 655,
           "column": null,
           "code": "SPELL",
           "misspelling": "SEH",
           "correction": "SHE",
           "message": "'SEH' ==> 'SHE'",
-          "raw": "src/intellicrack\\bridges\\_win32_types.py:627: SEH ==> SHE"
+          "raw": "src/intellicrack\\bridges\\_win32_types.py:655: SEH ==> SHE"
         }
       ]
     },
@@ -2254,6 +2848,36 @@
           "correction": "the, be, we, to",
           "message": "'te' ==> 'the, be, we, to'",
           "raw": "tests/test_sandbox\\test_base_types.py:232: te ==> the, be, we, to"
+        }
+      ]
+    },
+    {
+      "path": "scripts/sandbox\\reporting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 164,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "unparseable",
+          "correction": "unparsable",
+          "message": "'unparseable' ==> 'unparsable'",
+          "raw": "scripts/sandbox\\reporting.py:164: unparseable ==> unparsable"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack\\sandbox\\windows.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 2237,
+          "column": null,
+          "code": "SPELL",
+          "misspelling": "unparseable",
+          "correction": "unparsable",
+          "message": "'unparseable' ==> 'unparsable'",
+          "raw": "src/intellicrack\\sandbox\\windows.py:2237: unparseable ==> unparsable"
         }
       ]
     },

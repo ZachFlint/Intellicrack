@@ -295,7 +295,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'ProcessWow64Information' is never read"
+            "text": "'IMAGE_FILE_MACHINE_ARM' is never read"
           },
           "locations": [
             {
@@ -305,7 +305,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 104,
+                  "startLine": 137,
                   "startColumn": 1
                 }
               }
@@ -316,49 +316,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'SC_MANAGER_ALL_ACCESS' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 135,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'SERVICE_ACTIVE' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 138,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'SERVICE_INACTIVE' is never read"
+            "text": "'IMAGE_FILE_MACHINE_ARMNT' is never read"
           },
           "locations": [
             {
@@ -379,7 +337,49 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'ProcessMitigationOptionsMask' is never read"
+            "text": "'IMAGE_FILE_MACHINE_IA64' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 140,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'SC_MANAGER_ALL_ACCESS' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'SERVICE_ACTIVE' is never read"
           },
           "locations": [
             {
@@ -400,7 +400,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'ProcessExtensionPointDisablePolicy' is never read"
+            "text": "'SERVICE_INACTIVE' is never read"
           },
           "locations": [
             {
@@ -421,28 +421,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'INFINITE' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 159,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'WAIT_OBJECT_0' is never read"
+            "text": "'ProcessMitigationOptionsMask' is never read"
           },
           "locations": [
             {
@@ -463,7 +442,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'WAIT_TIMEOUT' is never read"
+            "text": "'ProcessExtensionPointDisablePolicy' is never read"
           },
           "locations": [
             {
@@ -484,91 +463,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'WAIT_FAILED' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 162,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'PIPE_ACCESS_DUPLEX' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 167,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'PIPE_READMODE_BYTE' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 168,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'PIPE_WAIT' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 169,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'NMPWAIT_WAIT_FOREVER' is never read"
+            "text": "'INFINITE' is never read"
           },
           "locations": [
             {
@@ -589,7 +484,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'NMPWAIT_USE_DEFAULT_WAIT' is never read"
+            "text": "'WAIT_OBJECT_0' is never read"
           },
           "locations": [
             {
@@ -610,7 +505,133 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'REG_SZ' is never read"
+            "text": "'WAIT_TIMEOUT' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 172,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'WAIT_FAILED' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 173,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'PIPE_ACCESS_DUPLEX' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 178,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'PIPE_READMODE_BYTE' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 179,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'PIPE_WAIT' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 180,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'NMPWAIT_WAIT_FOREVER' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 181,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'NMPWAIT_USE_DEFAULT_WAIT' is never read"
           },
           "locations": [
             {
@@ -631,133 +652,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'REG_EXPAND_SZ' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 183,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'REG_BINARY' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 184,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'REG_DWORD' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 185,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'REG_QWORD' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 186,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'REG_MULTI_SZ' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 187,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'JobObjectBasicLimitInformation' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 198,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'JobObjectExtendedLimitInformation' is never read"
+            "text": "'REG_SZ' is never read"
           },
           "locations": [
             {
@@ -778,6 +673,111 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'REG_EXPAND_SZ' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 200,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'REG_BINARY' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 201,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'REG_DWORD' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 202,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'REG_QWORD' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 203,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'REG_MULTI_SZ' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/_win32_types.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 204,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'THREAD_STATE_NAMES' is never read"
           },
           "locations": [
@@ -788,7 +788,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 213,
+                  "startLine": 230,
                   "startColumn": 1
                 }
               }
@@ -809,28 +809,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 353,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'SYSTEM_HANDLE_INFORMATION_EX' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 410,
+                  "startLine": 370,
                   "startColumn": 1
                 }
               }
@@ -851,7 +830,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 436,
+                  "startLine": 453,
                   "startColumn": 1
                 }
               }
@@ -872,28 +851,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 657,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'JOBOBJECT_EXTENDED_LIMIT_INFORMATION' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/_win32_types.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 701,
+                  "startLine": 685,
                   "startColumn": 1
                 }
               }
@@ -914,7 +872,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 804,
+                  "startLine": 832,
                   "startColumn": 1
                 }
               }
@@ -935,7 +893,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 864,
+                  "startLine": 892,
                   "startColumn": 1
                 }
               }
@@ -956,7 +914,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 79,
+                  "startLine": 80,
                   "startColumn": 1
                 }
               }
@@ -977,7 +935,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 769,
+                  "startLine": 770,
                   "startColumn": 1
                 }
               }
@@ -998,7 +956,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1868,
+                  "startLine": 1888,
                   "startColumn": 1
                 }
               }
@@ -1019,7 +977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1884,
+                  "startLine": 1904,
                   "startColumn": 1
                 }
               }
@@ -1040,7 +998,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1991,
+                  "startLine": 2011,
                   "startColumn": 1
                 }
               }
@@ -1061,7 +1019,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2007,
+                  "startLine": 2027,
                   "startColumn": 1
                 }
               }
@@ -1082,7 +1040,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2031,
+                  "startLine": 2051,
                   "startColumn": 1
                 }
               }
@@ -1103,7 +1061,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2138,
+                  "startLine": 2158,
                   "startColumn": 1
                 }
               }
@@ -1124,7 +1082,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2159,
+                  "startLine": 2179,
                   "startColumn": 1
                 }
               }
@@ -1145,7 +1103,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2213,
+                  "startLine": 2255,
                   "startColumn": 1
                 }
               }
@@ -1166,7 +1124,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2245,
+                  "startLine": 2287,
                   "startColumn": 1
                 }
               }
@@ -1187,7 +1145,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2261,
+                  "startLine": 2303,
                   "startColumn": 1
                 }
               }
@@ -1208,7 +1166,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2277,
+                  "startLine": 2319,
                   "startColumn": 1
                 }
               }
@@ -1229,7 +1187,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2337,
+                  "startLine": 2392,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +1208,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2372,
+                  "startLine": 2427,
                   "startColumn": 1
                 }
               }
@@ -1271,7 +1229,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2391,
+                  "startLine": 2446,
                   "startColumn": 1
                 }
               }
@@ -1292,7 +1250,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2407,
+                  "startLine": 2462,
                   "startColumn": 1
                 }
               }
@@ -1313,7 +1271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2427,
+                  "startLine": 2482,
                   "startColumn": 1
                 }
               }
@@ -1334,7 +1292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2447,
+                  "startLine": 2502,
                   "startColumn": 1
                 }
               }
@@ -1355,7 +1313,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2463,
+                  "startLine": 2518,
                   "startColumn": 1
                 }
               }
@@ -1376,7 +1334,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2482,
+                  "startLine": 2537,
                   "startColumn": 1
                 }
               }
@@ -1397,7 +1355,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2501,
+                  "startLine": 2556,
                   "startColumn": 1
                 }
               }
@@ -1418,7 +1376,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2537,
+                  "startLine": 2592,
                   "startColumn": 1
                 }
               }
@@ -1439,7 +1397,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2557,
+                  "startLine": 2612,
                   "startColumn": 1
                 }
               }
@@ -1460,7 +1418,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2579,
+                  "startLine": 2637,
                   "startColumn": 1
                 }
               }
@@ -1481,7 +1439,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2601,
+                  "startLine": 2662,
                   "startColumn": 1
                 }
               }
@@ -1502,7 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2623,
+                  "startLine": 2687,
                   "startColumn": 1
                 }
               }
@@ -1523,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2643,
+                  "startLine": 2707,
                   "startColumn": 1
                 }
               }
@@ -1544,7 +1502,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2664,
+                  "startLine": 2728,
                   "startColumn": 1
                 }
               }
@@ -1565,7 +1523,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2685,
+                  "startLine": 2749,
                   "startColumn": 1
                 }
               }
@@ -1586,7 +1544,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2706,
+                  "startLine": 2770,
                   "startColumn": 1
                 }
               }
@@ -1607,7 +1565,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2726,
+                  "startLine": 2790,
                   "startColumn": 1
                 }
               }
@@ -1628,7 +1586,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2746,
+                  "startLine": 2810,
                   "startColumn": 1
                 }
               }
@@ -1649,7 +1607,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2762,
+                  "startLine": 2826,
                   "startColumn": 1
                 }
               }
@@ -1670,7 +1628,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2778,
+                  "startLine": 2842,
                   "startColumn": 1
                 }
               }
@@ -1691,7 +1649,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2799,
+                  "startLine": 2863,
                   "startColumn": 1
                 }
               }
@@ -1712,7 +1670,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2819,
+                  "startLine": 2883,
                   "startColumn": 1
                 }
               }
@@ -1733,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2885,
+                  "startLine": 2960,
                   "startColumn": 1
                 }
               }
@@ -1754,7 +1712,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2905,
+                  "startLine": 2980,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'unload_all_scripts' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2350,
                   "startColumn": 1
                 }
               }
@@ -1775,7 +1754,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3201,
+                  "startLine": 3693,
                   "startColumn": 1
                 }
               }
@@ -1796,7 +1775,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3223,
+                  "startLine": 3719,
                   "startColumn": 1
                 }
               }
@@ -1817,7 +1796,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3246,
+                  "startLine": 3742,
                   "startColumn": 1
                 }
               }
@@ -1838,7 +1817,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3282,
+                  "startLine": 3778,
                   "startColumn": 1
                 }
               }
@@ -1859,7 +1838,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3310,
+                  "startLine": 3898,
                   "startColumn": 1
                 }
               }
@@ -1880,7 +1859,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3349,
+                  "startLine": 3937,
                   "startColumn": 1
                 }
               }
@@ -1901,7 +1880,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3421,
+                  "startLine": 4004,
                   "startColumn": 1
                 }
               }
@@ -1922,7 +1901,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3481,
+                  "startLine": 4064,
                   "startColumn": 1
                 }
               }
@@ -1943,7 +1922,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3523,
+                  "startLine": 4106,
                   "startColumn": 1
                 }
               }
@@ -1964,7 +1943,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3563,
+                  "startLine": 4146,
                   "startColumn": 1
                 }
               }
@@ -1985,28 +1964,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3620,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'get_backtrace' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3671,
+                  "startLine": 4203,
                   "startColumn": 1
                 }
               }
@@ -2027,7 +1985,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3738,
+                  "startLine": 4321,
                   "startColumn": 1
                 }
               }
@@ -2048,7 +2006,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3791,
+                  "startLine": 4374,
                   "startColumn": 1
                 }
               }
@@ -2069,7 +2027,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3824,
+                  "startLine": 4407,
                   "startColumn": 1
                 }
               }
@@ -2090,7 +2048,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3848,
+                  "startLine": 4431,
                   "startColumn": 1
                 }
               }
@@ -2111,7 +2069,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3918,
+                  "startLine": 4501,
                   "startColumn": 1
                 }
               }
@@ -2132,7 +2090,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3966,
+                  "startLine": 4549,
                   "startColumn": 1
                 }
               }
@@ -2153,7 +2111,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4077,
+                  "startLine": 4660,
                   "startColumn": 1
                 }
               }
@@ -2174,7 +2132,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4104,
+                  "startLine": 4687,
                   "startColumn": 1
                 }
               }
@@ -2195,7 +2153,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4131,
+                  "startLine": 4714,
                   "startColumn": 1
                 }
               }
@@ -2216,7 +2174,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4180,
+                  "startLine": 4763,
                   "startColumn": 1
                 }
               }
@@ -2237,7 +2195,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4228,
+                  "startLine": 4811,
                   "startColumn": 1
                 }
               }
@@ -2258,7 +2216,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4264,
+                  "startLine": 4847,
                   "startColumn": 1
                 }
               }
@@ -2279,7 +2237,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4354,
+                  "startLine": 4930,
                   "startColumn": 1
                 }
               }
@@ -2300,7 +2258,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4403,
+                  "startLine": 4979,
                   "startColumn": 1
                 }
               }
@@ -2321,7 +2279,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4448,
+                  "startLine": 5024,
                   "startColumn": 1
                 }
               }
@@ -2342,7 +2300,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4487,
+                  "startLine": 5063,
                   "startColumn": 1
                 }
               }
@@ -2363,7 +2321,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4580,
+                  "startLine": 5153,
                   "startColumn": 1
                 }
               }
@@ -2384,7 +2342,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4610,
+                  "startLine": 5183,
                   "startColumn": 1
                 }
               }
@@ -2405,7 +2363,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4677,
+                  "startLine": 5245,
                   "startColumn": 1
                 }
               }
@@ -2426,7 +2384,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4726,
+                  "startLine": 5294,
                   "startColumn": 1
                 }
               }
@@ -2447,7 +2405,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4779,
+                  "startLine": 5350,
                   "startColumn": 1
                 }
               }
@@ -2468,7 +2426,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4815,
+                  "startLine": 5386,
                   "startColumn": 1
                 }
               }
@@ -2489,7 +2447,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4848,
+                  "startLine": 5419,
                   "startColumn": 1
                 }
               }
@@ -2510,7 +2468,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4879,
+                  "startLine": 5450,
                   "startColumn": 1
                 }
               }
@@ -2531,7 +2489,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4910,
+                  "startLine": 5484,
                   "startColumn": 1
                 }
               }
@@ -2552,7 +2510,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4958,
+                  "startLine": 5535,
                   "startColumn": 1
                 }
               }
@@ -2573,7 +2531,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4994,
+                  "startLine": 5574,
                   "startColumn": 1
                 }
               }
@@ -2594,7 +2552,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5023,
+                  "startLine": 5603,
                   "startColumn": 1
                 }
               }
@@ -2615,7 +2573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5053,
+                  "startLine": 5633,
                   "startColumn": 1
                 }
               }
@@ -2636,7 +2594,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5083,
+                  "startLine": 5663,
                   "startColumn": 1
                 }
               }
@@ -2657,7 +2615,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5121,
+                  "startLine": 5701,
                   "startColumn": 1
                 }
               }
@@ -2678,7 +2636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5157,
+                  "startLine": 5737,
                   "startColumn": 1
                 }
               }
@@ -2699,7 +2657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5228,
+                  "startLine": 5812,
                   "startColumn": 1
                 }
               }
@@ -2720,7 +2678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5253,
+                  "startLine": 5837,
                   "startColumn": 1
                 }
               }
@@ -2741,7 +2699,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5285,
+                  "startLine": 5869,
                   "startColumn": 1
                 }
               }
@@ -2762,7 +2720,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5332,
+                  "startLine": 5934,
                   "startColumn": 1
                 }
               }
@@ -2783,7 +2741,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5358,
+                  "startLine": 5960,
                   "startColumn": 1
                 }
               }
@@ -2804,7 +2762,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5384,
+                  "startLine": 5986,
                   "startColumn": 1
                 }
               }
@@ -2825,7 +2783,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5411,
+                  "startLine": 6013,
                   "startColumn": 1
                 }
               }
@@ -2846,7 +2804,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5439,
+                  "startLine": 6041,
                   "startColumn": 1
                 }
               }
@@ -2867,7 +2825,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5465,
+                  "startLine": 6097,
                   "startColumn": 1
                 }
               }
@@ -2888,7 +2846,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5516,
+                  "startLine": 6148,
                   "startColumn": 1
                 }
               }
@@ -2909,7 +2867,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1260,
+                  "startLine": 1410,
                   "startColumn": 1
                 }
               }
@@ -2930,7 +2888,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1269,
+                  "startLine": 1419,
                   "startColumn": 1
                 }
               }
@@ -2951,7 +2909,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3424,
+                  "startLine": 3883,
                   "startColumn": 1
                 }
               }
@@ -2972,7 +2930,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3524,
+                  "startLine": 4067,
                   "startColumn": 1
                 }
               }
@@ -2993,7 +2951,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3569,
+                  "startLine": 4112,
                   "startColumn": 1
                 }
               }
@@ -3014,7 +2972,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4016,
+                  "startLine": 4559,
                   "startColumn": 1
                 }
               }
@@ -3035,7 +2993,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4054,
+                  "startLine": 4597,
                   "startColumn": 1
                 }
               }
@@ -3056,7 +3014,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4133,
+                  "startLine": 4676,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'decompiler_options' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4886,
                   "startColumn": 1
                 }
               }
@@ -3077,7 +3056,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4427,
+                  "startLine": 5039,
                   "startColumn": 1
                 }
               }
@@ -3098,7 +3077,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4460,
+                  "startLine": 5135,
                   "startColumn": 1
                 }
               }
@@ -3119,7 +3098,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4634,
+                  "startLine": 5370,
                   "startColumn": 1
                 }
               }
@@ -3140,7 +3119,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4677,
+                  "startLine": 5413,
                   "startColumn": 1
                 }
               }
@@ -3151,7 +3130,112 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_U16_MASK' is never read"
+            "text": "'remove_label' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5726,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'add_thunk' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5775,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'remove_thunk' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5833,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'add_external_reference' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5885,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'remove_external_reference' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5954,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_BYTE_MASK' is never read"
           },
           "locations": [
             {
@@ -3172,7 +3256,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_U32_MASK' is never read"
+            "text": "'_U16_MASK' is never read"
           },
           "locations": [
             {
@@ -3193,7 +3277,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_U64_MASK' is never read"
+            "text": "'_U32_MASK' is never read"
           },
           "locations": [
             {
@@ -3214,6 +3298,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'_U64_MASK' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 232,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'_PE_CHECKSUM_RELATIVE' is never read"
           },
           "locations": [
@@ -3224,7 +3329,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 238,
+                  "startLine": 239,
                   "startColumn": 1
                 }
               }
@@ -3245,7 +3350,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 245,
+                  "startLine": 246,
                   "startColumn": 1
                 }
               }
@@ -3266,7 +3371,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 246,
+                  "startLine": 247,
                   "startColumn": 1
                 }
               }
@@ -3287,7 +3392,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 253,
+                  "startLine": 254,
                   "startColumn": 1
                 }
               }
@@ -3308,7 +3413,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 257,
+                  "startLine": 258,
                   "startColumn": 1
                 }
               }
@@ -3329,7 +3434,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 258,
+                  "startLine": 259,
                   "startColumn": 1
                 }
               }
@@ -3350,7 +3455,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2514,
+                  "startLine": 2581,
                   "startColumn": 1
                 }
               }
@@ -3371,28 +3476,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2665,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'apply_arithmetic_to_selection' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3941,
+                  "startLine": 2732,
                   "startColumn": 1
                 }
               }
@@ -3413,7 +3497,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4156,
+                  "startLine": 4341,
                   "startColumn": 1
                 }
               }
@@ -3434,7 +3518,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4232,
+                  "startLine": 4417,
                   "startColumn": 1
                 }
               }
@@ -3455,7 +3539,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4446,
+                  "startLine": 4631,
                   "startColumn": 1
                 }
               }
@@ -3476,7 +3560,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4595,
+                  "startLine": 4780,
                   "startColumn": 1
                 }
               }
@@ -3497,7 +3581,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4762,
+                  "startLine": 4947,
                   "startColumn": 1
                 }
               }
@@ -3518,7 +3602,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4814,
+                  "startLine": 4999,
                   "startColumn": 1
                 }
               }
@@ -3539,7 +3623,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4949,
+                  "startLine": 5134,
                   "startColumn": 1
                 }
               }
@@ -3560,7 +3644,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4967,
+                  "startLine": 5152,
                   "startColumn": 1
                 }
               }
@@ -3581,7 +3665,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5099,
+                  "startLine": 5284,
                   "startColumn": 1
                 }
               }
@@ -3602,7 +3686,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5171,
+                  "startLine": 5356,
                   "startColumn": 1
                 }
               }
@@ -3623,7 +3707,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5373,
+                  "startLine": 5558,
                   "startColumn": 1
                 }
               }
@@ -3644,7 +3728,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5405,
+                  "startLine": 5590,
                   "startColumn": 1
                 }
               }
@@ -3665,7 +3749,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5419,
+                  "startLine": 5604,
                   "startColumn": 1
                 }
               }
@@ -3686,7 +3770,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5434,
+                  "startLine": 5619,
                   "startColumn": 1
                 }
               }
@@ -3707,7 +3791,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5442,
+                  "startLine": 5627,
                   "startColumn": 1
                 }
               }
@@ -3728,7 +3812,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5538,
+                  "startLine": 5723,
                   "startColumn": 1
                 }
               }
@@ -3749,7 +3833,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5664,
+                  "startLine": 5849,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_BYTE_MASK' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 47,
                   "startColumn": 1
                 }
               }
@@ -3770,7 +3875,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 487,
+                  "startLine": 486,
                   "startColumn": 1
                 }
               }
@@ -3791,7 +3896,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 168,
+                  "startLine": 165,
                   "startColumn": 1
                 }
               }
@@ -3812,7 +3917,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 478,
+                  "startLine": 477,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_ensure_entropy_cache' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 506,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_ensure_content_class_cache' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 524,
                   "startColumn": 1
                 }
               }
@@ -3833,7 +3980,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 999,
+                  "startLine": 1038,
                   "startColumn": 1
                 }
               }
@@ -3854,7 +4001,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1189,
+                  "startLine": 1273,
                   "startColumn": 1
                 }
               }
@@ -3875,7 +4022,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1203,
+                  "startLine": 1287,
                   "startColumn": 1
                 }
               }
@@ -3896,7 +4043,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1713,
+                  "startLine": 1803,
                   "startColumn": 1
                 }
               }
@@ -3917,7 +4064,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1966,
+                  "startLine": 2056,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'set_encoding' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2074,
                   "startColumn": 1
                 }
               }
@@ -3959,7 +4127,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 148,
+                  "startLine": 159,
                   "startColumn": 1
                 }
               }
@@ -3980,7 +4148,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 150,
+                  "startLine": 161,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'list_detailed' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 952,
                   "startColumn": 1
                 }
               }
@@ -4001,7 +4190,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3126,
+                  "startLine": 3913,
                   "startColumn": 1
                 }
               }
@@ -4022,7 +4211,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3150,
+                  "startLine": 3937,
                   "startColumn": 1
                 }
               }
@@ -4043,7 +4232,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3372,
+                  "startLine": 4179,
                   "startColumn": 1
                 }
               }
@@ -4064,7 +4253,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3403,
+                  "startLine": 4210,
                   "startColumn": 1
                 }
               }
@@ -4085,7 +4274,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3447,
+                  "startLine": 4254,
                   "startColumn": 1
                 }
               }
@@ -4106,7 +4295,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3749,
+                  "startLine": 4758,
                   "startColumn": 1
                 }
               }
@@ -4127,7 +4316,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3783,
+                  "startLine": 4792,
                   "startColumn": 1
                 }
               }
@@ -4148,7 +4337,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1375,
+                  "startLine": 1426,
                   "startColumn": 1
                 }
               }
@@ -4169,7 +4358,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1671,
+                  "startLine": 1722,
                   "startColumn": 1
                 }
               }
@@ -4190,7 +4379,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1710,
+                  "startLine": 1761,
                   "startColumn": 1
                 }
               }
@@ -4211,7 +4400,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 142,
+                  "startLine": 168,
                   "startColumn": 1
                 }
               }
@@ -4222,154 +4411,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'get_module_imports' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3760,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'find_references' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3775,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'find_string_references' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3791,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'find_intermodular_calls' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3804,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'get_function_cfg' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3834,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'clear_database' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3870,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'restore_patch' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3895,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'set_thread_name' is never read"
+            "text": "'get_entry_point' is never read"
           },
           "locations": [
             {
@@ -4390,6 +4432,174 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'get_module_imports' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4097,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'find_references' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4112,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'find_string_references' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4130,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'find_intermodular_calls' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4148,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_function_cfg' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4183,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'clear_database' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4241,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'restore_patch' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4281,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'set_thread_name' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4355,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'get_pe_directories' is never read"
           },
           "locations": [
@@ -4400,7 +4610,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4028,
+                  "startLine": 4438,
                   "startColumn": 1
                 }
               }
@@ -4421,7 +4631,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4046,
+                  "startLine": 4462,
                   "startColumn": 1
                 }
               }
@@ -4442,7 +4652,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4062,
+                  "startLine": 4484,
                   "startColumn": 1
                 }
               }
@@ -4463,7 +4673,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4078,
+                  "startLine": 4506,
                   "startColumn": 1
                 }
               }
@@ -4484,7 +4694,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4093,
+                  "startLine": 4527,
                   "startColumn": 1
                 }
               }
@@ -4505,7 +4715,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4111,
+                  "startLine": 4545,
                   "startColumn": 1
                 }
               }
@@ -4526,7 +4736,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4143,
+                  "startLine": 4577,
                   "startColumn": 1
                 }
               }
@@ -4547,7 +4757,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4194,
+                  "startLine": 4628,
                   "startColumn": 1
                 }
               }
@@ -4568,7 +4778,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4213,
+                  "startLine": 4653,
                   "startColumn": 1
                 }
               }
@@ -4589,7 +4799,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4228,
+                  "startLine": 4668,
                   "startColumn": 1
                 }
               }
@@ -4610,7 +4820,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4242,
+                  "startLine": 4682,
                   "startColumn": 1
                 }
               }
@@ -4631,7 +4841,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4252,
+                  "startLine": 4692,
                   "startColumn": 1
                 }
               }
@@ -4652,7 +4862,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4349,
+                  "startLine": 4824,
                   "startColumn": 1
                 }
               }
@@ -4673,7 +4883,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4362,
+                  "startLine": 4837,
                   "startColumn": 1
                 }
               }
@@ -4694,7 +4904,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4372,
+                  "startLine": 4847,
                   "startColumn": 1
                 }
               }
@@ -4715,7 +4925,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4385,
+                  "startLine": 4860,
                   "startColumn": 1
                 }
               }
@@ -4736,7 +4946,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4395,
+                  "startLine": 4870,
                   "startColumn": 1
                 }
               }
@@ -4757,7 +4967,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4408,
+                  "startLine": 4883,
                   "startColumn": 1
                 }
               }
@@ -4778,7 +4988,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4421,
+                  "startLine": 4896,
                   "startColumn": 1
                 }
               }
@@ -4799,7 +5009,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4459,
+                  "startLine": 5049,
                   "startColumn": 1
                 }
               }
@@ -4820,7 +5030,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4475,
+                  "startLine": 5065,
                   "startColumn": 1
                 }
               }
@@ -4841,7 +5051,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4506,
+                  "startLine": 5128,
                   "startColumn": 1
                 }
               }
@@ -4862,7 +5072,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4534,
+                  "startLine": 5180,
                   "startColumn": 1
                 }
               }
@@ -4883,7 +5093,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4587,
+                  "startLine": 5233,
                   "startColumn": 1
                 }
               }
@@ -4904,7 +5114,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4644,
+                  "startLine": 5290,
                   "startColumn": 1
                 }
               }
@@ -4925,7 +5135,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4709,
+                  "startLine": 5355,
                   "startColumn": 1
                 }
               }
@@ -4936,17 +5146,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'parse_providers' is never read"
+            "text": "'CREATE_NEW_PROCESS_GROUP' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
+                  "uri": "src/intellicrack/core/_subprocess.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 479,
+                  "startLine": 45,
                   "startColumn": 1
                 }
               }
@@ -4957,38 +5167,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'parse_tools' is never read"
+            "text": "'CREATE_NEW_PROCESS_GROUP' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
+                  "uri": "src/intellicrack/core/_subprocess.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 491,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'parse_sub_configs' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/config.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 503,
+                  "startLine": 51,
                   "startColumn": 1
                 }
               }
@@ -5072,7 +5261,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 340,
+                  "startLine": 374,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'span' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/errors.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 92,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'data_span' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/errors.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 149,
                   "startColumn": 1
                 }
               }
@@ -5093,7 +5324,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 209,
+                  "startLine": 189,
                   "startColumn": 1
                 }
               }
@@ -5114,7 +5345,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 235,
+                  "startLine": 215,
                   "startColumn": 1
                 }
               }
@@ -5135,7 +5366,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 189,
+                  "startLine": 200,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'set_print_sink' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 79,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'set_reflection_provider' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 258,
                   "startColumn": 1
                 }
               }
@@ -5156,7 +5429,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 544,
+                  "startLine": 2257,
                   "startColumn": 1
                 }
               }
@@ -5198,7 +5471,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 523,
+                  "startLine": 541,
                   "startColumn": 1
                 }
               }
@@ -5219,7 +5492,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 590,
+                  "startLine": 608,
                   "startColumn": 1
                 }
               }
@@ -5230,7 +5503,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'prepare_ai_prompt' is never read"
+            "text": "'generate_frida' is never read"
           },
           "locations": [
             {
@@ -5240,7 +5513,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 769,
+                  "startLine": 863,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'generate_ghidra' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 874,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'generate_python' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 885,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'generate_cutter' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 896,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'generate_x64dbg' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/script_gen.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 907,
                   "startColumn": 1
                 }
               }
@@ -5261,7 +5618,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 63,
+                  "startLine": 93,
                   "startColumn": 1
                 }
               }
@@ -5387,7 +5744,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 160,
+                  "startLine": 173,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_verify_pkce_pair' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 599,
                   "startColumn": 1
                 }
               }
@@ -5408,7 +5786,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 572,
+                  "startLine": 666,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_pending_usage' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 319,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_pending_thinking' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 336,
                   "startColumn": 1
                 }
               }
@@ -5429,7 +5849,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 475,
+                  "startLine": 530,
                   "startColumn": 1
                 }
               }
@@ -5450,7 +5870,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 62,
+                  "startLine": 67,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_ChatCompletionCallable' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 69,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'HTTP_INTERNAL_ERROR' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 121,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'HTTP_SERVICE_UNAVAILABLE' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 122,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'cuda_available' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 220,
                   "startColumn": 1
                 }
               }
@@ -5471,7 +5975,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 215,
+                  "startLine": 238,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'list_tags' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 387,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'list_running_models' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 417,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'show_model' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 448,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'embeddings' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/ollama.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 548,
                   "startColumn": 1
                 }
               }
@@ -5492,7 +6080,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 70,
+                  "startLine": 75,
                   "startColumn": 1
                 }
               }
@@ -5534,7 +6122,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 371,
+                  "startLine": 384,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_NETWORK_LOG_PID_INDEX' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 75,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_NETWORK_LOG_PNAME_INDEX' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 76,
                   "startColumn": 1
                 }
               }
@@ -5555,7 +6185,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 106,
+                  "startLine": 126,
                   "startColumn": 1
                 }
               }
@@ -5576,7 +6206,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 107,
+                  "startLine": 127,
                   "startColumn": 1
                 }
               }
@@ -5587,17 +6217,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_parse_service_log' is never read"
+            "text": "'_MONITOR_START_TIMEOUT' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uri": "src/intellicrack/sandbox/windows.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2075,
+                  "startLine": 68,
                   "startColumn": 1
                 }
               }
@@ -5608,122 +6238,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_parse_kernel_object_log' is never read"
+            "text": "'SANDBOX_WORKER_EXE' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uri": "src/intellicrack/sandbox/windows.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2109,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_dll_log' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2143,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_injection_log' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2177,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_resource_log' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2212,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_clipboard_log' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2247,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_api_trace_log' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2282,
+                  "startLine": 151,
                   "startColumn": 1
                 }
               }
@@ -5744,7 +6269,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1780,
+                  "startLine": 2026,
                   "startColumn": 1
                 }
               }
@@ -5765,7 +6290,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1802,
+                  "startLine": 2048,
                   "startColumn": 1
                 }
               }
@@ -5786,7 +6311,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 324,
+                  "startLine": 321,
                   "startColumn": 1
                 }
               }
@@ -5807,7 +6332,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 333,
+                  "startLine": 330,
                   "startColumn": 1
                 }
               }
@@ -5828,7 +6353,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 347,
+                  "startLine": 344,
                   "startColumn": 1
                 }
               }
@@ -5849,7 +6374,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 480,
+                  "startLine": 477,
                   "startColumn": 1
                 }
               }
@@ -5860,17 +6385,17 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'ensure_loop' is never read"
+            "text": "'IPS_OFFSET_SIZE' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/async_bridge.py",
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 83,
+                  "startLine": 143,
                   "startColumn": 1
                 }
               }
@@ -5881,17 +6406,80 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_DIFF_CHUNK_SIZE' is never read"
+            "text": "'IPS32_OFFSET_SIZE' is never read"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_comparison.py",
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 26,
+                  "startLine": 144,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'IPS_LENGTH_FIELD_SIZE' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 145,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'IPS_HEADER_SIZE' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 146,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'ENCODING_ENTRIES' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_base.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 429,
                   "startColumn": 1
                 }
               }
@@ -5933,7 +6521,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 420,
+                  "startLine": 404,
                   "startColumn": 1
                 }
               }
@@ -5954,7 +6542,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 533,
+                  "startLine": 512,
                   "startColumn": 1
                 }
               }
@@ -5975,7 +6563,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 536,
+                  "startLine": 515,
                   "startColumn": 1
                 }
               }
@@ -5996,7 +6584,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 541,
+                  "startLine": 520,
                   "startColumn": 1
                 }
               }
@@ -6017,7 +6605,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 607,
+                  "startLine": 579,
                   "startColumn": 1
                 }
               }
@@ -6038,7 +6626,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 616,
+                  "startLine": 588,
                   "startColumn": 1
                 }
               }
@@ -6059,7 +6647,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 625,
+                  "startLine": 597,
                   "startColumn": 1
                 }
               }
@@ -6080,7 +6668,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1035,
+                  "startLine": 1054,
                   "startColumn": 1
                 }
               }
@@ -6101,7 +6689,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 651,
+                  "startLine": 890,
                   "startColumn": 1
                 }
               }
@@ -6122,49 +6710,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 456,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_EMBED_POLL_INTERVAL_MS' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hxd_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 48,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_EMBED_MAX_RETRIES' is never read"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hxd_panel.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 49,
+                  "startLine": 622,
                   "startColumn": 1
                 }
               }
@@ -6185,7 +6731,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 89,
+                  "startLine": 90,
                   "startColumn": 1
                 }
               }
@@ -6206,7 +6752,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 101,
+                  "startLine": 102,
                   "startColumn": 1
                 }
               }
@@ -6227,7 +6773,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 275,
+                  "startLine": 311,
                   "startColumn": 1
                 }
               }
@@ -6248,7 +6794,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 327,
+                  "startLine": 335,
                   "startColumn": 1
                 }
               }
@@ -6353,7 +6899,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 355,
+                  "startLine": 354,
                   "startColumn": 1
                 }
               }
@@ -6374,7 +6920,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 364,
+                  "startLine": 363,
                   "startColumn": 1
                 }
               }
@@ -6437,7 +6983,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1859,
+                  "startLine": 1842,
                   "startColumn": 1
                 }
               }
@@ -6458,7 +7004,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1935,
+                  "startLine": 1918,
                   "startColumn": 1
                 }
               }
@@ -6479,7 +7025,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1944,
+                  "startLine": 1927,
                   "startColumn": 1
                 }
               }
@@ -6500,7 +7046,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1969,
+                  "startLine": 1952,
                   "startColumn": 1
                 }
               }
@@ -6521,7 +7067,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1980,
+                  "startLine": 1963,
                   "startColumn": 1
                 }
               }
@@ -6542,7 +7088,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2129,
+                  "startLine": 2121,
                   "startColumn": 1
                 }
               }
@@ -6563,7 +7109,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 102,
+                  "startLine": 108,
                   "startColumn": 1
                 }
               }
@@ -6584,7 +7130,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 127,
+                  "startLine": 136,
                   "startColumn": 1
                 }
               }
@@ -6605,7 +7151,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 199,
+                  "startLine": 212,
                   "startColumn": 1
                 }
               }
@@ -6626,7 +7172,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 280,
+                  "startLine": 289,
                   "startColumn": 1
                 }
               }
@@ -6679,6 +7225,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'get_description' is never read"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/session_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1048,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'GW_OWNER' is never read"
           },
           "locations": [
@@ -6689,7 +7256,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 36,
+                  "startLine": 39,
                   "startColumn": 1
                 }
               }
@@ -6710,7 +7277,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 37,
+                  "startLine": 40,
                   "startColumn": 1
                 }
               }
@@ -6731,7 +7298,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 81,
+                  "startLine": 83,
                   "startColumn": 1
                 }
               }
@@ -6743,7 +7310,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:37:28.976627+00:00"
+          "endTimeUtc": "2026-04-24T05:11:27.360271+00:00"
         }
       ]
     }

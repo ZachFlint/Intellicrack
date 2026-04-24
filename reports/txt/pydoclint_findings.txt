@@ -1,1 +1,263 @@
-No findings.
+23 findings in src/intellicrack/sandbox/base.py
+
+358: DOC304: Class `SandboxBase`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+445: DOC201: Method `SandboxBase.run_command` does not have a return section in docstring
+
+445: DOC203: Method `SandboxBase.run_command` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+472: DOC201: Method `SandboxBase.run_binary` does not have a return section in docstring
+
+472: DOC203: Method `SandboxBase.run_binary` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+544: DOC201: Method `SandboxBase.take_snapshot` does not have a return section in docstring
+
+544: DOC203: Method `SandboxBase.take_snapshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+576: DOC201: Method `SandboxBase.list_snapshots` does not have a return section in docstring
+
+576: DOC203: Method `SandboxBase.list_snapshots` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+604: DOC201: Method `SandboxBase.start_pcap_capture` does not have a return section in docstring
+
+604: DOC203: Method `SandboxBase.start_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+613: DOC201: Method `SandboxBase.stop_pcap_capture` does not have a return section in docstring
+
+613: DOC203: Method `SandboxBase.stop_pcap_capture` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+631: DOC201: Method `SandboxBase.capture_screenshot` does not have a return section in docstring
+
+631: DOC203: Method `SandboxBase.capture_screenshot` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+647: DOC201: Method `SandboxBase.apply_anti_evasion` does not have a return section in docstring
+
+647: DOC203: Method `SandboxBase.apply_anti_evasion` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+663: DOC201: Method `SandboxBase.dump_memory` does not have a return section in docstring
+
+663: DOC203: Method `SandboxBase.dump_memory` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+679: DOC201: Method `SandboxBase.extract_dropped_files` does not have a return section in docstring
+
+679: DOC203: Method `SandboxBase.extract_dropped_files` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+695: DOC201: Method `SandboxBase.yara_scan` does not have a return section in docstring
+
+695: DOC203: Method `SandboxBase.yara_scan` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+
+11 findings in src/intellicrack/core/types.py
+
+1461: DOC304: Class `IntellicrackError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1498: DOC304: Class `ProviderError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1548: DOC304: Class `RateLimitError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1597: DOC304: Class `ModelNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1646: DOC304: Class `ToolError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1692: DOC304: Class `ToolNotFoundError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1735: DOC304: Class `InitializationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1784: DOC304: Class `AttachError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1839: DOC304: Class `SandboxError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1879: DOC304: Class `SandboxTimeoutError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1919: DOC304: Class `ConfigurationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+6 findings in src/intellicrack/sandbox/qemu.py
+
+193: DOC203: Function `_parse_ppm_p6` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int, bytes]']; docstring return section types: ['']
+
+359: DOC304: Class `QMPClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+578: DOC304: Class `GuestAgentClient`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+776: DOC304: Class `QEMUSandbox`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+2245: DOC203: Method `QEMUSandbox._coerce_network_protocol` return type(s) in docstring not consistent with the return annotation. Return annotation types: ["Literal['tcp', 'udp', 'icmp', 'other']"]; docstring return section types: ['Literal[``tcp``, ``udp``, ``icmp``, ``other``]']
+
+2262: DOC203: Method `QEMUSandbox._coerce_network_direction` return type(s) in docstring not consistent with the return annotation. Return annotation types: ["Literal['inbound', 'outbound']"]; docstring return section types: ['Literal[``inbound``, ``outbound``]']
+
+
+5 findings in src/intellicrack/core/hexpat/errors.py
+
+10: DOC304: Class `HexPatError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+54: DOC304: Class `HexPatParseError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+92: DOC203: Method `HexPatParseError.span` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int, int, int] | None']; docstring return section types: ['']
+
+108: DOC304: Class `HexPatRuntimeError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+149: DOC203: Method `HexPatRuntimeError.data_span` return type(s) in docstring not consistent with the return annotation. Return annotation types: ['tuple[int, int] | None']; docstring return section types: ['']
+
+
+4 findings in src/intellicrack/core/hexpat_compiler.py
+
+24: DOC304: Class `HexPatError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+464: DOC304: Class `HexPatLexer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+688: DOC304: Class `HexPatParser`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+1172: DOC304: Class `HexPatCodegen`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+4 findings in src/intellicrack/core/session.py
+
+207: DOC304: Class `SessionStore`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+287: DOC501: Method `SessionStore.save` has raise statements, but the docstring does not have a "Raises" section
+
+287: DOC503: Method `SessionStore.save` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: []. Raised exceptions in the body: ['OSError', 'sqlite3.Error'].
+
+901: DOC304: Class `SessionManager`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+3 findings in src/intellicrack/bridges/schemas.py
+
+28: DOC201: Function `_assert_never` does not have a return section in docstring
+
+28: DOC203: Function `_assert_never` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+140: DOC304: Class `ValidationError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+3 findings in src/intellicrack/core/hexpat/evaluator.py
+
+90: DOC304: Class `_ReturnSignalError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+143: DOC304: Class `EvalScope`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+268: DOC304: Class `HexPatEvaluator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+3 findings in src/intellicrack/core/hexpat/stdlib.py
+
+184: DOC304: Class `BuiltinFunctions`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+2183: DOC201: Method `BuiltinFunctions._io_error` does not have a return section in docstring
+
+2183: DOC203: Method `BuiltinFunctions._io_error` return type(s) in docstring not consistent with the return annotation. Return annotation has 1 type(s); docstring return section has 0 type(s).
+
+
+3 findings in src/intellicrack/core/template_manager.py
+
+65: DOC602: Class `TemplateBootstrapError`: Class docstring contains more class attributes than in actual class attributes.  (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+65: DOC603: Class `TemplateBootstrapError`: Class docstring attributes are different from actual class attributes. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the docstring but not in the actual class attributes: [failed_templates: ]. (Please read https://jsh9.github.io/pydoclint/checking_class_attributes.html on how to correctly document class attributes.)
+
+93: DOC304: Class `TemplateManager`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+3 findings in src/intellicrack/core/transform_pipeline.py
+
+43: DOC304: Class `UnsupportedConstantTypeError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+59: DOC304: Class `TransformParamError`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+258: DOC304: Class `RustTransformNode`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+2 findings in src/intellicrack/core/logging.py
+
+270: DOC304: Class `IntellicrackLogger`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+608: DOC304: Class `OperationTimer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+2 findings in src/intellicrack/providers/discovery.py
+
+88: DOC304: Class `DiscoveryCache`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+296: DOC304: Class `ModelDiscovery`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+2 findings in src/intellicrack/sandbox/manager.py
+
+38: DOC304: Class `SandboxInstance`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+83: DOC304: Class `SandboxManager`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/analysis_aggregator.py
+
+34: DOC304: Class `AnalysisAggregator`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/data_reader.py
+
+53: DOC304: Class `DataReader`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/interpreter.py
+
+43: DOC304: Class `HexPatInterpreter`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/lexer.py
+
+14: DOC304: Class `HexPatLexer`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/parser.py
+
+118: DOC304: Class `HexPatParser`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/pattern_registry.py
+
+49: DOC304: Class `PatternRegistry`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/hexpat/preprocessor.py
+
+69: DOC304: Class `HexPatPreprocessor`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/script_gen.py
+
+512: DOC304: Class `ScriptManager`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/tools.py
+
+75: DOC304: Class `ToolRegistry`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/core/yara_scanner.py
+
+74: DOC304: Class `YaraScanner`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/credentials/store.py
+
+96: DOC304: Class `CredentialStore`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/providers/base.py
+
+360: DOC503: Method `LLMProviderBase._retry_with_backoff` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['AuthenticationError', 'ProviderError']. Raised exceptions in the body: ['AuthenticationError', 'ProviderError', 'retryable_exceptions'].
+
+
+1 findings in src/intellicrack/providers/local_transformers.py
+
+790: DOC503: Method `LocalTransformersProvider._load_model_for_cuda` exceptions in the "Raises" section in the docstring do not match those in the function body. Raised exceptions in the docstring: ['ImportError', 'RuntimeError']. Raised exceptions in the body: ['ImportError', 'OSError', 'RuntimeError', 'ValueError'].
+
+
+1 findings in src/intellicrack/providers/model_loader.py
+
+111: DOC304: Class `ModelCache`: Class docstring has an argument/parameter section; please put it in the __init__() docstring
+
+
+1 findings in src/intellicrack/providers/registry.py
+
+30: DOC304: Class `ProviderRegistry`: Class docstring has an argument/parameter section; please put it in the __init__() docstring

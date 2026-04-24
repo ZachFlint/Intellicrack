@@ -9,4 +9,4 @@ pydocstyle,tests/test_ui\conftest.py,38,,,D107,D107,in public method `__init__`:
 pydocstyle,tests/test_ui\conftest.py,82,,,D107,D107,in public method `__init__`: - Missing docstring in __init__,,,,,,,,,,,,
 pydocstyle,tests/test_ui\conftest.py,106,,,D107,D107,in public method `__init__`: - Missing docstring in __init__,,,,,,,,,,,,
 pydocstyle,tests/test_ui\conftest.py,128,,,D107,D107,in public method `__init__`: - Missing docstring in __init__,,,,,,,,,,,,
-pydocstyle,src/intellicrack/ui\panels\async_bridge.py,140,,,D103,D103,in public function `run_bridge_coroutine`: - Missing docstring in public function,,,,,,,,,,,,
+pydocstyle,src/intellicrack/ui\panels\async_bridge.py,159,,,D103,D103,in public function `run_bridge_coroutine`: - Missing docstring in public function,,,,,,,,,,,,

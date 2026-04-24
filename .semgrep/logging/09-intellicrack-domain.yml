@@ -1,13 +1,7 @@
 rules:
-
   - id: intellicrack-logging-i1-tool-dispatch-without-context
     message: >-
-      Tool-dispatch entry point (`execute_tool_call`,
-      `invoke_tool`, `_dispatch_tool`, `run_tool`,
-      `handle_tool_call`) must log the tool name, arguments, and
-      ultimately the result/duration. Without this, the orchestration
-      layer cannot show users which tool was invoked, with what
-      arguments, or how long it took.
+      Tool-dispatch entry point (`execute_tool_call`, `invoke_tool`, `_dispatch_tool`, `run_tool`, `handle_tool_call`) must log the tool name, arguments, and ultimately the result/duration. Without this, the orchestration layer cannot show users which tool was invoked, with what arguments, or how long it took.
     severity: WARNING
     languages: [python]
     patterns:
@@ -46,16 +40,9 @@ rules:
               ...
               $L.$LVL(..., tool_name=$T, ...)
               ...
-
   - id: intellicrack-logging-i2-memory-patch-without-audit-log
     message: >-
-      Memory write / patch operation
-      (`WriteProcessMemory`, `VirtualProtectEx`, `NtWriteVirtualMemory`,
-      `write_process_memory`, `patch_bytes`, `apply_patch`,
-      `write_memory`, `poke`, `frida Memory.writeByteArray`) without
-      an adjacent log. Patches are the single most security-relevant
-      action this platform performs - every one MUST be recorded with
-      target, address, size, and outcome.
+      Memory write / patch operation (`WriteProcessMemory`, `VirtualProtectEx`, `NtWriteVirtualMemory`, `write_process_memory`, `patch_bytes`, `apply_patch`, `write_memory`, `poke`, `frida Memory.writeByteArray`) without an adjacent log. Patches are the single most security-relevant action this platform performs - every one MUST be recorded with target, address, size, and outcome.
     severity: ERROR
     languages: [python]
     patterns:
@@ -83,13 +70,9 @@ rules:
               ...
               $L.$LVL(...)
               ...
-
   - id: intellicrack-logging-i3-frida-script-load-without-id-log
     message: >-
-      Frida `session.create_script(...)` / `script.load()` must log
-      the resulting `script_id` - without it, failed-script events
-      cannot be correlated to the script that triggered them, and the
-      unified workspace loses the Frida-side execution record.
+      Frida `session.create_script(...)` / `script.load()` must log the resulting `script_id` - without it, failed-script events cannot be correlated to the script that triggered them, and the unified workspace loses the Frida-side execution record.
     severity: WARNING
     languages: [python]
     patterns:
@@ -106,14 +89,9 @@ rules:
               ...
               $L.$LVL(..., script_id=$X, ...)
               ...
-
   - id: intellicrack-logging-i4-disassembler-call-missing-binary-context
     message: >-
-      Bridge call to an external disassembler/debugger (IDA, Ghidra,
-      Radare2, r2, rizin, x64dbg, WinDbg, gdb) without logging the
-      target binary and address/offset. Disassembler outputs without
-      this context cannot be reconciled with what the user was
-      analysing.
+      Bridge call to an external disassembler/debugger (IDA, Ghidra, Radare2, r2, rizin, x64dbg, WinDbg, gdb) without logging the target binary and address/offset. Disassembler outputs without this context cannot be reconciled with what the user was analysing.
     severity: WARNING
     languages: [python]
     patterns:
@@ -139,13 +117,9 @@ rules:
               ...
               $L.$LVL(..., binary_path=$B, ...)
               ...
-
   - id: intellicrack-logging-i5-provider-completion-without-model
     message: >-
-      AI provider `generate` / `stream` / `chat` / `complete` /
-      `create_completion` call without a log that includes the
-      `model` kwarg. The shared workspace's AI event stream is
-      indexed by model - completions without it become untraceable.
+      AI provider `generate` / `stream` / `chat` / `complete` / `create_completion` call without a log that includes the `model` kwarg. The shared workspace's AI event stream is indexed by model - completions without it become untraceable.
     severity: WARNING
     languages: [python]
     patterns:
@@ -187,14 +161,9 @@ rules:
               ...
               $L.$LVL(..., model=$M, ...)
               ...
-
   - id: intellicrack-logging-i6-credential-op-missing-key-id
     message: >-
-      Credential store operation (`.save`, `.load`, `.delete`,
-      `.rotate`, `.get`, `.put`) on a credential store without a log
-      that includes a `key_id` / `name` kwarg. NEVER log the
-      credential VALUE, but DO log the key identifier so operators
-      can audit which secrets were accessed.
+      Credential store operation (`.save`, `.load`, `.delete`, `.rotate`, `.get`, `.put`) on a credential store without a log that includes a `key_id` / `name` kwarg. NEVER log the credential VALUE, but DO log the key identifier so operators can audit which secrets were accessed.
     severity: WARNING
     languages: [python]
     patterns:
@@ -261,13 +230,9 @@ rules:
               ...
               _logger.$LVL(..., key_id=$K, ...)
               ...
-
   - id: intellicrack-logging-i7-session-state-change-without-session-id
     message: >-
-      Mutating a session's active target / state / binding without
-      logging with the `session_id` kwarg. Session correlation is
-      the backbone of the unified workspace; every state change
-      must carry its session id.
+      Mutating a session's active target / state / binding without logging with the `session_id` kwarg. Session correlation is the backbone of the unified workspace; every state change must carry its session id.
     severity: WARNING
     languages: [python]
     patterns:
@@ -293,13 +258,9 @@ rules:
               ...
               $L.$LVL(..., session_id=$SID, ...)
               ...
-
   - id: intellicrack-logging-i8-sandbox-lifecycle-without-log
     message: >-
-      Sandbox lifecycle transitions (`start`, `stop`, `reset`,
-      `snapshot`, `restore`, `launch`) must be logged - sandbox
-      execution is one of the most security-sensitive boundaries
-      the platform crosses. Emit entry and result logs.
+      Sandbox lifecycle transitions (`start`, `stop`, `reset`, `snapshot`, `restore`, `launch`) must be logged - sandbox execution is one of the most security-sensitive boundaries the platform crosses. Emit entry and result logs.
     severity: WARNING
     languages: [python]
     patterns:
@@ -327,14 +288,9 @@ rules:
               ...
               $L.$LVL(...)
               ...
-
   - id: intellicrack-logging-i9-unpack-without-packer-log
     message: >-
-      Unpacker / unprotector routine (`unpack`, `unpack_binary`,
-      `unprotect`, `remove_protection`, `deobfuscate`, `decrypt_binary`)
-      without a log that reports the detected packer/protection and
-      the outcome. Operators must be able to see which protections
-      were encountered and how each was handled.
+      Unpacker / unprotector routine (`unpack`, `unpack_binary`, `unprotect`, `remove_protection`, `deobfuscate`, `decrypt_binary`) without a log that reports the detected packer/protection and the outcome. Operators must be able to see which protections were encountered and how each was handled.
     severity: WARNING
     languages: [python]
     patterns:

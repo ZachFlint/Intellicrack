@@ -264,10 +264,9 @@ class HxDPanel(QWidget):
     def _schedule_embed(self) -> None:
         """Reparent the HxD top-level window into ``_embed_host`` on Windows.
 
-        Starts a short polling loop that enumerates top-level windows owned
-        by the HxD process and wraps the main HWND in a Qt window container
-        so HxD renders inside the panel rather than as a separate top-level.
-        No-op on non-Windows platforms or when the process has already exited.
+        Starts a short polling loop that enumerates top-level windows owned by the HxD process and wraps the main HWND in a Qt window
+        container so HxD renders inside the panel rather than as a separate top-level. No-op on non-Windows platforms or when the process
+        has already exited.
         """
         if sys.platform != "win32" or self.process is None:
             return

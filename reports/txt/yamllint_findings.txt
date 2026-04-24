@@ -1,3 +1,212 @@
+16 findings in .\.semgrep\logging\04-coverage-gaps.yml
+
+.\.semgrep\logging\04-coverage-gaps.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\04-coverage-gaps.yml:4:121: [warning] line too long (267 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:142:121: [warning] line too long (285 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:163:121: [warning] line too long (245 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:184:121: [warning] line too long (258 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:211:121: [warning] line too long (466 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:281:121: [warning] line too long (312 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:300:121: [warning] line too long (138 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:399:121: [warning] line too long (534 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:414:121: [warning] line too long (281 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:426:121: [warning] line too long (239 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:439:121: [warning] line too long (245 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:456:121: [warning] line too long (272 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:482:121: [warning] line too long (310 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:496:121: [warning] line too long (281 > 120 characters)  (line-length)
+
+.\.semgrep\logging\04-coverage-gaps.yml:532:121: [warning] line too long (247 > 120 characters)  (line-length)
+
+
+12 findings in .\.semgrep\logging\02-event-names.yml
+
+.\.semgrep\logging\02-event-names.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\02-event-names.yml:4:121: [warning] line too long (435 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:16:121: [warning] line too long (245 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:28:121: [warning] line too long (259 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:40:121: [warning] line too long (157 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:58:121: [warning] line too long (356 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:77:121: [warning] line too long (375 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:90:121: [warning] line too long (463 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:93:121: [warning] line too long (322 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:138:121: [warning] line too long (232 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:160:121: [warning] line too long (282 > 120 characters)  (line-length)
+
+.\.semgrep\logging\02-event-names.yml:176:121: [warning] line too long (273 > 120 characters)  (line-length)
+
+
+11 findings in .\.semgrep\logging\05-severity-levels.yml
+
+.\.semgrep\logging\05-severity-levels.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\05-severity-levels.yml:4:121: [warning] line too long (329 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:28:121: [warning] line too long (266 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:209:121: [warning] line too long (354 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:243:121: [warning] line too long (320 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:257:121: [warning] line too long (287 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:266:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:269:121: [warning] line too long (281 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:278:121: [warning] line too long (328 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:281:121: [warning] line too long (252 > 120 characters)  (line-length)
+
+.\.semgrep\logging\05-severity-levels.yml:290:121: [warning] line too long (228 > 120 characters)  (line-length)
+
+
+11 findings in .\.semgrep\logging\07-anti-patterns.yml
+
+.\.semgrep\logging\07-anti-patterns.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\07-anti-patterns.yml:4:121: [warning] line too long (237 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:16:121: [warning] line too long (346 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:46:121: [warning] line too long (277 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:71:121: [warning] line too long (311 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:83:121: [warning] line too long (369 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:100:121: [warning] line too long (293 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:130:121: [warning] line too long (285 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:140:121: [warning] line too long (239 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:151:121: [warning] line too long (253 > 120 characters)  (line-length)
+
+.\.semgrep\logging\07-anti-patterns.yml:205:121: [warning] line too long (302 > 120 characters)  (line-length)
+
+
+10 findings in .\.semgrep\logging\03-structured-fields.yml
+
+.\.semgrep\logging\03-structured-fields.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\03-structured-fields.yml:4:121: [warning] line too long (354 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:35:121: [warning] line too long (441 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:77:121: [warning] line too long (598 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:92:121: [warning] line too long (171 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:95:121: [warning] line too long (296 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:110:121: [warning] line too long (359 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:177:121: [warning] line too long (318 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:208:121: [warning] line too long (274 > 120 characters)  (line-length)
+
+.\.semgrep\logging\03-structured-fields.yml:216:121: [warning] line too long (288 > 120 characters)  (line-length)
+
+
+10 findings in .\.semgrep\logging\09-intellicrack-domain.yml
+
+.\.semgrep\logging\09-intellicrack-domain.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:4:121: [warning] line too long (311 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:45:121: [warning] line too long (383 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:75:121: [warning] line too long (249 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:94:121: [warning] line too long (260 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:122:121: [warning] line too long (239 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:166:121: [warning] line too long (280 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:235:121: [warning] line too long (211 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:263:121: [warning] line too long (229 > 120 characters)  (line-length)
+
+.\.semgrep\logging\09-intellicrack-domain.yml:293:121: [warning] line too long (297 > 120 characters)  (line-length)
+
+
+7 findings in .\.semgrep\logging\01-logger-identity.yml
+
+.\.semgrep\logging\01-logger-identity.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\01-logger-identity.yml:4:121: [warning] line too long (451 > 120 characters)  (line-length)
+
+.\.semgrep\logging\01-logger-identity.yml:16:121: [warning] line too long (362 > 120 characters)  (line-length)
+
+.\.semgrep\logging\01-logger-identity.yml:31:121: [warning] line too long (288 > 120 characters)  (line-length)
+
+.\.semgrep\logging\01-logger-identity.yml:39:121: [warning] line too long (328 > 120 characters)  (line-length)
+
+.\.semgrep\logging\01-logger-identity.yml:66:121: [warning] line too long (224 > 120 characters)  (line-length)
+
+.\.semgrep\logging\01-logger-identity.yml:75:121: [warning] line too long (291 > 120 characters)  (line-length)
+
+
+7 findings in .\.semgrep\logging\06-sensitive-data.yml
+
+.\.semgrep\logging\06-sensitive-data.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\06-sensitive-data.yml:4:121: [warning] line too long (515 > 120 characters)  (line-length)
+
+.\.semgrep\logging\06-sensitive-data.yml:167:121: [warning] line too long (295 > 120 characters)  (line-length)
+
+.\.semgrep\logging\06-sensitive-data.yml:209:121: [warning] line too long (302 > 120 characters)  (line-length)
+
+.\.semgrep\logging\06-sensitive-data.yml:245:121: [warning] line too long (322 > 120 characters)  (line-length)
+
+.\.semgrep\logging\06-sensitive-data.yml:293:121: [warning] line too long (308 > 120 characters)  (line-length)
+
+.\.semgrep\logging\06-sensitive-data.yml:347:121: [warning] line too long (281 > 120 characters)  (line-length)
+
+
+7 findings in .\.semgrep\logging\08-flow-correlation.yml
+
+.\.semgrep\logging\08-flow-correlation.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\08-flow-correlation.yml:4:121: [warning] line too long (286 > 120 characters)  (line-length)
+
+.\.semgrep\logging\08-flow-correlation.yml:21:121: [warning] line too long (271 > 120 characters)  (line-length)
+
+.\.semgrep\logging\08-flow-correlation.yml:43:121: [warning] line too long (317 > 120 characters)  (line-length)
+
+.\.semgrep\logging\08-flow-correlation.yml:73:121: [warning] line too long (270 > 120 characters)  (line-length)
+
+.\.semgrep\logging\08-flow-correlation.yml:94:121: [warning] line too long (317 > 120 characters)  (line-length)
+
+.\.semgrep\logging\08-flow-correlation.yml:275:121: [warning] line too long (148 > 120 characters)  (line-length)
+
+
 7 findings in .\.serena\project.yml
 
 .\.serena\project.yml:1:73: [error] wrong new line character: expected \n  (new-lines)
@@ -15,6 +224,21 @@
 .\.serena\project.yml:89:121: [warning] line too long (123 > 120 characters)  (line-length)
 
 
+6 findings in .\.pre-commit-config.yaml
+
+.\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.pre-commit-config.yaml:10:121: [warning] line too long (142 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
+
+.\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
+
+
 6 findings in .\.github\workflows\gemini-dispatch.yml
 
 .\.github\workflows\gemini-dispatch.yml:1:26: [error] wrong new line character: expected \n  (new-lines)
@@ -30,19 +254,6 @@
 .\.github\workflows\gemini-dispatch.yml:189:121: [warning] line too long (212 > 120 characters)  (line-length)
 
 
-5 findings in .\.pre-commit-config.yaml
-
-.\.pre-commit-config.yaml:1:7: [error] wrong new line character: expected \n  (new-lines)
-
-.\.pre-commit-config.yaml:30:121: [warning] line too long (128 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:37:121: [warning] line too long (269 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:57:121: [warning] line too long (165 > 120 characters)  (line-length)
-
-.\.pre-commit-config.yaml:73:121: [warning] line too long (123 > 120 characters)  (line-length)
-
-
 4 findings in .\.github\workflows\gemini-triage.yml
 
 .\.github\workflows\gemini-triage.yml:1:24: [error] wrong new line character: expected \n  (new-lines)
@@ -52,6 +263,17 @@
 .\.github\workflows\gemini-triage.yml:122:121: [warning] line too long (133 > 120 characters)  (line-length)
 
 .\.github\workflows\gemini-triage.yml:163:121: [warning] line too long (127 > 120 characters)  (line-length)
+
+
+4 findings in .\.semgrep\logging\10-meta-suppressions.yml
+
+.\.semgrep\logging\10-meta-suppressions.yml:1:7: [error] wrong new line character: expected \n  (new-lines)
+
+.\.semgrep\logging\10-meta-suppressions.yml:4:121: [warning] line too long (272 > 120 characters)  (line-length)
+
+.\.semgrep\logging\10-meta-suppressions.yml:10:121: [warning] line too long (291 > 120 characters)  (line-length)
+
+.\.semgrep\logging\10-meta-suppressions.yml:19:121: [warning] line too long (279 > 120 characters)  (line-length)
 
 
 4 findings in .\vendor\PatternLanguage\.github\workflows\tests.yml

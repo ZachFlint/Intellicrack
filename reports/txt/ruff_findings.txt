@@ -1,1 +1,77 @@
-No findings.
+38 findings in D:\Intellicrack\src\intellicrack\main.py
+
+D:\Intellicrack\src\intellicrack\main.py:223:39: F821 Undefined name `ProcessManager`
+
+D:\Intellicrack\src\intellicrack\main.py:230:23: F821 Undefined name `ProcessManager`
+
+D:\Intellicrack\src\intellicrack\main.py:243:37: F821 Undefined name `SplashScreen`
+
+D:\Intellicrack\src\intellicrack\main.py:250:23: F821 Undefined name `SplashScreen`
+
+D:\Intellicrack\src\intellicrack\main.py:253:49: F821 Undefined name `ThemeManager`
+
+D:\Intellicrack\src\intellicrack\main.py:253:69: F821 Undefined name `IconManager`
+
+D:\Intellicrack\src\intellicrack\main.py:261:21: F821 Undefined name `ThemeManager`
+
+D:\Intellicrack\src\intellicrack\main.py:261:41: F821 Undefined name `IconManager`
+
+D:\Intellicrack\src\intellicrack\main.py:266:36: F821 Undefined name `Orchestrator`
+
+D:\Intellicrack\src\intellicrack\main.py:273:23: F821 Undefined name `Orchestrator`
+
+D:\Intellicrack\src\intellicrack\main.py:276:45: F821 Undefined name `SessionManager`
+
+D:\Intellicrack\src\intellicrack\main.py:276:67: F821 Undefined name `SessionStore`
+
+D:\Intellicrack\src\intellicrack\main.py:284:20: F821 Undefined name `SessionManager`
+
+D:\Intellicrack\src\intellicrack\main.py:285:20: F821 Undefined name `SessionStore`
+
+D:\Intellicrack\src\intellicrack\main.py:289:37: F821 Undefined name `ToolRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:296:23: F821 Undefined name `ToolRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:299:41: F821 Undefined name `CredentialLoader`
+
+D:\Intellicrack\src\intellicrack\main.py:306:23: F821 Undefined name `CredentialLoader`
+
+D:\Intellicrack\src\intellicrack\main.py:309:33: F821 Undefined name `ProviderRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:316:39: F821 Undefined name `ProviderRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:320:35: F821 Undefined name `MainWindow`
+
+D:\Intellicrack\src\intellicrack\main.py:327:23: F821 Undefined name `MainWindow`
+
+D:\Intellicrack\src\intellicrack\main.py:395:6: F821 Undefined name `SplashScreen`
+
+D:\Intellicrack\src\intellicrack\main.py:439:15: F821 Undefined name `ProviderRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:440:18: F821 Undefined name `CredentialLoader`
+
+D:\Intellicrack\src\intellicrack\main.py:462:27: F821 Undefined name `ProviderName`
+
+D:\Intellicrack\src\intellicrack\main.py:462:46: F821 Undefined name `LLMProviderBase`
+
+D:\Intellicrack\src\intellicrack\main.py:463:21: F821 Undefined name `ProviderName`
+
+D:\Intellicrack\src\intellicrack\main.py:463:40: F821 Undefined name `LLMProviderBase`
+
+D:\Intellicrack\src\intellicrack\main.py:476:40: F821 Undefined name `ProviderName`
+
+D:\Intellicrack\src\intellicrack\main.py:476:75: F821 Undefined name `LLMProviderBase`
+
+D:\Intellicrack\src\intellicrack\main.py:526:74: F821 Undefined name `ProcessManager`
+
+D:\Intellicrack\src\intellicrack\main.py:549:82: F821 Undefined name `ProcessManager`
+
+D:\Intellicrack\src\intellicrack\main.py:641:24: F821 Undefined name `ProviderRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:667:24: F821 Undefined name `ProviderRegistry`
+
+D:\Intellicrack\src\intellicrack\main.py:706:13: F821 Undefined name `SplashScreen`
+
+D:\Intellicrack\src\intellicrack\main.py:707:22: F821 Undefined name `ProcessManager`
+
+D:\Intellicrack\src\intellicrack\main.py:771:38: F821 Undefined name `ModelDiscovery`

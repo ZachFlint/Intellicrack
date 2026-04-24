@@ -133,7 +133,6 @@ intellicrack.core.hexpat.ast_nodes.is_const  # unused-variable
 intellicrack.core.hexpat.interpreter.execute_bytes  # unused-method
 intellicrack.core.hexpat.pattern_registry.get_pattern  # unused-method
 intellicrack.core.hexpat.stdlib.set_array_index  # unused-method
-intellicrack.core.logging.get_structlog_logger  # unused-function
 intellicrack.core.process_manager.ASYNC_SUBPROCESS  # unused-variable
 intellicrack.core.session.row_factory  # unused-attribute
 intellicrack.core.template_manager._config_dir  # unused-attribute

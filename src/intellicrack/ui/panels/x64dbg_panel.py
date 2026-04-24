@@ -99,9 +99,8 @@ _SEGMENT_REGS = ["cs", "ds", "es", "fs", "gs", "ss"]
 class X64DbgPanel(AnalysisPanelBase):
     """Native Qt panel for x64dbg interactive debugging.
 
-    Displays disassembly, registers, breakpoints, memory dumps,
-    stack traces, and a command console for controlling x64dbg
-    via the X64DbgBridge backend.
+    Displays disassembly, registers, breakpoints, memory dumps, stack traces, and a command console for controlling x64dbg via the
+    X64DbgBridge backend.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

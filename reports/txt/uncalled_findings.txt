@@ -62,17 +62,17 @@ src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function paintEvent
 src\intellicrack\ui\panels\hex_editor\_widgets.py: Unused function prefetch_on_scroll
 
 
-5 findings in src\intellicrack\core\types.py
+5 findings in src\intellicrack\core\script_gen.py
 
-src\intellicrack\core\types.py: Unused function display_type
+src\intellicrack\core\script_gen.py: Unused function generate_cutter
 
-src\intellicrack\core\types.py: Unused function has_code
+src\intellicrack\core\script_gen.py: Unused function generate_frida
 
-src\intellicrack\core\types.py: Unused function is_executable
+src\intellicrack\core\script_gen.py: Unused function generate_ghidra
 
-src\intellicrack\core\types.py: Unused function is_readable
+src\intellicrack\core\script_gen.py: Unused function generate_python
 
-src\intellicrack\core\types.py: Unused function is_writable
+src\intellicrack\core\script_gen.py: Unused function generate_x64dbg
 
 
 5 findings in src\intellicrack\ui\panels\qt_compat.py
@@ -99,6 +99,17 @@ src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseMoveEvent
 src\intellicrack\ui\panels\vnc_widget.py: Unused function mouseReleaseEvent
 
 src\intellicrack\ui\panels\vnc_widget.py: Unused function paintEvent
+
+
+4 findings in src\intellicrack\core\types.py
+
+src\intellicrack\core\types.py: Unused function display_type
+
+src\intellicrack\core\types.py: Unused function has_code
+
+src\intellicrack\core\types.py: Unused function is_readable
+
+src\intellicrack\core\types.py: Unused function is_writable
 
 
 3 findings in src\intellicrack\core\disassembler.py
@@ -142,6 +153,13 @@ src\intellicrack\bridges\base.py: Unused function supports_arch
 src\intellicrack\bridges\base.py: Unused function supports_format
 
 
+2 findings in src\intellicrack\bridges\ghidra.py
+
+src\intellicrack\bridges\ghidra.py: Unused function bridge_script_path
+
+src\intellicrack\bridges\ghidra.py: Unused function decompiler_options
+
+
 2 findings in src\intellicrack\bridges\hex_state.py
 
 src\intellicrack\bridges\hex_state.py: Unused function clear_selection
@@ -161,6 +179,13 @@ src\intellicrack\core\hexpat\pattern_registry.py: Unused function load_source
 src\intellicrack\core\logging.py: Unused function get_structlog_logger
 
 src\intellicrack\core\logging.py: Unused function log_binary_operation
+
+
+2 findings in src\intellicrack\providers\base.py
+
+src\intellicrack\providers\base.py: Unused function get_pending_thinking
+
+src\intellicrack\providers\base.py: Unused function get_pending_usage
 
 
 2 findings in src\intellicrack\providers\local_transformers.py
@@ -205,11 +230,6 @@ src\intellicrack\ui\resources\theme_manager.py: Unused function current_theme
 src\intellicrack\ui\resources\theme_manager.py: Unused function get_available_themes
 
 
-1 findings in src\intellicrack\bridges\ghidra.py
-
-src\intellicrack\bridges\ghidra.py: Unused function bridge_script_path
-
-
 1 findings in src\intellicrack\core\hexpat\data_reader.py
 
 src\intellicrack\core\hexpat\data_reader.py: Unused function read_fixed_string
@@ -218,11 +238,6 @@ src\intellicrack\core\hexpat\data_reader.py: Unused function read_fixed_string
 1 findings in src\intellicrack\core\hexpat\type_system.py
 
 src\intellicrack\core\hexpat\type_system.py: Unused function all_names
-
-
-1 findings in src\intellicrack\core\script_gen.py
-
-src\intellicrack\core\script_gen.py: Unused function prepare_ai_prompt
 
 
 1 findings in src\intellicrack\ui\confirmation_dialog.py

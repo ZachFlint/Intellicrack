@@ -2095,9 +2095,7 @@ class BuiltinFunctions:
         Raises:
             HexPatRuntimeError: When no reflection provider is wired.
         """
-        hook = (
-            self._reflection.set_pattern_palette_colors if self._reflection is not None else None
-        )
+        hook = self._reflection.set_pattern_palette_colors if self._reflection is not None else None
         if hook is None:
             msg = "std::core::set_pattern_palette_colors requires evaluator metadata not yet wired"
             raise HexPatRuntimeError(msg)
@@ -2143,10 +2141,7 @@ class BuiltinFunctions:
             msg = "std::core::execute_function requires evaluator metadata not yet wired"
             raise HexPatRuntimeError(msg)
         function_name = str(self._unwrap(args[0]))
-        forwarded: list[PatternValue] = [
-            a if isinstance(a, PatternValue) else PatternValue(value=self._unwrap(a))
-            for a in args[1:]
-        ]
+        forwarded: list[PatternValue] = [a if isinstance(a, PatternValue) else PatternValue(value=self._unwrap(a)) for a in args[1:]]
         return hook(function_name, forwarded)
 
     def _io_print(self, *args: object) -> PatternValue:

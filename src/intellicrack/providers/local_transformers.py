@@ -171,9 +171,8 @@ def _classify_model_capabilities(
 class LocalTransformersProvider(LLMProviderBase):
     """Local Transformers provider with Intel XPU/CPU inference.
 
-    Provides local LLM inference using HuggingFace Transformers models
-    with automatic Intel XPU acceleration when available, falling back
-    to CPU when XPU is unavailable.
+    Provides local LLM inference using HuggingFace Transformers models with automatic Intel XPU acceleration when available, falling back to
+    CPU when XPU is unavailable.
     """
 
     def __init__(
@@ -386,11 +385,9 @@ class LocalTransformersProvider(LLMProviderBase):
     async def disconnect(self) -> None:
         """Disconnect from the provider and cleanup resources.
 
-        Releases the loaded model, clears any device-side KV caches
-        captured during generation, empties the XPU/CUDA allocator
-        caches when applicable, and finally forwards to the base
-        disconnect implementation.  All errors are logged rather than
-        propagated so the caller always observes a disconnected state.
+        Releases the loaded model, clears any device-side KV caches captured during generation, empties the XPU/CUDA allocator caches when
+        applicable, and finally forwards to the base disconnect implementation.  All errors are logged rather than propagated so the caller
+        always observes a disconnected state.
         """
         try:
             if self._loaded_model is not None:

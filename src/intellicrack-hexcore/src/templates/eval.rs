@@ -278,6 +278,7 @@ impl<'a> TemplateEvaluator<'a> {
             ConditionOp::Ge => actual >= condition_value,
             ConditionOp::Le => actual <= condition_value,
             ConditionOp::BitAnd => (actual & condition_value) != 0,
+            ConditionOp::BitAndZero => (actual & condition_value) == 0,
         };
 
         if condition_met {
