@@ -1,1 +1,41 @@
-No findings.
+6 findings in src\intellicrack\core\orchestrator.py
+
+src\intellicrack\core\orchestrator.py:_run_agent_loop:442: DAR401: -r CancelledError
+
+src\intellicrack\core\orchestrator.py:_run_agent_loop:447: DAR402: +r asyncio.CancelledError
+
+src\intellicrack\core\orchestrator.py:_stream_response:1002: DAR401: -r CancelledError
+
+src\intellicrack\core\orchestrator.py:_stream_response:1022: DAR402: +r asyncio.CancelledError
+
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1119: DAR401: -r CancelledError
+
+src\intellicrack\core\orchestrator.py:_execute_tool_calls:1129: DAR402: +r asyncio.CancelledError
+
+
+3 findings in src\intellicrack\core\transform_pipeline.py
+
+src\intellicrack\core\transform_pipeline.py:name:225: DAR202: + return
+
+src\intellicrack\core\transform_pipeline.py:category:234: DAR202: + return
+
+src\intellicrack\core\transform_pipeline.py:process:254: DAR202: + return
+
+
+2 findings in src\intellicrack\core\session.py
+
+src\intellicrack\core\session.py:save:287: DAR401: -r OSError
+
+src\intellicrack\core\session.py:save:287: DAR401: -r sqlite3.Error
+
+
+2 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:_load_model_for_cuda:790: DAR401: -r OSError
+
+src\intellicrack\providers\local_transformers.py:_load_model_for_cuda:790: DAR401: -r ValueError
+
+
+1 findings in src\intellicrack\ui\panels\hex_editor\_sections.py
+
+src\intellicrack\ui\panels\hex_editor\_sections.py:extract_strings:44: DAR202: + return

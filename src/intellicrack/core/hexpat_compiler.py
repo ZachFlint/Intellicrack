@@ -1354,34 +1354,24 @@ class HexPatCodegen:
     def _gen_conditional(self, node: ConditionalField) -> list[dict[str, Any]]:
         """Generate conditional field definition dicts.
 
-        For if/else constructs, emits the true-branch as a Conditional field.
-        If false_fields exist, emits a second Conditional with an inverted
-        comparison so the two emitted Conditionals partition the space of the
-        original predicate.
+        For ``if``/``else`` constructs, emits the true-branch as a
+        ``Conditional`` field. If ``false_fields`` exist, emits a second
+        ``Conditional`` with an inverted comparison so the two emitted
+        ``Conditional`` instructions partition the space of the original
+        predicate exactly.
 
-        The runtime Conditional primitive exposes only a single set of fields
-        per instruction and has no Else branch. It also does not provide a
-        dedicated "bit-mask-is-zero" comparison. As a result, the natural
-        inversion for a bit-mask predicate ``(field & mask) != 0`` would be
-        ``(field & mask) == 0``, which cannot be expressed with the current
-        primitive surface (there is no ``BitAndZero`` opcode and the
-        expression evaluator used by ``Computed`` fields does not parse the
-        ``&`` operator, so a helper temporary cannot be synthesised either).
-        Emitting ``field == 0`` as an inversion would silently mis-parse any
-        payload where additional unrelated bits of ``field`` are set, so the
-        compiler refuses to lower such an ``else`` branch and raises
-        ``HexPatError`` instead of fabricating incorrect semantics.
+        The Rust runtime exposes a dedicated :code:`BitAndZero` opcode whose
+        semantics are :code:`(field & mask) == 0`, the natural inverse of
+        :code:`BitAnd` (:code:`(field & mask) != 0`). Bit-mask ``if``/``else``
+        pairs are therefore lowered to :code:`BitAnd` for the true-branch and
+        :code:`BitAndZero` for the else-branch, preserving the user's
+        intended semantics for arbitrary payload bits.
 
         Args:
             node: Conditional field AST node.
 
         Returns:
             list[dict[str, Any]]: One or two JSON conditional field definitions.
-
-        Raises:
-            HexPatError: If the condition is a bit-mask test (``field & mask``)
-                accompanied by an ``else`` branch, which cannot be expressed
-                correctly with the current primitive set.
         """
         condition_field = ""
         condition_value = 0
@@ -1428,18 +1418,6 @@ class HexPatCodegen:
         ]
 
         if node.false_fields:
-            if condition_op == "BitAnd":
-                msg = (
-                    f"cannot emit else-branch for bit-mask condition "
-                    f"'{condition_field} & {condition_value}': the runtime "
-                    f"Conditional primitive has no BitAndZero inverse and the "
-                    f"Computed expression parser does not support '&', so "
-                    f"'(field & mask) == 0' cannot be expressed; rewrite the "
-                    f"pattern without an else branch (use two separate ifs with "
-                    f"explicit equality tests against the expected masked values)"
-                )
-                raise HexPatError(msg)
-
             invert_map: dict[str, str] = {
                 "Eq": "Ne",
                 "Ne": "Eq",
@@ -1447,6 +1425,8 @@ class HexPatCodegen:
                 "Lt": "Ge",
                 "Ge": "Lt",
                 "Le": "Gt",
+                "BitAnd": "BitAndZero",
+                "BitAndZero": "BitAnd",
             }
             inverted_op = invert_map.get(condition_op, "Ne")
 

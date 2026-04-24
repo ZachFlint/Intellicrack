@@ -1,7 +1,150 @@
 {
   "tool": "darglint",
-  "generated": "2026-04-17T05:38:56.225437+00:00",
-  "total_findings": 0,
-  "total_files": 0,
-  "files": []
+  "generated": "2026-04-24T05:13:02.957387+00:00",
+  "total_findings": 14,
+  "total_files": 5,
+  "files": [
+    {
+      "path": "src\\intellicrack\\core\\orchestrator.py",
+      "count": 6,
+      "findings": [
+        {
+          "line": 442,
+          "column": null,
+          "function": "_run_agent_loop",
+          "code": "DAR401",
+          "message": "[_run_agent_loop] -r CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:442: DAR401: -r CancelledError"
+        },
+        {
+          "line": 447,
+          "column": null,
+          "function": "_run_agent_loop",
+          "code": "DAR402",
+          "message": "[_run_agent_loop] +r asyncio.CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_run_agent_loop:447: DAR402: +r asyncio.CancelledError"
+        },
+        {
+          "line": 1002,
+          "column": null,
+          "function": "_stream_response",
+          "code": "DAR401",
+          "message": "[_stream_response] -r CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:1002: DAR401: -r CancelledError"
+        },
+        {
+          "line": 1022,
+          "column": null,
+          "function": "_stream_response",
+          "code": "DAR402",
+          "message": "[_stream_response] +r asyncio.CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_stream_response:1022: DAR402: +r asyncio.CancelledError"
+        },
+        {
+          "line": 1119,
+          "column": null,
+          "function": "_execute_tool_calls",
+          "code": "DAR401",
+          "message": "[_execute_tool_calls] -r CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1119: DAR401: -r CancelledError"
+        },
+        {
+          "line": 1129,
+          "column": null,
+          "function": "_execute_tool_calls",
+          "code": "DAR402",
+          "message": "[_execute_tool_calls] +r asyncio.CancelledError",
+          "raw": "src\\intellicrack\\core\\orchestrator.py:_execute_tool_calls:1129: DAR402: +r asyncio.CancelledError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\transform_pipeline.py",
+      "count": 3,
+      "findings": [
+        {
+          "line": 225,
+          "column": null,
+          "function": "name",
+          "code": "DAR202",
+          "message": "[name] + return",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:name:225: DAR202: + return"
+        },
+        {
+          "line": 234,
+          "column": null,
+          "function": "category",
+          "code": "DAR202",
+          "message": "[category] + return",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:category:234: DAR202: + return"
+        },
+        {
+          "line": 254,
+          "column": null,
+          "function": "process",
+          "code": "DAR202",
+          "message": "[process] + return",
+          "raw": "src\\intellicrack\\core\\transform_pipeline.py:process:254: DAR202: + return"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\session.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 287,
+          "column": null,
+          "function": "save",
+          "code": "DAR401",
+          "message": "[save] -r OSError",
+          "raw": "src\\intellicrack\\core\\session.py:save:287: DAR401: -r OSError"
+        },
+        {
+          "line": 287,
+          "column": null,
+          "function": "save",
+          "code": "DAR401",
+          "message": "[save] -r sqlite3.Error",
+          "raw": "src\\intellicrack\\core\\session.py:save:287: DAR401: -r sqlite3.Error"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\local_transformers.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": 790,
+          "column": null,
+          "function": "_load_model_for_cuda",
+          "code": "DAR401",
+          "message": "[_load_model_for_cuda] -r OSError",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:_load_model_for_cuda:790: DAR401: -r OSError"
+        },
+        {
+          "line": 790,
+          "column": null,
+          "function": "_load_model_for_cuda",
+          "code": "DAR401",
+          "message": "[_load_model_for_cuda] -r ValueError",
+          "raw": "src\\intellicrack\\providers\\local_transformers.py:_load_model_for_cuda:790: DAR401: -r ValueError"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": 44,
+          "column": null,
+          "function": "extract_strings",
+          "code": "DAR202",
+          "message": "[extract_strings] + return",
+          "raw": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py:extract_strings:44: DAR202: + return"
+        }
+      ]
+    }
+  ]
 }

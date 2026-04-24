@@ -33,6 +33,41 @@ src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:16: ser
 src/intellicrack-hexcore\target\debug\deps\serde_core-4fc3a9a4bb9c9a32.d:17: ser ==> set
 
 
+16 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:14: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:15: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:16: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-cf81c84a3550377d.d:17: ser ==> set
+
+
 16 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d
 
 src/intellicrack-hexcore\target\debug\deps\serde_core-d86809d9b0b73174.d:1: ser ==> set
@@ -138,6 +173,33 @@ src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d:16: s
 src/intellicrack-hexcore\target\release\deps\serde_core-7bd8eecab8417789.d:17: ser ==> set
 
 
+12 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:12: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:13: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:14: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_core-1ff2024c4d775afc.d:15: ser ==> set
+
+
 12 findings in src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d
 
 src/intellicrack-hexcore\target\debug\deps\serde_core-2028d3412432f3f9.d:1: ser ==> set
@@ -192,23 +254,25 @@ src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d:14: ser
 src/intellicrack-hexcore\target\debug\deps\serde_core-41c4da796a7ac8f6.d:15: ser ==> set
 
 
-8 findings in src/intellicrack\bridges\process.py
+9 findings in src/intellicrack\bridges\process.py
 
 src/intellicrack\bridges\process.py:9: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:469: SEH ==> SHE
+src/intellicrack\bridges\process.py:511: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:473: SEH ==> SHE
+src/intellicrack\bridges\process.py:515: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:664: SEH ==> SHE
+src/intellicrack\bridges\process.py:706: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:756: SEH ==> SHE
+src/intellicrack\bridges\process.py:798: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2835: SEH ==> SHE
+src/intellicrack\bridges\process.py:1171: re-declaring ==> redeclaring
 
-src/intellicrack\bridges\process.py:2839: SEH ==> SHE
+src/intellicrack\bridges\process.py:3616: SEH ==> SHE
 
-src/intellicrack\bridges\process.py:2849: SEH ==> SHE
+src/intellicrack\bridges\process.py:3620: SEH ==> SHE
+
+src/intellicrack\bridges\process.py:3630: SEH ==> SHE
 
 
 8 findings in src/intellicrack-hexcore\_typos.toml
@@ -268,6 +332,25 @@ src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:12: ser
 src/intellicrack-hexcore\target\debug\deps\serde_json-4b4d298195031be2.d:18: ser ==> set
 
 
+8 findings in src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:12: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-d3e2b787eb9af5fc.d:18: ser ==> set
+
+
 8 findings in src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d
 
 src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\serde_json-2e8323744a019080.d:1: ser ==> set
@@ -306,6 +389,21 @@ src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d:12: s
 src/intellicrack-hexcore\target\release\deps\serde_json-618a504fdd57c763.d:18: ser ==> set
 
 
+6 findings in src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:10: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_json-73d66bd94ff7db04.d:16: ser ==> set
+
+
 6 findings in src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d
 
 src/intellicrack-hexcore\target\debug\deps\serde_json-9c1e4cfcd0d5b9b1.d:1: ser ==> set
@@ -342,11 +440,11 @@ src/intellicrack\ui\panels\process_panel\_threads_tab.py:7: SEH ==> SHE
 
 src/intellicrack\ui\panels\process_panel\_threads_tab.py:48: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:242: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:250: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:245: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:253: SEH ==> SHE
 
-src/intellicrack\ui\panels\process_panel\_threads_tab.py:474: SEH ==> SHE
+src/intellicrack\ui\panels\process_panel\_threads_tab.py:485: SEH ==> SHE
 
 
 4 findings in src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d
@@ -358,6 +456,17 @@ src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:3: inout ==>
 src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:5: inout ==> input, in out
 
 src/intellicrack-hexcore\target\debug\deps\inout-184b7e41a5dc3483.d:9: inout ==> input, in out
+
+
+4 findings in src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d:5: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-a3ab05ce946cfbff.d:9: inout ==> input, in out
 
 
 4 findings in src/intellicrack-hexcore\target\debug\deps\inout-ff478cd917ff9fbd.d
@@ -391,6 +500,17 @@ src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:3: ser ==> s
 src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:5: ser ==> set
 
 src/intellicrack-hexcore\target\debug\deps\serde-7d0f1529218a447f.d:11: ser ==> set
+
+
+4 findings in src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d
+
+src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d:5: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-a69d48844ad78271.d:11: ser ==> set
 
 
 4 findings in src/intellicrack-hexcore\target\llvm-cov-target\debug\deps\inout-184b7e41a5dc3483.d
@@ -439,11 +559,11 @@ src/intellicrack-hexcore\target\release\deps\serde-e93b3533851d4d9f.d:11: ser ==
 
 3 findings in src/intellicrack\bridges\x64dbg.py
 
-src/intellicrack\bridges\x64dbg.py:1279: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:1328: SEH ==> SHE
 
-src/intellicrack\bridges\x64dbg.py:2338: unparseable ==> unparsable
+src/intellicrack\bridges\x64dbg.py:2461: unparseable ==> unparsable
 
-src/intellicrack\bridges\x64dbg.py:3981: SEH ==> SHE
+src/intellicrack\bridges\x64dbg.py:4373: SEH ==> SHE
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d
@@ -455,6 +575,15 @@ src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:3: inout ==>
 src/intellicrack-hexcore\target\debug\deps\inout-34bd8eddb48cf7f4.d:7: inout ==> input, in out
 
 
+3 findings in src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d
+
+src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d:1: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d:3: inout ==> input, in out
+
+src/intellicrack-hexcore\target\debug\deps\inout-964c33ec394638fd.d:7: inout ==> input, in out
+
+
 3 findings in src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d
 
 src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:1: inout ==> input, in out
@@ -462,6 +591,15 @@ src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:1: inout ==>
 src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:3: inout ==> input, in out
 
 src/intellicrack-hexcore\target\debug\deps\inout-bf44c4e3ebd981c3.d:7: inout ==> input, in out
+
+
+3 findings in src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d
+
+src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde-6d58608743fd6fc6.d:9: ser ==> set
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\serde-b4ec85fafc863481.d
@@ -489,6 +627,15 @@ src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:1: se
 src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:3: ser ==> set
 
 src/intellicrack-hexcore\target\debug\deps\serde_derive-4d3dc0a78c25b9b0.d:31: ser ==> set
+
+
+3 findings in src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d:1: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d:3: ser ==> set
+
+src/intellicrack-hexcore\target\debug\deps\serde_derive-bc6fe4635ef75c20.d:31: ser ==> set
 
 
 3 findings in src/intellicrack-hexcore\target\debug\deps\serde_derive-f8f79c2a108af0eb.d
@@ -529,9 +676,9 @@ tests/test_hexcore_e2e\test_bridge_va_mapping.py:173: vas ==> was
 
 2 findings in src/intellicrack\bridges\_win32_types.py
 
-src/intellicrack\bridges\_win32_types.py:622: SEH ==> SHE
+src/intellicrack\bridges\_win32_types.py:650: SEH ==> SHE
 
-src/intellicrack\bridges\_win32_types.py:627: SEH ==> SHE
+src/intellicrack\bridges\_win32_types.py:655: SEH ==> SHE
 
 
 2 findings in tests/test_bridges\test_process_bridge.py
@@ -560,6 +707,16 @@ tests/test_hexcore_e2e\test_encodings.py:151: caf ==> calf
 tests/test_sandbox\test_base_types.py:226: te ==> the, be, we, to
 
 tests/test_sandbox\test_base_types.py:232: te ==> the, be, we, to
+
+
+1 findings in scripts/sandbox\reporting.py
+
+scripts/sandbox\reporting.py:164: unparseable ==> unparsable
+
+
+1 findings in src/intellicrack\sandbox\windows.py
+
+src/intellicrack\sandbox\windows.py:2237: unparseable ==> unparsable
 
 
 1 findings in tests/test_hexcore_e2e\test_bridge_new_capabilities.py

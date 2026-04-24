@@ -192,9 +192,8 @@ class EntropyGraphWidget(QWidget):
 class ByteDistributionWidget(QWidget):
     """Histogram widget showing the frequency of each of the 256 byte values.
 
-    Renders 256 vertical bars, one per byte value.  Supports optional
-    logarithmic scale.  Hovering over a bar shows a tooltip with the
-    byte value and count.
+    Renders 256 vertical bars, one per byte value.  Supports optional logarithmic scale.  Hovering over a bar shows a tooltip with the byte
+    value and count.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -292,9 +291,8 @@ class ByteDistributionWidget(QWidget):
 class CustomCrcDialog(QDialog):
     """Dialog for computing a custom parametric CRC.
 
-    Provides input fields for width, polynomial, initial value,
-    reflection options, and XOR-out value, then computes the CRC
-    over the supplied data when the user clicks Calculate.
+    Provides input fields for width, polynomial, initial value, reflection options, and XOR-out value, then computes the CRC over the
+    supplied data when the user clicks Calculate.
     """
 
     def __init__(self, data: bytes, parent: QWidget | None = None) -> None:
@@ -485,8 +483,7 @@ class _DigramMatrixWidget(QWidget):
 class DigramMatrixDialog(QDialog):
     """Dialog displaying a 256x256 byte pair frequency heatmap.
 
-    Visualises the digram matrix as a color-coded 2D grid where
-    each cell represents how often one byte follows another.
+    Visualises the digram matrix as a color-coded 2D grid where each cell represents how often one byte follows another.
     """
 
     def __init__(
@@ -523,8 +520,7 @@ _MAX_BUDGET_MB: int = 4096
 class LargeFileSettingsDialog(QDialog):
     """Dialog for configuring large file memory and chunk settings.
 
-    Provides controls for chunk size, memory budget, and prefetch
-    behavior used when working with memory-mapped large files.
+    Provides controls for chunk size, memory budget, and prefetch behavior used when working with memory-mapped large files.
     """
 
     def __init__(

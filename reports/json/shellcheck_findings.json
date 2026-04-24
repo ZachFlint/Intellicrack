@@ -1,7 +1,7 @@
 {
-  "tool": "shellcheck",
+  "generated": "2026-04-23T23:13:08.9619959-06:00",
   "total_findings": 0,
-  "files": [],
+  "tool": "shellcheck",
   "total_files": 0,
-  "generated": "2026-04-16T23:38:51.3470116-06:00"
+  "files": []
 }

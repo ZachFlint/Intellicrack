@@ -11,13 +11,34 @@
             {
               "id": "general",
               "shortDescription": {
-                "text": "'shutdown' has rank D (complexity > threshold)"
+                "text": "'resolve_flag' has rank C (complexity > threshold)"
               }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'resolve_flag' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2179,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
         {
           "ruleId": "general",
           "level": "warning",
@@ -32,7 +53,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1151,
+                  "startLine": 1200,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_escape_js_string' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3169,
                   "startColumn": 1
                 }
               }
@@ -53,7 +95,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2002,
+                  "startLine": 2148,
                   "startColumn": 1
                 }
               }
@@ -74,7 +116,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3848,
+                  "startLine": 4431,
                   "startColumn": 1
                 }
               }
@@ -95,7 +137,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3671,
+                  "startLine": 4254,
                   "startColumn": 1
                 }
               }
@@ -116,70 +158,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4264,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'hook_function' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1783,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'find_functions_named' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2496,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'replace_function' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/frida_bridge.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2619,
+                  "startLine": 4847,
                   "startColumn": 1
                 }
               }
@@ -200,7 +179,133 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4487,
+                  "startLine": 5063,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'enumerate_threads' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2567,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'find_functions_named' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2878,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'stalker_follow' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3256,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'allocate_string' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/frida_bridge.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3937,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_detect_architecture' has rank E (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1686,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_query_ghidra_arch' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1778,
                   "startColumn": 1
                 }
               }
@@ -221,7 +326,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1986,
+                  "startLine": 2306,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'write_bytes' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/ghidra.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3401,
                   "startColumn": 1
                 }
               }
@@ -242,7 +368,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2223,
+                  "startLine": 2287,
                   "startColumn": 1
                 }
               }
@@ -263,28 +389,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4515,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_exec_bps_command' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 6031,
+                  "startLine": 4700,
                   "startColumn": 1
                 }
               }
@@ -305,7 +410,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3365,
+                  "startLine": 3520,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_exec_bps_command' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6216,
                   "startColumn": 1
                 }
               }
@@ -326,7 +452,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5099,
+                  "startLine": 5284,
                   "startColumn": 1
                 }
               }
@@ -347,7 +473,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5909,
+                  "startLine": 6094,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'import_patches' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3342,
                   "startColumn": 1
                 }
               }
@@ -368,7 +515,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3562,
+                  "startLine": 3725,
                   "startColumn": 1
                 }
               }
@@ -389,7 +536,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3941,
+                  "startLine": 4104,
                   "startColumn": 1
                 }
               }
@@ -410,28 +557,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4013,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'calculate_hash_custom_crc' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/hex_editor.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3132,
+                  "startLine": 4191,
                   "startColumn": 1
                 }
               }
@@ -452,7 +578,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 3442,
+                  "startLine": 3600,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'calculate_hash_custom_crc' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3199,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_apply_ips_patches' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/hex_editor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3459,
                   "startColumn": 1
                 }
               }
@@ -473,7 +641,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5171,
+                  "startLine": 5356,
                   "startColumn": 1
                 }
               }
@@ -494,7 +662,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5471,
+                  "startLine": 5656,
                   "startColumn": 1
                 }
               }
@@ -515,7 +683,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5600,
+                  "startLine": 5785,
                   "startColumn": 1
                 }
               }
@@ -536,7 +704,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 6137,
+                  "startLine": 6322,
                   "startColumn": 1
                 }
               }
@@ -557,7 +725,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2514,
+                  "startLine": 2581,
                   "startColumn": 1
                 }
               }
@@ -578,7 +746,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2885,
+                  "startLine": 2952,
                   "startColumn": 1
                 }
               }
@@ -599,7 +767,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4446,
+                  "startLine": 4631,
                   "startColumn": 1
                 }
               }
@@ -620,7 +788,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 5664,
+                  "startLine": 5849,
                   "startColumn": 1
                 }
               }
@@ -641,7 +809,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 231,
+                  "startLine": 240,
                   "startColumn": 1
                 }
               }
@@ -662,28 +830,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 571,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'get_memory_map' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/process.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1398,
+                  "startLine": 580,
                   "startColumn": 1
                 }
               }
@@ -704,7 +851,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1461,
+                  "startLine": 1757,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_memory_map' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1694,
                   "startColumn": 1
                 }
               }
@@ -725,7 +893,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2004,
+                  "startLine": 2440,
                   "startColumn": 1
                 }
               }
@@ -746,7 +914,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2260,
+                  "startLine": 2696,
                   "startColumn": 1
                 }
               }
@@ -767,7 +935,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2895,
+                  "startLine": 3676,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_detect_arch_via_pe_header' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/process.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1250,
                   "startColumn": 1
                 }
               }
@@ -788,7 +977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1918,
+                  "startLine": 2354,
                   "startColumn": 1
                 }
               }
@@ -809,7 +998,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2620,
+                  "startLine": 3236,
                   "startColumn": 1
                 }
               }
@@ -830,28 +1019,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2967,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'stack_walk' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/process.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2719,
+                  "startLine": 3748,
                   "startColumn": 1
                 }
               }
@@ -904,27 +1072,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'find_pattern' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 3185,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "'get_breakpoints' has rank C (complexity > threshold)"
           },
           "locations": [
@@ -935,7 +1082,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2175,
+                  "startLine": 2286,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'find_pattern' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3466,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'patch_anti_debug' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5065,
                   "startColumn": 1
                 }
               }
@@ -956,91 +1145,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2282,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'get_stack_trace' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2833,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'yara_scan' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 4286,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'disassemble_at' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2745,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_read_unicode_string_from_params' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/bridges/x64dbg.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 320,
+                  "startLine": 2399,
                   "startColumn": 1
                 }
               }
@@ -1061,7 +1166,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2649,
+                  "startLine": 2778,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'disassemble_at' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2908,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_stack_trace' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 3002,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'yara_scan' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 4726,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_read_unicode_string_from_params' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/bridges/x64dbg.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 355,
                   "startColumn": 1
                 }
               }
@@ -1135,6 +1324,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'_eval_const_expr' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat_compiler.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1508,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'_read_multi_char_operator' has rank C (complexity > threshold)"
           },
           "locations": [
@@ -1198,27 +1408,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_eval_const_expr' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat_compiler.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1480,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "'_sanitize_arguments' has rank C (complexity > threshold)"
           },
           "locations": [
@@ -1229,7 +1418,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 432,
+                  "startLine": 450,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +1439,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 435,
+                  "startLine": 442,
                   "startColumn": 1
                 }
               }
@@ -1271,7 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1708,
+                  "startLine": 1776,
                   "startColumn": 1
                 }
               }
@@ -1292,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1830,
+                  "startLine": 1929,
                   "startColumn": 1
                 }
               }
@@ -1313,7 +1502,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 285,
+                  "startLine": 307,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_terminate_tree_with_psutil' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 404,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'run_tracked' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/process_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 766,
                   "startColumn": 1
                 }
               }
@@ -1334,7 +1565,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 185,
+                  "startLine": 198,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'bootstrap_builtins' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/template_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 124,
                   "startColumn": 1
                 }
               }
@@ -1355,7 +1607,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 445,
+                  "startLine": 446,
                   "startColumn": 1
                 }
               }
@@ -1376,7 +1628,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 122,
+                  "startLine": 123,
                   "startColumn": 1
                 }
               }
@@ -1397,7 +1649,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 313,
+                  "startLine": 312,
                   "startColumn": 1
                 }
               }
@@ -1418,7 +1670,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1452,
+                  "startLine": 1668,
                   "startColumn": 1
                 }
               }
@@ -1439,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1274,
+                  "startLine": 1490,
                   "startColumn": 1
                 }
               }
@@ -1460,7 +1712,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1341,
+                  "startLine": 1557,
                   "startColumn": 1
                 }
               }
@@ -1481,7 +1733,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1222,
+                  "startLine": 1438,
                   "startColumn": 1
                 }
               }
@@ -1502,28 +1754,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1409,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_eval_cast' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1830,
+                  "startLine": 1625,
                   "startColumn": 1
                 }
               }
@@ -1544,7 +1775,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 356,
+                  "startLine": 384,
                   "startColumn": 1
                 }
               }
@@ -1565,7 +1796,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 492,
+                  "startLine": 520,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_coerce_to_integer_primitive' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2213,
                   "startColumn": 1
                 }
               }
@@ -1586,7 +1838,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1669,
+                  "startLine": 1885,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_eval_placement' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/evaluator.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 659,
                   "startColumn": 1
                 }
               }
@@ -1607,7 +1880,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 690,
+                  "startLine": 721,
                   "startColumn": 1
                 }
               }
@@ -1628,7 +1901,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1003,
+                  "startLine": 1154,
                   "startColumn": 1
                 }
               }
@@ -1649,7 +1922,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1761,
+                  "startLine": 1977,
                   "startColumn": 1
                 }
               }
@@ -1733,7 +2006,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 488,
+                  "startLine": 647,
                   "startColumn": 1
                 }
               }
@@ -1754,7 +2027,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 661,
+                  "startLine": 820,
                   "startColumn": 1
                 }
               }
@@ -1775,7 +2048,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 380,
+                  "startLine": 539,
                   "startColumn": 1
                 }
               }
@@ -1796,7 +2069,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 862,
+                  "startLine": 1021,
                   "startColumn": 1
                 }
               }
@@ -1807,17 +2080,59 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'match_file' has rank C (complexity > threshold)"
+            "text": "'_parse_type' has rank C (complexity > threshold)"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "src/intellicrack/core/hexpat/pattern_registry.py",
+                  "uri": "src/intellicrack/core/hexpat/parser.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 138,
+                  "startLine": 362,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_process_source' has rank E (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 208,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_parse_macro_arguments' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 569,
                   "startColumn": 1
                 }
               }
@@ -1838,7 +2153,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 88,
+                  "startLine": 92,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_expand_macros_once' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 449,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_substitute_func_macro' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/preprocessor.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 646,
                   "startColumn": 1
                 }
               }
@@ -1859,7 +2216,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 418,
+                  "startLine": 723,
                   "startColumn": 1
                 }
               }
@@ -1870,7 +2227,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_process_conditionals' has rank C (complexity > threshold)"
+            "text": "'HexPatPreprocessor' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -1880,7 +2237,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 348,
+                  "startLine": 69,
                   "startColumn": 1
                 }
               }
@@ -1891,7 +2248,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_process_source' has rank C (complexity > threshold)"
+            "text": "'_resolve_include' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -1901,7 +2258,70 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 203,
+                  "startLine": 346,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_random_generate' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1714,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_math_accumulate' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1113,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'save_to_env_file' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/env_loader.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 563,
                   "startColumn": 1
                 }
               }
@@ -1922,7 +2342,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 73,
+                  "startLine": 256,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_token' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/credentials/oauth.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 897,
                   "startColumn": 1
                 }
               }
@@ -1943,7 +2384,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 544,
+                  "startLine": 578,
                   "startColumn": 1
                 }
               }
@@ -1954,7 +2395,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'chat_stream' has rank C (complexity > threshold)"
+            "text": "'chat_stream' has rank D (complexity > threshold)"
           },
           "locations": [
             {
@@ -1964,7 +2405,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 421,
+                  "startLine": 472,
                   "startColumn": 1
                 }
               }
@@ -1985,7 +2426,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 205,
+                  "startLine": 212,
                   "startColumn": 1
                 }
               }
@@ -2006,7 +2447,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 511,
+                  "startLine": 566,
                   "startColumn": 1
                 }
               }
@@ -2080,7 +2521,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'chat_stream' has rank C (complexity > threshold)"
+            "text": "'chat_stream' has rank D (complexity > threshold)"
           },
           "locations": [
             {
@@ -2090,7 +2531,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 343,
+                  "startLine": 395,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'chat' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 243,
                   "startColumn": 1
                 }
               }
@@ -2111,28 +2573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 549,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'chat' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/google.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 208,
+                  "startLine": 699,
                   "startColumn": 1
                 }
               }
@@ -2153,70 +2594,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 586,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'chat_stream' has rank D (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/grok.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 414,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'chat' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/grok.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 233,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'chat_stream' has rank D (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/providers/huggingface.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 440,
+                  "startLine": 736,
                   "startColumn": 1
                 }
               }
@@ -2233,11 +2611,74 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
+                  "uri": "src/intellicrack/providers/google.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 163,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'chat_stream' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 477,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'chat' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/grok.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 245,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'chat_stream' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
                   "uri": "src/intellicrack/providers/huggingface.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 162,
+                  "startLine": 547,
                   "startColumn": 1
                 }
               }
@@ -2258,7 +2699,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 250,
+                  "startLine": 408,
                   "startColumn": 1
                 }
               }
@@ -2279,7 +2720,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 932,
+                  "startLine": 1259,
                   "startColumn": 1
                 }
               }
@@ -2300,7 +2741,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 457,
+                  "startLine": 594,
                   "startColumn": 1
                 }
               }
@@ -2321,7 +2762,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 368,
+                  "startLine": 497,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_load_model_for_cuda' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 790,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'connect' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/local_transformers.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 255,
                   "startColumn": 1
                 }
               }
@@ -2342,7 +2825,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 296,
+                  "startLine": 425,
                   "startColumn": 1
                 }
               }
@@ -2405,7 +2888,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 580,
+                  "startLine": 985,
                   "startColumn": 1
                 }
               }
@@ -2426,7 +2909,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 331,
+                  "startLine": 697,
                   "startColumn": 1
                 }
               }
@@ -2447,7 +2930,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 456,
+                  "startLine": 505,
                   "startColumn": 1
                 }
               }
@@ -2468,7 +2951,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 264,
+                  "startLine": 274,
                   "startColumn": 1
                 }
               }
@@ -2489,7 +2972,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 385,
+                  "startLine": 433,
                   "startColumn": 1
                 }
               }
@@ -2510,7 +2993,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 219,
+                  "startLine": 234,
                   "startColumn": 1
                 }
               }
@@ -2531,7 +3014,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 142,
+                  "startLine": 157,
                   "startColumn": 1
                 }
               }
@@ -2552,7 +3035,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 212,
+                  "startLine": 215,
                   "startColumn": 1
                 }
               }
@@ -2573,7 +3056,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 417,
+                  "startLine": 420,
                   "startColumn": 1
                 }
               }
@@ -2699,7 +3182,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 150,
+                  "startLine": 151,
                   "startColumn": 1
                 }
               }
@@ -2720,28 +3203,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1000,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'apply_anti_evasion' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 2580,
+                  "startLine": 1084,
                   "startColumn": 1
                 }
               }
@@ -2762,7 +3224,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1834,
+                  "startLine": 2056,
                   "startColumn": 1
                 }
               }
@@ -2783,28 +3245,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2777,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_parse_network_log' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/sandbox/qemu.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1999,
+                  "startLine": 3165,
                   "startColumn": 1
                 }
               }
@@ -2825,7 +3266,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2212,
+                  "startLine": 2519,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'apply_anti_evasion' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/qemu.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2925,
                   "startColumn": 1
                 }
               }
@@ -2846,7 +3308,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1227,
+                  "startLine": 2031,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_resolve_worker_pid' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 489,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_parse_process_log' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1357,
                   "startColumn": 1
                 }
               }
@@ -2867,7 +3371,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 332,
+                  "startLine": 588,
                   "startColumn": 1
                 }
               }
@@ -2888,7 +3392,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 586,
+                  "startLine": 1105,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'dump_memory' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1856,
                   "startColumn": 1
                 }
               }
@@ -2909,7 +3434,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 299,
+                  "startLine": 314,
                   "startColumn": 1
                 }
               }
@@ -2930,7 +3455,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1495,
+                  "startLine": 1634,
                   "startColumn": 1
                 }
               }
@@ -2951,7 +3476,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1897,
+                  "startLine": 2143,
                   "startColumn": 1
                 }
               }
@@ -2972,7 +3497,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1005,
+                  "startLine": 1020,
                   "startColumn": 1
                 }
               }
@@ -2993,7 +3518,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2116,
+                  "startLine": 2362,
                   "startColumn": 1
                 }
               }
@@ -3014,7 +3539,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 818,
+                  "startLine": 940,
                   "startColumn": 1
                 }
               }
@@ -3035,7 +3560,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 607,
+                  "startLine": 664,
                   "startColumn": 1
                 }
               }
@@ -3056,7 +3581,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 573,
+                  "startLine": 628,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_fetch_grok_models' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 876,
                   "startColumn": 1
                 }
               }
@@ -3077,7 +3623,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1910,
+                  "startLine": 2098,
                   "startColumn": 1
                 }
               }
@@ -3098,7 +3644,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 107,
+                  "startLine": 105,
                   "startColumn": 1
                 }
               }
@@ -3119,7 +3665,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 418,
+                  "startLine": 414,
                   "startColumn": 1
                 }
               }
@@ -3140,7 +3686,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 249,
+                  "startLine": 245,
                   "startColumn": 1
                 }
               }
@@ -3161,7 +3707,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 304,
+                  "startLine": 300,
                   "startColumn": 1
                 }
               }
@@ -3182,7 +3728,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 587,
+                  "startLine": 607,
                   "startColumn": 1
                 }
               }
@@ -3203,7 +3749,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 655,
+                  "startLine": 675,
                   "startColumn": 1
                 }
               }
@@ -3224,7 +3770,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1612,
+                  "startLine": 1594,
                   "startColumn": 1
                 }
               }
@@ -3245,7 +3791,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1674,
+                  "startLine": 1656,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_install_tool' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/tool_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 148,
                   "startColumn": 1
                 }
               }
@@ -3266,7 +3833,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 458,
+                  "startLine": 618,
                   "startColumn": 1
                 }
               }
@@ -3287,7 +3854,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 525,
+                  "startLine": 685,
                   "startColumn": 1
                 }
               }
@@ -3308,7 +3875,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1877,
+                  "startLine": 1883,
                   "startColumn": 1
                 }
               }
@@ -3329,7 +3896,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1722,
+                  "startLine": 1728,
                   "startColumn": 1
                 }
               }
@@ -3350,7 +3917,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 449,
+                  "startLine": 432,
                   "startColumn": 1
                 }
               }
@@ -3371,7 +3938,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 751,
+                  "startLine": 790,
                   "startColumn": 1
                 }
               }
@@ -3392,7 +3959,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1203,
+                  "startLine": 1287,
                   "startColumn": 1
                 }
               }
@@ -3413,7 +3980,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1769,
+                  "startLine": 1859,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_decode_row_chars' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1074,
                   "startColumn": 1
                 }
               }
@@ -3434,28 +4022,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1454,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_paint_ascii_byte' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1035,
+                  "startLine": 1544,
                   "startColumn": 1
                 }
               }
@@ -3476,28 +4043,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1851,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'set_color_mode' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 487,
+                  "startLine": 1941,
                   "startColumn": 1
                 }
               }
@@ -3518,7 +4064,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 53,
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_populate_instances_tree' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/sandbox_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1586,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'get_stack_frames' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/stack_viewer.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 165,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'handle_server_message' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 383,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'apply_raw_rect' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 477,
                   "startColumn": 1
                 }
               }
@@ -3539,7 +4169,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 755,
+                  "startLine": 745,
                   "startColumn": 1
                 }
               }
@@ -3560,7 +4190,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 592,
+                  "startLine": 581,
                   "startColumn": 1
                 }
               }
@@ -3602,7 +4232,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 197,
+                  "startLine": 130,
                   "startColumn": 1
                 }
               }
@@ -3613,7 +4243,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_on_bit_toggled' has rank C (complexity > threshold)"
+            "text": "'_on_encode_text' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -3623,28 +4253,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 174,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_update_bit_buttons' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_data_inspector.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 142,
+                  "startLine": 327,
                   "startColumn": 1
                 }
               }
@@ -3686,7 +4295,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 161,
+                  "startLine": 148,
                   "startColumn": 1
                 }
               }
@@ -3707,7 +4316,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 122,
+                  "startLine": 111,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'refresh_pattern_highlights' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_highlighting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 291,
                   "startColumn": 1
                 }
               }
@@ -3728,7 +4358,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 157,
+                  "startLine": 196,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_resolve_pattern_rule' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_highlighting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 158,
                   "startColumn": 1
                 }
               }
@@ -3749,28 +4400,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 36,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_on_import_patches' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_patches.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 142,
+                  "startLine": 29,
                   "startColumn": 1
                 }
               }
@@ -3791,28 +4421,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 96,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'PatchesMixin' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_patches.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 24,
+                  "startLine": 89,
                   "startColumn": 1
                 }
               }
@@ -3980,7 +4589,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 274,
+                  "startLine": 271,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_validate_script_ast' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 781,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_on_run_script' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1082,
                   "startColumn": 1
                 }
               }
@@ -4001,49 +4652,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 518,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_on_search_finished' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_search.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 348,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_on_numeric_search_finished' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_search.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 597,
+                  "startLine": 492,
                   "startColumn": 1
                 }
               }
@@ -4064,7 +4673,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 233,
+                  "startLine": 332,
                   "startColumn": 1
                 }
               }
@@ -4085,7 +4694,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 91,
+                  "startLine": 172,
                   "startColumn": 1
                 }
               }
@@ -4106,28 +4715,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 125,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_populate_strings' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_sections.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 160,
+                  "startLine": 206,
                   "startColumn": 1
                 }
               }
@@ -4148,7 +4736,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 283,
+                  "startLine": 382,
                   "startColumn": 1
                 }
               }
@@ -4169,7 +4757,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 89,
+                  "startLine": 83,
                   "startColumn": 1
                 }
               }
@@ -4190,7 +4778,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 208,
+                  "startLine": 202,
                   "startColumn": 1
                 }
               }
@@ -4211,7 +4799,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 404,
+                  "startLine": 398,
                   "startColumn": 1
                 }
               }
@@ -4274,28 +4862,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 537,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
-            "text": "'_on_transform_apply' has rank C (complexity > threshold)"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 402,
+                  "startLine": 632,
                   "startColumn": 1
                 }
               }
@@ -4316,7 +4883,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 716,
+                  "startLine": 771,
                   "startColumn": 1
                 }
               }
@@ -4327,7 +4894,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_apply_arithmetic_op' has rank C (complexity > threshold)"
+            "text": "'_load_transform_descriptors' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -4337,7 +4904,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 768,
+                  "startLine": 89,
                   "startColumn": 1
                 }
               }
@@ -4348,7 +4915,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_on_transform_preview' has rank C (complexity > threshold)"
+            "text": "'_on_transform_apply' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -4358,7 +4925,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 363,
+                  "startLine": 504,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'_run_single_transform' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 439,
                   "startColumn": 1
                 }
               }
@@ -4379,7 +4967,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 267,
+                  "startLine": 365,
                   "startColumn": 1
                 }
               }
@@ -4390,7 +4978,7 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "'_on_block_swap' has rank C (complexity > threshold)"
+            "text": "'_on_transform_preview' has rank C (complexity > threshold)"
           },
           "locations": [
             {
@@ -4400,7 +4988,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 681,
+                  "startLine": 473,
                   "startColumn": 1
                 }
               }
@@ -4474,6 +5062,27 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "'test_anthropic_chat_and_stream_populate_usage_and_thinking' has rank D (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_anthropic_buffers_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 158,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "'test_model_listing_fields_valid' has rank C (complexity > threshold)"
           },
           "locations": [
@@ -4485,6 +5094,90 @@
                 },
                 "region": {
                   "startLine": 360,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'test_live_google_chat_populates_usage' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_google_chat_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'test_live_google_chat_stream_populates_usage' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_google_chat_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 111,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'test_live_chat_returns_content_and_usage' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_huggingface_chat_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'test_live_chat_stream_yields_and_captures_usage' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_huggingface_chat_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 82,
                   "startColumn": 1
                 }
               }
@@ -4527,6 +5220,27 @@
                 },
                 "region": {
                   "startLine": 142,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "'test_live_ollama_chat_and_stream' has rank C (complexity > threshold)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/test_providers/test_ollama_chat_live.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 72,
                   "startColumn": 1
                 }
               }
@@ -4664,7 +5378,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:37:11.408898+00:00"
+          "endTimeUtc": "2026-04-24T05:11:07.810059+00:00"
         }
       ]
     }

@@ -26,4 +26,4 @@ tests/test_ui\conftest.py:128: D107: in public method `__init__`: - Missing docs
 
 1 findings in src/intellicrack/ui\panels\async_bridge.py
 
-src/intellicrack/ui\panels\async_bridge.py:140: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function
+src/intellicrack/ui\panels\async_bridge.py:159: D103: in public function `run_bridge_coroutine`: - Missing docstring in public function

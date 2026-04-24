@@ -57,6 +57,13 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
+            "text": "Unused function: decompiler_options"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
             "text": "Unused function: clear_selection"
           }
         },
@@ -155,7 +162,35 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: prepare_ai_prompt"
+            "text": "Unused function: generate_cutter"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: generate_frida"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: generate_ghidra"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: generate_python"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: generate_x64dbg"
           }
         },
         {
@@ -218,13 +253,6 @@
           "ruleId": "general",
           "level": "warning",
           "message": {
-            "text": "Unused function: is_executable"
-          }
-        },
-        {
-          "ruleId": "general",
-          "level": "warning",
-          "message": {
             "text": "Unused function: is_readable"
           }
         },
@@ -254,6 +282,20 @@
           "level": "warning",
           "message": {
             "text": "Unused function: needs_refresh"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_pending_thinking"
+          }
+        },
+        {
+          "ruleId": "general",
+          "level": "warning",
+          "message": {
+            "text": "Unused function: get_pending_usage"
           }
         },
         {
@@ -590,7 +632,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:37:48.641439+00:00"
+          "endTimeUtc": "2026-04-24T05:11:36.647020+00:00"
         }
       ]
     }

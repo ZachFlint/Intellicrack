@@ -36,8 +36,7 @@ _logger = get_logger("ui.confirmation_dialog")
 class ToolConfirmationDialog(QDialog):
     """Dialog for confirming tool calls.
 
-    Displays the tool name, function, and arguments for user review
-    before executing potentially destructive operations.
+    Displays the tool name, function, and arguments for user review before executing potentially destructive operations.
     """
 
     def __init__(

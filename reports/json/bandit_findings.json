@@ -1,6 +1,6 @@
 {
   "tool": "bandit",
-  "generated": "2026-04-17T05:38:04.698530+00:00",
+  "generated": "2026-04-24T05:11:59.762277+00:00",
   "total_findings": 7,
   "total_files": 5,
   "files": [
@@ -9,22 +9,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 5332,
+          "line": 5517,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B102:exec_used",
           "message": "Use of exec detected.",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5332: [Medium] B102:exec_used: Use of exec detected."
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5517: [Medium] B102:exec_used: Use of exec detected."
         },
         {
-          "line": 5573,
+          "line": 5758,
           "column": null,
           "severity": "High",
           "confidence": "High",
           "code": "B324:hashlib",
           "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-          "raw": "src/intellicrack/bridges\\hex_editor.py:5573: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          "raw": "src/intellicrack/bridges\\hex_editor.py:5758: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
         }
       ]
     },
@@ -33,22 +33,22 @@
       "count": 2,
       "findings": [
         {
-          "line": 2735,
+          "line": 3123,
           "column": null,
           "severity": "Medium",
           "confidence": "Medium",
           "code": "B108:hardcoded_tmp_directory",
           "message": "Probable insecure usage of temp file/directory.",
-          "raw": "src/intellicrack/sandbox\\qemu.py:2735: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
+          "raw": "src/intellicrack/sandbox\\qemu.py:3123: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
         },
         {
-          "line": 2736,
+          "line": 3124,
           "column": null,
           "severity": "Medium",
           "confidence": "Medium",
           "code": "B108:hardcoded_tmp_directory",
           "message": "Probable insecure usage of temp file/directory.",
-          "raw": "src/intellicrack/sandbox\\qemu.py:2736: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
+          "raw": "src/intellicrack/sandbox\\qemu.py:3124: [Medium] B108:hardcoded_tmp_directory: Probable insecure usage of temp file/directory."
         }
       ]
     },
@@ -72,13 +72,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 571,
+          "line": 1005,
           "column": null,
           "severity": "Medium",
           "confidence": "High",
           "code": "B102:exec_used",
           "message": "Use of exec detected.",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:571: [Medium] B102:exec_used: Use of exec detected."
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_scripting.py:1005: [Medium] B102:exec_used: Use of exec detected."
         }
       ]
     },
@@ -87,13 +87,13 @@
       "count": 1,
       "findings": [
         {
-          "line": 185,
+          "line": 179,
           "column": null,
           "severity": "High",
           "confidence": "High",
           "code": "B324:hashlib",
           "message": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:185: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
+          "raw": "src/intellicrack/ui\\panels\\hex_editor\\_signatures.py:179: [High] B324:hashlib: Use of weak MD5 hash for security. Consider usedforsecurity=False"
         }
       ]
     }

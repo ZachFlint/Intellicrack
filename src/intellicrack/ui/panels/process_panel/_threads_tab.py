@@ -45,8 +45,7 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 class ThreadsTab(QWidget):
     """Tab for thread inspection and manipulation.
 
-    Provides sub-tabs for thread list, register context, stack walk,
-    SEH chain enumeration, and fiber/TLS data.
+    Provides sub-tabs for thread list, register context, stack walk, SEH chain enumeration, and fiber/TLS data.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

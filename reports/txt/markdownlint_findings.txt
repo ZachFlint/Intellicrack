@@ -1,350 +1,3 @@
-172 findings in tool_bridge_audit_2026-04-10.md
-
-tool_bridge_audit_2026-04-10.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 140]
-
-tool_bridge_audit_2026-04-10.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 136]
-
-tool_bridge_audit_2026-04-10.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
-
-tool_bridge_audit_2026-04-10.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
-
-tool_bridge_audit_2026-04-10.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
-
-tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:76 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 516]
-
-tool_bridge_audit_2026-04-10.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 283]
-
-tool_bridge_audit_2026-04-10.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 232]
-
-tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:39 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:56:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
-
-tool_bridge_audit_2026-04-10.md:57:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
-
-tool_bridge_audit_2026-04-10.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 113]
-
-tool_bridge_audit_2026-04-10.md:59:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
-
-tool_bridge_audit_2026-04-10.md:60:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
-
-tool_bridge_audit_2026-04-10.md:61:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
-
-tool_bridge_audit_2026-04-10.md:62:81 error MD013/line-length Line length [Expected: 80; Actual: 104]
-
-tool_bridge_audit_2026-04-10.md:63:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
-
-tool_bridge_audit_2026-04-10.md:64:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
-
-tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:69:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:69:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 85]
-
-tool_bridge_audit_2026-04-10.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
-
-tool_bridge_audit_2026-04-10.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
-
-tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:92:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:92:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 439]
-
-tool_bridge_audit_2026-04-10.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 571]
-
-tool_bridge_audit_2026-04-10.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 270]
-
-tool_bridge_audit_2026-04-10.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 182]
-
-tool_bridge_audit_2026-04-10.md:127:81 error MD013/line-length Line length [Expected: 80; Actual: 318]
-
-tool_bridge_audit_2026-04-10.md:129:81 error MD013/line-length Line length [Expected: 80; Actual: 218]
-
-tool_bridge_audit_2026-04-10.md:131:81 error MD013/line-length Line length [Expected: 80; Actual: 181]
-
-tool_bridge_audit_2026-04-10.md:133:81 error MD013/line-length Line length [Expected: 80; Actual: 154]
-
-tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:140:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:140:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 87]
-
-tool_bridge_audit_2026-04-10.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
-
-tool_bridge_audit_2026-04-10.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 123]
-
-tool_bridge_audit_2026-04-10.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 84]
-
-tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:157:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:157:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:184:81 error MD013/line-length Line length [Expected: 80; Actual: 549]
-
-tool_bridge_audit_2026-04-10.md:190:81 error MD013/line-length Line length [Expected: 80; Actual: 644]
-
-tool_bridge_audit_2026-04-10.md:199:81 error MD013/line-length Line length [Expected: 80; Actual: 220]
-
-tool_bridge_audit_2026-04-10.md:201:81 error MD013/line-length Line length [Expected: 80; Actual: 177]
-
-tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:208:27 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:208:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:209:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
-
-tool_bridge_audit_2026-04-10.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 188]
-
-tool_bridge_audit_2026-04-10.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
-
-tool_bridge_audit_2026-04-10.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 121]
-
-tool_bridge_audit_2026-04-10.md:213:81 error MD013/line-length Line length [Expected: 80; Actual: 93]
-
-tool_bridge_audit_2026-04-10.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 89]
-
-tool_bridge_audit_2026-04-10.md:215:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
-
-tool_bridge_audit_2026-04-10.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
-
-tool_bridge_audit_2026-04-10.md:218:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
-
-tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:224:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:224:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:225:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
-
-tool_bridge_audit_2026-04-10.md:228:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
-
-tool_bridge_audit_2026-04-10.md:242:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
-
-tool_bridge_audit_2026-04-10.md:245:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
-
-tool_bridge_audit_2026-04-10.md:251:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
-
-tool_bridge_audit_2026-04-10.md:259:81 error MD013/line-length Line length [Expected: 80; Actual: 529]
-
-tool_bridge_audit_2026-04-10.md:268:81 error MD013/line-length Line length [Expected: 80; Actual: 188]
-
-tool_bridge_audit_2026-04-10.md:270:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
-
-tool_bridge_audit_2026-04-10.md:272:81 error MD013/line-length Line length [Expected: 80; Actual: 182]
-
-tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:279:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:279:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:280:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
-
-tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:301:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:301:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:302:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
-
-tool_bridge_audit_2026-04-10.md:308:81 error MD013/line-length Line length [Expected: 80; Actual: 141]
-
-tool_bridge_audit_2026-04-10.md:318:81 error MD013/line-length Line length [Expected: 80; Actual: 185]
-
-tool_bridge_audit_2026-04-10.md:326:81 error MD013/line-length Line length [Expected: 80; Actual: 540]
-
-tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:341:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:341:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:344:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
-
-tool_bridge_audit_2026-04-10.md:346:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
-
-tool_bridge_audit_2026-04-10.md:351:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
-
-tool_bridge_audit_2026-04-10.md:354:81 error MD013/line-length Line length [Expected: 80; Actual: 83]
-
-tool_bridge_audit_2026-04-10.md:355:81 error MD013/line-length Line length [Expected: 80; Actual: 81]
-
-tool_bridge_audit_2026-04-10.md:362:81 error MD013/line-length Line length [Expected: 80; Actual: 694]
-
-tool_bridge_audit_2026-04-10.md:368:81 error MD013/line-length Line length [Expected: 80; Actual: 643]
-
-tool_bridge_audit_2026-04-10.md:373:81 error MD013/line-length Line length [Expected: 80; Actual: 241]
-
-tool_bridge_audit_2026-04-10.md:377:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
-
-tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:382:28 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:382:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:383:81 error MD013/line-length Line length [Expected: 80; Actual: 82]
-
-tool_bridge_audit_2026-04-10.md:391:81 error MD013/line-length Line length [Expected: 80; Actual: 81]
-
-tool_bridge_audit_2026-04-10.md:413:81 error MD013/line-length Line length [Expected: 80; Actual: 332]
-
-tool_bridge_audit_2026-04-10.md:415:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
-
-tool_bridge_audit_2026-04-10.md:421:81 error MD013/line-length Line length [Expected: 80; Actual: 681]
-
-tool_bridge_audit_2026-04-10.md:426:81 error MD013/line-length Line length [Expected: 80; Actual: 219]
-
-tool_bridge_audit_2026-04-10.md:430:81 error MD013/line-length Line length [Expected: 80; Actual: 164]
-
-tool_bridge_audit_2026-04-10.md:432:81 error MD013/line-length Line length [Expected: 80; Actual: 256]
-
-tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:437:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:437:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:453:81 error MD013/line-length Line length [Expected: 80; Actual: 85]
-
-tool_bridge_audit_2026-04-10.md:462:81 error MD013/line-length Line length [Expected: 80; Actual: 324]
-
-tool_bridge_audit_2026-04-10.md:468:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
-
-tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:98 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style "compact"]
-
-tool_bridge_audit_2026-04-10.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 90]
-
-tool_bridge_audit_2026-04-10.md:478:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
-
-tool_bridge_audit_2026-04-10.md:480:81 error MD013/line-length Line length [Expected: 80; Actual: 133]
-
-
 101 findings in prompts.md
 
 prompts.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 179]
@@ -920,89 +573,246 @@ vendor/ImHex-Patterns/README.md:350:63 error MD060/table-column-style Table colu
 vendor/ImHex-Patterns/README.md:350:89 error MD060/table-column-style Table column style [Table pipe does not align with header for style "aligned"]
 
 
-41 findings in CHANGELOG.md
+82 findings in CHANGELOG.md
 
-CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
+CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 291]
 
-CHANGELOG.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 647]
+CHANGELOG.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
 
-CHANGELOG.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
+CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 118]
 
-CHANGELOG.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 180]
+CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
 
-CHANGELOG.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
+CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 513]
 
-CHANGELOG.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:95:81 error MD013/line-length Line length [Expected: 80; Actual: 647]
 
-CHANGELOG.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:97:81 error MD013/line-length Line length [Expected: 80; Actual: 167]
 
-CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 163]
+CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 180]
 
-CHANGELOG.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+CHANGELOG.md:99:81 error MD013/line-length Line length [Expected: 80; Actual: 162]
 
-CHANGELOG.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+CHANGELOG.md:100:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
+CHANGELOG.md:102:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
+CHANGELOG.md:103:81 error MD013/line-length Line length [Expected: 80; Actual: 163]
 
-CHANGELOG.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+CHANGELOG.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
 
-CHANGELOG.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
+CHANGELOG.md:105:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
 
-CHANGELOG.md:31:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+CHANGELOG.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 149]
 
-CHANGELOG.md:32:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
+CHANGELOG.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 129]
 
-CHANGELOG.md:33:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+CHANGELOG.md:109:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
 
-CHANGELOG.md:35:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
+CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
 
-CHANGELOG.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+CHANGELOG.md:112:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
 
-CHANGELOG.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
+CHANGELOG.md:113:81 error MD013/line-length Line length [Expected: 80; Actual: 151]
 
-CHANGELOG.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 135]
+CHANGELOG.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
 
-CHANGELOG.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 146]
+CHANGELOG.md:116:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
 
-CHANGELOG.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
+CHANGELOG.md:117:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
 
-CHANGELOG.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+CHANGELOG.md:118:81 error MD013/line-length Line length [Expected: 80; Actual: 137]
 
-CHANGELOG.md:44:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+CHANGELOG.md:119:81 error MD013/line-length Line length [Expected: 80; Actual: 135]
 
-CHANGELOG.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
+CHANGELOG.md:121:81 error MD013/line-length Line length [Expected: 80; Actual: 146]
 
-CHANGELOG.md:65:81 error MD013/line-length Line length [Expected: 80; Actual: 250]
+CHANGELOG.md:122:81 error MD013/line-length Line length [Expected: 80; Actual: 171]
 
-CHANGELOG.md:67:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+CHANGELOG.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
 
-CHANGELOG.md:68:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
+CHANGELOG.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
 
-CHANGELOG.md:69:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+CHANGELOG.md:139:81 error MD013/line-length Line length [Expected: 80; Actual: 105]
 
-CHANGELOG.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:146:81 error MD013/line-length Line length [Expected: 80; Actual: 250]
 
-CHANGELOG.md:71:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
+CHANGELOG.md:148:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
 
-CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
+CHANGELOG.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 110]
 
-CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+CHANGELOG.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
 
-CHANGELOG.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
+CHANGELOG.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
+CHANGELOG.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 112]
 
-CHANGELOG.md:93:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+CHANGELOG.md:189:81 error MD013/line-length Line length [Expected: 80; Actual: 271]
 
-CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+CHANGELOG.md:197:81 error MD013/line-length Line length [Expected: 80; Actual: 244]
 
-CHANGELOG.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+CHANGELOG.md:202:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
 
-CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+CHANGELOG.md:205:81 error MD013/line-length Line length [Expected: 80; Actual: 226]
 
-CHANGELOG.md:106:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
+CHANGELOG.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 277]
+
+CHANGELOG.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 119]
+
+CHANGELOG.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+
+CHANGELOG.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 107]
+
+CHANGELOG.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+CHANGELOG.md:224:81 error MD013/line-length Line length [Expected: 80; Actual: 117]
+
+CHANGELOG.md:237:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+CHANGELOG.md:293:81 error MD013/line-length Line length [Expected: 80; Actual: 157]
+
+CHANGELOG.md:295:81 error MD013/line-length Line length [Expected: 80; Actual: 152]
+
+CHANGELOG.md:297:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+CHANGELOG.md:299:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+CHANGELOG.md:305:81 error MD013/line-length Line length [Expected: 80; Actual: 127]
+
+CHANGELOG.md:307:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+
+CHANGELOG.md:309:81 error MD013/line-length Line length [Expected: 80; Actual: 98]
+
+CHANGELOG.md:311:81 error MD013/line-length Line length [Expected: 80; Actual: 111]
+
+CHANGELOG.md:313:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+CHANGELOG.md:315:81 error MD013/line-length Line length [Expected: 80; Actual: 97]
+
+CHANGELOG.md:319:81 error MD013/line-length Line length [Expected: 80; Actual: 99]
+
+CHANGELOG.md:321:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+
+CHANGELOG.md:323:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+CHANGELOG.md:327:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+CHANGELOG.md:331:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
+
+CHANGELOG.md:335:81 error MD013/line-length Line length [Expected: 80; Actual: 116]
+
+CHANGELOG.md:337:81 error MD013/line-length Line length [Expected: 80; Actual: 132]
+
+CHANGELOG.md:339:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+CHANGELOG.md:341:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+CHANGELOG.md:363:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+CHANGELOG.md:389:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+CHANGELOG.md:401:81 error MD013/line-length Line length [Expected: 80; Actual: 113]
+
+CHANGELOG.md:425:81 error MD013/line-length Line length [Expected: 80; Actual: 124]
+
+CHANGELOG.md:427:81 error MD013/line-length Line length [Expected: 80; Actual: 102]
+
+CHANGELOG.md:429:81 error MD013/line-length Line length [Expected: 80; Actual: 95]
+
+CHANGELOG.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+CHANGELOG.md:506:81 error MD013/line-length Line length [Expected: 80; Actual: 94]
+
+CHANGELOG.md:514:81 error MD013/line-length Line length [Expected: 80; Actual: 159]
+
+CHANGELOG.md:585:81 error MD013/line-length Line length [Expected: 80; Actual: 103]
+
+CHANGELOG.md:587:81 error MD013/line-length Line length [Expected: 80; Actual: 114]
+
+CHANGELOG.md:695:81 error MD013/line-length Line length [Expected: 80; Actual: 92]
+
+CHANGELOG.md:718:81 error MD013/line-length Line length [Expected: 80; Actual: 234]
+
+CHANGELOG.md:720:81 error MD013/line-length Line length [Expected: 80; Actual: 100]
+
+CHANGELOG.md:728:81 error MD013/line-length Line length [Expected: 80; Actual: 222]
+
+CHANGELOG.md:729:81 error MD013/line-length Line length [Expected: 80; Actual: 91]
+
+
+36 findings in remediation-audit-results.md
+
+remediation-audit-results.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 155]
+
+remediation-audit-results.md:7 error MD001/heading-increment Heading levels should only increment by one level at a time [Expected: h2; Actual: h3]
+
+remediation-audit-results.md:9:81 error MD013/line-length Line length [Expected: 80; Actual: 273]
+
+remediation-audit-results.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 96]
+
+remediation-audit-results.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 190]
+
+remediation-audit-results.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 148]
+
+remediation-audit-results.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 186]
+
+remediation-audit-results.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 154]
+
+remediation-audit-results.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
+
+remediation-audit-results.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 569]
+
+remediation-audit-results.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 216]
+
+remediation-audit-results.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 209]
+
+remediation-audit-results.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 317]
+
+remediation-audit-results.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 322]
+
+remediation-audit-results.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 209]
+
+remediation-audit-results.md:25:81 error MD013/line-length Line length [Expected: 80; Actual: 323]
+
+remediation-audit-results.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 342]
+
+remediation-audit-results.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 354]
+
+remediation-audit-results.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 335]
+
+remediation-audit-results.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 261]
+
+remediation-audit-results.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 352]
+
+remediation-audit-results.md:34:81 error MD013/line-length Line length [Expected: 80; Actual: 155]
+
+remediation-audit-results.md:35:81 error MD013/line-length Line length [Expected: 80; Actual: 166]
+
+remediation-audit-results.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 124]
+
+remediation-audit-results.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 136]
+
+remediation-audit-results.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 155]
+
+remediation-audit-results.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 147]
+
+remediation-audit-results.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 131]
+
+remediation-audit-results.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 108]
+
+remediation-audit-results.md:43:81 error MD013/line-length Line length [Expected: 80; Actual: 379]
+
+remediation-audit-results.md:44:81 error MD013/line-length Line length [Expected: 80; Actual: 276]
+
+remediation-audit-results.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 160]
+
+remediation-audit-results.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 139]
+
+remediation-audit-results.md:47:81 error MD013/line-length Line length [Expected: 80; Actual: 115]
+
+remediation-audit-results.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 161]
+
+remediation-audit-results.md:49:81 error MD013/line-length Line length [Expected: 80; Actual: 169]
 
 
 30 findings in GEMINI.md
@@ -1184,6 +994,17 @@ AGENTS.md:53:81 error MD013/line-length Line length [Expected: 80; Actual: 101]
 AGENTS.md:86:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
 
 AGENTS.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 86]
+
+
+4 findings in remediation-prompt.md
+
+remediation-prompt.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 89]
+
+remediation-prompt.md:486 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+remediation-prompt.md:496 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
+
+remediation-prompt.md:506 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: "```"]
 
 
 3 findings in CLAUDE.md

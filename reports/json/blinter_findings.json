@@ -1,9 +1,55 @@
 {
   "tool": "blinter",
-  "generated": "2026-04-17T05:38:56.913693+00:00",
-  "total_findings": 3,
-  "total_files": 3,
+  "generated": "2026-04-24T05:13:18.469157+00:00",
+  "total_findings": 8,
+  "total_files": 4,
   "files": [
+    {
+      "path": "src\\intellicrack\\sandbox\\scripts\\start_monitors.cmd",
+      "count": 5,
+      "findings": [
+        {
+          "line": 27,
+          "column": 0,
+          "severity": "warning",
+          "code": "W001",
+          "message": "Missing exit code",
+          "raw": "Line 27: Missing exit code (W001)"
+        },
+        {
+          "line": 17,
+          "column": 0,
+          "severity": "warning",
+          "code": "W025",
+          "message": "Missing error handling",
+          "raw": "Line 17: Missing error handling (W025)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "style",
+          "code": "S011",
+          "message": "Line exceeds maximum length",
+          "raw": "Line 23: Line exceeds maximum length (S011)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "style",
+          "code": "S020",
+          "message": "Long line without continuation",
+          "raw": "Line 23: Long line without continuation (S020)"
+        },
+        {
+          "line": 23,
+          "column": 0,
+          "severity": "security",
+          "code": "SEC009",
+          "message": "PowerShell execution policy bypass",
+          "raw": "Line 23: PowerShell execution policy bypass (SEC009)"
+        }
+      ]
+    },
     {
       "path": "Intellicrack.cmd",
       "count": 1,

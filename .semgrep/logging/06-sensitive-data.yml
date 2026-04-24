@@ -1,15 +1,7 @@
 rules:
-
   - id: intellicrack-logging-f1-sensitive-kwarg-name
     message: >-
-      Log call uses a kwarg whose name strongly implies a secret value
-      (password, passwd, pwd, api_key, apikey, secret, token, bearer,
-      authorization, auth_header, credential, private_key, ssh_key,
-      pem, cookie, session_cookie, csrf, refresh_token, access_token,
-      client_secret). Logging secrets leaks credentials through log
-      aggregators, archives, and incident exports. If you need to
-      correlate on a secret, log a masked prefix or a hash:
-      `token_prefix=token[:4], token_sha256=hashlib.sha256(token).hexdigest()[:12]`.
+      Log call uses a kwarg whose name strongly implies a secret value (password, passwd, pwd, api_key, apikey, secret, token, bearer, authorization, auth_header, credential, private_key, ssh_key, pem, cookie, session_cookie, csrf, refresh_token, access_token, client_secret). Logging secrets leaks credentials through log aggregators, archives, and incident exports. If you need to correlate on a secret, log a masked prefix or a hash: `token_prefix=token[:4], token_sha256=hashlib.sha256(token).hexdigest()[:12]`.
     severity: ERROR
     languages: [python]
     patterns:
@@ -172,11 +164,7 @@ rules:
           - pattern: $L.critical(..., csrf_token=$X, ...)
   - id: intellicrack-logging-f2-logging-environment-variable
     message: >-
-      `os.environ[...]` / `os.getenv(...)` values are logged directly.
-      Environment variables are the canonical home for secrets
-      (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, GitHub tokens, etc.).
-      Never dump environ values into logs. Log only the variable NAME
-      if you need to record what was looked up.
+      `os.environ[...]` / `os.getenv(...)` values are logged directly. Environment variables are the canonical home for secrets (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, GitHub tokens, etc.). Never dump environ values into logs. Log only the variable NAME if you need to record what was looked up.
     severity: ERROR
     languages: [python]
     pattern-either:
@@ -218,11 +206,7 @@ rules:
       - pattern: $L.critical(..., $K=getenv(...), ...)
   - id: intellicrack-logging-f3-logging-http-auth-material
     message: >-
-      Logging HTTP request/response authentication material
-      (`request.headers`, `request.cookies`, `response.cookies`,
-      `request.auth`, `session.auth`, `session.headers`). Auth
-      headers and cookies contain bearer tokens, API keys, and session
-      IDs. Log a redacted summary instead (e.g. header NAMES only).
+      Logging HTTP request/response authentication material (`request.headers`, `request.cookies`, `response.cookies`, `request.auth`, `session.auth`, `session.headers`). Auth headers and cookies contain bearer tokens, API keys, and session IDs. Log a redacted summary instead (e.g. header NAMES only).
     severity: ERROR
     languages: [python]
     pattern-either:
@@ -258,12 +242,7 @@ rules:
       - pattern: $L.critical(..., $K=dict($R.cookies), ...)
   - id: intellicrack-logging-f4-logging-http-body
     message: >-
-      Logging raw HTTP response bodies (`response.text`,
-      `response.content`, `response.json()`, `await response.text()`,
-      `await response.json()`). Bodies frequently contain returned
-      tokens, PII, or privileged data. Log `response.status_code`,
-      `len(response.content)`, and a structured summary of known
-      safe fields instead.
+      Logging raw HTTP response bodies (`response.text`, `response.content`, `response.json()`, `await response.text()`, `await response.json()`). Bodies frequently contain returned tokens, PII, or privileged data. Log `response.status_code`, `len(response.content)`, and a structured summary of known safe fields instead.
     severity: WARNING
     languages: [python]
     pattern-either:
@@ -311,11 +290,7 @@ rules:
       - pattern: $L.critical(..., $K=await $R.read(), ...)
   - id: intellicrack-logging-f5-logging-raw-bytes-payload
     message: >-
-      Raw bytes/bytearray values are passed as a log kwarg. Emitting
-      binary payloads through the log pipeline bloats records, breaks
-      text aggregators, and may leak target-binary contents or shared
-      memory state. Log metadata: `size=len(data)`, `sha256=...`,
-      optionally a hex prefix `head_hex=data[:16].hex()`.
+      Raw bytes/bytearray values are passed as a log kwarg. Emitting binary payloads through the log pipeline bloats records, breaks text aggregators, and may leak target-binary contents or shared memory state. Log metadata: `size=len(data)`, `sha256=...`, optionally a hex prefix `head_hex=data[:16].hex()`.
     severity: WARNING
     languages: [python]
     pattern-either:
@@ -369,11 +344,7 @@ rules:
       - pattern: $L.critical(..., body=$D, ...)
   - id: intellicrack-logging-f6-high-entropy-literal-in-log
     message: >-
-      A log kwarg value is a long high-entropy string literal. This
-      is almost always a hardcoded secret (API key, token, password)
-      that must not appear in code at all, let alone in logs. Move
-      the secret into the credential store and reference it by key
-      id, and never log its value.
+      A log kwarg value is a long high-entropy string literal. This is almost always a hardcoded secret (API key, token, password) that must not appear in code at all, let alone in logs. Move the secret into the credential store and reference it by key id, and never log its value.
     severity: ERROR
     languages: [python]
     patterns:

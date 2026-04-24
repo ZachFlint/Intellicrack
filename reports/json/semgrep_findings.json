@@ -1,6 +1,6 @@
 {
   "tool": "semgrep",
-  "generated": "2026-04-19T20:47:16.662952+00:00",
+  "generated": "2026-04-24T05:12:56.270883+00:00",
   "total_findings": 981,
   "total_files": 121,
   "files": [
@@ -2843,204 +2843,204 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:49: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 1079,
+          "line": 1078,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1079: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1078: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 1260,
+          "line": 1259,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-b8-no-format-markers-in-event-name",
           "message": "The event name contains format markers (`{...}`, `%s`, `%d`) that are not substituted anywhere. `_logger.info(\"memory_write\", address=hex(addr), size=n)`.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1260: [error] intellicrack-logging-b8-no-format-markers-in-event-name: The event name contains format markers (`{...}`, `%s`, `%d`) that are not substituted anywhere. `_logger.info(\"memory_write\", address=hex(addr), size=n)`."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1259: [error] intellicrack-logging-b8-no-format-markers-in-event-name: The event name contains format markers (`{...}`, `%s`, `%d`) that are not substituted anywhere. `_logger.info(\"memory_write\", address=hex(addr), size=n)`."
         },
         {
-          "line": 1293,
+          "line": 1292,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1293: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1292: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 1344,
+          "line": 1343,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1344: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1343: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 1391,
+          "line": 1390,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1391: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1390: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 1391,
+          "line": 1390,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1391: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1390: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 1413,
+          "line": 1412,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1413: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1412: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 1413,
+          "line": 1412,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1413: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1412: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 1557,
+          "line": 1556,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1557: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1556: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 1604,
+          "line": 1603,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1604: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1603: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 1611,
+          "line": 1610,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1611: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:1610: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 2273,
+          "line": 2272,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2273: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2272: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2273,
+          "line": 2272,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2273: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2272: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2294,
+          "line": 2293,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2294: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2293: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2294,
+          "line": 2293,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2294: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2293: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2371,
+          "line": 2370,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2371: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2370: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2371,
+          "line": 2370,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2371: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2370: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2432,
+          "line": 2431,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2432: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2431: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2432,
+          "line": 2431,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2432: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2431: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2453,
+          "line": 2452,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2453: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2452: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2453,
+          "line": 2452,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2453: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2452: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2473,
+          "line": 2472,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2473: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2472: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2473,
+          "line": 2472,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2473: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2472: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2493,
+          "line": 2492,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2493: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2492: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 2493,
+          "line": 2492,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2493: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/x64dbg_panel.py:2492: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         }
       ]
     },
@@ -3659,76 +3659,76 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:1052: [error] intellicrack-logging-g5-dynamic-log-level: `_logger.log(level_variable, ...)` makes the severity unpredictable from static inspection - readers"
         },
         {
-          "line": 1865,
+          "line": 1864,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:1865: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:1864: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 1865,
+          "line": 1864,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:1865: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:1864: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 2046,
+          "line": 2045,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2046: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2045: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2062,
+          "line": 2061,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2062: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2061: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2080,
+          "line": 2079,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2080: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2079: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2092,
+          "line": 2091,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2092: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2091: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2110,
+          "line": 2109,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2110: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2109: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2128,
+          "line": 2127,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2128: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2127: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 2144,
+          "line": 2143,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c2-missing-function-context-kwargs",
           "message": "The enclosing function receives a well-known correlation argument (pid, process_name, binary_path,",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2144: [error] intellicrack-logging-c2-missing-function-context-kwargs: The enclosing function receives a well-known correlation argument (pid, process_name, binary_path,"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/app.py:2143: [error] intellicrack-logging-c2-missing-function-context-kwargs: The enclosing function receives a well-known correlation argument (pid, process_name, binary_path,"
         }
       ]
     },
@@ -3959,68 +3959,68 @@
           "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1410: [error] intellicrack-logging-d6-bridge-method-no-entry-log: A public method on a Bridge class has no log call at all. Every bridge method crosses the boundary"
         },
         {
-          "line": 1781,
+          "line": 1787,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1781: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1787: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 1781,
+          "line": 1787,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1781: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1787: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 1851,
+          "line": 1857,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1851: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:1857: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 3954,
+          "line": 3960,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-b9-event-name-redundant-with-level",
           "message": "The event name starts with the level word (`error_...`, `warning_...`, `debug_...`). The level is `_logger.error(\"attach_failed\", ...)` not `_logger.error(\"error_attach_failed\", ...)`.",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:3954: [error] intellicrack-logging-b9-event-name-redundant-with-level: The event name starts with the level word (`error_...`, `warning_...`, `debug_...`). The level is `_logger.error(\"attach_failed\", ...)` not `_logger.error(\"error_attach_failed\", ...)`."
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:3960: [error] intellicrack-logging-b9-event-name-redundant-with-level: The event name starts with the level word (`error_...`, `warning_...`, `debug_...`). The level is `_logger.error(\"attach_failed\", ...)` not `_logger.error(\"error_attach_failed\", ...)`."
         },
         {
-          "line": 4106,
+          "line": 4112,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4106: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4112: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 4546,
+          "line": 4552,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c5-exception-call-outside-except",
           "message": "`_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`.",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4546: [error] intellicrack-logging-c5-exception-call-outside-except: `_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`."
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4552: [error] intellicrack-logging-c5-exception-call-outside-except: `_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`."
         },
         {
-          "line": 4553,
+          "line": 4559,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4553: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:4559: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 6025,
+          "line": 6031,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:6025: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/ghidra.py:6031: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         }
       ]
     },
@@ -4479,84 +4479,84 @@
           "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:171: [error] intellicrack-logging-h5-init-without-completion-log: A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) `__init__`."
         },
         {
-          "line": 355,
+          "line": 354,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:355: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:354: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 418,
+          "line": 415,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:418: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:415: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+        },
+        {
+          "line": 422,
+          "column": null,
+          "severity": "error",
+          "rule": "intellicrack-logging-e6-debug-on-destructive-op",
+          "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:422: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
           "line": 425,
           "column": null,
           "severity": "error",
-          "rule": "intellicrack-logging-e6-debug-on-destructive-op",
-          "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:425: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
-        },
-        {
-          "line": 428,
-          "column": null,
-          "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:428: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:425: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 692,
+          "line": 689,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e1-info-inside-except",
           "message": "try:",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:692: [error] intellicrack-logging-e1-info-inside-except: try:"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:689: [error] intellicrack-logging-e1-info-inside-except: try:"
         },
         {
-          "line": 793,
+          "line": 790,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:793: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:790: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 855,
+          "line": 852,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:855: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:852: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 860,
+          "line": 857,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:860: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:857: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 878,
+          "line": 875,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:878: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:875: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 1167,
+          "line": 1164,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:1167: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/providers/local_transformers.py:1164: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         }
       ]
     },
@@ -4865,28 +4865,28 @@
           "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:1862: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 2165,
+          "line": 2160,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g9-kwarg-value-is-empty-collection",
           "message": "A log kwarg value is a literal empty collection (`[]`, `{}`, `\"\"`, `()`). This adds noise without `matched_rules_count=0` rather than `matched_rules=[]`).",
-          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2165: [error] intellicrack-logging-g9-kwarg-value-is-empty-collection: A log kwarg value is a literal empty collection (`[]`, `{}`, `\"\"`, `()`). This adds noise without `matched_rules_count=0` rather than `matched_rules=[]`)."
+          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2160: [error] intellicrack-logging-g9-kwarg-value-is-empty-collection: A log kwarg value is a literal empty collection (`[]`, `{}`, `\"\"`, `()`). This adds noise without `matched_rules_count=0` rather than `matched_rules=[]`)."
         },
         {
-          "line": 2188,
+          "line": 2183,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2188: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2183: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 2243,
+          "line": 2238,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2243: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/core/hexpat/stdlib.py:2238: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         }
       ]
     },
@@ -5131,44 +5131,44 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:852: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 1432,
+          "line": 1429,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1432: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1429: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 1466,
+          "line": 1463,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1466: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1463: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 1505,
+          "line": 1502,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1505: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1502: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 1516,
+          "line": 1513,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1516: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1513: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 1585,
+          "line": 1582,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1585: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor_widget.py:1582: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         }
       ]
     },
@@ -5263,84 +5263,84 @@
       "count": 10,
       "findings": [
         {
-          "line": 174,
+          "line": 193,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g1-print-in-src",
           "message": "`print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level).",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:174: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:193: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
         },
         {
-          "line": 366,
+          "line": 385,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g1-print-in-src",
           "message": "`print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level).",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:366: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:385: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
         },
         {
-          "line": 502,
+          "line": 521,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g1-print-in-src",
           "message": "`print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level).",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:502: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:521: [error] intellicrack-logging-g1-print-in-src: `print(...)` writes to stdout/stderr outside the structured logging pipeline. It carries no `_logger.info(\"event_name\", ...)` (or the appropriate level)."
         },
         {
-          "line": 552,
+          "line": 571,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-a6-logger-must-be-private-module-attr",
           "message": "logger = get_logger(\"main\")",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:552: [error] intellicrack-logging-a6-logger-must-be-private-module-attr: logger = get_logger(\"main\")"
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:571: [error] intellicrack-logging-a6-logger-must-be-private-module-attr: logger = get_logger(\"main\")"
         },
         {
-          "line": 552,
+          "line": 571,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-a3-get-logger-requires-dunder-name",
           "message": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:552: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:571: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 597,
+          "line": 616,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c4-redundant-error-on-exception",
           "message": "`_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string.",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:597: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:616: [error] intellicrack-logging-c4-redundant-error-on-exception: `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string."
         },
         {
-          "line": 597,
+          "line": 616,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-c5-exception-call-outside-except",
           "message": "`_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`.",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:597: [error] intellicrack-logging-c5-exception-call-outside-except: `_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`."
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:616: [error] intellicrack-logging-c5-exception-call-outside-except: `_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a `_logger.error(\"event_name\", error=str(e), error_type=type(e).__name__)`."
         },
         {
-          "line": 647,
+          "line": 666,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d12-async-function-zero-logs",
           "message": "async def init_model_discovery(",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:647: [error] intellicrack-logging-d12-async-function-zero-logs: async def init_model_discovery("
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:666: [error] intellicrack-logging-d12-async-function-zero-logs: async def init_model_discovery("
         },
         {
-          "line": 679,
+          "line": 698,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:679: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:698: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 803,
+          "line": 822,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/main.py:803: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/main.py:822: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         }
       ]
     },
@@ -5365,60 +5365,60 @@
           "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:97: [error] intellicrack-logging-h5-init-without-completion-log: A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) `__init__`."
         },
         {
-          "line": 351,
+          "line": 349,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g4-fstring-in-kwarg-value",
           "message": "A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:351: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:349: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
         },
         {
-          "line": 375,
+          "line": 373,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g4-fstring-in-kwarg-value",
           "message": "A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:375: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:373: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
         },
         {
-          "line": 442,
+          "line": 440,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g4-fstring-in-kwarg-value",
           "message": "A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:442: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:440: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
         },
         {
-          "line": 491,
+          "line": 489,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:491: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:489: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 505,
+          "line": 503,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-g4-fstring-in-kwarg-value",
           "message": "A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:505: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:503: [error] intellicrack-logging-g4-fstring-in-kwarg-value: A kwarg value is an f-string (e.g. `f\"pid={pid} addr={addr}\"`). This re-invents a string-log instead"
         },
         {
-          "line": 512,
+          "line": 510,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:512: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:510: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         },
         {
-          "line": 519,
+          "line": 517,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e6-debug-on-destructive-op",
           "message": "`_logger.debug(...)` on an event name that describes a destructive or state-changing operation",
-          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:519: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
+          "raw": "D:/Intellicrack/src/intellicrack/bridges/named_pipe_client.py:517: [error] intellicrack-logging-e6-debug-on-destructive-op: `_logger.debug(...)` on an event name that describes a destructive or state-changing operation"
         }
       ]
     },
@@ -5435,68 +5435,68 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:75: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 528,
+          "line": 526,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "self.analyze_binary(Path(file_path))",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:528: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self.analyze_binary(Path(file_path))"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:526: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self.analyze_binary(Path(file_path))"
         },
         {
-          "line": 634,
+          "line": 632,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "self._bridge.decompile(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:634: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.decompile(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:632: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.decompile(address),"
         },
         {
-          "line": 640,
+          "line": 638,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "self._bridge.disassemble(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:640: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.disassemble(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:638: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.disassemble(address),"
         },
         {
-          "line": 665,
+          "line": 663,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "self._bridge.decompile(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:665: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.decompile(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:663: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.decompile(address),"
         },
         {
-          "line": 720,
+          "line": 718,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:720: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:718: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 720,
+          "line": 718,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:720: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:718: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 1108,
+          "line": 1106,
           "column": null,
           "severity": "info",
           "rule": "intellicrack-logging-d8-binary-write-without-log",
           "message": "self._bridge.write_bytes(address, hex_data),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:1108: [info] intellicrack-logging-d8-binary-write-without-log: self._bridge.write_bytes(address, hex_data),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:1106: [info] intellicrack-logging-d8-binary-write-without-log: self._bridge.write_bytes(address, hex_data),"
         },
         {
-          "line": 1144,
+          "line": 1142,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "self._bridge.disassemble(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:1144: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.disassemble(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/cutter_panel.py:1142: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: self._bridge.disassemble(address),"
         }
       ]
     },
@@ -5785,68 +5785,68 @@
       "count": 8,
       "findings": [
         {
-          "line": 36,
+          "line": 34,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-a3-get-logger-requires-dunder-name",
           "message": "`get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:36: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:34: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 140,
+          "line": 138,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-h5-init-without-completion-log",
           "message": "A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) `__init__`.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:140: [error] intellicrack-logging-h5-init-without-completion-log: A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) `__init__`."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:138: [error] intellicrack-logging-h5-init-without-completion-log: A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) `__init__`."
         },
         {
-          "line": 181,
+          "line": 179,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-h3-state-assignment-without-log",
           "message": "A state-tracking attribute (`self._state`, `self._status`, `self._phase`, `self.state`, `self.status`, `self.phase`, `self._active`, `self._connected`, `self._attached`) is being",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:181: [error] intellicrack-logging-h3-state-assignment-without-log: A state-tracking attribute (`self._state`, `self._status`, `self._phase`, `self.state`, `self.status`, `self.phase`, `self._active`, `self._connected`, `self._attached`) is being"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:179: [error] intellicrack-logging-h3-state-assignment-without-log: A state-tracking attribute (`self._state`, `self._status`, `self._phase`, `self.state`, `self.status`, `self.phase`, `self._active`, `self._connected`, `self._attached`) is being"
         },
         {
-          "line": 239,
+          "line": 237,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:239: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:237: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 394,
+          "line": 392,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:394: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:392: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         },
         {
-          "line": 474,
+          "line": 472,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:474: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:472: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 474,
+          "line": 472,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:474: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:472: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 762,
+          "line": 760,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:762: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/vnc_widget.py:760: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         }
       ]
     },
@@ -6073,36 +6073,36 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:102: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 1652,
+          "line": 1650,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "bridge.decompile(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1652: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: bridge.decompile(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1650: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: bridge.decompile(address),"
         },
         {
-          "line": 1658,
+          "line": 1656,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-i4-disassembler-call-missing-binary-context",
           "message": "bridge.disassemble(address),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1658: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: bridge.disassemble(address),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1656: [error] intellicrack-logging-i4-disassembler-call-missing-binary-context: bridge.disassemble(address),"
         },
         {
-          "line": 1814,
+          "line": 1812,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-b7-no-dynamic-event-name",
           "message": "The event name is a variable or expression rather than a string literal. Log aggregators index and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1814: [error] intellicrack-logging-b7-no-dynamic-event-name: The event name is a variable or expression rather than a string literal. Log aggregators index and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:1812: [error] intellicrack-logging-b7-no-dynamic-event-name: The event name is a variable or expression rather than a string literal. Log aggregators index and"
         },
         {
-          "line": 2517,
+          "line": 2515,
           "column": null,
           "severity": "info",
           "rule": "intellicrack-logging-d8-binary-write-without-log",
           "message": "bridge.write_bytes(addr, hex_data),",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:2517: [info] intellicrack-logging-d8-binary-write-without-log: bridge.write_bytes(addr, hex_data),"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/ghidra_panel.py:2515: [info] intellicrack-logging-d8-binary-write-without-log: bridge.write_bytes(addr, hex_data),"
         }
       ]
     },
@@ -6181,52 +6181,52 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:36: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 280,
+          "line": 279,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:280: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:279: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 280,
+          "line": 279,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d2-except-pass",
           "message": "`except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:280: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:279: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
         },
         {
-          "line": 319,
+          "line": 318,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:319: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:318: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 319,
+          "line": 318,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d2-except-pass",
           "message": "`except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:319: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:318: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
         },
         {
-          "line": 330,
+          "line": 329,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:330: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:329: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 330,
+          "line": 329,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d2-except-pass",
           "message": "`except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:330: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hxd_panel.py:329: [error] intellicrack-logging-d2-except-pass: `except: pass` is the textbook silent swallow - the exception is caught and discarded with no audit"
         }
       ]
     },
@@ -6289,52 +6289,52 @@
       "count": 6,
       "findings": [
         {
-          "line": 519,
+          "line": 517,
           "column": null,
           "severity": "info",
           "rule": "intellicrack-logging-d8-binary-write-without-log",
           "message": "self._doc.write_bytes(offset, data)",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:519: [info] intellicrack-logging-d8-binary-write-without-log: self._doc.write_bytes(offset, data)"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:517: [info] intellicrack-logging-d8-binary-write-without-log: self._doc.write_bytes(offset, data)"
         },
         {
-          "line": 667,
+          "line": 665,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:667: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:665: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 770,
+          "line": 768,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:770: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:768: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 770,
+          "line": 768,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:770: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:768: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 850,
+          "line": 848,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d5-raise-without-preceding-log",
           "message": "`raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:850: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:848: [error] intellicrack-logging-d5-raise-without-preceding-log: `raise SomeError(...)` is invoked without any preceding log call in the same function. The stack `_logger.error` or `_logger.warning` with structured kwargs immediately before the raise, or raise"
         },
         {
-          "line": 1165,
+          "line": 1163,
           "column": null,
           "severity": "info",
           "rule": "intellicrack-logging-d8-binary-write-without-log",
           "message": "Path(save_path).write_text(",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:1165: [info] intellicrack-logging-d8-binary-write-without-log: Path(save_path).write_text("
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_scripting.py:1163: [info] intellicrack-logging-d8-binary-write-without-log: Path(save_path).write_text("
         }
       ]
     },
@@ -6881,36 +6881,36 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:39: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 502,
+          "line": 501,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:502: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:501: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 502,
+          "line": 501,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:502: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:501: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         },
         {
-          "line": 532,
+          "line": 531,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:532: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:531: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 532,
+          "line": 531,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d4-except-returns-silent",
           "message": "`except:` block returns without logging. The caller sees a normal (possibly falsy) return value and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:532: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_memory_tab.py:531: [error] intellicrack-logging-d4-except-returns-silent: `except:` block returns without logging. The caller sees a normal (possibly falsy) return value and"
         }
       ]
     },
@@ -6951,12 +6951,12 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/session_manager.py:590: [error] intellicrack-logging-d9-destructive-op-without-log: `pathlib.Path.rmdir`). Destructive ops MUST leave an audit trail - confirm a log with the target"
         },
         {
-          "line": 833,
+          "line": 841,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-b7-no-dynamic-event-name",
           "message": "The event name is a variable or expression rather than a string literal. Log aggregators index and",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/session_manager.py:833: [error] intellicrack-logging-b7-no-dynamic-event-name: The event name is a variable or expression rather than a string literal. Log aggregators index and"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/session_manager.py:841: [error] intellicrack-logging-b7-no-dynamic-event-name: The event name is a variable or expression rather than a string literal. Log aggregators index and"
         }
       ]
     },
@@ -7841,20 +7841,20 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_threads_tab.py:38: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 445,
+          "line": 444,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d1-silent-except-block",
           "message": "`except:` block contains no log call. Silently swallowing exceptions hides failures from the",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_threads_tab.py:445: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_threads_tab.py:444: [error] intellicrack-logging-d1-silent-except-block: `except:` block contains no log call. Silently swallowing exceptions hides failures from the"
         },
         {
-          "line": 445,
+          "line": 444,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-d3-except-continue",
           "message": "`except: continue` discards the exception inside a loop with no record of which iteration failed.",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_threads_tab.py:445: [error] intellicrack-logging-d3-except-continue: `except: continue` discards the exception inside a loop with no record of which iteration failed."
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/process_panel/_threads_tab.py:444: [error] intellicrack-logging-d3-except-continue: `except: continue` discards the exception inside a loop with no record of which iteration failed."
         }
       ]
     },
@@ -8167,12 +8167,12 @@
           "raw": "D:/Intellicrack/src/intellicrack/ui/confirmation_dialog.py:33: [error] intellicrack-logging-a3-get-logger-requires-dunder-name: `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger(\"mybridge\")`) breaks parent-child log-level propagation and makes per-module filtering"
         },
         {
-          "line": 246,
+          "line": 245,
           "column": null,
           "severity": "info",
           "rule": "intellicrack-logging-e7-info-on-error-event",
           "message": "\"tool_call_denied\",",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/confirmation_dialog.py:246: [info] intellicrack-logging-e7-info-on-error-event: \"tool_call_denied\","
+          "raw": "D:/Intellicrack/src/intellicrack/ui/confirmation_dialog.py:245: [info] intellicrack-logging-e7-info-on-error-event: \"tool_call_denied\","
         }
       ]
     },
@@ -8429,12 +8429,12 @@
       "count": 1,
       "findings": [
         {
-          "line": 117,
+          "line": 116,
           "column": null,
           "severity": "error",
           "rule": "intellicrack-logging-e2-debug-inside-except",
           "message": "`_logger.debug(...)` inside an `except:` block hides failures below the default log level. In",
-          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_hashing.py:117: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
+          "raw": "D:/Intellicrack/src/intellicrack/ui/panels/hex_editor/_hashing.py:116: [error] intellicrack-logging-e2-debug-inside-except: `_logger.debug(...)` inside an `except:` block hides failures below the default log level. In"
         }
       ]
     },

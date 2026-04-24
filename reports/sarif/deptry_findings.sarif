@@ -9,21 +9,84 @@
           "version": "1.0.0",
           "rules": [
             {
-              "id": "DEP002",
+              "id": "DEP003",
               "shortDescription": {
-                "text": "'check-wheel-contents' defined as a dependency but not used in the codebase"
+                "text": "'httpx' imported but it is a transitive dependency"
               }
             },
             {
-              "id": "DEP003",
+              "id": "DEP002",
               "shortDescription": {
-                "text": "'structlog' imported but it is a transitive dependency"
+                "text": "'check-wheel-contents' defined as a dependency but not used in the codebase"
               }
             }
           ]
         }
       },
       "results": [
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'httpx' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".semgrep/logging/04-coverage-gaps.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'requests' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".semgrep/logging/04-coverage-gaps.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'requests' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".semgrep/logging/06-sensitive-data.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 8
+                }
+              }
+            }
+          ]
+        },
         {
           "ruleId": "DEP002",
           "level": "warning",
@@ -773,7 +836,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
+                  "startLine": 22,
                   "startColumn": 8
                 }
               }
@@ -794,7 +857,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 24,
                   "startColumn": 8
                 }
               }
@@ -836,7 +899,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 70,
+                  "startLine": 77,
                   "startColumn": 12
                 }
               }
@@ -857,7 +920,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 77,
+                  "startLine": 84,
                   "startColumn": 12
                 }
               }
@@ -941,7 +1004,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1807,
+                  "startLine": 1906,
                   "startColumn": 12
                 }
               }
@@ -962,7 +1025,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1839,
+                  "startLine": 1938,
                   "startColumn": 12
                 }
               }
@@ -983,7 +1046,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1876,
+                  "startLine": 1975,
                   "startColumn": 12
                 }
               }
@@ -1004,7 +1067,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1905,
+                  "startLine": 2004,
                   "startColumn": 12
                 }
               }
@@ -1025,7 +1088,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1940,
+                  "startLine": 2039,
                   "startColumn": 12
                 }
               }
@@ -1067,7 +1130,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 307,
+                  "startLine": 352,
                   "startColumn": 9
                 }
               }
@@ -1088,7 +1151,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 308,
+                  "startLine": 353,
                   "startColumn": 9
                 }
               }
@@ -1109,7 +1172,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 312,
+                  "startLine": 357,
                   "startColumn": 9
                 }
               }
@@ -1246,7 +1309,7 @@
           "ruleId": "DEP003",
           "level": "warning",
           "message": {
-            "text": "'httpx' imported but it is a transitive dependency"
+            "text": "'huggingface_hub' imported but it is a transitive dependency"
           },
           "locations": [
             {
@@ -1256,8 +1319,29 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 16,
-                  "startColumn": 8
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'huggingface_hub' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 26,
+                  "startColumn": 1
                 }
               }
             }
@@ -1928,7 +2012,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 19,
+                  "startLine": 20,
                   "startColumn": 1
                 }
               }
@@ -1949,7 +2033,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 21,
                   "startColumn": 1
                 }
               }
@@ -2138,7 +2222,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 12,
+                  "startLine": 13,
                   "startColumn": 1
                 }
               }
@@ -2159,7 +2243,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13,
+                  "startLine": 14,
                   "startColumn": 1
                 }
               }
@@ -2264,7 +2348,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 13,
+                  "startLine": 12,
                   "startColumn": 1
                 }
               }
@@ -2390,27 +2474,6 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 15,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP003",
-          "level": "warning",
-          "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
                   "startLine": 16,
                   "startColumn": 1
                 }
@@ -2433,6 +2496,27 @@
                 },
                 "region": {
                   "startLine": 17,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
                   "startColumn": 1
                 }
               }
@@ -2517,6 +2601,27 @@
                 },
                 "region": {
                   "startLine": 12,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/hex_editor/_sections.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
                   "startColumn": 1
                 }
               }
@@ -2642,7 +2747,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 11,
+                  "startLine": 12,
                   "startColumn": 1
                 }
               }
@@ -3167,7 +3272,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 15,
+                  "startLine": 16,
                   "startColumn": 1
                 }
               }
@@ -3188,7 +3293,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 16,
+                  "startLine": 17,
                   "startColumn": 1
                 }
               }
@@ -3304,49 +3409,7 @@
           "ruleId": "DEP003",
           "level": "warning",
           "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP003",
-          "level": "warning",
-          "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 18,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP003",
-          "level": "warning",
-          "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
+            "text": "'cryptography' imported but it is a transitive dependency"
           },
           "locations": [
             {
@@ -3357,6 +3420,90 @@
                 },
                 "region": {
                   "startLine": 19,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'cryptography' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 26,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/intellicrack/ui/panels/vnc_widget.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 27,
                   "startColumn": 1
                 }
               }
@@ -3671,7 +3818,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 20,
+                  "startLine": 21,
                   "startColumn": 1
                 }
               }
@@ -3692,7 +3839,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
+                  "startLine": 22,
                   "startColumn": 1
                 }
               }
@@ -3755,7 +3902,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 21,
+                  "startLine": 23,
                   "startColumn": 8
                 }
               }
@@ -3776,7 +3923,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 22,
+                  "startLine": 24,
                   "startColumn": 1
                 }
               }
@@ -3797,7 +3944,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 23,
+                  "startLine": 25,
                   "startColumn": 1
                 }
               }
@@ -3861,48 +4008,6 @@
                 },
                 "region": {
                   "startLine": 23,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP003",
-          "level": "warning",
-          "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/win32_embed.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 17,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "DEP003",
-          "level": "warning",
-          "message": {
-            "text": "'PyQt6' imported but it is a transitive dependency"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/intellicrack/ui/win32_embed.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 18,
                   "startColumn": 1
                 }
               }
@@ -3961,6 +4066,27 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
+                  "uri": "src/intellicrack/ui/win32_embed.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 21,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DEP003",
+          "level": "warning",
+          "message": {
+            "text": "'PyQt6' imported but it is a transitive dependency"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
                   "uri": "src/intellicrack/ui/xpu_status.py",
                   "uriBaseId": "%SRCROOT%"
                 },
@@ -3998,7 +4124,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:38:13.056848+00:00"
+          "endTimeUtc": "2026-04-24T05:12:27.027899+00:00"
         }
       ]
     }

@@ -1,12 +1,7 @@
 rules:
-
   - id: intellicrack-logging-h1-async-def-zero-logs
     message: >-
-      `async def` function in a runtime/integration layer
-      (bridges/providers/core/sandbox) contains zero log calls.
-      Async functions cross event-loop task boundaries; without log
-      telemetry their execution becomes impossible to correlate.
-      Emit at least an entry log and an exit/error log.
+      `async def` function in a runtime/integration layer (bridges/providers/core/sandbox) contains zero log calls. Async functions cross event-loop task boundaries; without log telemetry their execution becomes impossible to correlate. Emit at least an entry log and an exit/error log.
     severity: WARNING
     languages: [python]
     patterns:
@@ -21,14 +16,9 @@ rules:
               ...
               $L.$LVL(...)
               ...
-
   - id: intellicrack-logging-h2-session-create-without-log
     message: >-
-      Creating a new Session / SessionManager / SessionContext
-      without an adjacent log is a lost correlation anchor - every
-      downstream log in this session will be un-pinned to the
-      session creation event. Emit
-      `_logger.info("session_created", session_id=session.id, ...)`.
+      Creating a new Session / SessionManager / SessionContext without an adjacent log is a lost correlation anchor - every downstream log in this session will be un-pinned to the session creation event. Emit `_logger.info("session_created", session_id=session.id, ...)`.
     severity: WARNING
     languages: [python]
     patterns:
@@ -48,15 +38,9 @@ rules:
               ...
               $L.$LVL(...)
               ...
-
   - id: intellicrack-logging-h3-state-assignment-without-log
     message: >-
-      A state-tracking attribute (`self._state`, `self._status`,
-      `self._phase`, `self.state`, `self.status`, `self.phase`,
-      `self._active`, `self._connected`, `self._attached`) is being
-      reassigned without an adjacent log. State transitions must be
-      logged so the full lifecycle can be reconstructed from the
-      log stream.
+      A state-tracking attribute (`self._state`, `self._status`, `self._phase`, `self.state`, `self.status`, `self.phase`, `self._active`, `self._connected`, `self._attached`) is being reassigned without an adjacent log. State transitions must be logged so the full lifecycle can be reconstructed from the log stream.
     severity: INFO
     languages: [python]
     patterns:
@@ -84,14 +68,9 @@ rules:
       - pattern-not-inside: |
           def __init__(self, ...):
               ...
-
   - id: intellicrack-logging-h4-retry-loop-no-log
     message: >-
-      Retry loop variable (`attempt`, `attempts`, `retry`, `retries`,
-      `tries`, `iteration`) but no log call inside the loop body.
-      Each retry attempt must be recorded with the attempt number
-      and the error that triggered the retry so backoff effectiveness
-      can be analysed.
+      Retry loop variable (`attempt`, `attempts`, `retry`, `retries`, `tries`, `iteration`) but no log call inside the loop body. Each retry attempt must be recorded with the attempt number and the error that triggered the retry so backoff effectiveness can be analysed.
     severity: WARNING
     languages: [python]
     patterns:
@@ -110,15 +89,9 @@ rules:
               ...
               $L.$LVL(...)
               ...
-
   - id: intellicrack-logging-h5-init-without-completion-log
     message: >-
-      A `__init__` that performs non-trivial work
-      (acquires connections, loads resources, spawns threads) exits
-      without a completion log. Without it, the rest of the object's
-      life cannot be traced back to its construction site. Emit
-      `self._logger.info("bridge_initialized", <config kwargs>)`
-      at the end of `__init__`.
+      A `__init__` that performs non-trivial work (acquires connections, loads resources, spawns threads) exits without a completion log. Without it, the rest of the object's life cannot be traced back to its construction site. Emit `self._logger.info("bridge_initialized", <config kwargs>)` at the end of `__init__`.
     severity: INFO
     languages: [python]
     patterns:

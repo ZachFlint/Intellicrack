@@ -49,8 +49,7 @@ _ASCII_PRINTABLE_MAX: Final[int] = 127
 class MemoryTab(QWidget):
     """Tab for memory inspection and manipulation operations.
 
-    Provides sub-tabs for region map, read, write, allocate/free,
-    protection changes, and pattern search.
+    Provides sub-tabs for region map, read, write, allocate/free, protection changes, and pattern search.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

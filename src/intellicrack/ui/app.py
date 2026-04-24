@@ -1244,8 +1244,7 @@ class MainWindow(QMainWindow):
     def _on_export_session(self) -> None:
         """Export the current session to a JSON file.
 
-        Success and failure dialogs are only shown after the async export
-        coroutine completes so the user is not told the file was saved
+        Success and failure dialogs are only shown after the async export coroutine completes so the user is not told the file was saved
         before it has actually been written.
         """
         session = self._orchestrator.current_session

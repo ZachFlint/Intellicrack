@@ -879,7 +879,6 @@ ignore-names = [
   "quantization_config",
   "_config_dir",
   "preview",
-  "get_structlog_logger",
   "connect_hex_widget_to_tools",
   "execute_pattern_bytes",
   "load_template",

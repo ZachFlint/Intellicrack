@@ -1,1219 +1,9 @@
 {
   "tool": "markdownlint",
-  "generated": "2026-04-17T05:38:40.402365+00:00",
-  "total_findings": 586,
-  "total_files": 16,
+  "generated": "2026-04-24T05:13:09.534171+00:00",
+  "total_findings": 495,
+  "total_files": 17,
   "files": [
-    {
-      "path": "tool_bridge_audit_2026-04-10.md",
-      "count": 172,
-      "findings": [
-        {
-          "line": 5,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 140]",
-          "raw": "tool_bridge_audit_2026-04-10.md:5:81 error MD013/line-length Line length [Expected: 80; Actual: 140]"
-        },
-        {
-          "line": 11,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 136]",
-          "raw": "tool_bridge_audit_2026-04-10.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 136]"
-        },
-        {
-          "line": 13,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 121]",
-          "raw": "tool_bridge_audit_2026-04-10.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 121]"
-        },
-        {
-          "line": 14,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
-          "raw": "tool_bridge_audit_2026-04-10.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
-        },
-        {
-          "line": 15,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 137]",
-          "raw": "tool_bridge_audit_2026-04-10.md:15:81 error MD013/line-length Line length [Expected: 80; Actual: 137]"
-        },
-        {
-          "line": 23,
-          "column": 10,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 23,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 45,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 61,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 76,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:76 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 10,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 23,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:23 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 45,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:45 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 23,
-          "column": 61,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:23:61 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 37,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 516]",
-          "raw": "tool_bridge_audit_2026-04-10.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 516]"
-        },
-        {
-          "line": 46,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 283]",
-          "raw": "tool_bridge_audit_2026-04-10.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 283]"
-        },
-        {
-          "line": 48,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 232]",
-          "raw": "tool_bridge_audit_2026-04-10.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 232]"
-        },
-        {
-          "line": 55,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 30,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 39,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:39 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 55,
-          "column": 30,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:55:30 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 56,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
-          "raw": "tool_bridge_audit_2026-04-10.md:56:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
-        },
-        {
-          "line": 57,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 121]",
-          "raw": "tool_bridge_audit_2026-04-10.md:57:81 error MD013/line-length Line length [Expected: 80; Actual: 121]"
-        },
-        {
-          "line": 58,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 113]",
-          "raw": "tool_bridge_audit_2026-04-10.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 113]"
-        },
-        {
-          "line": 59,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 123]",
-          "raw": "tool_bridge_audit_2026-04-10.md:59:81 error MD013/line-length Line length [Expected: 80; Actual: 123]"
-        },
-        {
-          "line": 60,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 105]",
-          "raw": "tool_bridge_audit_2026-04-10.md:60:81 error MD013/line-length Line length [Expected: 80; Actual: 105]"
-        },
-        {
-          "line": 61,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 96]",
-          "raw": "tool_bridge_audit_2026-04-10.md:61:81 error MD013/line-length Line length [Expected: 80; Actual: 96]"
-        },
-        {
-          "line": 62,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 104]",
-          "raw": "tool_bridge_audit_2026-04-10.md:62:81 error MD013/line-length Line length [Expected: 80; Actual: 104]"
-        },
-        {
-          "line": 63,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 82]",
-          "raw": "tool_bridge_audit_2026-04-10.md:63:81 error MD013/line-length Line length [Expected: 80; Actual: 82]"
-        },
-        {
-          "line": 64,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
-          "raw": "tool_bridge_audit_2026-04-10.md:64:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
-        },
-        {
-          "line": 69,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 69,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 69,
-          "column": 30,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:30 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 69,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 69,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 69,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:69:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 70,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 85]",
-          "raw": "tool_bridge_audit_2026-04-10.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 85]"
-        },
-        {
-          "line": 79,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 83]",
-          "raw": "tool_bridge_audit_2026-04-10.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 83]"
-        },
-        {
-          "line": 87,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
-          "raw": "tool_bridge_audit_2026-04-10.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
-        },
-        {
-          "line": 92,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 92,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:92:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 92,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:92:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 92,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:92:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 108,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 439]",
-          "raw": "tool_bridge_audit_2026-04-10.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 439]"
-        },
-        {
-          "line": 114,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 571]",
-          "raw": "tool_bridge_audit_2026-04-10.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 571]"
-        },
-        {
-          "line": 123,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 270]",
-          "raw": "tool_bridge_audit_2026-04-10.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 270]"
-        },
-        {
-          "line": 125,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 182]",
-          "raw": "tool_bridge_audit_2026-04-10.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 182]"
-        },
-        {
-          "line": 127,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 318]",
-          "raw": "tool_bridge_audit_2026-04-10.md:127:81 error MD013/line-length Line length [Expected: 80; Actual: 318]"
-        },
-        {
-          "line": 129,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 218]",
-          "raw": "tool_bridge_audit_2026-04-10.md:129:81 error MD013/line-length Line length [Expected: 80; Actual: 218]"
-        },
-        {
-          "line": 131,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 181]",
-          "raw": "tool_bridge_audit_2026-04-10.md:131:81 error MD013/line-length Line length [Expected: 80; Actual: 181]"
-        },
-        {
-          "line": 133,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 154]",
-          "raw": "tool_bridge_audit_2026-04-10.md:133:81 error MD013/line-length Line length [Expected: 80; Actual: 154]"
-        },
-        {
-          "line": 140,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 140,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 140,
-          "column": 33,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 140,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 140,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 140,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:140:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 141,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 87]",
-          "raw": "tool_bridge_audit_2026-04-10.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 87]"
-        },
-        {
-          "line": 149,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 83]",
-          "raw": "tool_bridge_audit_2026-04-10.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 83]"
-        },
-        {
-          "line": 151,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 123]",
-          "raw": "tool_bridge_audit_2026-04-10.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 123]"
-        },
-        {
-          "line": 152,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 84]",
-          "raw": "tool_bridge_audit_2026-04-10.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 84]"
-        },
-        {
-          "line": 157,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 157,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:157:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 157,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:157:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 157,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:157:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 184,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 549]",
-          "raw": "tool_bridge_audit_2026-04-10.md:184:81 error MD013/line-length Line length [Expected: 80; Actual: 549]"
-        },
-        {
-          "line": 190,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 644]",
-          "raw": "tool_bridge_audit_2026-04-10.md:190:81 error MD013/line-length Line length [Expected: 80; Actual: 644]"
-        },
-        {
-          "line": 199,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 220]",
-          "raw": "tool_bridge_audit_2026-04-10.md:199:81 error MD013/line-length Line length [Expected: 80; Actual: 220]"
-        },
-        {
-          "line": 201,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 177]",
-          "raw": "tool_bridge_audit_2026-04-10.md:201:81 error MD013/line-length Line length [Expected: 80; Actual: 177]"
-        },
-        {
-          "line": 208,
-          "column": 13,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 208,
-          "column": 27,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:208:27 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 208,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:208:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 208,
-          "column": 13,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:208:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 209,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 167]",
-          "raw": "tool_bridge_audit_2026-04-10.md:209:81 error MD013/line-length Line length [Expected: 80; Actual: 167]"
-        },
-        {
-          "line": 210,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 188]",
-          "raw": "tool_bridge_audit_2026-04-10.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 188]"
-        },
-        {
-          "line": 211,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 131]",
-          "raw": "tool_bridge_audit_2026-04-10.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 131]"
-        },
-        {
-          "line": 212,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 121]",
-          "raw": "tool_bridge_audit_2026-04-10.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 121]"
-        },
-        {
-          "line": 213,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 93]",
-          "raw": "tool_bridge_audit_2026-04-10.md:213:81 error MD013/line-length Line length [Expected: 80; Actual: 93]"
-        },
-        {
-          "line": 214,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 89]",
-          "raw": "tool_bridge_audit_2026-04-10.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 89]"
-        },
-        {
-          "line": 215,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 95]",
-          "raw": "tool_bridge_audit_2026-04-10.md:215:81 error MD013/line-length Line length [Expected: 80; Actual: 95]"
-        },
-        {
-          "line": 216,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 115]",
-          "raw": "tool_bridge_audit_2026-04-10.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 115]"
-        },
-        {
-          "line": 218,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
-          "raw": "tool_bridge_audit_2026-04-10.md:218:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
-        },
-        {
-          "line": 224,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 224,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 224,
-          "column": 26,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 224,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 224,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 224,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:224:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 225,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 83]",
-          "raw": "tool_bridge_audit_2026-04-10.md:225:81 error MD013/line-length Line length [Expected: 80; Actual: 83]"
-        },
-        {
-          "line": 228,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 82]",
-          "raw": "tool_bridge_audit_2026-04-10.md:228:81 error MD013/line-length Line length [Expected: 80; Actual: 82]"
-        },
-        {
-          "line": 242,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 82]",
-          "raw": "tool_bridge_audit_2026-04-10.md:242:81 error MD013/line-length Line length [Expected: 80; Actual: 82]"
-        },
-        {
-          "line": 245,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 95]",
-          "raw": "tool_bridge_audit_2026-04-10.md:245:81 error MD013/line-length Line length [Expected: 80; Actual: 95]"
-        },
-        {
-          "line": 251,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 513]",
-          "raw": "tool_bridge_audit_2026-04-10.md:251:81 error MD013/line-length Line length [Expected: 80; Actual: 513]"
-        },
-        {
-          "line": 259,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 529]",
-          "raw": "tool_bridge_audit_2026-04-10.md:259:81 error MD013/line-length Line length [Expected: 80; Actual: 529]"
-        },
-        {
-          "line": 268,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 188]",
-          "raw": "tool_bridge_audit_2026-04-10.md:268:81 error MD013/line-length Line length [Expected: 80; Actual: 188]"
-        },
-        {
-          "line": 270,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 147]",
-          "raw": "tool_bridge_audit_2026-04-10.md:270:81 error MD013/line-length Line length [Expected: 80; Actual: 147]"
-        },
-        {
-          "line": 272,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 182]",
-          "raw": "tool_bridge_audit_2026-04-10.md:272:81 error MD013/line-length Line length [Expected: 80; Actual: 182]"
-        },
-        {
-          "line": 279,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 279,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 279,
-          "column": 33,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:33 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 279,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 279,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 279,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:279:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 280,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 92]",
-          "raw": "tool_bridge_audit_2026-04-10.md:280:81 error MD013/line-length Line length [Expected: 80; Actual: 92]"
-        },
-        {
-          "line": 301,
-          "column": 13,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 301,
-          "column": 29,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:301:29 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 301,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:301:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 301,
-          "column": 13,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:301:13 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 302,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 82]",
-          "raw": "tool_bridge_audit_2026-04-10.md:302:81 error MD013/line-length Line length [Expected: 80; Actual: 82]"
-        },
-        {
-          "line": 308,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 141]",
-          "raw": "tool_bridge_audit_2026-04-10.md:308:81 error MD013/line-length Line length [Expected: 80; Actual: 141]"
-        },
-        {
-          "line": 318,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 185]",
-          "raw": "tool_bridge_audit_2026-04-10.md:318:81 error MD013/line-length Line length [Expected: 80; Actual: 185]"
-        },
-        {
-          "line": 326,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 540]",
-          "raw": "tool_bridge_audit_2026-04-10.md:326:81 error MD013/line-length Line length [Expected: 80; Actual: 540]"
-        },
-        {
-          "line": 341,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 341,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 341,
-          "column": 31,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 341,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 341,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 341,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:341:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 344,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
-          "raw": "tool_bridge_audit_2026-04-10.md:344:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
-        },
-        {
-          "line": 346,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 92]",
-          "raw": "tool_bridge_audit_2026-04-10.md:346:81 error MD013/line-length Line length [Expected: 80; Actual: 92]"
-        },
-        {
-          "line": 351,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
-          "raw": "tool_bridge_audit_2026-04-10.md:351:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
-        },
-        {
-          "line": 354,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 83]",
-          "raw": "tool_bridge_audit_2026-04-10.md:354:81 error MD013/line-length Line length [Expected: 80; Actual: 83]"
-        },
-        {
-          "line": 355,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 81]",
-          "raw": "tool_bridge_audit_2026-04-10.md:355:81 error MD013/line-length Line length [Expected: 80; Actual: 81]"
-        },
-        {
-          "line": 362,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 694]",
-          "raw": "tool_bridge_audit_2026-04-10.md:362:81 error MD013/line-length Line length [Expected: 80; Actual: 694]"
-        },
-        {
-          "line": 368,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 643]",
-          "raw": "tool_bridge_audit_2026-04-10.md:368:81 error MD013/line-length Line length [Expected: 80; Actual: 643]"
-        },
-        {
-          "line": 373,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 241]",
-          "raw": "tool_bridge_audit_2026-04-10.md:373:81 error MD013/line-length Line length [Expected: 80; Actual: 241]"
-        },
-        {
-          "line": 377,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
-          "raw": "tool_bridge_audit_2026-04-10.md:377:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
-        },
-        {
-          "line": 382,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 382,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 382,
-          "column": 28,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:28 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 382,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 382,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 382,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:382:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 383,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 82]",
-          "raw": "tool_bridge_audit_2026-04-10.md:383:81 error MD013/line-length Line length [Expected: 80; Actual: 82]"
-        },
-        {
-          "line": 391,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 81]",
-          "raw": "tool_bridge_audit_2026-04-10.md:391:81 error MD013/line-length Line length [Expected: 80; Actual: 81]"
-        },
-        {
-          "line": 413,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 332]",
-          "raw": "tool_bridge_audit_2026-04-10.md:413:81 error MD013/line-length Line length [Expected: 80; Actual: 332]"
-        },
-        {
-          "line": 415,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 159]",
-          "raw": "tool_bridge_audit_2026-04-10.md:415:81 error MD013/line-length Line length [Expected: 80; Actual: 159]"
-        },
-        {
-          "line": 421,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 681]",
-          "raw": "tool_bridge_audit_2026-04-10.md:421:81 error MD013/line-length Line length [Expected: 80; Actual: 681]"
-        },
-        {
-          "line": 426,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 219]",
-          "raw": "tool_bridge_audit_2026-04-10.md:426:81 error MD013/line-length Line length [Expected: 80; Actual: 219]"
-        },
-        {
-          "line": 430,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 164]",
-          "raw": "tool_bridge_audit_2026-04-10.md:430:81 error MD013/line-length Line length [Expected: 80; Actual: 164]"
-        },
-        {
-          "line": 432,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 256]",
-          "raw": "tool_bridge_audit_2026-04-10.md:432:81 error MD013/line-length Line length [Expected: 80; Actual: 256]"
-        },
-        {
-          "line": 437,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 437,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 437,
-          "column": 31,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:31 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 437,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 437,
-          "column": 5,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:5 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 437,
-          "column": 17,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:437:17 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 453,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 85]",
-          "raw": "tool_bridge_audit_2026-04-10.md:453:81 error MD013/line-length Line length [Expected: 80; Actual: 85]"
-        },
-        {
-          "line": 462,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 324]",
-          "raw": "tool_bridge_audit_2026-04-10.md:462:81 error MD013/line-length Line length [Expected: 80; Actual: 324]"
-        },
-        {
-          "line": 468,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 99]",
-          "raw": "tool_bridge_audit_2026-04-10.md:468:81 error MD013/line-length Line length [Expected: 80; Actual: 99]"
-        },
-        {
-          "line": 469,
-          "column": 10,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 26,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 46,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 60,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 70,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 77,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 98,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:98 error MD060/table-column-style Table column style [Table pipe is missing space to the left for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 1,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:1 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 10,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:10 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 26,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:26 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 46,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:46 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 60,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:60 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 70,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:70 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 469,
-          "column": 77,
-          "code": "error",
-          "message": "MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]",
-          "raw": "tool_bridge_audit_2026-04-10.md:469:77 error MD060/table-column-style Table column style [Table pipe is missing space to the right for style \"compact\"]"
-        },
-        {
-          "line": 474,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 90]",
-          "raw": "tool_bridge_audit_2026-04-10.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 90]"
-        },
-        {
-          "line": 478,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 95]",
-          "raw": "tool_bridge_audit_2026-04-10.md:478:81 error MD013/line-length Line length [Expected: 80; Actual: 95]"
-        },
-        {
-          "line": 480,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 133]",
-          "raw": "tool_bridge_audit_2026-04-10.md:480:81 error MD013/line-length Line length [Expected: 80; Actual: 133]"
-        }
-      ]
-    },
     {
       "path": "prompts.md",
       "count": 101,
@@ -3215,294 +2005,839 @@
     },
     {
       "path": "CHANGELOG.md",
-      "count": 41,
+      "count": 82,
       "findings": [
         {
           "line": 13,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 513]",
-          "raw": "CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 513]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 291]",
+          "raw": "CHANGELOG.md:13:81 error MD013/line-length Line length [Expected: 80; Actual: 291]"
         },
         {
-          "line": 14,
+          "line": 20,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 647]",
-          "raw": "CHANGELOG.md:14:81 error MD013/line-length Line length [Expected: 80; Actual: 647]"
-        },
-        {
-          "line": 16,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 167]",
-          "raw": "CHANGELOG.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 167]"
-        },
-        {
-          "line": 17,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 180]",
-          "raw": "CHANGELOG.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 180]"
-        },
-        {
-          "line": 18,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 162]",
-          "raw": "CHANGELOG.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 162]"
-        },
-        {
-          "line": 19,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
-          "raw": "CHANGELOG.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
-        },
-        {
-          "line": 21,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
-          "raw": "CHANGELOG.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "CHANGELOG.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
         },
         {
           "line": 22,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 163]",
-          "raw": "CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 163]"
-        },
-        {
-          "line": 23,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 115]",
-          "raw": "CHANGELOG.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 115]"
-        },
-        {
-          "line": 24,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 129]",
-          "raw": "CHANGELOG.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 129]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 118]",
+          "raw": "CHANGELOG.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 118]"
         },
         {
           "line": 26,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 149]",
-          "raw": "CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 149]"
-        },
-        {
-          "line": 27,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 129]",
-          "raw": "CHANGELOG.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 129]"
-        },
-        {
-          "line": 28,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 159]",
-          "raw": "CHANGELOG.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 159]"
-        },
-        {
-          "line": 29,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 147]",
-          "raw": "CHANGELOG.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 147]"
-        },
-        {
-          "line": 31,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 169]",
-          "raw": "CHANGELOG.md:31:81 error MD013/line-length Line length [Expected: 80; Actual: 169]"
-        },
-        {
-          "line": 32,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
-          "raw": "CHANGELOG.md:32:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
-        },
-        {
-          "line": 33,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 116]",
-          "raw": "CHANGELOG.md:33:81 error MD013/line-length Line length [Expected: 80; Actual: 116]"
-        },
-        {
-          "line": 35,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 160]",
-          "raw": "CHANGELOG.md:35:81 error MD013/line-length Line length [Expected: 80; Actual: 160]"
-        },
-        {
-          "line": 36,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 148]",
-          "raw": "CHANGELOG.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 148]"
-        },
-        {
-          "line": 37,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 137]",
-          "raw": "CHANGELOG.md:37:81 error MD013/line-length Line length [Expected: 80; Actual: 137]"
-        },
-        {
-          "line": 38,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 135]",
-          "raw": "CHANGELOG.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 135]"
-        },
-        {
-          "line": 40,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 146]",
-          "raw": "CHANGELOG.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 146]"
-        },
-        {
-          "line": 41,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 171]",
-          "raw": "CHANGELOG.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 171]"
-        },
-        {
-          "line": 42,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 100]",
-          "raw": "CHANGELOG.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 100]"
-        },
-        {
-          "line": 44,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
-          "raw": "CHANGELOG.md:44:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
-        },
-        {
-          "line": 58,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 105]",
-          "raw": "CHANGELOG.md:58:81 error MD013/line-length Line length [Expected: 80; Actual: 105]"
-        },
-        {
-          "line": 65,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 250]",
-          "raw": "CHANGELOG.md:65:81 error MD013/line-length Line length [Expected: 80; Actual: 250]"
-        },
-        {
-          "line": 67,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
-          "raw": "CHANGELOG.md:67:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
-        },
-        {
-          "line": 68,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 110]",
-          "raw": "CHANGELOG.md:68:81 error MD013/line-length Line length [Expected: 80; Actual: 110]"
-        },
-        {
-          "line": 69,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
-          "raw": "CHANGELOG.md:69:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
-        },
-        {
-          "line": 70,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
-          "raw": "CHANGELOG.md:70:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
-        },
-        {
-          "line": 71,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 112]",
-          "raw": "CHANGELOG.md:71:81 error MD013/line-length Line length [Expected: 80; Actual: 112]"
-        },
-        {
-          "line": 79,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 244]",
-          "raw": "CHANGELOG.md:79:81 error MD013/line-length Line length [Expected: 80; Actual: 244]"
-        },
-        {
-          "line": 84,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
-          "raw": "CHANGELOG.md:84:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
-        },
-        {
-          "line": 87,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 226]",
-          "raw": "CHANGELOG.md:87:81 error MD013/line-length Line length [Expected: 80; Actual: 226]"
-        },
-        {
-          "line": 92,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 277]",
-          "raw": "CHANGELOG.md:92:81 error MD013/line-length Line length [Expected: 80; Actual: 277]"
-        },
-        {
-          "line": 93,
-          "column": 81,
-          "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 119]",
-          "raw": "CHANGELOG.md:93:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 95]",
+          "raw": "CHANGELOG.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 95]"
         },
         {
           "line": 94,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 132]",
-          "raw": "CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 132]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 513]",
+          "raw": "CHANGELOG.md:94:81 error MD013/line-length Line length [Expected: 80; Actual: 513]"
         },
         {
-          "line": 96,
+          "line": 95,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
-          "raw": "CHANGELOG.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 647]",
+          "raw": "CHANGELOG.md:95:81 error MD013/line-length Line length [Expected: 80; Actual: 647]"
+        },
+        {
+          "line": 97,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 167]",
+          "raw": "CHANGELOG.md:97:81 error MD013/line-length Line length [Expected: 80; Actual: 167]"
         },
         {
           "line": 98,
           "column": 81,
           "code": "error",
-          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
-          "raw": "CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 180]",
+          "raw": "CHANGELOG.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 180]"
         },
         {
-          "line": 106,
+          "line": 99,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 162]",
+          "raw": "CHANGELOG.md:99:81 error MD013/line-length Line length [Expected: 80; Actual: 162]"
+        },
+        {
+          "line": 100,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
+          "raw": "CHANGELOG.md:100:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
+        },
+        {
+          "line": 102,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
+          "raw": "CHANGELOG.md:102:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
+        },
+        {
+          "line": 103,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 163]",
+          "raw": "CHANGELOG.md:103:81 error MD013/line-length Line length [Expected: 80; Actual: 163]"
+        },
+        {
+          "line": 104,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 115]",
+          "raw": "CHANGELOG.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 115]"
+        },
+        {
+          "line": 105,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 129]",
+          "raw": "CHANGELOG.md:105:81 error MD013/line-length Line length [Expected: 80; Actual: 129]"
+        },
+        {
+          "line": 107,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 149]",
+          "raw": "CHANGELOG.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 149]"
+        },
+        {
+          "line": 108,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 129]",
+          "raw": "CHANGELOG.md:108:81 error MD013/line-length Line length [Expected: 80; Actual: 129]"
+        },
+        {
+          "line": 109,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 159]",
+          "raw": "CHANGELOG.md:109:81 error MD013/line-length Line length [Expected: 80; Actual: 159]"
+        },
+        {
+          "line": 110,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 147]",
+          "raw": "CHANGELOG.md:110:81 error MD013/line-length Line length [Expected: 80; Actual: 147]"
+        },
+        {
+          "line": 112,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 169]",
+          "raw": "CHANGELOG.md:112:81 error MD013/line-length Line length [Expected: 80; Actual: 169]"
+        },
+        {
+          "line": 113,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 151]",
+          "raw": "CHANGELOG.md:113:81 error MD013/line-length Line length [Expected: 80; Actual: 151]"
+        },
+        {
+          "line": 114,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 116]",
+          "raw": "CHANGELOG.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 116]"
+        },
+        {
+          "line": 116,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 160]",
+          "raw": "CHANGELOG.md:116:81 error MD013/line-length Line length [Expected: 80; Actual: 160]"
+        },
+        {
+          "line": 117,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 148]",
+          "raw": "CHANGELOG.md:117:81 error MD013/line-length Line length [Expected: 80; Actual: 148]"
+        },
+        {
+          "line": 118,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 137]",
+          "raw": "CHANGELOG.md:118:81 error MD013/line-length Line length [Expected: 80; Actual: 137]"
+        },
+        {
+          "line": 119,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 135]",
+          "raw": "CHANGELOG.md:119:81 error MD013/line-length Line length [Expected: 80; Actual: 135]"
+        },
+        {
+          "line": 121,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 146]",
+          "raw": "CHANGELOG.md:121:81 error MD013/line-length Line length [Expected: 80; Actual: 146]"
+        },
+        {
+          "line": 122,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 171]",
+          "raw": "CHANGELOG.md:122:81 error MD013/line-length Line length [Expected: 80; Actual: 171]"
+        },
+        {
+          "line": 123,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 100]",
+          "raw": "CHANGELOG.md:123:81 error MD013/line-length Line length [Expected: 80; Actual: 100]"
+        },
+        {
+          "line": 125,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
+          "raw": "CHANGELOG.md:125:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
+        },
+        {
+          "line": 139,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 105]",
+          "raw": "CHANGELOG.md:139:81 error MD013/line-length Line length [Expected: 80; Actual: 105]"
+        },
+        {
+          "line": 146,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 250]",
+          "raw": "CHANGELOG.md:146:81 error MD013/line-length Line length [Expected: 80; Actual: 250]"
+        },
+        {
+          "line": 148,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
+          "raw": "CHANGELOG.md:148:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
+        },
+        {
+          "line": 149,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 110]",
+          "raw": "CHANGELOG.md:149:81 error MD013/line-length Line length [Expected: 80; Actual: 110]"
+        },
+        {
+          "line": 150,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
+          "raw": "CHANGELOG.md:150:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
+        },
+        {
+          "line": 151,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:151:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+        },
+        {
+          "line": 152,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 112]",
+          "raw": "CHANGELOG.md:152:81 error MD013/line-length Line length [Expected: 80; Actual: 112]"
+        },
+        {
+          "line": 189,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 271]",
+          "raw": "CHANGELOG.md:189:81 error MD013/line-length Line length [Expected: 80; Actual: 271]"
+        },
+        {
+          "line": 197,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 244]",
+          "raw": "CHANGELOG.md:197:81 error MD013/line-length Line length [Expected: 80; Actual: 244]"
+        },
+        {
+          "line": 202,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:202:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+        },
+        {
+          "line": 205,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 226]",
+          "raw": "CHANGELOG.md:205:81 error MD013/line-length Line length [Expected: 80; Actual: 226]"
+        },
+        {
+          "line": 210,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 277]",
+          "raw": "CHANGELOG.md:210:81 error MD013/line-length Line length [Expected: 80; Actual: 277]"
+        },
+        {
+          "line": 211,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 119]",
+          "raw": "CHANGELOG.md:211:81 error MD013/line-length Line length [Expected: 80; Actual: 119]"
+        },
+        {
+          "line": 212,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 132]",
+          "raw": "CHANGELOG.md:212:81 error MD013/line-length Line length [Expected: 80; Actual: 132]"
+        },
+        {
+          "line": 214,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 107]",
+          "raw": "CHANGELOG.md:214:81 error MD013/line-length Line length [Expected: 80; Actual: 107]"
+        },
+        {
+          "line": 216,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "CHANGELOG.md:216:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 224,
           "column": 81,
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 117]",
-          "raw": "CHANGELOG.md:106:81 error MD013/line-length Line length [Expected: 80; Actual: 117]"
+          "raw": "CHANGELOG.md:224:81 error MD013/line-length Line length [Expected: 80; Actual: 117]"
+        },
+        {
+          "line": 237,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
+          "raw": "CHANGELOG.md:237:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
+        },
+        {
+          "line": 293,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 157]",
+          "raw": "CHANGELOG.md:293:81 error MD013/line-length Line length [Expected: 80; Actual: 157]"
+        },
+        {
+          "line": 295,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 152]",
+          "raw": "CHANGELOG.md:295:81 error MD013/line-length Line length [Expected: 80; Actual: 152]"
+        },
+        {
+          "line": 297,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "CHANGELOG.md:297:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 299,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 92]",
+          "raw": "CHANGELOG.md:299:81 error MD013/line-length Line length [Expected: 80; Actual: 92]"
+        },
+        {
+          "line": 305,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 127]",
+          "raw": "CHANGELOG.md:305:81 error MD013/line-length Line length [Expected: 80; Actual: 127]"
+        },
+        {
+          "line": 307,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 148]",
+          "raw": "CHANGELOG.md:307:81 error MD013/line-length Line length [Expected: 80; Actual: 148]"
+        },
+        {
+          "line": 309,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 98]",
+          "raw": "CHANGELOG.md:309:81 error MD013/line-length Line length [Expected: 80; Actual: 98]"
+        },
+        {
+          "line": 311,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 111]",
+          "raw": "CHANGELOG.md:311:81 error MD013/line-length Line length [Expected: 80; Actual: 111]"
+        },
+        {
+          "line": 313,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
+          "raw": "CHANGELOG.md:313:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
+        },
+        {
+          "line": 315,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 97]",
+          "raw": "CHANGELOG.md:315:81 error MD013/line-length Line length [Expected: 80; Actual: 97]"
+        },
+        {
+          "line": 319,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 99]",
+          "raw": "CHANGELOG.md:319:81 error MD013/line-length Line length [Expected: 80; Actual: 99]"
+        },
+        {
+          "line": 321,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 100]",
+          "raw": "CHANGELOG.md:321:81 error MD013/line-length Line length [Expected: 80; Actual: 100]"
+        },
+        {
+          "line": 323,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 102]",
+          "raw": "CHANGELOG.md:323:81 error MD013/line-length Line length [Expected: 80; Actual: 102]"
+        },
+        {
+          "line": 327,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 115]",
+          "raw": "CHANGELOG.md:327:81 error MD013/line-length Line length [Expected: 80; Actual: 115]"
+        },
+        {
+          "line": 331,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 101]",
+          "raw": "CHANGELOG.md:331:81 error MD013/line-length Line length [Expected: 80; Actual: 101]"
+        },
+        {
+          "line": 335,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 116]",
+          "raw": "CHANGELOG.md:335:81 error MD013/line-length Line length [Expected: 80; Actual: 116]"
+        },
+        {
+          "line": 337,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 132]",
+          "raw": "CHANGELOG.md:337:81 error MD013/line-length Line length [Expected: 80; Actual: 132]"
+        },
+        {
+          "line": 339,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "CHANGELOG.md:339:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
+        },
+        {
+          "line": 341,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:341:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+        },
+        {
+          "line": 363,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 103]",
+          "raw": "CHANGELOG.md:363:81 error MD013/line-length Line length [Expected: 80; Actual: 103]"
+        },
+        {
+          "line": 389,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "CHANGELOG.md:389:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
+        },
+        {
+          "line": 401,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 113]",
+          "raw": "CHANGELOG.md:401:81 error MD013/line-length Line length [Expected: 80; Actual: 113]"
+        },
+        {
+          "line": 425,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 124]",
+          "raw": "CHANGELOG.md:425:81 error MD013/line-length Line length [Expected: 80; Actual: 124]"
+        },
+        {
+          "line": 427,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 102]",
+          "raw": "CHANGELOG.md:427:81 error MD013/line-length Line length [Expected: 80; Actual: 102]"
+        },
+        {
+          "line": 429,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 95]",
+          "raw": "CHANGELOG.md:429:81 error MD013/line-length Line length [Expected: 80; Actual: 95]"
+        },
+        {
+          "line": 474,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:474:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+        },
+        {
+          "line": 506,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 94]",
+          "raw": "CHANGELOG.md:506:81 error MD013/line-length Line length [Expected: 80; Actual: 94]"
+        },
+        {
+          "line": 514,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 159]",
+          "raw": "CHANGELOG.md:514:81 error MD013/line-length Line length [Expected: 80; Actual: 159]"
+        },
+        {
+          "line": 585,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 103]",
+          "raw": "CHANGELOG.md:585:81 error MD013/line-length Line length [Expected: 80; Actual: 103]"
+        },
+        {
+          "line": 587,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 114]",
+          "raw": "CHANGELOG.md:587:81 error MD013/line-length Line length [Expected: 80; Actual: 114]"
+        },
+        {
+          "line": 695,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 92]",
+          "raw": "CHANGELOG.md:695:81 error MD013/line-length Line length [Expected: 80; Actual: 92]"
+        },
+        {
+          "line": 718,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 234]",
+          "raw": "CHANGELOG.md:718:81 error MD013/line-length Line length [Expected: 80; Actual: 234]"
+        },
+        {
+          "line": 720,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 100]",
+          "raw": "CHANGELOG.md:720:81 error MD013/line-length Line length [Expected: 80; Actual: 100]"
+        },
+        {
+          "line": 728,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 222]",
+          "raw": "CHANGELOG.md:728:81 error MD013/line-length Line length [Expected: 80; Actual: 222]"
+        },
+        {
+          "line": 729,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 91]",
+          "raw": "CHANGELOG.md:729:81 error MD013/line-length Line length [Expected: 80; Actual: 91]"
+        }
+      ]
+    },
+    {
+      "path": "remediation-audit-results.md",
+      "count": 36,
+      "findings": [
+        {
+          "line": 3,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 155]",
+          "raw": "remediation-audit-results.md:3:81 error MD013/line-length Line length [Expected: 80; Actual: 155]"
+        },
+        {
+          "line": 7,
+          "column": null,
+          "code": "error",
+          "message": "MD001/heading-increment Heading levels should only increment by one level at a time [Expected: h2; Actual: h3]",
+          "raw": "remediation-audit-results.md:7 error MD001/heading-increment Heading levels should only increment by one level at a time [Expected: h2; Actual: h3]"
+        },
+        {
+          "line": 9,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 273]",
+          "raw": "remediation-audit-results.md:9:81 error MD013/line-length Line length [Expected: 80; Actual: 273]"
+        },
+        {
+          "line": 10,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 96]",
+          "raw": "remediation-audit-results.md:10:81 error MD013/line-length Line length [Expected: 80; Actual: 96]"
+        },
+        {
+          "line": 11,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 190]",
+          "raw": "remediation-audit-results.md:11:81 error MD013/line-length Line length [Expected: 80; Actual: 190]"
+        },
+        {
+          "line": 12,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 148]",
+          "raw": "remediation-audit-results.md:12:81 error MD013/line-length Line length [Expected: 80; Actual: 148]"
+        },
+        {
+          "line": 16,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 186]",
+          "raw": "remediation-audit-results.md:16:81 error MD013/line-length Line length [Expected: 80; Actual: 186]"
+        },
+        {
+          "line": 17,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 154]",
+          "raw": "remediation-audit-results.md:17:81 error MD013/line-length Line length [Expected: 80; Actual: 154]"
+        },
+        {
+          "line": 18,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 169]",
+          "raw": "remediation-audit-results.md:18:81 error MD013/line-length Line length [Expected: 80; Actual: 169]"
+        },
+        {
+          "line": 19,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 569]",
+          "raw": "remediation-audit-results.md:19:81 error MD013/line-length Line length [Expected: 80; Actual: 569]"
+        },
+        {
+          "line": 20,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 216]",
+          "raw": "remediation-audit-results.md:20:81 error MD013/line-length Line length [Expected: 80; Actual: 216]"
+        },
+        {
+          "line": 21,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 209]",
+          "raw": "remediation-audit-results.md:21:81 error MD013/line-length Line length [Expected: 80; Actual: 209]"
+        },
+        {
+          "line": 22,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 317]",
+          "raw": "remediation-audit-results.md:22:81 error MD013/line-length Line length [Expected: 80; Actual: 317]"
+        },
+        {
+          "line": 23,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 322]",
+          "raw": "remediation-audit-results.md:23:81 error MD013/line-length Line length [Expected: 80; Actual: 322]"
+        },
+        {
+          "line": 24,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 209]",
+          "raw": "remediation-audit-results.md:24:81 error MD013/line-length Line length [Expected: 80; Actual: 209]"
+        },
+        {
+          "line": 25,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 323]",
+          "raw": "remediation-audit-results.md:25:81 error MD013/line-length Line length [Expected: 80; Actual: 323]"
+        },
+        {
+          "line": 26,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 342]",
+          "raw": "remediation-audit-results.md:26:81 error MD013/line-length Line length [Expected: 80; Actual: 342]"
+        },
+        {
+          "line": 27,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 354]",
+          "raw": "remediation-audit-results.md:27:81 error MD013/line-length Line length [Expected: 80; Actual: 354]"
+        },
+        {
+          "line": 28,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 335]",
+          "raw": "remediation-audit-results.md:28:81 error MD013/line-length Line length [Expected: 80; Actual: 335]"
+        },
+        {
+          "line": 29,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 261]",
+          "raw": "remediation-audit-results.md:29:81 error MD013/line-length Line length [Expected: 80; Actual: 261]"
+        },
+        {
+          "line": 30,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 352]",
+          "raw": "remediation-audit-results.md:30:81 error MD013/line-length Line length [Expected: 80; Actual: 352]"
+        },
+        {
+          "line": 34,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 155]",
+          "raw": "remediation-audit-results.md:34:81 error MD013/line-length Line length [Expected: 80; Actual: 155]"
+        },
+        {
+          "line": 35,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 166]",
+          "raw": "remediation-audit-results.md:35:81 error MD013/line-length Line length [Expected: 80; Actual: 166]"
+        },
+        {
+          "line": 36,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 124]",
+          "raw": "remediation-audit-results.md:36:81 error MD013/line-length Line length [Expected: 80; Actual: 124]"
+        },
+        {
+          "line": 38,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 136]",
+          "raw": "remediation-audit-results.md:38:81 error MD013/line-length Line length [Expected: 80; Actual: 136]"
+        },
+        {
+          "line": 39,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 155]",
+          "raw": "remediation-audit-results.md:39:81 error MD013/line-length Line length [Expected: 80; Actual: 155]"
+        },
+        {
+          "line": 40,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 147]",
+          "raw": "remediation-audit-results.md:40:81 error MD013/line-length Line length [Expected: 80; Actual: 147]"
+        },
+        {
+          "line": 41,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 131]",
+          "raw": "remediation-audit-results.md:41:81 error MD013/line-length Line length [Expected: 80; Actual: 131]"
+        },
+        {
+          "line": 42,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 108]",
+          "raw": "remediation-audit-results.md:42:81 error MD013/line-length Line length [Expected: 80; Actual: 108]"
+        },
+        {
+          "line": 43,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 379]",
+          "raw": "remediation-audit-results.md:43:81 error MD013/line-length Line length [Expected: 80; Actual: 379]"
+        },
+        {
+          "line": 44,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 276]",
+          "raw": "remediation-audit-results.md:44:81 error MD013/line-length Line length [Expected: 80; Actual: 276]"
+        },
+        {
+          "line": 45,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 160]",
+          "raw": "remediation-audit-results.md:45:81 error MD013/line-length Line length [Expected: 80; Actual: 160]"
+        },
+        {
+          "line": 46,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 139]",
+          "raw": "remediation-audit-results.md:46:81 error MD013/line-length Line length [Expected: 80; Actual: 139]"
+        },
+        {
+          "line": 47,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 115]",
+          "raw": "remediation-audit-results.md:47:81 error MD013/line-length Line length [Expected: 80; Actual: 115]"
+        },
+        {
+          "line": 48,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 161]",
+          "raw": "remediation-audit-results.md:48:81 error MD013/line-length Line length [Expected: 80; Actual: 161]"
+        },
+        {
+          "line": 49,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 169]",
+          "raw": "remediation-audit-results.md:49:81 error MD013/line-length Line length [Expected: 80; Actual: 169]"
         }
       ]
     },
@@ -4105,6 +3440,40 @@
           "code": "error",
           "message": "MD013/line-length Line length [Expected: 80; Actual: 86]",
           "raw": "AGENTS.md:141:81 error MD013/line-length Line length [Expected: 80; Actual: 86]"
+        }
+      ]
+    },
+    {
+      "path": "remediation-prompt.md",
+      "count": 4,
+      "findings": [
+        {
+          "line": 114,
+          "column": 81,
+          "code": "error",
+          "message": "MD013/line-length Line length [Expected: 80; Actual: 89]",
+          "raw": "remediation-prompt.md:114:81 error MD013/line-length Line length [Expected: 80; Actual: 89]"
+        },
+        {
+          "line": 486,
+          "column": null,
+          "code": "error",
+          "message": "MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]",
+          "raw": "remediation-prompt.md:486 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]"
+        },
+        {
+          "line": 496,
+          "column": null,
+          "code": "error",
+          "message": "MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]",
+          "raw": "remediation-prompt.md:496 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]"
+        },
+        {
+          "line": 506,
+          "column": null,
+          "code": "error",
+          "message": "MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]",
+          "raw": "remediation-prompt.md:506 error MD040/fenced-code-language Fenced code blocks should have a language specified [Context: \"```\"]"
         }
       ]
     },

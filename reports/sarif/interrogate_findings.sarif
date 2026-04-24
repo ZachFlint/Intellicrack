@@ -32,7 +32,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 427,
+                  "startLine": 476,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'CutterBridge.import_c_header._write_temp'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bridges/cutter.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2338,
                   "startColumn": 1
                 }
               }
@@ -53,7 +74,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 269,
+                  "startLine": 304,
                   "startColumn": 1
                 }
               }
@@ -74,7 +95,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4787,
+                  "startLine": 5433,
                   "startColumn": 1
                 }
               }
@@ -95,7 +116,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 4861,
+                  "startLine": 5507,
                   "startColumn": 1
                 }
               }
@@ -116,7 +137,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 61,
+                  "startLine": 95,
                   "startColumn": 1
                 }
               }
@@ -137,7 +158,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 78,
+                  "startLine": 112,
                   "startColumn": 1
                 }
               }
@@ -158,7 +179,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1916,
+                  "startLine": 2312,
                   "startColumn": 1
                 }
               }
@@ -179,7 +200,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1919,
+                  "startLine": 2315,
                   "startColumn": 1
                 }
               }
@@ -200,7 +221,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1922,
+                  "startLine": 2318,
                   "startColumn": 1
                 }
               }
@@ -221,7 +242,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1928,
+                  "startLine": 2324,
                   "startColumn": 1
                 }
               }
@@ -242,7 +263,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1936,
+                  "startLine": 2332,
                   "startColumn": 1
                 }
               }
@@ -263,7 +284,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1939,
+                  "startLine": 2335,
                   "startColumn": 1
                 }
               }
@@ -284,7 +305,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1954,
+                  "startLine": 2350,
                   "startColumn": 1
                 }
               }
@@ -305,7 +326,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1964,
+                  "startLine": 2360,
                   "startColumn": 1
                 }
               }
@@ -326,7 +347,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1974,
+                  "startLine": 2370,
                   "startColumn": 1
                 }
               }
@@ -347,7 +368,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1983,
+                  "startLine": 2379,
                   "startColumn": 1
                 }
               }
@@ -368,7 +389,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1993,
+                  "startLine": 2389,
                   "startColumn": 1
                 }
               }
@@ -389,7 +410,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1997,
+                  "startLine": 2393,
                   "startColumn": 1
                 }
               }
@@ -410,7 +431,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2001,
+                  "startLine": 2397,
                   "startColumn": 1
                 }
               }
@@ -431,7 +452,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2010,
+                  "startLine": 2406,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'BuiltinFunctions._format_string._replace'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "core/hexpat/stdlib.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2225,
                   "startColumn": 1
                 }
               }
@@ -452,28 +494,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 382,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for '_OAuthManagerHolder'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "credentials/oauth.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 947,
+                  "startLine": 468,
                   "startColumn": 1
                 }
               }
@@ -494,7 +515,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 269,
+                  "startLine": 287,
                   "startColumn": 1
                 }
               }
@@ -515,7 +536,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 320,
+                  "startLine": 338,
                   "startColumn": 1
                 }
               }
@@ -536,7 +557,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 347,
+                  "startLine": 365,
                   "startColumn": 1
                 }
               }
@@ -557,7 +578,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 444,
+                  "startLine": 478,
                   "startColumn": 1
                 }
               }
@@ -568,17 +589,59 @@
           "ruleId": "INT001",
           "level": "warning",
           "message": {
-            "text": "Missing docstring for '_CredentialStoreHolder'"
+            "text": "Missing docstring for '_ChatCompletionCallable.__call__'"
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "credentials/store.py",
+                  "uri": "providers/huggingface.py",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 603,
+                  "startLine": 73,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for '_ChatCompletionCallable.__call__'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 86,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for '_WhoamiCallable.__call__'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "providers/huggingface.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 102,
                   "startColumn": 1
                 }
               }
@@ -662,7 +725,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 854,
+                  "startLine": 910,
                   "startColumn": 1
                 }
               }
@@ -683,7 +746,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2753,
+                  "startLine": 3141,
                   "startColumn": 1
                 }
               }
@@ -704,7 +767,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2833,
+                  "startLine": 3221,
                   "startColumn": 1
                 }
               }
@@ -725,7 +788,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2871,
+                  "startLine": 3259,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'WindowsSandbox._try_graceful_close._post_wm_close'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 393,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'WindowsSandbox._try_graceful_close._post_wm_close._cb'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 422,
                   "startColumn": 1
                 }
               }
@@ -746,7 +851,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 383,
+                  "startLine": 635,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'WindowsSandbox._create_monitor_scripts._copy_scripts'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "sandbox/windows.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 795,
                   "startColumn": 1
                 }
               }
@@ -767,28 +893,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1203,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "INT001",
-          "level": "warning",
-          "message": {
-            "text": "Missing docstring for 'WindowsSandbox.yara_scan._format_yara_match'"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "sandbox/windows.py",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 1286,
+                  "startLine": 2007,
                   "startColumn": 1
                 }
               }
@@ -809,7 +914,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1321,
+                  "startLine": 2087,
                   "startColumn": 1
                 }
               }
@@ -830,7 +935,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 748,
+                  "startLine": 763,
                   "startColumn": 1
                 }
               }
@@ -851,7 +956,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 758,
+                  "startLine": 773,
                   "startColumn": 1
                 }
               }
@@ -872,7 +977,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 799,
+                  "startLine": 814,
                   "startColumn": 1
                 }
               }
@@ -893,7 +998,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 955,
+                  "startLine": 970,
                   "startColumn": 1
                 }
               }
@@ -914,7 +1019,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 982,
+                  "startLine": 997,
                   "startColumn": 1
                 }
               }
@@ -935,7 +1040,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1122,
+                  "startLine": 1137,
                   "startColumn": 1
                 }
               }
@@ -956,7 +1061,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1159,
+                  "startLine": 1186,
                   "startColumn": 1
                 }
               }
@@ -977,7 +1082,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1174,
+                  "startLine": 1206,
                   "startColumn": 1
                 }
               }
@@ -998,7 +1103,91 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1185,
+                  "startLine": 1217,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._on_export_session._on_export_done'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1278,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._on_export_session._on_export_failed'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1282,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._start_session_import._on_import_done'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1344,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'MainWindow._start_session_import._on_import_failed'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/app.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1348,
                   "startColumn": 1
                 }
               }
@@ -1019,7 +1208,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1373,
+                  "startLine": 1512,
                   "startColumn": 1
                 }
               }
@@ -1040,7 +1229,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1457,
+                  "startLine": 1596,
                   "startColumn": 1
                 }
               }
@@ -1061,7 +1250,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1546,
+                  "startLine": 1685,
                   "startColumn": 1
                 }
               }
@@ -1082,7 +1271,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1577,
+                  "startLine": 1716,
                   "startColumn": 1
                 }
               }
@@ -1103,7 +1292,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1682,
+                  "startLine": 1929,
                   "startColumn": 1
                 }
               }
@@ -1124,7 +1313,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1688,
+                  "startLine": 1935,
                   "startColumn": 1
                 }
               }
@@ -1145,7 +1334,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1706,
+                  "startLine": 1953,
                   "startColumn": 1
                 }
               }
@@ -1166,7 +1355,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1977,
+                  "startLine": 2223,
                   "startColumn": 1
                 }
               }
@@ -1187,7 +1376,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2109,
+                  "startLine": 2355,
                   "startColumn": 1
                 }
               }
@@ -1208,7 +1397,49 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 502,
+                  "startLine": 443,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ConnectionTestWorker._test_grok._probe'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 543,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ModelRefreshWorker._fetch_grok_models._list'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 897,
                   "startColumn": 1
                 }
               }
@@ -1229,7 +1460,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 895,
+                  "startLine": 1016,
                   "startColumn": 1
                 }
               }
@@ -1250,7 +1481,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1035,
+                  "startLine": 1156,
                   "startColumn": 1
                 }
               }
@@ -1271,7 +1502,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1306,
+                  "startLine": 1427,
                   "startColumn": 1
                 }
               }
@@ -1292,7 +1523,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1345,
+                  "startLine": 1466,
                   "startColumn": 1
                 }
               }
@@ -1313,7 +1544,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1454,
+                  "startLine": 1573,
                   "startColumn": 1
                 }
               }
@@ -1334,7 +1565,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2059,
+                  "startLine": 2247,
                   "startColumn": 1
                 }
               }
@@ -1355,7 +1586,70 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2136,
+                  "startLine": 2324,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget.pull_ollama_model._pull'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2554,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget.pull_ollama_model._on_success'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2577,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ProviderSettingsWidget.pull_ollama_model._on_error'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/provider_config.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 2586,
                   "startColumn": 1
                 }
               }
@@ -1376,7 +1670,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 2367,
+                  "startLine": 2612,
                   "startColumn": 1
                 }
               }
@@ -1397,7 +1691,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 624,
+                  "startLine": 618,
                   "startColumn": 1
                 }
               }
@@ -1418,7 +1712,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 346,
+                  "startLine": 342,
                   "startColumn": 1
                 }
               }
@@ -1439,7 +1733,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 918,
+                  "startLine": 1064,
                   "startColumn": 1
                 }
               }
@@ -1460,7 +1754,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 980,
+                  "startLine": 1126,
                   "startColumn": 1
                 }
               }
@@ -1481,7 +1775,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1367,
+                  "startLine": 1505,
                   "startColumn": 1
                 }
               }
@@ -1502,7 +1796,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 65,
+                  "startLine": 140,
                   "startColumn": 1
                 }
               }
@@ -1523,7 +1817,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 155,
+                  "startLine": 295,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for '_log_tab_error._callback'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/cutter_tabs.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 66,
                   "startColumn": 1
                 }
               }
@@ -1544,7 +1859,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1951,
+                  "startLine": 1957,
                   "startColumn": 1
                 }
               }
@@ -1565,7 +1880,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1886,
+                  "startLine": 1976,
                   "startColumn": 1
                 }
               }
@@ -1586,7 +1901,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1919,
+                  "startLine": 2009,
                   "startColumn": 1
                 }
               }
@@ -1607,7 +1922,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1929,
+                  "startLine": 2019,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'HxDPanel._schedule_embed._on_embedded'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/hxd_panel.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 277,
                   "startColumn": 1
                 }
               }
@@ -1628,7 +1964,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 266,
+                  "startLine": 265,
                   "startColumn": 1
                 }
               }
@@ -1649,7 +1985,28 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 819,
+                  "startLine": 883,
+                  "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INT001",
+          "level": "warning",
+          "message": {
+            "text": "Missing docstring for 'ScriptManagerPanel.acknowledge_execution.reset_status'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "ui/panels/script_manager.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 973,
                   "startColumn": 1
                 }
               }
@@ -1670,7 +2027,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 481,
+                  "startLine": 484,
                   "startColumn": 1
                 }
               }
@@ -1691,7 +2048,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 172,
+                  "startLine": 168,
                   "startColumn": 1
                 }
               }
@@ -1712,7 +2069,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 1013,
+                  "startLine": 1009,
                   "startColumn": 1
                 }
               }
@@ -1775,7 +2132,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 552,
+                  "startLine": 983,
                   "startColumn": 1
                 }
               }
@@ -1796,7 +2153,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 462,
+                  "startLine": 436,
                   "startColumn": 1
                 }
               }
@@ -1817,7 +2174,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 155,
+                  "startLine": 152,
                   "startColumn": 1
                 }
               }
@@ -1838,7 +2195,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 158,
+                  "startLine": 155,
                   "startColumn": 1
                 }
               }
@@ -1859,7 +2216,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 256,
+                  "startLine": 249,
                   "startColumn": 1
                 }
               }
@@ -1880,7 +2237,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 461,
+                  "startLine": 450,
                   "startColumn": 1
                 }
               }
@@ -1901,7 +2258,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 464,
+                  "startLine": 453,
                   "startColumn": 1
                 }
               }
@@ -1922,7 +2279,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 820,
+                  "startLine": 823,
                   "startColumn": 1
                 }
               }
@@ -1943,7 +2300,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 962,
+                  "startLine": 981,
                   "startColumn": 1
                 }
               }
@@ -1964,7 +2321,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 963,
+                  "startLine": 982,
                   "startColumn": 1
                 }
               }
@@ -1985,7 +2342,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 374,
+                  "startLine": 370,
                   "startColumn": 1
                 }
               }
@@ -2006,7 +2363,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 412,
+                  "startLine": 408,
                   "startColumn": 1
                 }
               }
@@ -2027,7 +2384,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 475,
+                  "startLine": 471,
                   "startColumn": 1
                 }
               }
@@ -2048,7 +2405,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 488,
+                  "startLine": 484,
                   "startColumn": 1
                 }
               }
@@ -2069,7 +2426,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 520,
+                  "startLine": 516,
                   "startColumn": 1
                 }
               }
@@ -2090,7 +2447,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 553,
+                  "startLine": 549,
                   "startColumn": 1
                 }
               }
@@ -2111,7 +2468,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 574,
+                  "startLine": 570,
                   "startColumn": 1
                 }
               }
@@ -2132,7 +2489,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 288,
+                  "startLine": 284,
                   "startColumn": 1
                 }
               }
@@ -2153,7 +2510,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 341,
+                  "startLine": 337,
                   "startColumn": 1
                 }
               }
@@ -2174,7 +2531,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 348,
+                  "startLine": 344,
                   "startColumn": 1
                 }
               }
@@ -2195,7 +2552,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 362,
+                  "startLine": 358,
                   "startColumn": 1
                 }
               }
@@ -2216,7 +2573,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 392,
+                  "startLine": 388,
                   "startColumn": 1
                 }
               }
@@ -2237,7 +2594,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 415,
+                  "startLine": 411,
                   "startColumn": 1
                 }
               }
@@ -2258,7 +2615,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 436,
+                  "startLine": 432,
                   "startColumn": 1
                 }
               }
@@ -2279,7 +2636,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 173,
+                  "startLine": 170,
                   "startColumn": 1
                 }
               }
@@ -2300,7 +2657,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 256,
+                  "startLine": 253,
                   "startColumn": 1
                 }
               }
@@ -2321,7 +2678,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 329,
+                  "startLine": 326,
                   "startColumn": 1
                 }
               }
@@ -2342,7 +2699,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 336,
+                  "startLine": 333,
                   "startColumn": 1
                 }
               }
@@ -2363,7 +2720,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 444,
+                  "startLine": 441,
                   "startColumn": 1
                 }
               }
@@ -2384,7 +2741,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 448,
+                  "startLine": 445,
                   "startColumn": 1
                 }
               }
@@ -2405,7 +2762,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 463,
+                  "startLine": 460,
                   "startColumn": 1
                 }
               }
@@ -2426,7 +2783,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 497,
+                  "startLine": 494,
                   "startColumn": 1
                 }
               }
@@ -2447,7 +2804,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 523,
+                  "startLine": 520,
                   "startColumn": 1
                 }
               }
@@ -2468,7 +2825,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 537,
+                  "startLine": 534,
                   "startColumn": 1
                 }
               }
@@ -2489,7 +2846,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 554,
+                  "startLine": 551,
                   "startColumn": 1
                 }
               }
@@ -2510,7 +2867,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 480,
+                  "startLine": 477,
                   "startColumn": 1
                 }
               }
@@ -2531,7 +2888,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 523,
+                  "startLine": 520,
                   "startColumn": 1
                 }
               }
@@ -2552,7 +2909,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 547,
+                  "startLine": 544,
                   "startColumn": 1
                 }
               }
@@ -2573,7 +2930,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 575,
+                  "startLine": 572,
                   "startColumn": 1
                 }
               }
@@ -2594,7 +2951,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 599,
+                  "startLine": 596,
                   "startColumn": 1
                 }
               }
@@ -2615,7 +2972,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 618,
+                  "startLine": 615,
                   "startColumn": 1
                 }
               }
@@ -2636,7 +2993,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 654,
+                  "startLine": 651,
                   "startColumn": 1
                 }
               }
@@ -2657,7 +3014,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 686,
+                  "startLine": 683,
                   "startColumn": 1
                 }
               }
@@ -2678,7 +3035,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 704,
+                  "startLine": 701,
                   "startColumn": 1
                 }
               }
@@ -2699,7 +3056,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 721,
+                  "startLine": 718,
                   "startColumn": 1
                 }
               }
@@ -2720,7 +3077,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 735,
+                  "startLine": 732,
                   "startColumn": 1
                 }
               }
@@ -2741,7 +3098,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 755,
+                  "startLine": 752,
                   "startColumn": 1
                 }
               }
@@ -2762,7 +3119,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 776,
+                  "startLine": 773,
                   "startColumn": 1
                 }
               }
@@ -2783,7 +3140,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 350,
+                  "startLine": 358,
                   "startColumn": 1
                 }
               }
@@ -2804,7 +3161,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 395,
+                  "startLine": 406,
                   "startColumn": 1
                 }
               }
@@ -2825,7 +3182,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 448,
+                  "startLine": 459,
                   "startColumn": 1
                 }
               }
@@ -2846,7 +3203,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 481,
+                  "startLine": 492,
                   "startColumn": 1
                 }
               }
@@ -2867,7 +3224,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 511,
+                  "startLine": 522,
                   "startColumn": 1
                 }
               }
@@ -2888,7 +3245,7 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 533,
+                  "startLine": 544,
                   "startColumn": 1
                 }
               }
@@ -2900,7 +3257,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:37:00.051484+00:00"
+          "endTimeUtc": "2026-04-24T05:10:17.014887+00:00"
         }
       ]
     }

@@ -1,8 +1,8 @@
 {
   "tool": "uncalled",
-  "generated": "2026-04-17T05:37:48.641439+00:00",
-  "total_findings": 81,
-  "total_files": 30,
+  "generated": "2026-04-24T05:11:36.647020+00:00",
+  "total_findings": 87,
+  "total_files": 31,
   "files": [
     {
       "path": "src\\intellicrack\\ui\\panels\\hex_editor_widget.py",
@@ -185,38 +185,38 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\core\\types.py",
+      "path": "src\\intellicrack\\core\\script_gen.py",
       "count": 5,
       "findings": [
         {
           "line": null,
           "column": null,
-          "message": "Unused function: display_type",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function display_type"
+          "message": "Unused function: generate_cutter",
+          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_cutter"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: has_code",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function has_code"
+          "message": "Unused function: generate_frida",
+          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_frida"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_executable",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function is_executable"
+          "message": "Unused function: generate_ghidra",
+          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_ghidra"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_readable",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function is_readable"
+          "message": "Unused function: generate_python",
+          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_python"
         },
         {
           "line": null,
           "column": null,
-          "message": "Unused function: is_writable",
-          "raw": "src\\intellicrack\\core\\types.py: Unused function is_writable"
+          "message": "Unused function: generate_x64dbg",
+          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function generate_x64dbg"
         }
       ]
     },
@@ -289,6 +289,36 @@
           "column": null,
           "message": "Unused function: paintEvent",
           "raw": "src\\intellicrack\\ui\\panels\\vnc_widget.py: Unused function paintEvent"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\core\\types.py",
+      "count": 4,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: display_type",
+          "raw": "src\\intellicrack\\core\\types.py: Unused function display_type"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: has_code",
+          "raw": "src\\intellicrack\\core\\types.py: Unused function has_code"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: is_readable",
+          "raw": "src\\intellicrack\\core\\types.py: Unused function is_readable"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: is_writable",
+          "raw": "src\\intellicrack\\core\\types.py: Unused function is_writable"
         }
       ]
     },
@@ -401,6 +431,24 @@
       ]
     },
     {
+      "path": "src\\intellicrack\\bridges\\ghidra.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: bridge_script_path",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py: Unused function bridge_script_path"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: decompiler_options",
+          "raw": "src\\intellicrack\\bridges\\ghidra.py: Unused function decompiler_options"
+        }
+      ]
+    },
+    {
       "path": "src\\intellicrack\\bridges\\hex_state.py",
       "count": 2,
       "findings": [
@@ -451,6 +499,24 @@
           "column": null,
           "message": "Unused function: log_binary_operation",
           "raw": "src\\intellicrack\\core\\logging.py: Unused function log_binary_operation"
+        }
+      ]
+    },
+    {
+      "path": "src\\intellicrack\\providers\\base.py",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_pending_thinking",
+          "raw": "src\\intellicrack\\providers\\base.py: Unused function get_pending_thinking"
+        },
+        {
+          "line": null,
+          "column": null,
+          "message": "Unused function: get_pending_usage",
+          "raw": "src\\intellicrack\\providers\\base.py: Unused function get_pending_usage"
         }
       ]
     },
@@ -563,18 +629,6 @@
       ]
     },
     {
-      "path": "src\\intellicrack\\bridges\\ghidra.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: bridge_script_path",
-          "raw": "src\\intellicrack\\bridges\\ghidra.py: Unused function bridge_script_path"
-        }
-      ]
-    },
-    {
       "path": "src\\intellicrack\\core\\hexpat\\data_reader.py",
       "count": 1,
       "findings": [
@@ -595,18 +649,6 @@
           "column": null,
           "message": "Unused function: all_names",
           "raw": "src\\intellicrack\\core\\hexpat\\type_system.py: Unused function all_names"
-        }
-      ]
-    },
-    {
-      "path": "src\\intellicrack\\core\\script_gen.py",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "message": "Unused function: prepare_ai_prompt",
-          "raw": "src\\intellicrack\\core\\script_gen.py: Unused function prepare_ai_prompt"
         }
       ]
     },

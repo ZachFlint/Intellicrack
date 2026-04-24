@@ -775,12 +775,20 @@ class SessionManagerDialog(QDialog):
             run_bridge_coroutine(manager.import_json(path, replace=replace))
         except FileNotFoundError as e:
             self._report_import_error(
-                path, e, event="session_import_file_missing", title="Import Failed", message=f"File not found:\n{path}",
+                path,
+                e,
+                event="session_import_file_missing",
+                title="Import Failed",
+                message=f"File not found:\n{path}",
             )
             return
         except ValueError as e:
             self._report_import_error(
-                path, e, event="session_import_invalid", title="Import Failed", message=f"Invalid session file:\n{e}",
+                path,
+                e,
+                event="session_import_invalid",
+                title="Import Failed",
+                message=f"Invalid session file:\n{e}",
             )
             return
         except (OSError, RuntimeError) as e:
@@ -855,17 +863,29 @@ class SessionManagerDialog(QDialog):
                 raw_data: object = json.load(f)
         except FileNotFoundError as e:
             self._report_import_error(
-                path, e, event="session_import_file_missing", title="Import Failed", message=f"File not found:\n{path}",
+                path,
+                e,
+                event="session_import_file_missing",
+                title="Import Failed",
+                message=f"File not found:\n{path}",
             )
             return False, None
         except json.JSONDecodeError as e:
             self._report_import_error(
-                path, e, event="session_import_json_invalid", title="Import Failed", message=f"Invalid JSON file:\n{e}",
+                path,
+                e,
+                event="session_import_json_invalid",
+                title="Import Failed",
+                message=f"Invalid JSON file:\n{e}",
             )
             return False, None
         except OSError as e:
             self._report_import_error(
-                path, e, event="session_import_read_failed", title="Import Failed", message=f"Failed to read file:\n{e}",
+                path,
+                e,
+                event="session_import_read_failed",
+                title="Import Failed",
+                message=f"Failed to read file:\n{e}",
             )
             return False, None
 
@@ -923,7 +943,11 @@ class SessionManagerDialog(QDialog):
             self._save_session_to_disk(import_data)
         except OSError as e:
             self._report_import_error(
-                path, e, event="session_import_failed", title="Import Failed", message=f"Failed to write session file:\n{e}",
+                path,
+                e,
+                event="session_import_failed",
+                title="Import Failed",
+                message=f"Failed to write session file:\n{e}",
             )
             return
 

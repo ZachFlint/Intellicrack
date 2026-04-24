@@ -1,4 +1,1 @@
 tool,file,line,column,severity,code,rule,message,confidence,complexity,rank,name,entity_type,category,function,variable,crate,vulnerability,misspelling,correction
-basedpyright,d:\Intellicrack\src\intellicrack\ui\panels\hex_editor\_process_memory.py,54,9,error,reportIncompatibleVariableOverride,reportIncompatibleVariableOverride,"""_fields_"" overrides symbol of same name in class ""Structure""
-  Variable is mutable so its type is invariant
-    Override type ""list[tuple[str, type]]"" is not the same as base type ""Sequence[tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]]] | tuple[str, type[_SimpleCData[Any]] | type[_Pointer[Any]] | type[CFuncPtr] | type[Union] | type[Structure] | type[Array[Any]], int]]""",,,,,,,,,,,,

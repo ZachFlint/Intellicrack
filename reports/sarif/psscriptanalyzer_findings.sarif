@@ -39,15 +39,15 @@
               }
             },
             {
-              "id": "PSAvoidUsingEmptyCatchBlock",
+              "id": "PSAvoidAssignmentToAutomaticVariable",
               "shortDescription": {
-                "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+                "text": "The Variable 'pid' cannot be assigned since it is a readonly automatic variable that is built into PowerShell, please use a different name."
               }
             },
             {
-              "id": "PSAvoidAssignmentToAutomaticVariable",
+              "id": "PSAvoidUsingEmptyCatchBlock",
               "shortDescription": {
-                "text": "The Variable 'event' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name."
+                "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
               }
             },
             {
@@ -334,27 +334,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/docs-build.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 14,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -370,6 +349,27 @@
                 "region": {
                   "startLine": 14,
                   "startColumn": 111
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/docs-build.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 5
                 }
               }
             }
@@ -565,27 +565,6 @@
           ]
         },
         {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
-          "level": "warning",
-          "message": {
-            "text": "The variable 'output' is assigned but never used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 13,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -601,6 +580,27 @@
                 "region": {
                   "startLine": 33,
                   "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
+          "level": "warning",
+          "message": {
+            "text": "The variable 'output' is assigned but never used."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/generate-structure.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 5
                 }
               }
             }
@@ -1699,6 +1699,27 @@
           ]
         },
         {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/lint-jsonlint.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 35,
+                  "startColumn": 5
+                }
+              }
+            }
+          ]
+        },
+        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -1734,48 +1755,6 @@
                 },
                 "region": {
                   "startLine": 16,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/lint-jsonlint.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 35,
-                  "startColumn": 5
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/lint-psscriptanalyzer.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 41,
                   "startColumn": 5
                 }
               }
@@ -1840,6 +1819,27 @@
                 "region": {
                   "startLine": 3,
                   "startColumn": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/lint-psscriptanalyzer.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 5
                 }
               }
             }
@@ -1930,27 +1930,6 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingInvokeExpression",
-          "level": "warning",
-          "message": {
-            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/scripts/nul-cleanup.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 13,
-                  "startColumn": 15
-                }
-              }
-            }
-          ]
-        },
-        {
           "ruleId": "PSAvoidUsingWriteHost",
           "level": "warning",
           "message": {
@@ -1966,6 +1945,27 @@
                 "region": {
                   "startLine": 29,
                   "startColumn": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PSAvoidUsingInvokeExpression",
+          "level": "warning",
+          "message": {
+            "text": "Invoke-Expression is used. Please remove Invoke-Expression from script and find other options instead."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "D:/Intellicrack/scripts/nul-cleanup.ps1",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 13,
+                  "startColumn": 15
                 }
               }
             }
@@ -2497,42 +2497,42 @@
           ]
         },
         {
-          "ruleId": "PSAvoidUsingEmptyCatchBlock",
+          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
           "level": "warning",
           "message": {
-            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
+            "text": "The variable 'lastContent' is assigned but never used."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/api_trace.ps1",
+                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 101,
-                  "startColumn": 15
+                  "startLine": 87,
+                  "startColumn": 1
                 }
               }
             }
           ]
         },
         {
-          "ruleId": "PSAvoidAssignmentToAutomaticVariable",
+          "ruleId": "PSReviewUnusedParameter",
           "level": "warning",
           "message": {
-            "text": "The Variable 'event' is an automatic variable that is built into PowerShell, assigning to it might have undesired side effects. If assignment is not by design, please use a different name."
+            "text": "The parameter 'sender' has been declared but not used."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/api_trace.ps1",
+                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 49,
-                  "startColumn": 18
+                  "startLine": 91,
+                  "startColumn": 11
                 }
               }
             }
@@ -2602,42 +2602,21 @@
           ]
         },
         {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
+          "ruleId": "PSAvoidUsingEmptyCatchBlock",
           "level": "warning",
           "message": {
-            "text": "The variable 'lastContent' is assigned but never used."
+            "text": "Empty catch block is used. Please use Write-Error or throw statements in catch blocks."
           },
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
+                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/dll_monitor.ps1",
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 87,
-                  "startColumn": 1
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSReviewUnusedParameter",
-          "level": "warning",
-          "message": {
-            "text": "The parameter 'sender' has been declared but not used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/clipboard_monitor.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 91,
-                  "startColumn": 11
+                  "startLine": 99,
+                  "startColumn": 19
                 }
               }
             }
@@ -2657,8 +2636,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 48,
-                  "startColumn": 15
+                  "startLine": 108,
+                  "startColumn": 19
                 }
               }
             }
@@ -2678,8 +2657,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 69,
-                  "startColumn": 15
+                  "startLine": 116,
+                  "startColumn": 19
                 }
               }
             }
@@ -2699,8 +2678,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 26,
-                  "startColumn": 3
+                  "startLine": 190,
+                  "startColumn": 19
                 }
               }
             }
@@ -2720,29 +2699,8 @@
                   "uriBaseId": "%SRCROOT%"
                 },
                 "region": {
-                  "startLine": 92,
-                  "startColumn": 11
-                }
-              }
-            }
-          ]
-        },
-        {
-          "ruleId": "PSUseDeclaredVarsMoreThanAssignments",
-          "level": "warning",
-          "message": {
-            "text": "The variable 'parentPids' is assigned but never used."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "D:/Intellicrack/src/intellicrack/sandbox/scripts/injection_monitor.ps1",
-                  "uriBaseId": "%SRCROOT%"
-                },
-                "region": {
-                  "startLine": 52,
-                  "startColumn": 17
+                  "startLine": 203,
+                  "startColumn": 19
                 }
               }
             }
@@ -3740,7 +3698,7 @@
       "invocations": [
         {
           "executionSuccessful": true,
-          "endTimeUtc": "2026-04-17T05:39:31.820913+00:00"
+          "endTimeUtc": "2026-04-24T05:14:45.185847+00:00"
         }
       ]
     }

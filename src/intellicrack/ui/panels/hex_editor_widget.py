@@ -1092,10 +1092,7 @@ class HexEditorWidget(QAbstractScrollArea):
             list[str]: Exactly ``bytes_in_row`` single-character strings.
         """
         if self.encoding == "ascii" or bytes_in_row <= 0:
-            return [
-                chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
-                for b in row_data[:bytes_in_row]
-            ]
+            return [chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "." for b in row_data[:bytes_in_row]]
         chars: list[str] = ["." for _ in range(bytes_in_row)]
         decode_fn = getattr(self._document, "decode_text", None) if self._document is not None else None
         decoded: str | None = None

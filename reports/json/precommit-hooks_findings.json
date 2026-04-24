@@ -1,8 +1,8 @@
 {
   "tool": "precommit-hooks",
-  "generated": "2026-04-17T05:39:37.481501+00:00",
-  "total_findings": 383,
-  "total_files": 242,
+  "generated": "2026-04-24T05:14:10.612400+00:00",
+  "total_findings": 603,
+  "total_files": 461,
   "files": [
     {
       "path": "reports/csv/bandit_findings.csv",
@@ -101,26 +101,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/csv/clippy_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/csv/codespell_findings.csv",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "trailing-whitespace",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/csv/codespell_findings.csv: [trailing-whitespace] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/csv/codespell_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -905,26 +885,6 @@
       ]
     },
     {
-      "path": "reports/json/codespell_findings.json",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/json/codespell_findings.json: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/json/codespell_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/json/complexipy_findings.json",
       "count": 2,
       "findings": [
@@ -1705,26 +1665,6 @@
       ]
     },
     {
-      "path": "reports/sarif/codespell_findings.sarif",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/sarif/codespell_findings.sarif: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/sarif/codespell_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/sarif/complexipy_findings.sarif",
       "count": 2,
       "findings": [
@@ -2405,26 +2345,6 @@
       ]
     },
     {
-      "path": "reports/txt/basedpyright_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/basedpyright_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/blinter_findings.txt",
       "count": 2,
       "findings": [
@@ -2445,46 +2365,6 @@
       ]
     },
     {
-      "path": "reports/txt/clippy_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/clippy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/codespell_findings.txt",
-      "count": 2,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/codespell_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        },
-        {
-          "line": null,
-          "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/txt/codespell_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/complexipy_findings.txt",
       "count": 2,
       "findings": [
@@ -2501,6 +2381,26 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/complexipy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/darglint_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/darglint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/darglint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -2565,6 +2465,26 @@
       ]
     },
     {
+      "path": "reports/txt/flake8_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/flake8_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/flake8_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/interrogate_findings.txt",
       "count": 2,
       "findings": [
@@ -2601,6 +2521,26 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/markdownlint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/mccabe_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/mccabe_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/mccabe_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -2665,6 +2605,26 @@
       ]
     },
     {
+      "path": "reports/txt/pydoclint_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/pydoclint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/pydocstyle_findings.txt",
       "count": 2,
       "findings": [
@@ -2701,6 +2661,46 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/txt/radon_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/ruff_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/ruff_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/semgrep_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/semgrep_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -2765,6 +2765,26 @@
       ]
     },
     {
+      "path": "reports/txt/wemake_findings.txt",
+      "count": 2,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/txt/wemake_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+        },
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/wemake_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/txt/xenon_findings.txt",
       "count": 2,
       "findings": [
@@ -2805,27 +2825,27 @@
       ]
     },
     {
-      "path": "reports/xml/basedpyright_findings.xml",
+      "path": "reports/json/rust_clippy_findings.json",
       "count": 2,
       "findings": [
         {
           "line": null,
           "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/rust_clippy_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
         },
         {
           "line": null,
           "column": null,
-          "code": "mixed-line-ending",
-          "message": "[FIXED] fixed mixed line endings",
-          "raw": "reports/xml/basedpyright_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "code": "check-json",
+          "message": "Failed to json decode (Extra data: line 2 column 1 (char 932))",
+          "raw": "reports/json/rust_clippy_findings.json: [check-json] Failed to json decode (Extra data: line 2 column 1 (char 932))"
         }
       ]
     },
     {
-      "path": "notebooks/hexcore_tutorial.ipynb",
+      "path": "reports/txt/basedpyright_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -2833,7 +2853,7 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "notebooks/hexcore_tutorial.ipynb: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/basedpyright_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -2851,7 +2871,7 @@
       ]
     },
     {
-      "path": "reports/txt/darglint_findings.txt",
+      "path": "reports/txt/clippy_findings.txt",
       "count": 1,
       "findings": [
         {
@@ -2859,20 +2879,7 @@
           "column": null,
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
-          "raw": "reports/txt/darglint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/flake8_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/flake8_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
+          "raw": "reports/txt/clippy_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -2916,19 +2923,6 @@
       ]
     },
     {
-      "path": "reports/txt/mccabe_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/mccabe_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
       "path": "reports/txt/nextest_findings.txt",
       "count": 1,
       "findings": [
@@ -2938,32 +2932,6 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/txt/nextest_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/pydoclint_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/pydoclint_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/ruff_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/ruff_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -2990,19 +2958,6 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/txt/rustfmt_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/txt/semgrep_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/semgrep_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -3059,19 +3014,6 @@
       ]
     },
     {
-      "path": "reports/txt/wemake_findings.txt",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/txt/wemake_findings.txt: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
       "path": "reports/xml/bandit_findings.xml",
       "count": 1,
       "findings": [
@@ -3081,6 +3023,19 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/bandit_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/basedpyright_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "end-of-file-fixer",
+          "message": "[FIXED] Fixed",
+          "raw": "reports/xml/basedpyright_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -3120,19 +3075,6 @@
           "code": "end-of-file-fixer",
           "message": "[FIXED] Fixed",
           "raw": "reports/xml/clippy_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
-        }
-      ]
-    },
-    {
-      "path": "reports/xml/codespell_findings.xml",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "end-of-file-fixer",
-          "message": "[FIXED] Fixed",
-          "raw": "reports/xml/codespell_findings.xml: [end-of-file-fixer] [FIXED] Fixed"
         }
       ]
     },
@@ -3566,6 +3508,58 @@
       ]
     },
     {
+      "path": ".claude/agents/developer.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".claude/agents/developer.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".claude/agents/worktree-reviewer.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".claude/agents/worktree-reviewer.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".claude/commands/docstrings.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".claude/commands/docstrings.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".claude/commands/typecheck.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".claude/commands/typecheck.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": ".github/dependabot.yml",
       "count": 1,
       "findings": [
@@ -3696,6 +3690,19 @@
       ]
     },
     {
+      "path": ".gitignore",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".gitignore: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": ".pre-commit-config.yaml",
       "count": 1,
       "findings": [
@@ -3718,6 +3725,227 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": ".readthedocs.yaml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".secrets.baseline",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".secrets.baseline: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/01-logger-identity.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/01-logger-identity.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/02-event-names.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/02-event-names.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/02-event-names.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/02-event-names.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/03-structured-fields.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/03-structured-fields.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/03-structured-fields.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/03-structured-fields.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/04-coverage-gaps.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/04-coverage-gaps.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/04-coverage-gaps.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/04-coverage-gaps.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/05-severity-levels.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/05-severity-levels.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/06-sensitive-data.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/06-sensitive-data.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/07-anti-patterns.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/07-anti-patterns.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/07-anti-patterns.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/07-anti-patterns.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/08-flow-correlation.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/08-flow-correlation.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/08-flow-correlation.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/08-flow-correlation.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/09-intellicrack-domain.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/09-intellicrack-domain.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/09-intellicrack-domain.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/09-intellicrack-domain.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": ".semgrep/logging/10-meta-suppressions.yml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": ".semgrep/logging/10-meta-suppressions.yml: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -3748,7 +3976,7 @@
       ]
     },
     {
-      "path": "IntellicrackKnowledgeGraph.html",
+      "path": "GEMINI.md",
       "count": 1,
       "findings": [
         {
@@ -3756,12 +3984,12 @@
           "column": null,
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackKnowledgeGraph.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "raw": "GEMINI.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
     {
-      "path": "IntellicrackStructure.hta",
+      "path": "QWEN.md",
       "count": 1,
       "findings": [
         {
@@ -3769,12 +3997,12 @@
           "column": null,
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackStructure.hta: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "raw": "QWEN.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
     {
-      "path": "IntellicrackStructure.txt",
+      "path": "README.md",
       "count": 1,
       "findings": [
         {
@@ -3782,7 +4010,7 @@
           "column": null,
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
-          "raw": "IntellicrackStructure.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "raw": "README.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -3839,6 +4067,19 @@
       ]
     },
     {
+      "path": "justfile",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "justfile: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "package.json",
       "count": 1,
       "findings": [
@@ -3848,6 +4089,19 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "package.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "pyproject.toml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "pyproject.toml: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -3878,6 +4132,201 @@
       ]
     },
     {
+      "path": "remediation-audit-results.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "remediation-audit-results.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/codespell_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/codespell_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/liccheck_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/liccheck_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/pylint_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/pylint_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/shellcheck_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/shellcheck_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/sourcery_hexcore_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/sourcery_hexcore_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/sourcery_src_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/sourcery_src_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/sourcery_tests_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/sourcery_tests_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/csv/validate-pyproject_findings.csv",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/csv/validate-pyproject_findings.csv: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/bp_fresh.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/bp_fresh.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/codespell_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/codespell_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/file-encoding_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/file-encoding_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/liccheck_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/liccheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/mixed-line-ending_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/mixed-line-ending_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/pylint_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/pylint_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/json/shellcheck_findings.json",
       "count": 1,
       "findings": [
@@ -3887,6 +4336,175 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/json/shellcheck_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/json/validate-pyproject_findings.json",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/json/validate-pyproject_findings.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/codespell_findings.sarif",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/codespell_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/liccheck_findings.sarif",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/liccheck_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/pylint_findings.sarif",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/pylint_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/shellcheck_findings.sarif",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/shellcheck_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/sarif/validate-pyproject_findings.sarif",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/sarif/validate-pyproject_findings.sarif: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/scratch_analyze.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/scratch_analyze.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/codespell_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/codespell_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/file-encoding_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/file-encoding_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/liccheck_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/liccheck_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/mixed-line-ending_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/mixed-line-ending_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/pylint_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/pylint_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/txt/rust_clippy_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/rust_clippy_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -3904,6 +4522,71 @@
       ]
     },
     {
+      "path": "reports/txt/validate-pyproject_findings.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/txt/validate-pyproject_findings.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/file-encoding_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/file-encoding_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/liccheck_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/liccheck_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/mixed-line-ending_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/mixed-line-ending_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/pylint_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/pylint_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "reports/xml/shellcheck_findings.xml",
       "count": 1,
       "findings": [
@@ -3913,6 +4596,19 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "reports/xml/shellcheck_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "reports/xml/validate-pyproject_findings.xml",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "reports/xml/validate-pyproject_findings.xml: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -3930,7 +4626,7 @@
       ]
     },
     {
-      "path": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot",
+      "path": "src/intellicrack-hexcore/Cargo.toml",
       "count": 1,
       "findings": [
         {
@@ -3938,7 +4634,228 @@
           "column": null,
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
-          "raw": "scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot: [mixed-line-ending] [FIXED] fixed mixed line endings"
+          "raw": "src/intellicrack-hexcore/Cargo.toml: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/intellicrack_hexcore.pyi",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/intellicrack_hexcore.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/bps_ups.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/bps_ups.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/diff.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/diff.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/encodings.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/encodings.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/lib.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/lib.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/patch_export.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/patch_export.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/piece_table.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/piece_table.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/search.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/search.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/strings.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/strings.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/elf.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/elf.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/eval.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/eval.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/json_schema.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/json_schema.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/macho.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/macho.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/mod.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/mod.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/templates/zip.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/templates/zip.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/transforms.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/transforms.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack-hexcore/src/undo.rs",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack-hexcore/src/undo.rs: [mixed-line-ending] [FIXED] fixed mixed line endings"
         }
       ]
     },
@@ -4086,6 +5003,1878 @@
       ]
     },
     {
+      "path": "src/intellicrack/bridges/_win32_types.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/_win32_types.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/base.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/cutter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/cutter.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/frida_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/frida_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/ghidra.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/hex_editor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/hex_editor.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/hex_state.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/hex_state.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/installer.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/installer.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/named_pipe_client.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/named_pipe_client.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/process.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/process.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/sandbox_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/sandbox_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/bridges/x64dbg.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/bridges/x64dbg.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/_subprocess.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/_subprocess.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/_subprocess.pyi",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/_subprocess.pyi: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/ast_nodes.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/ast_nodes.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/data_reader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/data_reader.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/errors.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/errors.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/evaluator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/evaluator.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/interpreter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/interpreter.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/lexer.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/lexer.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/parser.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/parser.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/pattern_registry.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/pattern_registry.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/preprocessor.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/preprocessor.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/stdlib.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/stdlib.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat/tokens.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat/tokens.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/hexpat_compiler.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/hexpat_compiler.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/logging.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/logging.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/orchestrator.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/orchestrator.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/process_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/process_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/script_gen.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/script_gen.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/session.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/session.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/template_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/template_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/tools.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/core/transform_pipeline.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/core/transform_pipeline.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/credentials/env_loader.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/credentials/env_loader.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/credentials/oauth.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/credentials/oauth.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/credentials/store.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/credentials/store.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/main.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/main.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/anthropic.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/anthropic.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/base.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/google.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/google.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/grok.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/grok.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/huggingface.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/huggingface.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/local_transformers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/local_transformers.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/ollama.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/ollama.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/openai.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/openai.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/openrouter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/openrouter.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/registry.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/registry.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/providers/xpu_utils.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/providers/xpu_utils.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/qemu.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/qemu.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/scripts/api_trace.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/scripts/api_trace.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/scripts/dll_monitor.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/scripts/dll_monitor.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/scripts/injection_monitor.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/scripts/injection_monitor.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/scripts/kernel_object_monitor.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/scripts/kernel_object_monitor.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/scripts/start_monitors.cmd: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/sandbox/windows.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/sandbox/windows.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/app.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/app.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/chat.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/chat.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/confirmation_dialog.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/confirmation_dialog.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/dialogs/splash_screen.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/dialogs/splash_screen.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/highlighter.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/highlighter.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panel_dock.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panel_dock.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/analysis_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/analysis_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/async_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/async_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/base_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/base_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/cutter_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/cutter_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/cutter_tabs.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/cutter_tabs.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/frida_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/frida_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/ghidra_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/ghidra_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/graph_view.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/graph_view.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_comparison.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_comparison.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_data_inspector.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_data_inspector.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_hashing.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_hashing.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_highlighting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_highlighting.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_patches.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_patches.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_process_memory.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_process_memory.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_sandbox.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_sandbox.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_scripting.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_scripting.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_search.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_search.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_sections.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_sections.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_signatures.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_signatures.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_statistics.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_statistics.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_transforms.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_transforms.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/_widgets.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/_widgets.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor/panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor/panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hex_editor_widget.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hex_editor_widget.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/hxd_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/hxd_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_base.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_base.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_memory_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_memory_tab.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_modules_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_modules_tab.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_process_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_process_tab.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_system_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_system_tab.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_threads_tab.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_threads_tab.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/process_panel/_workers.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/process_panel/_workers.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/sandbox_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/sandbox_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/script_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/script_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/stack_viewer.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/stack_viewer.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/vnc_widget.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/vnc_widget.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/panels/x64dbg_panel.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/panels/x64dbg_panel.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/preferences.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/preferences.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/provider_config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/provider_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/resources/resource_helper.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/resources/resource_helper.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/sandbox_config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/sandbox_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/session_manager.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/session_manager.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/tool_config.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/tool_config.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/tools.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/tools.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/win32_embed.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/win32_embed.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "src/intellicrack/ui/xpu_status.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "src/intellicrack/ui/xpu_status.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/conftest.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/conftest.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_bridges/test_frida_bridge.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_bridges/test_frida_bridge.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_bridges/test_ghidra.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_bridges/test_ghidra.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_credentials/test_credential_store_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_credentials/test_credential_store_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_credentials/test_env_loader_roundtrip_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_credentials/test_env_loader_roundtrip_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_credentials/test_oauth_manager_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_credentials/test_oauth_manager_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_anthropic_buffers_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_anthropic_buffers_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_google_chat_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_google_chat_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_huggingface_chat_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_huggingface_chat_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_local_transformers_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_local_transformers_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_ollama_chat_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_ollama_chat_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_registry.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_registry.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tests/test_providers/test_registry_thread_safety_live.py",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tests/test_providers/test_registry_thread_safety_live.py: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/README.md",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/README.md: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/GenP/GenP-3.7.1.au3",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/GenP/GenP-3.7.1.au3: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/WinTrust/patch_wintrust.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build_info.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/build_info.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/run_build.bat",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/GenP.v3.7.1/v3.7.1-Source/run_build.bat: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/AdobeInjector.au3",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/AdobeInjector.au3: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/COPYING",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/COPYING: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/LICENSE",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/LICENSE: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/NEWS",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/NEWS: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/README",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/README: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/THANKS.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/THANKS.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.html",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.html: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx-doc.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx.1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/UPX/upx-5.0.1-win64/upx.1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/WinTrust/patch_wintrust.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/build.bat",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/build.bat: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/Source/Rebranded/build.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/Source/Rebranded/build.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/AdobeInjector/config.ini",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/AdobeInjector/config.ini: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/IDMActivator/IDMA.ps1",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/IDMActivator/IDMA.ps1: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/WindowsPatch/WindowsActivator.cmd",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/WindowsPatch/WindowsActivator.cmd: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "tools/pmd-bin-7.8.0/sbom/pmd-7.8.0-cyclonedx.json",
       "count": 1,
       "findings": [
@@ -4112,6 +6901,84 @@
       ]
     },
     {
+      "path": "tools/resource_hacker/ReadMe.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/ReadMe.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/changes.txt",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/changes.txt: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/help/manual.htm",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/help/manual.htm: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.h",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.h: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.inc",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.inc: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
+      "path": "tools/resource_hacker/samples/sample1.rc",
+      "count": 1,
+      "findings": [
+        {
+          "line": null,
+          "column": null,
+          "code": "mixed-line-ending",
+          "message": "[FIXED] fixed mixed line endings",
+          "raw": "tools/resource_hacker/samples/sample1.rc: [mixed-line-ending] [FIXED] fixed mixed line endings"
+        }
+      ]
+    },
+    {
       "path": "tools/x64dbg/release/mnemdb.json",
       "count": 1,
       "findings": [
@@ -4121,19 +6988,6 @@
           "code": "mixed-line-ending",
           "message": "[FIXED] fixed mixed line endings",
           "raw": "tools/x64dbg/release/mnemdb.json: [mixed-line-ending] [FIXED] fixed mixed line endings"
-        }
-      ]
-    },
-    {
-      "path": "reports/json/rust_clippy_findings.json",
-      "count": 1,
-      "findings": [
-        {
-          "line": null,
-          "column": null,
-          "code": "check-json",
-          "message": "Failed to json decode (Extra data: line 2 column 1 (char 932))",
-          "raw": "reports/json/rust_clippy_findings.json: [check-json] Failed to json decode (Extra data: line 2 column 1 (char 932))"
         }
       ]
     }

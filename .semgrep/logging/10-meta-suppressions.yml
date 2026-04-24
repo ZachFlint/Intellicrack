@@ -1,37 +1,22 @@
 rules:
-
   - id: intellicrack-logging-j1-forbidden-noqa-on-logging-rules
     message: >-
-      `# noqa` suppressing a logging-related ruff rule
-      (`G`, `LOG`, `TRY4`, `BLE`) is forbidden by project policy. The
-      rules exist to keep logs consistent and auditable; suppressing
-      them locally erodes that contract. Fix the underlying issue
-      instead of silencing the rule.
+      `# noqa` suppressing a logging-related ruff rule (`G`, `LOG`, `TRY4`, `BLE`) is forbidden by project policy. The rules exist to keep logs consistent and auditable; suppressing them locally erodes that contract. Fix the underlying issue instead of silencing the rule.
     severity: ERROR
     languages: [python]
     pattern-regex: '#\s*noqa[:\s].*\b(G0\d{2}|G1\d{2}|G2\d{2}|LOG\d{3}|TRY4\d{2}|BLE\d{3})\b'
-
   - id: intellicrack-logging-j2-logging-disable
     message: >-
-      `logging.disable(...)` globally disables logs at or below a
-      threshold - this is a production-safety hazard in an analysis
-      platform where log records are the only post-mortem evidence.
-      Use per-logger level filtering via `get_logger(...).setLevel(...)`
-      if a specific module is too noisy.
+      `logging.disable(...)` globally disables logs at or below a threshold - this is a production-safety hazard in an analysis platform where log records are the only post-mortem evidence. Use per-logger level filtering via `get_logger(...).setLevel(...)` if a specific module is too noisy.
     severity: ERROR
     languages: [python]
     paths:
       exclude:
         - "**/intellicrack/**/tests/**"
     pattern: logging.disable(...)
-
   - id: intellicrack-logging-j3-library-level-muting
     message: >-
-      Setting a logger to `ERROR` or `CRITICAL` at library level
-      silences INFO/WARNING records that operators rely on. Library
-      code should not dictate the operator's severity threshold -
-      leave the level unset (inherits from the root configuration)
-      or expose it via configuration.
+      Setting a logger to `ERROR` or `CRITICAL` at library level silences INFO/WARNING records that operators rely on. Library code should not dictate the operator's severity threshold - leave the level unset (inherits from the root configuration) or expose it via configuration.
     severity: WARNING
     languages: [python]
     paths:

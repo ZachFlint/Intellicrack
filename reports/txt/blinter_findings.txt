@@ -1,3 +1,16 @@
+5 findings in src\intellicrack\sandbox\scripts\start_monitors.cmd
+
+Line 27: Missing exit code (W001)
+
+Line 17: Missing error handling (W025)
+
+Line 23: Line exceeds maximum length (S011)
+
+Line 23: Long line without continuation (S020)
+
+Line 23: PowerShell execution policy bypass (SEC009)
+
+
 1 findings in Intellicrack.cmd
 
 Line 1: Unix line endings detected (E018)

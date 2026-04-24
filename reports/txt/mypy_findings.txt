@@ -1,3 +1,264 @@
+66 findings in src\intellicrack\bridges\process.py
+
+src\intellicrack\bridges\process.py:955: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:955: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:991: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:991: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1041: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1041: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1118: error: Returning Any from function declared to return "float"  [no-any-return]
+
+src\intellicrack\bridges\process.py:1483: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:1513: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:1694: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1694: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1762: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1762: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1795: error: "list?[intellicrack.core.types.MemoryRegion]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:1828: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1828: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1830: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1830: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1865: error: Need type annotation for "pb"  [var-annotated]
+
+src\intellicrack\bridges\process.py:1867: error: "list?[int]" has no attribute "append"  [attr-defined]
+
+src\intellicrack\bridges\process.py:1917: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1917: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:1970: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:1970: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2216: error: "list?[intellicrack.core.types.ProcessInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:2220: error: Returning Any from function declared to return "ProcessInfo | None"  [no-any-return]
+
+src\intellicrack\bridges\process.py:2228: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2228: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2272: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2272: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2440: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2440: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2508: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2508: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2578: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2578: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:2643: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:2643: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3086: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3086: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3335: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3335: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3390: error: Returning Any from function declared to return "list?[dict[str, object]]"  [no-any-return]
+
+src\intellicrack\bridges\process.py:3417: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3417: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3455: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3455: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3511: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3511: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3619: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3619: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3976: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:3976: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:3991: error: "list?[intellicrack.core.types.ModuleInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:4013: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:4013: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:4060: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:4060: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:4108: error: "list?[dict[str, str]]" has no attribute "append"  [attr-defined]
+
+src\intellicrack\bridges\process.py:4154: error: "list?[intellicrack.core.types.ModuleInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+src\intellicrack\bridges\process.py:4656: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:4656: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:4705: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:4705: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+src\intellicrack\bridges\process.py:4828: error: Function "intellicrack.bridges.process.ProcessBridge.list" is not valid as a type  [valid-type]
+
+src\intellicrack\bridges\process.py:4828: note: Perhaps you need "Callable[...]" or a callback protocol?
+
+
+38 findings in src\intellicrack\main.py
+
+src\intellicrack\main.py:223: error: Name "ProcessManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:230: error: Name "ProcessManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:243: error: Name "SplashScreen" is not defined  [name-defined]
+
+src\intellicrack\main.py:250: error: Name "SplashScreen" is not defined  [name-defined]
+
+src\intellicrack\main.py:253: error: Name "ThemeManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:253: error: Name "IconManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:261: error: Name "ThemeManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:261: error: Name "IconManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:266: error: Name "Orchestrator" is not defined  [name-defined]
+
+src\intellicrack\main.py:273: error: Name "Orchestrator" is not defined  [name-defined]
+
+src\intellicrack\main.py:276: error: Name "SessionManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:276: error: Name "SessionStore" is not defined  [name-defined]
+
+src\intellicrack\main.py:284: error: Name "SessionManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:285: error: Name "SessionStore" is not defined  [name-defined]
+
+src\intellicrack\main.py:289: error: Name "ToolRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:296: error: Name "ToolRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:299: error: Name "CredentialLoader" is not defined  [name-defined]
+
+src\intellicrack\main.py:306: error: Name "CredentialLoader" is not defined  [name-defined]
+
+src\intellicrack\main.py:309: error: Name "ProviderRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:316: error: Name "ProviderRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:320: error: Name "MainWindow" is not defined  [name-defined]
+
+src\intellicrack\main.py:327: error: Name "MainWindow" is not defined  [name-defined]
+
+src\intellicrack\main.py:395: error: Name "SplashScreen" is not defined  [name-defined]
+
+src\intellicrack\main.py:439: error: Name "ProviderRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:440: error: Name "CredentialLoader" is not defined  [name-defined]
+
+src\intellicrack\main.py:462: error: Name "ProviderName" is not defined  [name-defined]
+
+src\intellicrack\main.py:462: error: Name "LLMProviderBase" is not defined  [name-defined]
+
+src\intellicrack\main.py:463: error: Name "ProviderName" is not defined  [name-defined]
+
+src\intellicrack\main.py:463: error: Name "LLMProviderBase" is not defined  [name-defined]
+
+src\intellicrack\main.py:476: error: Name "ProviderName" is not defined  [name-defined]
+
+src\intellicrack\main.py:476: error: Name "LLMProviderBase" is not defined  [name-defined]
+
+src\intellicrack\main.py:526: error: Name "ProcessManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:549: error: Name "ProcessManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:641: error: Name "ProviderRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:667: error: Name "ProviderRegistry" is not defined  [name-defined]
+
+src\intellicrack\main.py:706: error: Name "SplashScreen" is not defined  [name-defined]
+
+src\intellicrack\main.py:707: error: Name "ProcessManager" is not defined  [name-defined]
+
+src\intellicrack\main.py:771: error: Name "ModelDiscovery" is not defined  [name-defined]
+
+
+22 findings in tests\test_bridges\test_process_bridge.py
+
+tests\test_bridges\test_process_bridge.py:256: error: Returning Any from function declared to return "int"  [no-any-return]
+
+tests\test_bridges\test_process_bridge.py:256: error: Value of type "list?[intellicrack.core.types.ThreadInfo]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:383: error: "list?[intellicrack.core.types.ProcessInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:392: error: "list?[intellicrack.core.types.ProcessInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:413: error: Value of type "list?[dict[str, int | str | float]]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:424: error: "list?[dict[str, int | str | float]]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:437: error: "list?[dict[str, int | str | float]]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:592: error: "list?[int]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:602: error: Value of type "list?[intellicrack.core.types.MemoryRegion]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:627: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:636: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:646: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:655: error: "list?[intellicrack.core.types.ThreadInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:677: error: "list?[intellicrack.core.types.ModuleInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:686: error: "list?[intellicrack.core.types.ModuleInfo]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:745: error: "list?[dict[str, object]]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:754: error: "list?[dict[str, object]]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+tests\test_bridges\test_process_bridge.py:791: error: Value of type "list?[dict[str, object]]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:828: error: Value of type "list?[dict[str, object]]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:865: error: Value of type "list?[intellicrack.core.types.ThreadInfo]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:878: error: Value of type "list?[intellicrack.core.types.ThreadInfo]" is not indexable  [index]
+
+tests\test_bridges\test_process_bridge.py:907: error: "list?[dict[str, object]]" has no attribute "__iter__" (not iterable)  [attr-defined]
+
+
 20 findings in tests\test_ui\test_sandbox_panel_fixes.py
 
 tests\test_ui\test_sandbox_panel_fixes.py:56: error: "SandboxPanel" has no attribute "selected_sandbox_type"; maybe "_selected_sandbox_type"?  [attr-defined]
@@ -82,7 +343,7 @@ tests\test_ui\test_tools_logic.py:316: error: "ToolOutputPanel" has no attribute
 tests\test_ui\test_tools_logic.py:354: error: Statement is unreachable  [unreachable]
 
 
-16 findings in src\intellicrack\ui\provider_config.py
+18 findings in src\intellicrack\ui\provider_config.py
 
 src\intellicrack\ui\provider_config.py:67: error: Incompatible types in assignment (expression has type "None", variable has type "type[LocalTransformersProvider]")  [assignment]
 
@@ -90,85 +351,62 @@ src\intellicrack\ui\provider_config.py:73: error: Incompatible types in assignme
 
 src\intellicrack\ui\provider_config.py:79: error: Incompatible types in assignment (expression has type "None", variable has type "type[OpenRouterProvider]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:93: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+src\intellicrack\ui\provider_config.py:85: error: Incompatible types in assignment (expression has type "None", variable has type "type[GrokProvider]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:94: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:95: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+src\intellicrack\ui\provider_config.py:100: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:96: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
+src\intellicrack\ui\provider_config.py:101: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:97: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+src\intellicrack\ui\provider_config.py:102: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], int]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:98: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+src\intellicrack\ui\provider_config.py:103: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+src\intellicrack\ui\provider_config.py:104: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:108: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:105: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:109: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
+src\intellicrack\ui\provider_config.py:114: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:1677: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:115: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\provider_config.py:1712: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1852: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:1773: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1865: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\provider_config.py:2386: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\provider_config.py:1900: error: Statement is unreachable  [unreachable]
 
+src\intellicrack\ui\provider_config.py:1961: error: Statement is unreachable  [unreachable]
 
-12 findings in tests\test_bridges\test_frida_bridge.py
-
-tests\test_bridges\test_frida_bridge.py:451: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:451: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
-
-tests\test_bridges\test_frida_bridge.py:481: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:481: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
-
-tests\test_bridges\test_frida_bridge.py:498: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:498: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
-
-tests\test_bridges\test_frida_bridge.py:572: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:572: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
-
-tests\test_bridges\test_frida_bridge.py:589: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:589: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
-
-tests\test_bridges\test_frida_bridge.py:609: error: Name "cast" is not defined  [name-defined]
-
-tests\test_bridges\test_frida_bridge.py:609: note: Did you forget to import it from "typing"? (Suggestion: "from typing import cast")
+src\intellicrack\ui\provider_config.py:2631: error: Statement is unreachable  [unreachable]
 
 
 12 findings in src\intellicrack\ui\xpu_status.py
 
-src\intellicrack\ui\xpu_status.py:46: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], tuple[bool, list[str]]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:47: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
+src\intellicrack\ui\xpu_status.py:49: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], str]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:48: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
+src\intellicrack\ui\xpu_status.py:50: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], XPUDeviceInfo | None]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:49: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
+src\intellicrack\ui\xpu_status.py:51: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], tuple[int, int]]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:50: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
+src\intellicrack\ui\xpu_status.py:52: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], bool]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:56: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
+src\intellicrack\ui\xpu_status.py:58: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[], ModelCache]")  [assignment]
 
-src\intellicrack\ui\xpu_status.py:230: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:228: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:261: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:259: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:288: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:286: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:305: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:303: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:342: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:340: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\xpu_status.py:371: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\xpu_status.py:369: error: Statement is unreachable  [unreachable]
 
 
 9 findings in tests\test_ui\test_app_embedded_tools.py
@@ -192,42 +430,49 @@ tests\test_ui\test_app_embedded_tools.py:451: error: "MainWindow" has no attribu
 tests\test_ui\test_app_embedded_tools.py:472: error: "MainWindow" has no attribute "show_no_binary_warning"; maybe "_show_no_binary_warning"?  [attr-defined]
 
 
-9 findings in tests\test_ui\test_vnc_widget.py
+8 findings in src\intellicrack\bridges\cutter.py
 
-tests\test_ui\test_vnc_widget.py:96: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+src\intellicrack\bridges\cutter.py:181: error: Redundant cast to "list[Any]"  [redundant-cast]
 
-tests\test_ui\test_vnc_widget.py:98: error: Property "connected" defined in "RFBClient" is read-only  [misc]
+src\intellicrack\bridges\cutter.py:753: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-tests\test_ui\test_vnc_widget.py:105: error: Unexpected keyword argument "timeout" for "connect" of "RFBClient"  [call-arg]
+src\intellicrack\bridges\cutter.py:753: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-tests\test_ui\test_vnc_widget.py:105: note: "connect" defined in "intellicrack.ui.panels.vnc_widget"
+src\intellicrack\bridges\cutter.py:759: error: Returning Any from function declared to return "r2pipe.open? | None"  [no-any-return]
 
-tests\test_ui\test_vnc_widget.py:199: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+src\intellicrack\bridges\cutter.py:762: error: Function "r2pipe.open" is not valid as a type  [valid-type]
 
-tests\test_ui\test_vnc_widget.py:214: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+src\intellicrack\bridges\cutter.py:762: note: Perhaps you need "Callable[...]" or a callback protocol?
 
-tests\test_ui\test_vnc_widget.py:220: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
+src\intellicrack\bridges\cutter.py:1854: error: Redundant cast to "list[Any]"  [redundant-cast]
 
-tests\test_ui\test_vnc_widget.py:230: error: "RFBClient" has no attribute "apply_raw_rect"; maybe "_apply_raw_rect"?  [attr-defined]
-
-tests\test_ui\test_vnc_widget.py:357: error: "type[VNCWidget]" has no attribute "button_mask"  [attr-defined]
+src\intellicrack\bridges\cutter.py:2211: error: Redundant cast to "list[Any]"  [redundant-cast]
 
 
-7 findings in src\intellicrack\bridges\cutter.py
+6 findings in tests\test_bridges\test_frida_bridge.py
 
-src\intellicrack\bridges\cutter.py:180: error: Redundant cast to "list[Any]"  [redundant-cast]
+tests\test_bridges\test_frida_bridge.py:451: error: Redundant cast to "list[FridaDeviceInfo]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:752: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+tests\test_bridges\test_frida_bridge.py:481: error: Redundant cast to "list[ThreadInfo]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:752: note: Perhaps you need "Callable[...]" or a callback protocol?
+tests\test_bridges\test_frida_bridge.py:498: error: Redundant cast to "list[ImportInfo]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:758: error: Returning Any from function declared to return "r2pipe.open? | None"  [no-any-return]
+tests\test_bridges\test_frida_bridge.py:572: error: Redundant cast to "list[ApiResolverMatch]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:761: error: Function "r2pipe.open" is not valid as a type  [valid-type]
+tests\test_bridges\test_frida_bridge.py:589: error: Redundant cast to "list[ApiResolverMatch]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:761: note: Perhaps you need "Callable[...]" or a callback protocol?
+tests\test_bridges\test_frida_bridge.py:609: error: Redundant cast to "list[SymbolInfo]"  [redundant-cast]
 
-src\intellicrack\bridges\cutter.py:1834: error: Redundant cast to "list[Any]"  [redundant-cast]
+
+4 findings in src\intellicrack\credentials\store.py
+
+src\intellicrack\credentials\store.py:37: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+src\intellicrack\credentials\store.py:38: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+src\intellicrack\credentials\store.py:53: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\credentials\store.py:141: error: Statement is unreachable  [unreachable]
 
 
 4 findings in tests\test_ui\test_graph_view.py
@@ -239,6 +484,17 @@ tests\test_ui\test_graph_view.py:270: error: "type[CFGGraphScene]" has no attrib
 tests\test_ui\test_graph_view.py:280: error: "type[CFGGraphScene]" has no attribute "compute_layers"  [attr-defined]
 
 tests\test_ui\test_graph_view.py:335: error: Item "None" of "QGraphicsScene | None" has no attribute "items"  [union-attr]
+
+
+4 findings in src\intellicrack\providers\local_transformers.py
+
+src\intellicrack\providers\local_transformers.py:67: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+src\intellicrack\providers\local_transformers.py:273: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\local_transformers.py:353: error: Statement is unreachable  [unreachable]
+
+src\intellicrack\providers\local_transformers.py:373: error: Statement is unreachable  [unreachable]
 
 
 4 findings in tests\test_bridges\test_cutter.py
@@ -269,18 +525,9 @@ src\intellicrack\ui\app.py:68: error: Incompatible types in assignment (expressi
 
 src\intellicrack\ui\app.py:69: error: Incompatible types in assignment (expression has type "None", variable has type "Callable[[int], None]")  [assignment]
 
-src\intellicrack\ui\app.py:366: error: Statement is unreachable  [unreachable]
+src\intellicrack\ui\app.py:381: error: Statement is unreachable  [unreachable]
 
-src\intellicrack\ui\app.py:818: error: Statement is unreachable  [unreachable]
-
-
-3 findings in src\intellicrack\core\hexpat\stdlib.py
-
-src\intellicrack\core\hexpat\stdlib.py:159: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
-
-src\intellicrack\core\hexpat\stdlib.py:174: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
-
-src\intellicrack\core\hexpat\stdlib.py:566: error: Argument "byteorder" to "from_bytes" of "int" has incompatible type "str"; expected "Literal['little', 'big']"  [arg-type]
+src\intellicrack\ui\app.py:833: error: Statement is unreachable  [unreachable]
 
 
 3 findings in src\intellicrack\sandbox\analysis.py
@@ -294,11 +541,11 @@ src\intellicrack\sandbox\analysis.py:507: error: Argument 1 to "_scan_text" has 
 
 3 findings in src\intellicrack\ui\panels\hex_editor\panel.py
 
-src\intellicrack\ui\panels\hex_editor\panel.py:229: error: Incompatible types in assignment (expression has type "QComboBox | None", base class "TransformsMixin" defined the type as "QComboBox")  [assignment]
+src\intellicrack\ui\panels\hex_editor\panel.py:227: error: Incompatible types in assignment (expression has type "QComboBox | None", base class "TransformsMixin" defined the type as "QComboBox")  [assignment]
 
-src\intellicrack\ui\panels\hex_editor\panel.py:230: error: Incompatible types in assignment (expression has type "QLineEdit | None", base class "TransformsMixin" defined the type as "QLineEdit")  [assignment]
+src\intellicrack\ui\panels\hex_editor\panel.py:228: error: Incompatible types in assignment (expression has type "QLineEdit | None", base class "TransformsMixin" defined the type as "QLineEdit")  [assignment]
 
-src\intellicrack\ui\panels\hex_editor\panel.py:231: error: Incompatible types in assignment (expression has type "QSpinBox | None", base class "TransformsMixin" defined the type as "QSpinBox")  [assignment]
+src\intellicrack\ui\panels\hex_editor\panel.py:229: error: Incompatible types in assignment (expression has type "QSpinBox | None", base class "TransformsMixin" defined the type as "QSpinBox")  [assignment]
 
 
 3 findings in tests\test_ui\test_tool_panel_detach.py
@@ -319,20 +566,6 @@ tests\test_ui\test_search_async.py:147: error: "SearchWorker" has no attribute "
 tests\test_ui\test_search_async.py:149: error: "SearchWorker" has no attribute "encoding"; maybe "_encoding"?  [attr-defined]
 
 
-2 findings in src\intellicrack\credentials\store.py
-
-src\intellicrack\credentials\store.py:35: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-src\intellicrack\credentials\store.py:123: error: Statement is unreachable  [unreachable]
-
-
-2 findings in src\intellicrack\providers\xpu_utils.py
-
-src\intellicrack\providers\xpu_utils.py:28: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
-
-src\intellicrack\providers\xpu_utils.py:73: error: Statement is unreachable  [unreachable]
-
-
 2 findings in tests\test_ui\test_font_manager.py
 
 tests\test_ui\test_font_manager.py:178: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
@@ -340,37 +573,39 @@ tests\test_ui\test_font_manager.py:178: error: Non-overlapping equality check (l
 tests\test_ui\test_font_manager.py:243: error: Non-overlapping equality check (left operand type: "StyleHint", right operand type: "int")  [comparison-overlap]
 
 
+2 findings in src\intellicrack\providers\xpu_utils.py
+
+src\intellicrack\providers\xpu_utils.py:31: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+src\intellicrack\providers\xpu_utils.py:76: error: Statement is unreachable  [unreachable]
+
+
 2 findings in src\intellicrack\ui\panels\ghidra_panel.py
 
-src\intellicrack\ui\panels\ghidra_panel.py:99: error: Incompatible types in assignment (expression has type "None", variable has type "type[CFGGraphView]")  [assignment]
+src\intellicrack\ui\panels\ghidra_panel.py:100: error: Incompatible types in assignment (expression has type "None", variable has type "type[CFGGraphView]")  [assignment]
 
-src\intellicrack\ui\panels\ghidra_panel.py:104: error: Incompatible types in assignment (expression has type "None", variable has type "type[PythonSyntaxHighlighter]")  [assignment]
+src\intellicrack\ui\panels\ghidra_panel.py:105: error: Incompatible types in assignment (expression has type "None", variable has type "type[PythonSyntaxHighlighter]")  [assignment]
 
 
 2 findings in src\intellicrack\ui\panels\x64dbg_panel.py
 
-src\intellicrack\ui\panels\x64dbg_panel.py:2502: error: "appendPlainText" of "QPlainTextEdit" does not return a value (it only ever returns None)  [func-returns-value]
+src\intellicrack\ui\panels\x64dbg_panel.py:2498: error: "appendPlainText" of "QPlainTextEdit" does not return a value (it only ever returns None)  [func-returns-value]
 
-src\intellicrack\ui\panels\x64dbg_panel.py:2502: error: "_refresh_state" of "X64DbgPanel" does not return a value (it only ever returns None)  [func-returns-value]
-
-
-2 findings in src\intellicrack\core\template_manager.py
-
-src\intellicrack\core\template_manager.py:322: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
-
-src\intellicrack\core\template_manager.py:334: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+src\intellicrack\ui\panels\x64dbg_panel.py:2498: error: "_refresh_state" of "X64DbgPanel" does not return a value (it only ever returns None)  [func-returns-value]
 
 
 2 findings in src\intellicrack\bridges\sandbox_bridge.py
 
-src\intellicrack\bridges\sandbox_bridge.py:1577: error: Function "intellicrack.bridges.sandbox_bridge.SandboxBridge.list" is not valid as a type  [valid-type]
+src\intellicrack\bridges\sandbox_bridge.py:1628: error: Function "intellicrack.bridges.sandbox_bridge.SandboxBridge.list" is not valid as a type  [valid-type]
 
-src\intellicrack\bridges\sandbox_bridge.py:1577: note: Perhaps you need "Callable[...]" or a callback protocol?
+src\intellicrack\bridges\sandbox_bridge.py:1628: note: Perhaps you need "Callable[...]" or a callback protocol?
 
 
-1 findings in src\intellicrack\core\hexpat\evaluator.py
+2 findings in src\intellicrack\core\template_manager.py
 
-src\intellicrack\core\hexpat\evaluator.py:1484: error: Right operand of "or" is never evaluated  [unreachable]
+src\intellicrack\core\template_manager.py:422: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
+
+src\intellicrack\core\template_manager.py:434: error: Returning Any from function declared to return "PatternRegistry | None"  [no-any-return]
 
 
 1 findings in tests\test_hexcore_e2e\test_data_inspector.py
@@ -378,24 +613,34 @@ src\intellicrack\core\hexpat\evaluator.py:1484: error: Right operand of "or" is 
 tests\test_hexcore_e2e\test_data_inspector.py:173: error: Returning Any from function declared to return "HexDocument"  [no-any-return]
 
 
-1 findings in src\intellicrack\ui\win32_embed.py
-
-src\intellicrack\ui\win32_embed.py:119: error: Argument 1 to "createWindowContainer" of "QWidget" has incompatible type "object"; expected "QWindow | None"  [arg-type]
-
-
 1 findings in src\intellicrack\core\process_manager.py
 
-src\intellicrack\core\process_manager.py:149: error: Cannot determine type of "_initialized"  [has-type]
+src\intellicrack\core\process_manager.py:171: error: Cannot determine type of "_initialized"  [has-type]
+
+
+1 findings in src\intellicrack\core\hexpat\evaluator.py
+
+src\intellicrack\core\hexpat\evaluator.py:1700: error: Right operand of "or" is never evaluated  [unreachable]
 
 
 1 findings in src\intellicrack\sandbox\qemu.py
 
-src\intellicrack\sandbox\qemu.py:345: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
+src\intellicrack\sandbox\qemu.py:400: error: Item "None" of "StreamReader | None" has no attribute "readline"  [union-attr]
 
 
-1 findings in src\intellicrack\bridges\process.py
+1 findings in src\intellicrack\core\hexpat\stdlib.py
 
-src\intellicrack\bridges\process.py:1021: error: Returning Any from function declared to return "float"  [no-any-return]
+src\intellicrack\core\hexpat\stdlib.py:1475: error: Incompatible types in assignment (expression has type "IO[Any]", variable has type "BinaryIO")  [assignment]
+
+
+1 findings in tests\test_ui\test_icon_manager.py
+
+tests\test_ui\test_icon_manager.py:348: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
+
+
+1 findings in tests\test_providers\test_ollama_chat_live.py
+
+tests\test_providers\test_ollama_chat_live.py:61: error: Redundant cast to "list[Any]"  [redundant-cast]
 
 
 1 findings in tests\test_providers\test_openrouter_provider.py
@@ -403,19 +648,9 @@ src\intellicrack\bridges\process.py:1021: error: Returning Any from function dec
 tests\test_providers\test_openrouter_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in tests\test_providers\test_huggingface_provider.py
-
-tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
-
-
 1 findings in src\intellicrack\credentials\oauth.py
 
-src\intellicrack\credentials\oauth.py:95: error: Statement is unreachable  [unreachable]
-
-
-1 findings in src\intellicrack\providers\model_loader.py
-
-src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\credentials\oauth.py:108: error: Statement is unreachable  [unreachable]
 
 
 1 findings in tests\test_providers\test_openai_provider.py
@@ -428,19 +663,19 @@ tests\test_providers\test_openai_provider.py:22: error: Module "intellicrack.cre
 tests\test_providers\test_grok_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in tests\test_providers\test_anthropic_provider.py
+1 findings in tests\test_providers\test_google_provider.py
 
-tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
-
-
-1 findings in tests\test_ui\test_icon_manager.py
-
-tests\test_ui\test_icon_manager.py:348: error: "IconManager" has no attribute "load_icon"; maybe "_load_icon" or "preload_icons"?  [attr-defined]
+tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in src\intellicrack\providers\local_transformers.py
+1 findings in src\intellicrack\providers\model_loader.py
 
-src\intellicrack\providers\local_transformers.py:64: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+src\intellicrack\providers\model_loader.py:27: error: Incompatible types in assignment (expression has type "None", variable has type Module)  [assignment]
+
+
+1 findings in src\intellicrack\providers\huggingface.py
+
+src\intellicrack\providers\huggingface.py:231: error: Call to untyped function "close" in typed context  [no-untyped-call]
 
 
 1 findings in tests\test_bridges\test_x64dbg.py
@@ -448,14 +683,9 @@ src\intellicrack\providers\local_transformers.py:64: error: Incompatible types i
 tests\test_bridges\test_x64dbg.py:190: error: Incompatible types in assignment (expression has type "dict[str, object]", variable has type "WatchpointInfo")  [assignment]
 
 
-1 findings in src\intellicrack\bridges\hex_editor.py
+1 findings in tests\test_providers\test_anthropic_provider.py
 
-src\intellicrack\bridges\hex_editor.py:2258: error: Name "data" already defined on line 2252  [no-redef]
-
-
-1 findings in tests\test_ui\test_xpu_status.py
-
-tests\test_ui\test_xpu_status.py:249: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
+tests\test_providers\test_anthropic_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
 1 findings in tests\test_providers\test_model_discovery.py
@@ -463,9 +693,24 @@ tests\test_ui\test_xpu_status.py:249: error: "XPUStatusDialog" has no attribute 
 tests\test_providers\test_model_discovery.py:21: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
 
 
-1 findings in tests\test_providers\test_google_provider.py
+1 findings in tests\test_providers\test_huggingface_provider.py
 
-tests\test_providers\test_google_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+tests\test_providers\test_huggingface_provider.py:22: error: Module "intellicrack.credentials.store" does not explicitly export attribute "CredentialLoader"  [attr-defined]
+
+
+1 findings in tests\test_credentials\test_oauth_manager_live.py
+
+tests\test_credentials\test_oauth_manager_live.py:56: error: Returning Any from function declared to return "int"  [no-any-return]
+
+
+1 findings in src\intellicrack\bridges\hex_editor.py
+
+src\intellicrack\bridges\hex_editor.py:2327: error: Name "data" already defined on line 2321  [no-redef]
+
+
+1 findings in tests\test_ui\test_xpu_status.py
+
+tests\test_ui\test_xpu_status.py:249: error: "XPUStatusDialog" has no attribute "status_label"; maybe "_status_label"?  [attr-defined]
 
 
 1 findings in tests\test_ui\test_panel_dock.py

@@ -128,11 +128,9 @@ def _make_table(columns: list[str]) -> QTableWidget:
 class GhidraPanel(AnalysisPanelBase):
     """Native Qt panel for Ghidra reverse engineering analysis.
 
-    Displays decompiled code, disassembly, PCode, CFG, function lists,
-    strings, imports, exports, cross-references, labels, bookmarks,
-    structures, memory maps, segments, program info, call graphs,
-    comments, symbols, namespaces, equates, relocations, and a
-    Ghidra script runner powered by the GhidraBridge backend.
+    Displays decompiled code, disassembly, PCode, CFG, function lists, strings, imports, exports, cross-references, labels, bookmarks,
+    structures, memory maps, segments, program info, call graphs, comments, symbols, namespaces, equates, relocations, and a Ghidra script
+    runner powered by the GhidraBridge backend.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

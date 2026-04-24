@@ -97,10 +97,8 @@ class PipeConfig:
 class NamedPipeClient:
     """Async named pipe client for x64dbg plugin IPC.
 
-    Stores the provided pipe configuration (falling back to defaults
-    when omitted), the optional event handler used for asynchronous
-    plugin events, and sets up the pipe handle slot, the concurrency
-    lock serialising I/O, and the request identifier counter.
+    Stores the provided pipe configuration (falling back to defaults when omitted), the optional event handler used for asynchronous plugin
+    events, and sets up the pipe handle slot, the concurrency lock serialising I/O, and the request identifier counter.
     """
 
     def __init__(

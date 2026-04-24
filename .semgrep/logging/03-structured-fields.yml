@@ -1,13 +1,7 @@
 rules:
-
   - id: intellicrack-logging-c1-except-log-missing-error-context
     message: >-
-      A log call inside an `except:` block passes no error context.
-      Without `error=str(e)` (or better, using `.exception()` which
-      captures the traceback automatically) the record tells you
-      something went wrong but nothing about WHAT. Either switch to
-      `_logger.exception("event_name", <context kwargs>)` or add
-      `error=str(e), error_type=type(e).__name__`.
+      A log call inside an `except:` block passes no error context. Without `error=str(e)` (or better, using `.exception()` which captures the traceback automatically) the record tells you something went wrong but nothing about WHAT. Either switch to `_logger.exception("event_name", <context kwargs>)` or add `error=str(e), error_type=type(e).__name__`.
     severity: WARNING
     languages: [python]
     patterns:
@@ -36,16 +30,9 @@ rules:
               except $E as $X:
                   ...
                   $L.debug($EVENT)
-
   - id: intellicrack-logging-c2-missing-function-context-kwargs
     message: >-
-      The enclosing function receives a well-known correlation argument
-      (pid, process_name, binary_path, target, address, size,
-      module_name, offset, session_id, bridge, tool_name, provider,
-      script_id, probe_id, monitor_id, or hook_id) but this log call
-      does not pass it as a kwarg. Logs without these keys cannot be
-      correlated across the workspace. Add the relevant kwarg:
-      `_logger.info("event_name", pid=pid, binary_path=str(binary_path))`.
+      The enclosing function receives a well-known correlation argument (pid, process_name, binary_path, target, address, size, module_name, offset, session_id, bridge, tool_name, provider, script_id, probe_id, monitor_id, or hook_id) but this log call does not pass it as a kwarg. Logs without these keys cannot be correlated across the workspace. Add the relevant kwarg: `_logger.info("event_name", pid=pid, binary_path=str(binary_path))`.
     severity: WARNING
     languages: [python]
     patterns:
@@ -85,19 +72,9 @@ rules:
       - metavariable-regex:
           metavariable: $LVL
           regex: '^(info|warning|error|debug|exception|critical)$'
-
   - id: intellicrack-logging-c3-reserved-logrecord-key
     message: >-
-      The kwarg name collides with a reserved LogRecord attribute
-      (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`,
-      `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`,
-      `relativeCreated`, `thread`, `threadName`, `processName`,
-      `process`, `args`, or `asctime`). structlog/stdlib will either
-      silently drop the kwarg or raise at format time. Rename to a
-      project-specific key (e.g. `"name"` -> `"process_name"` or
-      `"tool_name"`). `exc_info` / `exc_text` / `stack_info` are
-      excluded because they are documented stdlib-logging kwargs
-      consumed by the handler, not stored as fields.
+      The kwarg name collides with a reserved LogRecord attribute (`name`, `message`, `msg`, `levelname`, `levelno`, `pathname`, `filename`, `module`, `lineno`, `funcName`, `created`, `msecs`, `relativeCreated`, `thread`, `threadName`, `processName`, `process`, `args`, or `asctime`). structlog/stdlib will either silently drop the kwarg or raise at format time. Rename to a project-specific key (e.g. `"name"` -> `"process_name"` or `"tool_name"`). `exc_info` / `exc_text` / `stack_info` are excluded because they are documented stdlib-logging kwargs consumed by the handler, not stored as fields.
     severity: ERROR
     languages: [python]
     patterns:
@@ -113,14 +90,9 @@ rules:
       - metavariable-regex:
           metavariable: $K
           regex: '^(name|message|msg|levelname|levelno|pathname|filename|module|lineno|funcName|created|msecs|relativeCreated|thread|threadName|processName|args|asctime)$'
-
   - id: intellicrack-logging-c4-redundant-error-on-exception
     message: >-
-      `_logger.exception(...)` already attaches the active traceback
-      via `exc_info=True`. Passing `error=str(e)` duplicates that
-      information and hides the type/traceback under a truncated
-      string. Drop the `error=` kwarg and let `.exception()` capture
-      it - keep only the structured context kwargs.
+      `_logger.exception(...)` already attaches the active traceback via `exc_info=True`. Passing `error=str(e)` duplicates that information and hides the type/traceback under a truncated string. Drop the `error=` kwarg and let `.exception()` capture it - keep only the structured context kwargs.
     severity: WARNING
     languages: [python]
     pattern-either:
@@ -133,15 +105,9 @@ rules:
       - pattern: $L.exception(..., exception=$E, ...)
       - pattern: $L.exception(..., traceback=$X, ...)
       - pattern: $L.exception(..., tb=$X, ...)
-
   - id: intellicrack-logging-c5-exception-call-outside-except
     message: >-
-      `_logger.exception(...)` captures the active exception via
-      `exc_info=True`. When called outside an `except:` block there is
-      no active exception, so it logs `NoneType: None` or nothing at
-      all - a useless record. If you want structured error reporting
-      without a live traceback, use `_logger.error("event_name",
-      error=str(e), error_type=type(e).__name__)`.
+      `_logger.exception(...)` captures the active exception via `exc_info=True`. When called outside an `except:` block there is no active exception, so it logs `NoneType: None` or nothing at all - a useless record. If you want structured error reporting without a live traceback, use `_logger.error("event_name", error=str(e), error_type=type(e).__name__)`.
     severity: ERROR
     languages: [python]
     patterns:
@@ -206,14 +172,9 @@ rules:
               ...
           except ($E1, $E2, $E3, $E4, $E5) as $X:
               ...
-
   - id: intellicrack-logging-c6-raw-exception-as-kwarg-value
     message: >-
-      A bare exception object is being logged as a kwarg value. Most
-      renderers will call `repr()` on it, producing inconsistent output
-      across exception types and losing chained-exception context. Log
-      `error=str(e)` and `error_type=type(e).__name__` separately, or
-      use `_logger.exception(...)` to capture the traceback.
+      A bare exception object is being logged as a kwarg value. Most renderers will call `repr()` on it, producing inconsistent output across exception types and losing chained-exception context. Log `error=str(e)` and `error_type=type(e).__name__` separately, or use `_logger.exception(...)` to capture the traceback.
     severity: WARNING
     languages: [python]
     patterns:
@@ -242,27 +203,17 @@ rules:
               except $ET as $E:
                   ...
                   $L.$LVL(..., exc=$E, ...)
-
   - id: intellicrack-logging-c7-duplicated-data-in-event-and-kwargs
     message: >-
-      The event-name string encodes data that is also passed as a
-      kwarg (e.g. `f"attached pid={pid}"` next to `pid=pid`). Pick one
-      - the structured kwarg is the source of truth because it is
-      queryable. Make the event name a constant literal and keep the
-      data in kwargs only.
+      The event-name string encodes data that is also passed as a kwarg (e.g. `f"attached pid={pid}"` next to `pid=pid`). Pick one - the structured kwarg is the source of truth because it is queryable. Make the event name a constant literal and keep the data in kwargs only.
     severity: WARNING
     languages: [python]
     pattern-either:
       - pattern: $L.$LVL(f"...{$X}...", ..., $X=$X, ...)
       - pattern: $L.$LVL(f"...{$X}...", ..., $X=..., ...)
-
   - id: intellicrack-logging-c8-non-loggable-value-type
     message: >-
-      The kwarg value is a raw bytes/bytearray/file/socket/Popen object
-      that will render as a giant blob or opaque repr. Log metadata
-      instead: `len(data)`, `path.name`, `sock.getpeername()`,
-      `proc.pid`. Dumping the object itself bloats logs and leaks
-      binary content into text aggregators.
+      The kwarg value is a raw bytes/bytearray/file/socket/Popen object that will render as a giant blob or opaque repr. Log metadata instead: `len(data)`, `path.name`, `sock.getpeername()`, `proc.pid`. Dumping the object itself bloats logs and leaks binary content into text aggregators.
     severity: WARNING
     languages: [python]
     pattern-either:

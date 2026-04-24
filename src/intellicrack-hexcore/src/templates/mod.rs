@@ -27,6 +27,7 @@ pub enum ConditionOp {
     Ge,
     Le,
     BitAnd,
+    BitAndZero,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
