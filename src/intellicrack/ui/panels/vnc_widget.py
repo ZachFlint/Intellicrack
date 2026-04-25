@@ -31,7 +31,7 @@ from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutin
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
-_logger = get_logger("ui.panels.vnc_widget")
+_logger = get_logger(__name__)
 
 _RFB_VERSION: Final[bytes] = b"RFB 003.008\n"
 _SECURITY_NONE: Final[int] = 1
@@ -159,6 +159,7 @@ class RFBClient:
         self.height = 0
         self.server_name = ""
         self.framebuffer = None
+        _logger.debug("rfb_client_initialized")
 
     @property
     def connected(self) -> bool:
@@ -176,6 +177,7 @@ class RFBClient:
         Args:
             value: Desired connection state.
         """
+        _logger.debug("rfb_client_connected_state_set", connected=value)
         self._connected = value
 
     def take_dirty_flag(self) -> bool:
@@ -241,6 +243,7 @@ class RFBClient:
             ConnectionError: If reader/writer not available.
         """
         if self._reader is None or self._writer is None:
+            _logger.warning("vnc_negotiate_version_no_connection")
             msg = "Not connected"
             raise ConnectionError(msg)
 
@@ -263,6 +266,7 @@ class RFBClient:
             ConnectionError: If reader/writer not available.
         """
         if self._reader is None or self._writer is None:
+            _logger.warning("vnc_negotiate_security_no_connection")
             msg = "Not connected"
             raise ConnectionError(msg)
 
@@ -309,6 +313,7 @@ class RFBClient:
             ConnectionError: If reader/writer not available.
         """
         if self._reader is None or self._writer is None:
+            _logger.warning("vnc_perform_auth_no_connection")
             msg = "Not connected"
             raise ConnectionError(msg)
 
@@ -341,6 +346,7 @@ class RFBClient:
             ConnectionError: If reader/writer not available.
         """
         if self._reader is None or self._writer is None:
+            _logger.warning("vnc_client_init_no_connection")
             msg = "Not connected"
             raise ConnectionError(msg)
 
@@ -423,11 +429,11 @@ class RFBClient:
                 return True
 
         except asyncio.IncompleteReadError:
-            _logger.debug("vnc_message_incomplete")
+            _logger.warning("vnc_message_incomplete")
             self._connected = False
             return False
         except TimeoutError:
-            _logger.debug("vnc_message_timeout")
+            _logger.warning("vnc_message_timeout")
             return False
         except (OSError, struct.error):
             _logger.exception("vnc_message_error", connected=self._connected)
@@ -472,6 +478,7 @@ class RFBClient:
         try:
             return await self._reader.readexactly(total_bytes)
         except asyncio.IncompleteReadError:
+            _logger.warning("vnc_raw_pixels_incomplete", expected_bytes=total_bytes)
             return None
 
     def apply_raw_rect(
@@ -747,10 +754,10 @@ class VNCWidget(QWidget):
                     await self.client.request_framebuffer_update(incremental=True)
                     handled = await self.client.handle_server_message()
                 except (OSError, struct.error):
-                    _logger.debug("vnc_pump_error", exc_info=True)
+                    _logger.exception("vnc_pump_error")
                     break
                 except asyncio.CancelledError:
-                    _logger.debug("vnc_pump_cancelled")
+                    _logger.debug("vnc_pump_cancelled", exc_info=True)
                     break
 
                 if self.client.take_dirty_flag():
@@ -760,7 +767,7 @@ class VNCWidget(QWidget):
                     try:
                         await asyncio.sleep(_PUMP_IDLE_SLEEP_S)
                     except asyncio.CancelledError:
-                        _logger.debug("vnc_pump_cancelled")
+                        _logger.debug("vnc_pump_idle_sleep_cancelled", exc_info=True)
                         break
         finally:
             self._pump_task_ref = None

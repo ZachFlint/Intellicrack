@@ -72,7 +72,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from intellicrack.bridges.cutter import CutterBridge
 
-_logger = get_logger("ui.panels.cutter")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
@@ -523,6 +523,7 @@ class CutterPanel(AnalysisPanelBase):
         if not file_path:
             return
 
+        _logger.info("cutter_load_binary_requested", binary_path=file_path)
         self.analyze_binary(Path(file_path))
 
     def _on_analyze(self) -> None:
@@ -628,6 +629,13 @@ class CutterPanel(AnalysisPanelBase):
         if not isinstance(address, int) or self._bridge is None:
             return
 
+        binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        _logger.info(
+            "cutter_function_disassembly_requested",
+            binary_path=binary_path,
+            offset=hex(address),
+        )
+
         self._run_async(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
@@ -658,6 +666,13 @@ class CutterPanel(AnalysisPanelBase):
         if address is None:
             self._set_status("No function selected")
             return
+
+        binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        _logger.info(
+            "cutter_decompile_requested",
+            binary_path=binary_path,
+            offset=hex(address),
+        )
 
         self._run_async(
             self._bridge.decompile(address),
@@ -720,6 +735,7 @@ class CutterPanel(AnalysisPanelBase):
                 return int(stripped, 16)
             return int(stripped)
         except ValueError:
+            _logger.warning("cutter_address_parse_failed", input_text=stripped)
             return None
 
     def _apply_decompiled(self, result: object) -> None:
@@ -1102,6 +1118,13 @@ class CutterPanel(AnalysisPanelBase):
         if not ok2 or not hex_data:
             return
 
+        binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        _logger.info(
+            "cutter_patch_bytes_requested",
+            binary_path=binary_path,
+            offset=hex(address),
+            byte_count=len(hex_data.replace(" ", "")) // 2,
+        )
         self._run_async(
             self._bridge.write_bytes(address, hex_data),
             on_success=lambda _: self._set_status(f"Patched @ 0x{address:X}"),
@@ -1138,6 +1161,12 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         self._set_status(f"@ 0x{address:X}")
+        binary_path = str(self._current_binary) if self._current_binary is not None else "unset"
+        _logger.info(
+            "cutter_goto_disassembly_requested",
+            binary_path=binary_path,
+            offset=hex(address),
+        )
         self._run_async(
             self._bridge.disassemble(address),
             on_success=self._apply_disassembly,

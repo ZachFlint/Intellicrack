@@ -41,7 +41,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
-_logger = get_logger("ui.panels.graph_view")
+_logger = get_logger(__name__)
 
 _BLOCK_PADDING: Final[int] = 10
 _BLOCK_MIN_WIDTH: Final[int] = 200
