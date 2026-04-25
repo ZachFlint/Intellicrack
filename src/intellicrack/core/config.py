@@ -20,7 +20,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
 
 
-_logger = get_logger("core.config")
+_logger = get_logger(__name__)
 
 _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
 

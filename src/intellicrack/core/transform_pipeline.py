@@ -22,7 +22,7 @@ from typing import Any, override
 from intellicrack.core.logging import get_logger
 
 
-_logger = get_logger("core.transform_pipeline")
+_logger = get_logger(__name__)
 
 _MAX_BYTE_VALUE = 255
 
@@ -77,7 +77,7 @@ try:
     _hexcore_mod = intellicrack_hexcore
     _hexcore_available = True
 except ImportError:
-    pass
+    _logger.debug("hexcore_module_import_failed")
 
 
 _BINARY_OPS: dict[type[ast.operator], Any] = {
@@ -132,6 +132,10 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
     """
     if isinstance(node, ast.Constant):
         if not isinstance(node.value, (int, float, bool)):
+            _logger.error(
+                "ast_node_unsupported_constant",
+                type_name=type(node.value).__name__,
+            )
             raise UnsupportedConstantTypeError(type(node.value).__name__)
         return int(node.value)
 
@@ -765,7 +769,7 @@ class TransformPipeline:
         if index < 0 or index >= len(self._steps):
             return False
         removed = self._steps.pop(index)
-        _logger.debug("pipeline_step_removed", node=removed.node.name, index=index)
+        _logger.info("pipeline_step_removed", node=removed.node.name, index=index)
         return True
 
     def move_step(self, from_index: int, to_index: int) -> bool:
@@ -838,7 +842,7 @@ class TransformPipeline:
     def clear(self) -> None:
         """Remove all steps from the pipeline."""
         self._steps.clear()
-        _logger.debug("pipeline_cleared")
+        _logger.info("pipeline_cleared")
 
 
 def get_all_transform_nodes() -> list[TransformNode]:

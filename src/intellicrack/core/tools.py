@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
-_logger = get_logger("core.tools")
+_logger = get_logger(__name__)
 
 _ERR_BRIDGE_NA = "bridge not available"
 _ERR_UNKNOWN_TOOL = "unknown tool"
@@ -197,7 +197,7 @@ class ToolRegistry:
         for name, bridge in self._bridges.items():
             try:
                 await bridge.shutdown()
-                _logger.debug("bridge_shutdown", bridge_name=name.value)
+                _logger.info("bridge_shutdown", bridge_name=name.value)
             except (OSError, RuntimeError, ToolError) as e:
                 _logger.warning("bridge_shutdown_error", bridge_name=name.value, error=str(e))
 
@@ -372,10 +372,10 @@ class ToolRegistry:
                     if path is not None:
                         version = await self._installer.get_version(name, path)
                 except (OSError, RuntimeError, ToolError) as e:
-                    _logger.debug(
+                    _logger.exception(
                         "tool_path_version_lookup_failed",
                         tool_name=name.value,
-                        error=str(e),
+                        error_str=str(e),
                     )
 
             return ToolStatus(
@@ -467,7 +467,7 @@ class ToolRegistry:
         try:
             tool_enum = ToolName(tool_name.lower())
         except ValueError:
-            _logger.debug("execute_tool_call_invalid_name", tool_name=tool_name)
+            _logger.exception("execute_tool_call_invalid_name", tool_name=tool_name)
             raise ToolError(_ERR_UNKNOWN_TOOL) from None
 
         _logger.debug("execute_tool_call_resolved", tool_enum=tool_enum.value)

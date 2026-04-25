@@ -18,7 +18,7 @@ from typing import Any
 from intellicrack.core.logging import get_logger
 
 
-_logger = get_logger("core.hexpat_compiler")
+_logger = get_logger(__name__)
 
 
 class HexPatError(Exception):
@@ -36,6 +36,12 @@ class HexPatError(Exception):
         self.line = line
         self.column = column
         super().__init__(f"line {line}, col {column}: {message}")
+        _logger.debug(
+            "hexpat_error_constructed",
+            error_message=message,
+            line=line,
+            column=column,
+        )
 
 
 class TokenType(enum.Enum):
@@ -469,6 +475,7 @@ class HexPatLexer:
         self._line = 1
         self._col = 1
         self._tokens: list[Token] = []
+        _logger.debug("hexpat_lexer_initialized", source_length=len(source))
 
     def tokenize(self) -> list[Token]:
         """Tokenize the entire source into a list of tokens.
@@ -1217,6 +1224,10 @@ class HexPatCodegen:
         self._nested_enums: dict[str, EnumDecl] = {}
         self._nested_bitfields: dict[str, BitfieldDecl] = {}
         self._collect_nested()
+        _logger.debug(
+            "hexpat_codegen_initialized",
+            declaration_count=len(declarations),
+        )
 
     def _collect_nested(self) -> None:
         """Index nested declarations by name for StructRef resolution."""
@@ -1242,6 +1253,7 @@ class HexPatCodegen:
         main_struct: StructDecl | None = next((decl for decl in self._decls if isinstance(decl, StructDecl)), None)
         if main_struct is None:
             msg = "no struct declaration found"
+            _logger.error("hexpat_generate_no_struct_declaration")
             raise HexPatError(msg)
 
         fields: list[dict[str, Any]] = []
