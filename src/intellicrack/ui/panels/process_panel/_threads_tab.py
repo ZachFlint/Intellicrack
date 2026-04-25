@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from intellicrack.core.types import ThreadInfo
     from intellicrack.ui.panels.process_panel._system_tab import SystemTab
 
-_logger = get_logger("ui.panels.process.threads_tab")
+_logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
@@ -441,9 +441,17 @@ class ThreadsTab(QWidget):
             name_item = self._reg_table.item(row, 0)
             val_item = self._reg_table.item(row, 1)
             if name_item is not None and val_item is not None:
+                register_name = name_item.text()
+                raw_value = val_item.text()
                 try:
-                    regs[name_item.text()] = int(val_item.text(), 16)
+                    regs[register_name] = int(raw_value, 16)
                 except ValueError:
+                    _logger.exception(
+                        "register_value_parse_failed",
+                        register_name=register_name,
+                        raw_value=raw_value,
+                        row=row,
+                    )
                     continue
 
         run_bridge_coroutine_async(self._bridge.set_thread_context(tid, regs), None, None, self)

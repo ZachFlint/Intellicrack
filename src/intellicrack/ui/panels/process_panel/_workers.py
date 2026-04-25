@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget
 
 
-_logger = get_logger("ui.panels.process.workers")
+_logger = get_logger(__name__)
 
 
 class TrackedRefreshWorker(QThread):
