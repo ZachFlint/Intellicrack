@@ -32,7 +32,7 @@ from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.types import ToolError, ToolName
 
 
-_logger = get_logger("bridges.installer")
+_logger = get_logger(__name__)
 
 _ERR_UNSUPPORTED_ARCHIVE = "unsupported archive format"
 _ERR_EXTRACTION_FAILED = "extraction failed"
@@ -311,8 +311,8 @@ class ToolInstaller:
             if result.returncode == 0:
                 _logger.info("frida_installed", version=result.stdout.strip())
                 return Path("frida-python")
-        except (TimeoutExpired, FileNotFoundError) as e:
-            _logger.debug("frida_check_failed", error=str(e))
+        except (TimeoutExpired, FileNotFoundError):
+            _logger.exception("frida_check_failed")
         return None
 
     async def get_version(self, tool: ToolName, path: Path) -> ToolVersion | None:
@@ -360,8 +360,8 @@ class ToolInstaller:
                 version_str = result.stdout.strip()
                 return self._parse_version(version_str)
 
-        except (TimeoutExpired, OSError) as e:
-            _logger.debug("version_check_failed", tool=str(tool), error=str(e))
+        except (TimeoutExpired, OSError):
+            _logger.exception("version_check_failed", tool=str(tool))
 
         return None
 
@@ -389,11 +389,10 @@ class ToolInstaller:
 
         try:
             text = props_path.read_text(encoding="utf-8")
-        except OSError as e:
-            _logger.debug(
+        except OSError:
+            _logger.exception(
                 "ghidra_properties_read_failed",
                 path=str(props_path),
-                error=str(e),
             )
             return None
 
@@ -664,10 +663,13 @@ class ToolInstaller:
                 finally:
                     await asyncio.to_thread(file_handle.close)
 
-            _logger.info("download_completed", file_name=filename, bytes=downloaded)
+            _logger.info("download_completed", file_name=filename, data_size=downloaded)
 
         except (httpx.HTTPError, OSError, ValueError):
-            _logger.exception("download_failed", url=url)
+            _logger.exception(
+                "download_failed",
+                url=url,
+            )
             return None
         else:
             return temp_path
@@ -1031,7 +1033,7 @@ def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
     any_source_found = any(_find_plugin_source(plugin_dir, fn) is not None for _, fn, _ in _PLUGIN_ARCHS)
     if not any_source_found:
         _logger.info(
-            "plugin_binaries_missing_attempting_build",
+            "plugin_binaries_build_starting",
             plugin_dir=str(plugin_dir),
         )
         build_x64dbg_plugin(plugin_dir, x64dbg_path)
