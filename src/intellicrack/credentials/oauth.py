@@ -36,14 +36,15 @@ from intellicrack.credentials.store import CredentialSource, get_credential_stor
 if TYPE_CHECKING:
     from intellicrack.credentials.store import CredentialStore
 
+_logger = get_logger(__name__)
+
 try:
     import keyring.errors as _keyring_errors
 
     _KeyringError: type[Exception] = _keyring_errors.KeyringError
 except ImportError:
+    _logger.debug("keyring_errors_import_failed", exc_info=True)
     _KeyringError = OSError
-
-_logger = get_logger("credentials.oauth")
 
 _GOOGLE_OAUTH_ENDPOINT: Final = "https://oauth2.googleapis.com/token"
 _ANTHROPIC_OAUTH_AUTHORIZE_URL: Final = "https://claude.ai/oauth/authorize"
@@ -118,6 +119,7 @@ def _oauth_provider_to_name(provider: OAuthProvider) -> ProviderName:
         KeyError: If the provider has no mapping.
     """
     if provider not in _OAUTH_TO_PROVIDER_NAME:
+        _logger.error("oauth_provider_mapping_missing", provider_name=provider.value)
         msg = f"No provider name mapping for {provider!r}"
         raise KeyError(msg)
     return _OAUTH_TO_PROVIDER_NAME[provider]
@@ -487,6 +489,12 @@ class OAuthCallbackServer:
         self._server: _OAuthCallbackTCPServer | None = None
         self._thread: threading.Thread | None = None
         self._event = threading.Event()
+        _logger.debug(
+            "oauth_callback_server_initialized",
+            port=port,
+            timeout_seconds=timeout,
+            has_expected_state=bool(expected_state),
+        )
 
     def start(self) -> None:
         """Start the callback server in a background thread.
@@ -515,8 +523,8 @@ class OAuthCallbackServer:
         def serve() -> None:
             try:
                 server.handle_request()
-            except OSError as serve_exc:
-                _logger.debug("oauth_callback_server_serve_error", error=str(serve_exc))
+            except OSError:
+                _logger.exception("oauth_callback_server_serve_error")
 
         self._thread = threading.Thread(target=serve, daemon=True)
         self._thread.start()
@@ -533,19 +541,23 @@ class OAuthCallbackServer:
             OAuthAuthorizationError: If the user denied authorization.
         """
         if not self._event.wait(timeout=self._timeout):
+            _logger.warning("oauth_callback_wait_timeout", timeout_seconds=self._timeout)
             msg = "Timeout waiting for OAuth callback"
             raise OAuthCallbackError(msg)
 
         server = self._server
         if server is None:
+            _logger.warning("oauth_callback_server_not_running")
             msg = "Callback server is not running"
             raise OAuthCallbackError(msg)
 
         if server.callback_error:
             error_msg = server.callback_error
             if "denied" in error_msg.lower() or "access_denied" in error_msg.lower():
+                _logger.warning("oauth_callback_authorization_denied", error_code=error_msg)
                 msg = f"Authorization denied: {error_msg}"
                 raise OAuthAuthorizationError(msg)
+            _logger.warning("oauth_callback_error_received", error_code=error_msg)
             msg = f"OAuth error: {error_msg}"
             raise OAuthCallbackError(msg)
 
@@ -553,6 +565,7 @@ class OAuthCallbackServer:
         state = server.callback_state
 
         if not code or not state:
+            _logger.warning("oauth_callback_invalid_params", has_code=bool(code), has_state=bool(state))
             msg = "Invalid callback: missing code or state"
             raise OAuthCallbackError(msg)
 
@@ -573,8 +586,8 @@ class OAuthCallbackServer:
             server.expected_state = None
             try:
                 server.server_close()
-            except OSError as exc:
-                _logger.debug("oauth_callback_server_close_error", error=str(exc))
+            except OSError:
+                _logger.exception("oauth_callback_server_close_error")
             self._server = None
         if self._thread is not None:
             self._thread.join(timeout=1.0)
@@ -612,6 +625,11 @@ class OAuthManager:
         self._token_cache_lock = asyncio.Lock()
         self._token_cache: dict[OAuthProvider, OAuthToken] = {}
         self._http_client: httpx.AsyncClient | None = None
+        _logger.debug(
+            "oauth_manager_initialized",
+            callback_port=callback_port,
+            has_credential_store=credential_store is not None,
+        )
 
     async def _get_http_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client.
@@ -675,6 +693,7 @@ class OAuthManager:
             OAuthConfigurationError: If configuration is invalid.
         """
         if not config.client_id:
+            _logger.warning("oauth_authorization_url_invalid_config", provider_name=config.provider.value, reason="missing_client_id")
             msg = "client_id is required"
             raise OAuthConfigurationError(msg)
 
@@ -767,14 +786,17 @@ class OAuthManager:
             oauth_state = self._pending_states.pop(state, None)
 
         if oauth_state is None:
+            _logger.warning("oauth_callback_unknown_state")
             msg = f"Unknown state parameter: {state}"
             raise OAuthCallbackError(msg)
 
         if oauth_state.is_expired:
+            _logger.warning("oauth_callback_state_expired", provider_name=oauth_state.provider.value)
             msg = "Authorization flow expired"
             raise OAuthCallbackError(msg)
 
         if oauth_state.config.use_pkce and not oauth_state.code_verifier:
+            _logger.warning("oauth_callback_pkce_verifier_missing", provider_name=oauth_state.provider.value)
             msg = "PKCE flow missing code_verifier"
             raise OAuthCallbackError(msg)
 

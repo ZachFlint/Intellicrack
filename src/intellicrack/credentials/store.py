@@ -27,7 +27,7 @@ from intellicrack.credentials.env_loader import CredentialLoader, get_credential
 if TYPE_CHECKING:
     from types import ModuleType
 
-_logger = get_logger("credentials.store")
+_logger = get_logger(__name__)
 
 try:
     import keyring as _keyring_module
@@ -121,6 +121,7 @@ class CredentialStore:
         self._keyring: ModuleType | None = None
         self._keyring_checked: bool = False
         self._keyring_available: bool = False
+        _logger.debug("credential_store_initialized", has_fallback_loader=fallback_loader is not None)
 
     _UNUSABLE_BACKEND_NAMES: ClassVar[frozenset[str]] = frozenset({
         "fail.Keyring",
@@ -336,6 +337,7 @@ class CredentialStore:
             CredentialStoreError: If storage fails.
         """
         if self._keyring is None:
+            _logger.warning("credential_set_keyring_unavailable", provider=provider.value)
             msg = "Keyring is not available"
             raise KeyringUnavailableError(msg)
 
@@ -427,8 +429,16 @@ class CredentialStore:
         Returns:
             ProviderCredentials | None: ProviderCredentials if found, None otherwise.
         """
+        _logger.debug("credential_get_started", provider=provider.value, key_id=self._get_keyring_key(provider))
         async with self._lock:
-            return await self._get_unlocked(provider)
+            result = await self._get_unlocked(provider)
+        _logger.debug(
+            "credential_get_completed",
+            provider=provider.value,
+            key_id=self._get_keyring_key(provider),
+            credential_found=result is not None and bool(result.api_key),
+        )
+        return result
 
     async def get_or_raise(self, provider: ProviderName) -> ProviderCredentials:
         """Get credentials for a provider, raising if not found.
@@ -444,6 +454,7 @@ class CredentialStore:
         """
         creds = await self.get(provider)
         if creds is None:
+            _logger.warning("credential_get_or_raise_missing", provider=provider.value)
             msg = f"No credentials found for {provider.value}"
             raise CredentialNotFoundError(msg)
         return creds
@@ -466,7 +477,14 @@ class CredentialStore:
         Raises:
             KeyringUnavailableError: If keyring is not available.
         """
+        _logger.debug(
+            "credential_set_started",
+            provider=provider.value,
+            key_id=self._get_keyring_key(provider),
+            source=source.value,
+        )
         if not self.keyring_available:
+            _logger.warning("credential_set_keyring_unavailable", provider=provider.value)
             msg = (
                 "Keyring is not available. Install keyring package and ensure "
                 "a backend is available (Windows Credential Manager, macOS Keychain, etc.)"
@@ -489,29 +507,31 @@ class CredentialStore:
             KeyringUnavailableError: If keyring is not available.
         """
         if not self.keyring_available or self._keyring is None:
+            _logger.warning("credential_delete_keyring_unavailable", provider=provider.value)
             msg = "Keyring is not available"
             raise KeyringUnavailableError(msg)
 
         key = self._get_keyring_key(provider)
         metadata_key = f"{key}{self.METADATA_KEY}"
         keyring = self._keyring
+        _logger.info("credential_delete_started", provider=provider.value, key_id=key)
 
         def _delete() -> bool:
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
             except (OSError, KeyError, ValueError, _KeyringError):
-                _logger.debug("keyring_delete_credential_failed", provider=provider.value, exc_info=True)
+                _logger.exception("keyring_delete_credential_failed", provider=provider.value)
                 return False
             try:
                 keyring.delete_password(self.SERVICE_NAME, metadata_key)
             except (OSError, KeyError, ValueError, _KeyringError):
-                _logger.debug("keyring_delete_metadata_failed", provider=provider.value, exc_info=True)
+                _logger.exception("keyring_delete_metadata_failed", provider=provider.value)
             return True
 
         async with self._lock:
             result = await asyncio.to_thread(_delete)
             if result:
-                _logger.info("credentials_deleted", provider=provider.value, store="keyring")
+                _logger.info("credentials_deleted", provider=provider.value, key_id=key, store="keyring")
             return result
 
     async def list_providers(self) -> list[StoredCredential]:
@@ -520,6 +540,7 @@ class CredentialStore:
         Returns:
             list[StoredCredential]: List of StoredCredential with metadata for each provider.
         """
+        _logger.debug("credential_list_providers_started")
         results: list[StoredCredential] = []
 
         async with self._lock:
@@ -541,6 +562,7 @@ class CredentialStore:
                             ),
                         )
 
+        _logger.debug("credential_list_providers_completed", provider_count=len(results))
         return results
 
     async def migrate_from_env(
@@ -561,7 +583,13 @@ class CredentialStore:
         Raises:
             KeyringUnavailableError: If keyring is not available.
         """
+        _logger.debug(
+            "credential_migration_started",
+            provider_count=len(providers) if providers is not None else len(list(ProviderName)),
+            overwrite=overwrite,
+        )
         if not self.keyring_available:
+            _logger.warning("credential_migration_keyring_unavailable")
             msg = "Keyring is not available for migration"
             raise KeyringUnavailableError(msg)
 
