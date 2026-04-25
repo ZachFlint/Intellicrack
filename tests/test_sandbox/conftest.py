@@ -494,9 +494,7 @@ class StubManager:
         Returns:
             int: Number of running sandboxes.
         """
-        return sum(
-            inst.state.status == "running" for inst in self._instances.values()
-        )
+        return sum(inst.state.status == "running" for inst in self._instances.values())
 
     async def create(
         self,

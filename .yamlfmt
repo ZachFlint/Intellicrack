@@ -1,11 +1,16 @@
 doublestar: true
+line_ending: crlf
 include:
   - "**/*.yml"
   - "**/*.yaml"
 exclude:
   - ".pixi/**"
   - ".claude/**"
+  - ".venv*/**"
   - "build/**"
   - "dist/**"
   - "node_modules/**"
+  - "tools/**"
+  - "vendor/**"
+  - "target/**"
   - ".git/**"

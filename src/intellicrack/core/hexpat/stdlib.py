@@ -186,9 +186,6 @@ class BuiltinFunctions:
 
     Registered into the evaluator's global scope so that the real
     std/*.pat library files can call them transparently.
-
-    Args:
-        data_reader: The DataReader wrapping the target binary.
     """
 
     def __init__(self, data_reader: DataReader) -> None:
@@ -2185,6 +2182,11 @@ class BuiltinFunctions:
 
         Args:
             *args: ``(message: str)``.
+
+        Returns:
+            PatternValue: This method never returns; it always raises
+            ``HexPatRuntimeError``. The return type matches the builtin
+            calling convention.
 
         Raises:
             HexPatRuntimeError: Always, carrying the supplied message.

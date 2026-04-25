@@ -33,7 +33,7 @@
   "venv": "default",
   "useLibraryCodeForTypes": false,
   "analyzeUnannotatedFunctions": true,
-  "enableTypeIgnoreComments": true,
+  "enableTypeIgnoreComments": false,
   "strictListInference": true,
   "strictDictionaryInference": true,
   "strictSetInference": true,

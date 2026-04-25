@@ -98,9 +98,7 @@ class TestPanelConstruction:
 class TestBridgeWiring:
     """Verify set_bridge propagates to all tabs."""
 
-    def test_set_bridge_propagates_to_process_tab(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_propagates_to_process_tab(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify bridge propagates to the process tab.
 
         Args:
@@ -110,9 +108,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._process_tab.get_bridge() is bridge
 
-    def test_set_bridge_propagates_to_memory_tab(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_propagates_to_memory_tab(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify bridge propagates to the memory tab.
 
         Args:
@@ -122,9 +118,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._memory_tab.get_bridge() is bridge
 
-    def test_set_bridge_propagates_to_threads_tab(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_propagates_to_threads_tab(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify bridge propagates to the threads tab.
 
         Args:
@@ -134,9 +128,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._threads_tab.get_bridge() is bridge
 
-    def test_set_bridge_propagates_to_modules_tab(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_propagates_to_modules_tab(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify bridge propagates to the modules tab.
 
         Args:
@@ -146,9 +138,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._modules_tab.get_bridge() is bridge
 
-    def test_set_bridge_propagates_to_system_tab(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_propagates_to_system_tab(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify bridge propagates to the system tab.
 
         Args:
@@ -158,9 +148,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._system_tab.get_bridge() is bridge
 
-    def test_set_bridge_transitions_to_detached(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_set_bridge_transitions_to_detached(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify set_bridge transitions state to detached.
 
         Args:
@@ -170,9 +158,7 @@ class TestBridgeWiring:
         panel.set_bridge(bridge)
         assert panel._state.value == "detached"
 
-    def test_get_bridge_returns_set_bridge(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_get_bridge_returns_set_bridge(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify get_bridge returns the same bridge that was set.
 
         Args:
@@ -197,9 +183,7 @@ class TestStateMachine:
         assert not panel._modules_tab.isEnabled()
         assert not panel._system_tab.isEnabled()
 
-    def test_detached_disables_detail_tabs(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_detached_disables_detail_tabs(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify detail tabs remain disabled after set_bridge (detached).
 
         Args:
@@ -212,9 +196,7 @@ class TestStateMachine:
         assert not panel._modules_tab.isEnabled()
         assert not panel._system_tab.isEnabled()
 
-    def test_attached_enables_detail_tabs(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_attached_enables_detail_tabs(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify all detail tabs become enabled after process attachment.
 
         Args:
@@ -228,9 +210,7 @@ class TestStateMachine:
         assert panel._modules_tab.isEnabled()
         assert panel._system_tab.isEnabled()
 
-    def test_detach_disables_tabs_again(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_detach_disables_tabs_again(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify detaching disables tabs and resets state.
 
         Args:
@@ -246,9 +226,7 @@ class TestStateMachine:
         assert not panel._system_tab.isEnabled()
         assert panel._state.value == "detached"
 
-    def test_attach_updates_status_pid(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_attach_updates_status_pid(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify attach updates the PID label.
 
         Args:
@@ -259,9 +237,7 @@ class TestStateMachine:
         panel._on_process_attached(1234)
         assert panel._status_pid.text() == "PID: 1234"
 
-    def test_detach_clears_status_pid(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_detach_clears_status_pid(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify detach clears the PID label.
 
         Args:
@@ -350,9 +326,7 @@ class TestSignalEmission:
         panel._on_process_selected(42)
         recorder.verify_single_call(42)
 
-    def test_process_attached_signal(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_process_attached_signal(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify process_attached signal fires with correct PID.
 
         Args:
@@ -367,9 +341,7 @@ class TestSignalEmission:
         panel._on_process_attached(42)
         recorder.verify_single_call(42)
 
-    def test_process_detached_signal(
-        self, panel: ProcessPanel, bridge: ProcessBridge
-    ) -> None:
+    def test_process_detached_signal(self, panel: ProcessPanel, bridge: ProcessBridge) -> None:
         """Verify process_detached signal fires once.
 
         Args:

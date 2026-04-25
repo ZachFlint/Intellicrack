@@ -334,7 +334,9 @@ class TestSearchNumeric:
         struct.pack_into("<I", buf, 12, 0xBEEFCAFE)
         struct.pack_into("<I", buf, 18, 0xBEEFCAFE)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        aligned_results: list[tuple[int, int]] = doc.search_numeric(0xBEEFCAFE, 4, signed=False, big_endian=False, alignment=4, max_results=100)
+        aligned_results: list[tuple[int, int]] = doc.search_numeric(
+            0xBEEFCAFE, 4, signed=False, big_endian=False, alignment=4, max_results=100
+        )
         offsets = [r[0] for r in aligned_results]
         assert 8 in offsets
         assert 12 in offsets
@@ -380,7 +382,9 @@ class TestSearchNumericFloat:
         struct.pack_into("<f", buf, 20, math.pi)
         struct.pack_into("<f", buf, 60, math.pi)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_float(math.pi, 4, big_endian=False, tolerance=0.001, alignment=1, max_results=100)
+        results: list[tuple[int, int]] = doc.search_numeric_float(
+            math.pi, 4, big_endian=False, tolerance=0.001, alignment=1, max_results=100
+        )
         offsets = [r[0] for r in results]
         assert 20 in offsets
         assert 60 in offsets

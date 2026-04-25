@@ -26,12 +26,8 @@ def _load_gcm_module() -> ModuleType:
     Raises:
         RuntimeError: If the script cannot be located or loaded.
     """
-    script_path = (
-        Path(__file__).parent.parent.parent / "scripts" / "generate_commit_message.py"
-    )
-    spec = importlib.util.spec_from_file_location(
-        "generate_commit_message", script_path
-    )
+    script_path = Path(__file__).parent.parent.parent / "scripts" / "generate_commit_message.py"
+    spec = importlib.util.spec_from_file_location("generate_commit_message", script_path)
     if spec is None or spec.loader is None:
         msg = f"Cannot load generate_commit_message from {script_path}"
         raise RuntimeError(msg)
@@ -67,19 +63,12 @@ def _make_file_diff(path: str, num_hunks: int, lines_per_hunk: int) -> str:
     Returns:
         str: A synthetic unified diff string.
     """
-    header = (
-        f"diff --git a/{path} b/{path}\n"
-        f"--- a/{path}\n"
-        f"+++ b/{path}\n"
-    )
+    header = f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
     hunks: list[str] = []
     for i in range(num_hunks):
         start = i * lines_per_hunk + 1
         hunk_header = f"@@ -{start},0 +{start},{lines_per_hunk} @@\n"
-        hunk_lines = "".join(
-            f"+line {start + j} content padding to increase size aaaa\n"
-            for j in range(lines_per_hunk)
-        )
+        hunk_lines = "".join(f"+line {start + j} content padding to increase size aaaa\n" for j in range(lines_per_hunk))
         hunks.append(hunk_header + hunk_lines)
     return header + "".join(hunks)
 
@@ -220,9 +209,7 @@ class TestSubsplitLargeFileDiff:
         for chunk in chunks:
             assert chunk.startswith("diff --git a/src/main.py")
 
-    def test_single_hunk_falls_back_to_line_split(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_single_hunk_falls_back_to_line_split(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify fallback to line-based splitting when only one hunk exists.
 
         Args:
@@ -247,17 +234,12 @@ class TestSplitDiffOnFileBoundaries:
 
     def test_multiple_files_grouped(self) -> None:
         """Verify that multiple small files are grouped into one chunk."""
-        diffs = [
-            _make_file_diff(f"file_{i}.py", num_hunks=1, lines_per_hunk=5)
-            for i in range(5)
-        ]
+        diffs = [_make_file_diff(f"file_{i}.py", num_hunks=1, lines_per_hunk=5) for i in range(5)]
         combined = "".join(diffs)
         chunks: list[str] = _split_diff_on_file_boundaries(combined)
         assert len(chunks) == 1
 
-    def test_oversized_file_gets_subsplit(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_oversized_file_gets_subsplit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify that a file exceeding CHUNK_TOKEN_TARGET is sub-split.
 
         Args:
@@ -278,10 +260,7 @@ class TestSplitDiffOnFileBoundaries:
         Args:
             monkeypatch: Pytest fixture used to override chunk/model limits.
         """
-        diffs = [
-            _make_file_diff(f"mod_{i}.py", num_hunks=5, lines_per_hunk=200)
-            for i in range(8)
-        ]
+        diffs = [_make_file_diff(f"mod_{i}.py", num_hunks=5, lines_per_hunk=200) for i in range(8)]
         combined = "".join(diffs)
 
         target = 5000
@@ -291,10 +270,7 @@ class TestSplitDiffOnFileBoundaries:
 
         for i, chunk in enumerate(chunks):
             chunk_tokens = _estimate_tokens(chunk)
-            assert chunk_tokens <= target * 2, (
-                f"Chunk {i} has {chunk_tokens} estimated tokens, "
-                f"exceeds limit {target * 2}"
-            )
+            assert chunk_tokens <= target * 2, f"Chunk {i} has {chunk_tokens} estimated tokens, exceeds limit {target * 2}"
 
     def test_chunks_are_balanced(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Verify LPT bin-packing produces roughly equal chunk sizes.
@@ -305,14 +281,8 @@ class TestSplitDiffOnFileBoundaries:
         Args:
             monkeypatch: Pytest fixture used to override chunk/model limits.
         """
-        small_files = [
-            _make_file_diff(f"small_{i}.py", num_hunks=2, lines_per_hunk=50)
-            for i in range(20)
-        ]
-        medium_files = [
-            _make_file_diff(f"med_{i}.py", num_hunks=5, lines_per_hunk=100)
-            for i in range(5)
-        ]
+        small_files = [_make_file_diff(f"small_{i}.py", num_hunks=2, lines_per_hunk=50) for i in range(20)]
+        medium_files = [_make_file_diff(f"med_{i}.py", num_hunks=5, lines_per_hunk=100) for i in range(5)]
         combined = "".join(small_files) + "".join(medium_files)
 
         total_est = _estimate_tokens(combined)
@@ -324,9 +294,7 @@ class TestSplitDiffOnFileBoundaries:
         assert len(chunks) >= 2
         sizes: list[int] = [_estimate_tokens(c) for c in chunks]
         ratio = max(sizes) / max(min(sizes), 1)
-        assert ratio < 3.0, (
-            f"Chunks are unbalanced: sizes={sizes}, ratio={ratio:.1f}"
-        )
+        assert ratio < 3.0, f"Chunks are unbalanced: sizes={sizes}, ratio={ratio:.1f}"
 
 
 class TestExtractStatSection:
@@ -353,18 +321,14 @@ class TestCountTokensFallback:
     def test_api_error_falls_back_to_estimate(self) -> None:
         """Verify that API errors produce an estimate instead of crashing."""
         client = MagicMock()
-        client.models.count_tokens.side_effect = _server_error_cls()(
-            503, {"error": {"message": "unavailable"}}, None
-        )
+        client.models.count_tokens.side_effect = _server_error_cls()(503, {"error": {"message": "unavailable"}}, None)
         result = _count_tokens(client, "a" * 300)
         assert result == 100
 
     def test_client_error_falls_back(self) -> None:
         """Verify that client errors produce an estimate."""
         client = MagicMock()
-        client.models.count_tokens.side_effect = _client_error_cls()(
-            400, {"error": {"message": "bad request"}}, None
-        )
+        client.models.count_tokens.side_effect = _client_error_cls()(400, {"error": {"message": "bad request"}}, None)
         result = _count_tokens(client, "b" * 600)
         assert result == 200
 

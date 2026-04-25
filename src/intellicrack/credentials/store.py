@@ -102,10 +102,6 @@ class CredentialStore:
 
     If keyring is unavailable, falls back to CredentialLoader for .env files.
 
-    Args:
-        fallback_loader: CredentialLoader instance for fallback.
-                       If None, creates a new one.
-
     Attributes:
         SERVICE_NAME: The keyring service name for Intellicrack credentials.
         METADATA_KEY: Key suffix for storing credential metadata.

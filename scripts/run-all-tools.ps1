@@ -42,7 +42,6 @@ $tools = @(
     @{N = 'Mypy'; R = 'mypy'; F = $false; G = 'py' },
     @{N = 'Ty'; R = 'ty'; F = $false; G = 'py' },
     @{N = 'Pydocstyle'; R = 'pydocstyle'; F = $false; G = 'py' },
-    @{N = 'Darglint'; R = 'darglint'; F = $false; G = 'py' },
     @{N = 'Pydoclint'; R = 'pydoclint'; F = $false; G = 'py' },
     @{N = 'Interrogate'; R = 'interrogate'; F = $false; G = 'py' },
     @{N = 'McCabe'; R = 'mccabe'; F = $false; G = 'py' },

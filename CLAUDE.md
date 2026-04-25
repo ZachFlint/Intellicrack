@@ -50,6 +50,12 @@ unifies tools, context, and AI connectivity into a single operational surface.
 
 ## CRITICAL: SHELL USAGE
 
+- **Prefer the `PowerShell` tool over the `Bash` tool for ALL shell
+  operations.** Only fall back to the `Bash` tool when a command genuinely
+  requires Unix shell syntax or POSIX-only utilities that have no PowerShell
+  equivalent (e.g., piping to `jq` with complex single-quoted filters,
+  here-docs that PowerShell cannot express cleanly, or invoking a script
+  that hard-requires bash). Default tool of choice is `PowerShell`.
 - **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER `powershell.exe` (PowerShell 5)**
 - When executing PowerShell commands, use `pwsh -Command '...'` or `pwsh -File ...`
 

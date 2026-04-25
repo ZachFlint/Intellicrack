@@ -21,14 +21,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor._base import (
     DEFAULT_DISASM_COUNT,
     MAX_INSN_BYTES,
     HexDisassembler_cls,
     disassembler_available,
-    logger,
 )
 
+
+_logger = get_logger(__name__)
 
 _LAYOUT_MARGIN: Final[int] = 2
 _SPIN_WIDTH: Final[int] = 60
@@ -154,7 +156,7 @@ class DisassemblyMixin:
             else:
                 return
         except (AttributeError, ValueError) as exc:
-            logger.debug("disasm_read_failed", error=str(exc))
+            _logger.exception("disasm_read_failed", error=str(exc), offset=cursor_offset, read_len=read_len)
             return
 
         disassembler = HexDisassembler_cls()
@@ -194,10 +196,28 @@ class DisassemblyMixin:
             }
             arch_str = arch_map.get(arch_text, "x86")
 
+        binary_path = getattr(self, "file_path", None)
+        binary_path_str = str(binary_path) if binary_path is not None else "<in-memory>"
+        _logger.info(
+            "disasm_invoke",
+            binary_path=binary_path_str,
+            offset=cursor_offset,
+            arch=arch_str,
+            mode=mode_str,
+            count=count,
+            data_size=len(data),
+        )
         try:
             instructions = disassembler.disassemble(data, base_addr=cursor_offset, arch=arch_str, mode=mode_str, count=count)
         except (RuntimeError, ValueError) as exc:
-            logger.debug("disasm_failed", error=str(exc))
+            _logger.exception(
+                "disasm_failed",
+                error=str(exc),
+                binary_path=binary_path_str,
+                offset=cursor_offset,
+                arch=arch_str,
+                mode=mode_str,
+            )
             return
 
         self._disasm_table.setRowCount(0)
@@ -210,7 +230,7 @@ class DisassemblyMixin:
             self._disasm_table.setItem(row, 2, QTableWidgetItem(insn.mnemonic))
             self._disasm_table.setItem(row, 3, QTableWidgetItem(insn.op_str))
 
-        logger.debug("disasm_complete", instruction_count=len(instructions))
+        _logger.debug("disasm_complete", instruction_count=len(instructions))
 
     def _on_cursor_moved_disasm(self, offset: int) -> None:
         """Auto-disassemble when Follow Cursor is active.

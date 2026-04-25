@@ -26,7 +26,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 _DEFAULT_TIMEOUT: Final[int] = 30
@@ -52,6 +55,11 @@ async def _run_command(
     Raises:
         TimeoutError: If the process exceeds the time limit.
     """
+    _logger.info(
+        "sandbox_subprocess_invoke",
+        argv=args,
+        timeout=max_seconds,
+    )
     proc = await asyncio.create_subprocess_exec(
         *args,
         stdout=asyncio.subprocess.PIPE,
@@ -338,7 +346,7 @@ class SandboxMixin:
             lines: list[str] = [f"{key}: {val}" for key, val in result.items()]
             self._sandbox_output.setPlainText("\n".join(lines))
 
-        logger.info("sandbox_operation_complete", result_keys=list(result.keys()))
+        _logger.info("sandbox_operation_complete", result_keys=list(result.keys()))
 
     def _on_sandbox_error(self, error: str) -> None:
         """Handle sandbox operation failure.
@@ -352,4 +360,4 @@ class SandboxMixin:
         if self._sandbox_output is not None:
             self._sandbox_output.setPlainText(f"Error: {error}")
 
-        logger.warning("sandbox_operation_failed", error=error)
+        _logger.warning("sandbox_operation_failed", error=error)

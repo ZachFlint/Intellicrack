@@ -64,7 +64,7 @@ def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> 
         expected: Expected runtime type of the non-None value.
 
     Returns:
-        The attribute value typed as ``expected | None``.
+        _T | None: The attribute value typed as ``expected | None``.
 
     Raises:
         TypeError: If the attribute is neither None nor an instance of expected.
@@ -74,8 +74,7 @@ def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> 
         return None
     if not isinstance(value, expected):
         raise TypeError(
-            f"ProcessBridge.{name} expected {expected.__name__} or None, "
-            f"got {type(value).__name__}",
+            f"ProcessBridge.{name} expected {expected.__name__} or None, got {type(value).__name__}",
         )
     return value
 
@@ -87,7 +86,7 @@ def _get_debug_privilege_enabled(bridge: ProcessBridge) -> bool:
         bridge: The ProcessBridge instance to read from.
 
     Returns:
-        True if the debug privilege was acquired during initialization.
+        bool: True if the debug privilege was acquired during initialization.
 
     Raises:
         TypeError: If the underlying attribute is not a bool.
@@ -95,8 +94,7 @@ def _get_debug_privilege_enabled(bridge: ProcessBridge) -> bool:
     flag: object = getattr(bridge, _ATTR_DEBUG_PRIV)
     if not isinstance(flag, bool):
         raise TypeError(
-            f"ProcessBridge.{_ATTR_DEBUG_PRIV} expected bool, "
-            f"got {type(flag).__name__}",
+            f"ProcessBridge.{_ATTR_DEBUG_PRIV} expected bool, got {type(flag).__name__}",
         )
     return flag
 
@@ -108,7 +106,7 @@ def _invoke_prot_from_string(protection: str) -> int:
         protection: Protection string such as ``"rwx"``, ``"rw"``, or ``"r"``.
 
     Returns:
-        The Win32 PAGE_* flag integer for the given string.
+        int: The Win32 PAGE_* flag integer for the given string.
 
     Raises:
         TypeError: If the resolved attribute is not callable or does not return int.
@@ -119,8 +117,7 @@ def _invoke_prot_from_string(protection: str) -> int:
     result: object = fn(protection)
     if not isinstance(result, int):
         raise TypeError(
-            f"ProcessBridge.{_ATTR_PROT_FROM_STRING} expected int return, "
-            f"got {type(result).__name__}",
+            f"ProcessBridge.{_ATTR_PROT_FROM_STRING} expected int return, got {type(result).__name__}",
         )
     return result
 
@@ -132,7 +129,7 @@ def _invoke_parse_registry_path(key_path: str) -> tuple[int, str]:
         key_path: Registry path such as ``r"HKLM\\SOFTWARE\\Test"``.
 
     Returns:
-        A 2-tuple of ``(root_key_handle, subpath)``.
+        tuple[int, str]: A 2-tuple of ``(root_key_handle, subpath)``.
 
     Raises:
         TypeError: If the resolved attribute is not callable or returns an
@@ -144,21 +141,18 @@ def _invoke_parse_registry_path(key_path: str) -> tuple[int, str]:
     result: object = fn(key_path)
     if not isinstance(result, tuple):
         raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, "
-            f"got {type(result).__name__}",
+            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got {type(result).__name__}",
         )
     typed_result = cast("tuple[object, ...]", result)
     if len(typed_result) != 2:
         raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, "
-            f"got tuple of length {len(typed_result)}",
+            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got tuple of length {len(typed_result)}",
         )
     root_obj: object = typed_result[0]
     sub_obj: object = typed_result[1]
     if not isinstance(root_obj, int) or not isinstance(sub_obj, str):
         raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected (int, str), "
-            f"got ({type(root_obj).__name__}, {type(sub_obj).__name__})",
+            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected (int, str), got ({type(root_obj).__name__}, {type(sub_obj).__name__})",
         )
     return root_obj, sub_obj
 
@@ -586,9 +580,7 @@ class TestMemoryOperations:
         """
         addr, _buf, data = known_buffer
         pattern = " ".join(f"{b:02X}" for b in data[:8])
-        results = await attached_bridge.search_pattern(
-            pattern, start_address=addr - 0x10000, end_address=addr + 0x10000
-        )
+        results = await attached_bridge.search_pattern(pattern, start_address=addr - 0x10000, end_address=addr + 0x10000)
         assert addr in results
 
     async def test_get_memory_map_non_empty(self, attached_bridge: ProcessBridge) -> None:
@@ -733,9 +725,7 @@ class TestTokenPrivileges:
         privs = await attached_bridge.get_token_privileges(os.getpid())
         assert len(privs) > 0
 
-    async def test_get_token_privileges_has_sechangenotify(
-        self, attached_bridge: ProcessBridge
-    ) -> None:
+    async def test_get_token_privileges_has_sechangenotify(self, attached_bridge: ProcessBridge) -> None:
         """Verify SeChangeNotifyPrivilege is present.
 
         Args:
@@ -755,18 +745,14 @@ class TestTokenPrivileges:
             for key in ("name", "luid_low", "luid_high", "enabled", "attributes"):
                 assert key in priv
 
-    async def test_adjust_token_privilege_invalid_raises(
-        self, attached_bridge: ProcessBridge
-    ) -> None:
+    async def test_adjust_token_privilege_invalid_raises(self, attached_bridge: ProcessBridge) -> None:
         """Verify adjusting a fake privilege raises ToolError.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
         """
         with pytest.raises(ToolError, match="privilege lookup failed"):
-            await attached_bridge.adjust_token_privilege(
-                "SeCompletelyFakePrivilege", enable=True, pid=os.getpid()
-            )
+            await attached_bridge.adjust_token_privilege("SeCompletelyFakePrivilege", enable=True, pid=os.getpid())
 
 
 class TestHandleEnumeration:
@@ -910,9 +896,7 @@ class TestHeapEnumeration:
 class TestThreadContext:
     """Verify thread context read using a secondary thread to avoid deadlock."""
 
-    async def test_get_thread_context_has_registers(
-        self, attached_bridge: ProcessBridge, secondary_thread: int
-    ) -> None:
+    async def test_get_thread_context_has_registers(self, attached_bridge: ProcessBridge, secondary_thread: int) -> None:
         """Verify context has rip and rsp on 64-bit, or eip/esp on 32-bit.
 
         Args:
@@ -1024,9 +1008,7 @@ class TestJobGuiCom:
         assert res["gdi_objects"] >= 0
         assert res["user_objects"] >= 0
 
-    async def test_enumerate_com_servers_returns_list(
-        self, attached_bridge: ProcessBridge
-    ) -> None:
+    async def test_enumerate_com_servers_returns_list(self, attached_bridge: ProcessBridge) -> None:
         """Verify COM enumeration returns a list without crashing.
 
         Args:
@@ -1045,9 +1027,7 @@ class TestRegistry:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        result = await process_bridge.reg_read_value(
-            r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName"
-        )
+        result = await process_bridge.reg_read_value(r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName")
         value_type = result["type"]
         assert isinstance(value_type, str)
         assert value_type == "string"
@@ -1068,9 +1048,7 @@ class TestRegistry:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        values = await process_bridge.reg_enum_values(
-            r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
-        )
+        values = await process_bridge.reg_enum_values(r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion")
         assert len(values) > 0
 
     async def test_reg_read_invalid_key_raises(self, process_bridge: ProcessBridge) -> None:
@@ -1080,9 +1058,7 @@ class TestRegistry:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         with pytest.raises(ToolError, match="registry key open failed"):
-            await process_bridge.reg_read_value(
-                r"HKLM\SOFTWARE\TOTALLY_FAKE_KEY_12345", "value"
-            )
+            await process_bridge.reg_read_value(r"HKLM\SOFTWARE\TOTALLY_FAKE_KEY_12345", "value")
 
 
 class TestSectionMapping:
@@ -1135,9 +1111,7 @@ class TestNtQuerySystemInformation:
 class TestSehFiberTls:
     """Verify SEH chain, fiber data, and TLS access."""
 
-    async def test_get_seh_chain_no_crash(
-        self, attached_bridge: ProcessBridge, main_thread_tid: int
-    ) -> None:
+    async def test_get_seh_chain_no_crash(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify SEH chain returns a list (may be empty on x64).
 
         Args:
@@ -1147,9 +1121,7 @@ class TestSehFiberTls:
         chain = await attached_bridge.get_seh_chain(main_thread_tid)
         assert isinstance(chain, list)
 
-    async def test_get_fiber_data_returns_dict(
-        self, attached_bridge: ProcessBridge, main_thread_tid: int
-    ) -> None:
+    async def test_get_fiber_data_returns_dict(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify fiber data has expected keys.
 
         Args:
@@ -1160,9 +1132,7 @@ class TestSehFiberTls:
         assert "fiber_data" in result
         assert "has_fiber" in result
 
-    async def test_get_tls_values_returns_list(
-        self, attached_bridge: ProcessBridge, main_thread_tid: int
-    ) -> None:
+    async def test_get_tls_values_returns_list(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify TLS values returns a list.
 
         Args:

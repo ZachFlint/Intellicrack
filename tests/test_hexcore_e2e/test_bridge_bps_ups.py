@@ -143,9 +143,9 @@ class TestBPSRoundtrip:
 
         _run(bridge.close_file())
         orig_b = tmp_path / "bps_b.bin"
-        orig_b.write_bytes(b"\xFF" * 64)
+        orig_b.write_bytes(b"\xff" * 64)
         target = tmp_path / "bps_target_b.bin"
-        target.write_bytes(b"\xFF" * 64)
+        target.write_bytes(b"\xff" * 64)
         _run(bridge.open_file(str(target)))
         with pytest.raises(ValueError):
             _run(bridge.import_patches_bps(b64_patch, str(orig_b)))
@@ -256,7 +256,7 @@ class TestUPSRoundtrip:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        original = b"\xAA" * 64
+        original = b"\xaa" * 64
         orig_file = tmp_path / "ups_ident_orig.bin"
         orig_file.write_bytes(original)
         mod_file = tmp_path / "ups_ident_mod.bin"

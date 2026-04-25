@@ -274,9 +274,6 @@ class IntellicrackLogger:
     providing structured logging with both file-based JSON output and
     colorized console output.
 
-    Args:
-        name: The name for this logger instance.
-
     Attributes:
         name: The name for this logger instance.
     """
@@ -592,11 +589,6 @@ def log_analysis_operation(
 
 class OperationTimer:
     """Context manager for timing operations and logging duration.
-
-    Args:
-        operation: The operation name.
-        logger_name: The logger name to use.
-        **context: Additional context for the log.
 
     Attributes:
         operation: The operation name.

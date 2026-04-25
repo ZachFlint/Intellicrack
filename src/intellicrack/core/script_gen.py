@@ -512,9 +512,6 @@ class ScriptValidator:
 class ScriptManager:
     """Manages script storage and retrieval.
 
-    Args:
-        scripts_dir: Directory for storing scripts.
-
     Attributes:
         scripts_dir: Directory for storing scripts.
         scripts: Mapping of script names to Script objects.

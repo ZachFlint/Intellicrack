@@ -33,6 +33,9 @@ def _assert_never(value: Never) -> Never:
     Args:
         value: A value of type Never (should be impossible to call).
 
+    Returns:
+        Never: This function never returns; it always raises ``AssertionError``.
+
     Raises:
         AssertionError: Always raised if this function is somehow called.
     """
@@ -140,14 +143,8 @@ class GoogleFunctionDeclaration(TypedDict):
 class ValidationError:
     """Represents a validation error in a tool definition.
 
-    Stores the human-readable description, the dotted path where the
-    issue was detected, and the severity that downstream reporting uses
-    to decide whether the tool definition should be rejected.
-
-    Args:
-        message: Error description.
-        location: Where the error occurred (e.g., "func.param").
-        severity: Error severity level.
+    Stores the human-readable description, the dotted path where the issue was detected, and the severity that downstream reporting uses to
+    decide whether the tool definition should be rejected.
     """
 
     def __init__(

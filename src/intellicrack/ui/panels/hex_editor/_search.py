@@ -24,8 +24,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import MAX_SEARCH_RESULTS, logger
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.hex_editor._base import MAX_SEARCH_RESULTS
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_logger = get_logger(__name__)
 
 
 _LAYOUT_MARGIN: Final[int] = 4
@@ -96,7 +100,7 @@ class SearchWorker(QThread):
             results = self._execute_search()
             self.search_finished.emit(results)
         except (RuntimeError, OSError, ValueError) as exc:
-            logger.debug("search_worker_failed", error=str(exc))
+            _logger.exception("search_worker_failed", error=str(exc), mode=self._mode)
             self.search_error.emit(exc)
 
     def _execute_search(self) -> list[tuple[int, int]]:
@@ -199,7 +203,7 @@ class NumericSearchWorker(QThread):
             results = self._search_native() if self._use_native else self._search_fallback()
             self.search_finished.emit(results)
         except (RuntimeError, OSError, ValueError) as exc:
-            logger.debug("numeric_search_worker_failed", error=str(exc))
+            _logger.exception("numeric_search_worker_failed", error=str(exc))
             self.search_error.emit(exc)
 
     def _search_native(self) -> list[tuple[int, int]]:
@@ -259,7 +263,8 @@ class NumericSearchWorker(QThread):
                         results.append((abs_off, self._byte_width))
                         if len(results) >= self.max_results:
                             break
-                except struct.error:
+                except struct.error as exc:
+                    _logger.debug("numeric_search_unpack_failed", offset=abs_off, error=str(exc))
                     continue
             offset += max(1, read_len - self._byte_width + 1)
         return results
@@ -353,7 +358,7 @@ class SearchMixin:
             else:
                 self._search_status_label.setText(f"Found {len(results)} results")
 
-        logger.info("search_completed", result_count=len(results))
+        _logger.info("search_completed", result_count=len(results))
 
     def _on_search_error(self, exc: object) -> None:
         """Handle search failure from the background worker.
@@ -363,7 +368,7 @@ class SearchMixin:
         """
         if self._search_input is not None:
             self._search_input.setEnabled(True)
-        logger.debug("search_failed", error=str(exc))
+        _logger.debug("search_failed", error=str(exc))
 
     def _on_find_next(self) -> None:
         """Navigate to the next search result with wrap-around."""
@@ -597,7 +602,7 @@ class SearchMixin:
             else:
                 self._search_status_label.setText(f"Found {len(results)} results")
 
-        logger.info("numeric_search_completed", result_count=len(results))
+        _logger.info("numeric_search_completed", result_count=len(results))
 
     def _on_numeric_search_error(self, exc: object) -> None:
         """Handle numeric search failure from the background worker.
@@ -607,6 +612,6 @@ class SearchMixin:
         """
         if self._numeric_value_input is not None:
             self._numeric_value_input.setEnabled(True)
-        logger.debug("numeric_search_failed", error=str(exc))
+        _logger.debug("numeric_search_failed", error=str(exc))
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(parent, "Numeric Search", f"Search failed:\n{exc}")

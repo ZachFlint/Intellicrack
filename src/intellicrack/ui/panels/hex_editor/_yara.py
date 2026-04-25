@@ -21,13 +21,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor._base import (
     YARA_MATCH_DISPLAY_BYTES,
     YaraScanner_cls,
-    logger,
     yara_scanner_available,
 )
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_logger = get_logger(__name__)
 
 
 _YARA_MATCH_DARK: Final[str] = "#AA44FF"
@@ -167,7 +170,7 @@ class YaraMixin:
             matches = scanner.scan_data(data, compiled_rules)
 
         except (RuntimeError, OSError, ValueError) as exc:
-            logger.debug("yara_scan_failed", error=str(exc))
+            _logger.exception("yara_scan_failed", error=str(exc))
             return
 
         if matches is None:
@@ -198,7 +201,7 @@ class YaraMixin:
                 highlights = [(off, length, color) for off, length in all_match_offsets]
                 highlight_fn(highlights, "yara")
 
-        logger.debug("yara_scan_complete", match_count=len(matches))
+        _logger.debug("yara_scan_complete", match_count=len(matches))
 
     def _on_yara_result_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the YARA match offset when a result child is double-clicked.

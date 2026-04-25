@@ -34,12 +34,8 @@ _logger = get_logger("core.analysis_aggregator")
 class AnalysisAggregator:
     """Aggregates analysis data from connected bridges.
 
-    Queries GhidraBridge and CutterBridge for strings, imports,
-    exports, functions, and sections, then packages everything
-    into a single BridgeAnalysisSummary.
-
-    Args:
-        tools: ToolRegistry providing access to bridge instances.
+    Queries GhidraBridge and CutterBridge for strings, imports, exports, functions, and sections, then packages everything into a single
+    BridgeAnalysisSummary.
     """
 
     def __init__(self, tools: ToolRegistry) -> None:

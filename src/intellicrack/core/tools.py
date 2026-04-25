@@ -77,9 +77,6 @@ class ToolRegistry:
 
     Manages initialization, availability, and provides unified access
     to all tool bridges.
-
-    Args:
-        tools_dir: Directory for tool installations.
     """
 
     def __init__(self, tools_dir: Path) -> None:

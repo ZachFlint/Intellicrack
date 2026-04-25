@@ -48,7 +48,10 @@ class TestDIESignatures:
     """Tests for DIE-style JSON signature database scanning."""
 
     def test_die_scan_detects_mz_header(
-        self, bridge: HexEditorBridge, pe_binary_full: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        pe_binary_full: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify DIE scan detects MZ pattern in a PE file.
 
@@ -63,7 +66,10 @@ class TestDIESignatures:
         assert any(r["name"] == "MZ Executable" for r in results)
 
     def test_die_scan_no_match_returns_empty(
-        self, bridge: HexEditorBridge, tmp_path: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify DIE scan returns empty list when no pattern matches.
 
@@ -83,7 +89,10 @@ class TestClamAVSignatures:
     """Tests for ClamAV .hdb and .ndb signature scanning."""
 
     def test_clamav_hdb_md5_match(
-        self, bridge: HexEditorBridge, tmp_path: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify HDB scan matches a file by MD5 hash.
 
@@ -101,7 +110,10 @@ class TestClamAVSignatures:
         assert results[0]["type"] == "hash"
 
     def test_clamav_hdb_no_match(
-        self, bridge: HexEditorBridge, tmp_path: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify HDB scan returns empty for a non-matching file.
 
@@ -111,13 +123,16 @@ class TestClamAVSignatures:
             sig_db_dir: Path to the directory with test signature databases.
         """
         f = tmp_path / "hdb_nomatch.bin"
-        f.write_bytes(b"\xFF" * 128)
+        f.write_bytes(b"\xff" * 128)
         _run(bridge.open_file(str(f)))
         results = _run(bridge.scan_clamav_signatures(str(sig_db_dir / "test.hdb")))
         assert results == []
 
     def test_clamav_ndb_pattern_match(
-        self, bridge: HexEditorBridge, pe_binary_full: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        pe_binary_full: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify NDB scan finds MZ hex pattern at wildcard offset.
 
@@ -136,7 +151,10 @@ class TestCustomSignatures:
     """Tests for custom JSON signature database scanning."""
 
     def test_custom_json_ep_match(
-        self, bridge: HexEditorBridge, pe_binary_full: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        pe_binary_full: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify custom scan with ep offset matches MZ at entry point.
 
@@ -152,7 +170,10 @@ class TestCustomSignatures:
         assert ep_matches[0]["offset"] == 0
 
     def test_custom_json_any_match(
-        self, bridge: HexEditorBridge, tmp_path: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify custom scan with any offset finds pattern anywhere in file.
 
@@ -161,7 +182,7 @@ class TestCustomSignatures:
             tmp_path: Pytest temporary directory.
             sig_db_dir: Path to the directory with test signature databases.
         """
-        data = b"\x00" * 32 + b"\xDE\xAD\xBE\xEF" + b"\x00" * 32
+        data = b"\x00" * 32 + b"\xde\xad\xbe\xef" + b"\x00" * 32
         f = tmp_path / "custom_any.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
@@ -171,7 +192,10 @@ class TestCustomSignatures:
         assert any_matches[0]["offset"] == 32
 
     def test_custom_json_fixed_offset_match(
-        self, bridge: HexEditorBridge, tmp_path: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify custom scan with fixed offset matches at exact position.
 
@@ -194,7 +218,10 @@ class TestSignatureResultStructure:
     """Tests for the structure of signature scan result dictionaries."""
 
     def test_scan_result_structure(
-        self, bridge: HexEditorBridge, pe_binary_full: Path, sig_db_dir: Path,
+        self,
+        bridge: HexEditorBridge,
+        pe_binary_full: Path,
+        sig_db_dir: Path,
     ) -> None:
         """Verify each scan result has name, type, version, offset, details keys.
 

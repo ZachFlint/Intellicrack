@@ -113,15 +113,15 @@ class TestToolDefinition:
             sig_params = {
                 p_name
                 for p_name, p in sig.parameters.items()
-                if p_name != "self" and p.kind not in {
+                if p_name != "self"
+                and p.kind
+                not in {
                     inspect.Parameter.VAR_POSITIONAL,
                     inspect.Parameter.VAR_KEYWORD,
                 }
             }
             def_params = {p.name for p in func.parameters}
-            assert def_params.issubset(sig_params), (
-                f"{func.name}: tool params {def_params - sig_params} not in method sig {sig_params}"
-            )
+            assert def_params.issubset(sig_params), f"{func.name}: tool params {def_params - sig_params} not in method sig {sig_params}"
 
     def test_no_duplicate_names(self) -> None:
         """No duplicate function names in tool definition."""
@@ -397,7 +397,8 @@ class TestSnapshots:
         """
         create_result = await sandbox_bridge.snapshot_create(_QEMU_INSTANCE, "restore_test")
         result = await sandbox_bridge.snapshot_restore(
-            _QEMU_INSTANCE, create_result["snapshot_id"],
+            _QEMU_INSTANCE,
+            create_result["snapshot_id"],
         )
         assert result["success"] is True
 
@@ -623,7 +624,8 @@ class TestNewCapabilities:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.yara_scan(
-            _WIN_INSTANCE, rules_path="/rules/custom.yar",
+            _WIN_INSTANCE,
+            rules_path="/rules/custom.yar",
         )
         assert result["match_count"] >= 1
 
@@ -635,7 +637,8 @@ class TestNewCapabilities:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.yara_scan(
-            _WIN_INSTANCE, scan_target="memory",
+            _WIN_INSTANCE,
+            scan_target="memory",
         )
         assert "matches" in result
 
@@ -840,23 +843,41 @@ class TestReportToDict:
     def test_contains_all_keys(self) -> None:
         """Converted dict contains all expected keys."""
         report = ExecutionReport(
-            result="success", exit_code=0, stdout="out", stderr="err",
+            result="success",
+            exit_code=0,
+            stdout="out",
+            stderr="err",
             duration_seconds=1.0,
         )
         result = getattr(SandboxBridge, "_report_to_dict")(report, "test-id")
         expected_keys = {
-            "instance_id", "result", "exit_code", "stdout", "stderr",
-            "duration_seconds", "file_changes", "registry_changes",
-            "network_activity", "process_activity", "api_calls",
-            "service_changes", "kernel_objects", "dll_loads",
-            "injection_events", "resource_samples", "clipboard_events",
+            "instance_id",
+            "result",
+            "exit_code",
+            "stdout",
+            "stderr",
+            "duration_seconds",
+            "file_changes",
+            "registry_changes",
+            "network_activity",
+            "process_activity",
+            "api_calls",
+            "service_changes",
+            "kernel_objects",
+            "dll_loads",
+            "injection_events",
+            "resource_samples",
+            "clipboard_events",
         }
         assert expected_keys == set(result.keys())
 
     def test_preserves_instance_id(self) -> None:
         """Converted dict preserves the instance_id."""
         report = ExecutionReport(
-            result="success", exit_code=0, stdout="", stderr="",
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
             duration_seconds=0.0,
         )
         result = getattr(SandboxBridge, "_report_to_dict")(report, "my-instance")
@@ -865,14 +886,24 @@ class TestReportToDict:
     def test_list_fields_are_plain_lists(self) -> None:
         """List fields in converted dict are plain Python lists."""
         report = ExecutionReport(
-            result="success", exit_code=0, stdout="", stderr="",
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
             duration_seconds=0.0,
         )
         result = getattr(SandboxBridge, "_report_to_dict")(report, "test")
         for key in [
-            "file_changes", "registry_changes", "network_activity",
-            "process_activity", "api_calls", "service_changes",
-            "kernel_objects", "dll_loads", "injection_events",
-            "resource_samples", "clipboard_events",
+            "file_changes",
+            "registry_changes",
+            "network_activity",
+            "process_activity",
+            "api_calls",
+            "service_changes",
+            "kernel_objects",
+            "dll_loads",
+            "injection_events",
+            "resource_samples",
+            "clipboard_events",
         ]:
             assert isinstance(result[key], list)

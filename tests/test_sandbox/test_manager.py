@@ -68,10 +68,7 @@ class _TestableManager:
         Returns:
             int: Number of running sandboxes.
         """
-        return sum(
-            inst.sandbox.state.status == "running"
-            for inst in self._instances.values()
-        )
+        return sum(inst.sandbox.state.status == "running" for inst in self._instances.values())
 
     async def create(
         self,
@@ -290,7 +287,11 @@ class TestSandboxInstance:
         sb = InMemorySandbox()
         inst = _TestInstance(sb)
         report = ExecutionReport(
-            result="success", exit_code=0, stdout="", stderr="", duration_seconds=1.0,
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
         )
         inst.last_report = report
         assert inst.last_report is report

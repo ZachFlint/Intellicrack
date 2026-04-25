@@ -93,7 +93,6 @@ TOOLS: list[Tool] = [
     Tool("Mypy", "mypy", is_formatter=False, group="py"),
     Tool("Ty", "ty", is_formatter=False, group="py"),
     Tool("Pydocstyle", "pydocstyle", is_formatter=False, group="py"),
-    Tool("Darglint", "darglint", is_formatter=False, group="py"),
     Tool("Pydoclint", "pydoclint", is_formatter=False, group="py"),
     Tool("Interrogate", "interrogate", is_formatter=False, group="py"),
     Tool("McCabe", "mccabe", is_formatter=False, group="py"),
@@ -245,7 +244,7 @@ def _read_report_findings(recipe: str) -> int | None:
 
 
 _CREATE_NEW_PROCESS_GROUP = 0x00000200
-_TOOL_TIMEOUT = 300
+_TOOL_TIMEOUT = 600
 
 
 def _run_just(recipe: str) -> subprocess.CompletedProcess[str]:

@@ -26,7 +26,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available, logger
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available
+
+
+_logger = get_logger(__name__)
 
 
 _MAX_PID: Final[int] = 999999
@@ -137,7 +141,7 @@ class ProcessMemoryDialog(QDialog):
                     self._status_label.setText(f"{len(regions)} region(s) found")
                     return
             except (OSError, RuntimeError, ValueError) as exc:
-                logger.debug("process_regions_hexcore_failed", error=str(exc))
+                _logger.exception("process_regions_hexcore_failed", error=str(exc), pid=pid)
 
         if sys.platform == "win32":
             self._list_regions_ctypes(pid)
@@ -190,7 +194,7 @@ class ProcessMemoryDialog(QDialog):
             self._status_label.setText(f"{len(regions)} committed region(s) found")
         except (OSError, AttributeError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            logger.debug("process_regions_ctypes_failed", error=str(exc))
+            _logger.exception("process_regions_ctypes_failed", error=str(exc), pid=pid)
 
     def _list_regions_procfs(self, pid: int) -> None:
         """List process memory regions from /proc on Linux.
@@ -225,7 +229,7 @@ class ProcessMemoryDialog(QDialog):
                 regions.append((start, end - start, prot, _MEM_COMMIT))
         except (OSError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            logger.debug("process_regions_procfs_failed", error=str(exc))
+            _logger.debug("process_regions_procfs_failed", error=str(exc))
             return
 
         self._populate_regions(regions)
@@ -260,7 +264,8 @@ class ProcessMemoryDialog(QDialog):
             base = int(base_text, 16)
             size_text = size_item.text().split("(")[0].strip()
             size = int(size_text, 16)
-        except ValueError:
+        except ValueError as exc:
+            _logger.warning("process_region_parse_failed", row=row, error=str(exc))
             return
 
         pid = self._pid_spin.value()
@@ -309,11 +314,11 @@ class ProcessMemoryMixin:
                 if callable(set_doc):
                     set_doc(doc)
 
-            logger.info("process_memory_opened", pid=pid, address=addr, size=size)
+            _logger.info("process_memory_opened", pid=pid, address=addr, size=size)
         except (OSError, RuntimeError, ValueError) as exc:
             QMessageBox.warning(
                 parent,
                 "Process Memory",
                 f"Failed to open process memory:\n{exc}",
             )
-            logger.warning("process_memory_open_failed", error=str(exc))
+            _logger.warning("process_memory_open_failed", error=str(exc))

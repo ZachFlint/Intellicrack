@@ -31,7 +31,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()

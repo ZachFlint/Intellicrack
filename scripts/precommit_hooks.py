@@ -16,7 +16,7 @@ Usage::
 
     python scripts/precommit_hooks.py                              # all hooks
     python scripts/precommit_hooks.py trailing-whitespace           # one hook
-    python scripts/precommit_hooks.py mixed-line-ending --fix=crlf  # hook + flags
+    python scripts/precommit_hooks.py mixed-line-ending --fix=lf    # hook + flags
     python scripts/precommit_hooks.py --target-dir tests            # different dir
 """
 
@@ -271,7 +271,7 @@ HOOK_REGISTRY: dict[str, HookConfig] = {
         hook_id="mixed-line-ending",
         module="pre_commit_hooks.mixed_line_ending",
         extensions=ALL_EXTENSIONS,
-        default_args=("--fix=lf",),
+        default_args=("--fix=crlf",),
         is_fixer=True,
     ),
     "fix-byte-order-marker": HookConfig(

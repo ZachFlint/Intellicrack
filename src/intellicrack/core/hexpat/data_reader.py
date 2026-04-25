@@ -53,13 +53,7 @@ def _resolve_length(document: HexDocumentLike) -> int:
 class DataReader:
     """Provides typed byte access to binary data for pattern evaluation.
 
-    Wraps either a HexDocument PyO3 object or raw bytes behind a uniform
-    read interface used by the HexPat evaluator.
-
-    Args:
-        read_fn: A callable ``(offset, length) -> bytes`` that returns
-            the requested byte slice from the underlying data source.
-        length: Total number of bytes available in the data source.
+    Wraps either a HexDocument PyO3 object or raw bytes behind a uniform read interface used by the HexPat evaluator.
     """
 
     def __init__(self, read_fn: Callable[[int, int], bytes], length: int) -> None:

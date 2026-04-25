@@ -252,9 +252,7 @@ def test_full_callback_path_with_mock_provider(
 
     assert token.access_token == _LIVE_ACCESS_MARKER
     assert token.refresh_token == _LIVE_REFRESH_MARKER
-    token_exchange_forms = [
-        entry["form"] for entry in exchange_log if entry["path"] == "/token"
-    ]
+    token_exchange_forms = [entry["form"] for entry in exchange_log if entry["path"] == "/token"]
     assert len(token_exchange_forms) == 1
     form = token_exchange_forms[0]
     assert isinstance(form, dict)

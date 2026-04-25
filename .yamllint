@@ -10,6 +10,8 @@ rules:
   comments:
     min-spaces-from-content: 1
   document-start: disable
+  new-lines:
+    type: dos
   truthy:
     allowed-values: ['true', 'false', 'yes', 'no']
     check-keys: false
@@ -22,3 +24,5 @@ ignore: |
   build/
   dist/
   tools/
+  vendor/
+  target/

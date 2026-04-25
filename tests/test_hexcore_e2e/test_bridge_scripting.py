@@ -86,7 +86,7 @@ class TestScriptDocumentAccess:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "script_read.bin"
-        f.write_bytes(b"\xAA\xBB\xCC\xDD" + b"\x00" * 60)
+        f.write_bytes(b"\xaa\xbb\xcc\xdd" + b"\x00" * 60)
         _run(bridge.open_file(str(f)))
         result = _run(bridge.run_python_script("data = doc.read(0, 4)\nprint(len(data))"))
         assert "4" in result["output"]

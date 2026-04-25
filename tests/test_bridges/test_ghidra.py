@@ -1083,9 +1083,7 @@ def test_tool_definition_exact_count(bridge: GhidraBridge) -> None:
         bridge: GhidraBridge fixture.
     """
     tool_def = bridge.tool_definition
-    assert len(tool_def.functions) == _EXPECTED_TOOL_COUNT, (
-        f"Expected {_EXPECTED_TOOL_COUNT}, got {len(tool_def.functions)}"
-    )
+    assert len(tool_def.functions) == _EXPECTED_TOOL_COUNT, f"Expected {_EXPECTED_TOOL_COUNT}, got {len(tool_def.functions)}"
 
 
 def test_all_tool_names_unique(bridge: GhidraBridge) -> None:

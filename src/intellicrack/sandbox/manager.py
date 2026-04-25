@@ -36,13 +36,7 @@ SandboxType = Literal["windows", "qemu"]
 
 
 class SandboxInstance:
-    """Represents a managed sandbox instance.
-
-    Args:
-        sandbox: The sandbox implementation.
-        sandbox_type: Type of sandbox.
-        binary_path: Optional binary being analyzed.
-    """
+    """Represents a managed sandbox instance."""
 
     def __init__(
         self,
@@ -85,10 +79,6 @@ class SandboxManager:
 
     Provides creation, lifecycle management, and coordination of
     multiple sandbox instances for binary analysis.
-
-    Args:
-        default_config: Default configuration for new sandboxes.
-        max_instances: Maximum number of concurrent instances.
 
     Attributes:
         DEFAULT_MAX_INSTANCES: Maximum concurrent sandbox instances allowed.

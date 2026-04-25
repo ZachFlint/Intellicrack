@@ -41,11 +41,7 @@ class ExpressionError(ValueError):
 
 
 class UnsupportedConstantTypeError(TypeError):
-    """Raised when an AST constant has an unsupported type.
-
-    Args:
-        type_name: Name of the AST constant type that is unsupported.
-    """
+    """Raised when an AST constant has an unsupported type."""
 
     def __init__(self, type_name: str) -> None:
         """Initialize the UnsupportedConstantTypeError with the offending type name.
@@ -57,12 +53,7 @@ class UnsupportedConstantTypeError(TypeError):
 
 
 class TransformParamError(ValueError):
-    """Raised when a transform node receives invalid parameters.
-
-    Args:
-        node_name: Name of the transform node that produced the error.
-        detail: Description of the invalid parameter or reason.
-    """
+    """Raised when a transform node receives invalid parameters."""
 
     def __init__(self, node_name: str, detail: str) -> None:
         """Initialize the TransformParamError with node name and detail.
@@ -256,13 +247,7 @@ class TransformNode(abc.ABC):
 
 
 class RustTransformNode(TransformNode):
-    """Wraps a Rust hexcore transform exposed via ``HexDocument.transform_data``.
-
-    Args:
-        transform_name: Name of the Rust-side transform to invoke.
-        transform_category: Category string for the transform.
-        transform_description: Human-readable description.
-    """
+    """Wraps a Rust hexcore transform exposed via ``HexDocument.transform_data``."""
 
     def __init__(
         self,

@@ -22,13 +22,7 @@ _logger = get_logger("core.hexpat_compiler")
 
 
 class HexPatError(Exception):
-    """Error raised during HexPat DSL compilation.
-
-    Args:
-        message: Human-readable error description.
-        line: Source line number where the error occurred.
-        column: Source column number where the error occurred.
-    """
+    """Error raised during HexPat DSL compilation."""
 
     def __init__(self, message: str, line: int = 0, column: int = 0) -> None:
         """Initialize the HexPatError with a message and source location.
@@ -462,11 +456,7 @@ _SINGLE_CHAR_TOKENS: dict[str, TokenType] = {
 
 
 class HexPatLexer:
-    """Tokenizer for HexPat DSL source code.
-
-    Args:
-        source: Source code string to tokenize.
-    """
+    """Tokenizer for HexPat DSL source code."""
 
     def __init__(self, source: str) -> None:
         """Initialize the HexPatLexer with source code to tokenize.
@@ -686,11 +676,7 @@ class HexPatLexer:
 
 
 class HexPatParser:
-    """Recursive descent parser for HexPat DSL.
-
-    Args:
-        tokens: List of tokens from the lexer.
-    """
+    """Recursive descent parser for HexPat DSL."""
 
     def __init__(self, tokens: list[Token]) -> None:
         """Initialize the HexPatParser with a list of tokens.
@@ -1217,11 +1203,7 @@ class HexPatParser:
 
 
 class HexPatCodegen:
-    """Generates JSON template definitions from a HexPat AST.
-
-    Args:
-        declarations: List of parsed declaration nodes.
-    """
+    """Generates JSON template definitions from a HexPat AST."""
 
     def __init__(self, declarations: list[DeclNode]) -> None:
         """Initialize the HexPatCodegen with parsed declarations.

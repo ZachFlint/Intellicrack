@@ -358,11 +358,7 @@ class ExecutionReport:
 class SandboxBase:
     """Base class for sandbox implementations.
 
-    Provides common functionality for all sandbox types.
-    Subclasses should override methods to provide actual sandbox functionality.
-
-    Args:
-        config: Optional sandbox configuration.
+    Provides common functionality for all sandbox types. Subclasses should override methods to provide actual sandbox functionality.
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
@@ -455,6 +451,9 @@ class SandboxBase:
             time_limit: Optional timeout override in seconds.
             working_directory: Optional working directory.
 
+        Returns:
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr) from the command execution.
+
         Raises:
             SandboxError: If execution fails.
         """
@@ -484,6 +483,9 @@ class SandboxBase:
             args: Optional command line arguments.
             time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
+
+        Returns:
+            ExecutionReport: Execution report with results, behavioral artifacts, and resource samples.
 
         Raises:
             SandboxError: If execution fails.
@@ -547,6 +549,9 @@ class SandboxBase:
         Args:
             name: Snapshot name.
 
+        Returns:
+            str: Identifier of the created snapshot.
+
         Raises:
             SandboxError: If not supported.
         """
@@ -576,6 +581,9 @@ class SandboxBase:
     async def list_snapshots(self) -> list[str]:
         """List available snapshots.
 
+        Returns:
+            list[str]: List of snapshot identifiers known to the sandbox.
+
         Raises:
             SandboxError: If not supported.
         """
@@ -604,6 +612,9 @@ class SandboxBase:
     async def start_pcap_capture(self) -> str:
         """Start packet capture on the sandbox network.
 
+        Returns:
+            str: Identifier for the active capture session, used by stop_pcap_capture.
+
         Raises:
             SandboxError: If capture cannot be started.
         """
@@ -621,6 +632,9 @@ class SandboxBase:
             capture_id: Capture identifier from start_pcap_capture.
             output_path: Optional path to save the PCAP file.
 
+        Returns:
+            Path: Filesystem path to the saved PCAP file on the host.
+
         Raises:
             SandboxError: If capture cannot be stopped.
         """
@@ -636,6 +650,9 @@ class SandboxBase:
 
         Args:
             output_path: Optional path to save the screenshot.
+
+        Returns:
+            Path: Filesystem path to the screenshot image on the host.
 
         Raises:
             SandboxError: If screenshot cannot be captured.
@@ -653,6 +670,9 @@ class SandboxBase:
         Args:
             profile: Anti-evasion profile name.
 
+        Returns:
+            dict[str, Any]: Mapping of evasion technique name to whether it was successfully applied.
+
         Raises:
             SandboxError: If anti-evasion cannot be applied.
         """
@@ -669,6 +689,9 @@ class SandboxBase:
         Args:
             output_path: Optional path to save the memory dump.
 
+        Returns:
+            Path: Filesystem path to the memory dump file on the host.
+
         Raises:
             SandboxError: If memory dump fails.
         """
@@ -684,6 +707,9 @@ class SandboxBase:
 
         Args:
             output_path: Optional path to save the ZIP archive.
+
+        Returns:
+            Path: Filesystem path to the ZIP archive containing dropped files.
 
         Raises:
             SandboxError: If extraction fails.
@@ -702,6 +728,9 @@ class SandboxBase:
         Args:
             rules_path: Path to YARA rules file. Uses built-in rules if None.
             scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
+
+        Returns:
+            list[dict[str, Any]]: List of YARA match dictionaries describing rule hits and matched strings.
 
         Raises:
             SandboxError: If scan fails.

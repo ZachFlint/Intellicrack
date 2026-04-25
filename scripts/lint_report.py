@@ -596,40 +596,6 @@ def process_vulture_text(text_output: str) -> tuple[dict[str, list[dict[str, Any
     return grouped, cnt
 
 
-def process_darglint_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
-    r"""Process darglint docstring linting text output.
-
-    Darglint outputs format: file:function:line: CODE: message
-    Example: intellicrack\\config.py:_ensure_config_manager_imported:35: DAR201: - return
-
-    Returns:
-        A tuple of (grouped findings by file, total count).
-    """
-    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    pattern = re.compile(r"^(.+\.py):([^:]+):(\d+):\s*(\S+):\s*(.+)$")
-    for line in text_output.strip().split("\n"):
-        stripped_line = line.strip()
-        if not stripped_line:
-            continue
-        match = pattern.match(stripped_line)
-        if match:
-            fp = match.group(1)
-            func_name = match.group(2)
-            line_num = int(match.group(3))
-            code = match.group(4)
-            message = match.group(5).strip()
-            grouped[fp].append({
-                "line": line_num,
-                "column": None,
-                "function": func_name,
-                "code": code,
-                "message": f"[{func_name}] {message}",
-                "raw": stripped_line,
-            })
-    cnt = sum(len(v) for v in grouped.values())
-    return grouped, cnt
-
-
 def process_pydoclint_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     r"""Process pydoclint docstring linting text output.
 
@@ -2727,7 +2693,6 @@ def load_json_stdin() -> dict[str, Any] | list[Any]:
 TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]], int]]] = {
     "ty": process_ty_text,
     "vulture": process_vulture_text,
-    "darglint": process_darglint_text,
     "pydoclint": process_pydoclint_text,
     "dead": process_dead_text,
     "mypy": process_mypy_text,
