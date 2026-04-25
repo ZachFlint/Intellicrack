@@ -20,6 +20,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol, cast
 
 from intellicrack._metadata import __version__
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
@@ -196,7 +200,7 @@ def _apply_cli_overrides(config: Config, cli: _CLIOptions) -> None:
     if cli.disable_file_log:
         config.log.file_enabled = False
     if not config.log.console_enabled and not config.log.file_enabled:
-        sys.stderr.write("Warning: all log output disabled\n")
+        _logger.warning("all_log_output_disabled")
 
 
 def _import_config_module() -> tuple[type[Config], Callable[[], Path]]:
@@ -388,7 +392,7 @@ def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
         early_splash.show()
         app.processEvents()
     except (ImportError, OSError, RuntimeError) as exc:
-        sys.stderr.write(f"Failed to show early splash: {exc}\n")
+        _logger.warning("early_splash_failed", error=str(exc), error_type=type(exc).__name__)
         return None
     else:
         return app, early_splash
@@ -524,7 +528,7 @@ def _resolve_config_path(cli_options: _CLIOptions, get_config_dir: Callable[[], 
     """
     config_path = cli_options.config_path if cli_options.config_path is not None else get_config_dir() / "config.toml"
     if cli_options.config_path is not None and not config_path.exists():
-        sys.stderr.write(f"Error: --config path does not exist: {config_path}\n")
+        _logger.error("config_path_missing", config_path=str(config_path))
         return None
     return config_path
 
@@ -563,7 +567,7 @@ def _load_startup_config(cli_options: _CLIOptions) -> tuple[Config, BoundLogger,
             on success; ``None`` when the caller should exit with status 1 (e.g. bad ``--config``).
     """
     config_cls, get_config_dir = _import_config_module()
-    get_logger, setup_logging = _import_logging_funcs()
+    _, setup_logging = _import_logging_funcs()
     pm_cls = _import_process_manager()
 
     config_path = _resolve_config_path(cli_options, get_config_dir)
@@ -574,13 +578,12 @@ def _load_startup_config(cli_options: _CLIOptions) -> tuple[Config, BoundLogger,
     config.ensure_directories()
 
     setup_logging(config.log, log_dir=config.logs_directory)
-    logger = get_logger("main")
-    logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
+    _logger.info("app_starting", version=_APP_VERSION, log_level=config.log.level)
 
     process_manager = pm_cls.get_instance()
     process_manager.install_handlers()
-    logger.debug("process_manager_initialized", handlers_installed=True)
-    return config, logger, process_manager
+    _logger.debug("process_manager_initialized", handlers_installed=True)
+    return config, _logger, process_manager
 
 
 def main() -> int:
@@ -619,7 +622,7 @@ def main() -> int:
             _run_application(config, app, splash, process_manager, logger),
         )
     except (ImportError, OSError, RuntimeError) as exc:
-        logger.exception("startup_failed", error=str(exc))
+        logger.warning("startup_failed", error=str(exc), error_type=type(exc).__name__)
         return 1
     finally:
         _finalize_shutdown(loop, process_manager, logger)
@@ -779,6 +782,7 @@ async def init_model_discovery(
     Returns:
         tuple[object, Path]: Tuple of (model_discovery, discovery_cache_path).
     """
+    logger.debug("init_model_discovery_invoked")
     return await _init_model_discovery(provider_registry, config, logger)
 
 
@@ -829,9 +833,9 @@ def _clear_model_cache(logger: BoundLogger) -> None:
             clear_fn = getattr(cache, "clear", None)
             if callable(clear_fn):
                 clear_fn()
-            logger.debug("model_cache_cleared")
+            logger.info("model_cache_cleared")
         except (ImportError, OSError, RuntimeError):
-            logger.debug("model_cache_cleanup_skipped", exc_info=True)
+            logger.exception("model_cache_cleanup_skipped")
 
 
 def _create_main_window(
@@ -933,7 +937,7 @@ async def _shutdown_application(
         if callable(shutdown_fn):
             shutdown_fn()
     except (ImportError, OSError, RuntimeError):
-        logger.debug("bridge_loop_shutdown_failed", exc_info=True)
+        logger.exception("bridge_loop_shutdown_failed")
 
     logger.info("shutdown_complete")
 
