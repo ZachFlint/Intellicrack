@@ -18,7 +18,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
 
 
-_logger = get_logger("ui.resources.themes")
+_logger = get_logger(__name__)
 
 
 THEME_DARK: Final[str] = "dark"
@@ -1155,11 +1155,10 @@ class ThemeManager:
             styles_dir = get_assets_path() / "styles"
             available = styles_dir.exists()
             _logger.debug("styles_availability_check", available=available, path=str(styles_dir))
-        except FileNotFoundError as exc:
-            _logger.exception("styles_availability_check_failed", error=str(exc))
+        except FileNotFoundError:
+            _logger.exception("styles_availability_check_failed")
             return False
-        else:
-            return available
+        return available
 
     def apply_theme(self, theme: str = DEFAULT_THEME) -> bool:
         r"""Apply a theme to the application.
@@ -1342,7 +1341,7 @@ class ThemeManager:
         """Clear the stylesheet cache."""
         cache_count = len(self.theme_cache)
         self.theme_cache.clear()
-        _logger.debug("theme_cache_cleared", entries_cleared=cache_count)
+        _logger.info("theme_cache_cleared", entries_cleared=cache_count)
 
     @staticmethod
     def get_available_themes() -> list[str]:

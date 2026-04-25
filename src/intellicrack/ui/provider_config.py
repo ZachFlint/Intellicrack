@@ -60,28 +60,31 @@ from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
+_logger = get_logger(__name__)
+
+
 try:
     from intellicrack.providers.local_transformers import LocalTransformersProvider
 except ImportError:
-    get_logger("ui.provider_config").debug("local_transformers_unavailable")
+    _logger.debug("local_transformers_unavailable")
     LocalTransformersProvider = None
 
 try:
     from intellicrack.providers.ollama import OllamaProvider
 except ImportError:
-    get_logger("ui.provider_config").debug("ollama_provider_unavailable")
+    _logger.debug("ollama_provider_unavailable")
     OllamaProvider = None
 
 try:
     from intellicrack.providers.openrouter import OpenRouterProvider
 except ImportError:
-    get_logger("ui.provider_config").debug("openrouter_provider_unavailable")
+    _logger.debug("openrouter_provider_unavailable")
     OpenRouterProvider = None
 
 try:
     from intellicrack.providers.grok import GrokProvider
 except ImportError:
-    get_logger("ui.provider_config").debug("grok_provider_unavailable")
+    _logger.debug("grok_provider_unavailable")
     GrokProvider = None
 
 try:
@@ -95,7 +98,7 @@ try:
         is_xpu_available,
     )
 except ImportError:
-    get_logger("ui.provider_config").debug("xpu_utils_unavailable")
+    _logger.debug("xpu_utils_unavailable")
     check_windows_requirements = None
     clear_xpu_cache = None
     get_optimal_dtype_for_xpu = None
@@ -110,12 +113,9 @@ try:
         set_global_cache_size,
     )
 except ImportError:
-    get_logger("ui.provider_config").debug("model_loader_unavailable")
+    _logger.debug("model_loader_unavailable")
     clear_global_cache = None
     set_global_cache_size = None
-
-
-_logger = get_logger("ui.provider_config")
 
 _DIALOG_WIDTH: Final[int] = 800
 _DIALOG_HEIGHT: Final[int] = 550
@@ -229,8 +229,8 @@ class CredentialSourceDetector:
                             if key:
                                 self._env_file_vars.add(key)
                 break
-            except OSError as e:
-                _logger.debug("env_file_read_failed", path=str(env_path), error=str(e))
+            except OSError:
+                _logger.warning("env_file_read_failed", path=str(env_path))
                 continue
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
@@ -264,8 +264,8 @@ class CredentialSourceDetector:
                     config = json.load(f)
                     if provider_id in config and config[provider_id].get("api_key") == current_key:
                         return CredentialSource.MANUAL
-            except (OSError, json.JSONDecodeError) as e:
-                _logger.debug("config_file_read_failed", error=str(e))
+            except (OSError, json.JSONDecodeError):
+                _logger.warning("config_file_read_failed", config_path=str(self._config_path))
         return CredentialSource.MANUAL
 
     @staticmethod
@@ -379,7 +379,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="anthropic")
+            _logger.warning("provider_connect_failed", provider="anthropic")
             return False, "Could not connect to Anthropic API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="anthropic", error=str(e))
@@ -407,7 +407,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="openai")
+            _logger.warning("provider_connect_failed", provider="openai")
             return False, "Could not connect to OpenAI API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="openai", error=str(e))
@@ -434,7 +434,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="google")
+            _logger.warning("provider_connect_failed", provider="google")
             return False, "Could not connect to Google API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="google", error=str(e))
@@ -457,7 +457,7 @@ class ConnectionTestWorker(QThread):
                     return True, "Connected to Ollama"
                 return False, f"Ollama error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="ollama")
+            _logger.warning("provider_connect_failed", provider="ollama")
             return False, "Could not connect to Ollama (is it running?)"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="ollama", error=str(e))
@@ -485,7 +485,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="openrouter")
+            _logger.warning("provider_connect_failed", provider="openrouter")
             return False, "Could not connect to OpenRouter API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="openrouter", error=str(e))
@@ -513,7 +513,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API token"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="huggingface")
+            _logger.warning("provider_connect_failed", provider="huggingface")
             return False, "Could not connect to HuggingFace API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="huggingface", error=str(e))
@@ -576,7 +576,7 @@ class ConnectionTestWorker(QThread):
                     return False, "Invalid API key"
                 return False, f"API error: {response.status_code}"
         except httpx.ConnectError:
-            _logger.debug("provider_connect_failed", provider="grok")
+            _logger.warning("provider_connect_failed", provider="grok")
             return False, "Could not connect to Grok API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="grok", error=str(e))
@@ -1280,7 +1280,7 @@ class ProviderConfigDialog(QDialog):
                 provider=self._current_provider,
             )
         except ValueError:
-            _logger.debug("unknown_provider_name", provider=self._current_provider)
+            _logger.warning("unknown_provider_name", provider=self._current_provider)
             QMessageBox.critical(self, "Error", f"Unknown provider: {self._current_provider}")
         except (RuntimeError, AttributeError) as e:
             _logger.warning("set_active_provider_failed", provider=self._current_provider, error=str(e))
@@ -1421,7 +1421,7 @@ class ProviderConfigDialog(QDialog):
             try:
                 pname = ProviderName(provider_name)
             except ValueError:
-                _logger.debug("unknown_provider_for_discovery", provider=provider_name)
+                _logger.warning("unknown_provider_for_discovery", provider=provider_name)
                 return
 
             async def _discover() -> None:
@@ -1429,11 +1429,10 @@ class ProviderConfigDialog(QDialog):
 
             try:
                 run_bridge_coroutine(_discover())
-            except (RuntimeError, OSError, ValueError) as exc:
-                _logger.debug(
+            except (RuntimeError, OSError, ValueError):
+                _logger.exception(
                     "provider_discovery_failed",
                     provider=provider_name,
-                    error=str(exc),
                 )
 
             events = discovery.get_discovery_events()
@@ -1488,12 +1487,12 @@ class ProviderConfigDialog(QDialog):
             try:
                 oauth_provider = OAuthProvider(provider_id)
             except ValueError:
-                _logger.debug("unknown_oauth_provider", provider=provider_id)
+                _logger.warning("unknown_oauth_provider", provider=provider_id)
                 return
             run_bridge_coroutine(manager.revoke_token(oauth_provider))
             _logger.info("oauth_token_revoked", provider=provider_id)
         except (RuntimeError, OSError, ValueError):
-            _logger.debug("oauth_revoke_failed", provider=provider_id)
+            _logger.exception("oauth_revoke_failed", provider=provider_id)
         self._load_credential_overview()
 
 
@@ -2081,7 +2080,7 @@ class ProviderSettingsWidget(QFrame):
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
-                _logger.debug("no_running_event_loop", provider=self.provider_id)
+                _logger.warning("no_running_event_loop", provider=self.provider_id)
 
             if loop is not None and loop.is_running():
                 self._recommended_label.setText("")
@@ -2091,8 +2090,8 @@ class ProviderSettingsWidget(QFrame):
                 self._recommended_label.setText(f"Recommended: {recommended.name}")
             else:
                 self._recommended_label.setText("")
-        except (RuntimeError, OSError, ValueError) as e:
-            _logger.exception("recommended_model_update_failed", provider=self.provider_id, error=str(e))
+        except (RuntimeError, OSError, ValueError):
+            _logger.exception("recommended_model_update_failed", provider=self.provider_id)
             self._recommended_label.setText("")
 
     def _load_settings(self) -> None:
@@ -2234,7 +2233,7 @@ class ProviderSettingsWidget(QFrame):
                 provider_name = ProviderName(self.provider_id)
                 provider = self._registry.get(provider_name)
             except ValueError:
-                _logger.debug("provider_name_parse_failed", provider_id=self.provider_id)
+                _logger.warning("provider_name_parse_failed", provider_id=self.provider_id)
 
         self._refresh_worker = ModelRefreshWorker(
             self.provider_id,
@@ -2445,7 +2444,6 @@ class ProviderSettingsWidget(QFrame):
             _logger.exception(
                 "provider_settings_save_failed",
                 provider=self.provider_id,
-                error=str(e),
             )
             QMessageBox.warning(
                 self,

@@ -19,7 +19,7 @@ from intellicrack.ui.resources.resource_helper import get_assets_path, get_icon_
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
-_logger = get_logger("ui.resources.icons")
+_logger = get_logger(__name__)
 
 
 ICON_MAP: Final[dict[str, str]] = {
@@ -231,11 +231,10 @@ class IconManager:
             icons_dir = get_assets_path() / "icons"
             available = any(icons_dir.iterdir()) if icons_dir.exists() else False
             _logger.debug("icons_availability_check", available=available, path=str(icons_dir))
-        except (FileNotFoundError, PermissionError) as exc:
-            _logger.exception("icons_availability_check_failed", error=str(exc))
+        except (FileNotFoundError, PermissionError):
+            _logger.exception("icons_availability_check_failed")
             return False
-        else:
-            return available
+        return available
 
     def get_icon(self, name: str, size: int = 24) -> QIcon:
         """Get an icon by name with caching.
@@ -419,7 +418,7 @@ class IconManager:
         pixmap_count = len(self.pixmap_cache)
         self.icon_cache.clear()
         self.pixmap_cache.clear()
-        _logger.debug(
+        _logger.info(
             "icon_cache_cleared",
             icons_cleared=icon_count,
             pixmaps_cleared=pixmap_count,

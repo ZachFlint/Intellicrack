@@ -44,7 +44,7 @@ from intellicrack.core.types import ConfirmationLevel, ProviderName
 from intellicrack.ui.resources.font_manager import FontManager
 
 
-_logger = get_logger("ui.preferences")
+_logger = get_logger(__name__)
 
 
 def _combo_find_data(combo: QComboBox, data: object) -> int:
@@ -652,8 +652,8 @@ class PreferencesDialog(QDialog):
             try:
                 new_config.save(self._config_path)
                 _logger.info("configuration_saved", path=str(self._config_path))
-            except OSError as e:
-                _logger.exception("configuration_save_failed", error=str(e))
+            except OSError:
+                _logger.exception("configuration_save_failed")
 
     def _build_config(self) -> Config:
         """Build a new Config from all widget settings.
