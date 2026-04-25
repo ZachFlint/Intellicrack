@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     import structlog
 
-_module_logger = get_logger("process_manager")
+_logger = get_logger(__name__)
 
 _WIN_PROCESS_TERMINATE = 1
 _SIGNAL_SIGKILL = 9
@@ -61,6 +61,12 @@ class ProcessStateError(RuntimeError):
         self.pid = pid
         detail = message or "subprocess returned no exit status"
         super().__init__(f"{detail} (name={name!r}, pid={pid})")
+        _logger.debug(
+            "process_state_error_constructed",
+            process_name=name,
+            pid=pid,
+            detail=detail,
+        )
 
 
 class ProcessType(Enum):
@@ -180,7 +186,7 @@ class ProcessManager:
         self.atexit_registered = False
         self.shutdown_event = threading.Event()
         self._initialized = True
-        _module_logger.debug("process_manager_initialized")
+        _logger.debug("process_manager_initialized")
 
     @classmethod
     def get_instance(cls) -> ProcessManager:
@@ -194,7 +200,7 @@ class ProcessManager:
     @classmethod
     def reset_instance(cls) -> None:
         """Reset the singleton instance (for testing)."""
-        _module_logger.debug("process_manager_resetting")
+        _logger.debug("process_manager_resetting")
         with cls._lock:
             inst = cls._instance
             if inst is not None:
@@ -213,7 +219,7 @@ class ProcessManager:
         Returns:
             structlog.stdlib.BoundLogger: The module logger instance.
         """
-        return _module_logger
+        return _logger
 
     def install_handlers(self) -> None:
         """Install signal handlers and atexit hook for cleanup.
@@ -238,9 +244,13 @@ class ProcessManager:
                 if hasattr(signal, "SIGBREAK"):
                     signal.signal(signal.SIGBREAK, self._signal_handler)
             except (ValueError, OSError) as e:
-                _module_logger.debug("signal_handler_install_failed", error=str(e))
+                _logger.exception(
+                    "signal_handler_install_failed",
+                    error_str=str(e),
+                    error_type=type(e).__name__,
+                )
 
-        ProcessManager._get_logger().debug("handlers_installed")
+        ProcessManager._get_logger().info("handlers_installed")
 
     def uninstall_handlers(self) -> None:
         """Uninstall signal handlers (restore original handlers)."""
@@ -253,16 +263,16 @@ class ProcessManager:
             try:
                 signal.signal(signal.SIGINT, self._original_sigint_handler)
             except (ValueError, OSError):
-                _module_logger.debug("signal_handler_uninstall_failed", exc_info=True)
+                _logger.exception("signal_handler_uninstall_failed")
 
         if self.atexit_registered:
             try:
                 atexit.unregister(self._atexit_cleanup)
             except (TypeError, OSError) as exc:
-                _module_logger.warning("atexit_unregister_failed", error=str(exc))
+                _logger.warning("atexit_unregister_failed", error=str(exc))
             self.atexit_registered = False
 
-        ProcessManager._get_logger().debug("handlers_uninstalled")
+        ProcessManager._get_logger().info("handlers_uninstalled")
 
     def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
         """Handle termination signals by triggering cleanup.
@@ -327,7 +337,7 @@ class ProcessManager:
                 all_procs_psutil.append(proc)
                 all_procs_psutil.extend(proc.children(recursive=True))
             except psutil.NoSuchProcess:
-                _module_logger.debug("process_already_exited", pid=pid)
+                _logger.exception("process_lookup_failed", pid=pid)
         # Deduplicate based on PID
         seen_pids: set[int] = set()
         unique_procs: list[psutil.Process] = []
@@ -339,9 +349,9 @@ class ProcessManager:
         for p in unique_procs:
             try:
                 p.terminate()
-                _module_logger.debug("signal_sent", pid=p.pid, signal=_SIGNAL_SIGTERM)
+                _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGTERM)
             except psutil.NoSuchProcess:
-                _module_logger.debug("terminate_process_already_exited", pid=p.pid)
+                _logger.exception("process_terminate_target_missing", pid=p.pid)
 
         _, alive = psutil.wait_procs(unique_procs, timeout=self.DEFAULT_GRACEFUL_TIMEOUT)
 
@@ -351,12 +361,12 @@ class ProcessManager:
                 try:
                     if sys.platform == "win32":
                         p.kill()
-                        _module_logger.debug("win32_terminate", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
+                        _logger.info("win32_terminate_signal_sent", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
                     else:
                         p.kill()
-                        _module_logger.debug("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
+                        _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
                 except psutil.NoSuchProcess:
-                    _module_logger.debug("kill_process_already_exited", pid=p.pid)
+                    _logger.exception("kill_process_target_missing", pid=p.pid)
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
 
         with self._process_lock:
@@ -416,19 +426,19 @@ class ProcessManager:
         try:
             parent = psutil.Process(pid)
         except psutil.NoSuchProcess:
-            _module_logger.debug("terminate_tree_root_missing", pid=pid)
+            _logger.exception("terminate_tree_root_lookup_missing", pid=pid)
             return
         except psutil.AccessDenied:
-            _module_logger.warning("terminate_tree_root_access_denied", pid=pid)
+            _logger.warning("terminate_tree_root_access_denied", pid=pid)
             return
 
         try:
             children = parent.children(recursive=True)
         except psutil.NoSuchProcess:
-            _module_logger.debug("terminate_tree_root_exited", pid=pid)
+            _logger.exception("terminate_tree_root_lookup_exited", pid=pid)
             return
         except psutil.AccessDenied:
-            _module_logger.warning("terminate_tree_children_access_denied", pid=pid)
+            _logger.warning("terminate_tree_children_access_denied", pid=pid)
             return
 
         all_procs = [*children, parent]
@@ -437,9 +447,9 @@ class ProcessManager:
             try:
                 p.terminate()
             except psutil.NoSuchProcess:
-                _module_logger.debug("terminate_tree_process_exited", pid=p.pid)
+                _logger.exception("terminate_tree_process_target_missing", pid=p.pid)
             except psutil.AccessDenied:
-                _module_logger.warning("terminate_tree_access_denied", pid=p.pid)
+                _logger.warning("terminate_tree_access_denied", pid=p.pid)
 
         _, alive = psutil.wait_procs(all_procs, timeout=graceful_timeout)
 
@@ -448,9 +458,9 @@ class ProcessManager:
                 try:
                     p.kill()
                 except psutil.NoSuchProcess:
-                    _module_logger.debug("kill_tree_process_exited", pid=p.pid)
+                    _logger.exception("kill_tree_process_target_missing", pid=p.pid)
                 except psutil.AccessDenied:
-                    _module_logger.warning("kill_tree_access_denied", pid=p.pid)
+                    _logger.warning("kill_tree_access_denied", pid=p.pid)
             psutil.wait_procs(alive, timeout=force_timeout)
 
     def register(
@@ -631,7 +641,7 @@ class ProcessManager:
                 process.kill()
                 await asyncio.to_thread(process.wait)
 
-        logger.debug("process_terminated_tree", process_name=name)
+        logger.info("process_terminated_tree", process_name=name)
 
     @staticmethod
     async def _terminate_async_subprocess(
@@ -665,9 +675,9 @@ class ProcessManager:
             try:
                 await process.wait()
             except (OSError, RuntimeError) as exc:
-                _module_logger.warning("zombie_wait_fallback_failed", error=str(exc))
+                _logger.warning("zombie_wait_fallback_failed", error=str(exc))
 
-        logger.debug("async_process_terminated_tree", process_name=name)
+        logger.info("async_process_terminated_tree", process_name=name)
 
     async def cleanup_all_async(
         self,
@@ -1003,7 +1013,7 @@ class ProcessManager:
             self._terminate_tree_with_psutil(pid, graceful, force_to)
 
             self.unregister_external_pid(pid)
-            logger.debug(
+            logger.info(
                 "external_pid_terminated",
                 process_name=name,
                 pid=pid,

@@ -14,9 +14,14 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
+from intellicrack.core.logging import get_logger
+
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+_logger = get_logger(__name__)
 
 
 @runtime_checkable
@@ -768,6 +773,7 @@ class RegisterState:
             val = getattr(self, key)
             if isinstance(val, int):
                 return val
+        _logger.error("register_state_invalid_key", register_name=key)
         raise KeyError(key)
 
     def get_gpr_dict(self) -> dict[str, int]:
@@ -1493,6 +1499,11 @@ class IntellicrackError(Exception):
         self.message = message
         self.error_code = error_code
         self.details = details or {}
+        _logger.debug(
+            "intellicrack_error_constructed",
+            error_message=message,
+            error_code=error_code,
+        )
 
 
 class ProviderError(IntellicrackError):
@@ -1531,6 +1542,12 @@ class ProviderError(IntellicrackError):
         self.provider_name = provider_name
         self.status_code = status_code
         self.response_body = response_body
+        _logger.debug(
+            "provider_error_constructed",
+            error_message=message,
+            provider_name=provider_name,
+            status_code=status_code,
+        )
 
 
 class AuthenticationError(ProviderError):
@@ -1651,6 +1668,12 @@ class ToolError(IntellicrackError):
         self.tool_name = tool_name
         self.exit_code = exit_code
         self.stderr = stderr
+        _logger.debug(
+            "tool_error_constructed",
+            error_message=message,
+            tool_name=tool_name,
+            exit_code=exit_code,
+        )
 
 
 class ToolNotFoundError(ToolError):
@@ -1769,6 +1792,14 @@ class AttachError(ToolError):
         self.pid = pid
         self.process_name = process_name
         self.reason = reason
+        _logger.debug(
+            "attach_error_constructed",
+            error_message=message,
+            tool_name=tool_name,
+            pid=pid,
+            process_name=process_name,
+            reason=reason,
+        )
 
 
 class SandboxError(IntellicrackError):
@@ -1872,3 +1903,9 @@ class ConfigurationError(IntellicrackError):
         self.config_key = config_key
         self.expected_type = expected_type
         self.actual_value = actual_value
+        _logger.debug(
+            "configuration_error_constructed",
+            error_message=message,
+            config_key=config_key,
+            expected_type=expected_type,
+        )

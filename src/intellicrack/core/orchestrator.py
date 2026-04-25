@@ -65,7 +65,7 @@ if TYPE_CHECKING:
     from intellicrack.providers.registry import ProviderRegistry
 
 
-_logger = get_logger("core.orchestrator")
+_logger = get_logger(__name__)
 
 OrchestratorState = Literal["idle", "processing", "waiting_confirmation", "cancelled"]
 
@@ -221,6 +221,12 @@ class Orchestrator:
         self._on_bridge_analysis: Callable[[BridgeAnalysisSummary], None] | None = None
         self._confirmation_callback: Callable[[ToolCall], bool] | None = None
         self._async_confirmation_callback: Callable[[ToolCall], asyncio.Future[bool]] | None = None
+
+        _logger.debug(
+            "orchestrator_initialized",
+            confirmation_level=self._config.confirmation_level.value,
+            max_iterations=self._config.max_iterations,
+        )
 
     @property
     def state(self) -> OrchestratorState:
@@ -404,6 +410,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("process_user_input_no_active_session")
             raise RuntimeError(error_message)
 
         self._state = "processing"
@@ -913,6 +920,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("call_llm_no_active_session")
             raise RuntimeError(error_message)
 
         # Estimate input tokens
@@ -1026,6 +1034,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("stream_response_no_active_session")
             raise RuntimeError(error_message)
 
         content_parts: list[str] = []
@@ -1093,6 +1102,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("non_stream_response_no_active_session")
             raise RuntimeError(error_message)
 
         response, tool_calls = await provider.chat(
@@ -1400,6 +1410,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("add_binary_no_active_session", path=str(path))
             raise RuntimeError(error_message)
 
         binary_info = await self._load_binary(path)
@@ -1483,10 +1494,16 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("set_active_binary_no_active_session", index=index)
             raise RuntimeError(error_message)
 
         if index < 0 or index >= len(self._current_session.binaries):
             error_message = f"Binary index out of range: {index}"
+            _logger.error(
+                "set_active_binary_index_out_of_range",
+                index=index,
+                binary_count=len(self._current_session.binaries),
+            )
             raise IndexError(error_message)
 
         _logger.info("active_binary_changed", index=index)
@@ -1504,6 +1521,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("add_patch_no_active_session")
             raise RuntimeError(error_message)
 
         _logger.info("patch_added", address=hex(patch.address), description=patch.description)
@@ -1762,6 +1780,7 @@ class Orchestrator:
         """
         if self._current_session is None:
             error_message = "No active session"
+            _logger.error("activate_binary_by_name_no_active_session", binary_name=name)
             raise RuntimeError(error_message)
 
         _logger.info("binary_activation_by_name", binary_name=name)
@@ -1771,6 +1790,7 @@ class Orchestrator:
                 return
 
         error_message = f"Binary not found: {name}"
+        _logger.error("activate_binary_by_name_not_found", binary_name=name)
         raise ValueError(error_message)
 
     async def shutdown(self) -> None:
@@ -1789,7 +1809,7 @@ class Orchestrator:
                 exceptions, all collected failures are bundled into an ``ExceptionGroup``.
         """
         if self._shutdown_called:
-            _logger.debug("orchestrator_shutdown_already_called", state=self._state)
+            _logger.info("orchestrator_shutdown_already_called", state=self._state)
             return
         self._shutdown_called = True
         _logger.info("orchestrator_shutdown_started", state=self._state)
@@ -1832,7 +1852,7 @@ class Orchestrator:
                             unload(),
                         )
                         await unload_coro
-                        _logger.debug("shutdown_provider_model_unloaded", provider=provider_name.value)
+                        _logger.info("shutdown_provider_model_unloaded", provider=provider_name.value)
                     except Exception as exc:
                         _logger.exception(
                             "shutdown_provider_unload_failed",

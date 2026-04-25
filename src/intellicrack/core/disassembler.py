@@ -21,7 +21,7 @@ from intellicrack.core.logging import get_logger
 if TYPE_CHECKING:
     from types import ModuleType
 
-_logger = get_logger("core.disassembler")
+_logger = get_logger(__name__)
 
 _capstone_mod: ModuleType | None = None
 try:
@@ -146,11 +146,13 @@ class HexDisassembler:
                 architecture/mode combination is not supported.
         """
         if self._cs_mod is None:
+            _logger.error("disassembler_capstone_unavailable", arch=arch, mode=mode)
             raise ValueError(_ERR_NO_CAPSTONE)
 
         cs: Any = self._cs_mod
         arch_lower = arch.lower()
         mode_lower = mode.lower()
+        _logger.debug("arch_mode_resolve", arch=arch_lower, mode=mode_lower)
 
         if arch_lower == "arm":
             return (cs.CS_ARCH_ARM, cs.CS_MODE_THUMB) if mode_lower == "thumb" else (cs.CS_ARCH_ARM, cs.CS_MODE_ARM)
@@ -219,6 +221,7 @@ class HexDisassembler:
                 architecture/mode combination is unsupported.
         """
         if self._cs_mod is None:
+            _logger.error("disassembler_capstone_unavailable_for_disassemble", arch=arch, mode=mode)
             raise ValueError(_ERR_NO_CAPSTONE)
 
         cs_arch, cs_mode = self._resolve_arch_mode(arch, mode)
@@ -273,6 +276,15 @@ class HexDisassembler:
         Returns:
             list[DisassemblyLine]: Decoded instructions as bridge lines.
         """
+        _logger.debug(
+            "disassemble_to_lines_invoked",
+            binary_path="<bytes-buffer>",
+            data_size=len(data),
+            offset=base_addr,
+            arch=arch,
+            mode=mode,
+            count=count,
+        )
         raw = self.disassemble(data, base_addr, arch, mode, count)
         return [_to_disassembly_line(insn) for insn in raw]
 
@@ -368,6 +380,7 @@ class HexDisassembler:
             ValueError: If capstone is not available.
         """
         if self._cs_mod is None:
+            _logger.error("disassembler_capstone_unavailable_for_arch_list")
             raise ValueError(_ERR_NO_CAPSTONE)
 
         cs: Any = self._cs_mod

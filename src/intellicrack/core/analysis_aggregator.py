@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from .tools import ToolRegistry
     from .types import BinaryInfo
 
-_logger = get_logger("core.analysis_aggregator")
+_logger = get_logger(__name__)
 
 
 class AnalysisAggregator:
@@ -143,7 +143,7 @@ class AnalysisAggregator:
         try:
             bridge = self._tools.get_ghidra_bridge() if bridge_name == "ghidra" else self._tools.get_cutter_bridge()
         except ToolError:
-            _logger.debug("static_bridge_unavailable", bridge=bridge_name)
+            _logger.exception("static_bridge_unavailable", bridge=bridge_name)
             return
 
         contributed = False
