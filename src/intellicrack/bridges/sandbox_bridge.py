@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from intellicrack.sandbox import ExecutionReport
 
 
-_logger = get_logger("bridges.sandbox")
+_logger = get_logger(__name__)
 
 
 def _get_analysis_module() -> types.ModuleType:
@@ -698,6 +698,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             bool: True if at least one sandbox type is available.
         """
+        _logger.info("sandbox_is_available_started")
         if self._manager is None:
             self._manager = SandboxManager()
 
@@ -1008,6 +1009,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Status dictionary with available types and instance info.
         """
+        _logger.info("sandbox_status_started")
         manager = self._ensure_manager()
         return dict(await manager.get_status())
 
@@ -1017,6 +1019,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of instance information dictionaries.
         """
+        _logger.info("sandbox_list_started")
         manager = self._ensure_manager()
 
         return [

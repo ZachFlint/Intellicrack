@@ -50,7 +50,7 @@ from intellicrack.core.types import (
 )
 
 
-_logger = get_logger("bridges.ghidra")
+_logger = get_logger(__name__)
 
 _RemoteExecFunc = Callable[[str], object]
 
@@ -173,6 +173,7 @@ class GhidraBridge(StaticAnalysisBridge):
             ],
             supported_formats=["pe", "elf", "macho", "raw", "coff"],
         )
+        _logger.info("ghidra_bridge_initialized", port=self._port)
 
     @property
     def ghidra_path(self) -> Path | None:
@@ -190,6 +191,7 @@ class GhidraBridge(StaticAnalysisBridge):
         Args:
             value: Path to Ghidra installation directory, or None.
         """
+        _logger.info("ghidra_path_set", path=str(value) if value is not None else None)
         self._ghidra_path = value
 
     @property
@@ -1135,6 +1137,7 @@ class GhidraBridge(StaticAnalysisBridge):
         Args:
             port: TCP port for the ghidra_bridge RPC connection.
         """
+        _logger.info("ghidra_set_port_started", port=port)
         self._port = port
 
     async def initialize(self, tool_path: Path | None = None) -> None:
@@ -1173,7 +1176,7 @@ class GhidraBridge(StaticAnalysisBridge):
             _logger.info("ghidra_bridge_connected", port=self._port)
 
         except ImportError as imp_err:
-            _logger.warning("ghidra_bridge_not_installed", bridge="ghidra")
+            _logger.warning("ghidra_bridge_module_missing", bridge="ghidra")
             self._bridge = None
             self.state.connected = False
             self.state.tool_running = False
@@ -1181,7 +1184,7 @@ class GhidraBridge(StaticAnalysisBridge):
             raise ToolError(error_message) from imp_err
 
         except Exception as exc:
-            _logger.exception("ghidra_connect_failed", error=str(exc))
+            _logger.exception("ghidra_connect_failed")
             self._bridge = None
             self.state.connected = False
             self.state.tool_running = False
@@ -1217,11 +1220,8 @@ class GhidraBridge(StaticAnalysisBridge):
                 parent_children = await asyncio.to_thread(lambda: list(parent.iterdir()))
                 if await asyncio.to_thread(parent.exists) and not any(parent_children):
                     await asyncio.to_thread(parent.rmdir)
-            except OSError as e:
-                _logger.debug(
-                    "bridge_script_cleanup_failed",
-                    error=str(e),
-                )
+            except OSError:
+                _logger.exception("bridge_script_cleanup_failed")
             self._bridge_script_path = None
 
         self._bridge = None
@@ -1237,6 +1237,7 @@ class GhidraBridge(StaticAnalysisBridge):
         Returns:
             bool: True if Ghidra can be used.
         """
+        _logger.info("ghidra_is_available_started", ghidra_path=str(self._ghidra_path) if self._ghidra_path else None)
         if self._ghidra_path is None:
             return False
         return importlib.util.find_spec("ghidra_bridge") is not None
@@ -1402,7 +1403,17 @@ ghidra_bridge_server.GhidraBridgeServer(
         script_dir.mkdir(exist_ok=True)
 
         script_path = script_dir / "start_bridge.py"
+        _logger.info(
+            "ghidra_bridge_script_writing",
+            script_path=str(script_path),
+            content_size=len(script_content),
+        )
         script_path.write_text(script_content)
+        _logger.info(
+            "file_written",
+            path=str(script_path),
+            data_size=len(script_content),
+        )
         self._bridge_script_path = script_path
 
         return script_path
@@ -1413,6 +1424,7 @@ ghidra_bridge_server.GhidraBridgeServer(
         Returns:
             Path: Path to the created script.
         """
+        _logger.info("ghidra_create_bridge_script_started")
         return self._create_bridge_script()
 
     @property
@@ -1792,6 +1804,7 @@ metadata
                 "{'processor': proc, 'pointer_size': psize}\n",
             )
         except ToolError:
+            _logger.warning("ghidra_arch_query_tool_error")
             return None
         except Exception:
             _logger.exception("ghidra_arch_query_failed")
@@ -1843,6 +1856,7 @@ metadata
             ToolError: If Ghidra is not connected or analysis fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -1869,7 +1883,9 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.info("ghidra_get_functions_started", filter_pattern=filter_pattern)
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", operation="get_functions")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -1930,6 +1946,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2090,6 +2107,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2148,6 +2166,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2195,6 +2214,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2243,6 +2263,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2322,6 +2343,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2410,6 +2432,7 @@ metadata
             ToolError: If operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2451,6 +2474,7 @@ metadata
             ToolError: If operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2490,6 +2514,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2533,6 +2558,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2578,6 +2604,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2645,6 +2672,7 @@ metadata
             ToolError: If setting the data type fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2703,6 +2731,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2729,6 +2758,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2776,6 +2806,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2799,6 +2830,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2839,6 +2871,7 @@ metadata
             ToolError: If Ghidra is not connected or function creation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -2942,6 +2975,7 @@ metadata
             ToolError: If Ghidra is not connected or modification fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3008,6 +3042,7 @@ metadata
             ToolError: If Ghidra is not connected or retype fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3055,6 +3090,7 @@ metadata
             ToolError: If Ghidra is not connected or definition fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3110,6 +3146,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3149,6 +3186,7 @@ metadata
             ToolError: If Ghidra is not connected or application fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3193,6 +3231,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3332,6 +3371,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3371,6 +3411,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3531,6 +3572,7 @@ metadata
             ToolError: If Ghidra is not connected or read fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3569,6 +3611,7 @@ metadata
             ToolError: If Ghidra is not connected or undo fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3594,6 +3637,7 @@ metadata
             ToolError: If Ghidra is not connected or redo fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3623,6 +3667,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3694,6 +3739,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3759,6 +3805,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3855,6 +3902,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3894,6 +3942,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -3957,7 +4006,7 @@ metadata
             msg = f"{_ERR_UNSUPPORTED_DEBUG_FORMAT}: {path}"
             raise ToolError(msg)
 
-        _logger.info("debug_info_importing", path=path, debug_type=debug_type)
+        _logger.info("debuginfo_importing", path=path, debug_type=debug_type)
         path_literal = json.dumps(path)
         try:
             result = await self._execute_remote(f"""
@@ -4079,6 +4128,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4123,6 +4173,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4156,6 +4207,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4195,6 +4247,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4231,6 +4284,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4268,6 +4322,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4298,6 +4353,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4334,6 +4390,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4375,6 +4432,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4415,6 +4473,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4465,6 +4524,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4539,6 +4599,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4569,6 +4630,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4616,6 +4678,7 @@ metadata
             ToolError: If Ghidra is not connected or type creation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4687,6 +4750,7 @@ metadata
             ToolError: If Ghidra is not connected or creation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4739,6 +4803,7 @@ metadata
             ToolError: If Ghidra is not connected or configuration fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4918,6 +4983,7 @@ metadata
             ToolError: If Ghidra is not connected or block creation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", size=size)
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -4956,6 +5022,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5002,6 +5069,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5145,6 +5213,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5185,6 +5254,7 @@ metadata
             ToolError: If Ghidra is not connected or comparison fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5331,6 +5401,7 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5380,6 +5451,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5423,6 +5495,7 @@ metadata
             ToolError: If Ghidra is not connected.
         """
         if self._bridge is None:
+            _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -5466,6 +5539,8 @@ metadata
             ToolError: If Ghidra is not connected or operation fails.
         """
         if self._bridge is None:
+            address_repr = hex(address) if address is not None else "None"
+            _logger.error("ghidra_not_connected", address=address_repr)
             error_message = "Ghidra not connected"
             raise ToolError(error_message)
 
@@ -6028,6 +6103,6 @@ metadata
                 code,
             )
         except Exception as e:
-            _logger.exception("ghidra_remote_exec_failed", error=str(e))
+            _logger.exception("ghidra_remote_exec_failed")
             error_message = f"Remote execution failed: {e}"
             raise ToolError(error_message) from e

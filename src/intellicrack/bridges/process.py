@@ -135,7 +135,7 @@ from intellicrack.core.types import (
 )
 
 
-_logger = get_logger("bridges.process")
+_logger = get_logger(__name__)
 
 _ERR_KERNEL32_NA = "kernel32 not available"
 _ERR_SNAPSHOT_FAILED = "snapshot creation failed"
@@ -776,6 +776,7 @@ class ProcessBridge(ToolBridgeBase):
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe"],
         )
+        _logger.info("process_bridge_initialized")
 
     @property
     def name(self) -> ToolName:
@@ -815,19 +816,19 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 self._ntdll = get_ntdll()
             except OSError:
-                _logger.debug("ntdll_load_failed")
+                _logger.exception("ntdll_load_failed")
             try:
                 self._advapi32 = get_advapi32()
             except OSError:
-                _logger.debug("advapi32_load_failed")
+                _logger.exception("advapi32_load_failed")
             try:
                 self._user32 = get_user32()
             except OSError:
-                _logger.debug("user32_load_failed")
+                _logger.exception("user32_load_failed")
             try:
                 self._dbghelp = get_dbghelp()
             except OSError:
-                _logger.debug("dbghelp_load_failed")
+                _logger.exception("dbghelp_load_failed")
 
             self._elevate_debug_privilege()
 
@@ -897,7 +898,7 @@ class ProcessBridge(ToolBridgeBase):
             finally:
                 self._kernel32.CloseHandle(token_handle)
         except (OSError, AttributeError, ctypes.ArgumentError):
-            _logger.debug("debug_privilege_elevation_failed")
+            _logger.exception("se_debug_privilege_elevation_failed")
 
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
@@ -947,6 +948,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[ProcessInfo]: List of processes.
         """
+        _logger.info("process_list_started", filter_name=filter_name)
         return await self.list_processes(filter_name)
 
     async def list_detailed(
@@ -964,6 +966,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[dict[str, int | str | float]]: Process detail dicts.
         """
+        _logger.info("process_list_detailed_started", filter_name=filter_name)
         return await self.list_processes_detailed(filter_name)
 
     async def open(
@@ -983,6 +986,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if successful.
         """
+        _logger.info("process_open_started", pid=pid, access=access)
         return await self.open_process(pid, access)
 
     async def list_processes(
@@ -1052,7 +1056,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If enumeration fails.
         """
+        _logger.info("process_list_processes_detailed_started", filter_name=filter_name)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="list_processes_detailed")
             raise ToolError(_ERR_KERNEL32_NA)
 
         snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
@@ -1095,6 +1101,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             float: Working set size in MB, or 0.0 on failure.
         """
+        _logger.info("process_get_memory_mb_started", pid=pid)
         if self._kernel32 is None or self._psapi is None:
             return 0.0
 
@@ -1138,6 +1145,7 @@ class ProcessBridge(ToolBridgeBase):
             str: Architecture string such as ``'x64'``, ``'x86'``,
                 ``'arm64'``, ``'arm'``, or ``'Unknown'``.
         """
+        _logger.info("process_detect_architecture_started", pid=pid)
         if self._kernel32 is None:
             return "Unknown"
 
@@ -1851,12 +1859,11 @@ class ProcessBridge(ToolBridgeBase):
 
             try:
                 data_bytes = self._sync_read_memory(region_base + offset, chunk_size)
-            except ToolError as err:
-                _logger.debug(
+            except ToolError:
+                _logger.exception(
                     "pattern_search_region_read_failed",
                     address=hex(region_base + offset),
                     size=chunk_size,
-                    error=str(err),
                 )
                 break
 
@@ -1893,8 +1900,10 @@ class ProcessBridge(ToolBridgeBase):
                 fails.
         """
         if self._process_handle is None:
+            _logger.error("process_not_attached", operation="_sync_read_memory")
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="_sync_read_memory")
             raise ToolError(_ERR_KERNEL32_NA)
 
         buffer = ctypes.create_string_buffer(size)
@@ -1908,6 +1917,11 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(bytes_read),
         ):
             return buffer.raw[: bytes_read.value]
+        _logger.error(
+            "process_memory_read_failed",
+            address=hex(address),
+            size=size,
+        )
         raise ToolError(_ERR_READ_FAILED)
 
     # ------------------------------------------------------------------
@@ -1926,11 +1940,14 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_modules_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_modules")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
         if target_pid is None:
+            _logger.error("no_process_specified", operation="get_modules")
             raise ToolError(_ERR_NO_PROCESS)
 
         snapshot = self._kernel32.CreateToolhelp32Snapshot(
@@ -1983,7 +2000,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_threads_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_threads")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
@@ -2066,14 +2085,15 @@ class ProcessBridge(ToolBridgeBase):
             _logger.debug(
                 "thread_start_address_nt_failed",
                 tid=tid,
-                ntstatus=f"0x{status & 0xFFFFFFFF:08X}",
+                ntstatus=hex(status & 0xFFFFFFFF),
                 raw_status=status,
             )
         except (OSError, ctypes.ArgumentError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "thread_start_address_query_exception",
                 tid=tid,
                 error=str(exc),
+                error_type=type(exc).__name__,
             )
         finally:
             self._kernel32.CloseHandle(handle)
@@ -2237,9 +2257,12 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_token_privileges_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_token_privileges")
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="get_token_privileges")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         target_pid = pid or self._attached_pid
@@ -2326,6 +2349,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If advapi32 is not available.
         """
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="_privilege_entry_to_dict")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         name_buf = ctypes.create_unicode_buffer(256)
@@ -2449,11 +2473,14 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_handles_started", pid=pid)
         if self._ntdll is None:
+            _logger.error("ntdll_unavailable", operation="get_handles")
             raise ToolError(_ERR_NTDLL_NA)
 
         target_pid = pid or self._attached_pid
         if target_pid is None:
+            _logger.error("no_process_specified", operation="get_handles")
             raise ToolError(_ERR_NO_PROCESS)
 
         buf_size = 0x100000
@@ -2517,13 +2544,17 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_windows_started", pid=pid)
         if self._user32 is None:
+            _logger.error("user32_unavailable", operation="get_windows")
             raise ToolError(_ERR_USER32_NA)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_windows")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
         if target_pid is None:
+            _logger.error("no_process_specified", operation="get_windows")
             raise ToolError(_ERR_NO_PROCESS)
 
         windows: list[dict[str, object]] = []
@@ -2587,11 +2618,14 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_list_services_started", filter_pid=filter_pid)
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="list_services")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         scm = self._advapi32.OpenSCManagerW(None, None, SC_MANAGER_ENUMERATE_SERVICE)
         if not scm:
+            _logger.error("scm_open_failed", operation="list_services")
             raise ToolError(_ERR_SCM_OPEN_FAILED)
 
         try:
@@ -2718,9 +2752,12 @@ class ProcessBridge(ToolBridgeBase):
                 cannot be opened, the Nt query fails, or
                 ``ReadProcessMemory`` fails.
         """
+        _logger.info("process_read_peb_started", pid=pid)
         if self._ntdll is None:
+            _logger.error("ntdll_unavailable", operation="read_peb")
             raise ToolError(_ERR_NTDLL_NA)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="read_peb")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
@@ -2860,7 +2897,7 @@ class ProcessBridge(ToolBridgeBase):
         if status < 0:
             _logger.debug(
                 "wow64_peb_query_failed",
-                ntstatus=f"0x{status & 0xFFFFFFFF:08X}",
+                ntstatus=hex(status & 0xFFFFFFFF),
             )
             return None
 
@@ -2982,9 +3019,12 @@ class ProcessBridge(ToolBridgeBase):
                 cannot be opened, ``NtQueryInformationThread`` fails, no
                 process is attached, or ``ReadProcessMemory`` fails.
         """
+        _logger.info("process_read_teb_started", tid=tid)
         if self._ntdll is None:
+            _logger.error("ntdll_unavailable", operation="read_teb")
             raise ToolError(_ERR_NTDLL_NA)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="read_teb")
             raise ToolError(_ERR_KERNEL32_NA)
 
         inherit_handle = False
@@ -3095,15 +3135,19 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_heaps_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_heaps")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
         if target_pid is None:
+            _logger.error("no_process_specified", operation="get_heaps")
             raise ToolError(_ERR_NO_PROCESS)
 
         snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPHEAPLIST, target_pid)
         if snapshot == -1:
+            _logger.error("snapshot_failed", operation="get_heaps", target_pid=target_pid)
             raise ToolError(_ERR_SNAPSHOT_FAILED)
 
         heaps: list[dict[str, object]] = []
@@ -3142,7 +3186,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_thread_context_started", tid=tid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_thread_context")
             raise ToolError(_ERR_KERNEL32_NA)
 
         inherit_handle = False
@@ -3152,6 +3198,7 @@ class ProcessBridge(ToolBridgeBase):
             tid,
         )
         if not thread_handle:
+            _logger.error("thread_open_failed", operation="get_thread_context", tid=tid)
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
         try:
@@ -3354,7 +3401,9 @@ class ProcessBridge(ToolBridgeBase):
                 attached, the thread cannot be opened, or the
                 ``GetThreadContext`` call fails.
         """
+        _logger.info("process_stack_walk_started", tid=tid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="stack_walk")
             raise ToolError(_ERR_KERNEL32_NA)
         if self._dbghelp is None:
             raise ToolError(_ERR_DBGHELP_NA)
@@ -3632,7 +3681,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_seh_chain_started", tid=tid)
         if self._process_handle is None:
+            _logger.error("process_not_attached", operation="get_seh_chain")
             raise ToolError(_ERR_NOT_ATTACHED)
 
         teb = await self.read_teb(tid)
@@ -3652,6 +3703,7 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 record_data = await self.read_memory(current, ptr_size * 2)
             except ToolError:
+                _logger.warning("seh_chain_read_failed", address=hex(current))
                 break
 
             if ptr_size == _PTR_SIZE_64:
@@ -3685,7 +3737,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_mitigation_policies_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_mitigation_policies")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
@@ -3757,9 +3811,12 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_environment_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_environment")
             raise ToolError(_ERR_KERNEL32_NA)
         if self._ntdll is None:
+            _logger.error("ntdll_unavailable", operation="get_environment")
             raise ToolError(_ERR_NTDLL_NA)
 
         peb_info = await self.read_peb(pid)
@@ -3806,7 +3863,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If kernel32 is not available.
         """
+        _logger.info("process_read_env_block_started", params_addr=hex(params_addr))
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="_read_env_block")
             raise ToolError(_ERR_KERNEL32_NA)
 
         params_data = ctypes.create_string_buffer(0x100)
@@ -3889,7 +3948,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If connection fails.
         """
+        _logger.info("process_pipe_connect_started", pipe_name=pipe_name, timeout_ms=timeout_ms)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="pipe_connect")
             raise ToolError(_ERR_KERNEL32_NA)
 
         self._kernel32.WaitNamedPipeW(pipe_name, timeout_ms)
@@ -3905,6 +3966,7 @@ class ProcessBridge(ToolBridgeBase):
         )
 
         if handle in {-1, 0}:
+            _logger.error("pipe_connect_failed", pipe_name=pipe_name)
             raise ToolError(_ERR_PIPE_CONNECT_FAILED)
 
         _logger.info("pipe_connected", pipe_name=pipe_name, handle=handle)
@@ -3923,13 +3985,16 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If read fails.
         """
+        _logger.info("process_pipe_read_started", handle=handle, size=size)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="pipe_read")
             raise ToolError(_ERR_KERNEL32_NA)
 
         buffer = ctypes.create_string_buffer(size)
         bytes_read = wintypes.DWORD(0)
 
         if not self._kernel32.ReadFile(handle, buffer, size, ctypes.byref(bytes_read), None):
+            _logger.error("pipe_read_failed", handle=handle, size=size)
             raise ToolError(_ERR_READ_FAILED)
 
         return buffer.raw[: bytes_read.value]
@@ -3947,11 +4012,14 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If write fails.
         """
+        _logger.info("process_pipe_write_started", handle=handle, data_size=len(data))
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="pipe_write")
             raise ToolError(_ERR_KERNEL32_NA)
 
         bytes_written = wintypes.DWORD(0)
         if not self._kernel32.WriteFile(handle, data, len(data), ctypes.byref(bytes_written), None):
+            _logger.error("pipe_write_failed", handle=handle, data_size=len(data))
             raise ToolError(_ERR_WRITE_FAILED)
 
         return bytes_written.value
@@ -3965,6 +4033,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if closed.
         """
+        _logger.info("process_pipe_close_started", handle=handle)
         if self._kernel32 is not None:
             self._kernel32.CloseHandle(handle)
         return True
@@ -3984,6 +4053,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[dict[str, str]]: List of COM server dicts.
         """
+        _logger.info("process_enumerate_com_servers_started", pid=pid)
         modules = await self.get_modules(pid)
         if self._advapi32 is None:
             return []
@@ -4024,6 +4094,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If advapi32 is not available.
         """
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="_scan_clsid_entries")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         com_servers: list[dict[str, str]] = []
@@ -4071,6 +4142,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If advapi32 is not available.
         """
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="_check_inproc_server")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         server_key = wintypes.HKEY()
@@ -4137,6 +4209,7 @@ class ProcessBridge(ToolBridgeBase):
                 ``clr_version`` string or None, and ``runtime_dlls``
                 list of matched DLL basenames.
         """
+        _logger.info("process_detect_dotnet_started", pid=pid)
         modules = await self.get_modules(pid)
         clr_dlls = {
             "mscoree.dll",
@@ -4188,7 +4261,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If open fails.
         """
+        _logger.info("process_device_open_started", device_path=device_path)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="device_open")
             raise ToolError(_ERR_KERNEL32_NA)
 
         handle: int = self._kernel32.CreateFileW(
@@ -4202,6 +4277,7 @@ class ProcessBridge(ToolBridgeBase):
         )
 
         if handle in {-1, 0}:
+            _logger.error("device_open_failed", device_path=device_path)
             raise ToolError(_ERR_DEVICE_OPEN_FAILED)
 
         _logger.info("device_opened", device_path=device_path, handle=handle)
@@ -4228,7 +4304,14 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If IOCTL fails.
         """
+        _logger.info(
+            "process_device_ioctl_started",
+            handle=handle,
+            ioctl_code=hex(ioctl_code),
+            output_size=output_size,
+        )
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="device_ioctl")
             raise ToolError(_ERR_KERNEL32_NA)
 
         output_buffer = ctypes.create_string_buffer(output_size)
@@ -4247,6 +4330,7 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(bytes_returned),
             None,
         ):
+            _logger.error("device_ioctl_failed", handle=handle, ioctl_code=hex(ioctl_code))
             raise ToolError(_ERR_IOCTL_FAILED)
 
         return output_buffer.raw[: bytes_returned.value]
@@ -4260,6 +4344,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if closed.
         """
+        _logger.info("process_device_close_started", handle=handle)
         if self._kernel32 is not None:
             self._kernel32.CloseHandle(handle)
         return True
@@ -4293,7 +4378,9 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If kernel32 is not available or the target
                 process cannot be opened.
         """
+        _logger.info("process_get_job_info_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_job_info")
             raise ToolError(_ERR_KERNEL32_NA)
 
         target_pid = pid or self._attached_pid
@@ -4528,9 +4615,12 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_gui_resources_started", pid=pid)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="get_gui_resources")
             raise ToolError(_ERR_KERNEL32_NA)
         if self._user32 is None:
+            _logger.error("user32_unavailable", operation="get_gui_resources")
             raise ToolError(_ERR_USER32_NA)
 
         target_pid = pid or self._attached_pid
@@ -4610,7 +4700,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_reg_read_value_started", key_path=key_path, value_name=value_name)
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="reg_read_value")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         root_key, subpath = self._parse_registry_path(key_path)
@@ -4665,7 +4757,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_reg_enum_keys_started", key_path=key_path)
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="reg_enum_keys")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         root_key, subpath = self._parse_registry_path(key_path)
@@ -4714,7 +4808,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_reg_enum_values_started", key_path=key_path)
         if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="reg_enum_values")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         root_key, subpath = self._parse_registry_path(key_path)
@@ -4786,7 +4882,7 @@ class ProcessBridge(ToolBridgeBase):
         if not handle:
             raise ToolError(_ERR_SECTION_CREATE)
 
-        _logger.info("section_created", handle=handle, size=size, name=section_name)
+        _logger.info("section_created", handle=handle, size=size, section_name=section_name)
         return handle
 
     async def map_section(self, handle: int, size: int) -> int:
@@ -4802,7 +4898,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If mapping fails.
         """
+        _logger.info("process_map_section_started", handle=handle, size=size)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="map_section")
             raise ToolError(_ERR_KERNEL32_NA)
 
         address: int = cast(
@@ -4817,6 +4915,7 @@ class ProcessBridge(ToolBridgeBase):
         )
 
         if not address:
+            _logger.error("section_map_failed", handle=handle, size=size)
             raise ToolError(_ERR_SECTION_MAP)
 
         return address
@@ -4838,7 +4937,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_get_tls_values_started", tid=tid, max_slots=max_slots)
         if self._process_handle is None:
+            _logger.error("process_not_attached", operation="get_tls_values")
             raise ToolError(_ERR_NOT_ATTACHED)
 
         teb = await self.read_teb(tid)
@@ -4852,6 +4953,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             data = await self.read_memory(tls_addr, read_size)
         except ToolError:
+            _logger.warning("tls_slots_read_failed", tid=tid, address=hex(tls_addr), size=read_size)
             return []
 
         slots: list[dict[str, object]] = []
@@ -4878,6 +4980,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             dict[str, object]: Dict with fiber_data address.
         """
+        _logger.info("process_get_fiber_data_started", tid=tid)
         teb = await self.read_teb(tid)
         fiber_data = teb.get("fiber_data")
 
@@ -4903,7 +5006,9 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("process_query_system_info_started", info_class=info_class, buffer_size=buffer_size)
         if self._ntdll is None:
+            _logger.error("ntdll_unavailable", operation="query_system_info")
             raise ToolError(_ERR_NTDLL_NA)
 
         current_size = buffer_size

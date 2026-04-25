@@ -20,7 +20,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
 
 
-_logger = get_logger("bridges.namedpipe")
+_logger = get_logger(__name__)
 
 
 _LENGTH_PREFIX_SIZE = 4
@@ -117,6 +117,12 @@ class NamedPipeClient:
         self._lock = asyncio.Lock()
         self._event_handler = event_handler
         self._next_id: int = 0
+        _logger.info(
+            "named_pipe_client_initialized",
+            pipe_name=self._config.pipe_name,
+            connect_timeout=self._config.connect_timeout,
+            io_timeout=self._config.io_timeout,
+        )
 
     @property
     def is_connected(self) -> bool:
@@ -349,7 +355,8 @@ class NamedPipeClient:
             _logger.error(
                 "pipe_connection_failed",
                 pipe_name=pipe_name,
-                error=f"pipe not available (code {error})",
+                error="pipe not available",
+                error_code=error,
                 hint=hint,
             )
             error_message = f"Named pipe not available (error {error})"
@@ -373,7 +380,8 @@ class NamedPipeClient:
             _logger.error(
                 "pipe_connection_failed",
                 pipe_name=pipe_name,
-                error=f"failed to open (code {error})",
+                error="failed to open",
+                error_code=error,
                 hint=hint,
             )
             error_message = f"Failed to open pipe (error {error})"
@@ -440,7 +448,8 @@ class NamedPipeClient:
                 _logger.error(
                     "pipe_error",
                     operation="read",
-                    error=f"read failed (code {error})",
+                    error="read failed",
+                    error_code=error,
                 )
                 error_message = f"Pipe read failed (error {error})"
                 raise ToolError(error_message)
@@ -486,7 +495,7 @@ class NamedPipeClient:
 
         total = len(data)
         offset = 0
-        _logger.debug("pipe_write_started", total_bytes=total)
+        _logger.info("pipe_write_started", total_bytes=total)
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
@@ -503,18 +512,19 @@ class NamedPipeClient:
                 _logger.error(
                     "pipe_error",
                     operation="write",
-                    error=f"write failed (code {error})",
+                    error="write failed",
+                    error_code=error,
                 )
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)
-            _logger.debug(
+            _logger.info(
                 "pipe_write_chunk",
                 chunk_bytes=bytes_written.value,
                 offset=offset + bytes_written.value,
             )
             offset += bytes_written.value
 
-        _logger.debug("pipe_write_complete", total_bytes=total)
+        _logger.info("pipe_write_complete", total_bytes=total)
 
     def _cancel_io(self) -> None:
         """Cancel any in-flight pipe I/O on supported Windows builds.
