@@ -27,7 +27,7 @@ from intellicrack.sandbox.base import (
 )
 
 
-_logger = get_logger("sandbox.analysis")
+_logger = get_logger(__name__)
 
 _IPV4_PATTERN = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
 _URL_PATTERN = re.compile(r"(https?://\S+)")
@@ -114,6 +114,7 @@ def _is_private_ip(ip: str) -> bool:
             try:
                 second_octet = int(parts[1])
             except ValueError:
+                _logger.debug("private_ip_octet_parse_failed", ip_address=ip, exc_info=True)
                 return False
             if _PRIVATE_172_OCTET_MIN <= second_octet <= _PRIVATE_172_OCTET_MAX:
                 return True
@@ -136,6 +137,7 @@ def _is_valid_ipv4(ip: str) -> bool:
         try:
             val = int(part)
         except ValueError:
+            _logger.debug("ipv4_octet_parse_failed", ip_address=ip, exc_info=True)
             return False
         if val < 0 or val > _IPV4_OCTET_MAX:
             return False
