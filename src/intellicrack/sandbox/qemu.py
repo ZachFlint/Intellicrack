@@ -57,7 +57,7 @@ from intellicrack.sandbox.base import (
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-_logger = get_logger("sandbox.qemu")
+_logger = get_logger(__name__)
 
 _QMP_READ_TIMEOUT = 5.0
 _QMP_CONNECT_TIMEOUT = 60.0
@@ -205,11 +205,13 @@ def _parse_ppm_p6(data: bytes) -> tuple[int, int, bytes]:
     """
     magic, pos = _read_ppm_token(data, 0)
     if magic != "P6":
+        _logger.warning("ppm_invalid_magic", magic=magic, payload_size=len(data))
         raise ValueError(_ERR_PPM_INVALID_MAGIC)
     width_str, pos = _read_ppm_token(data, pos)
     height_str, pos = _read_ppm_token(data, pos)
     maxval_str, pos = _read_ppm_token(data, pos)
     if int(maxval_str) != _PPM_EXPECTED_MAXVAL:
+        _logger.warning("ppm_unsupported_maxval", maxval=maxval_str)
         raise ValueError(_ERR_PPM_UNSUPPORTED_MAXVAL)
     if pos < len(data) and data[pos] in _PPM_WHITESPACE:
         pos += 1
@@ -218,6 +220,11 @@ def _parse_ppm_p6(data: bytes) -> tuple[int, int, bytes]:
     expected_bytes = width * height * 3
     pixels = data[pos : pos + expected_bytes]
     if len(pixels) < expected_bytes:
+        _logger.warning(
+            "ppm_truncated",
+            expected_size=expected_bytes,
+            actual_size=len(pixels),
+        )
         raise ValueError(_ERR_PPM_TRUNCATED)
     return width, height, pixels
 
@@ -243,6 +250,13 @@ def _ppm_p6_to_png(ppm_path: Path, png_path: Path) -> None:
         + _encode_png_chunk(b"IEND", b"")
     )
     png_path.write_bytes(png_bytes)
+    _logger.info(
+        "screenshot_png_written",
+        png_path=str(png_path),
+        size=len(png_bytes),
+        width=width,
+        height=height,
+    )
 
 
 class GuestOS(Enum):
@@ -375,6 +389,7 @@ class QMPClient:
         self._writer: asyncio.StreamWriter | None = None
         self.connected = False
         self._lock = asyncio.Lock()
+        _logger.debug("qmp_client_initialized", host=host, port=port)
 
     async def connect(self, time_limit: float = 30.0) -> bool:
         """Connect to QMP server.
@@ -414,7 +429,7 @@ class QMPClient:
                 self._writer.close()
                 await self._writer.wait_closed()
             except OSError as e:
-                _logger.debug("qmp_disconnect_error", error=str(e))
+                _logger.warning("qmp_disconnect_error", error=str(e))
         self._reader = None
         self._writer = None
         self.connected = False
@@ -433,6 +448,7 @@ class QMPClient:
         Returns:
             QMPResponse: QMP response.
         """
+        _logger.debug("qmp_command_send_called", command=command.get("execute"))
         if self._reader is None or self._writer is None:
             return QMPResponse(success=False, error="Not connected")
 
@@ -591,6 +607,7 @@ class GuestAgentClient:
         self._lock = asyncio.Lock()
         self._message_queue: asyncio.Queue[GuestAgentMessage] = asyncio.Queue()
         self._reader_task: asyncio.Task[None] | None = None
+        _logger.debug("guest_agent_client_initialized", host=host, port=port)
 
     @property
     def is_connected(self) -> bool:
@@ -651,7 +668,7 @@ class GuestAgentClient:
                 self._writer.close()
                 await self._writer.wait_closed()
             except OSError as e:
-                _logger.debug("agent_disconnect_error", error=str(e))
+                _logger.warning("agent_disconnect_error", error=str(e))
 
         self._reader = None
         self._writer = None
@@ -677,13 +694,13 @@ class GuestAgentClient:
                     )
                     await self._message_queue.put(msg)
                 except json.JSONDecodeError:
-                    _logger.debug("agent_invalid_json", line=line.decode(errors="replace"))
+                    _logger.warning("agent_invalid_json", line=line.decode(errors="replace"))
 
             except asyncio.CancelledError:
                 _logger.debug("agent_read_cancelled", exc_info=True)
                 break
             except (OSError, ConnectionError) as e:
-                _logger.debug("agent_read_error", error=str(e))
+                _logger.warning("agent_read_error", error=str(e))
                 break
 
     async def send_command(
@@ -702,6 +719,12 @@ class GuestAgentClient:
         Returns:
             tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
         """
+        _logger.debug(
+            "guest_send_command_called",
+            command=command,
+            args_count=len(args) if args else 0,
+            time_limit=time_limit,
+        )
         if self._writer is None or not self.connected:
             return (-1, "", "Not connected to guest agent")
 
@@ -737,7 +760,7 @@ class GuestAgentClient:
                             )
                             break
                     except TimeoutError:
-                        _logger.debug("guest_command_poll_timeout")
+                        _logger.debug("guest_command_poll_timeout", exc_info=True)
                         continue
 
             except (OSError, ConnectionError) as e:
@@ -758,7 +781,7 @@ class GuestAgentClient:
                 msg = self._message_queue.get_nowait()
                 messages.append(msg)
             except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty")
+                _logger.debug("message_queue_empty", exc_info=True)
                 break
         return messages
 
@@ -805,6 +828,12 @@ class QEMUSandbox(SandboxBase):
         self._qemu_pid: int | None = None
         self._vnc_port: int | None = None
         self._active_captures: dict[str, Path] = {}
+        _logger.info(
+            "qemu_sandbox_initialized",
+            guest_os=self._qemu_config.guest_os.value,
+            memory_mb=self._qemu_config.memory_mb,
+            cpu_cores=self._qemu_config.cpu_cores,
+        )
 
     @property
     def qemu_config(self) -> QEMUConfig:
@@ -968,7 +997,7 @@ class QEMUSandbox(SandboxBase):
                     return AcceleratorType.KVM
 
         except (OSError, RuntimeError, TimeoutError) as e:
-            _logger.debug("acceleration_detection_failed", error=str(e))
+            _logger.warning("acceleration_detection_failed", error=str(e))
 
         _logger.info("using_tcg_software_emulation", accelerator="tcg")
         return AcceleratorType.TCG
@@ -992,6 +1021,7 @@ class QEMUSandbox(SandboxBase):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 if sock.connect_ex(("127.0.0.1", port)) != 0:
                     return port
+        _logger.error("free_port_search_exhausted", port_start=start, port_end=end)
         raise SandboxError(_ERR_NO_FREE_PORTS)
 
     @staticmethod
@@ -1084,9 +1114,14 @@ class QEMUSandbox(SandboxBase):
             ValueError: If the guest OS type is unsupported.
         """
         if self._qemu_path is None:
+            _logger.error("qemu_command_build_failed_no_path")
             raise SandboxError(_ERR_QEMU_PATH)
 
         if self._qemu_config.image_path is None or not await asyncio.to_thread(self._qemu_config.image_path.exists):
+            _logger.error(
+                "qemu_command_build_failed_no_image",
+                image_path=str(self._qemu_config.image_path) if self._qemu_config.image_path else None,
+            )
             raise SandboxError(_ERR_NO_IMAGE)
 
         cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
@@ -1139,6 +1174,7 @@ class QEMUSandbox(SandboxBase):
                     "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
                 ])
             else:
+                _logger.error("qemu_command_build_failed_guest_os", guest_os=str(self._qemu_config.guest_os))
                 raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
         cmd.extend([
@@ -1192,6 +1228,7 @@ class QEMUSandbox(SandboxBase):
             SandboxError: If qemu_pid is None.
         """
         if qemu_pid is None:
+            _logger.error("qemu_start_failed_no_pid")
             raise SandboxError(_ERR_QEMU_START)
 
     async def start(self) -> None:
@@ -1225,6 +1262,7 @@ class QEMUSandbox(SandboxBase):
 
             cmd = await self._build_qemu_command()
             _logger.info("qemu_starting", command=" ".join(cmd))
+            _logger.info("subprocess_spawning", argv=cmd, executable=cmd[0] if cmd else None)
 
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -1343,11 +1381,11 @@ class QEMUSandbox(SandboxBase):
                     pid = int(pid_content.strip())
                     try:
                         ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
-                        _logger.debug("cleanup_killed_orphan_qemu_tree", pid=pid)
+                        _logger.info("cleanup_terminated_orphan_qemu_tree", pid=pid)
                     except psutil.NoSuchProcess:
-                        _logger.debug("cleanup_orphan_already_exited", pid=pid)
+                        _logger.debug("cleanup_orphan_already_exited", pid=pid, exc_info=True)
                 except (OSError, ValueError) as e:
-                    _logger.debug("cleanup_pid_check_failed", error=str(e))
+                    _logger.warning("cleanup_pid_check_failed", error=str(e))
 
         if self._temp_dir is not None and await asyncio.to_thread(self._temp_dir.exists):
             try:
@@ -1999,6 +2037,11 @@ echo %ERRORLEVEL% > "{self.GUEST_SHARED_PATH_WINDOWS}output\\{result_name}"
 echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 """
         else:
+            _logger.error(
+                "execution_script_unsupported_guest_os",
+                guest_os=str(self._qemu_config.guest_os),
+                script_id=script_id,
+            )
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
         return script_name, script_content
 
@@ -2927,9 +2970,11 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             SandboxError: If the sandbox is not running or QMP is disconnected.
         """
         if self.state.status != "running":
+            _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
             raise SandboxError(_ERR_NOT_RUNNING)
 
         if self._qmp is None:
+            _logger.error("anti_evasion_skipped_qmp_not_connected", profile=profile)
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
         applied: dict[str, Any] = {"profile": profile, "techniques": []}
@@ -3087,9 +3132,11 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             SandboxError: If extraction fails.
         """
         if self.state.status != "running":
+            _logger.error("dropped_files_extraction_skipped_not_running", state=self.state.status)
             raise SandboxError(_ERR_NOT_RUNNING)
 
         if self._shared_folder is None:
+            _logger.error("dropped_files_extraction_shared_folder_not_initialized")
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         extract_id = secrets.token_hex(8)
@@ -3137,7 +3184,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         try:
             await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
         except OSError as e:
-            _logger.debug("staging_dir_cleanup_failed", error=str(e))
+            _logger.warning("staging_dir_cleanup_failed", error=str(e), staging_dir=str(staging_dir))
 
         _logger.info("dropped_files_extracted", zip_path=str(zip_path))
 
@@ -3260,7 +3307,7 @@ rule PackedBinary {
                     file_matches = await asyncio.to_thread(compiled_rules.match, filepath=str(scan_file))
                     matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
                 except (OSError, RuntimeError) as e:
-                    _logger.debug("yara_file_scan_error", file=str(scan_file), error=str(e))
+                    _logger.warning("yara_file_scan_error", file=str(scan_file), error=str(e))
 
         _logger.info("yara_scan_complete", match_count=len(matches), scan_target=scan_target)
         return matches
