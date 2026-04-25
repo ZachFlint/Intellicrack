@@ -46,7 +46,7 @@ from intellicrack.ui.win32_embed import poll_and_embed
 if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
 
-_logger = get_logger("ui.panels.x64dbg")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
@@ -1078,7 +1078,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             pid = int(pid_text)
         except ValueError:
-            _logger.debug("invalid_pid_input", input=pid_text)
+            _logger.warning("invalid_pid_input", input_text=pid_text)
             self._console_output.appendPlainText(f"[!] Invalid PID: {pid_text}")
             return
 
@@ -1256,7 +1256,7 @@ class X64DbgPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._console_output.appendPlainText(f"[-] Step {direction} failed: {exc}")
-        _logger.warning("x64dbg_step_%s_failed", direction, error=str(exc))
+        _logger.warning("x64dbg_step_failed", direction=direction, error=str(exc))
         self._step_into_btn.setEnabled(True)
         self._step_over_btn.setEnabled(True)
         self._step_out_btn.setEnabled(True)
@@ -1292,7 +1292,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
-            _logger.debug("invalid_breakpoint_address", input=addr_text)
+            _logger.warning("invalid_breakpoint_address", input_text=addr_text)
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
@@ -1343,7 +1343,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_item.text(), 16)
         except ValueError:
-            _logger.debug("invalid_breakpoint_address_from_table")
+            _logger.warning("invalid_breakpoint_address_from_table", input_text=addr_item.text())
             return
 
         if self._bridge is None:
@@ -1390,6 +1390,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_item.text(), 16)
         except ValueError:
+            _logger.warning("x64dbg_enable_breakpoint_invalid_address", input_text=addr_item.text())
             return
 
         self._enable_bp_btn.setEnabled(False)
@@ -1412,6 +1413,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_item.text(), 16)
         except ValueError:
+            _logger.warning("x64dbg_disable_breakpoint_invalid_address", input_text=addr_item.text())
             return
 
         self._disable_bp_btn.setEnabled(False)
@@ -1556,7 +1558,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             value = int(val_text, 16) if val_text.startswith("0x") else int(val_text, 0)
         except ValueError:
-            _logger.debug("invalid_register_value", register=reg_name, input=val_text)
+            _logger.warning("invalid_register_value", register=reg_name, input_text=val_text)
             self._console_output.appendPlainText(f"[!] Invalid value for {reg_name}: {val_text}")
             return
 
@@ -1603,14 +1605,14 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
         except ValueError:
-            _logger.debug("invalid_memory_address", input=addr_text)
+            _logger.warning("invalid_memory_address", input_text=addr_text)
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
         try:
             size = int(size_text) if size_text else 256
         except ValueError:
-            _logger.debug("invalid_memory_size_using_default", input=size_text)
+            _logger.warning("invalid_memory_size_using_default", input_text=size_text)
             size = 256
 
         self._mem_read_btn.setEnabled(False)
@@ -2273,6 +2275,11 @@ class X64DbgPanel(AnalysisPanelBase):
             base = int(base_item.text(), 16)
             size = int(size_item.text(), 16)
         except ValueError:
+            _logger.warning(
+                "x64dbg_dump_memmap_region_invalid_values",
+                base_text=base_item.text(),
+                size_text=size_item.text(),
+            )
             return
         path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
         if not path:
@@ -2293,6 +2300,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             size = int(size_text)
         except ValueError:
+            _logger.warning("x64dbg_alloc_memory_invalid_size", input_text=size_text)
             return
         prot = self._alloc_prot_combo.currentText()
         self._run_async(
@@ -2371,6 +2379,11 @@ class X64DbgPanel(AnalysisPanelBase):
             address = int(addr_text, 0)
             size = int(size_text) if size_text else 256
         except ValueError:
+            _logger.warning(
+                "x64dbg_dump_memory_invalid_values",
+                address_text=addr_text,
+                size_text=size_text,
+            )
             return
         path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
         if not path:
@@ -2432,6 +2445,11 @@ class X64DbgPanel(AnalysisPanelBase):
             address = int(addr_text, 0)
             size = int(size_text) if size_text else 1
         except ValueError:
+            _logger.warning(
+                "x64dbg_nop_range_invalid_values",
+                address_text=addr_text,
+                size_text=size_text,
+            )
             return
         self._run_async(
             self._bridge.nop_range(address, size),
@@ -2452,6 +2470,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             tid = int(tid_item.text())
         except ValueError:
+            _logger.warning("x64dbg_suspend_thread_invalid_tid", input_text=tid_item.text())
             return
         self._run_async(
             self._bridge.suspend_thread(tid),
@@ -2472,6 +2491,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             tid = int(tid_item.text())
         except ValueError:
+            _logger.warning("x64dbg_resume_thread_invalid_tid", input_text=tid_item.text())
             return
         self._run_async(
             self._bridge.resume_thread(tid),
@@ -2492,6 +2512,7 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             tid = int(tid_item.text())
         except ValueError:
+            _logger.warning("x64dbg_switch_thread_invalid_tid", input_text=tid_item.text())
             return
         self._run_async(
             self._bridge.switch_thread(tid),

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import X64DbgBridge
 
 
-_logger = get_logger("ui.panels.stack_viewer")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 8
 _PANEL_SPACING: Final[int] = 8
@@ -352,7 +352,7 @@ class StackFrameTable(QTableWidget):
                 address = int(addr_item.text(), 16)
                 self.frame_clicked.emit(address)
             except ValueError:
-                _logger.debug("stack_frame_address_parse_failed")
+                _logger.warning("stack_frame_address_parse_failed", row=row, address_text=addr_item.text())
 
     def _on_cell_double_clicked(self, row: int, _column: int) -> None:
         """Handle cell double-click.
@@ -366,7 +366,7 @@ class StackFrameTable(QTableWidget):
                 address = int(addr_item.text(), 16)
                 self.frame_double_clicked.emit(address)
             except ValueError:
-                _logger.debug("stack_frame_address_parse_failed")
+                _logger.warning("stack_frame_address_parse_failed", row=row, address_text=addr_item.text())
 
     def set_frames(self, frames: list[StackFrame]) -> None:
         """Populate the table with stack frames.

@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
     ScriptExecutor = Callable[[str, str, str], str | None]
 
-_logger = get_logger("ui.panels.script_manager")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 8
 _PANEL_MARGIN_INNER: Final[int] = 4
@@ -832,12 +832,13 @@ class ScriptManagerPanel(QWidget):
         )
 
         if file_path:
+            content: str | None = None
             try:
                 content = Path(file_path).read_text(encoding="utf-8")
             except OSError:
                 _logger.exception("script_file_load_failed", path=file_path)
                 QMessageBox.critical(self, "Error", "Failed to load file. Check logs for details.")
-            else:
+            if content is not None:
                 self._editor.set_content(content)
                 name = Path(file_path).stem
                 self._name_edit.setText(name)
@@ -865,13 +866,17 @@ class ScriptManagerPanel(QWidget):
 
         script = self._build_script(name, script_type, content)
 
+        validation_completed = False
+        is_valid = False
+        error_msg: str | None = None
         try:
             is_valid, error_msg = self._validator.validate(script)
+            validation_completed = True
         except (RuntimeError, ValueError):
             _logger.exception("script_validation_failed", script_name=name)
             self._status_bar.showMessage("Validation error. Check logs for details.")
             self._set_status_style("error")
-        else:
+        if validation_completed:
             if is_valid:
                 self._status_bar.showMessage("Validation passed")
                 self._set_status_style("success")

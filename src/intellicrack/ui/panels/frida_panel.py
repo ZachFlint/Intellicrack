@@ -46,7 +46,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from intellicrack.bridges.frida_bridge import FridaBridge
 
-_logger = get_logger("ui.panels.frida")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
@@ -197,7 +197,7 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.detach())
             except (RuntimeError, ConnectionError, OSError):
-                _logger.debug("frida_detach_skipped", exc_info=True)
+                _logger.warning("frida_detach_skipped", exc_info=True)
         self._attached_pid = None
 
     def _create_editor_section(self) -> QWidget:
@@ -508,7 +508,7 @@ class FridaPanel(AnalysisPanelBase):
         try:
             pid = int(target)
         except ValueError:
-            _logger.debug("frida_attach_by_name_fallback", target=target)
+            _logger.warning("frida_attach_by_name_fallback", target=target)
             self._run_async(
                 self._bridge.attach_by_name(target),
                 on_success=lambda _: self._on_attach_name_success(target),
@@ -567,7 +567,7 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        _logger.debug("frida_detach_started", pid=self._attached_pid)
+        _logger.info("frida_detach_started", pid=self._attached_pid)
         self._detach_btn.setEnabled(False)
 
         self._run_async(
@@ -1845,6 +1845,7 @@ class FridaPanel(AnalysisPanelBase):
         try:
             return int(text, 16)
         except ValueError:
+            _logger.warning("frida_address_parse_failed", input_text=text)
             return None
 
     def _create_symbols_section(self) -> QWidget:
@@ -2227,6 +2228,7 @@ class FridaPanel(AnalysisPanelBase):
         try:
             pid = int(pid_item.text())
         except ValueError:
+            _logger.warning("frida_resume_child_pid_parse_failed", input_text=pid_item.text())
             return
         self._run_async(
             self._bridge.resume_child(pid),

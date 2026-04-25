@@ -37,7 +37,7 @@ if TYPE_CHECKING:
         QTreeWidgetItem,
     )
 
-_logger = get_logger("ui.panels.qt_compat")
+_logger = get_logger(__name__)
 
 _SORT_ENABLED = "setSortingEnabled"
 _SELECTION_MODE = "setSelectionMode"

@@ -64,7 +64,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.ghidra import GhidraBridge
 
-_logger = get_logger("ui.panels.ghidra")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
@@ -97,11 +97,13 @@ _ASCII_PRINTABLE_MAX: Final[int] = 127
 try:
     from intellicrack.ui.panels.graph_view import CFGGraphView
 except ImportError:
+    _logger.debug("ghidra_cfg_graph_view_unavailable", exc_info=True)
     CFGGraphView = None
 
 try:
     from intellicrack.ui.highlighter import PythonSyntaxHighlighter
 except ImportError:
+    _logger.debug("ghidra_python_syntax_highlighter_unavailable", exc_info=True)
     PythonSyntaxHighlighter = None
 
 
@@ -1646,6 +1648,13 @@ class GhidraPanel(AnalysisPanelBase):
         if bridge is None:
             return
 
+        binary_path = str(bridge.state.target_path) if bridge.state.target_path is not None else "unset"
+        _logger.info(
+            "ghidra_function_decompile_requested",
+            binary_path=binary_path,
+            offset=hex(address),
+        )
+
         self._run_async(
             bridge.decompile(address),
             on_success=self._apply_decompiled,
@@ -1804,12 +1813,18 @@ class GhidraPanel(AnalysisPanelBase):
         """Log and display a bridge operation failure.
 
         Args:
-            event: Structured log event name.
+            event: Operation identifier used as a structured log kwarg.
             label: Human-readable operation label for the status bar.
             address: Target address that the operation was attempted on.
             error: Exception or error object from the bridge.
         """
-        _logger.warning(event, address=hex(address))
+        _logger.warning(
+            "ghidra_bridge_op_failed",
+            operation=event,
+            address=hex(address),
+            error=str(error),
+            error_type=type(error).__name__,
+        )
         self._set_status(f"{label} failed: {error}")
 
     # ------------------------------------------------------------------
@@ -2510,7 +2525,15 @@ class GhidraPanel(AnalysisPanelBase):
             bytes.fromhex(clean_hex)
         except ValueError:
             self._set_status("Invalid hex data")
+            _logger.warning("ghidra_write_bytes_invalid_hex", input_text=hex_data, address=hex(addr))
             return
+        binary_path = str(bridge.state.target_path) if bridge.state.target_path is not None else "unset"
+        _logger.info(
+            "ghidra_write_bytes_requested",
+            binary_path=binary_path,
+            address=hex(addr),
+            byte_count=len(clean_hex) // 2,
+        )
         self._run_async(
             bridge.write_bytes(addr, hex_data),
             on_success=lambda _: self._set_status(f"Wrote {len(clean_hex) // 2} byte(s) at 0x{addr:X}"),

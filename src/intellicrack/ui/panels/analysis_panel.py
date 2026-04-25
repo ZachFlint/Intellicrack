@@ -33,7 +33,7 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 if TYPE_CHECKING:
     from intellicrack.core.types import BridgeAnalysisSummary
 
-_logger = get_logger("ui.panels.analysis")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
@@ -221,7 +221,7 @@ class BridgeAnalysisPanel(QWidget):
             try:
                 self.address_navigate.emit(int(text, 16))
             except ValueError:
-                _logger.debug("invalid_hex_address", text=text)
+                _logger.warning("invalid_hex_address", address_text=text)
 
     def set_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Populate the panel with bridge analysis data.
@@ -345,10 +345,15 @@ class BridgeAnalysisPanel(QWidget):
         Returns:
             BridgeAnalysisSummary | None: The current BridgeAnalysisSummary or None if not set.
         """
+        _logger.debug(
+            "analysis_panel_current_analysis_requested",
+            has_analysis=self._current_analysis is not None,
+        )
         return self._current_analysis
 
     def clear(self) -> None:
         """Clear all displayed data."""
+        _logger.info("analysis_panel_cleared")
         self._current_analysis = None
         self._binary_label.setText("No binary loaded")
         self._format_label.setText("")

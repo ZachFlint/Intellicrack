@@ -44,7 +44,7 @@ _ESIL_WELCOME: Final[str] = (
 if TYPE_CHECKING:
     from intellicrack.bridges.cutter import CutterBridge
 
-_logger = get_logger("ui.panels.cutter_tabs")
+_logger = get_logger(__name__)
 
 RunAsyncFn = Callable[
     [Coroutine[object, object, object], Callable[[object], None] | None, Callable[[object], None] | None],
