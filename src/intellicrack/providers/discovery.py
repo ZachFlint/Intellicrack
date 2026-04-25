@@ -100,7 +100,8 @@ class DiscoveryCache:
         self._ttl_seconds = ttl_seconds
         self._cache: dict[ProviderName, _CacheEntry] = {}
         self._lock = asyncio.Lock()
-        self._logger = get_logger("providers.discovery.cache")
+        self._logger = get_logger(__name__).bind(component="discovery_cache")
+        self._logger.info("discovery_cache_initialized", ttl_seconds=ttl_seconds)
 
     def get(self, provider: ProviderName) -> list[ModelInfo] | None:
         """Get cached models for a provider.
@@ -185,6 +186,7 @@ class DiscoveryCache:
         Args:
             path: File path to save cache to.
         """
+        self._logger.info("cache_save_starting", cache_path=str(path))
         async with self._lock:
             try:
                 data: dict[str, object] = {
@@ -232,6 +234,7 @@ class DiscoveryCache:
         Args:
             path: File path to load cache from.
         """
+        self._logger.info("cache_load_starting", cache_path=str(path))
         async with self._lock:
             exists = await asyncio.to_thread(path.exists)
             if not exists:
@@ -313,7 +316,12 @@ class ModelDiscovery:
         self._timeout = timeout_per_provider
         self._events: list[DiscoveryEvent] = []
         self._lock = asyncio.Lock()
-        self._logger = get_logger("providers.discovery")
+        self._logger = get_logger(__name__)
+        self._logger.info(
+            "model_discovery_initialized",
+            cache_ttl_seconds=cache_ttl,
+            timeout_per_provider=timeout_per_provider,
+        )
 
     @property
     def cache(self) -> DiscoveryCache:

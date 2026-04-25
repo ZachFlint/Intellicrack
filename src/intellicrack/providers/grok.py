@@ -98,7 +98,8 @@ class GrokProvider(LLMProviderBase):
         super().__init__()
         self.client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
-        self._logger = get_logger("providers.grok").bind(provider="grok")
+        self._logger = get_logger(__name__).bind(provider="grok")
+        self._logger.info("grok_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -300,6 +301,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
         """
         if not self.connected or self.client is None:
+            self._logger.error("grok_chat_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False

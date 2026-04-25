@@ -23,20 +23,20 @@ from intellicrack.core.logging import get_logger
 try:
     import torch as _torch
 except ImportError:
-    get_logger("providers.model_loader").debug("torch_import_unavailable")
+    get_logger(__name__).debug("torch_import_unavailable")
     _torch = None
 
 try:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 except (ImportError, ValueError):
-    get_logger("providers.model_loader").debug("transformers_automodel_unavailable")
+    get_logger(__name__).debug("transformers_automodel_unavailable")
     AutoModelForCausalLM = None
     AutoTokenizer = None
 
 try:
     from transformers import BitsAndBytesConfig
 except (ImportError, ValueError):
-    get_logger("providers.model_loader").debug("bitsandbytes_config_unavailable")
+    get_logger(__name__).debug("bitsandbytes_config_unavailable")
     BitsAndBytesConfig = None
 
 from intellicrack.providers.xpu_utils import clear_xpu_cache, get_xpu_memory_info, initialize_xpu, is_xpu_available
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 
-_logger = get_logger("providers.model_loader")
+_logger = get_logger(__name__)
 
 _ERR_MISSING_DEPS = "transformers and torch are required for model loading"
 _ERR_XPU_NOT_AVAILABLE = "XPU is not available. Use load_model_for_cpu instead."
@@ -124,6 +124,7 @@ class ModelCache:
         self._lock = threading.RLock()
         self._max_memory_bytes = max_memory_bytes
         self._current_memory_bytes: int = 0
+        _logger.info("model_cache_initialized", max_memory_bytes=max_memory_bytes)
 
     @property
     def max_memory_bytes(self) -> int:
@@ -254,7 +255,7 @@ class ModelCache:
             _, oldest_model = self._cache.popitem(last=False)
             self._current_memory_bytes -= oldest_model.memory_usage_bytes
             _unload_model(oldest_model)
-            _logger.debug(
+            _logger.info(
                 "model_evicted",
                 model_id=oldest_model.model_id,
                 memory_freed_mb=oldest_model.memory_usage_bytes // (1024 * 1024),
@@ -276,9 +277,9 @@ def _unload_model(loaded_model: LoadedModel) -> None:
             if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
                 _torch.xpu.empty_cache()
         except (RuntimeError, OSError) as inner_exc:
-            _logger.debug("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
+            _logger.warning("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
     except (RuntimeError, OSError, AttributeError) as exc:
-        _logger.debug("model_unload_failed", error=str(exc))
+        _logger.warning("model_unload_failed", error=str(exc))
 
 
 def estimate_model_memory(
@@ -466,9 +467,11 @@ def load_model_for_xpu(
         ImportError: If required packages are not installed.
     """
     if _torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+        _logger.error("xpu_load_missing_dependencies", model_id=config.model_id)
         raise ImportError(_ERR_MISSING_DEPS)
 
     if not is_xpu_available():
+        _logger.error("xpu_load_xpu_unavailable", model_id=config.model_id)
         raise RuntimeError(_ERR_XPU_NOT_AVAILABLE)
 
     dtype_str = config.dtype
@@ -580,6 +583,7 @@ def load_model_for_cpu(
         ImportError: If required packages are not installed.
     """
     if _torch is None or AutoModelForCausalLM is None or AutoTokenizer is None:
+        _logger.error("cpu_load_missing_dependencies", model_id=config.model_id)
         raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_str = config.dtype
@@ -676,6 +680,7 @@ def _get_torch_dtype(dtype_str: str) -> torch.dtype:
         ImportError: If torch is not installed.
     """
     if _torch is None:
+        _logger.error("get_torch_dtype_torch_unavailable", requested_dtype=dtype_str)
         raise ImportError(_ERR_MISSING_DEPS)
 
     dtype_map: dict[str, torch.dtype] = {

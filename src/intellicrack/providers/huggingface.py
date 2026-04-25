@@ -155,7 +155,8 @@ class HuggingFaceProvider(LLMProviderBase):
         self._api_token: str | None = None
         self._api_base: str | None = None
         self._timeout: float = 120.0
-        self._logger = get_logger("providers.huggingface").bind(provider="huggingface")
+        self._logger = get_logger(__name__).bind(provider="huggingface")
+        self._logger.info("huggingface_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -268,10 +269,11 @@ class HuggingFaceProvider(LLMProviderBase):
     async def _close_client(self) -> None:
         """Close the inference client if present, ignoring shutdown errors."""
         if self.client is not None:
+            self._logger.info("huggingface_client_closing")
             try:
                 await self.client.close()
             except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
-                self._logger.debug("close_client_error", error=str(exc))
+                self._logger.warning("huggingface_client_close_error", error=str(exc))
             self.client = None
 
     async def disconnect(self) -> None:
@@ -762,9 +764,10 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             if self._cancel_requested:
-                self._logger.debug(
-                    "huggingface_stream_cancelled_with_timeout",
+                self._logger.warning(
+                    "huggingface_stream_cancelled_during_timeout",
                     model=model,
+                    exc_info=True,
                 )
                 return
             self._logger.warning(
@@ -775,10 +778,11 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
         except (ConnectionError, OSError, ValueError) as exc:
             if self._cancel_requested:
-                self._logger.debug(
-                    "huggingface_stream_cancelled_with_error",
+                self._logger.warning(
+                    "huggingface_stream_cancelled_during_transport",
                     model=model,
                     error_type=type(exc).__name__,
+                    exc_info=True,
                 )
                 return
             self._logger.warning(

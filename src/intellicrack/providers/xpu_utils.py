@@ -24,7 +24,7 @@ from intellicrack.core.process_manager import ProcessManager
 try:
     import torch as _torch_module
 except ImportError:
-    get_logger("providers.xpu_utils").warning(
+    get_logger(__name__).warning(
         "torch_import_unavailable",
         impact="XPU detection is disabled; install pytorch with XPU support to enable",
     )
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     import torch
 
 
-_logger = get_logger("providers.xpu_utils")
+_logger = get_logger(__name__)
 
 _B580_DEVICE_IDS: frozenset[str] = frozenset({"0xe20b", "e20b", "E20B", "0xE20B"})
 _ARC_DEVICE_PATTERNS: tuple[str, ...] = ("Arc", "A770", "A750", "A380", "A310", "B580")
@@ -149,7 +149,7 @@ def _get_device_name_from_sycl(device_index: int) -> str:
             if hasattr(props, "name"):
                 return str(props.name)
     except (RuntimeError, OSError, AttributeError) as exc:
-        _logger.debug("sycl_device_name_failed", error=str(exc))
+        _logger.warning("sycl_device_name_failed", error=str(exc))
     return ""
 
 
@@ -193,7 +193,7 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
                 for gpu in gpu_entries
             )
     except (OSError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
-        _logger.debug("windows_gpu_info_failed", error=str(exc))
+        _logger.warning("windows_gpu_info_failed", error=str(exc))
 
     return gpus
 
@@ -247,7 +247,7 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
                 if not device_name and hasattr(props, "name"):
                     device_name = str(props.name)
         except (RuntimeError, OSError, AttributeError) as exc:
-            _logger.debug("xpu_properties_failed", error=str(exc))
+            _logger.warning("xpu_properties_failed", error=str(exc))
 
         if not device_name or not driver_version:
             windows_gpus = _get_windows_gpu_info()
@@ -282,7 +282,7 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
         )
 
     except (RuntimeError, OSError, AttributeError) as exc:
-        _logger.debug("xpu_device_info_failed", device_index=device_index, error=str(exc))
+        _logger.warning("xpu_device_info_failed", device_index=device_index, error=str(exc))
         return None
 
 
@@ -412,7 +412,7 @@ def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> N
         torch_mod.xpu.synchronize()
         _logger.debug("xpu_device_validation_passed", device=str(device))
     except (RuntimeError, OSError) as exc:
-        _logger.debug("xpu_device_validation_failed", device=str(device), error=str(exc))
+        _logger.warning("xpu_device_validation_failed", device=str(device), error=str(exc))
         msg = f"XPU device validation failed: {exc}"
         raise RuntimeError(msg) from exc
 
@@ -468,9 +468,9 @@ def clear_xpu_cache() -> None:
     try:
         if hasattr(torch, "xpu") and torch.xpu.is_available() and hasattr(torch.xpu, "empty_cache"):
             torch.xpu.empty_cache()
-            _logger.debug("xpu_cache_cleared")
+            _logger.info("xpu_cache_cleared")
     except (RuntimeError, OSError) as exc:
-        _logger.debug("xpu_cache_clear_failed", error=str(exc))
+        _logger.warning("xpu_cache_clear_failed", error=str(exc))
 
 
 def check_windows_requirements() -> tuple[bool, list[str]]:

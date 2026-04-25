@@ -67,6 +67,8 @@ _BLOCKING_FINISH_REASONS: Final = frozenset({
     "IMAGE_PROHIBITED_CONTENT",
 })
 
+_logger = get_logger(__name__)
+
 
 class GoogleProvider(LLMProviderBase):
     """Google Gemini API provider implementation.
@@ -79,7 +81,8 @@ class GoogleProvider(LLMProviderBase):
         super().__init__()
         self.client: genai.Client | None = None
         self._current_task: asyncio.Task[object] | None = None
-        self._logger = get_logger("providers.google").bind(provider="google")
+        self._logger = get_logger(__name__).bind(provider="google")
+        self._logger.info("google_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -602,6 +605,7 @@ class GoogleProvider(LLMProviderBase):
             if block_reason is not None:
                 reason_name = getattr(block_reason, "name", str(block_reason))
                 msg = f"{_MSG_CONTENT_BLOCKED}: prompt {reason_name}"
+                _logger.warning("google_prompt_blocked", reason=reason_name)
                 raise ProviderError(msg)
 
         candidates = getattr(response, "candidates", None)
@@ -616,8 +620,10 @@ class GoogleProvider(LLMProviderBase):
             if reason_name in _BLOCKING_FINISH_REASONS:
                 if reason_name == "PROHIBITED_CONTENT":
                     msg = f"{_MSG_PROHIBITED_CONTENT}: {reason_name}"
+                    _logger.warning("google_response_prohibited_content", reason=reason_name)
                     raise ProviderError(msg)
                 msg = f"{_MSG_CONTENT_BLOCKED}: {reason_name}"
+                _logger.warning("google_response_blocked", reason=reason_name)
                 raise ProviderError(msg)
 
     @staticmethod
