@@ -61,10 +61,13 @@ from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog
 from intellicrack.ui.tools import ToolOutputPanel
 
 
+_logger = get_logger(__name__)
+
+
 try:
     from intellicrack.providers.model_loader import get_global_model_cache, set_global_cache_size
 except ImportError:
-    get_logger("ui.app").debug("model_loader_unavailable")
+    _logger.debug("model_loader_unavailable")
     get_global_model_cache = None
     set_global_cache_size = None
 
@@ -79,9 +82,6 @@ if TYPE_CHECKING:
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.template_manager import TemplateManager
-
-
-_logger = get_logger("ui.app")
 
 _MAX_RESULT_DISPLAY_LEN = 500
 
@@ -100,7 +100,7 @@ def _unhandled_exception_hook(
         exc_value: Exception instance.
         exc_tb: Traceback object.
     """
-    _logger.critical(
+    _logger.error(
         "unhandled_exception",
         exc_type=exc_type.__name__,
         exc_value=str(exc_value),
@@ -917,8 +917,8 @@ class MainWindow(QMainWindow):
             scripts_dir.mkdir(parents=True, exist_ok=True)
             script_mgr = ScriptManager(scripts_dir)
             self._orchestrator.set_script_manager(script_mgr)
-        except OSError as e:
-            _logger.debug("script_manager_init_skipped", error=str(e))
+        except OSError:
+            _logger.warning("script_manager_init_skipped")
 
         available_tools = self._orchestrator.get_available_tool_names()
         _logger.info("orchestrator_tools_available", tools=available_tools)
@@ -941,8 +941,8 @@ class MainWindow(QMainWindow):
                 "tool_installer_initialized",
                 tools_dir=str(tools_dir),
             )
-        except OSError as e:
-            _logger.debug("tool_installer_init_skipped", error=str(e))
+        except OSError:
+            _logger.warning("tool_installer_init_skipped")
 
     async def _refresh_tool_status(self) -> dict[str, object]:
         """Refresh tool installation status asynchronously.
@@ -1045,7 +1045,7 @@ class MainWindow(QMainWindow):
             call: The tool call being executed.
         """
         self.status_update.emit(f"Running: {call.tool_name}.{call.function_name}")
-        self.tool_panel.log(f"[CALL] {call.tool_name}.{call.function_name}")
+        self.tool_panel.append_log_message(f"[CALL] {call.tool_name}.{call.function_name}")
 
     def _on_tool_result(self, result: ToolResult) -> None:
         """Handle tool result notification.
@@ -1054,13 +1054,13 @@ class MainWindow(QMainWindow):
             result: The tool execution result.
         """
         status = "SUCCESS" if result.success else "FAILED"
-        self.tool_panel.log(f"[{status}] Duration: {result.duration_ms:.1f}ms")
+        self.tool_panel.append_log_message(f"[{status}] Duration: {result.duration_ms:.1f}ms")
 
         if result.success and result.result:
             result_str = str(result.result)
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
                 result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
-            self.tool_panel.log(f"Result: {result_str}")
+            self.tool_panel.append_log_message(f"Result: {result_str}")
 
             tool_name = getattr(result, "tool_name", "")
             if tool_name == "patch_binary" and isinstance(result.result, dict):
@@ -1079,7 +1079,7 @@ class MainWindow(QMainWindow):
                 )
 
         if result.error:
-            self.tool_panel.log(f"Error: {result.error}")
+            self.tool_panel.append_log_message(f"Error: {result.error}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
         """Run an async operation in a worker thread.
@@ -1894,6 +1894,7 @@ class MainWindow(QMainWindow):
             try:
                 return int(value.strip())
             except ValueError:
+                _logger.warning("setting_int_coerce_failed", raw_value=value, default=default)
                 return default
         return default
 
@@ -2072,7 +2073,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="x64dbg", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="x64dbg")
             self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
 
     def on_open_cutter(self) -> None:
@@ -2088,7 +2089,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="Cutter", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="Cutter")
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
     def on_open_hxd(self) -> None:
@@ -2106,7 +2107,7 @@ class MainWindow(QMainWindow):
             if callable(start):
                 start()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="HxD", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="HxD")
             self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
 
     def _on_open_hex_editor(self) -> None:
@@ -2118,7 +2119,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="HexEditor", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="HexEditor")
             self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
     def _on_open_ghidra(self) -> None:
@@ -2136,7 +2137,7 @@ class MainWindow(QMainWindow):
                 return
             widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="Ghidra", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="Ghidra")
             self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
 
     def _on_open_frida(self) -> None:
@@ -2154,7 +2155,7 @@ class MainWindow(QMainWindow):
                 return
             panel.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="Frida", error=str(e))
+            _logger.exception("tool_open_failed", tool_name="Frida")
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")
 
     def _on_open_process(self) -> None:
@@ -2183,7 +2184,7 @@ class MainWindow(QMainWindow):
         try:
             import intellicrack_hexcore as _hc
         except ImportError:
-            _logger.debug("hexcore_unavailable_for_process_memory")
+            _logger.debug("hexcore_unavailable_for_process_memory", pid=pid)
             return
 
         try:
@@ -2237,7 +2238,7 @@ class MainWindow(QMainWindow):
 
         hex_bridge = self._orchestrator.get_typed_bridge("hex_editor")
         if hex_bridge is None:
-            _logger.debug("hex_bridge_unavailable_for_process_memory")
+            _logger.debug("hex_bridge_unavailable_for_process_memory", pid=pid)
             return
 
         open_fn = getattr(hex_bridge, "open_process_memory", None)

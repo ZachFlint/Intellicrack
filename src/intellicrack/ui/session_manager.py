@@ -41,7 +41,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
 
-_logger = get_logger("ui.session_manager")
+_logger = get_logger(__name__)
 
 _DIALOG_WIDTH: Final[int] = 800
 _DIALOG_HEIGHT: Final[int] = 500
@@ -316,15 +316,15 @@ class SessionManagerDialog(QDialog):
                 if "created_at" in session_data and isinstance(session_data["created_at"], str):
                     try:
                         session_data["created_at"] = datetime.fromisoformat(session_data["created_at"])
-                    except ValueError as e:
-                        _logger.debug("session_datetime_parse_failed", error=str(e))
+                    except ValueError:
+                        _logger.warning("session_datetime_parse_failed", field="created_at", session_id=session_data.get("id"))
                         session_data["created_at"] = datetime.now(tz=UTC)
 
                 if "updated_at" in session_data and isinstance(session_data["updated_at"], str):
                     try:
                         session_data["updated_at"] = datetime.fromisoformat(session_data["updated_at"])
-                    except ValueError as e:
-                        _logger.debug("session_datetime_parse_failed", error=str(e))
+                    except ValueError:
+                        _logger.warning("session_datetime_parse_failed", field="updated_at", session_id=session_data.get("id"))
                         session_data["updated_at"] = datetime.now(tz=UTC)
 
                 self._sessions.append(session_data)
@@ -586,6 +586,7 @@ class SessionManagerDialog(QDialog):
 
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
         if session_file.exists():
+            _logger.info("session_file_unlinking", session_id=session_id, path=str(session_file))
             try:
                 session_file.unlink()
             except OSError as e:
@@ -774,29 +775,19 @@ class SessionManagerDialog(QDialog):
         try:
             run_bridge_coroutine(manager.import_json(path, replace=replace))
         except FileNotFoundError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_file_missing",
-                title="Import Failed",
-                message=f"File not found:\n{path}",
-            )
+            _logger.warning("session_import_file_missing", path=str(path), error=str(e))
+            QMessageBox.warning(self, "Import Failed", f"File not found:\n{path}")
             return
         except ValueError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_invalid",
-                title="Import Failed",
-                message=f"Invalid session file:\n{e}",
-            )
+            _logger.warning("session_import_invalid", path=str(path), error=str(e))
+            QMessageBox.warning(self, "Import Failed", f"Invalid session file:\n{e}")
             return
         except (OSError, RuntimeError) as e:
             _logger.exception("session_import_failed", path=str(path))
             QMessageBox.warning(self, "Import Failed", f"Failed to import session:\n{e}")
             return
 
-        _logger.debug("session_imported", session_id=import_id, path=str(path))
+        _logger.info("session_imported", session_id=import_id, path=str(path))
         QMessageBox.information(self, "Import Complete", f"Session imported from:\n{path}")
         self._load_sessions()
 
@@ -828,19 +819,6 @@ class SessionManagerDialog(QDialog):
         )
         return reply == QMessageBox.StandardButton.Yes
 
-    def _report_import_error(self, path: Path, error: BaseException, *, event: str, title: str, message: str) -> None:
-        """Log an import failure and show a warning dialog to the user.
-
-        Args:
-            path: Path that was being imported.
-            error: Exception that was raised.
-            event: Structured-logging event name.
-            title: Dialog title.
-            message: Dialog body text.
-        """
-        _logger.warning(event, path=str(path), error=str(error))
-        QMessageBox.warning(self, title, message)
-
     def _peek_session_id(self, path: Path) -> tuple[bool, str | None]:
         """Peek at a session JSON file to extract its session identifier.
 
@@ -862,31 +840,16 @@ class SessionManagerDialog(QDialog):
             with path.open(encoding="utf-8") as f:
                 raw_data: object = json.load(f)
         except FileNotFoundError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_file_missing",
-                title="Import Failed",
-                message=f"File not found:\n{path}",
-            )
+            _logger.warning("session_import_file_missing", path=str(path), error=str(e))
+            QMessageBox.warning(self, "Import Failed", f"File not found:\n{path}")
             return False, None
         except json.JSONDecodeError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_json_invalid",
-                title="Import Failed",
-                message=f"Invalid JSON file:\n{e}",
-            )
+            _logger.warning("session_import_json_invalid", path=str(path), error=str(e))
+            QMessageBox.warning(self, "Import Failed", f"Invalid JSON file:\n{e}")
             return False, None
         except OSError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_read_failed",
-                title="Import Failed",
-                message=f"Failed to read file:\n{e}",
-            )
+            _logger.warning("session_import_read_failed", path=str(path), error=str(e))
+            QMessageBox.warning(self, "Import Failed", f"Failed to read file:\n{e}")
             return False, None
 
         if not isinstance(raw_data, dict):
@@ -916,10 +879,12 @@ class SessionManagerDialog(QDialog):
             with path.open(encoding="utf-8") as f:
                 raw_data: object = json.load(f)
         except json.JSONDecodeError as e:
-            self._report_import_error(path, e, event="session_import_failed", title="Import Failed", message=f"Invalid JSON file:\n{e}")
+            _logger.warning("session_import_failed", path=str(path), error=str(e), reason="invalid_json")
+            QMessageBox.warning(self, "Import Failed", f"Invalid JSON file:\n{e}")
             return
         except OSError as e:
-            self._report_import_error(path, e, event="session_import_failed", title="Import Failed", message=f"Failed to read file:\n{e}")
+            _logger.warning("session_import_failed", path=str(path), error=str(e), reason="read_failed")
+            QMessageBox.warning(self, "Import Failed", f"Failed to read file:\n{e}")
             return
 
         if not isinstance(raw_data, dict):
@@ -942,16 +907,11 @@ class SessionManagerDialog(QDialog):
         try:
             self._save_session_to_disk(import_data)
         except OSError as e:
-            self._report_import_error(
-                path,
-                e,
-                event="session_import_failed",
-                title="Import Failed",
-                message=f"Failed to write session file:\n{e}",
-            )
+            _logger.warning("session_import_failed", path=str(path), error=str(e), reason="write_failed")
+            QMessageBox.warning(self, "Import Failed", f"Failed to write session file:\n{e}")
             return
 
-        _logger.debug("session_imported", session_id=import_data.get("id"), path=str(path))
+        _logger.info("session_imported", session_id=import_data.get("id"), path=str(path))
         QMessageBox.information(self, "Import Complete", f"Session imported from:\n{path}")
         self._load_sessions()
 

@@ -74,7 +74,7 @@ _CUTTER_ASSET_PATTERN_WINDOWS: Final[str] = r".*[Ww]indows.*x86[_-]?64.*\.zip$"
 _CUTTER_ASSET_PATTERN_LINUX: Final[str] = r".*[Ll]inux.*x86[_-]?64.*\.(zip|AppImage|tar\.gz|tar\.xz)$"
 _CUTTER_ASSET_PATTERN_MACOS: Final[str] = r".*(macOS|[Dd]arwin).*x86[_-]?64.*\.(zip|dmg)$"
 
-_logger = get_logger("ui.tool_config")
+_logger = get_logger(__name__)
 
 _DIALOG_WIDTH: Final[int] = 750
 _DIALOG_HEIGHT: Final[int] = 550
@@ -141,7 +141,7 @@ class ToolInstallWorker(QThread):
         try:
             self._install_tool()
         except (RuntimeError, OSError, ValueError) as e:
-            _logger.exception("tool_install_failed", error=str(e))
+            _logger.exception("tool_install_failed")
             success = False
             self.install_finished.emit(success, f"Installation failed: {e}")
 
@@ -197,13 +197,13 @@ class ToolInstallWorker(QThread):
                                 pct = int(10 + (downloaded / total) * 70)
                                 self.progress.emit(pct)
 
-            except httpx.TimeoutException as exc:
-                _logger.exception("tool_download_timeout", tool_id=self._tool_id, error=str(exc))
+            except httpx.TimeoutException:
+                _logger.exception("tool_download_timeout", tool_id=self._tool_id)
                 success = False
                 self.install_finished.emit(success, "Download timed out")
                 return
-            except httpx.ConnectError as exc:
-                _logger.exception("tool_download_connect_error", tool_id=self._tool_id, error=str(exc))
+            except httpx.ConnectError:
+                _logger.exception("tool_download_connect_error", tool_id=self._tool_id)
                 success = False
                 self.install_finished.emit(success, "Could not connect to download server")
                 return
@@ -213,8 +213,8 @@ class ToolInstallWorker(QThread):
             try:
                 with zipfile.ZipFile(zip_path, "r") as zf:
                     zf.extractall(self._install_path)
-            except zipfile.BadZipFile as exc:
-                _logger.exception("tool_extraction_bad_zip", tool_id=self._tool_id, error=str(exc))
+            except zipfile.BadZipFile:
+                _logger.exception("tool_extraction_bad_zip", tool_id=self._tool_id)
                 success = False
                 self.install_finished.emit(success, "Downloaded file is not a valid ZIP archive")
                 return
@@ -299,14 +299,14 @@ class ToolInstallWorker(QThread):
         try:
             with httpx.Client(timeout=httpx.Timeout(_GITHUB_API_TIMEOUT, connect=_GITHUB_API_TIMEOUT)) as client:
                 response = client.get(api_url, headers=_GITHUB_API_HEADERS, follow_redirects=True)
-        except httpx.TimeoutException as exc:
-            _logger.exception("github_release_fetch_timeout", api_url=api_url, error=str(exc))
+        except httpx.TimeoutException:
+            _logger.exception("github_release_fetch_timeout", api_url=api_url)
             return None, "GitHub API request timed out"
-        except httpx.ConnectError as exc:
-            _logger.exception("github_release_fetch_connect_error", api_url=api_url, error=str(exc))
+        except httpx.ConnectError:
+            _logger.exception("github_release_fetch_connect_error", api_url=api_url)
             return None, "Could not connect to GitHub API"
         except httpx.HTTPError as exc:
-            _logger.exception("github_release_fetch_http_error", api_url=api_url, error=str(exc))
+            _logger.exception("github_release_fetch_http_error", api_url=api_url)
             return None, f"GitHub API request failed: {exc}"
 
         if response.status_code == HTTP_FORBIDDEN:
@@ -323,8 +323,8 @@ class ToolInstallWorker(QThread):
 
         try:
             data = cast("dict[str, Any]", response.json())
-        except ValueError as exc:
-            _logger.exception("github_release_json_parse_failed", api_url=api_url, error=str(exc))
+        except ValueError:
+            _logger.exception("github_release_json_parse_failed", api_url=api_url)
             return None, "Failed to parse GitHub API response"
 
         return data, ""
@@ -426,15 +426,18 @@ class ToolInstallWorker(QThread):
         )
 
         script_path = scripts_dir / "intellicrack_bridge.py"
+        _logger.info("ghidra_bridge_script_writing", path=str(script_path), size=len(bridge_script_content))
         script_path.write_text(bridge_script_content, encoding="utf-8")
 
         extensions_dir = ghidra_root / "Extensions" / "intellicrack_bridge"
         extensions_dir.mkdir(parents=True, exist_ok=True)
 
         ext_script_path = extensions_dir / "intellicrack_bridge.py"
+        _logger.info("ghidra_bridge_extension_writing", path=str(ext_script_path), size=len(bridge_script_content))
         ext_script_path.write_text(bridge_script_content, encoding="utf-8")
 
         install_script_path = extensions_dir / "install_bridge.py"
+        _logger.info("ghidra_bridge_install_script_writing", path=str(install_script_path))
         install_script_path.write_text(
             (
                 "from pathlib import Path\n"
@@ -457,6 +460,7 @@ class ToolInstallWorker(QThread):
         support_dir = ghidra_root / "support"
         support_dir.mkdir(parents=True, exist_ok=True)
         headless_script_path = support_dir / "intellicrack_headless_bridge.bat"
+        _logger.info("ghidra_headless_script_writing", path=str(headless_script_path))
         headless_script_path.write_text(
             (
                 "@echo off\n"
@@ -481,6 +485,7 @@ class ToolInstallWorker(QThread):
         )
 
         verify_script_path = ghidra_root / "verify_intellicrack_bridge.py"
+        _logger.info("ghidra_verify_script_writing", path=str(verify_script_path))
         verify_script_path.write_text(
             (
                 "import socket\n"
@@ -570,7 +575,7 @@ class ToolStatusCheckWorker(QThread):
             _logger.debug("tool_status_check_completed", tool_id=self._tool_id, available=is_available, status_message=message)
             self.status_checked.emit(self._tool_id, is_available, message)
         except (RuntimeError, OSError, ImportError) as e:
-            _logger.exception("tool_status_check_failed", tool_id=self._tool_id, error=str(e))
+            _logger.exception("tool_status_check_failed", tool_id=self._tool_id)
             is_available = False
             self.status_checked.emit(self._tool_id, is_available, f"Check failed: {e}")
 
@@ -713,11 +718,11 @@ class ToolStatusCheckWorker(QThread):
             if result.returncode == _RETURNCODE_SUCCESS:
                 return True, "Cutter available in PATH"
         except TimeoutExpired:
-            _logger.debug("cutter_path_check_timed_out")
+            _logger.warning("cutter_path_check_timed_out")
         except FileNotFoundError:
-            _logger.debug("cutter_executable_not_in_path")
-        except OSError as e:
-            _logger.debug("cutter_os_error", error=str(e))
+            _logger.warning("cutter_executable_not_in_path")
+        except OSError:
+            _logger.exception("cutter_os_error")
 
         return False, "Cutter executable not found"
 

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from PyQt6.sip import voidptr
 
 
-_logger = get_logger("ui.win32_embed")
+_logger = get_logger(__name__)
 
 _EMBED_MIN_WIDTH: Final[int] = 200
 _EMBED_MIN_HEIGHT: Final[int] = 150
