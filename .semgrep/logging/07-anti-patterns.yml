@@ -85,6 +85,16 @@ rules:
     languages: [python]
     patterns:
       - pattern: $L.log($LVL, ...)
+      - pattern-not: math.log(...)
+      - pattern-not: math.log2(...)
+      - pattern-not: math.log10(...)
+      - pattern-not: math.log1p(...)
+      - pattern-not: numpy.log(...)
+      - pattern-not: numpy.log2(...)
+      - pattern-not: numpy.log10(...)
+      - pattern-not: np.log(...)
+      - pattern-not: np.log2(...)
+      - pattern-not: np.log10(...)
       - metavariable-pattern:
           metavariable: $LVL
           patterns:
