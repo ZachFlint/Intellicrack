@@ -140,8 +140,8 @@ class ProcessMemoryDialog(QDialog):
                     self._populate_regions(regions)
                     self._status_label.setText(f"{len(regions)} region(s) found")
                     return
-            except (OSError, RuntimeError, ValueError) as exc:
-                _logger.exception("process_regions_hexcore_failed", error=str(exc), pid=pid)
+            except (OSError, RuntimeError, ValueError):
+                _logger.exception("process_regions_hexcore_failed", pid=pid)
 
         if sys.platform == "win32":
             self._list_regions_ctypes(pid)
@@ -194,7 +194,7 @@ class ProcessMemoryDialog(QDialog):
             self._status_label.setText(f"{len(regions)} committed region(s) found")
         except (OSError, AttributeError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_ctypes_failed", error=str(exc), pid=pid)
+            _logger.exception("process_regions_ctypes_failed", pid=pid)
 
     def _list_regions_procfs(self, pid: int) -> None:
         """List process memory regions from /proc on Linux.
@@ -229,7 +229,7 @@ class ProcessMemoryDialog(QDialog):
                 regions.append((start, end - start, prot, _MEM_COMMIT))
         except (OSError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.debug("process_regions_procfs_failed", error=str(exc))
+            _logger.exception("process_regions_procfs_failed")
             return
 
         self._populate_regions(regions)
@@ -264,8 +264,8 @@ class ProcessMemoryDialog(QDialog):
             base = int(base_text, 16)
             size_text = size_item.text().split("(")[0].strip()
             size = int(size_text, 16)
-        except ValueError as exc:
-            _logger.warning("process_region_parse_failed", row=row, error=str(exc))
+        except ValueError:
+            _logger.exception("process_region_parse_failed", row=row)
             return
 
         pid = self._pid_spin.value()
@@ -321,4 +321,4 @@ class ProcessMemoryMixin:
                 "Process Memory",
                 f"Failed to open process memory:\n{exc}",
             )
-            _logger.warning("process_memory_open_failed", error=str(exc))
+            _logger.exception("process_memory_open_failed")

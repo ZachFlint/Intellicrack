@@ -25,11 +25,11 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
 
+_logger = get_logger(__name__)
+
+
 if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
-
-
-_logger = get_logger(__name__)
 
 
 class DiffWorker(QThread):
@@ -163,16 +163,16 @@ class ComparisonMixin:
                     data_a = raw_a
                 else:
                     return
-            except (AttributeError, ValueError) as exc:
-                _logger.warning("diff_doc_read_failed", error=str(exc))
+            except (AttributeError, ValueError):
+                _logger.exception("diff_doc_read_failed")
                 return
 
             try:
                 with tempfile.NamedTemporaryFile(prefix="intellicrack_diff_", delete=False) as tmp:
                     tmp.write(data_a)
                     path_a = tmp.name
-            except OSError as exc:
-                _logger.warning("diff_temp_write_failed", error=str(exc))
+            except OSError:
+                _logger.exception("diff_temp_write_failed")
                 return
 
         if self._diff_summary_label is not None:
@@ -243,7 +243,7 @@ class ComparisonMixin:
         offset_text = item.text(0)
         try:
             offset = int(offset_text, 16)
-        except ValueError as exc:
-            _logger.debug("diff_offset_parse_failed", offset_text=offset_text, error=str(exc))
+        except ValueError:
+            _logger.exception("diff_offset_parse_failed", offset_text=offset_text)
             return
         self.goto_offset(offset)

@@ -148,13 +148,13 @@ class SectionsMixin:
         self.sections_tree.clear()
 
         if not pefile_available or pefile is None:
-            _logger.debug("pefile_not_available")
+            _logger.warning("pefile_not_available")
             return
 
         try:
             pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError) as exc:
-            _logger.exception("sections_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError, OSError):
+            _logger.exception("sections_parse_failed", file_path=str(self.file_path))
             return
 
         try:
@@ -167,8 +167,8 @@ class SectionsMixin:
                     rawsize = f"0x{section.SizeOfRawData:08X}"
                     item = QTreeWidgetItem([name, vaddr, vsize, rawsize])
                     self.sections_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("sections_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError):
+            _logger.exception("sections_parse_failed", file_path=str(self.file_path))
         finally:
             pe.close()
 
@@ -180,13 +180,13 @@ class SectionsMixin:
         self._imports_tree.clear()
 
         if not pefile_available or pefile is None:
-            _logger.debug("pefile_not_available_for_imports")
+            _logger.warning("pefile_not_available_for_imports")
             return
 
         try:
             pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError) as exc:
-            _logger.exception("imports_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError, OSError):
+            _logger.exception("imports_parse_failed", file_path=str(self.file_path))
             return
 
         try:
@@ -201,8 +201,8 @@ class SectionsMixin:
                         addr = f"0x{imp.address:08X}" if imp.address else "N/A"
                         item = QTreeWidgetItem([dll_name, func_name, addr])
                         self._imports_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("imports_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError):
+            _logger.exception("imports_parse_failed", file_path=str(self.file_path))
         finally:
             pe.close()
 
@@ -214,13 +214,13 @@ class SectionsMixin:
         self._exports_tree.clear()
 
         if not pefile_available or pefile is None:
-            _logger.debug("pefile_not_available_for_exports")
+            _logger.warning("pefile_not_available_for_exports")
             return
 
         try:
             pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError) as exc:
-            _logger.exception("exports_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError, OSError):
+            _logger.exception("exports_parse_failed", file_path=str(self.file_path))
             return
 
         try:
@@ -236,8 +236,8 @@ class SectionsMixin:
                         ordinal = str(exp.ordinal) if exp.ordinal is not None else "N/A"
                         item = QTreeWidgetItem([name, addr, ordinal])
                         self._exports_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("exports_parse_failed", error=str(exc), file_path=str(self.file_path))
+        except (AttributeError, ValueError):
+            _logger.exception("exports_parse_failed", file_path=str(self.file_path))
         finally:
             pe.close()
 
@@ -311,7 +311,7 @@ class SectionsMixin:
         Args:
             message: Error message emitted by the extraction worker.
         """
-        _logger.debug("strings_extract_failed", error=message)
+        _logger.warning("strings_extract_failed", error=message)
         if self._strings_tree is not None:
             self._strings_tree.clear()
             self._strings_tree.addTopLevelItem(QTreeWidgetItem(["-", "-", f"(error: {message})"]))
@@ -339,8 +339,8 @@ class SectionsMixin:
 
         try:
             magic_raw: object = self.document.read(0, 4)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("auto_detect_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("auto_detect_failed")
             return
 
         if isinstance(magic_raw, bytes):
@@ -404,8 +404,8 @@ class SectionsMixin:
         try:
             data_reader = DataReaderCls.from_document(self.document)
             matches = registry.match_file(data_reader)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("pattern_registry_match_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("pattern_registry_match_failed")
             return
 
         if matches and self._pattern_status_label is not None:

@@ -111,8 +111,8 @@ def _load_transform_descriptors(document: object) -> list[TransformDescriptor]:
         if callable(list_fn):
             try:
                 raw: object = list_fn()
-            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                _logger.debug("transform_list_from_document_failed", error=str(exc))
+            except (RuntimeError, OSError, ValueError, AttributeError):
+                _logger.exception("transform_list_from_document_failed")
             else:
                 if isinstance(raw, list):
                     descriptors: list[TransformDescriptor] = []
@@ -463,8 +463,8 @@ class TransformsMixin:
         encoded_params: dict[str, bytes] = {key: str(value).encode("utf-8") for key, value in raw_params.items()}
         try:
             result = self.document.transform_data(node_name, offset, length, encoded_params)
-        except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
-            _logger.exception("transform_single_failed", error=str(exc), node_name=node_name)
+        except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError):
+            _logger.exception("transform_single_failed", node_name=node_name)
             return None
         if isinstance(result, bytes):
             return result
@@ -485,8 +485,8 @@ class TransformsMixin:
 
         try:
             doc_len: int = self.document.length()
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("transform_preview_len_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("transform_preview_len_failed")
             return
         read_len = min(PREVIEW_BYTES, doc_len - cursor_offset)
         if read_len <= 0:
@@ -522,8 +522,8 @@ class TransformsMixin:
 
         try:
             doc_len: int = self.document.length()
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("transform_apply_len_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("transform_apply_len_failed")
             return
         read_len = min(apply_len, doc_len - cursor_offset)
         if read_len <= 0:
@@ -553,8 +553,8 @@ class TransformsMixin:
         )
         try:
             self.document.write_bytes(cursor_offset, write_payload)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("transform_apply_write_failed", error=str(exc), offset=cursor_offset, length=write_len)
+        except (AttributeError, ValueError):
+            _logger.exception("transform_apply_write_failed", offset=cursor_offset, length=write_len)
         else:
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
@@ -673,8 +673,8 @@ class TransformsMixin:
                 data = raw
             else:
                 return
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("pipeline_read_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("pipeline_read_failed")
             return
 
         execute_fn: Any = getattr(self._transform_pipeline, "execute", None)
@@ -686,7 +686,7 @@ class TransformsMixin:
             raw_result: object = execute_fn(data)
             result: bytes = raw_result if isinstance(raw_result, bytes) else bytes(cast("list[int]", raw_result))
         except (ValueError, TypeError, KeyError) as exc:
-            _logger.exception("pipeline_execution_failed", error=str(exc))
+            _logger.exception("pipeline_execution_failed")
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(
                 parent,
@@ -715,8 +715,8 @@ class TransformsMixin:
         )
         try:
             self.document.write_bytes(cursor_offset, write_payload)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("pipeline_write_failed", error=str(exc), offset=cursor_offset, length=write_len)
+        except (AttributeError, ValueError):
+            _logger.exception("pipeline_write_failed", offset=cursor_offset, length=write_len)
         else:
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
@@ -739,8 +739,8 @@ class TransformsMixin:
         _logger.info("block_fill_invoke", offset=offset, length=length, pattern_size=len(pattern))
         try:
             self.document.fill_block(offset, length, bytes(pattern))
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            _logger.exception("block_fill_failed", error=str(exc), offset=offset, length=length)
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _logger.exception("block_fill_failed", offset=offset, length=length)
             return
         self._refresh_widget()
         _logger.info("block_fill_complete", offset=offset, length=length)
@@ -756,8 +756,8 @@ class TransformsMixin:
         src, length, dst = dlg.get_values()
         try:
             self.document.copy_block(src, length, dst)
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            _logger.exception("block_copy_failed", error=str(exc), src=src, length=length, dst=dst)
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _logger.exception("block_copy_failed", src=src, length=length, dst=dst)
             return
         self._refresh_widget()
 
@@ -772,8 +772,8 @@ class TransformsMixin:
         src, length, dst = dlg.get_values()
         try:
             self.document.move_block(src, length, dst)
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            _logger.exception("block_move_failed", error=str(exc), src=src, length=length, dst=dst)
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _logger.exception("block_move_failed", src=src, length=length, dst=dst)
             return
         self._refresh_widget()
 
@@ -788,8 +788,8 @@ class TransformsMixin:
         off_a, len_a, off_b, len_b = dlg.get_values()
         try:
             self.document.swap_blocks(off_a, len_a, off_b, len_b)
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            _logger.exception("block_swap_failed", error=str(exc), off_a=off_a, len_a=len_a, off_b=off_b, len_b=len_b)
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _logger.exception("block_swap_failed", off_a=off_a, len_a=len_a, off_b=off_b, len_b=len_b)
             return
         self._refresh_widget()
 
@@ -856,7 +856,6 @@ class TransformsMixin:
                 operation=op_short,
                 selection_start=sel_start,
                 selection_end=bridge_end,
-                error=str(exc),
             )
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(parent, "Arithmetic", f"Arithmetic operation failed: {exc}")

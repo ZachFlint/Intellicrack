@@ -101,7 +101,7 @@ class StatisticsWorker(QThread):
             result = self._compute()
             self.stats_finished.emit(result)
         except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("statistics_worker_failed", error=str(exc))
+            _logger.exception("statistics_worker_failed")
             self.stats_error.emit(exc)
 
     def _compute(self) -> _StatisticsResult:
@@ -144,8 +144,8 @@ class StatisticsWorker(QThread):
         try:
             raw_map: list[float] = cast("list[float]", entropy_map_fn(self._entropy_block_size))
             return [float(v) for v in raw_map] if raw_map else []
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("entropy_map_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("entropy_map_failed")
             return None
 
     def _compute_byte_distribution(self) -> list[int] | None:
@@ -160,8 +160,8 @@ class StatisticsWorker(QThread):
         try:
             raw_dist: list[int] = cast("list[int]", dist_fn())
             return [int(v) for v in raw_dist] if raw_dist else [0] * BYTE_VALUES_COUNT
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("byte_distribution_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("byte_distribution_failed")
             return None
 
     def _compute_type_distribution(self) -> tuple[int, ...] | None:
@@ -176,8 +176,8 @@ class StatisticsWorker(QThread):
         try:
             raw_type: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
             return tuple(int(v) for v in raw_type)
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("byte_type_distribution_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("byte_type_distribution_failed")
             return None
 
     def _compute_classification(self) -> list[int] | None:
@@ -192,8 +192,8 @@ class StatisticsWorker(QThread):
         try:
             raw_class: list[int] = cast("list[int]", class_fn(self._entropy_block_size))
             return [int(v) for v in raw_class] if raw_class else None
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("content_classification_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("content_classification_failed")
             return None
 
 
@@ -226,7 +226,7 @@ class StatisticsMixin:
 
         worker_attr: StatisticsWorker | None = getattr(self, "_statistics_worker", None)
         if worker_attr is not None and worker_attr.isRunning():
-            _logger.debug("statistics_update_skipped", reason="worker active")
+            _logger.warning("statistics_update_skipped", reason="worker active")
             return
 
         if worker_attr is not None:
@@ -292,7 +292,7 @@ class StatisticsMixin:
         Args:
             exc: The exception from the background worker.
         """
-        _logger.debug("statistics_update_failed", error=str(exc))
+        _logger.warning("statistics_update_failed", error=str(exc), error_type=type(exc).__name__)
         error_text: str = "\u2014"
         if self._entropy_label is not None:
             self._entropy_label.setText(error_text)
@@ -426,8 +426,8 @@ class StatisticsMixin:
         try:
             digram_result: Any = digram_fn()
             raw_matrix: list[int] = [int(v) for v in digram_result]
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("digram_matrix_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("digram_matrix_failed")
             return
 
         parent = self if isinstance(self, QWidget) else None

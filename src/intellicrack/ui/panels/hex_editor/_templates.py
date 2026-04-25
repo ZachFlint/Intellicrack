@@ -68,8 +68,8 @@ class TemplatesMixin:
 
         try:
             result = self.document.apply_template(template_name, cursor_offset)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("template_apply_failed", error=str(exc), template_name=template_name)
+        except (AttributeError, ValueError):
+            _logger.exception("template_apply_failed", template_name=template_name)
         else:
             self._templates_tree.clear()
 
@@ -175,8 +175,8 @@ class TemplatesMixin:
         self._template_combo.clear()
         try:
             templates: list[tuple[str, str]] = self.document.list_templates()
-        except (AttributeError, ValueError, RuntimeError) as exc:
-            _logger.exception("list_templates_failed", error=str(exc))
+        except (AttributeError, ValueError, RuntimeError):
+            _logger.exception("list_templates_failed")
             templates = []
         for name, _description in templates:
             self._template_combo.addItem(str(name))
@@ -214,7 +214,7 @@ class TemplatesMixin:
             name: str = self.document.register_json_template(json_str)
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Import Template", f"Import failed:\n{exc}")
-            _logger.exception("template_import_failed", error=str(exc))
+            _logger.exception("template_import_failed")
         else:
             self._populate_template_combo()
             self._select_template(name)
@@ -246,7 +246,7 @@ class TemplatesMixin:
             Path(save_path).write_text(json_str, encoding="utf-8")
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Export Template", f"Export failed:\n{exc}")
-            _logger.exception("template_export_failed", error=str(exc))
+            _logger.exception("template_export_failed")
         else:
             _logger.info("template_exported", template_name=name, path=save_path)
 
@@ -270,8 +270,8 @@ class TemplatesMixin:
 
         try:
             self.document.remove_template(name)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("template_remove_failed", error=str(exc), template_name=name)
+        except (AttributeError, ValueError):
+            _logger.exception("template_remove_failed", template_name=name)
         else:
             self._populate_template_combo()
             _logger.info("template_removed", template_name=name)

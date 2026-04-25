@@ -782,8 +782,8 @@ def _script_uses_writes(source: str) -> bool:
     """
     try:
         tree = ast.parse(source)
-    except SyntaxError as exc:
-        _logger.debug("script_uses_writes_parse_failed", error=str(exc))
+    except SyntaxError:
+        _logger.exception("script_uses_writes_parse_failed")
         return False
 
     for node in ast.walk(tree):
@@ -1138,7 +1138,7 @@ class ScriptingMixin:
                 doc_api = base_api
                 _logger.info("script_write_access_granted")
             else:
-                _logger.info("script_write_access_denied")
+                _logger.warning("script_write_access_denied")
 
         if self._script_status is not None:
             self._script_status.setText("Running...")
@@ -1163,8 +1163,8 @@ class ScriptingMixin:
             try:
                 content = Path(script_path).read_text(encoding="utf-8")
                 self._script_editor.setPlainText(content)
-            except OSError as exc:
-                _logger.warning("script_load_failed", error=str(exc))
+            except OSError:
+                _logger.exception("script_load_failed")
 
     def _on_save_script(self) -> None:
         """Save the editor content to a Python file."""
@@ -1189,8 +1189,8 @@ class ScriptingMixin:
                     script_text,
                     encoding="utf-8",
                 )
-            except OSError as exc:
-                _logger.warning("script_save_failed", error=str(exc))
+            except OSError:
+                _logger.exception("script_save_failed")
 
     def _on_clear_script_output(self) -> None:
         """Clear the script output console."""
@@ -1238,4 +1238,4 @@ class ScriptingMixin:
             self._script_status.setText("Error")
         if self._script_output is not None:
             self._script_output.setPlainText(f"Error:\n{error}")
-        _logger.debug("script_execution_error", error=error)
+        _logger.warning("script_execution_error", error=error)

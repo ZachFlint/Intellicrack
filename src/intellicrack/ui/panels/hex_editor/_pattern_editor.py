@@ -219,7 +219,7 @@ class PatternEditorMixin:
                 self._pattern_error_display.setPlainText(str(exc))
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Compilation failed")
-            _logger.exception("pattern_compile_failed", error=str(exc))
+            _logger.exception("pattern_compile_failed")
         else:
             self._compiled_json = compiled
 
@@ -267,7 +267,7 @@ class PatternEditorMixin:
                 self._pattern_error_display.setPlainText(f"Apply failed: {exc}")
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Apply failed")
-            _logger.exception("pattern_apply_failed", error=str(exc))
+            _logger.exception("pattern_apply_failed")
         else:
             if self._templates_tree is not None:
                 self._templates_tree.clear()
@@ -314,7 +314,7 @@ class PatternEditorMixin:
                 self._pattern_error_display.setPlainText(err_msg)
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Execution failed")
-            _logger.exception("pattern_interpreter_failed", error=str(exc))
+            _logger.exception("pattern_interpreter_failed")
         else:
             if self._pattern_error_display is not None:
                 self._pattern_error_display.clear()
@@ -351,19 +351,16 @@ class PatternEditorMixin:
         try:
             path = Path(save_path)
             if path.suffix == ".json" and self._compiled_json:
-                _logger.info("file_written", path=str(path), size=len(self._compiled_json), kind="pattern_json")
                 path.write_text(self._compiled_json, encoding="utf-8")
             elif self._pattern_dsl_editor is not None:
-                dsl_text = self._pattern_dsl_editor.toPlainText()
-                _logger.info("file_written", path=str(path), size=len(dsl_text), kind="pattern_dsl")
                 path.write_text(
-                    dsl_text,
+                    self._pattern_dsl_editor.toPlainText(),
                     encoding="utf-8",
                 )
-        except OSError as exc:
+        except OSError:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Save failed")
-            _logger.exception("pattern_save_failed", error=str(exc))
+            _logger.exception("pattern_save_failed")
         else:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText(f"Saved to {path.name}")
@@ -385,10 +382,10 @@ class PatternEditorMixin:
         try:
             path = Path(file_path_str)
             content = path.read_text(encoding="utf-8")
-        except OSError as exc:
+        except OSError:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Open failed")
-            _logger.exception("pattern_open_failed", error=str(exc))
+            _logger.exception("pattern_open_failed")
         else:
             if path.suffix == ".json":
                 self._compiled_json = content
@@ -441,8 +438,8 @@ class PatternEditorMixin:
         template_name = item.text(0)
         try:
             json_str_val: str = self.document.export_template_json(template_name)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("pattern_library_load_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("pattern_library_load_failed")
         else:
             self._compiled_json = json_str_val
 
@@ -452,7 +449,7 @@ class PatternEditorMixin:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText(f"Loaded: {template_name}")
 
-            _logger.debug("pattern_library_loaded", template_name=template_name)
+            _logger.info("pattern_library_loaded", template_name=template_name)
 
     def _load_hexpat_from_library(self, file_path: str, name: str) -> None:
         """Load a .hexpat pattern file into the DSL editor.
@@ -463,8 +460,8 @@ class PatternEditorMixin:
         """
         try:
             source = Path(file_path).read_text(encoding="utf-8", errors="replace")
-        except OSError as exc:
-            _logger.exception("hexpat_library_load_failed", error=str(exc))
+        except OSError:
+            _logger.exception("hexpat_library_load_failed")
             return
 
         if self._pattern_dsl_editor is not None:
@@ -486,8 +483,8 @@ class PatternEditorMixin:
 
         try:
             templates = self.document.list_templates()
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("pattern_library_populate_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("pattern_library_populate_failed")
             return
 
         categories: dict[str, QTreeWidgetItem] = {}
@@ -546,8 +543,8 @@ class PatternEditorMixin:
 
         try:
             by_cat: dict[str, list[Any]] = registry.list_by_category()
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("hexpat_library_populate_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("hexpat_library_populate_failed")
             return
 
         if not by_cat:
