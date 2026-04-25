@@ -93,7 +93,8 @@ class OpenAIProvider(LLMProviderBase):
         super().__init__()
         self.client: openai.AsyncOpenAI | None = None
         self._current_task: asyncio.Task[object] | None = None
-        self._logger = get_logger("providers.openai").bind(provider="openai")
+        self._logger = get_logger(__name__).bind(provider="openai")
+        self._logger.info("openai_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -302,6 +303,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
         """
         if not self.connected or self.client is None:
+            self._logger.error("openai_chat_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         self._cancel_requested = False

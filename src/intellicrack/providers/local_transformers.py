@@ -60,7 +60,7 @@ from intellicrack.providers.xpu_utils import (
 try:
     import torch as _torch
 except ImportError:
-    get_logger("providers.local_transformers").warning(
+    get_logger(__name__).warning(
         "torch_import_unavailable",
         impact="local transformer inference is disabled; install pytorch to enable",
     )
@@ -72,7 +72,7 @@ try:
         AutoTokenizer as _AutoTokenizer,
     )
 except ImportError:
-    get_logger("providers.local_transformers").warning(
+    get_logger(__name__).warning(
         "transformers_import_unavailable",
         impact="CUDA model loading is disabled; install the transformers package to enable",
     )
@@ -87,7 +87,7 @@ if TYPE_CHECKING:
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
 
-_logger = get_logger("providers.local_transformers")
+_logger = get_logger(__name__)
 
 _MSG_NOT_CONNECTED = "Provider not connected"
 _MSG_NO_MODEL_LOADED = "No model loaded"
@@ -132,7 +132,7 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
             result: dict[str, Any] = response.json()
             return result
     except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
-        _logger.debug("huggingface_config_fetch_failed", url=url, error=str(exc))
+        _logger.warning("huggingface_config_fetch_failed", url=url, error=str(exc))
         return {}
 
 
@@ -197,6 +197,7 @@ class LocalTransformersProvider(LLMProviderBase):
         self._is_arc_b580 = False
         self._windows_warnings: list[str] = []
         self._logger = _logger
+        self._logger.info("local_transformers_provider_initialized", prefer_xpu=prefer_xpu)
 
     @property
     def name(self) -> ProviderName:
@@ -358,7 +359,7 @@ class LocalTransformersProvider(LLMProviderBase):
             is_available = cuda_module.is_available()
             return bool(is_available)
         except (RuntimeError, OSError, AttributeError) as exc:
-            _logger.debug("cuda_probe_failed", error=str(exc))
+            _logger.warning("cuda_probe_failed", error=str(exc))
             return False
 
     @staticmethod
@@ -377,7 +378,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 return 0
             count = int(cuda_module.device_count())
         except (RuntimeError, OSError, AttributeError, ValueError) as exc:
-            _logger.debug("cuda_device_count_failed", error=str(exc))
+            _logger.warning("cuda_device_count_failed", error=str(exc))
             return 0
         else:
             return count
@@ -419,7 +420,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     if callable(empty_cache):
                         empty_cache()
             except (RuntimeError, OSError, AttributeError) as exc:
-                _logger.debug("cuda_cache_clear_failed", error=str(exc))
+                _logger.warning("cuda_cache_clear_failed", error=str(exc))
         gc.collect()
 
     async def list_models(self) -> list[ModelInfo]:
@@ -439,6 +440,7 @@ class LocalTransformersProvider(LLMProviderBase):
             ProviderError: If the provider is not connected.
         """
         if not self.connected:
+            self._logger.error("local_transformers_list_models_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         vram_utilisation_ceiling: float = 0.9
@@ -719,8 +721,8 @@ class LocalTransformersProvider(LLMProviderBase):
                     last_error = fb_exc
                     await asyncio.to_thread(self._release_device_caches)
                     continue
-                self._logger.info(
-                    "model_loaded_fallback",
+                self._logger.warning(
+                    "model_load_fallback_used",
                     model_id=model_id,
                     device=self._device_type,
                     dtype=self._loaded_model.dtype,
@@ -728,6 +730,11 @@ class LocalTransformersProvider(LLMProviderBase):
                 )
                 return
 
+            self._logger.warning(
+                "model_load_all_devices_failed",
+                model_id=model_id,
+                error=str(last_error),
+            )
             raise ProviderError(_ERR_LOAD_BOTH_FAILED % last_error) from last_error
 
     @staticmethod
@@ -811,13 +818,16 @@ class LocalTransformersProvider(LLMProviderBase):
                 model configuration is invalid.
         """
         if _torch is None:
+            self._logger.error("cuda_load_torch_unavailable", model_id=config.model_id)
             raise ImportError(_MSG_TORCH_REQUIRED)
 
         cuda_module = getattr(_torch, "cuda", None)
         if cuda_module is None or not cuda_module.is_available():
+            self._logger.error("cuda_load_cuda_unavailable", model_id=config.model_id)
             raise RuntimeError(_ERR_CUDA_NOT_AVAILABLE)
 
         if _AutoModelForCausalLM is None or _AutoTokenizer is None:
+            self._logger.error("cuda_load_transformers_unavailable", model_id=config.model_id)
             raise ImportError(_MSG_TRANSFORMERS_REQUIRED)
 
         cache = self._model_cache
@@ -859,7 +869,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 if callable(empty_cache):
                     empty_cache()
             except (RuntimeError, OSError, AttributeError) as cleanup_exc:
-                _logger.debug("cuda_cache_clear_after_failure", error=str(cleanup_exc))
+                _logger.warning("cuda_cache_clear_after_failure", error=str(cleanup_exc))
             raise
 
         load_time = time.perf_counter() - start_time
@@ -906,9 +916,11 @@ class LocalTransformersProvider(LLMProviderBase):
             ImportError: If torch is not installed.
         """
         if self._loaded_model is None:
+            self._logger.error("local_generate_no_model_loaded")
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
         if _torch is None:
+            self._logger.error("local_generate_torch_unavailable")
             raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
@@ -968,9 +980,11 @@ class LocalTransformersProvider(LLMProviderBase):
             ImportError: If torch is not installed.
         """
         if self._loaded_model is None:
+            self._logger.error("local_stream_generate_no_model_loaded")
             raise RuntimeError(_MSG_NO_MODEL_LOADED)
 
         if _torch is None:
+            self._logger.error("local_stream_generate_torch_unavailable")
             raise ImportError(_MSG_TORCH_REQUIRED)
 
         model = self._loaded_model.model
@@ -1017,6 +1031,7 @@ class LocalTransformersProvider(LLMProviderBase):
                 ImportError: If ``torch`` is not installed.
             """
             if _torch is None:
+                _logger.error("forward_pass_torch_unavailable")
                 raise ImportError(_MSG_TORCH_REQUIRED)
             use_ids = fwd_gen_ids[:, -1:] if fwd_past_kv else fwd_gen_ids
             with _torch.inference_mode():
@@ -1174,7 +1189,7 @@ class LocalTransformersProvider(LLMProviderBase):
                     )
                     return str(result)
                 except (ValueError, KeyError, TypeError, AttributeError) as exc:
-                    self._logger.debug(
+                    self._logger.warning(
                         "chat_template_failed_using_fallback",
                         error=str(exc),
                     )

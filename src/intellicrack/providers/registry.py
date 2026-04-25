@@ -45,7 +45,11 @@ class ProviderRegistry:
         self._providers: dict[ProviderName, LLMProviderBase] = {}
         self._active_provider: ProviderName | None = None
         self._credential_loader = credential_loader
-        self._logger = get_logger("providers.registry")
+        self._logger = get_logger(__name__)
+        self._logger.info(
+            "provider_registry_initialized",
+            has_credential_loader=credential_loader is not None,
+        )
 
     def register(self, provider: LLMProviderBase) -> None:
         """Register a provider instance.
@@ -105,6 +109,7 @@ class ProviderRegistry:
         """
         provider = self._providers.get(name)
         if provider is None:
+            self._logger.error("provider_not_registered", provider=name.value)
             raise ProviderError(_MSG_NOT_REGISTERED)
         return provider
 
@@ -154,6 +159,7 @@ class ProviderRegistry:
             credentials = self._credential_loader.get_credentials(name)
 
         if credentials is None:
+            self._logger.error("provider_connect_no_credentials", provider=name.value)
             raise ProviderError(_MSG_NO_CREDENTIALS)
 
         try:
@@ -192,6 +198,7 @@ class ProviderRegistry:
         """
         provider = self.get_or_raise(name)
         if not provider.is_connected:
+            self._logger.error("set_active_provider_not_connected", provider=name.value)
             raise ProviderError(_MSG_NOT_CONNECTED)
         self._active_provider = name
         self._logger.info("active_provider_set", provider=name.value)

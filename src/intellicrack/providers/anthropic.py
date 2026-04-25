@@ -73,7 +73,8 @@ class AnthropicProvider(LLMProviderBase):
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
         self._current_task: Task[Any] | None = None
-        self._logger = get_logger("providers.anthropic").bind(provider="anthropic")
+        self._logger = get_logger(__name__).bind(provider="anthropic")
+        self._logger.info("anthropic_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -354,6 +355,7 @@ class AnthropicProvider(LLMProviderBase):
                 4xx status code other than 401/429.
         """
         if self._client is None:
+            self._logger.error("anthropic_api_call_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED)
         try:
             return cast("AnthropicMessage", await self._client.messages.create(**api_kwargs))

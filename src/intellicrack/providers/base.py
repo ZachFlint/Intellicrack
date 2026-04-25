@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
-_logger = get_logger("providers.base")
+_logger = get_logger(__name__)
 _secure_rng = random.SystemRandom()
 
 
@@ -175,7 +175,8 @@ class LLMProviderBase(ABC):
         self._pending_tool_calls: list[ToolCall] = []
         self._pending_usage: UsageInfo | None = None
         self._pending_thinking: list[str] = []
-        self._logger = get_logger("providers.base")
+        self._logger = get_logger(__name__)
+        self._logger.info("provider_base_initialized")
 
     @property
     @abstractmethod
@@ -355,6 +356,7 @@ class LLMProviderBase(ABC):
 
         This method should safely abort ongoing API calls without raising exceptions.
         """
+        self._logger.info("provider_cancel_requested")
         self._cancel_requested = True
 
     async def _retry_with_backoff(
