@@ -35,6 +35,9 @@ if TYPE_CHECKING:
     from intellicrack.providers.xpu_utils import XPUDeviceInfo
 
 
+_logger = get_logger(__name__)
+
+
 try:
     from intellicrack.providers.xpu_utils import (
         check_windows_requirements,
@@ -44,7 +47,7 @@ try:
         is_xpu_available,
     )
 except ImportError:
-    get_logger("ui.xpu_status").debug("xpu_utils_unavailable")
+    _logger.debug("xpu_utils_unavailable")
     check_windows_requirements = None
     get_optimal_dtype_for_xpu = None
     get_xpu_device_info = None
@@ -54,11 +57,8 @@ except ImportError:
 try:
     from intellicrack.providers.model_loader import get_global_model_cache
 except ImportError:
-    get_logger("ui.xpu_status").debug("model_loader_unavailable")
+    _logger.debug("model_loader_unavailable")
     get_global_model_cache = None
-
-
-_logger = get_logger("ui.xpu_status")
 
 _BYTES_PER_GB: Final[float] = 1024.0 * 1024.0 * 1024.0
 _BYTES_PER_MB: Final[float] = 1024.0 * 1024.0

@@ -355,7 +355,7 @@ if TYPE_CHECKING:
     from intellicrack.ui.panels.script_manager import ScriptManagerPanel
     from intellicrack.ui.panels.stack_viewer import StackViewerPanel
 
-_logger = get_logger("ui.tools")
+_logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _INFO_MARGIN: Final[int] = 8
@@ -729,7 +729,7 @@ class XRefPanel(QFrame):
                 address = int(address_str, 16)
                 self.xref_selected.emit(address)
             except ValueError:
-                _logger.debug("xref_address_parse_failed", address=address_str)
+                _logger.warning("xref_address_parse_failed", address=address_str)
 
     def set_xrefs(
         self,
@@ -948,13 +948,13 @@ class ToolOutputPanel(QFrame):
         elif widget := self.panels.get(tab_name.lower()) or self.embedded_tools.get(tab_name.lower()):
             self._activate_tab_by_widget(widget)
 
-    def log(self, message: str) -> None:
+    def append_log_message(self, message: str) -> None:
         """Append a message to the log tab.
 
         Creates the Log tab on-demand if it does not already exist.
 
         Args:
-            message: Message to log.
+            message: Message to append to the log tab.
         """
         if "log" not in self.tabs:
             log_tab = ToolTab("Log", "python")
@@ -1003,6 +1003,7 @@ class ToolOutputPanel(QFrame):
         self._pending_sandbox_bridge: Any | None = None
         self._pending_script_backend: Any | None = None
         self._pending_script_validator: Any | None = None
+        _logger.debug("embedded_tabs_setup_complete")
 
     def set_tool_registry(self, registry: ToolRegistry) -> None:
         """Set the shared tool registry for bridge reuse.
@@ -1493,6 +1494,7 @@ class ToolOutputPanel(QFrame):
 
         self._cutter_widget.start_tool()
         path = Path(file_path) if isinstance(file_path, str) else file_path
+        _logger.info("cutter_analyze_binary_starting", binary_path=str(path))
         success = self._cutter_widget.analyze_binary(path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._cutter_widget))
@@ -1651,7 +1653,7 @@ class ToolOutputPanel(QFrame):
 
         self.tab_widget.removeTab(index)
         widget.deleteLater()
-        _logger.debug("tab_closed", tab_index=index)
+        _logger.info("tab_closed", tab_index=index)
 
     def close_embedded_tools(self) -> None:
         """Close all embedded tool instances and null their references."""
@@ -1955,7 +1957,7 @@ class ToolOutputPanel(QFrame):
         Returns:
             SandboxBase | None: Sandbox backend or None.
         """
-        _logger.warning("get_sandbox_backend_deprecated", msg="Use get_sandbox_bridge() instead")
+        _logger.warning("get_sandbox_backend_deprecated", deprecation_note="Use get_sandbox_bridge() instead")
         if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_sandbox"):
             return self.sandbox_panel.get_sandbox()
         return None
@@ -2088,7 +2090,7 @@ class ToolOutputPanel(QFrame):
 
         formatted = "\n".join(parts)
         self.hex_context_ready.emit(formatted)
-        self.log(f"[Hex Editor Context] cursor=0x{cursor_offset:08X}")
+        self.append_log_message(f"[Hex Editor Context] cursor=0x{cursor_offset:08X}")
         _logger.info("hex_context_pushed", keys=list(context.keys()))
 
     def _wire_stack_viewer_bridges(self) -> None:
@@ -2128,7 +2130,7 @@ class ToolOutputPanel(QFrame):
             manager: Optional SandboxManager instance (unused in new path).
         """
         _ = (self, sandbox, manager)
-        _logger.warning("wire_sandbox_backend_deprecated", msg="Use wire_sandbox_bridge() instead")
+        _logger.warning("wire_sandbox_backend_deprecated", deprecation_note="Use wire_sandbox_bridge() instead")
 
     def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.

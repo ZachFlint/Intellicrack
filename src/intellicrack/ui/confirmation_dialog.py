@@ -30,7 +30,7 @@ from intellicrack.core.logging import get_logger
 if TYPE_CHECKING:
     from intellicrack.core.types import ToolCall
 
-_logger = get_logger("ui.confirmation_dialog")
+_logger = get_logger(__name__)
 
 
 class ToolConfirmationDialog(QDialog):
@@ -241,7 +241,7 @@ class ToolConfirmationDialog(QDialog):
         """Handle deny button click."""
         self._approved = False
         self._remember_similar = self._remember_checkbox.isChecked()
-        _logger.info(
+        _logger.warning(
             "tool_call_denied",
             tool=self._call.tool_name,
             function=self._call.function_name,

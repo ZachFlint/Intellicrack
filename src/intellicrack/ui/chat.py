@@ -32,7 +32,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_logger = get_logger("ui.chat")
+_logger = get_logger(__name__)
 
 _MAX_ARGS_DISPLAY_LEN = 100
 _BUBBLE_MARGIN_H: Final[int] = 12
@@ -452,7 +452,7 @@ class ChatPanel(QFrame):
         """Clear all messages from the chat."""
         count = len(self._messages)
         self._messages.clear()
-        _logger.debug("chat_messages_cleared", count=count)
+        _logger.info("chat_messages_cleared", count=count)
 
         while self._messages_layout.count() > 1:
             item = self._messages_layout.takeAt(0)

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-_logger = get_logger("ui.resources.fonts")
+_logger = get_logger(__name__)
 
 
 DEFAULT_CODE_FONT: Final[str] = "JetBrains Mono"
@@ -64,6 +64,7 @@ class FontManager:
         self._code_font_family: str = ""
         self._ui_font_family: str = ""
         self._font_config: dict[str, object] = {}
+        _logger.info("font_manager_initialized")
 
     @classmethod
     def get_instance(cls) -> FontManager:
@@ -130,8 +131,8 @@ class FontManager:
                 with config_path.open(encoding="utf-8") as f:
                     self._font_config = cast("dict[str, object]", json.load(f))
                     _logger.debug("font_config_loaded", config=self._font_config)
-        except (json.JSONDecodeError, OSError) as e:
-            _logger.debug("font_config_load_failed", error=str(e))
+        except (json.JSONDecodeError, OSError):
+            _logger.exception("font_config_load_failed")
             self._font_config = {}
 
     def _load_font_file(self, font_path: Path) -> bool:

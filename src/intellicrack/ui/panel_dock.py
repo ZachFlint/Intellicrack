@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from PyQt6.QtGui import QCloseEvent
 
 
-_logger = get_logger("ui.panel_dock")
+_logger = get_logger(__name__)
 
 _TOOLBAR_HEIGHT: Final[int] = 32
 _DEFAULT_DOCK_WIDTH: Final[int] = 800

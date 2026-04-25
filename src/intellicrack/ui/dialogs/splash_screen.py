@@ -40,7 +40,7 @@ from intellicrack.ui.resources import get_assets_path
 from intellicrack.ui.resources.font_manager import FontManager
 
 
-_logger = get_logger("ui.dialogs.splash_screen")
+_logger = get_logger(__name__)
 
 SPLASH_WIDTH: Final[int] = 600
 SPLASH_HEIGHT: Final[int] = 400
@@ -204,6 +204,14 @@ class SplashScreen(QSplashScreen):
 
         self.progress_updated.connect(self._on_progress_updated)
 
+        _logger.info(
+            "splash_screen_initialized",
+            version=self._version,
+            scaled_width=scaled_w,
+            scaled_height=scaled_h,
+            dpi_scale=dpi_scale,
+        )
+
     @staticmethod
     def _load_splash_image(width: int, height: int) -> QPixmap | None:
         """Load the splash.png image for compositing in paintEvent.
@@ -227,7 +235,7 @@ class SplashScreen(QSplashScreen):
                         Qt.TransformationMode.SmoothTransformation,
                     )
         except FileNotFoundError:
-            _logger.debug("splash_image_not_found")
+            _logger.warning("splash_image_not_found")
         return None
 
     @staticmethod
@@ -271,7 +279,7 @@ class SplashScreen(QSplashScreen):
                     _logger.debug("splash_image_loaded", path=str(splash_path))
                     return scaled
         except FileNotFoundError:
-            _logger.debug("splash_image_not_found_using_fallback")
+            _logger.warning("splash_image_not_found_using_fallback")
         return SplashScreen._create_fallback_pixmap(width, height, dpi_scale)
 
     @staticmethod

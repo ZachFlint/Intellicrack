@@ -17,7 +17,7 @@ from typing import Final
 from intellicrack.core.logging import get_logger
 
 
-_logger = get_logger("ui.resources.helper")
+_logger = get_logger(__name__)
 
 _ASSETS_DIR_NAME: Final[str] = "assets"
 _PACKAGE_NAME: Final[str] = "intellicrack"

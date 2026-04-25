@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from PyQt6.QtWidgets import QApplication, QWidget
 
-_logger = get_logger("ui._screen_compat")
+_logger = get_logger(__name__)
 
 _PRIMARY_SCREEN = "primaryScreen"
 _AVAILABLE_GEOMETRY = "availableGeometry"

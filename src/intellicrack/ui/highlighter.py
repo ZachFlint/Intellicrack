@@ -23,7 +23,7 @@ from PyQt6.QtGui import (
 from intellicrack.core.logging import get_logger
 
 
-_logger = get_logger("ui.highlighter")
+_logger = get_logger(__name__)
 
 _BLOCK_STATE_NORMAL = 0
 _BLOCK_STATE_DOUBLE_QUOTE = 1
