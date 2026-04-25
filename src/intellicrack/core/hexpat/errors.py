@@ -6,6 +6,11 @@
 
 from __future__ import annotations
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
+
 
 class HexPatError(Exception):
     """Base error for the HexPat interpreter."""
@@ -38,6 +43,14 @@ class HexPatError(Exception):
                 location_parts.append(str(column))
         location: str = ":".join(location_parts)
         super().__init__(f"{location}: {message}" if location else message)
+        _logger.debug(
+            "hexpat_error_constructed",
+            error_type=type(self).__name__,
+            error_message=message,
+            line=line,
+            column=column,
+            source_file=file,
+        )
 
 
 class HexPatPreprocessorError(HexPatError):
@@ -71,6 +84,14 @@ class HexPatParseError(HexPatError):
         if end_line is not None and end_column is not None and line > 0 and column > 0:
             message = f"{message} [span {line}:{column}-{end_line}:{end_column}]"
         super().__init__(message, line, column, file)
+        _logger.debug(
+            "hexpat_parse_error_constructed",
+            error_message=message,
+            line=line,
+            column=column,
+            end_line=end_line,
+            end_column=end_column,
+        )
 
     @property
     def span(self) -> tuple[int, int, int, int] | None:
@@ -118,6 +139,14 @@ class HexPatRuntimeError(HexPatError):
             else:
                 message = f"{message} (at data offset 0x{offset:X})"
         super().__init__(message, line, column, file)
+        _logger.debug(
+            "hexpat_runtime_error_constructed",
+            error_message=message,
+            line=line,
+            column=column,
+            data_offset=offset,
+            data_end_offset=end_offset,
+        )
 
     @property
     def data_span(self) -> tuple[int, int] | None:

@@ -67,10 +67,14 @@ from intellicrack.core.hexpat.tokens import (
     Token,
     TokenType,
 )
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from intellicrack.core.hexpat.ast_nodes import DeclNode, ExprNode, StmtNode, TypeNode
+
+
+_logger = get_logger(__name__)
 
 
 _INFIX_BP: dict[TokenType, tuple[int, int]] = {
@@ -136,6 +140,11 @@ class HexPatParser:
         self._pos: int = 0
         self.file_path: str = file_path
         self._errors: list[HexPatParseError] = []
+        _logger.debug(
+            "hexpat_parser_initialized",
+            file_path=file_path,
+            token_count=len(tokens),
+        )
 
     @property
     def errors(self) -> list[HexPatParseError]:
@@ -786,8 +795,14 @@ class HexPatParser:
                         line=tok.line,
                         column=tok.column,
                     )
-        except HexPatParseError:
-            pass
+        except HexPatParseError as exc:
+            _logger.warning(
+                "hexpat_parser_cast_backtrack",
+                file_path=self.file_path,
+                line=tok.line,
+                column=tok.column,
+                error=str(exc),
+            )
         if cast_result is not None:
             return cast_result
         self._restore(saved)
