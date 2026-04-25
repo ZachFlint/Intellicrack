@@ -20,7 +20,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
 
 
-_logger = get_logger("credentials.env_loader")
+_logger = get_logger(__name__)
 
 
 _ENV_LINE_PATTERN: re.Pattern[str] = re.compile(
@@ -338,6 +338,11 @@ class CredentialLoader:
         self.env_path = env_path
         self._env_vars: dict[str, str] = {}
         self._load_env_file()
+        _logger.debug(
+            "credential_loader_initialized",
+            env_path=str(self.env_path),
+            variable_count=len(self._env_vars),
+        )
 
     def _load_env_file(self) -> None:
         """Load environment variables from .env file.
@@ -574,7 +579,7 @@ class CredentialLoader:
             value: The value to save.
         """
         self.set_env_var(name, value)
-        _logger.debug("env_file_write_started", path=str(self.env_path), variable=name)
+        _logger.info("env_file_write_started", path=str(self.env_path), variable=name)
 
         quoted = _quote_env_value(value)
         new_line_body = f"{name}={quoted}"
