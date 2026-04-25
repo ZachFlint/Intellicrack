@@ -115,12 +115,11 @@ class SignatureScanWorker(QThread):
 
                 try:
                     pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
-                except ValueError as exc:
-                    _logger.debug(
+                except ValueError:
+                    _logger.warning(
                         "die_pattern_decode_failed",
                         sig_name=sig_name,
                         hex_pattern=hex_pattern,
-                        error=str(exc),
                     )
                     continue
 
@@ -147,12 +146,11 @@ class SignatureScanWorker(QThread):
                 else:
                     try:
                         fixed_offset = int(scan_offset, 0)
-                    except ValueError as exc:
-                        _logger.debug(
+                    except ValueError:
+                        _logger.warning(
                             "die_offset_parse_failed",
                             sig_name=sig_name,
                             scan_offset=scan_offset,
-                            error=str(exc),
                         )
                         continue
                     if fixed_offset + len(pattern_bytes) <= len(self._doc_data):
@@ -202,12 +200,11 @@ class SignatureScanWorker(QThread):
             sig_name = parts[2]
             try:
                 sig_size = int(parts[1])
-            except ValueError as exc:
-                _logger.debug(
+            except ValueError:
+                _logger.warning(
                     "hdb_size_parse_failed",
                     sig_name=sig_name,
                     sig_size=parts[1],
-                    error=str(exc),
                 )
                 continue
             if sig_md5 == file_md5 and sig_size == file_size:
@@ -242,12 +239,11 @@ class SignatureScanWorker(QThread):
                 if not clean_hex:
                     continue
                 pattern_bytes = bytes.fromhex(clean_hex)
-            except ValueError as exc:
-                _logger.debug(
+            except ValueError:
+                _logger.warning(
                     "ndb_pattern_decode_failed",
                     sig_name=sig_name,
                     sig_hex=sig_hex,
-                    error=str(exc),
                 )
                 continue
             if sig_offset_spec == "*":
@@ -271,12 +267,11 @@ class SignatureScanWorker(QThread):
             else:
                 try:
                     offset_val = int(sig_offset_spec, 0)
-                except ValueError as exc:
-                    _logger.debug(
+                except ValueError:
+                    _logger.warning(
                         "ndb_offset_parse_failed",
                         sig_name=sig_name,
                         sig_offset_spec=sig_offset_spec,
-                        error=str(exc),
                     )
                     continue
                 end = offset_val + len(pattern_bytes)
@@ -310,12 +305,11 @@ class SignatureScanWorker(QThread):
 
             try:
                 pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
-            except ValueError as exc:
-                _logger.debug(
+            except ValueError:
+                _logger.warning(
                     "custom_pattern_decode_failed",
                     sig_name=sig_name,
                     hex_pattern=hex_pattern,
-                    error=str(exc),
                 )
                 continue
 
@@ -342,12 +336,11 @@ class SignatureScanWorker(QThread):
             else:
                 try:
                     fixed_offset = int(offset_spec, 0)
-                except ValueError as exc:
-                    _logger.debug(
+                except ValueError:
+                    _logger.warning(
                         "custom_offset_parse_failed",
                         sig_name=sig_name,
                         offset_spec=offset_spec,
-                        error=str(exc),
                     )
                     continue
                 end = fixed_offset + len(pattern_bytes)
@@ -459,8 +452,8 @@ class SignaturesMixin:
                 doc_data = raw
             else:
                 return
-        except (AttributeError, ValueError) as exc:
-            _logger.warning("sig_scan_read_failed", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("sig_scan_read_failed")
             return
 
         type_idx = self._sig_db_type_combo.currentIndex() if self._sig_db_type_combo else 0
@@ -521,7 +514,7 @@ class SignaturesMixin:
         offset_text = item.text(3)
         try:
             offset = int(offset_text, 16)
-        except ValueError as exc:
-            _logger.debug("sig_result_offset_parse_failed", offset_text=offset_text, error=str(exc))
+        except ValueError:
+            _logger.exception("sig_result_offset_parse_failed", offset_text=offset_text)
             return
         self.goto_offset(offset)

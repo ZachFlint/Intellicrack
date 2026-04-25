@@ -50,7 +50,7 @@ class HashingMixin:
             result = self.document.compute_hash(algo)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
-            _logger.debug("hash_calculate_failed", error=str(exc))
+            _logger.exception("hash_calculate_failed")
         else:
             self._hash_result_label.setText(f"{algo}: {result}")
             _logger.info("hash_calculated", algo=algo)
@@ -105,7 +105,7 @@ class HashingMixin:
             result = self.document.compute_hash_range(sel_start, sel_end, algo)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
-            _logger.debug("hash_selection_failed", error=str(exc))
+            _logger.exception("hash_selection_failed")
         else:
             self._hash_result_label.setText(
                 f"{algo} (0x{sel_start:X}-0x{sel_end:X}): {result}",
@@ -121,7 +121,7 @@ class HashingMixin:
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             if self._pe_checksum_status is not None:
                 self._pe_checksum_status.setText(f"Error: {exc}")
-            _logger.exception("pe_checksum_verify_failed", error=str(exc))
+            _logger.exception("pe_checksum_verify_failed")
             return
 
         if self._pe_checksum_status is None:
@@ -166,7 +166,7 @@ class HashingMixin:
             self.document.repair_pe_checksum()
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Repair Failed", str(exc))
-            _logger.warning("pe_checksum_repair_failed", error=str(exc))
+            _logger.exception("pe_checksum_repair_failed")
             return
 
         if self._pe_checksum_status is not None:

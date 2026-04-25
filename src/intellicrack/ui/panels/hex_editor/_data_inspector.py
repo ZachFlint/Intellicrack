@@ -26,11 +26,11 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available
 
 
+_logger = get_logger(__name__)
+
+
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-_logger = get_logger(__name__)
 
 
 _BIT_COUNT: int = 8
@@ -108,8 +108,8 @@ class DataInspectorMixin:
                     item = QTreeWidgetItem([key, str(val)])
                     self._data_inspector_tree.addTopLevelItem(item)
 
-        except (AttributeError, ValueError, TypeError) as exc:
-            _logger.exception("inspector_update_failed", error=str(exc))
+        except (AttributeError, ValueError, TypeError):
+            _logger.exception("inspector_update_failed")
 
         self._update_bit_buttons(offset)
 
@@ -161,8 +161,8 @@ class DataInspectorMixin:
             bit_idx = 7 - i
             try:
                 is_set = bool(self.document.get_bit(offset, bit_idx))
-            except (AttributeError, ValueError, OverflowError) as exc:
-                _logger.exception("bit_read_failed", offset=offset, bit=bit_idx, error=str(exc))
+            except (AttributeError, ValueError, OverflowError):
+                _logger.exception("bit_read_failed", offset=offset, bit=bit_idx)
                 return
             btn.setChecked(is_set)
             btn.setText("1" if is_set else "0")
@@ -187,16 +187,15 @@ class DataInspectorMixin:
         _logger.info("bit_write_requested", offset=offset, bit=bit_index, checked=checked)
         try:
             self.document.set_bit(offset, bit_index, checked)
-        except (AttributeError, ValueError, OverflowError) as exc:
-            _logger.exception("bit_write_failed", offset=offset, bit=bit_index, error=str(exc))
+        except (AttributeError, ValueError, OverflowError):
+            _logger.exception("bit_write_failed", offset=offset, bit=bit_index)
             return
 
         btn_idx = 7 - bit_index
         if 0 <= btn_idx < len(self._bit_buttons):
             try:
                 is_set = bool(self.document.get_bit(offset, bit_index))
-            except (AttributeError, ValueError, OverflowError) as exc:
-                _logger.exception("bit_read_failed_post_write", offset=offset, bit=bit_index, error=str(exc))
+            except (AttributeError, ValueError, OverflowError):
                 is_set = checked
             self._bit_buttons[btn_idx].setChecked(is_set)
             self._bit_buttons[btn_idx].setText("1" if is_set else "0")
@@ -223,8 +222,8 @@ class DataInspectorMixin:
         if hexcore_available and hexcore is not None:
             try:
                 encodings = list(hexcore.HexDocument.list_encodings())
-            except (AttributeError, TypeError, ValueError) as exc:
-                _logger.exception("list_encodings_failed", error=str(exc))
+            except (AttributeError, TypeError, ValueError):
+                _logger.exception("list_encodings_failed")
                 encodings = []
         if not encodings:
             encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
