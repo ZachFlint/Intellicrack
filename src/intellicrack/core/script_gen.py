@@ -47,7 +47,7 @@ from .logging import get_logger
 from .process_manager import ProcessManager
 
 
-_logger = get_logger("core.script_gen")
+_logger = get_logger(__name__)
 
 ScriptType = Literal["frida", "ghidra", "cutter", "python", "x64dbg"]
 
@@ -262,7 +262,7 @@ class ScriptContext:
                 elif isinstance(strategy_raw, BypassStrategy):
                     strategy_desc = f"{strategy_raw.value} ({strategy_raw.description})"
             except ValueError:
-                _logger.debug("unknown_bypass_strategy", strategy=str(strategy_raw))
+                _logger.exception("unknown_bypass_strategy", strategy=str(strategy_raw))
 
             lines.append(f"  - {name} @ 0x{addr:X} (strategy: {strategy_desc})")
 
@@ -338,6 +338,7 @@ class Script:
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("directory_ensured", directory=str(path.parent))
+        _logger.info("script_file_written", path=str(path), size=len(self.content))
         path.write_text(self.content, encoding="utf-8")
         _logger.info("script_saved", path=str(path), size=len(self.content))
 
@@ -423,7 +424,7 @@ class ScriptValidator:
                     timeout=10,
                 )
             except FileNotFoundError:
-                _logger.warning("node_not_installed", language="javascript")
+                _logger.warning("node_runtime_missing", language="javascript")
                 return False, "node not installed"
             except TimeoutExpired:
                 _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
@@ -435,8 +436,9 @@ class ScriptValidator:
             stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
             return False, stderr_text
         finally:
+            _logger.info("temp_file_unlink", path=temp_path)
             Path(temp_path).unlink(missing_ok=True)
-            _logger.debug("temp_file_cleaned", path=temp_path)
+            _logger.info("temp_file_cleaned", path=temp_path)
 
     @staticmethod
     def validate_java(content: str) -> tuple[bool, str | None]:

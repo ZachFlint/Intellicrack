@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from intellicrack.core.types import HexDocumentFull
 
 
-_logger = get_logger("core.template_manager")
+_logger = get_logger(__name__)
 
 _PatternRegistry: type[Any] | None = None
 _hexpat_registry_available: bool = False
@@ -110,6 +110,11 @@ class TemplateManager:
         self._user_dir = self._templates_dir / "user"
         self._pattern_registry: Any | None = None
         self.failed_templates: list[tuple[Path, str]] = []
+        _logger.debug(
+            "template_manager_initialized",
+            config_dir=str(config_dir),
+            templates_dir=str(self._templates_dir),
+        )
 
     def ensure_directories(self) -> None:
         """Create the template directory structure if it doesn't exist."""
@@ -224,6 +229,12 @@ class TemplateManager:
             return False
 
         try:
+            _logger.info(
+                "builtin_template_file_written",
+                template_name=name,
+                path=str(target_path),
+                size=len(raw_json),
+            )
             target_path.write_text(raw_json, encoding="utf-8")
         except OSError as exc:
             _logger.warning("builtin_export_write_failed", template_name=name, error=str(exc))
@@ -271,6 +282,7 @@ class TemplateManager:
         safe = "".join(c if c.isalnum() or c in {"_", "-"} else "_" for c in name)
         if not safe.strip("_"):
             msg = f"template name produces an empty filename after sanitization: {name!r}"
+            _logger.error("template_name_sanitization_empty", template_name=name)
             raise ValueError(msg)
         return safe
 
@@ -295,15 +307,28 @@ class TemplateManager:
         """
         if not name.strip():
             msg = "template name must not be empty"
+            _logger.error("user_template_save_empty_name")
             raise ValueError(msg)
         self.ensure_directories()
         safe_name = self._sanitize_name(name)
         json_path = self._user_dir / f"{safe_name}.json"
+        _logger.info(
+            "user_template_file_written",
+            template_name=name,
+            path=str(json_path),
+            size=len(json_str),
+        )
         json_path.write_text(json_str, encoding="utf-8")
-        _logger.info("user_template_saved", name=name, path=str(json_path))
+        _logger.info("user_template_saved", template_name=name, path=str(json_path))
 
         if dsl_source is not None:
             dsl_path = self._user_dir / f"{safe_name}.hexpat"
+            _logger.info(
+                "user_template_dsl_file_written",
+                template_name=name,
+                path=str(dsl_path),
+                size=len(dsl_source),
+            )
             dsl_path.write_text(dsl_source, encoding="utf-8")
 
         return json_path
@@ -323,6 +348,7 @@ class TemplateManager:
         """
         if not path.exists():
             msg = f"template file not found: {path}"
+            _logger.error("template_load_file_missing", path=str(path))
             raise FileNotFoundError(msg)
         return path.read_text(encoding="utf-8")
 
@@ -340,18 +366,29 @@ class TemplateManager:
         """
         if not name.strip():
             msg = "template name must not be empty"
+            _logger.error("user_template_delete_empty_name")
             raise ValueError(msg)
         safe_name = self._sanitize_name(name)
         json_path = self._user_dir / f"{safe_name}.json"
         dsl_path = self._user_dir / f"{safe_name}.hexpat"
         deleted = False
         if json_path.exists():
+            _logger.info(
+                "user_template_json_unlink",
+                template_name=name,
+                path=str(json_path),
+            )
             json_path.unlink()
             deleted = True
         if dsl_path.exists():
+            _logger.info(
+                "user_template_dsl_unlink",
+                template_name=name,
+                path=str(dsl_path),
+            )
             dsl_path.unlink()
         if deleted:
-            _logger.info("user_template_deleted", name=name)
+            _logger.info("user_template_deleted", template_name=name)
         return deleted
 
     def _parse_template_file(

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from intellicrack.core.types import CompiledYaraRules
 
 
-_logger = get_logger("core.yara_scanner")
+_logger = get_logger(__name__)
 
 _ERR_COMPILE_NA = "yara-python is not installed; cannot compile YARA rules"
 _ERR_SCAN_NA = "yara-python is not installed; cannot scan"
@@ -34,7 +34,7 @@ try:
     _yara_mod = _yara_import
     _yara_available = True
 except ImportError:
-    pass
+    _logger.debug("yara_module_import_failed")
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,7 +88,7 @@ class YaraScanner:
         """
         self._timeout = timeout
         if not _yara_available:
-            _logger.warning("yara-python is not installed; YARA scanning unavailable")
+            _logger.warning("yara_python_unavailable")
 
     @property
     def available(self) -> bool:
@@ -120,13 +120,14 @@ class YaraScanner:
                 rule source.
         """
         if not _yara_available or _yara_mod is None:
+            _logger.error("yara_compile_unavailable")
             raise RuntimeError(_ERR_COMPILE_NA)
         filepaths: dict[str, str] = {}
         for p in paths:
             resolved = Path(p).resolve()
             namespace = resolved.stem
             filepaths[namespace] = str(resolved)
-        _logger.debug("compiling YARA rules", file_count=len(filepaths))
+        _logger.debug("yara_rules_compile_start", file_count=len(filepaths))
         try:
             compiled: CompiledYaraRules = _yara_mod.compile(filepaths=filepaths)
         except (ValueError, OSError, RuntimeError) as exc:
@@ -151,8 +152,9 @@ class YaraScanner:
             ValueError: When compilation fails due to a syntax error.
         """
         if not _yara_available or _yara_mod is None:
+            _logger.error("yara_compile_unavailable")
             raise RuntimeError(_ERR_COMPILE_NA)
-        _logger.debug("compiling YARA rules from source", namespace=namespace)
+        _logger.debug("yara_rules_compile_source_start", namespace=namespace)
         sources: dict[str, str] = {namespace: source}
         try:
             compiled: CompiledYaraRules = _yara_mod.compile(sources=sources)
@@ -178,8 +180,9 @@ class YaraScanner:
             RuntimeError: When yara-python is not installed.
         """
         if not _yara_available:
+            _logger.error("yara_scan_unavailable")
             raise RuntimeError(_ERR_SCAN_NA)
-        _logger.debug("scanning data buffer", buffer_size=len(data))
+        _logger.debug("yara_data_scan_start", buffer_size=len(data))
         raw_matches: list[object] = rules.match(data=data, timeout=self._timeout)
         return self._convert_matches(raw_matches)
 
@@ -199,9 +202,10 @@ class YaraScanner:
             RuntimeError: When yara-python is not installed.
         """
         if not _yara_available:
+            _logger.error("yara_scan_unavailable")
             raise RuntimeError(_ERR_SCAN_NA)
         resolved = str(Path(path).resolve())
-        _logger.debug("scanning file", path=resolved)
+        _logger.debug("yara_file_scan_start", path=resolved)
         raw_matches: list[object] = rules.match(filepath=resolved, timeout=self._timeout)
         return self._convert_matches(raw_matches)
 

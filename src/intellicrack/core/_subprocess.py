@@ -16,6 +16,10 @@ from __future__ import annotations
 import importlib
 import sys
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 _sp = importlib.import_module("sub" + "process")
 
@@ -38,6 +42,7 @@ class _StartupInfoFallback:
         self.hStdError: object | None = None
         self.wShowWindow: int = 0
         self.lpAttributeList: dict[str, object] = {}
+        _logger.debug("startup_info_fallback_initialized")
 
 
 if sys.platform == "win32":

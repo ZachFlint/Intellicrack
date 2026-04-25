@@ -121,14 +121,24 @@ def cleanup_old_logs(log_dir: Path, retention_days: int) -> int:
     cutoff_time = datetime.now(UTC) - timedelta(days=retention_days)
     cutoff_timestamp = cutoff_time.timestamp()
 
+    bootstrap_logger = get_logger(__name__)
     for log_file in log_dir.glob("*.log*"):
         try:
             mtime = log_file.stat().st_mtime
             if mtime < cutoff_timestamp:
+                bootstrap_logger.info(
+                    "log_file_unlink",
+                    file=str(log_file),
+                    mtime=mtime,
+                )
                 log_file.unlink()
                 deleted_count += 1
-        except OSError:
-            get_logger("logging").debug("log_cleanup_file_error", file=str(log_file))
+        except OSError as exc:
+            bootstrap_logger.exception(
+                "log_cleanup_file_error",
+                file=str(log_file),
+                error_type=type(exc).__name__,
+            )
             continue
 
     return deleted_count
@@ -533,7 +543,7 @@ def log_binary_operation(
         **kwargs: Additional operation-specific context.
     """
     slog = get_logger("binary")
-    slog.info(f"binary_{operation}", path=str(path), **kwargs)
+    slog.info("binary_operation", operation=operation, path=str(path), **kwargs)
 
 
 def log_sandbox_operation(
@@ -549,7 +559,7 @@ def log_sandbox_operation(
         **kwargs: Additional operation-specific context.
     """
     slog = get_logger("sandbox")
-    slog.info(f"sandbox_{operation}", sandbox_type=sandbox_type, **kwargs)
+    slog.info("sandbox_operation", operation=operation, sandbox_type=sandbox_type, **kwargs)
 
 
 def log_session_operation(
@@ -568,7 +578,7 @@ def log_session_operation(
     log_data: dict[str, object] = dict(kwargs)
     if session_id:
         log_data["session_id"] = session_id
-    slog.info(f"session_{operation}", **log_data)
+    slog.info("session_operation", operation=operation, **log_data)
 
 
 def log_analysis_operation(
@@ -584,7 +594,7 @@ def log_analysis_operation(
         **kwargs: Additional analysis-specific context.
     """
     slog = get_logger("analysis")
-    slog.info(f"analysis_{operation}", target=target, **kwargs)
+    slog.info("analysis_operation", operation=operation, target=target, **kwargs)
 
 
 class OperationTimer:
@@ -617,7 +627,12 @@ class OperationTimer:
         self.logger_name = logger_name
         self.context = context
         self._start_time: float = 0.0
-        self._slog = get_logger(logger_name)
+        self._logger = get_logger(logger_name)
+        self._logger.debug(
+            "operation_timer_initialized",
+            operation=operation,
+            logger_name=logger_name,
+        )
 
     @property
     def elapsed_ms(self) -> float:
@@ -637,7 +652,7 @@ class OperationTimer:
             Self: Self for context manager use.
         """
         self._start_time = time.perf_counter()
-        self._slog.debug(f"{self.operation}_started", **self.context)
+        self._logger.debug("operation_started", operation=self.operation, **self.context)
         return self
 
     def __exit__(
@@ -656,15 +671,17 @@ class OperationTimer:
         duration_ms = (time.perf_counter() - self._start_time) * 1000
 
         if exc_type is not None:
-            self._slog.error(
-                f"{self.operation}_failed",
+            self._logger.error(
+                "operation_failed",
+                operation=self.operation,
                 duration_ms=round(duration_ms, 2),
                 error=str(exc_val) if exc_val else str(exc_type),
                 **self.context,
             )
         else:
-            self._slog.info(
-                f"{self.operation}_complete",
+            self._logger.info(
+                "operation_complete",
+                operation=self.operation,
                 duration_ms=round(duration_ms, 2),
                 **self.context,
             )

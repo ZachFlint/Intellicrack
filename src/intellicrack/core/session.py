@@ -50,7 +50,7 @@ _ERR_SESSION_NOT_FOUND = "session not found"
 _ERR_SESSION_EXISTS = "session already exists"
 _ERR_NO_CURRENT_SESSION = "no current session"
 
-_logger = get_logger("core.session")
+_logger = get_logger(__name__)
 
 
 @dataclass
@@ -245,7 +245,7 @@ class SessionStore:
             raise
         finally:
             conn.close()
-            _logger.debug("db_connection_closed", db_path=str(self.db_path))
+            _logger.info("db_connection_closed", db_path=str(self.db_path))
 
     def _init_database(self) -> None:
         """Initialize the database schema."""
@@ -346,12 +346,12 @@ class SessionStore:
                 try:
                     conn.execute("ROLLBACK")
                 except sqlite3.Error:
-                    _logger.debug("rollback_noop", db_path=str(self.db_path), exc_info=True)
+                    _logger.exception("rollback_noop_failed", db_path=str(self.db_path))
                 _logger.exception("db_connection_rollback", db_path=str(self.db_path))
                 raise
         finally:
             conn.close()
-            _logger.debug("db_connection_closed", db_path=str(self.db_path))
+            _logger.info("db_connection_closed", db_path=str(self.db_path))
 
         _logger.debug("session_saved", session_id=session.id)
 
@@ -413,7 +413,7 @@ class SessionStore:
         Returns:
             bool: True if deleted, False if not found.
         """
-        _logger.debug("session_delete_query", session_id=session_id)
+        _logger.info("session_delete_query", session_id=session_id)
         with self._connection() as conn:
             cursor = conn.execute(
                 "DELETE FROM sessions WHERE id = ?",
@@ -837,7 +837,7 @@ class SessionStore:
         }
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        _logger.debug("session_export_file_write", session_id=session.id, path=str(path))
+        _logger.info("session_export_file_write", session_id=session.id, path=str(path))
         with path.open("w", encoding="utf-8") as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)
 
@@ -857,6 +857,7 @@ class SessionStore:
             ValueError: If the file format is invalid.
         """
         if not path.exists():
+            _logger.error("session_import_file_missing", path=str(path))
             raise FileNotFoundError(_ERR_FILE_NOT_FOUND)
 
         _logger.debug("session_import_file_read", path=str(path))
@@ -866,6 +867,7 @@ class SessionStore:
         session_data = data.get("session", data)
 
         if "id" not in session_data or "provider" not in session_data:
+            _logger.error("session_import_invalid_format", path=str(path))
             raise ValueError(_ERR_INVALID_FORMAT)
 
         tool_states: dict[ToolName, ToolState] = {}
