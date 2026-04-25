@@ -370,6 +370,13 @@ class ToolBridgeBase(ABC):
         Args:
             value: New BridgeState instance to assign.
         """
+        self._logger.info(
+            "bridge_state_changed",
+            connected=value.connected,
+            tool_running=value.tool_running,
+            binary_loaded=value.binary_loaded,
+            process_attached=value.process_attached,
+        )
         self._state = value
 
     @property

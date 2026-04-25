@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from intellicrack.core.types import HexDocumentFull
 
 
-_logger = get_logger("bridges.hex_state")
+_logger = get_logger(__name__)
 
 
 class HexDocumentEvent(enum.Enum):
@@ -102,6 +102,10 @@ class HexDocumentState:
         self._notify_guard: bool = False
         self._highlight_rules: dict[str, dict[str, Any]] = {}
         self._display_mode: str = "hex8"
+        _logger.info(
+            "hex_document_state_initialized",
+            display_mode=self._display_mode,
+        )
 
     @property
     def document(self) -> HexDocumentFull | None:
