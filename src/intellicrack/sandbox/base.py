@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 __all__ = ["SandboxError", "SandboxTimeoutError"]
 
 
-_logger = get_logger("sandbox.base")
+_logger = get_logger(__name__)
 
 _ERR_SANDBOX_NOT_IMPL = "Sandbox not implemented"
 _ERR_SANDBOX_NOT_IMPL_DETAIL = "Use a concrete sandbox implementation like WindowsSandbox"
@@ -602,7 +602,7 @@ class SandboxBase:
         Raises:
             SandboxError: If not supported.
         """
-        _logger.debug(
+        _logger.info(
             "base_sandbox_delete_snapshot_called",
             class_name=type(self).__name__,
             snapshot_name=name,
@@ -714,7 +714,7 @@ class SandboxBase:
         Raises:
             SandboxError: If extraction fails.
         """
-        _logger.debug("base_sandbox_extract_dropped_files_called", class_name=type(self).__name__)
+        _logger.info("base_sandbox_extract_dropped_files_called", class_name=type(self).__name__)
         del output_path
         raise SandboxError(_ERR_EXTRACT_FILES_NOT_IMPL)
 

@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-_logger = get_logger("sandbox.manager")
+_logger = get_logger(__name__)
 
 SandboxType = Literal["windows", "qemu"]
 
@@ -59,6 +59,12 @@ class SandboxInstance:
         self.binary_path = binary_path
         self.last_report: ExecutionReport | None = None
         self.is_busy: bool = False
+        _logger.debug(
+            "sandbox_instance_initialized",
+            instance_id=self.id,
+            sandbox_type=sandbox_type,
+            binary_path=str(binary_path) if binary_path else None,
+        )
 
     @property
     def state(self) -> SandboxState:
@@ -101,6 +107,7 @@ class SandboxManager:
         self._default_config = default_config or SandboxConfig()
         self._max_instances = max_instances
         self._lock = asyncio.Lock()
+        _logger.info("sandbox_manager_initialized", max_instances=max_instances)
 
     @property
     def instances(self) -> list[SandboxInstance]:
@@ -167,6 +174,13 @@ class SandboxManager:
         Raises:
             SandboxError: If creation fails.
         """
+        _logger.debug(
+            "sandbox_create_called",
+            sandbox_type=sandbox_type,
+            binary_path=str(binary_path) if binary_path else None,
+            auto_start=auto_start,
+            mark_busy=mark_busy,
+        )
         async with self._lock:
             if self.active_count >= self._max_instances:
                 oldest = await self._find_oldest_idle()
@@ -174,6 +188,7 @@ class SandboxManager:
                     await self.destroy(oldest.id)
                 else:
                     error_message = f"All {self._max_instances} sandboxes busy"
+                    _logger.error("sandbox_create_capacity_exhausted", max_instances=self._max_instances)
                     raise SandboxError(error_message)
 
             effective_config = config or self._default_config
@@ -188,6 +203,7 @@ class SandboxManager:
 
             if not await sandbox.is_available():
                 error_message = f"Sandbox type not available: {sandbox_type}"
+                _logger.error("sandbox_create_type_unavailable", sandbox_type=sandbox_type)
                 raise SandboxError(error_message)
 
             instance = SandboxInstance(
@@ -234,10 +250,12 @@ class SandboxManager:
         Raises:
             SandboxError: If instance not found.
         """
+        _logger.info("sandbox_destroy_called", instance_id=instance_id)
         async with self._lock:
             instance = self._instances.get(instance_id)
             if instance is None:
                 error_message = f"Sandbox instance not found: {instance_id}"
+                _logger.error("sandbox_destroy_not_found", instance_id=instance_id)
                 raise SandboxError(error_message)
 
             try:

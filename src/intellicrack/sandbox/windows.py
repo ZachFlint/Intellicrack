@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-_logger = get_logger("sandbox.windows")
+_logger = get_logger(__name__)
 
 _WHERE_TIMEOUT = 10
 _FEATURE_CHECK_TIMEOUT = 30
@@ -167,6 +167,10 @@ class WindowsSandbox(SandboxBase):
         self._temp_dir: Path | None = None
         self._worker_pid: int | None = None
         self._active_captures: dict[str, str] = {}
+        _logger.info(
+            "windows_sandbox_initialized",
+            time_limit=getattr(self._config, "time_limit", None),
+        )
 
     async def is_available(self) -> bool:
         """Check if Windows Sandbox is available.
@@ -223,6 +227,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If the sandbox process has terminated.
         """
         if self.process is not None and self.process.poll() is not None:
+            _logger.error("windows_sandbox_process_terminated", returncode=self.process.returncode)
             raise SandboxError(_ERR_SANDBOX_TERMINATED)
 
     async def start(self) -> None:
@@ -359,7 +364,7 @@ class WindowsSandbox(SandboxBase):
                 try:
                     process_manager.terminate_external_pid(worker_pid, force=True)
                 except (OSError, RuntimeError) as worker_err:
-                    _logger.debug(
+                    _logger.warning(
                         "worker_pid_terminate_failed",
                         worker_pid=worker_pid,
                         error=str(worker_err),
@@ -432,11 +437,11 @@ class WindowsSandbox(SandboxBase):
         try:
             posted = await asyncio.to_thread(_post_wm_close)
         except (OSError, RuntimeError) as exc:
-            _logger.debug("wm_close_post_failed", pid=pid, error=str(exc))
+            _logger.warning("wm_close_post_failed", pid=pid, error=str(exc))
             return False
 
         if not posted:
-            _logger.debug("wm_close_no_top_level_window", pid=pid)
+            _logger.info("wm_close_no_top_level_window", pid=pid)
             return False
 
         if self.process is None:
@@ -448,7 +453,7 @@ class WindowsSandbox(SandboxBase):
                 timeout=_GRACEFUL_CLOSE_TIMEOUT,
             )
         except TimeoutError:
-            _logger.info("graceful_close_timeout", pid=pid)
+            _logger.warning("graceful_close_timeout", pid=pid)
             return False
         else:
             _logger.info("graceful_close_ok", pid=pid)
@@ -480,7 +485,7 @@ class WindowsSandbox(SandboxBase):
                     process_timeout=_TASKKILL_TIMEOUT,
                 )
             except (OSError, RuntimeError) as fallback_err:
-                _logger.debug(
+                _logger.warning(
                     "client_taskkill_fallback_failed",
                     error=str(fallback_err),
                 )
@@ -526,7 +531,7 @@ class WindowsSandbox(SandboxBase):
                     process_timeout=_FEATURE_CHECK_TIMEOUT,
                 )
             except (OSError, RuntimeError) as err:
-                _logger.debug("vmwp_lookup_error", error=str(err))
+                _logger.warning("vmwp_lookup_error", error=str(err))
                 await asyncio.sleep(_WORKER_PID_POLL_INTERVAL)
                 continue
 
@@ -535,7 +540,12 @@ class WindowsSandbox(SandboxBase):
                 try:
                     data: object = json.loads(raw)
                 except (ValueError, TypeError) as parse_err:
-                    _logger.debug("vmwp_json_parse_failed", error=str(parse_err), raw=raw)
+                    _logger.warning(
+                        "vmwp_json_parse_failed",
+                        error=str(parse_err),
+                        output_size=len(raw),
+                        output_prefix=raw[:120],
+                    )
                 else:
                     if isinstance(data, dict):
                         pid_val: object = cast("dict[str, object]", data).get("pid")
@@ -571,6 +581,7 @@ class WindowsSandbox(SandboxBase):
                 or the sandbox process terminated during startup.
         """
         if self._shared_folder is None:
+            _logger.error("dispatcher_wait_shared_folder_not_initialized")
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         marker = self._shared_folder / "flags" / self.DISPATCHER_READY_MARKER
@@ -583,6 +594,7 @@ class WindowsSandbox(SandboxBase):
                 return
             await asyncio.sleep(_DISPATCHER_POLL_INTERVAL)
 
+        _logger.error("dispatcher_ready_timeout", time_limit=_DISPATCHER_STARTUP_TIMEOUT)
         raise SandboxError(_ERR_DISPATCHER_NOT_READY)
 
     async def _generate_wsb_config(self) -> None:
@@ -597,6 +609,11 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox paths are not initialized.
         """
         if self._wsb_path is None or self._shared_folder is None:
+            _logger.error(
+                "wsb_config_generation_paths_not_initialized",
+                wsb_path_set=self._wsb_path is not None,
+                shared_folder_set=self._shared_folder is not None,
+            )
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
         config = Element("Configuration")
@@ -661,6 +678,11 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox paths are not initialized.
         """
         if self._monitor_folder is None or self._shared_folder is None:
+            _logger.error(
+                "dispatcher_scripts_paths_not_initialized",
+                monitor_folder_set=self._monitor_folder is not None,
+                shared_folder_set=self._shared_folder is not None,
+            )
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
         dispatcher_ps1 = self._monitor_folder / "sandbox_dispatcher.ps1"
@@ -788,6 +810,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If sandbox paths are not initialized.
         """
         if self._monitor_folder is None:
+            _logger.error("monitor_scripts_monitor_folder_not_initialized")
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
         monitor_folder = self._monitor_folder
@@ -795,6 +818,7 @@ class WindowsSandbox(SandboxBase):
         def _copy_scripts() -> list[str]:
             scripts_dir = _SCRIPTS_DIR
             if not scripts_dir.is_dir():
+                _logger.error("monitor_scripts_dir_not_found", scripts_dir=str(scripts_dir))
                 raise SandboxError(_ERR_SCRIPTS_NOT_FOUND)
             copied: list[str] = []
             for src in scripts_dir.iterdir():
@@ -1072,9 +1096,11 @@ class WindowsSandbox(SandboxBase):
             SandboxTimeoutError: If command times out.
         """
         if self.state.status != "running":
+            _logger.error("run_command_sandbox_not_running", state=self.state.status, command_prefix=command[:120])
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
 
         if self._shared_folder is None:
+            _logger.error("run_command_shared_folder_not_initialized", command_prefix=command[:120])
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         effective_timeout = time_limit or self._config.timeout_seconds
@@ -1125,12 +1151,15 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If execution fails.
         """
         if self.state.status != "running":
+            _logger.error("run_binary_sandbox_not_running", state=self.state.status, binary_path=str(binary_path))
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
 
         if not await asyncio.to_thread(binary_path.exists):
+            _logger.error("run_binary_target_not_found", binary_path=str(binary_path))
             raise SandboxError(_ERR_BINARY_NOT_FOUND)
 
         if self._shared_folder is None:
+            _logger.error("run_binary_shared_folder_not_initialized", binary_path=str(binary_path))
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         effective_timeout = time_limit or self._config.timeout_seconds
@@ -1201,7 +1230,7 @@ class WindowsSandbox(SandboxBase):
             try:
                 await asyncio.to_thread(log_file.unlink)
             except OSError as err:
-                _logger.debug(
+                _logger.warning(
                     "log_cleanup_failed",
                     log=str(log_file),
                     error=str(err),
@@ -1772,6 +1801,7 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If anti-evasion cannot be applied.
         """
         if self.state.status != "running":
+            _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
 
         applied: dict[str, Any] = {"profile": profile, "techniques": []}
@@ -1894,7 +1924,7 @@ class WindowsSandbox(SandboxBase):
             dump_path,
         )
         if not dbghelp_ok:
-            _logger.info("dbghelp_minidump_failed_trying_procdump", error=dbghelp_err)
+            _logger.warning("dbghelp_minidump_unavailable_falling_back_to_procdump", error=dbghelp_err)
             proc_ok = await self._minidump_via_procdump(worker_pid, dump_path)
             if not proc_ok:
                 _logger.warning(
@@ -1917,7 +1947,7 @@ class WindowsSandbox(SandboxBase):
                 match_count=len(yara_matches),
             )
         except SandboxError as yara_err:
-            _logger.debug("memory_dump_yara_skipped", error=str(yara_err))
+            _logger.warning("memory_dump_yara_skipped", error=str(yara_err))
 
         if output_path is not None:
             await asyncio.to_thread(
@@ -1944,7 +1974,7 @@ class WindowsSandbox(SandboxBase):
         """
         procdump = shutil.which("procdump64.exe") or shutil.which("procdump.exe")
         if procdump is None:
-            _logger.debug("procdump_not_found")
+            _logger.debug("procdump_not_found", pid=pid)
             return False
 
         process_manager = ProcessManager.get_instance()
@@ -1955,13 +1985,14 @@ class WindowsSandbox(SandboxBase):
                 process_timeout=_FEATURE_CHECK_TIMEOUT,
             )
         except (OSError, RuntimeError) as err:
-            _logger.warning("procdump_invocation_failed", error=str(err))
+            _logger.warning("procdump_invocation_failed", pid=pid, error=str(err))
             return False
         else:
             ok = result.returncode == _RETURNCODE_SUCCESS and await asyncio.to_thread(dump_path.exists)
             if not ok:
                 _logger.warning(
                     "procdump_failed",
+                    pid=pid,
                     returncode=result.returncode,
                     stderr=(result.stderr or "")[:500],
                 )
@@ -1980,8 +2011,10 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If extraction fails.
         """
         if self.state.status != "running":
+            _logger.error("dropped_files_extraction_skipped_not_running", state=self.state.status)
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
         if self._shared_folder is None:
+            _logger.error("dropped_files_extraction_shared_folder_not_initialized")
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
         extract_id = secrets.token_hex(8)
@@ -2017,7 +2050,7 @@ class WindowsSandbox(SandboxBase):
         try:
             await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
         except OSError as e:
-            _logger.debug("staging_dir_cleanup_failed", error=str(e))
+            _logger.warning("staging_dir_cleanup_failed", error=str(e), staging_dir=str(staging_dir))
 
         _logger.info("dropped_files_extracted", zip_path=str(zip_path))
 
@@ -2107,7 +2140,7 @@ class WindowsSandbox(SandboxBase):
                     )
                     matches.extend(_format_yara_match(ym, str(scan_file), "files") for ym in file_matches)
                 except (OSError, RuntimeError) as e:
-                    _logger.debug(
+                    _logger.warning(
                         "yara_file_scan_error",
                         file=str(scan_file),
                         error=str(e),
@@ -2165,6 +2198,7 @@ class _DispatcherPaths:
         self.out = out
         self.err = err
         self.result = result
+        _logger.debug("dispatcher_paths_initialized", trigger_path=str(trigger))
 
     @classmethod
     def for_ticket(cls, shared_folder: Path, ticket: str) -> _DispatcherPaths:
@@ -2204,7 +2238,7 @@ async def _read_dispatcher_result(paths: _DispatcherPaths) -> tuple[int, str, st
             errors="ignore",
         )
     except OSError as err:
-        _logger.debug("result_read_failed", error=str(err))
+        _logger.debug("result_read_failed", error=str(err), result_path=str(paths.result), exc_info=True)
         return None
 
     code_str = code_raw.strip()
@@ -2373,6 +2407,7 @@ def _minidump_via_dbghelp(pid: int, dump_path: Path) -> tuple[bool, str]:
         dbghelp = ctypes.WinDLL("dbghelp.dll", use_last_error=True)
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     except OSError as err:
+        _logger.warning("dbghelp_library_load_failed", pid=pid, error=str(err))
         return (False, f"library_load_failed:{err}")
 
     kernel32.OpenProcess.argtypes = [
@@ -2407,6 +2442,7 @@ def _minidump_via_dbghelp(pid: int, dump_path: Path) -> tuple[bool, str]:
         try:
             fh = dump_path.open("wb")
         except OSError as err:
+            _logger.warning("dbghelp_dump_open_failed", pid=pid, dump_path=str(dump_path), error=str(err))
             return (False, f"dump_open_failed:{err}")
         try:
             file_handle = _win_handle_from_file(fh)
@@ -2452,6 +2488,7 @@ def _win_handle_from_file(file_obj: IO[bytes]) -> int | None:
 
             msvcrt_mod = msvcrt
         except ImportError:
+            _logger.warning("msvcrt_import_failed_returning_none")
             return None
     get_osfhandle: Callable[[int], int] = msvcrt_mod.get_osfhandle
     try:
