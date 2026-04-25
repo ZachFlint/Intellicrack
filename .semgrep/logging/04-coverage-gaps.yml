@@ -331,6 +331,38 @@ rules:
           def $M(self, ...):
               ...
       - pattern-not: |
+          @abstractmethod
+          def $M(self, ...):
+              ...
+      - pattern-not: |
+          @abstractmethod
+          async def $M(self, ...):
+              ...
+      - pattern-not: |
+          @abstractmethod
+          def $M(self, ...) -> $RT:
+              ...
+      - pattern-not: |
+          @abstractmethod
+          async def $M(self, ...) -> $RT:
+              ...
+      - pattern-not: |
+          def $M(self, ...) -> $RT:
+              "..."
+              return $X
+      - pattern-not: |
+          def $M(self, ...):
+              "..."
+              return $X
+      - pattern-not: |
+          def $M(self, ...) -> $RT:
+              "..."
+              self.$A = $X
+      - pattern-not: |
+          def $M(self, ...):
+              "..."
+              self.$A = $X
+      - pattern-not: |
           def $M(self, ...) -> $RT:
               return $X
       - pattern-not: |
@@ -396,44 +428,167 @@ rules:
               return $Y
   - id: intellicrack-logging-d7-subprocess-without-log
     message: >-
-      Launching an external process (`subprocess.Popen`, `subprocess.run`, `subprocess.check_output`, `os.system`, `os.popen`, `asyncio.create_subprocess_exec`, `asyncio.create_subprocess_shell`) is a major orchestration event - it is the whole point of a tool bridge. Emit a log with the command and argv BEFORE the call and with the exit code / duration AFTER, so the unified workspace records what was run. Confirm a surrounding `_logger.info("subprocess_spawning", argv=...)` exists - if so this finding is a reviewable non-issue.
+      Launching an external process (`subprocess.Popen`, `subprocess.run`, `subprocess.check_output`, `os.system`, `os.popen`, `asyncio.create_subprocess_exec`, `asyncio.create_subprocess_shell`) is a major orchestration event - it is the whole point of a tool bridge. Emit a log with the command and argv BEFORE the call and with the exit code / duration AFTER, so the unified workspace records what was run.
     severity: WARNING
     languages: [python]
-    pattern-either:
-      - pattern: subprocess.Popen(...)
-      - pattern: subprocess.run(...)
-      - pattern: subprocess.call(...)
-      - pattern: subprocess.check_call(...)
-      - pattern: subprocess.check_output(...)
-      - pattern: os.system(...)
-      - pattern: os.popen(...)
-      - pattern: asyncio.create_subprocess_exec(...)
-      - pattern: asyncio.create_subprocess_shell(...)
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.Popen(...)
+          - pattern: subprocess.run(...)
+          - pattern: subprocess.call(...)
+          - pattern: subprocess.check_call(...)
+          - pattern: subprocess.check_output(...)
+          - pattern: os.system(...)
+          - pattern: os.popen(...)
+          - pattern: asyncio.create_subprocess_exec(...)
+          - pattern: asyncio.create_subprocess_shell(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.exception(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.exception(...)
+              ...
   - id: intellicrack-logging-d8-binary-write-without-log
     message: >-
-      Writing to a file. For an analysis/cracking platform, every write is potentially a patch or artifact emission that must be recorded. Confirm an adjacent `_logger.info("file_written", path=str(path), size=len(data))` call exists - if so this finding is a reviewable non-issue.
+      Writing to a file. For an analysis/cracking platform, every write is potentially a patch or artifact emission that must be recorded. Add an adjacent `_logger.info("file_written", path=str(path), size=len(data))` call so the audit trail captures the write.
     severity: WARNING
     languages: [python]
-    pattern-either:
-      - pattern: $P.write_bytes(...)
-      - pattern: $P.write_text(...)
-      - pattern: open($P, "wb").write(...)
-      - pattern: open($P, "w").write(...)
-      - pattern: open($P, "ab").write(...)
-      - pattern: open($P, "a").write(...)
+    patterns:
+      - pattern-either:
+          - pattern: $P.write_bytes(...)
+          - pattern: $P.write_text(...)
+          - pattern: open($P, "wb").write(...)
+          - pattern: open($P, "w").write(...)
+          - pattern: open($P, "ab").write(...)
+          - pattern: open($P, "a").write(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.exception(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.exception(...)
+              ...
   - id: intellicrack-logging-d9-destructive-op-without-log
     message: >-
-      Destructive filesystem operation (`os.remove`, `os.unlink`, `shutil.rmtree`, `pathlib.Path.unlink`, `pathlib.Path.rmdir`). Destructive ops MUST leave an audit trail - confirm a log with the target path is emitted before/after the op.
+      Destructive filesystem operation (`os.remove`, `os.unlink`, `shutil.rmtree`, `pathlib.Path.unlink`, `pathlib.Path.rmdir`). Destructive ops MUST leave an audit trail - emit a log with the target path before/after the op.
     severity: ERROR
     languages: [python]
-    pattern-either:
-      - pattern: os.remove(...)
-      - pattern: os.unlink(...)
-      - pattern: os.rmdir(...)
-      - pattern: os.removedirs(...)
-      - pattern: shutil.rmtree(...)
-      - pattern: $P.unlink(...)
-      - pattern: $P.rmdir(...)
+    patterns:
+      - pattern-either:
+          - pattern: os.remove(...)
+          - pattern: os.unlink(...)
+          - pattern: os.rmdir(...)
+          - pattern: os.removedirs(...)
+          - pattern: shutil.rmtree(...)
+          - pattern: $P.unlink(...)
+          - pattern: $P.rmdir(...)
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.info(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.warning(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.error(...)
+              ...
+      - pattern-not-inside: |
+          def $FN(...):
+              ...
+              $L.exception(...)
+              ...
+      - pattern-not-inside: |
+          async def $FN(...):
+              ...
+              $L.exception(...)
+              ...
   - id: intellicrack-logging-d10-network-call-without-log
     message: >-
       Network call (`requests.*`, `httpx.*`, `urllib.request.urlopen`, `socket.create_connection`). Network I/O crosses a trust and latency boundary that must be recorded (URL/host, method, status, duration). Confirm an adjacent log call exists.

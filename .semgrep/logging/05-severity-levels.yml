@@ -249,9 +249,14 @@ rules:
         - "**/intellicrack/cli/"
         - "**/intellicrack/core/session.py"
         - "**/intellicrack/core/orchestrator.py"
-    pattern-either:
-      - pattern: $L.critical(...)
-      - pattern: $L.fatal(...)
+    patterns:
+      - pattern-either:
+          - pattern: $L.critical(...)
+          - pattern: $L.fatal(...)
+      - pattern-not: QMessageBox.critical(...)
+      - pattern-not: QtWidgets.QMessageBox.critical(...)
+      - pattern-not: PyQt6.QtWidgets.QMessageBox.critical(...)
+      - pattern-not: PySide6.QtWidgets.QMessageBox.critical(...)
   - id: intellicrack-logging-e5-warning-announces-success
     message: >-
       `_logger.warning(...)` is being used to announce a successful operation (event name contains `success`, `ok`, `completed`, `done`, `ready`). WARNING is a problem indicator - using it for successes desensitizes operators to real warnings. Use `_logger.info(...)` for success events.

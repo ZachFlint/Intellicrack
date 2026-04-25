@@ -151,6 +151,20 @@ rules:
           - pattern: |
               async def complete(self, ...):
                   ...
+      - pattern-inside: |
+          class $C(...):
+              ...
+      - metavariable-regex:
+          metavariable: $C
+          regex: '.*(Provider|Completion|LLM|Chat|Anthropic|OpenAI|Google|Ollama|Grok|HuggingFace|Transformers|OpenRouter).*'
+      - pattern-not: |
+          @abstractmethod
+          def $FN(self, ...):
+              ...
+      - pattern-not: |
+          @abstractmethod
+          async def $FN(self, ...):
+              ...
       - pattern-not: |
           def $FN(self, ...):
               ...
@@ -283,8 +297,45 @@ rules:
           - pattern: |
               def launch(self, ...):
                   ...
+          - pattern: |
+              async def start(self, ...):
+                  ...
+          - pattern: |
+              async def stop(self, ...):
+                  ...
+          - pattern: |
+              async def reset(self, ...):
+                  ...
+          - pattern: |
+              async def snapshot(self, ...):
+                  ...
+          - pattern: |
+              async def restore(self, ...):
+                  ...
+          - pattern: |
+              async def launch(self, ...):
+                  ...
+      - pattern-inside: |
+          class $C(...):
+              ...
+      - metavariable-regex:
+          metavariable: $C
+          regex: '.*(Sandbox|Emulator|VirtualMachine|VM|QEMU|Cuckoo|Cape).*'
+      - pattern-not: |
+          @abstractmethod
+          def $FN(self, ...):
+              ...
+      - pattern-not: |
+          @abstractmethod
+          async def $FN(self, ...):
+              ...
       - pattern-not: |
           def $FN(self, ...):
+              ...
+              $L.$LVL(...)
+              ...
+      - pattern-not: |
+          async def $FN(self, ...):
               ...
               $L.$LVL(...)
               ...
