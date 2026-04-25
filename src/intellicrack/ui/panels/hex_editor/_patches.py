@@ -51,8 +51,8 @@ class PatchesMixin:
                     current_byte = raw_patch[0]
                 elif isinstance(raw_patch, list) and (patch_list := cast("list[int]", raw_patch)):
                     current_byte = patch_list[0]
-            except (AttributeError, ValueError) as exc:
-                _logger.exception("patch_read_failed", offset=off, error=str(exc))
+            except (AttributeError, ValueError):
+                _logger.exception("patch_read_failed", offset=off)
                 continue
 
             if current_byte < 0:
@@ -84,8 +84,8 @@ class PatchesMixin:
             return
         try:
             raw = self.document.read(offset, 1)
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("cache_original_byte_failed", offset=offset, error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("cache_original_byte_failed", offset=offset)
         else:
             if isinstance(raw, (list, bytes, bytearray)):
                 self._original_data_cache[offset] = raw[0] if raw else 0
@@ -121,7 +121,7 @@ class PatchesMixin:
         try:
             patch_data = self._dispatch_export_patches(suffix)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("patches_export_failed", error=str(exc), suffix=suffix)
+            _logger.exception("patches_export_failed", suffix=suffix)
             QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
         if patch_data is None:
@@ -141,7 +141,7 @@ class PatchesMixin:
         try:
             Path(save_path).write_bytes(patch_data)
         except OSError as exc:
-            _logger.exception("patches_export_write_failed", error=str(exc), path=save_path)
+            _logger.exception("patches_export_write_failed", path=save_path)
             QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
         _logger.info(
@@ -267,7 +267,7 @@ class PatchesMixin:
         try:
             patch_bytes = Path(file_path_str).read_bytes()
         except OSError as exc:
-            _logger.exception("patches_import_read_failed", error=str(exc), path=file_path_str)
+            _logger.exception("patches_import_read_failed", path=file_path_str)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
 
@@ -275,7 +275,7 @@ class PatchesMixin:
         try:
             applied = self._dispatch_import_patches(suffix, patch_bytes)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("patches_import_failed", error=str(exc), suffix=suffix)
+            _logger.exception("patches_import_failed", suffix=suffix)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
         if applied is None:

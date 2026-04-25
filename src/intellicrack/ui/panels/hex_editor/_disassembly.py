@@ -32,6 +32,7 @@ from intellicrack.ui.panels.hex_editor._base import (
 
 _logger = get_logger(__name__)
 
+
 _LAYOUT_MARGIN: Final[int] = 2
 _SPIN_WIDTH: Final[int] = 60
 
@@ -155,8 +156,8 @@ class DisassemblyMixin:
                 data = raw
             else:
                 return
-        except (AttributeError, ValueError) as exc:
-            _logger.exception("disasm_read_failed", error=str(exc), offset=cursor_offset, read_len=read_len)
+        except (AttributeError, ValueError):
+            _logger.exception("disasm_read_failed", offset=cursor_offset, read_len=read_len)
             return
 
         disassembler = HexDisassembler_cls()
@@ -209,10 +210,9 @@ class DisassemblyMixin:
         )
         try:
             instructions = disassembler.disassemble(data, base_addr=cursor_offset, arch=arch_str, mode=mode_str, count=count)
-        except (RuntimeError, ValueError) as exc:
+        except (RuntimeError, ValueError):
             _logger.exception(
                 "disasm_failed",
-                error=str(exc),
                 binary_path=binary_path_str,
                 offset=cursor_offset,
                 arch=arch_str,
@@ -230,7 +230,7 @@ class DisassemblyMixin:
             self._disasm_table.setItem(row, 2, QTableWidgetItem(insn.mnemonic))
             self._disasm_table.setItem(row, 3, QTableWidgetItem(insn.op_str))
 
-        _logger.debug("disasm_complete", instruction_count=len(instructions))
+        _logger.info("disasm_complete", instruction_count=len(instructions))
 
     def _on_cursor_moved_disasm(self, offset: int) -> None:
         """Auto-disassemble when Follow Cursor is active.

@@ -633,7 +633,7 @@ class HexEditorPanel(
                 self.state_holder.set_document(self.document, path, source="panel")
 
         except OSError as exc:
-            _logger.warning("file_load_failed", path=str(path), error=str(exc))
+            _logger.warning("file_load_failed", path=str(path))
             QMessageBox.warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
         else:
@@ -702,7 +702,7 @@ class HexEditorPanel(
         try:
             offset = int(text, 16) if text.lower().startswith("0x") else int(text)
         except ValueError:
-            _logger.debug("invalid_offset_input", text=text)
+            _logger.warning("invalid_offset_input", text=text)
         else:
             goto_fn(offset)
 
@@ -893,8 +893,8 @@ class HexEditorPanel(
         if hexcore_available and hexcore is not None:
             try:
                 encodings = list(hexcore.HexDocument.list_encodings())
-            except (AttributeError, TypeError, ValueError) as exc:
-                _logger.exception("toolbar_list_encodings_failed", error=str(exc))
+            except (AttributeError, TypeError, ValueError):
+                _logger.exception("toolbar_list_encodings_failed")
                 encodings = []
         if not encodings:
             encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
@@ -941,8 +941,8 @@ class HexEditorPanel(
             return False
         try:
             self._on_save()
-        except OSError as exc:
-            _logger.warning("save_document_failed", error=str(exc))
+        except OSError:
+            _logger.exception("save_document_failed")
             return False
         return True
 
@@ -1017,8 +1017,8 @@ class HexEditorPanel(
         else:
             try:
                 size = int(text.split("(", maxsplit=1)[0].strip().replace(",", ""))
-            except ValueError as exc:
-                _logger.debug("alignment_size_parse_failed", text=text, error=str(exc))
+            except ValueError:
+                _logger.exception("alignment_size_parse_failed", text=text)
                 size = 0
         if self._hex_widget is not None:
             set_align_fn = getattr(self._hex_widget, "set_alignment_grid_size", None)

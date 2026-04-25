@@ -180,7 +180,7 @@ class HighlightingMixin:
             try:
                 matches = document.search_hex(pattern, _HIGHLIGHT_PATTERN_MAX_MATCHES)
             except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                _logger.exception("highlight_search_failed", error=str(exc), pattern=pattern)
+                _logger.exception("highlight_search_failed", pattern=pattern)
                 QMessageBox.warning(parent, "Highlight", f"Pattern search failed: {exc}")
                 return None
             if isinstance(matches, list):
@@ -236,8 +236,8 @@ class HighlightingMixin:
                     priority=len(self._active_highlight_ids),
                 )
                 add_rule_fn(rule)
-            except (ImportError, TypeError, AttributeError) as exc:
-                _logger.exception("highlight_rule_add_failed", error=str(exc))
+            except (ImportError, TypeError, AttributeError):
+                _logger.exception("highlight_rule_add_failed")
                 return
 
         self._active_highlight_ids.append(rule_id)
@@ -249,7 +249,7 @@ class HighlightingMixin:
         if callable(update_fn):
             update_fn()
 
-        _logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
+        _logger.warning("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
 
     def _on_remove_highlight_rule(self) -> None:
         """Remove the selected highlight rule."""
@@ -264,8 +264,8 @@ class HighlightingMixin:
         if callable(remove_fn):
             try:
                 remove_fn(row)
-            except (IndexError, TypeError, AttributeError) as exc:
-                _logger.exception("highlight_rule_remove_failed", row=row, error=str(exc))
+            except (IndexError, TypeError, AttributeError):
+                _logger.exception("highlight_rule_remove_failed", row=row)
 
         self._active_highlight_ids.pop(row)
         self._highlight_rules_list.takeItem(row)
@@ -324,11 +324,10 @@ class HighlightingMixin:
             offsets: set[int] = set()
             try:
                 matches = search_fn(pattern_raw, _HIGHLIGHT_PATTERN_MAX_MATCHES)
-            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+            except (RuntimeError, OSError, ValueError, AttributeError):
                 _logger.exception(
                     "highlight_pattern_refresh_failed",
                     pattern=pattern_raw,
-                    error=str(exc),
                 )
                 continue
             if isinstance(matches, list):

@@ -169,8 +169,8 @@ class YaraMixin:
 
             matches = scanner.scan_data(data, compiled_rules)
 
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("yara_scan_failed", error=str(exc))
+        except (RuntimeError, OSError, ValueError):
+            _logger.exception("yara_scan_failed")
             return
 
         if matches is None:
@@ -201,7 +201,7 @@ class YaraMixin:
                 highlights = [(off, length, color) for off, length in all_match_offsets]
                 highlight_fn(highlights, "yara")
 
-        _logger.debug("yara_scan_complete", match_count=len(matches))
+        _logger.info("yara_scan_complete", match_count=len(matches))
 
     def _on_yara_result_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the YARA match offset when a result child is double-clicked.

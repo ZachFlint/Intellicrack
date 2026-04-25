@@ -100,7 +100,7 @@ class SearchWorker(QThread):
             results = self._execute_search()
             self.search_finished.emit(results)
         except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("search_worker_failed", error=str(exc), mode=self._mode)
+            _logger.exception("search_worker_failed", mode=self._mode)
             self.search_error.emit(exc)
 
     def _execute_search(self) -> list[tuple[int, int]]:
@@ -203,7 +203,7 @@ class NumericSearchWorker(QThread):
             results = self._search_native() if self._use_native else self._search_fallback()
             self.search_finished.emit(results)
         except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("numeric_search_worker_failed", error=str(exc))
+            _logger.exception("numeric_search_worker_failed")
             self.search_error.emit(exc)
 
     def _search_native(self) -> list[tuple[int, int]]:
@@ -263,8 +263,8 @@ class NumericSearchWorker(QThread):
                         results.append((abs_off, self._byte_width))
                         if len(results) >= self.max_results:
                             break
-                except struct.error as exc:
-                    _logger.debug("numeric_search_unpack_failed", offset=abs_off, error=str(exc))
+                except struct.error:
+                    _logger.exception("numeric_search_unpack_failed", offset=abs_off)
                     continue
             offset += max(1, read_len - self._byte_width + 1)
         return results
@@ -368,7 +368,7 @@ class SearchMixin:
         """
         if self._search_input is not None:
             self._search_input.setEnabled(True)
-        _logger.debug("search_failed", error=str(exc))
+        _logger.warning("search_failed", error=str(exc), error_type=type(exc).__name__)
 
     def _on_find_next(self) -> None:
         """Navigate to the next search result with wrap-around."""
@@ -612,6 +612,6 @@ class SearchMixin:
         """
         if self._numeric_value_input is not None:
             self._numeric_value_input.setEnabled(True)
-        _logger.debug("numeric_search_failed", error=str(exc))
+        _logger.warning("numeric_search_failed")
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(parent, "Numeric Search", f"Search failed:\n{exc}")
