@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from intellicrack.core.logging import get_logger
+
 
 if TYPE_CHECKING:
     from typing import ClassVar
@@ -18,6 +20,9 @@ if TYPE_CHECKING:
         StructDecl,
         UnionDecl,
     )
+
+
+_logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -156,6 +161,7 @@ class TypeRegistry:
         self._bitfields: dict[str, BitfieldTypeInfo] = {}
         self._aliases: dict[str, str] = {}
         self._all_names: set[str] = set()
+        _logger.debug("hexpat_type_registry_initialized")
 
     def register_struct(self, decl: StructDecl) -> None:
         """Register a struct type declaration.

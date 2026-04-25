@@ -67,6 +67,7 @@ from intellicrack.core.hexpat.type_system import (
     StructTypeInfo,
     UnionTypeInfo,
 )
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -77,6 +78,9 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat.ast_nodes import DeclNode, ExprNode, StmtNode, TypeNode
     from intellicrack.core.hexpat.data_reader import DataReader
     from intellicrack.core.hexpat.type_system import TypeRegistry
+
+
+_logger = get_logger(__name__)
 
 
 class _BreakSignalError(Exception):
@@ -310,6 +314,13 @@ class HexPatEvaluator:
         self._pointer_size: int = pragma.pointer_size
         self._namespace_stack: list[str] = []
         self._builtins: dict[str, BuiltinCallable] = self._build_builtins()
+        _logger.debug(
+            "hexpat_evaluator_initialized",
+            base_address=self._offset,
+            default_endian=self._default_endian,
+            pointer_size=self._pointer_size,
+            data_size=self._data.size,
+        )
 
     @property
     def scope(self) -> EvalScope:
@@ -578,8 +589,10 @@ class HexPatEvaluator:
                 for stmt in node.body:
                     self._eval_stmt(stmt)
             except _BreakSignalError:
+                _logger.warning("hexpat_while_break", line=node.line, column=node.column)
                 break
             except _ContinueSignalError:
+                _logger.warning("hexpat_while_continue", line=node.line, column=node.column)
                 continue
 
     def _eval_for(self, node: ForStmt) -> None:
@@ -603,9 +616,10 @@ class HexPatEvaluator:
                     for stmt in node.body:
                         self._eval_stmt(stmt)
                 except _BreakSignalError:
+                    _logger.warning("hexpat_for_break", line=node.line, column=node.column)
                     break
                 except _ContinueSignalError:
-                    pass
+                    _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
                 if node.update is not None:
                     self._eval_expr(node.update)
         finally:
@@ -653,6 +667,12 @@ class HexPatEvaluator:
             HexPatRuntimeError: If the pattern limit is exceeded.
         """
         if self._pattern_count >= self._pragma.pattern_limit:
+            _logger.error(
+                "hexpat_pattern_limit_exceeded",
+                pattern_limit=self._pragma.pattern_limit,
+                line=node.line,
+                column=node.column,
+            )
             msg = f"pattern limit {self._pragma.pattern_limit} exceeded"
             raise HexPatRuntimeError(msg, node.line, node.column)
         target_offset = self._offset
@@ -912,6 +932,12 @@ class HexPatEvaluator:
         self._depth += 1
         if self._depth > self._pragma.eval_depth:
             self._depth -= 1
+            _logger.error(
+                "hexpat_struct_eval_depth_exceeded",
+                struct_name=name,
+                eval_depth_limit=self._pragma.eval_depth,
+                data_offset=offset,
+            )
             msg = f"maximum evaluation depth {self._pragma.eval_depth} exceeded"
             raise HexPatRuntimeError(msg, offset=offset)
 
@@ -983,6 +1009,12 @@ class HexPatEvaluator:
         self._depth += 1
         if self._depth > self._pragma.eval_depth:
             self._depth -= 1
+            _logger.error(
+                "hexpat_union_eval_depth_exceeded",
+                union_name=name,
+                eval_depth_limit=self._pragma.eval_depth,
+                data_offset=offset,
+            )
             msg = f"maximum evaluation depth {self._pragma.eval_depth} exceeded"
             raise HexPatRuntimeError(msg, offset=offset)
 
@@ -1682,11 +1714,23 @@ class HexPatEvaluator:
             return lv * rv
         if op == "/":
             if rv == 0:
+                _logger.error(
+                    "hexpat_division_by_zero",
+                    operator=op,
+                    line=line,
+                    column=column,
+                )
                 msg = "division by zero"
                 raise HexPatRuntimeError(msg, line, column)
             return lv / rv if isinstance(lv, float) or isinstance(rv, float) else int(lv) // int(rv)
         if op == "%":
             if rv == 0:
+                _logger.error(
+                    "hexpat_modulo_by_zero",
+                    operator=op,
+                    line=line,
+                    column=column,
+                )
                 msg = "modulo by zero"
                 raise HexPatRuntimeError(msg, line, column)
             return int(lv) % int(rv)
@@ -1714,6 +1758,12 @@ class HexPatEvaluator:
             return int(lv) >> int(rv)
         if op == "^^":
             return bool(lv) != bool(rv)
+        _logger.error(
+            "hexpat_unsupported_numeric_operator",
+            operator=op,
+            line=line,
+            column=column,
+        )
         msg = f"unsupported operator '{op}' for numeric types"
         raise HexPatRuntimeError(msg, line, column)
 
@@ -2313,6 +2363,7 @@ class HexPatEvaluator:
                 assert_default = "assertion failed"
                 error_msg = args[1].value if len(args) > 1 else assert_default
                 resolved = str(error_msg) if error_msg is not None else assert_default
+                _logger.error("hexpat_builtin_assert_failed", assert_message=resolved)
                 raise HexPatRuntimeError(resolved)
             return PatternValue(value=None)
 

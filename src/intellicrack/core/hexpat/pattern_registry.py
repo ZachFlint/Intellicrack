@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat.data_reader import DataReader
 
 
-_logger = get_logger("core.hexpat.pattern_registry")
+_logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -64,6 +64,10 @@ class PatternRegistry:
         self._by_name: dict[str, PatternMetadata] = {}
         self._scanned: bool = False
         self._max_magic_end: int = 0
+        _logger.info(
+            "pattern_registry_initialized",
+            pattern_dir_count=len(self._pattern_dirs),
+        )
 
     def scan(self) -> None:
         """Scan all configured directories for .hexpat files.
@@ -218,7 +222,7 @@ class PatternRegistry:
         try:
             source = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
-            _logger.debug("pattern_read_error", path=str(path))
+            _logger.exception("pattern_read_error", path=str(path))
             return None
 
         pragma = extract_pragmas_fast(source)

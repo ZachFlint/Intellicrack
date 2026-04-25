@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat.evaluator import EvalScope
 
 
-_logger = get_logger("core.hexpat.stdlib")
+_logger = get_logger(__name__)
 
 _MAX_OPEN_FILES: int = 32
 _ENDIAN_NATIVE: int = 0
@@ -201,6 +201,11 @@ class BuiltinFunctions:
         self._file_next_handle: int = 1
         self._rng: _random.Random = _create_rng()
         self._reflection: _ReflectionProvider | None = None
+        _logger.debug(
+            "hexpat_builtins_initialized",
+            data_size=data_reader.size,
+            default_endian=self._endian,
+        )
 
     @staticmethod
     def _unwrap(arg: object) -> int | float | str:
@@ -1659,9 +1664,19 @@ class BuiltinFunctions:
         except OSError as exc:
             _logger.warning("hexpat_file_close_error", handle=handle, error=str(exc))
         if file_name:
+            _logger.info(
+                "hexpat_file_remove",
+                handle=handle,
+                file_path=file_name,
+            )
             try:
                 Path(file_name).unlink(missing_ok=True)
             except OSError as exc:
+                _logger.exception(
+                    "hexpat_file_remove_failed",
+                    handle=handle,
+                    file_path=file_name,
+                )
                 msg = f"std::file::remove failed: {exc}"
                 raise HexPatRuntimeError(msg) from exc
         return PatternValue(value=None)
@@ -1871,6 +1886,11 @@ class BuiltinFunctions:
             HexPatRuntimeError: When ``arg`` is not a ``PatternValue``.
         """
         if not isinstance(arg, PatternValue):
+            _logger.error(
+                "hexpat_require_pattern_failed",
+                context=where,
+                actual_type=type(arg).__name__,
+            )
             msg = f"{where} requires a pattern argument"
             raise HexPatRuntimeError(msg)
         return arg
@@ -1910,10 +1930,15 @@ class BuiltinFunctions:
             HexPatRuntimeError: When no reflection provider is wired.
         """
         if len(args) < 2:
+            _logger.error(
+                "hexpat_get_attribute_argument_invalid_args",
+                arg_count=len(args),
+            )
             msg = "std::core::get_attribute_argument requires (pattern, attribute, [index])"
             raise HexPatRuntimeError(msg)
         hook = self._reflection.get_attribute_argument if self._reflection is not None else None
         if hook is None:
+            _logger.error("hexpat_get_attribute_argument_no_reflection_provider")
             msg = "std::core::get_attribute_argument requires evaluator metadata not yet wired"
             raise HexPatRuntimeError(msg)
         pattern = self._require_pattern(args[0], "std::core::get_attribute_argument")
@@ -2094,6 +2119,7 @@ class BuiltinFunctions:
         """
         hook = self._reflection.set_pattern_palette_colors if self._reflection is not None else None
         if hook is None:
+            _logger.error("hexpat_set_pattern_palette_colors_no_reflection_provider")
             msg = "std::core::set_pattern_palette_colors requires evaluator metadata not yet wired"
             raise HexPatRuntimeError(msg)
         colors = [int(self._unwrap(a)) for a in args]
@@ -2114,6 +2140,7 @@ class BuiltinFunctions:
         """
         hook = self._reflection.reset_pattern_palette if self._reflection is not None else None
         if hook is None:
+            _logger.error("hexpat_reset_pattern_palette_no_reflection_provider")
             msg = "std::core::reset_pattern_palette requires evaluator metadata not yet wired"
             raise HexPatRuntimeError(msg)
         hook()
@@ -2154,7 +2181,7 @@ class BuiltinFunctions:
         """
         sink = _PrintSinkRegistry.sink
         if not args:
-            _logger.info("hexpat_print", output="")
+            _logger.info("hexpat_print", output_length=0)
             if sink is not None:
                 sink("")
             return PatternValue(value=None)
@@ -2192,6 +2219,7 @@ class BuiltinFunctions:
             HexPatRuntimeError: Always, carrying the supplied message.
         """
         message = str(self._unwrap(args[0])) if args else ""
+        _logger.error("hexpat_io_error", error_message=message)
         raise HexPatRuntimeError(message)
 
     def _io_warning(self, *args: object) -> PatternValue:
@@ -2240,6 +2268,11 @@ class BuiltinFunctions:
                 try:
                     index = int(head)
                 except ValueError:
+                    _logger.warning(
+                        "hexpat_format_invalid_index",
+                        spec=spec,
+                        head=head,
+                    )
                     return match.group(0)
             if index < 0 or index >= len(unwrapped):
                 return ""

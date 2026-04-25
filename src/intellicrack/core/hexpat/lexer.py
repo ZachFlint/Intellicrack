@@ -9,6 +9,10 @@ import string
 
 from intellicrack.core.hexpat.errors import HexPatParseError
 from intellicrack.core.hexpat.tokens import KEYWORDS, Token, TokenType
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 class HexPatLexer:
@@ -30,6 +34,11 @@ class HexPatLexer:
         self._column = 1
         self.file_path = file_path
         self._tokens: list[Token] = []
+        _logger.debug(
+            "hexpat_lexer_initialized",
+            file_path=file_path,
+            source_length=len(source),
+        )
 
     def tokenize(self) -> list[Token]:
         """Tokenize the source into a list of Tokens.
