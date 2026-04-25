@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from intellicrack.core.types import HexDocumentLike
 
 
-_logger = get_logger("core.hexpat.interpreter")
+_logger = get_logger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 _VENDOR_DIR = _PROJECT_ROOT / "vendor"
@@ -69,6 +69,11 @@ class HexPatInterpreter:
             paths.extend(include_paths)
 
         self._include_paths: list[Path] = paths
+        _logger.info(
+            "hexpat_interpreter_initialized",
+            include_path_count=len(self._include_paths),
+            std_lib_present=lib_path.exists(),
+        )
 
     def execute(
         self,

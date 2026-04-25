@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-_logger = get_logger("core.hexpat.preprocessor")
+_logger = get_logger(__name__)
 
 _PRAGMA_ENDIAN_RE = re.compile(r"#pragma\s+endian\s+(big|little|native)")
 _PRAGMA_MIME_RE = re.compile(r"#pragma\s+MIME\s+(\S+)")
@@ -84,6 +84,10 @@ class HexPatPreprocessor:
         self._func_defines: dict[str, tuple[tuple[str, ...], str]] = {}
         self._included_files: set[str] = set()
         self._pragma_once_files: set[str] = set()
+        _logger.info(
+            "hexpat_preprocessor_initialized",
+            include_path_count=len(self._include_paths),
+        )
 
     def process(
         self,

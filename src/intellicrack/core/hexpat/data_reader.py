@@ -9,6 +9,7 @@ import struct
 from typing import TYPE_CHECKING
 
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
@@ -16,6 +17,9 @@ if TYPE_CHECKING:
     from typing import Literal
 
     from intellicrack.core.types import HexDocumentLike
+
+
+_logger = get_logger(__name__)
 
 
 def _resolve_length(document: HexDocumentLike) -> int:
@@ -41,10 +45,19 @@ def _resolve_length(document: HexDocumentLike) -> int:
     sentinel = object()
     raw_length: object = getattr(document, "length", sentinel)
     if raw_length is sentinel:
+        _logger.error(
+            "hexpat_document_missing_length",
+            document_type=type(document).__name__,
+        )
         msg = "document does not expose a 'length' attribute"
         raise HexPatRuntimeError(msg)
     resolved: object = raw_length() if callable(raw_length) else raw_length
     if not isinstance(resolved, int) or isinstance(resolved, bool):
+        _logger.error(
+            "hexpat_document_invalid_length_type",
+            document_type=type(document).__name__,
+            resolved_type=type(resolved).__name__,
+        )
         msg = f"document 'length' must resolve to int, got {type(resolved).__name__}"
         raise HexPatRuntimeError(msg)
     return resolved
@@ -132,6 +145,12 @@ class DataReader:
                 range exceeds the data source length.
         """
         if offset < 0 or offset + length > self._length:
+            _logger.error(
+                "hexpat_data_reader_read_out_of_bounds",
+                offset=offset,
+                read_length=length,
+                data_size=self._length,
+            )
             msg = f"read out of bounds: offset={offset}, length={length}, data_size={self._length}"
             raise HexPatRuntimeError(msg, offset=offset)
         return self._read_fn(offset, length)
