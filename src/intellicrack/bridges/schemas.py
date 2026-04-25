@@ -22,7 +22,7 @@ from intellicrack.core.types import (
 )
 
 
-_logger = get_logger("bridges.schemas")
+_logger = get_logger(__name__)
 
 
 def _assert_never(value: Never) -> Never:
@@ -40,6 +40,11 @@ def _assert_never(value: Never) -> Never:
         AssertionError: Always raised if this function is somehow called.
     """
     msg = f"Unexpected value: {value!r}"
+    _logger.error(
+        "assert_never_triggered",
+        unexpected_value=repr(value),
+        unexpected_type=type(value).__name__,
+    )
     raise AssertionError(msg)
 
 

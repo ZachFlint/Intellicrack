@@ -64,7 +64,7 @@ __all__ = ["CutterBridge"]
 XRefType = Literal["call", "jump", "data", "read", "write"]
 StringEncoding = Literal["ascii", "utf-8", "utf-16le", "utf-16be"]
 
-_logger = get_logger("bridges.cutter")
+_logger = get_logger(__name__)
 
 _ERR_FILE_NOT_FOUND = "file not found"
 _ERR_LOAD_FAILED = "failed to load binary"
@@ -748,6 +748,11 @@ class CutterBridge(StaticAnalysisBridge):
             supported_architectures=["x86", "x86_64", "arm", "arm64", "mips", "ppc"],
             supported_formats=["pe", "elf", "macho", "raw"],
         )
+        _logger.info(
+            "cutter_bridge_initialized",
+            supported_architectures=self._capabilities.supported_architectures,
+            supported_formats=self._capabilities.supported_formats,
+        )
 
     @property
     def r2(self) -> r2pipe.open | None:
@@ -765,6 +770,7 @@ class CutterBridge(StaticAnalysisBridge):
         Args:
             value: The r2pipe connection instance or None.
         """
+        _logger.debug("r2_connection_set", has_connection=value is not None)
         self._r2 = value
 
     async def r2_cmd(self, command: str) -> str:
@@ -779,6 +785,7 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             str: Command output as string, empty string if None.
         """
+        _logger.debug("r2_cmd_started", command=command)
         return await self._r2_cmd(command)
 
     async def _r2_cmd(self, command: str) -> str:
@@ -794,6 +801,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If r2 is not connected or command times out.
         """
         if self._r2 is None:
+            _logger.warning("_r2_cmd_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
         try:
             result = await asyncio.wait_for(
@@ -904,7 +912,11 @@ class CutterBridge(StaticAnalysisBridge):
             r2 = await asyncio.to_thread(r2pipe.open, "-")
             version: str | None = await asyncio.to_thread(r2.cmd, "?V")
         except (OSError, RuntimeError, ValueError) as e:
-            _logger.debug("cutter_availability_check_failed", error=str(e))
+            _logger.warning(
+                "cutter_availability_check_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return False
         else:
             return bool(version)
@@ -913,7 +925,7 @@ class CutterBridge(StaticAnalysisBridge):
                 try:
                     await asyncio.to_thread(r2.quit)
                 except (OSError, RuntimeError) as e:
-                    _logger.debug("cutter_cleanup_failed", error=str(e))
+                    _logger.warning("cutter_cleanup_failed", error=str(e))
 
     async def _close_existing_r2(self) -> None:
         """Close existing Rizin session and unregister process."""
@@ -1066,6 +1078,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If analysis fails.
         """
         if self._r2 is None:
+            _logger.warning("analyze_without_binary", level=level)
             raise ToolError(_ERR_NO_BINARY)
 
         cmd_map = {
@@ -1096,8 +1109,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("get_functions_without_binary", filter_pattern=filter_pattern)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("get_functions_without_analysis", filter_pattern=filter_pattern)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         funcs = await self._cmd_json("aflj")
@@ -1140,8 +1155,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("get_function_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("get_function_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
         await self._r2_cmd(f"s {address}")
@@ -1214,8 +1231,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If decompilation fails.
         """
         if self._r2 is None:
+            _logger.warning("decompile_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("decompile_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
         _logger.debug("decompile_requested", address=hex(address))
@@ -1248,8 +1267,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If disassembly fails.
         """
         if self._r2 is None:
+            _logger.warning("disassemble_without_binary", address=hex(address), count=count)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("disassemble_without_analysis", address=hex(address), count=count)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         _logger.debug("disassemble_requested", address=hex(address), count=count)
@@ -1288,8 +1309,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("get_xrefs_to_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("get_xrefs_to_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
         xrefs = await self._cmd_json(f"axtj @ {address}")
@@ -1331,8 +1354,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("get_xrefs_from_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("get_xrefs_from_without_analysis", address=hex(address))
             raise ToolError(_ERR_NOT_ANALYZED)
 
         xrefs = await self._cmd_json(f"axfj @ {address}")
@@ -1374,8 +1399,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If search fails.
         """
         if self._r2 is None:
+            _logger.warning("search_strings_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("search_strings_without_analysis", pattern=pattern)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         strings = await self._cmd_json("izj")
@@ -1422,8 +1449,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If search fails.
         """
         if self._r2 is None:
+            _logger.warning("search_bytes_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("search_bytes_without_analysis", pattern=pattern)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         clean_hex = pattern.hex() if isinstance(pattern, bytes) else pattern.replace(" ", "")
@@ -1446,8 +1475,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If search fails.
         """
         if self._r2 is None:
+            _logger.warning("search_bytes_wildcard_without_binary", hex_pattern=hex_pattern)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("search_bytes_wildcard_without_analysis", hex_pattern=hex_pattern)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         clean_pattern = hex_pattern.replace(" ", "").replace("??", "..")
@@ -1467,6 +1498,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("_get_sections_internal_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         sections = await self._cmd_json("iSj")
@@ -1493,6 +1525,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("_get_imports_internal_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         imports = await self._cmd_json("iij")
@@ -1517,6 +1550,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("_get_exports_internal_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         exports = await self._cmd_json("iEj")
@@ -1575,8 +1609,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("rename_function_without_binary", address=hex(address), new_name=new_name)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("rename_function_without_analysis", address=hex(address), new_name=new_name)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         await self._r2_cmd(f"afn {new_name} @ {address}")
@@ -1603,8 +1639,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If operation fails.
         """
         if self._r2 is None:
+            _logger.warning("add_comment_without_binary", address=hex(address), comment=comment)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("add_comment_without_analysis", address=hex(address), comment=comment)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         r2_cmd_map: dict[str, str] = {
@@ -1631,11 +1669,12 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If write fails.
         """
         if self._r2 is None:
+            _logger.warning("write_bytes_without_binary", address=hex(address), hex_data=hex_data)
             raise ToolError(_ERR_NO_BINARY)
 
         clean_hex = hex_data.replace(" ", "")
         await self._r2_cmd(f"wx {clean_hex} @ {address}")
-        _logger.debug("bytes_written", length=len(clean_hex) // 2, address=hex(address))
+        _logger.info("bytes_written", length=len(clean_hex) // 2, address=hex(address))
         return True
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
@@ -1655,8 +1694,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If assembly fails.
         """
         if self._r2 is None:
+            _logger.warning("assemble_at_without_binary", address=hex(address), instruction=instruction)
             raise ToolError(_ERR_NO_BINARY)
         if not self._analyzed:
+            _logger.warning("assemble_at_without_analysis", address=hex(address), instruction=instruction)
             raise ToolError(_ERR_NOT_ANALYZED)
 
         dry_run = await self._r2_cmd(f"pa {instruction} @ {address}")
@@ -1702,6 +1743,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("cmd_json_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(command)
@@ -1714,10 +1756,9 @@ class CutterBridge(StaticAnalysisBridge):
         except json.JSONDecodeError:
             _logger.exception("json_parse_failed", command=command)
             return []
-        else:
-            if isinstance(parsed, list):
-                return cast("list[dict[str, Any]]", parsed)
-            return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
+        if isinstance(parsed, list):
+            return cast("list[dict[str, Any]]", parsed)
+        return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
 
     async def seek(self, address: int) -> str:
         """Seek to a specific address.
@@ -1744,6 +1785,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded or command fails.
         """
         if self._r2 is None:
+            _logger.warning("function_graph_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         _logger.debug("function_graph_queried", address=hex(address))
@@ -1766,6 +1808,7 @@ class CutterBridge(StaticAnalysisBridge):
         Returns:
             int | None: Address of function or None if not found.
         """
+        _logger.debug("get_function_address_started", function_name=name)
         funcs = await self.get_functions(filter_pattern=name)
         return next((f.address for f in funcs if f.name == name), None)
 
@@ -1779,6 +1822,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_all_strings_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         strings = await self._cmd_json("izzj")
@@ -1815,6 +1859,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_symbols_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         symbols = await self._cmd_json("isj")
@@ -1841,6 +1886,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_libraries_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         raw = await self._r2_cmd("ilj")
@@ -1849,6 +1895,7 @@ class CutterBridge(StaticAnalysisBridge):
             try:
                 parsed_raw = json.loads(raw)
             except json.JSONDecodeError:
+                _logger.exception("libraries_json_parse_failed")
                 return result
             if isinstance(parsed_raw, list):
                 lib_list = cast("list[Any]", parsed_raw)
@@ -1871,6 +1918,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_headers_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         headers = await self._cmd_json("ihj")
@@ -1895,10 +1943,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_debug_info_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("iDj")
-        _logger.debug("debug_info_queried")
+        _logger.debug("binary_debug_info_queried")
         return result[0] if result else {}
 
     async def get_classes(self) -> list[ClassInfo]:
@@ -1911,6 +1960,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_classes_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         classes = await self._cmd_json("icj")
@@ -1936,6 +1986,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_relocations_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         relocs = await self._cmd_json("iRj")
@@ -1961,11 +2012,13 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_resources_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         try:
             resources = await self._cmd_json("irj")
         except ToolError:
+            _logger.exception("resources_query_failed")
             return []
         result: list[ResourceInfo] = [
             ResourceInfo(
@@ -1993,6 +2046,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_rop_gadgets_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
 
         cmd = f"/Rj {pattern}" if pattern else "/Rj"
@@ -2018,6 +2072,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_callgraph_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("agcj")
@@ -2034,6 +2089,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_vtables_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         vtables = await self._cmd_json("avj")
@@ -2058,6 +2114,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_syscalls_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("asj")
@@ -2078,6 +2135,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded or read fails.
         """
         if self._r2 is None:
+            _logger.warning("read_bytes_without_binary", address=hex(address), count=count)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"p8 {count} @ {address}")
@@ -2100,6 +2158,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded or save fails.
         """
         if self._r2 is None:
+            _logger.warning("save_binary_without_binary", path=str(path))
             raise ToolError(_ERR_NO_BINARY)
 
         target = path if path is not None else str(self._binary_path)
@@ -2117,6 +2176,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_comments_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         comments = await self._cmd_json("CCj")
@@ -2141,6 +2201,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_flags_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         flags = await self._cmd_json("fj")
@@ -2170,6 +2231,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("add_flag_without_binary", flag_name=name, size=size, address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"f {name} {size} @ {address}")
@@ -2193,6 +2255,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("resolve_flag_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         raw = await self._r2_cmd(f"fdj @ {address}")
@@ -2230,6 +2293,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_types_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("tj")
@@ -2246,6 +2310,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_structs_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("tsj")
@@ -2262,6 +2327,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_unions_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("tuj")
@@ -2278,6 +2344,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_enums_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("tej")
@@ -2294,6 +2361,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_typedefs_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("ttj")
@@ -2310,6 +2378,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_function_types_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("tfsj")
@@ -2333,6 +2402,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded or import fails.
         """
         if self._r2 is None:
+            _logger.warning("import_c_header_without_binary", header_text=header_text)
             raise ToolError(_ERR_NO_BINARY)
 
         def _write_temp() -> Path:
@@ -2362,6 +2432,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("esil_eval_without_binary", expression=expression)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"ae {expression}")
@@ -2381,6 +2452,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("esil_step_without_binary", count=count)
             raise ToolError(_ERR_NO_BINARY)
 
         result = ""
@@ -2402,6 +2474,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("esil_emulate_function_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"aef @ {address}")
@@ -2418,6 +2491,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("esil_init_memory_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd("aeim")
@@ -2437,6 +2511,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("esil_set_pc_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"aepc {address}")
@@ -2453,6 +2528,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_zignatures_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("zj")
@@ -2472,6 +2548,10 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning(
+                "generate_zignatures_without_binary",
+                address=hex(address) if address is not None else None,
+            )
             raise ToolError(_ERR_NO_BINARY)
 
         cmd = f"zg @ {address}" if address is not None else "zg"
@@ -2493,6 +2573,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("add_zignature_without_binary", zignature_name=name, zigdata=zigdata)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"za {name} {zigdata}")
@@ -2509,6 +2590,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_zignatures_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("z/j")
@@ -2528,6 +2610,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("save_project_without_binary", project_name=name)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"Ps {name}")
@@ -2547,6 +2630,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("open_project_without_binary", project_name=name)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"Po {name}")
@@ -2563,6 +2647,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("list_projects_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd("Pl")
@@ -2583,6 +2668,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_config_without_binary", key=key)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"e {key}")
@@ -2603,6 +2689,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("set_config_without_binary", key=key, value=value)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"e {key}={value}")
@@ -2628,10 +2715,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_xor_without_binary", address=hex(address), length=length)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"wox {key} @ {address} @!{length}")
-        _logger.debug("xor_written", address=hex(address), length=length, key=key)
+        _logger.info("xor_written", address=hex(address), length=length, key=key)
         return True
 
     async def write_add(self, address: int, length: int, value: int) -> bool:
@@ -2653,10 +2741,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_add_without_binary", address=hex(address), length=length)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"woa {value} @ {address} @!{length}")
-        _logger.debug("add_written", address=hex(address), length=length)
+        _logger.info("add_written", address=hex(address), length=length)
         return True
 
     async def write_sub(self, address: int, length: int, value: int) -> bool:
@@ -2678,10 +2767,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_sub_without_binary", address=hex(address), length=length)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"wos {value} @ {address} @!{length}")
-        _logger.debug("sub_written", address=hex(address), length=length)
+        _logger.info("sub_written", address=hex(address), length=length)
         return True
 
     async def write_from_file(self, file_path: str, address: int) -> bool:
@@ -2698,10 +2788,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_from_file_without_binary", file_path=file_path, address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"wf {file_path} @ {address}")
-        _logger.debug("file_written", file_path=file_path, address=hex(address))
+        _logger.info("file_written", file_path=file_path, address=hex(address))
         return True
 
     async def write_to_file(self, file_path: str, size: int, address: int) -> bool:
@@ -2719,10 +2810,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_to_file_without_binary", file_path=file_path, address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"wtf {file_path} {size} @ {address}")
-        _logger.debug("written_to_file", file_path=file_path, size=size, address=hex(address))
+        _logger.info("written_to_file", file_path=file_path, size=size, address=hex(address))
         return True
 
     async def write_value(self, address: int, value: int, size: int = 4) -> bool:
@@ -2740,10 +2832,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_value_without_binary", address=hex(address), size=size)
             raise ToolError(_ERR_NO_BINARY)
 
         await self._r2_cmd(f"wv{size} {value} @ {address}")
-        _logger.debug("value_written", address=hex(address), value=value, size=size)
+        _logger.info("value_written", address=hex(address), value=value, size=size)
         return True
 
     async def write_string(self, address: int, text: str) -> bool:
@@ -2760,11 +2853,12 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("write_string_without_binary", address=hex(address), length=len(text))
             raise ToolError(_ERR_NO_BINARY)
 
         escaped = text.replace('"', '\\"')
         await self._r2_cmd(f'w "{escaped}" @ {address}')
-        _logger.debug("string_written", address=hex(address), length=len(text))
+        _logger.info("string_written", address=hex(address), length=len(text))
         return True
 
     async def search_string_live(self, text: str) -> list[int]:
@@ -2780,6 +2874,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_string_live_without_binary", text=text)
             raise ToolError(_ERR_NO_BINARY)
 
         results = await self._cmd_json(f"/j {text}")
@@ -2800,6 +2895,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_assembly_pattern_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
 
         results = await self._cmd_json(f"/aj {pattern}")
@@ -2817,6 +2913,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_crypto_constants_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("/cj")
@@ -2833,6 +2930,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_magic_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._cmd_json("/mj")
@@ -2853,6 +2951,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("search_value_without_binary", value=value, size=size)
             raise ToolError(_ERR_NO_BINARY)
 
         results = await self._cmd_json(f"/vj{size} {value}")
@@ -2874,6 +2973,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("compare_bytes_without_binary", hex_data=hex_data, address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"c {hex_data} @ {address}")
@@ -2898,6 +2998,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("compare_disassembly_without_binary", file_path=str(file_path), address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         disasm_diff = await self._r2_cmd(f"cD {file_path} @ {address}")
@@ -2921,6 +3022,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_segments_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
         segments = await self._cmd_json("iSSj")
@@ -2951,6 +3053,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("hexdump_without_binary", address=hex(address), length=length)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"px {length} @ {address}")
@@ -2971,6 +3074,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("hexdump_words_without_binary", address=hex(address), length=length)
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"pxw {length} @ {address}")
@@ -2990,6 +3094,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("disassemble_function_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         result = await self._r2_cmd(f"pdf @ {address}")
@@ -3009,6 +3114,7 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
+            _logger.warning("get_basic_blocks_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
 
         blocks = await self._cmd_json(f"afbj @ {address}")
