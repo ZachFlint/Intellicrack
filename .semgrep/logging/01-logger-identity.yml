@@ -31,6 +31,10 @@ rules:
       `get_logger()` must be called with `__name__` so the logger participates in the hierarchy `intellicrack.<subpackage>.<module>`. Passing a hand-written literal string (e.g. `get_logger("mybridge")`) breaks parent-child log-level propagation and makes per-module filtering unreliable.
     severity: ERROR
     languages: [python]
+    paths:
+      exclude:
+        - "**/intellicrack/core/logging.py"
+        - "**/intellicrack/core/logging/**"
     pattern-either:
       - pattern: get_logger("...")
       - pattern: get_logger('...')
