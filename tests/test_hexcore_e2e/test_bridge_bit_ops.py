@@ -58,7 +58,7 @@ class TestGetBit:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "bits.bin"
-        f.write_bytes(b"\xA5" + b"\x00" * 63)
+        f.write_bytes(b"\xa5" + b"\x00" * 63)
         _run(bridge.open_file(str(f)))
 
         assert _run(bridge.get_bit(0, 0)) is True
@@ -118,11 +118,11 @@ class TestSetBit:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "clearbit.bin"
-        f.write_bytes(b"\xFF" + b"\x00" * 63)
+        f.write_bytes(b"\xff" + b"\x00" * 63)
         _run(bridge.open_file(str(f)))
         _run(bridge.set_bit(0, 3, value=False))
         result = _run(bridge.read_bytes(0, 1))
-        assert bytes.fromhex(result.replace(" ", "")) == b"\xF7"
+        assert bytes.fromhex(result.replace(" ", "")) == b"\xf7"
 
     def test_bit_index_negative_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that bit_index=-1 raises ValueError.
@@ -164,9 +164,9 @@ class TestToggleBit:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "toggle_back.bin"
-        f.write_bytes(b"\xFF" + b"\x00" * 63)
+        f.write_bytes(b"\xff" + b"\x00" * 63)
         _run(bridge.open_file(str(f)))
         new_val = _run(bridge.toggle_bit(0, 0))
         assert new_val is False
         result = _run(bridge.read_bytes(0, 1))
-        assert bytes.fromhex(result.replace(" ", "")) == b"\xFE"
+        assert bytes.fromhex(result.replace(" ", "")) == b"\xfe"

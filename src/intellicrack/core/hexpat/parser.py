@@ -118,12 +118,7 @@ _EOF_TOKEN = Token(TokenType.EOF, "", 0, 0)
 class HexPatParser:
     """Recursive-descent parser for the HexPat .hexpat pattern language.
 
-    Consumes a flat list of tokens produced by the lexer and builds an AST
-    consisting of top-level declarations and statements.
-
-    Args:
-            tokens: Flat token list produced by the lexer.
-            file_path: Source file path used for error location reporting.
+    Consumes a flat list of tokens produced by the lexer and builds an AST consisting of top-level declarations and statements.
     """
 
     def __init__(

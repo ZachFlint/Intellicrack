@@ -282,7 +282,9 @@ class TestCustomCRC:
         doc_length: int = sample_doc_from_bytes.length()
         crc_val: int = binascii.crc32(sample_bytes) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
         assert result.lower() == expected.lower()
 
     def test_crc32_standard_subrange_matches_binascii(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
@@ -296,7 +298,9 @@ class TestCustomCRC:
         end = 128
         crc_val: int = binascii.crc32(sample_bytes[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
         assert result.lower() == expected.lower()
 
     def test_crc16_arc_matches_reference_implementation(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
@@ -311,7 +315,9 @@ class TestCustomCRC:
         doc_length: int = sample_doc_from_bytes.length()
         crc_val: int = _crc16_arc(sample_bytes)
         expected: str = f"{crc_val:04x}"
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(0, doc_length, 0x8005, 0x0000, 16, refin=True, refout=True, xorout=0x0000)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            0, doc_length, 0x8005, 0x0000, 16, refin=True, refout=True, xorout=0x0000
+        )
         assert result.lower() == expected.lower()
 
     def test_crc16_arc_subrange_matches_reference(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
@@ -335,7 +341,9 @@ class TestCustomCRC:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
         """
         doc_length: int = sample_doc_from_bytes.length()
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
         assert isinstance(result, str)
         assert result
         assert all(c in string.hexdigits for c in result)
@@ -350,7 +358,9 @@ class TestCustomCRC:
         offset = 5
         crc_val: int = binascii.crc32(bytes([sample_bytes[offset]])) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(offset, offset + 1, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            offset, offset + 1, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
         assert result.lower() == expected.lower()
 
     def test_different_ranges_produce_different_crcs(self, sample_doc_from_bytes: HexDocument) -> None:
@@ -359,6 +369,10 @@ class TestCustomCRC:
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
         """
-        crc_a: str = sample_doc_from_bytes.compute_hash_custom_crc(0, 64, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
-        crc_b: str = sample_doc_from_bytes.compute_hash_custom_crc(64, 128, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        crc_a: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            0, 64, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
+        crc_b: str = sample_doc_from_bytes.compute_hash_custom_crc(
+            64, 128, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+        )
         assert crc_a != crc_b

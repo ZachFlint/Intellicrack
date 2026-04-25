@@ -21,12 +21,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
-from intellicrack.ui.panels.hex_editor._base import logger
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
+
+
+_logger = get_logger(__name__)
 
 
 class DiffWorker(QThread):
@@ -134,7 +137,7 @@ class ComparisonMixin:
 
         bridge = getattr(self, "_bridge", None)
         if bridge is None:
-            logger.warning("diff_bridge_unavailable")
+            _logger.warning("diff_bridge_unavailable")
             return
 
         parent = self if isinstance(self, QWidget) else None
@@ -161,7 +164,7 @@ class ComparisonMixin:
                 else:
                     return
             except (AttributeError, ValueError) as exc:
-                logger.warning("diff_doc_read_failed", error=str(exc))
+                _logger.warning("diff_doc_read_failed", error=str(exc))
                 return
 
             try:
@@ -169,7 +172,7 @@ class ComparisonMixin:
                     tmp.write(data_a)
                     path_a = tmp.name
             except OSError as exc:
-                logger.warning("diff_temp_write_failed", error=str(exc))
+                _logger.warning("diff_temp_write_failed", error=str(exc))
                 return
 
         if self._diff_summary_label is not None:
@@ -217,7 +220,7 @@ class ComparisonMixin:
             ])
             self._diff_results_tree.addTopLevelItem(item)
 
-        logger.info("diff_complete", regions=len(regions), total_diffs=total)
+        _logger.info("diff_complete", regions=len(regions), total_diffs=total)
 
     def _on_diff_error(self, error: str) -> None:
         """Handle diff computation failure.
@@ -227,7 +230,7 @@ class ComparisonMixin:
         """
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText(f"Diff failed: {error}")
-        logger.warning("diff_failed", error=error)
+        _logger.warning("diff_failed", error=error)
 
     def _on_diff_item_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the offset of a double-clicked diff region.
@@ -240,6 +243,7 @@ class ComparisonMixin:
         offset_text = item.text(0)
         try:
             offset = int(offset_text, 16)
-        except ValueError:
+        except ValueError as exc:
+            _logger.debug("diff_offset_parse_failed", offset_text=offset_text, error=str(exc))
             return
         self.goto_offset(offset)

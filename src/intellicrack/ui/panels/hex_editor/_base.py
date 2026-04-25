@@ -24,7 +24,7 @@ __all__ = [
     "pefile",
 ]
 
-logger = get_logger("ui.panels.hex_editor")
+_logger = get_logger(__name__)
 
 hexpat_mod: Any = None
 hexpat_available: bool = False
@@ -35,7 +35,7 @@ try:
     hexpat_mod = _importlib.import_module("intellicrack.core.hexpat_compiler")
     hexpat_available = True
 except ImportError:
-    logger.debug("hexpat_compiler_import_unavailable")
+    _logger.debug("hexpat_compiler_import_unavailable")
 
 HexPatInterpreter_cls: Any = None
 PatternRegistryCls: Any = None
@@ -50,7 +50,7 @@ try:
 
     hexpat_interpreter_available = True
 except ImportError:
-    logger.debug("hexpat_interpreter_import_unavailable")
+    _logger.debug("hexpat_interpreter_import_unavailable")
 
 try:
     import pefile
@@ -59,6 +59,7 @@ try:
 except ImportError:
     pefile = None
     pefile_available = False
+    _logger.debug("pefile_import_unavailable")
 
 _xxhash_mod: Any = None
 _xxhash_available: bool = False
@@ -68,7 +69,7 @@ try:
     _xxhash_mod = _xxhash_import
     _xxhash_available = True
 except ImportError:
-    logger.debug("xxhash_import_unavailable")
+    _logger.debug("xxhash_import_unavailable")
 
 hexcore: Any = None
 hexcore_available: bool = False
@@ -79,7 +80,7 @@ try:
     hexcore = _hexcore_mod
     hexcore_available = True
 except ImportError:
-    logger.debug("hexcore_import_unavailable")
+    _logger.debug("hexcore_import_unavailable")
 
 HexDocumentEvent_cls: Any = None
 hex_state_available: bool = False
@@ -88,7 +89,7 @@ try:
 
     hex_state_available = True
 except ImportError:
-    logger.debug("hex_state_import_unavailable")
+    _logger.debug("hex_state_import_unavailable")
 
 HexDisassembler_cls: Any = None
 disassembler_available: bool = False
@@ -97,7 +98,7 @@ try:
 
     disassembler_available = True
 except ImportError:
-    logger.debug("disassembler_import_unavailable")
+    _logger.debug("disassembler_import_unavailable")
 
 YaraScanner_cls: Any = None
 yara_scanner_available: bool = False
@@ -106,7 +107,7 @@ try:
 
     yara_scanner_available = True
 except ImportError:
-    logger.debug("yara_scanner_import_unavailable")
+    _logger.debug("yara_scanner_import_unavailable")
 
 get_all_transform_nodes_fn: Any = None
 transform_pipeline_available: bool = False
@@ -117,7 +118,7 @@ try:
 
     transform_pipeline_available = True
 except ImportError:
-    logger.debug("transform_pipeline_import_unavailable")
+    _logger.debug("transform_pipeline_import_unavailable")
 
 
 KB = 1024

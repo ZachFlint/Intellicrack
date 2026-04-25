@@ -8,14 +8,7 @@ from __future__ import annotations
 
 
 class HexPatError(Exception):
-    """Base error for the HexPat interpreter.
-
-    Args:
-        message: Human-readable error description.
-        line: Source line number where the error occurred.
-        column: Source column number where the error occurred.
-        file: Source file path where the error occurred.
-    """
+    """Base error for the HexPat interpreter."""
 
     def __init__(
         self,
@@ -52,16 +45,7 @@ class HexPatPreprocessorError(HexPatError):
 
 
 class HexPatParseError(HexPatError):
-    """Error during parsing (syntax errors).
-
-    Args:
-        message: Human-readable error description.
-        line: Source line number where the error occurred (start line).
-        column: Source column number where the error occurred (start column).
-        file: Source file path where the error occurred.
-        end_line: Optional end line number for the error span.
-        end_column: Optional end column number for the error span.
-    """
+    """Error during parsing (syntax errors)."""
 
     def __init__(
         self,
@@ -93,8 +77,7 @@ class HexPatParseError(HexPatError):
         """Return the full source span as a tuple if available.
 
         Returns:
-            A tuple ``(line, column, end_line, end_column)`` when both start
-            and end positions are known, otherwise ``None``.
+            tuple[int, int, int, int] | None: A tuple ``(line, column, end_line, end_column)`` when both start and end positions are known, otherwise ``None``.
         """
         if self.end_line is not None and self.end_column is not None and self.line > 0 and self.column > 0:
             return (self.line, self.column, self.end_line, self.end_column)
@@ -106,16 +89,7 @@ class HexPatTypeError(HexPatError):
 
 
 class HexPatRuntimeError(HexPatError):
-    """Error during pattern evaluation against binary data.
-
-    Args:
-        message: Human-readable error description.
-        line: Source line number where the error occurred.
-        column: Source column number where the error occurred.
-        file: Source file path where the error occurred.
-        offset: Byte offset in the binary data.
-        end_offset: Optional end byte offset for the error data span.
-    """
+    """Error during pattern evaluation against binary data."""
 
     def __init__(
         self,
@@ -150,8 +124,7 @@ class HexPatRuntimeError(HexPatError):
         """Return the byte range for the runtime error if available.
 
         Returns:
-            A tuple ``(offset, end_offset)`` when both start and end byte
-            offsets are known, otherwise ``None``.
+            tuple[int, int] | None: A tuple ``(offset, end_offset)`` when both start and end byte offsets are known, otherwise ``None``.
         """
         if self.end_offset is not None and self.offset > 0 and self.end_offset > self.offset:
             return (self.offset, self.end_offset)

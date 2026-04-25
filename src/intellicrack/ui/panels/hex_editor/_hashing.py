@@ -18,8 +18,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
+
+
+_logger = get_logger(__name__)
 
 
 class HashingMixin:
@@ -47,10 +50,10 @@ class HashingMixin:
             result = self.document.compute_hash(algo)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
-            logger.debug("hash_calculate_failed", error=str(exc))
+            _logger.debug("hash_calculate_failed", error=str(exc))
         else:
             self._hash_result_label.setText(f"{algo}: {result}")
-            logger.info("hash_calculated", algo=algo)
+            _logger.info("hash_calculated", algo=algo)
 
     def _on_custom_crc(self) -> None:
         """Open the custom CRC dialog with the current document data."""
@@ -102,7 +105,7 @@ class HashingMixin:
             result = self.document.compute_hash_range(sel_start, sel_end, algo)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
-            logger.debug("hash_selection_failed", error=str(exc))
+            _logger.debug("hash_selection_failed", error=str(exc))
         else:
             self._hash_result_label.setText(
                 f"{algo} (0x{sel_start:X}-0x{sel_end:X}): {result}",
@@ -118,7 +121,7 @@ class HashingMixin:
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             if self._pe_checksum_status is not None:
                 self._pe_checksum_status.setText(f"Error: {exc}")
-            logger.debug("pe_checksum_verify_failed", error=str(exc))
+            _logger.exception("pe_checksum_verify_failed", error=str(exc))
             return
 
         if self._pe_checksum_status is None:
@@ -163,7 +166,7 @@ class HashingMixin:
             self.document.repair_pe_checksum()
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Repair Failed", str(exc))
-            logger.warning("pe_checksum_repair_failed", error=str(exc))
+            _logger.warning("pe_checksum_repair_failed", error=str(exc))
             return
 
         if self._pe_checksum_status is not None:
@@ -187,4 +190,4 @@ class HashingMixin:
             if callable(update_fn):
                 update_fn()
 
-        logger.info("pe_checksum_repaired")
+        _logger.info("pe_checksum_repaired")

@@ -18,8 +18,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_logger = get_logger(__name__)
 
 
 _TEMPLATE_COLOR_DARK: Final[str] = "#44FF44"
@@ -66,7 +69,7 @@ class TemplatesMixin:
         try:
             result = self.document.apply_template(template_name, cursor_offset)
         except (AttributeError, ValueError) as exc:
-            logger.debug("template_apply_failed", error=str(exc))
+            _logger.exception("template_apply_failed", error=str(exc), template_name=template_name)
         else:
             self._templates_tree.clear()
 
@@ -75,7 +78,7 @@ class TemplatesMixin:
                 self._populate_template_tree(typed_fields)
                 self._highlight_template_fields(typed_fields)
 
-            logger.info("template_applied", template=template_name)
+            _logger.info("template_applied", template=template_name)
 
     def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
         """Populate the templates tree with parsed field data.
@@ -173,7 +176,7 @@ class TemplatesMixin:
         try:
             templates: list[tuple[str, str]] = self.document.list_templates()
         except (AttributeError, ValueError, RuntimeError) as exc:
-            logger.debug("list_templates_failed", error=str(exc))
+            _logger.exception("list_templates_failed", error=str(exc))
             templates = []
         for name, _description in templates:
             self._template_combo.addItem(str(name))
@@ -211,11 +214,11 @@ class TemplatesMixin:
             name: str = self.document.register_json_template(json_str)
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Import Template", f"Import failed:\n{exc}")
-            logger.debug("template_import_failed", error=str(exc))
+            _logger.exception("template_import_failed", error=str(exc))
         else:
             self._populate_template_combo()
             self._select_template(name)
-            logger.info("template_imported", name=name)
+            _logger.info("template_imported", template_name=name)
 
     def _on_export_template(self) -> None:
         """Export the selected template to a JSON file."""
@@ -239,12 +242,13 @@ class TemplatesMixin:
 
         try:
             json_str: str = self.document.export_template_json(name)
+            _logger.info("file_written", path=save_path, size=len(json_str), kind="template_json")
             Path(save_path).write_text(json_str, encoding="utf-8")
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Export Template", f"Export failed:\n{exc}")
-            logger.debug("template_export_failed", error=str(exc))
+            _logger.exception("template_export_failed", error=str(exc))
         else:
-            logger.info("template_exported", name=name, path=save_path)
+            _logger.info("template_exported", template_name=name, path=save_path)
 
     def _on_remove_template(self) -> None:
         """Remove the selected template from the registry."""
@@ -267,10 +271,10 @@ class TemplatesMixin:
         try:
             self.document.remove_template(name)
         except (AttributeError, ValueError) as exc:
-            logger.debug("template_remove_failed", error=str(exc))
+            _logger.exception("template_remove_failed", error=str(exc), template_name=name)
         else:
             self._populate_template_combo()
-            logger.info("template_removed", name=name)
+            _logger.info("template_removed", template_name=name)
 
     def _on_auto_bookmark_structure(self) -> None:
         """Automatically create bookmarks for PE/ELF structure regions."""
@@ -383,7 +387,7 @@ class TemplatesMixin:
 
         self._bookmark_pe_sections(section_offset, num_sections)
         self._refresh_bookmarks()
-        logger.info("pe_structure_bookmarked", sections=num_sections)
+        _logger.info("pe_structure_bookmarked", sections=num_sections)
 
     def _bookmark_pe_sections(self, section_offset: int, num_sections: int) -> None:
         """Create bookmarks for each PE section header.
@@ -504,7 +508,7 @@ class TemplatesMixin:
             )
 
         self._refresh_bookmarks()
-        logger.info("elf_structure_bookmarked")
+        _logger.info("elf_structure_bookmarked")
 
     def _refresh_bookmarks(self) -> None:
         """Refresh the bookmarks display after modification.

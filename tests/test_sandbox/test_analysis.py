@@ -184,8 +184,7 @@ class TestDetectC2Patterns:
     def test_beaconing_detected(self) -> None:
         """5 connections at 60s intervals triggers beaconing detection."""
         activity = [
-            _net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * _BEACONING_INTERVAL % 100)
-            for i in range(_BEACONING_COUNT)
+            _net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * _BEACONING_INTERVAL % 100) for i in range(_BEACONING_COUNT)
         ]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
@@ -194,20 +193,14 @@ class TestDetectC2Patterns:
 
     def test_beaconing_irregular_not_detected(self) -> None:
         """Irregular intervals don't trigger beaconing."""
-        activity = [
-            _net(remote_address="10.0.0.1", remote_port=8443, ts_sec=s)
-            for s in [0, 5, 47, 48, 99]
-        ]
+        activity = [_net(remote_address="10.0.0.1", remote_port=8443, ts_sec=s) for s in [0, 5, 47, 48, 99]]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
         assert len(beacon) == 0
 
     def test_beaconing_too_few_connections(self) -> None:
         """Fewer than 3 connections don't trigger beaconing."""
-        activity = [
-            _net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * 60)
-            for i in range(2)
-        ]
+        activity = [_net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * 60) for i in range(2)]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
         assert len(beacon) == 0
@@ -350,9 +343,14 @@ class TestExtractIOCs:
         report = make_sample_report(
             process_activity=[
                 ProcessActivity(
-                    pid=100, name="cmd.exe", path=None,
+                    pid=100,
+                    name="cmd.exe",
+                    path=None,
                     command_line="cmd /c https://evil.com/dl.exe",
-                    parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0),
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
                 ),
             ],
         )
@@ -367,7 +365,10 @@ class TestExtractIOCs:
             file_changes=[
                 FileChange(
                     path=f"C:\\Temp\\{sha}.bin",
-                    operation="created", old_path=None, timestamp=ts_offset(0), size=100,
+                    operation="created",
+                    old_path=None,
+                    timestamp=ts_offset(0),
+                    size=100,
                 ),
             ],
         )
@@ -382,7 +383,10 @@ class TestExtractIOCs:
             file_changes=[
                 FileChange(
                     path=f"C:\\Temp\\{md5}.bin",
-                    operation="created", old_path=None, timestamp=ts_offset(0), size=100,
+                    operation="created",
+                    old_path=None,
+                    timestamp=ts_offset(0),
+                    size=100,
                 ),
             ],
         )
@@ -441,7 +445,10 @@ class TestExtractIOCs:
             file_changes=[
                 FileChange(
                     path="C:\\999.999.999.999\\test.txt",
-                    operation="created", old_path=None, timestamp=ts_offset(0), size=100,
+                    operation="created",
+                    old_path=None,
+                    timestamp=ts_offset(0),
+                    size=100,
                 ),
             ],
         )
@@ -467,9 +474,14 @@ class TestExtractIOCs:
             network_activity=[_net(remote_address="203.0.113.1")],
             process_activity=[
                 ProcessActivity(
-                    pid=100, name="cmd.exe", path=None,
+                    pid=100,
+                    name="cmd.exe",
+                    path=None,
                     command_line="ping 198.51.100.1",
-                    parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0),
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
                 ),
             ],
         )
@@ -515,7 +527,9 @@ class TestGenerateTimeline:
         """Registry changes produce registry-category events."""
         report = make_sample_report(
             registry_changes=[
-                RegistryChange(key="HKLM\\X", value_name="v", operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)),
+                RegistryChange(
+                    key="HKLM\\X", value_name="v", operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -533,7 +547,16 @@ class TestGenerateTimeline:
         """Process activity produces process-category events."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="test.exe", path=None, command_line=None, parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(1)),
+                ProcessActivity(
+                    pid=100,
+                    name="test.exe",
+                    path=None,
+                    command_line=None,
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(1),
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -544,7 +567,15 @@ class TestGenerateTimeline:
         """API calls produce api-category events."""
         report = make_sample_report(
             api_calls=[
-                ApiCall(timestamp=ts_offset(1), process_name="test.exe", pid=100, api_name="CreateFileW", module="kernel32.dll", arguments=[], return_value="0"),
+                ApiCall(
+                    timestamp=ts_offset(1),
+                    process_name="test.exe",
+                    pid=100,
+                    api_name="CreateFileW",
+                    module="kernel32.dll",
+                    arguments=[],
+                    return_value="0",
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -555,7 +586,9 @@ class TestGenerateTimeline:
         """Service changes produce service-category events."""
         report = make_sample_report(
             service_changes=[
-                ServiceChange(service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(1)),
+                ServiceChange(
+                    service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(1)
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -566,7 +599,9 @@ class TestGenerateTimeline:
         """Kernel objects produce kernel-category events."""
         report = make_sample_report(
             kernel_objects=[
-                KernelObjectActivity(object_type="Mutex", name="M", pid=100, process_name="test.exe", operation="created", timestamp=ts_offset(1)),
+                KernelObjectActivity(
+                    object_type="Mutex", name="M", pid=100, process_name="test.exe", operation="created", timestamp=ts_offset(1)
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -588,7 +623,15 @@ class TestGenerateTimeline:
         """Injection events produce injection-category events."""
         report = make_sample_report(
             injection_events=[
-                InjectionEvent(timestamp=ts_offset(1), source_pid=100, source_name="a.exe", target_pid=200, target_name="b.exe", injection_type="CRT", api_calls=["VirtualAllocEx"]),
+                InjectionEvent(
+                    timestamp=ts_offset(1),
+                    source_pid=100,
+                    source_name="a.exe",
+                    target_pid=200,
+                    target_name="b.exe",
+                    injection_type="CRT",
+                    api_calls=["VirtualAllocEx"],
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -599,7 +642,15 @@ class TestGenerateTimeline:
         """Clipboard events produce clipboard-category events."""
         report = make_sample_report(
             clipboard_events=[
-                ClipboardEvent(timestamp=ts_offset(1), operation="read", format="CF_TEXT", content_preview="x", size_bytes=1, pid=100, process_name="test.exe"),
+                ClipboardEvent(
+                    timestamp=ts_offset(1),
+                    operation="read",
+                    format="CF_TEXT",
+                    content_preview="x",
+                    size_bytes=1,
+                    pid=100,
+                    process_name="test.exe",
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -626,7 +677,9 @@ class TestGenerateTimeline:
             ],
             network_activity=[_net(ts_sec=2)],
             process_activity=[
-                ProcessActivity(pid=100, name="x", path=None, command_line=None, parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(3)),
+                ProcessActivity(
+                    pid=100, name="x", path=None, command_line=None, parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(3)
+                ),
             ],
         )
         events = generate_timeline(report, categories=["file", "network"])
@@ -658,7 +711,9 @@ class TestGenerateTimeline:
         """Registry entry with value_name=None shows '(Default)' in summary."""
         report = make_sample_report(
             registry_changes=[
-                RegistryChange(key="HKLM\\X", value_name=None, operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)),
+                RegistryChange(
+                    key="HKLM\\X", value_name=None, operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)
+                ),
             ],
         )
         events = generate_timeline(report)
@@ -691,7 +746,9 @@ class TestMatchBehaviors:
         """Service creation triggers T1543 persistence match."""
         report = make_sample_report(
             service_changes=[
-                ServiceChange(service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(0)),
+                ServiceChange(
+                    service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(0)
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -702,7 +759,14 @@ class TestMatchBehaviors:
         """Run key modification triggers T1547 persistence match."""
         report = make_sample_report(
             registry_changes=[
-                RegistryChange(key="HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Malware", value_name="M", operation="created", value_type="REG_SZ", value_data="x", timestamp=ts_offset(0)),
+                RegistryChange(
+                    key="HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Malware",
+                    value_name="M",
+                    operation="created",
+                    value_type="REG_SZ",
+                    value_data="x",
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -713,7 +777,16 @@ class TestMatchBehaviors:
         """schtasks.exe execution triggers scheduled task persistence match."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="schtasks.exe", path=None, command_line="schtasks /create", parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0)),
+                ProcessActivity(
+                    pid=100,
+                    name="schtasks.exe",
+                    path=None,
+                    command_line="schtasks /create",
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -724,7 +797,16 @@ class TestMatchBehaviors:
         """at.exe execution triggers scheduled task persistence match."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="at.exe", path=None, command_line="at 12:00 test", parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0)),
+                ProcessActivity(
+                    pid=100,
+                    name="at.exe",
+                    path=None,
+                    command_line="at 12:00 test",
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -735,7 +817,15 @@ class TestMatchBehaviors:
         """Process injection triggers T1055 with critical severity."""
         report = make_sample_report(
             injection_events=[
-                InjectionEvent(timestamp=ts_offset(0), source_pid=100, source_name="a.exe", target_pid=200, target_name="b.exe", injection_type="CRT", api_calls=["VirtualAllocEx"]),
+                InjectionEvent(
+                    timestamp=ts_offset(0),
+                    source_pid=100,
+                    source_name="a.exe",
+                    target_pid=200,
+                    target_name="b.exe",
+                    injection_type="CRT",
+                    api_calls=["VirtualAllocEx"],
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -747,7 +837,15 @@ class TestMatchBehaviors:
         """IsDebuggerPresent triggers T1497 anti-debug match."""
         report = make_sample_report(
             api_calls=[
-                ApiCall(timestamp=ts_offset(0), process_name="test.exe", pid=100, api_name="IsDebuggerPresent", module="kernel32.dll", arguments=[], return_value="0"),
+                ApiCall(
+                    timestamp=ts_offset(0),
+                    process_name="test.exe",
+                    pid=100,
+                    api_name="IsDebuggerPresent",
+                    module="kernel32.dll",
+                    arguments=[],
+                    return_value="0",
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -758,7 +856,15 @@ class TestMatchBehaviors:
         """Sleep > 60000ms triggers sandbox evasion match."""
         report = make_sample_report(
             api_calls=[
-                ApiCall(timestamp=ts_offset(0), process_name="test.exe", pid=100, api_name="Sleep", module="kernel32.dll", arguments=[str(_SLEEP_MS)], return_value="0"),
+                ApiCall(
+                    timestamp=ts_offset(0),
+                    process_name="test.exe",
+                    pid=100,
+                    api_name="Sleep",
+                    module="kernel32.dll",
+                    arguments=[str(_SLEEP_MS)],
+                    return_value="0",
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -804,7 +910,15 @@ class TestMatchBehaviors:
         """Clipboard read triggers T1115 exfiltration match."""
         report = make_sample_report(
             clipboard_events=[
-                ClipboardEvent(timestamp=ts_offset(0), operation="read", format="CF_TEXT", content_preview="secret", size_bytes=6, pid=100, process_name="test.exe"),
+                ClipboardEvent(
+                    timestamp=ts_offset(0),
+                    operation="read",
+                    format="CF_TEXT",
+                    content_preview="secret",
+                    size_bytes=6,
+                    pid=100,
+                    process_name="test.exe",
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -815,7 +929,16 @@ class TestMatchBehaviors:
         """whoami.exe triggers T1082 discovery match."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="whoami.exe", path=None, command_line="whoami /all", parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0)),
+                ProcessActivity(
+                    pid=100,
+                    name="whoami.exe",
+                    path=None,
+                    command_line="whoami /all",
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -826,7 +949,16 @@ class TestMatchBehaviors:
         """systeminfo.exe triggers T1082 discovery match."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="systeminfo.exe", path=None, command_line="systeminfo", parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0)),
+                ProcessActivity(
+                    pid=100,
+                    name="systeminfo.exe",
+                    path=None,
+                    command_line="systeminfo",
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         matches = match_behaviors(report)
@@ -837,7 +969,14 @@ class TestMatchBehaviors:
         """Custom rule with registry_patterns matches."""
         report = make_sample_report(
             registry_changes=[
-                RegistryChange(key="HKLM\\CUSTOM\\SuspiciousKey", value_name="v", operation="created", value_type=None, value_data=None, timestamp=ts_offset(0)),
+                RegistryChange(
+                    key="HKLM\\CUSTOM\\SuspiciousKey",
+                    value_name="v",
+                    operation="created",
+                    value_type=None,
+                    value_data=None,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         rules: list[dict[str, Any]] = [
@@ -858,7 +997,16 @@ class TestMatchBehaviors:
         """Custom rule with process_names matches."""
         report = make_sample_report(
             process_activity=[
-                ProcessActivity(pid=100, name="evil.exe", path=None, command_line=None, parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(0)),
+                ProcessActivity(
+                    pid=100,
+                    name="evil.exe",
+                    path=None,
+                    command_line=None,
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(0),
+                ),
             ],
         )
         rules: list[dict[str, Any]] = [
@@ -874,7 +1022,15 @@ class TestMatchBehaviors:
         """Custom rule with api_names matches."""
         report = make_sample_report(
             api_calls=[
-                ApiCall(timestamp=ts_offset(0), process_name="test.exe", pid=100, api_name="NtCreateSection", module="ntdll.dll", arguments=[], return_value="0"),
+                ApiCall(
+                    timestamp=ts_offset(0),
+                    process_name="test.exe",
+                    pid=100,
+                    api_name="NtCreateSection",
+                    module="ntdll.dll",
+                    arguments=[],
+                    return_value="0",
+                ),
             ],
         )
         rules: list[dict[str, Any]] = [
@@ -984,10 +1140,17 @@ class TestDiffReports:
         b = make_sample_report()
         result = diff_reports(a, b)
         expected_fields = {
-            "file_changes", "registry_changes", "network_activity",
-            "process_activity", "api_calls", "service_changes",
-            "kernel_objects", "dll_loads", "injection_events",
-            "resource_samples", "clipboard_events",
+            "file_changes",
+            "registry_changes",
+            "network_activity",
+            "process_activity",
+            "api_calls",
+            "service_changes",
+            "kernel_objects",
+            "dll_loads",
+            "injection_events",
+            "resource_samples",
+            "clipboard_events",
         }
         for field_name in expected_fields:
             assert field_name in result

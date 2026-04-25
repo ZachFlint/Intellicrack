@@ -803,7 +803,12 @@ class LocalTransformersProvider(LLMProviderBase):
 
         Raises:
             ImportError: If torch or transformers are unavailable.
-            RuntimeError: If CUDA is not available or loading fails.
+            RuntimeError: If CUDA is not available, or re-raised from
+                ``from_pretrained``/``model.to`` when CUDA loading fails.
+            OSError: Re-raised from the transformers loader when the model
+                files cannot be read or downloaded.
+            ValueError: Re-raised from the transformers loader when the
+                model configuration is invalid.
         """
         if _torch is None:
             raise ImportError(_MSG_TORCH_REQUIRED)

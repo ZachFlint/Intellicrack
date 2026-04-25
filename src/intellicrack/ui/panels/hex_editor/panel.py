@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
@@ -47,7 +48,6 @@ from intellicrack.ui.panels.hex_editor._base import (
     format_size,
     hexcore,
     hexcore_available,
-    logger,
 )
 from intellicrack.ui.panels.hex_editor._bookmarks import BookmarksMixin
 from intellicrack.ui.panels.hex_editor._calculator import CalculatorMixin
@@ -73,6 +73,9 @@ from intellicrack.ui.panels.hex_editor._widgets import (
 )
 from intellicrack.ui.panels.hex_editor._yara import YaraMixin
 from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
+
+
+_logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
@@ -630,11 +633,11 @@ class HexEditorPanel(
                 self.state_holder.set_document(self.document, path, source="panel")
 
         except OSError as exc:
-            logger.warning("file_load_failed", path=str(path), error=str(exc))
+            _logger.warning("file_load_failed", path=str(path), error=str(exc))
             QMessageBox.warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
         else:
-            logger.info("file_loaded", path=str(path), size=doc_len)
+            _logger.info("file_loaded", path=str(path), size=doc_len)
             return True
 
     def _on_open_file(self) -> None:
@@ -666,7 +669,7 @@ class HexEditorPanel(
             self._on_data_changed()
             if self.state_holder is not None and file_path is not None:
                 self.state_holder.notify_document_saved(str(file_path), source="panel")
-            logger.info("file_saved", path=file_path)
+            _logger.info("file_saved", path=file_path)
 
     def _on_save_as(self) -> None:
         """Save the current document to a new path."""
@@ -684,7 +687,7 @@ class HexEditorPanel(
                 self._on_data_changed()
                 if self.state_holder is not None:
                     self.state_holder.notify_document_saved(save_path, source="panel")
-                logger.info("file_saved_as", path=save_path)
+                _logger.info("file_saved_as", path=save_path)
 
     def _on_goto_offset(self) -> None:
         """Navigate to the offset entered in the toolbar input."""
@@ -699,7 +702,7 @@ class HexEditorPanel(
         try:
             offset = int(text, 16) if text.lower().startswith("0x") else int(text)
         except ValueError:
-            logger.debug("invalid_offset_input", text=text)
+            _logger.debug("invalid_offset_input", text=text)
         else:
             goto_fn(offset)
 
@@ -763,7 +766,7 @@ class HexEditorPanel(
             read_len = min(PREVIEW_BYTES, self.document.length() - read_start)
             raw = self.document.read(read_start, read_len) if read_len > 0 else None
         except (AttributeError, ValueError):
-            logger.debug("ai_context_bytes_read_failed")
+            _logger.debug("ai_context_bytes_read_failed")
         else:
             if raw is not None:
                 context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
@@ -772,7 +775,7 @@ class HexEditorPanel(
         try:
             inspection = self.document.inspect_at(cursor_offset)
         except (AttributeError, ValueError):
-            logger.debug("ai_context_inspection_failed")
+            _logger.debug("ai_context_inspection_failed")
         else:
             if isinstance(inspection, dict):
                 context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
@@ -891,7 +894,7 @@ class HexEditorPanel(
             try:
                 encodings = list(hexcore.HexDocument.list_encodings())
             except (AttributeError, TypeError, ValueError) as exc:
-                logger.debug("toolbar_list_encodings_failed", error=str(exc))
+                _logger.exception("toolbar_list_encodings_failed", error=str(exc))
                 encodings = []
         if not encodings:
             encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
@@ -938,7 +941,8 @@ class HexEditorPanel(
             return False
         try:
             self._on_save()
-        except OSError:
+        except OSError as exc:
+            _logger.warning("save_document_failed", error=str(exc))
             return False
         return True
 
@@ -1013,7 +1017,8 @@ class HexEditorPanel(
         else:
             try:
                 size = int(text.split("(", maxsplit=1)[0].strip().replace(",", ""))
-            except ValueError:
+            except ValueError as exc:
+                _logger.debug("alignment_size_parse_failed", text=text, error=str(exc))
                 size = 0
         if self._hex_widget is not None:
             set_align_fn = getattr(self._hex_widget, "set_alignment_grid_size", None)
@@ -1086,4 +1091,4 @@ class HexEditorPanel(
             set_doc = getattr(self._hex_widget, "set_document", None)
             if callable(set_doc):
                 set_doc(None)
-        logger.debug("hex_editor_panel_cleanup")
+        _logger.debug("hex_editor_panel_cleanup")

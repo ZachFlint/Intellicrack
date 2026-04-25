@@ -60,7 +60,6 @@ dependencies = [
   "bumpversion",
   "codespell",
   "commitizen",
-  "darglint",
   "dead",
   "deadcode",
   "deptry",
@@ -165,7 +164,6 @@ optional-dependencies.dev = [
   "check-wheel-contents",
   "codespell",
   "commitizen",
-  "darglint",
   "dead",
   "deadcode",
   "deptry",
@@ -282,7 +280,7 @@ gui-scripts.intellicrack-gui = "intellicrack.main:main"
 build.targets.wheel.packages = [ "src/intellicrack" ]
 
 [tool.black]
-line-length = 100
+line-length = 140
 target-version = [ "py313" ]
 include = "\\.pyi?$"
 extend-exclude = '''/(
@@ -324,6 +322,7 @@ exclude = [
   ".semgrep/",
   ".serena/",
   ".venv/",
+  ".venv*/",
   ".vscode/",
   "__pycache__/",
   "build/",
@@ -334,7 +333,6 @@ exclude = [
   "node_modules/",
   "Screenshots/",
   "stubs/",
-  "tests/",
   "tools/",
   "typings/",
   "vendor/",
@@ -344,7 +342,7 @@ force-exclude = true
 preview = true
 format.indent-style = "space"
 format.quote-style = "double"
-format.line-ending = "auto"
+format.line-ending = "cr-lf"
 format.skip-magic-trailing-comma = false
 format.docstring-code-format = true
 lint.select = [
@@ -398,14 +396,14 @@ lint.select = [
   "W",     # pycodestyle warnings
 ]
 lint.ignore = [
+  "DOC202",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
+  "DOC502",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
   "E501",    # line-too-long
   "PLR0911", # too-many-return-statements
   "PLR0912", # too-many-branches
   "PLR0913", # too-many-arguments
   "PLR0915", # too-many-statements
   "PLR1702", # too-many-nested-blocks
-  "S603",    # subprocess-without-shell-equals-true
-  "S607",    # partial-path
 ]
 lint.per-file-ignores.".claude/**" = [ "S404" ]
 lint.per-file-ignores."scripts/**" = [ "S404", "S603", "T201" ]
@@ -457,15 +455,6 @@ lint.pylint.max-branches = 25
 lint.pylint.max-public-methods = 50
 lint.pylint.max-statements = 100
 
-[tool.isort]
-profile = "black"
-line_length = 100
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-
 [tool.flake8]
 max-line-length = 140
 exclude = [
@@ -485,6 +474,8 @@ exclude = [
   "tools",
   "docs",
   "node_modules",
+  "notebooks",
+  "vendor",
   "CLI Coding",
   "Screenshots",
   "typings",
@@ -540,7 +531,7 @@ per-file-ignores = [ "tests/*:S101,S102,S404" ]
 
 [tool.codespell]
 skip = """\
-  .git,.github,.pixi,build,dist,tools,node_modules,CLI \
+  .git,.github,.pixi,.claude,.serena,build,dist,tools,vendor,target,node_modules,CLI \
   Coding,Screenshots,typings,stubs,*.lock,reports,*.egg-info,*.hta,*.hpp,*.graphml\
   """
 ignore-words-list = "lief,crossreference,thirdparty,nd,lod,connin,regist"
@@ -570,6 +561,10 @@ arg-type-hints-in-docstring = false
 check-return-types = true
 check-yield-types = true
 allow-init-docstring = true
+
+[tool.pydocstyle]
+convention = "google"
+match-dir = "(?!tests|docs|tools|build|dist|node_modules|\\.).*"
 
 [tool.deptry]
 known_first_party = [ "intellicrack" ]
@@ -619,7 +614,7 @@ exclude_dirs = [
   "CLI Coding",
   "Screenshots",
 ]
-skips = [ "B101", "B601" ]
+skips = [  ]
 
 [tool.mypy]
 python_version = "3.13"
@@ -673,10 +668,6 @@ module = [
 ]
 follow_imports = "skip"
 
-[[tool.mypy.overrides]]
-module = [ "intellicrack.ui.*" ]
-disable_error_code = [ "attr-defined", "misc", "no-any-return", "redundant-cast", "unused-ignore" ]
-
 [tool.pytest]
 ini_options.minversion = "8.0"
 ini_options.testpaths = [ "tests" ]
@@ -721,46 +712,6 @@ report.skip_covered = false
 report.sort = "Cover"
 html.directory = "coverage_html_report"
 html.title = "Intellicrack Coverage Report"
-
-[tool.basedpyright]
-include = [ "src/intellicrack" ]
-exclude = [
-  "**/__pycache__",
-  "**/node_modules",
-  "**/.venv",
-  "**/build",
-  "**/dist",
-  "**/.git",
-  "**/.github",
-  "**/.pytest_cache",
-  "**/.mypy_cache",
-  "**/.ruff_cache",
-  "**/.claude",
-  "**/.serena",
-  "**/.idea",
-  "**/.vscode",
-  "tools",
-  "docs",
-  ".pixi",
-  "CLI Coding",
-  "Screenshots",
-]
-typeCheckingMode = "strict"
-pythonVersion = "3.13"
-pythonPlatform = "Windows"
-useLibraryCodeForTypes = false
-analyzeUnannotatedFunctions = true
-enableTypeIgnoreComments = true
-strictListInference = true
-strictDictionaryInference = true
-strictSetInference = true
-reportMissingImports = "error"
-reportMissingTypeStubs = "error"
-reportMissingModuleSource = "error"
-reportUndefinedVariable = "error"
-reportGeneralTypeIssues = "error"
-stubPath = "typings"
-extraPaths = [ "src" ]
 
 [tool.vulture]
 min_confidence = 80
@@ -1103,7 +1054,6 @@ pypi-dependencies.pyupgrade = ">=3.21.2, <4"
 pypi-dependencies.pydocstyle = ">=6.3.0, <7"
 pypi-dependencies.sourcery = ">=1.43.0, <2"
 pypi-dependencies.wemake-python-styleguide = ">=1.6.1, <2"
-pypi-dependencies.darglint = ">=1.8.1, <2"
 pypi-dependencies.pydoclint = ">=0.8.3, <0.9"
 pypi-dependencies.pyroma = ">=5.0.1, <6"
 pypi-dependencies.mypy-extensions = ">=1.1.0, <2"

@@ -208,9 +208,6 @@ class SessionStore:
     """SQLite-based session persistence.
 
     Handles storing and retrieving sessions from a SQLite database.
-
-    Args:
-        db_path: Path to the SQLite database file.
     """
 
     def __init__(self, db_path: Path) -> None:
@@ -294,6 +291,11 @@ class SessionStore:
 
         Args:
             session: Session to save.
+
+        Raises:
+            sqlite3.Error: If the SQLite engine reports a database-level error
+                while writing the session or its tags.
+            OSError: If the underlying SQLite file cannot be opened or written.
         """
         _logger.debug("session_save_start", session_id=session.id)
         session_data = {
@@ -902,11 +904,6 @@ class SessionManager:
     """Manages session lifecycle and persistence.
 
     Coordinates between the active session and the session store.
-
-    Args:
-        store: Session persistence store.
-        auto_save: Whether to auto-save changes.
-        save_interval: Interval between auto-saves in seconds.
     """
 
     def __init__(

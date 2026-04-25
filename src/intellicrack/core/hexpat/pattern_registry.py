@@ -49,11 +49,8 @@ class PatternMetadata:
 class PatternRegistry:
     """Discovers, indexes, and matches .hexpat pattern files.
 
-    Scans specified directories for .hexpat files, extracts metadata from
-    #pragma directives, and provides file-format matching via magic bytes.
-
-    Args:
-        pattern_dirs: Directories to scan for .hexpat files.
+    Scans specified directories for .hexpat files, extracts metadata from #pragma directives, and provides file-format matching via magic
+    bytes.
     """
 
     def __init__(self, pattern_dirs: list[Path] | None = None) -> None:

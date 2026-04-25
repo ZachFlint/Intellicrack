@@ -88,11 +88,7 @@ class _CacheEntry:
 class DiscoveryCache:
     """TTL-based cache for discovered models.
 
-    Provides thread-safe caching of model lists per provider with
-    configurable TTL and optional disk persistence.
-
-    Args:
-        ttl_seconds: Cache entry time-to-live in seconds. Default 1 hour.
+    Provides thread-safe caching of model lists per provider with configurable TTL and optional disk persistence.
     """
 
     def __init__(self, ttl_seconds: int = 3600) -> None:
@@ -296,13 +292,7 @@ class DiscoveryCache:
 class ModelDiscovery:
     """Orchestrates model discovery from all providers.
 
-    Provides unified model discovery with caching, filtering, and
-    intelligent recommendations.
-
-    Args:
-        registry: Provider registry containing registered providers.
-        cache_ttl: Cache time-to-live in seconds.
-        timeout_per_provider: Timeout for each provider's discovery.
+    Provides unified model discovery with caching, filtering, and intelligent recommendations.
     """
 
     def __init__(

@@ -69,12 +69,8 @@ def _parse_int_value(value_str: str) -> int:
 class HexPatPreprocessor:
     """Preprocesses HexPat .hexpat source files before parsing.
 
-    Resolves #include directives, expands #define macros, processes
-    conditional compilation (#ifdef/#ifndef/#endif), and extracts
-    #pragma metadata.
-
-    Args:
-        include_paths: Directories to search for included files.
+    Resolves #include directives, expands #define macros, processes conditional compilation (#ifdef/#ifndef/#endif), and extracts #pragma
+    metadata.
     """
 
     def __init__(self, include_paths: list[Path] | None = None) -> None:

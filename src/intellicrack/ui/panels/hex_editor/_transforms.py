@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Any, Final, cast
 
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.hex_editor._base import (
     DESCRIPTION_TRUNCATE_LEN,
@@ -35,8 +37,10 @@ from intellicrack.ui.panels.hex_editor._base import (
     PRINTABLE_MAX,
     PRINTABLE_MIN,
     get_all_transform_nodes_fn,
-    logger,
 )
+
+
+_logger = get_logger(__name__)
 
 
 _LAYOUT_MARGIN: Final[int] = 2
@@ -68,7 +72,7 @@ try:
 
     _pipeline_available = True
 except ImportError:
-    logger.debug("transform_pipeline_class_import_unavailable")
+    _logger.debug("transform_pipeline_class_import_unavailable")
 
 
 @dataclass(frozen=True)
@@ -108,7 +112,7 @@ def _load_transform_descriptors(document: object) -> list[TransformDescriptor]:
             try:
                 raw: object = list_fn()
             except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                logger.debug("transform_list_from_document_failed", error=str(exc))
+                _logger.debug("transform_list_from_document_failed", error=str(exc))
             else:
                 if isinstance(raw, list):
                     descriptors: list[TransformDescriptor] = []
@@ -460,7 +464,7 @@ class TransformsMixin:
         try:
             result = self.document.transform_data(node_name, offset, length, encoded_params)
         except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
-            logger.debug("transform_single_failed", error=str(exc))
+            _logger.exception("transform_single_failed", error=str(exc), node_name=node_name)
             return None
         if isinstance(result, bytes):
             return result
@@ -482,7 +486,7 @@ class TransformsMixin:
         try:
             doc_len: int = self.document.length()
         except (AttributeError, ValueError) as exc:
-            logger.debug("transform_preview_len_failed", error=str(exc))
+            _logger.exception("transform_preview_len_failed", error=str(exc))
             return
         read_len = min(PREVIEW_BYTES, doc_len - cursor_offset)
         if read_len <= 0:
@@ -519,7 +523,7 @@ class TransformsMixin:
         try:
             doc_len: int = self.document.length()
         except (AttributeError, ValueError) as exc:
-            logger.debug("transform_apply_len_failed", error=str(exc))
+            _logger.exception("transform_apply_len_failed", error=str(exc))
             return
         read_len = min(apply_len, doc_len - cursor_offset)
         if read_len <= 0:
@@ -537,17 +541,27 @@ class TransformsMixin:
                 "Transform Truncated",
                 f"Transform output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
+        write_payload = result[:write_len]
+        _logger.info(
+            "file_written",
+            path="<document>",
+            offset=cursor_offset,
+            size=write_len,
+            data_size=write_len,
+            data_sha256=hashlib.sha256(write_payload).hexdigest()[:12],
+            kind="transform_apply",
+        )
         try:
-            self.document.write_bytes(cursor_offset, result[:write_len])
+            self.document.write_bytes(cursor_offset, write_payload)
         except (AttributeError, ValueError) as exc:
-            logger.debug("transform_apply_write_failed", error=str(exc))
+            _logger.exception("transform_apply_write_failed", error=str(exc), offset=cursor_offset, length=write_len)
         else:
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
                     update_fn()
             self._on_data_changed()
-            logger.debug("transform_applied", offset=cursor_offset, length=write_len)
+            _logger.info("transform_applied", offset=cursor_offset, length=write_len)
 
     def _pipeline_step_count(self) -> int:
         """Return the number of steps in the current pipeline.
@@ -660,19 +674,19 @@ class TransformsMixin:
             else:
                 return
         except (AttributeError, ValueError) as exc:
-            logger.debug("pipeline_read_failed", error=str(exc))
+            _logger.exception("pipeline_read_failed", error=str(exc))
             return
 
         execute_fn: Any = getattr(self._transform_pipeline, "execute", None)
         if not callable(execute_fn):
-            logger.warning("pipeline_execute_not_available")
+            _logger.warning("pipeline_execute_not_available")
             return
 
         try:
             raw_result: object = execute_fn(data)
             result: bytes = raw_result if isinstance(raw_result, bytes) else bytes(cast("list[int]", raw_result))
         except (ValueError, TypeError, KeyError) as exc:
-            logger.debug("pipeline_execution_failed", error=str(exc))
+            _logger.exception("pipeline_execution_failed", error=str(exc))
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(
                 parent,
@@ -689,17 +703,27 @@ class TransformsMixin:
                 "Pipeline Truncated",
                 f"Pipeline output ({len(result)} bytes) exceeds input region ({read_len} bytes). Output will be truncated to fit.",
             )
+        write_payload = result[:write_len]
+        _logger.info(
+            "file_written",
+            path="<document>",
+            offset=cursor_offset,
+            size=write_len,
+            data_size=write_len,
+            data_sha256=hashlib.sha256(write_payload).hexdigest()[:12],
+            kind="pipeline_apply",
+        )
         try:
-            self.document.write_bytes(cursor_offset, result[:write_len])
+            self.document.write_bytes(cursor_offset, write_payload)
         except (AttributeError, ValueError) as exc:
-            logger.debug("pipeline_write_failed", error=str(exc))
+            _logger.exception("pipeline_write_failed", error=str(exc), offset=cursor_offset, length=write_len)
         else:
             if self._hex_widget is not None:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
                     update_fn()
             self._on_data_changed()
-            logger.debug("pipeline_executed", offset=cursor_offset, length=write_len)
+            _logger.info("pipeline_executed", offset=cursor_offset, length=write_len)
 
     def _on_block_fill(self) -> None:
         """Fill a block via hexcore document.fill_block."""
@@ -712,13 +736,14 @@ class TransformsMixin:
         offset, length, pattern = dlg.get_values()
         if not pattern:
             return
+        _logger.info("block_fill_invoke", offset=offset, length=length, pattern_size=len(pattern))
         try:
             self.document.fill_block(offset, length, bytes(pattern))
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            logger.debug("block_fill_failed", error=str(exc))
+            _logger.exception("block_fill_failed", error=str(exc), offset=offset, length=length)
             return
         self._refresh_widget()
-        logger.debug("block_fill_complete", offset=offset, length=length)
+        _logger.info("block_fill_complete", offset=offset, length=length)
 
     def _on_block_copy(self) -> None:
         """Copy a block via hexcore document.copy_block."""
@@ -732,7 +757,7 @@ class TransformsMixin:
         try:
             self.document.copy_block(src, length, dst)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            logger.debug("block_copy_failed", error=str(exc))
+            _logger.exception("block_copy_failed", error=str(exc), src=src, length=length, dst=dst)
             return
         self._refresh_widget()
 
@@ -748,7 +773,7 @@ class TransformsMixin:
         try:
             self.document.move_block(src, length, dst)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            logger.debug("block_move_failed", error=str(exc))
+            _logger.exception("block_move_failed", error=str(exc), src=src, length=length, dst=dst)
             return
         self._refresh_widget()
 
@@ -764,7 +789,7 @@ class TransformsMixin:
         try:
             self.document.swap_blocks(off_a, len_a, off_b, len_b)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            logger.debug("block_swap_failed", error=str(exc))
+            _logger.exception("block_swap_failed", error=str(exc), off_a=off_a, len_a=len_a, off_b=off_b, len_b=len_b)
             return
         self._refresh_widget()
 
@@ -826,7 +851,7 @@ class TransformsMixin:
                 bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count),
             )
         except (RuntimeError, OSError, ValueError, TypeError, AttributeError) as exc:
-            logger.warning(
+            _logger.warning(
                 "arithmetic_bridge_failed",
                 operation=op_short,
                 selection_start=sel_start,

@@ -47,7 +47,6 @@ crashtest==0.4.1
 cryptography==46.0.7
 cxxfilt==0.3.0
 cyclonedx_python_lib==11.7.0
-darglint==1.8.1
 dead==2.1.0
 deadcode==2.4.1
 decli==0.6.3

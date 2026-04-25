@@ -111,11 +111,7 @@ class ModelConfig:
 class ModelCache:
     """LRU cache for loaded models with memory limit enforcement.
 
-    Maintains an LRU cache of loaded models, automatically evicting
-    least recently used models when the memory limit is exceeded.
-
-    Args:
-        max_memory_bytes: Maximum memory for cached models.
+    Maintains an LRU cache of loaded models, automatically evicting least recently used models when the memory limit is exceeded.
     """
 
     def __init__(self, max_memory_bytes: int = _DEFAULT_CACHE_SIZE_BYTES) -> None:

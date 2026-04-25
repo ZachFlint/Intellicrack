@@ -55,7 +55,7 @@ class TestHTMLExport:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "html.bin"
-        f.write_bytes(b"\xAA\xBB\xCC\xDD" * 16)
+        f.write_bytes(b"\xaa\xbb\xcc\xdd" * 16)
         _run(bridge.open_file(str(f)))
         html = _run(bridge.export_annotated_html())
         assert "<!DOCTYPE html>" in html
@@ -69,7 +69,7 @@ class TestHTMLExport:
             tmp_path: Pytest temporary directory.
         """
         f = tmp_path / "html_data.bin"
-        f.write_bytes(b"\xDE\xAD\xBE\xEF" + b"\x00" * 60)
+        f.write_bytes(b"\xde\xad\xbe\xef" + b"\x00" * 60)
         _run(bridge.open_file(str(f)))
         html = _run(bridge.export_annotated_html())
         assert "DE" in html

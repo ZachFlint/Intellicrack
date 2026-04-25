@@ -75,7 +75,7 @@ class TestFillBlock:
         _run(bridge.fill_block(0, 12, "DEADBEEF"))
         result = _run(bridge.read_bytes(0, 12))
         raw = bytes.fromhex(result.replace(" ", ""))
-        assert raw == b"\xDE\xAD\xBE\xEF" * 3
+        assert raw == b"\xde\xad\xbe\xef" * 3
 
     def test_fill_block_empty_pattern_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that an empty pattern raises ValueError.

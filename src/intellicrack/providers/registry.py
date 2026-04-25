@@ -30,11 +30,7 @@ _MSG_NO_ACTIVE_PROVIDER = "No active provider"
 class ProviderRegistry:
     """Registry for all LLM providers.
 
-    Manages provider instances, connections, and provides a unified interface
-    for accessing any configured LLM provider.
-
-    Args:
-        credential_loader: Optional credential loader for auto-connecting providers.
+    Manages provider instances, connections, and provides a unified interface for accessing any configured LLM provider.
     """
 
     def __init__(

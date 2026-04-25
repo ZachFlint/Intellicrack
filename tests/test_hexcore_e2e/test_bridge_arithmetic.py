@@ -31,7 +31,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -98,8 +98,7 @@ class TestXorOperation:
             tmp_path: Pytest temporary directory.
         """
         result = _setup_and_apply(bridge, tmp_path, "01 02 03 04 05 06 07 08", "xor", key_hex="FF00")
-        expected = bytes([0x01 ^ 0xFF, 0x02 ^ 0x00, 0x03 ^ 0xFF, 0x04 ^ 0x00,
-                          0x05 ^ 0xFF, 0x06 ^ 0x00, 0x07 ^ 0xFF, 0x08 ^ 0x00])
+        expected = bytes([0x01 ^ 0xFF, 0x02 ^ 0x00, 0x03 ^ 0xFF, 0x04 ^ 0x00, 0x05 ^ 0xFF, 0x06 ^ 0x00, 0x07 ^ 0xFF, 0x08 ^ 0x00])
         assert result == expected
 
 

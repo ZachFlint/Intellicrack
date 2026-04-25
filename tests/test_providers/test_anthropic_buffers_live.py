@@ -40,13 +40,9 @@ _PROJECT_ROOT = Path("D:/Intellicrack")
 _ENV_PATH = _PROJECT_ROOT / ".env"
 
 
-_SKIP_REASON_NO_KEY = (
-    "ANTHROPIC_API_KEY not available in credential store (keyring or .env). "
-    "Live Anthropic buffers test skipped."
-)
+_SKIP_REASON_NO_KEY = "ANTHROPIC_API_KEY not available in credential store (keyring or .env). Live Anthropic buffers test skipped."
 _SKIP_REASON_NO_CREDIT = (
-    "Anthropic API returned a credit / payment error before the live buffers "
-    "could be validated. Live Anthropic buffers test skipped."
+    "Anthropic API returned a credit / payment error before the live buffers could be validated. Live Anthropic buffers test skipped."
 )
 
 
@@ -165,7 +161,6 @@ async def test_anthropic_chat_and_stream_populate_usage_and_thinking() -> None:
     after a thinking-enabled request.
 
     Raises:
-        AssertionError: If the buffers are not populated as expected.
         Exception: Any non-credit-related error raised by the live API is
             re-raised after the skip check so the test surfaces it.
     """

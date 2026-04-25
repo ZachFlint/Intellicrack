@@ -46,12 +46,6 @@ class HexPatInterpreter:
     Orchestrates the complete pipeline: preprocessor -> lexer -> parser ->
     type registration -> evaluator. Outputs ParsedField-compatible dicts
     that plug directly into the existing hex editor UI.
-
-    Args:
-        include_paths: Additional directories for ``#include`` resolution.
-            The interpreter always searches the standard library directory
-            (containing std/ and type/ libraries) first.
-        std_lib_path: Override path for the standard library directory.
     """
 
     def __init__(

@@ -6,12 +6,16 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any, cast
 
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 class PatchesMixin:
@@ -47,8 +51,8 @@ class PatchesMixin:
                     current_byte = raw_patch[0]
                 elif isinstance(raw_patch, list) and (patch_list := cast("list[int]", raw_patch)):
                     current_byte = patch_list[0]
-            except (AttributeError, ValueError):
-                logger.debug("patch_read_failed", offset=off)
+            except (AttributeError, ValueError) as exc:
+                _logger.exception("patch_read_failed", offset=off, error=str(exc))
                 continue
 
             if current_byte < 0:
@@ -80,8 +84,8 @@ class PatchesMixin:
             return
         try:
             raw = self.document.read(offset, 1)
-        except (AttributeError, ValueError):
-            logger.debug("cache_original_byte_failed", offset=offset)
+        except (AttributeError, ValueError) as exc:
+            _logger.exception("cache_original_byte_failed", offset=offset, error=str(exc))
         else:
             if isinstance(raw, (list, bytes, bytearray)):
                 self._original_data_cache[offset] = raw[0] if raw else 0
@@ -117,7 +121,7 @@ class PatchesMixin:
         try:
             patch_data = self._dispatch_export_patches(suffix)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
-            logger.debug("patches_export_failed", error=str(exc), suffix=suffix)
+            _logger.exception("patches_export_failed", error=str(exc), suffix=suffix)
             QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
         if patch_data is None:
@@ -127,13 +131,20 @@ class PatchesMixin:
                 f"Unsupported patch format for extension {suffix!r}.",
             )
             return
+        _logger.info(
+            "patches_export_write_begin",
+            path=save_path,
+            data_size=len(patch_data),
+            data_sha256=hashlib.sha256(patch_data).hexdigest()[:12],
+            suffix=suffix,
+        )
         try:
             Path(save_path).write_bytes(patch_data)
         except OSError as exc:
-            logger.debug("patches_export_write_failed", error=str(exc), path=save_path)
+            _logger.exception("patches_export_write_failed", error=str(exc), path=save_path)
             QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
-        logger.info(
+        _logger.info(
             "patches_exported",
             path=save_path,
             count=patch_count,
@@ -256,7 +267,7 @@ class PatchesMixin:
         try:
             patch_bytes = Path(file_path_str).read_bytes()
         except OSError as exc:
-            logger.debug("patches_import_read_failed", error=str(exc), path=file_path_str)
+            _logger.exception("patches_import_read_failed", error=str(exc), path=file_path_str)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
 
@@ -264,7 +275,7 @@ class PatchesMixin:
         try:
             applied = self._dispatch_import_patches(suffix, patch_bytes)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
-            logger.debug("patches_import_failed", error=str(exc), suffix=suffix)
+            _logger.exception("patches_import_failed", error=str(exc), suffix=suffix)
             QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
         if applied is None:
@@ -280,7 +291,7 @@ class PatchesMixin:
             if callable(update_fn):
                 update_fn()
         self._on_data_changed()
-        logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
+        _logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
         QMessageBox.information(parent, "Import Patches", f"Applied {applied} patch record(s).")
 
     def _dispatch_import_patches(self, suffix: str, patch_bytes: bytes) -> int | None:

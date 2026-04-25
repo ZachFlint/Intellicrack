@@ -74,6 +74,8 @@ class TemplateBootstrapError(RuntimeError):
             each failure encountered during bootstrap.
     """
 
+    failed_templates: Sequence[tuple[Path, str]]
+
     def __init__(
         self,
         message: str,
@@ -87,17 +89,13 @@ class TemplateBootstrapError(RuntimeError):
                 every template that failed to export or parse.
         """
         super().__init__(message)
-        self.failed_templates: Sequence[tuple[Path, str]] = tuple(failed_templates)
+        self.failed_templates = tuple(failed_templates)
 
 
 class TemplateManager:
     """Manages template files on disk for the hex editor.
 
-    Maintains a directory structure under config_dir/templates/ with
-    builtin and user subdirectories.
-
-    Args:
-        config_dir: Base configuration directory.
+    Maintains a directory structure under config_dir/templates/ with builtin and user subdirectories.
     """
 
     def __init__(self, config_dir: Path) -> None:

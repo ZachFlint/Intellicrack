@@ -287,7 +287,7 @@ def _iter_model_parameters(loaded: LoadedModel) -> Iterator[torch.nn.Parameter]:
         loaded: The loaded model whose parameters should be iterated.
 
     Yields:
-        Iterator[torch.nn.Parameter]: Iterator of torch Parameter tensors.
+        torch.nn.Parameter: Successive Parameter tensors from the loaded model.
 
     Raises:
         TypeError: If the loaded model is not a torch.nn.Module instance.

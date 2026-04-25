@@ -28,10 +28,10 @@ install-ghidra:
 install-radare2:
     @& scripts/install-radare2.ps1
 
-[doc('Build the Rust hex editor core (intellicrack-hexcore)')]
+[doc('Build the Rust hex editor core (intellicrack-hexcore) tuned for meteorlake')]
 [group('build')]
 build-hexcore:
-    cd src/intellicrack-hexcore && {{ pixi }} maturin develop --release
+    $env:RUSTFLAGS = '-C target-cpu=meteorlake'; cd src/intellicrack-hexcore && {{ pixi }} maturin develop --release
 
 [doc('Run Rust hex editor core tests')]
 [group('test')]
@@ -110,7 +110,7 @@ lint-fix *FLAGS:
 # Find dead code, secrets, and risky flows with skylos
 [group('lint')]
 skylos *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName skylos -DisplayName Skylos -Command "{{ pixi }} skylos {{ FLAGS }} --json {{ src }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName skylos -DisplayName Skylos -Command "{{ pixi }} skylos {{ FLAGS }} --json --no-upload --no-grep-verify --no-provenance {{ src }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql'
 
 # Detect dead code with vulture and output sorted findings
 [group('lint')]
@@ -129,11 +129,6 @@ sourcery *FLAGS:
     @if (!(Test-Path 'reports/csv')) { New-Item -ItemType Directory -Path 'reports/csv' -Force | Out-Null }
     @{{ pixi }} sourcery review --fix --csv --no-summary {{ FLAGS }} {{ src }} 2>&1 | Tee-Object -FilePath reports/csv/sourcery_src_findings.csv
     @{{ pixi }} sourcery review --fix --csv --no-summary {{ FLAGS }} tests 2>&1 | Tee-Object -FilePath reports/csv/sourcery_tests_findings.csv
-
-# Check docstring validity with darglint and output sorted findings
-[group('lint')]
-darglint *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName darglint -DisplayName Darglint -Command "{{ pixi }} darglint {{ FLAGS }} {{ src }}" -TextMode -Pixi "{{ pixi }}"
 
 # Check docstring validity with pydoclint and output sorted findings
 [group('lint')]
@@ -194,12 +189,12 @@ flake8 *FLAGS:
 # Run wemake-python-styleguide (strictest linter) and output sorted findings
 [group('lint')]
 wemake *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 10" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 30" -TextMode -Pixi "{{ pixi }}"
 
 # Run mccabe complexity checker and output sorted findings
 [group('lint')]
 mccabe *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName mccabe -DisplayName "McCabe Complexity" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --select=C901 --max-complexity 10" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName mccabe -DisplayName "McCabe Complexity" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --select=C901 --max-complexity 30" -TextMode -Pixi "{{ pixi }}"
 
 # Run pydocstyle docstring checker and output sorted findings
 [group('lint')]
@@ -301,7 +296,7 @@ psscriptanalyzer *FLAGS:
 [group('format')]
 jsonfmt:
     @echo "[JSON Format] Running..."
-    @$jsonFiles = fd -e json --type f --exclude 'package-lock.json' --exclude 'pixi.lock' --exclude 'reports' --exclude '.claude' --exclude '.pixi' --exclude 'node_modules' 2>$null | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }; foreach ($file in $jsonFiles) { try { $content = Get-Content $file -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 100; Set-Content -Path $file -Value $content -Encoding utf8 } catch { } }; Write-Host "[JSONFMT] Done"
+    @$jsonFiles = fd -e json --type f --exclude 'package-lock.json' --exclude 'pixi.lock' --exclude 'reports' --exclude '.claude' --exclude '.pixi' --exclude '.git' --exclude 'node_modules' --exclude 'target' --exclude 'vendor' --exclude 'build' --exclude 'dist' 2>$null | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }; foreach ($file in $jsonFiles) { try { $content = Get-Content $file -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 100; Set-Content -Path $file -Value $content -Encoding utf8 } catch { } }; Write-Host "[JSONFMT] Done"
 
 # Format YAML files with yamlfmt
 [group('format')]

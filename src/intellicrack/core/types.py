@@ -1466,11 +1466,6 @@ class ToolDefinition:
 class IntellicrackError(Exception):
     """Base exception for all Intellicrack errors.
 
-    Args:
-        message: Human-readable error description.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         message: Human-readable error description.
         error_code: Optional numeric error code for programmatic handling.
@@ -1502,14 +1497,6 @@ class IntellicrackError(Exception):
 
 class ProviderError(IntellicrackError):
     """Error related to LLM providers.
-
-    Args:
-        message: Human-readable error description.
-        provider_name: Name of the provider.
-        status_code: HTTP status code if applicable.
-        response_body: Raw response body for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
 
     Attributes:
         provider_name: Name of the provider that raised the error.
@@ -1553,16 +1540,6 @@ class AuthenticationError(ProviderError):
 class RateLimitError(ProviderError):
     """Rate limit exceeded.
 
-    Args:
-        message: Human-readable error description.
-        retry_after: Seconds until retry is allowed.
-        limit_type: Type of rate limit hit.
-        provider_name: Name of the provider.
-        status_code: HTTP status code if applicable.
-        response_body: Raw response body for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         retry_after: Seconds until retry is allowed.
         limit_type: Type of rate limit hit.
@@ -1601,16 +1578,6 @@ class RateLimitError(ProviderError):
 
 class ModelNotFoundError(ProviderError):
     """Requested model not found.
-
-    Args:
-        message: Human-readable error description.
-        model_name: Name of the model that was not found.
-        available_models: List of available model names.
-        provider_name: Name of the provider.
-        status_code: HTTP status code if applicable.
-        response_body: Raw response body for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
 
     Attributes:
         model_name: Name of the model that was not found.
@@ -1651,14 +1618,6 @@ class ModelNotFoundError(ProviderError):
 class ToolError(IntellicrackError):
     """Error related to tool bridges.
 
-    Args:
-        message: Human-readable error description.
-        tool_name: Name of the tool.
-        exit_code: Process exit code if applicable.
-        stderr: Standard error output for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         tool_name: Name of the tool that raised the error.
         exit_code: Process exit code if applicable.
@@ -1697,14 +1656,6 @@ class ToolError(IntellicrackError):
 class ToolNotFoundError(ToolError):
     """Tool could not be found or installed.
 
-    Args:
-        message: Human-readable error description.
-        tool_name: Name of the tool.
-        search_paths: Paths that were searched.
-        install_hint: Hint for how to install the tool.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         search_paths: Paths that were searched.
         install_hint: Hint for how to install the tool.
@@ -1739,16 +1690,6 @@ class ToolNotFoundError(ToolError):
 
 class InitializationError(ToolError):
     """Tool failed to initialize.
-
-    Args:
-        message: Human-readable error description.
-        tool_name: Name of the tool.
-        config_path: Path to configuration that failed.
-        missing_dependency: Name of missing dependency.
-        exit_code: Process exit code if applicable.
-        stderr: Standard error output for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
 
     Attributes:
         config_path: Path to configuration that failed.
@@ -1788,17 +1729,6 @@ class InitializationError(ToolError):
 
 class AttachError(ToolError):
     """Failed to attach to process.
-
-    Args:
-        message: Human-readable error description.
-        tool_name: Name of the tool.
-        pid: Process ID that could not be attached.
-        process_name: Name of the process that could not be attached.
-        reason: Specific reason for attachment failure.
-        exit_code: Process exit code if applicable.
-        stderr: Standard error output for debugging.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
 
     Attributes:
         pid: Process ID that could not be attached.
@@ -1844,13 +1774,6 @@ class AttachError(ToolError):
 class SandboxError(IntellicrackError):
     """Error related to sandbox operations.
 
-    Args:
-        message: Human-readable error description.
-        sandbox_type: Type of sandbox.
-        vm_state: Current VM state when error occurred.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         sandbox_type: Type of sandbox.
         vm_state: Current VM state when error occurred.
@@ -1884,14 +1807,6 @@ class SandboxError(IntellicrackError):
 class SandboxTimeoutError(SandboxError):
     """Timeout during sandbox command execution.
 
-    Args:
-        message: Human-readable error description.
-        timeout_seconds: Timeout duration that was exceeded.
-        sandbox_type: Type of sandbox.
-        vm_state: Current VM state when error occurred.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
-
     Attributes:
         timeout_seconds: Timeout duration that was exceeded.
     """
@@ -1923,14 +1838,6 @@ class SandboxTimeoutError(SandboxError):
 
 class ConfigurationError(IntellicrackError):
     """Configuration error.
-
-    Args:
-        message: Human-readable error description.
-        config_key: Configuration key that caused the error.
-        expected_type: Expected type or format.
-        actual_value: Actual value that was provided.
-        error_code: Optional numeric error code.
-        details: Optional dictionary with additional context.
 
     Attributes:
         config_key: Configuration key that caused the error.

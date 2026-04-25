@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import hashlib
 import io
 import re
 from pathlib import Path
@@ -27,7 +28,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 _FONT_FAMILY: Final[str] = "Consolas"
@@ -514,6 +518,14 @@ class _DocAPI:
             offset: Start offset.
             data: Bytes to write.
         """
+        _logger.info(
+            "file_written",
+            path="<scripted_doc>",
+            offset=offset,
+            size=len(data),
+            data_size=len(data),
+            data_sha256=hashlib.sha256(data).hexdigest()[:12],
+        )
         self._doc.write_bytes(offset, data)
 
     def insert(self, offset: int, data: bytes) -> None:
@@ -675,6 +687,7 @@ class _ReadOnlyDocAPI:
         """
         _ = (offset, data)
         msg = "doc.write is disabled in read-only script mode"
+        _logger.warning("script_sandbox_write_denied", offset=offset, size=len(data))
         raise _SandboxViolationError(msg)
 
     @staticmethod
@@ -690,6 +703,7 @@ class _ReadOnlyDocAPI:
         """
         _ = (offset, data)
         msg = "doc.insert is disabled in read-only script mode"
+        _logger.warning("script_sandbox_insert_denied", offset=offset, size=len(data))
         raise _SandboxViolationError(msg)
 
     @staticmethod
@@ -705,6 +719,7 @@ class _ReadOnlyDocAPI:
         """
         _ = (offset, length)
         msg = "doc.delete is disabled in read-only script mode"
+        _logger.warning("script_sandbox_delete_denied", offset=offset, length=length)
         raise _SandboxViolationError(msg)
 
     def search_hex(self, pattern: str, max_results: int = 100) -> list[tuple[int, int]]:
@@ -767,7 +782,8 @@ def _script_uses_writes(source: str) -> bool:
     """
     try:
         tree = ast.parse(source)
-    except SyntaxError:
+    except SyntaxError as exc:
+        _logger.debug("script_uses_writes_parse_failed", error=str(exc))
         return False
 
     for node in ast.walk(tree):
@@ -866,6 +882,7 @@ def _safe_getattr(target: object, name: object, *default: object) -> object:
     """
     if not isinstance(name, str) or name.startswith("_") or name in _FORBIDDEN_ATTRIBUTES:
         msg = f"getattr(..., {name!r}) is forbidden"
+        _logger.warning("script_sandbox_getattr_denied", attr_name=str(name))
         raise _SandboxViolationError(msg)
     if default:
         return getattr(target, name, default[0])
@@ -889,6 +906,7 @@ def _safe_setattr(target: object, name: object, value: object) -> None:
     """
     if not isinstance(name, str) or name.startswith("_") or name in _FORBIDDEN_ATTRIBUTES:
         msg = f"setattr(..., {name!r}, ...) is forbidden"
+        _logger.warning("script_sandbox_setattr_denied", attr_name=str(name))
         raise _SandboxViolationError(msg)
     setattr(target, name, value)
 
@@ -1118,9 +1136,9 @@ class ScriptingMixin:
             )
             if answer == QMessageBox.StandardButton.Yes:
                 doc_api = base_api
-                logger.info("script_write_access_granted")
+                _logger.info("script_write_access_granted")
             else:
-                logger.info("script_write_access_denied")
+                _logger.info("script_write_access_denied")
 
         if self._script_status is not None:
             self._script_status.setText("Running...")
@@ -1146,7 +1164,7 @@ class ScriptingMixin:
                 content = Path(script_path).read_text(encoding="utf-8")
                 self._script_editor.setPlainText(content)
             except OSError as exc:
-                logger.warning("script_load_failed", error=str(exc))
+                _logger.warning("script_load_failed", error=str(exc))
 
     def _on_save_script(self) -> None:
         """Save the editor content to a Python file."""
@@ -1159,13 +1177,20 @@ class ScriptingMixin:
         )
         save_path = result[0] if result else ""
         if save_path and self._script_editor is not None:
+            script_text = self._script_editor.toPlainText()
+            _logger.info(
+                "file_written",
+                path=save_path,
+                size=len(script_text),
+                kind="script",
+            )
             try:
                 Path(save_path).write_text(
-                    self._script_editor.toPlainText(),
+                    script_text,
                     encoding="utf-8",
                 )
             except OSError as exc:
-                logger.warning("script_save_failed", error=str(exc))
+                _logger.warning("script_save_failed", error=str(exc))
 
     def _on_clear_script_output(self) -> None:
         """Clear the script output console."""
@@ -1213,4 +1238,4 @@ class ScriptingMixin:
             self._script_status.setText("Error")
         if self._script_output is not None:
             self._script_output.setPlainText(f"Error:\n{error}")
-        logger.debug("script_execution_error", error=error)
+        _logger.debug("script_execution_error", error=error)

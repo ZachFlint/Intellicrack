@@ -423,9 +423,7 @@ class TestToolDefinition:
             method_name = func.name.replace("cutter.", "")
             method = getattr(bridge, method_name)
             sig = inspect.signature(method)
-            method_params = [
-                p.name for p in sig.parameters.values() if p.name != "self"
-            ]
+            method_params = [p.name for p in sig.parameters.values() if p.name != "self"]
             tooldef_params = [p.name for p in func.parameters]
             assert tooldef_params == method_params[: len(tooldef_params)], (
                 f"{func.name}: tool_def={tooldef_params} != method={method_params}"

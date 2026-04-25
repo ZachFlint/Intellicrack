@@ -88,11 +88,7 @@ class _ContinueSignalError(Exception):
 
 
 class _ReturnSignalError(Exception):
-    """Internal control-flow error raised by a return statement.
-
-    Args:
-        value: The PatternValue being returned from the function.
-    """
+    """Internal control-flow error raised by a return statement."""
 
     def __init__(self, value: PatternValue) -> None:
         """Initialize the _ReturnSignalError with the returned value.
@@ -141,11 +137,7 @@ class PatternValue:
 
 
 class EvalScope:
-    """Lexical scope with parent-chain variable resolution.
-
-    Args:
-        parent: The enclosing parent scope, or None for root scope.
-    """
+    """Lexical scope with parent-chain variable resolution."""
 
     def __init__(self, parent: EvalScope | None = None) -> None:
         """Initialize the EvalScope with an optional parent scope.
@@ -274,11 +266,6 @@ class HexPatEvaluator:
 
     Attributes:
         FIELD_COLORS: Color palette for field highlighting in the hex editor.
-
-    Args:
-        data_reader: Byte-access wrapper over the binary data.
-        type_registry: Registry of all user-defined types.
-        pragma: Parsed pragma directives controlling evaluation behaviour.
     """
 
     _POINTER_SIZE: ClassVar[int] = 8

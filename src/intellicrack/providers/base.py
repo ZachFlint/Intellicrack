@@ -386,7 +386,11 @@ class LLMProviderBase(ABC):
 
         Raises:
             AuthenticationError: If the operation fails with bad credentials.
-            ProviderError: If all retry attempts are exhausted.
+            ProviderError: If all retry attempts are exhausted with no captured
+                exception to re-raise.
+            retryable_exceptions: The most recent caught exception when
+                ``max_retries`` is exhausted. Re-raised verbatim from the
+                ``except retryable_exceptions`` block.
         """
         for attempt in range(max_retries + 1):
             try:

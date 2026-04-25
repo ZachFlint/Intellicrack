@@ -26,8 +26,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.ui.panels.hex_editor._base import logger
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
+
+
+_logger = get_logger(__name__)
 
 
 _DEFAULT_HIGHLIGHT_COLOR: Final[str] = "#FFFF00"
@@ -177,7 +180,7 @@ class HighlightingMixin:
             try:
                 matches = document.search_hex(pattern, _HIGHLIGHT_PATTERN_MAX_MATCHES)
             except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                logger.debug("highlight_search_failed", error=str(exc), pattern=pattern)
+                _logger.exception("highlight_search_failed", error=str(exc), pattern=pattern)
                 QMessageBox.warning(parent, "Highlight", f"Pattern search failed: {exc}")
                 return None
             if isinstance(matches, list):
@@ -234,7 +237,7 @@ class HighlightingMixin:
                 )
                 add_rule_fn(rule)
             except (ImportError, TypeError, AttributeError) as exc:
-                logger.debug("highlight_rule_add_failed", error=str(exc))
+                _logger.exception("highlight_rule_add_failed", error=str(exc))
                 return
 
         self._active_highlight_ids.append(rule_id)
@@ -246,7 +249,7 @@ class HighlightingMixin:
         if callable(update_fn):
             update_fn()
 
-        logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
+        _logger.debug("highlight_rule_added", rule_id=rule_id, condition_type=condition_type)
 
     def _on_remove_highlight_rule(self) -> None:
         """Remove the selected highlight rule."""
@@ -262,7 +265,7 @@ class HighlightingMixin:
             try:
                 remove_fn(row)
             except (IndexError, TypeError, AttributeError) as exc:
-                logger.debug("highlight_rule_remove_failed", row=row, error=str(exc))
+                _logger.exception("highlight_rule_remove_failed", row=row, error=str(exc))
 
         self._active_highlight_ids.pop(row)
         self._highlight_rules_list.takeItem(row)
@@ -322,7 +325,7 @@ class HighlightingMixin:
             try:
                 matches = search_fn(pattern_raw, _HIGHLIGHT_PATTERN_MAX_MATCHES)
             except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                logger.debug(
+                _logger.exception(
                     "highlight_pattern_refresh_failed",
                     pattern=pattern_raw,
                     error=str(exc),

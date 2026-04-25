@@ -13,15 +13,18 @@ from typing import TYPE_CHECKING, Any, cast, override
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.hex_editor._base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
     ENTROPY_BLOCK_SIZE,
-    logger,
 )
 from intellicrack.ui.panels.hex_editor._widgets import (
     DigramMatrixDialog,
 )
+
+
+_logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
@@ -98,7 +101,7 @@ class StatisticsWorker(QThread):
             result = self._compute()
             self.stats_finished.emit(result)
         except (RuntimeError, OSError, ValueError) as exc:
-            logger.debug("statistics_worker_failed", error=str(exc))
+            _logger.exception("statistics_worker_failed", error=str(exc))
             self.stats_error.emit(exc)
 
     def _compute(self) -> _StatisticsResult:
@@ -142,7 +145,7 @@ class StatisticsWorker(QThread):
             raw_map: list[float] = cast("list[float]", entropy_map_fn(self._entropy_block_size))
             return [float(v) for v in raw_map] if raw_map else []
         except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("entropy_map_failed", error=str(exc))
+            _logger.exception("entropy_map_failed", error=str(exc))
             return None
 
     def _compute_byte_distribution(self) -> list[int] | None:
@@ -158,7 +161,7 @@ class StatisticsWorker(QThread):
             raw_dist: list[int] = cast("list[int]", dist_fn())
             return [int(v) for v in raw_dist] if raw_dist else [0] * BYTE_VALUES_COUNT
         except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("byte_distribution_failed", error=str(exc))
+            _logger.exception("byte_distribution_failed", error=str(exc))
             return None
 
     def _compute_type_distribution(self) -> tuple[int, ...] | None:
@@ -174,7 +177,7 @@ class StatisticsWorker(QThread):
             raw_type: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
             return tuple(int(v) for v in raw_type)
         except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("byte_type_distribution_failed", error=str(exc))
+            _logger.exception("byte_type_distribution_failed", error=str(exc))
             return None
 
     def _compute_classification(self) -> list[int] | None:
@@ -190,7 +193,7 @@ class StatisticsWorker(QThread):
             raw_class: list[int] = cast("list[int]", class_fn(self._entropy_block_size))
             return [int(v) for v in raw_class] if raw_class else None
         except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("content_classification_failed", error=str(exc))
+            _logger.exception("content_classification_failed", error=str(exc))
             return None
 
 
@@ -223,7 +226,7 @@ class StatisticsMixin:
 
         worker_attr: StatisticsWorker | None = getattr(self, "_statistics_worker", None)
         if worker_attr is not None and worker_attr.isRunning():
-            logger.debug("statistics_update_skipped", reason="worker active")
+            _logger.debug("statistics_update_skipped", reason="worker active")
             return
 
         if worker_attr is not None:
@@ -289,7 +292,7 @@ class StatisticsMixin:
         Args:
             exc: The exception from the background worker.
         """
-        logger.debug("statistics_update_failed", error=str(exc))
+        _logger.debug("statistics_update_failed", error=str(exc))
         error_text: str = "\u2014"
         if self._entropy_label is not None:
             self._entropy_label.setText(error_text)
@@ -417,14 +420,14 @@ class StatisticsMixin:
 
         digram_fn: Any = getattr(self.document, "digram_matrix", None)
         if not callable(digram_fn):
-            logger.debug("digram_matrix_not_available")
+            _logger.debug("digram_matrix_not_available")
             return
 
         try:
             digram_result: Any = digram_fn()
             raw_matrix: list[int] = [int(v) for v in digram_result]
         except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("digram_matrix_failed", error=str(exc))
+            _logger.exception("digram_matrix_failed", error=str(exc))
             return
 
         parent = self if isinstance(self, QWidget) else None

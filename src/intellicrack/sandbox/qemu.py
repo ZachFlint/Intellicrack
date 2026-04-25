@@ -197,7 +197,7 @@ def _parse_ppm_p6(data: bytes) -> tuple[int, int, bytes]:
         data: Raw bytes of the PPM file.
 
     Returns:
-        Tuple ``(width, height, pixels)`` where ``pixels`` is raw RGB bytes.
+        tuple[int, int, bytes]: Tuple ``(width, height, pixels)`` where ``pixels`` is raw RGB bytes.
 
     Raises:
         ValueError: If the PPM magic is not ``P6``, the maxval is not 255, or
@@ -359,12 +359,7 @@ class GuestAgentMessage:
 class QMPClient:
     """QEMU Machine Protocol client for VM control.
 
-    Provides asynchronous communication with QEMU via QMP for
-    VM control, snapshot management, and status queries.
-
-    Args:
-        host: QMP server host.
-        port: QMP server port.
+    Provides asynchronous communication with QEMU via QMP for VM control, snapshot management, and status queries.
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
@@ -578,12 +573,7 @@ class QMPClient:
 class GuestAgentClient:
     """Client for communicating with the QEMU guest agent.
 
-    Provides bidirectional communication with the guest OS for
-    command execution, file transfer, and behavioral monitoring.
-
-    Args:
-        host: Agent server host.
-        port: Agent server port.
+    Provides bidirectional communication with the guest OS for command execution, file transfer, and behavioral monitoring.
     """
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
@@ -778,10 +768,6 @@ class QEMUSandbox(SandboxBase):
 
     Uses QEMU virtualization with hardware acceleration (WHPX on Windows,
     KVM on Linux) or software emulation (TCG) for isolated binary execution.
-
-    Args:
-        config: General sandbox configuration.
-        qemu_config: QEMU-specific configuration.
 
     Attributes:
         QEMU_EXE: QEMU executable name.
@@ -2249,7 +2235,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             raw: Protocol token from the guest log (case-insensitive).
 
         Returns:
-            Literal[``tcp``, ``udp``, ``icmp``, ``other``]: Normalized protocol.
+            Literal['tcp', 'udp', 'icmp', 'other']: Normalized protocol.
         """
         value = raw.strip().lower()
         if value == "tcp":
@@ -2270,7 +2256,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             state: State token from the guest log.
 
         Returns:
-            Literal[``inbound``, ``outbound``]: Derived direction.
+            Literal['inbound', 'outbound']: Derived direction.
         """
         normalized = state.strip().lower()
         return "inbound" if normalized in {"listen", "bound"} else "outbound"

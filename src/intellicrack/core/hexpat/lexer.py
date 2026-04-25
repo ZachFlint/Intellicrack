@@ -14,12 +14,7 @@ from intellicrack.core.hexpat.tokens import KEYWORDS, Token, TokenType
 class HexPatLexer:
     """Tokenizer for the HexPat pattern language.
 
-    Converts raw source text into a flat list of Token objects.  The final
-    token in the returned list is always an EOF token.
-
-    Args:
-            source: The raw source text to tokenize.
-            file_path: Optional file path used in error messages.
+    Converts raw source text into a flat list of Token objects.  The final token in the returned list is always an EOF token.
     """
 
     def __init__(self, source: str, file_path: str = "<input>") -> None:

@@ -31,7 +31,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
         coro: An awaitable coroutine object.
 
     Returns:
-        object: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -260,7 +260,9 @@ class TestCalculateHashCustomCrc:
         self._open_payload(bridge, tmp_path, payload, "crc32_iso.bin")
         crc_val: int = binascii.crc32(payload) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF))
+        result: str = _run(
+            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        )
         assert result.lower() == expected.lower()
 
     def test_crc32_on_subrange_matches_binascii_slice(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -275,7 +277,9 @@ class TestCalculateHashCustomCrc:
         start, end = 16, 80
         crc_val: int = binascii.crc32(payload[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
-        result: str = _run(bridge.calculate_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF))
+        result: str = _run(
+            bridge.calculate_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        )
         assert result.lower() == expected.lower()
 
     def test_crc16_ccitt_matches_reference_implementation(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -300,7 +304,9 @@ class TestCalculateHashCustomCrc:
             pe_binary: Path to the minimal PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        result: str = _run(bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, refin=False, refout=False, xorout=0x0000))
+        result: str = _run(
+            bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, refin=False, refout=False, xorout=0x0000)
+        )
         assert isinstance(result, str)
         assert result
         bytes.fromhex(result)
@@ -342,7 +348,9 @@ class TestCalculateHashCustomCrc:
         """
         payload = bytes(range(64))
         self._open_payload(bridge, tmp_path, payload, "crc32_len.bin")
-        result: str = _run(bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF))
+        result: str = _run(
+            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+        )
         assert len(result) <= 8
 
     def test_different_crc32_ranges_produce_different_values(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
