@@ -36,7 +36,7 @@ from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
 
-_logger = get_logger("ui.panels.process.memory_tab")
+_logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
@@ -498,9 +498,11 @@ class MemoryTab(QWidget):
         if self._bridge is None:
             return
 
+        raw_addr = self._free_addr.text()
         try:
-            addr = int(self._free_addr.text(), 16)
+            addr = int(raw_addr, 16)
         except ValueError:
+            _logger.exception("free_address_parse_failed", raw_addr=raw_addr)
             return
 
         reply = QMessageBox.warning(
@@ -528,9 +530,11 @@ class MemoryTab(QWidget):
         if self._bridge is None:
             return
 
+        raw_addr = self._prot_addr.text()
         try:
-            addr = int(self._prot_addr.text(), 16)
+            addr = int(raw_addr, 16)
         except ValueError:
+            _logger.exception("protect_address_parse_failed", raw_addr=raw_addr)
             return
 
         size = self._prot_size.value()

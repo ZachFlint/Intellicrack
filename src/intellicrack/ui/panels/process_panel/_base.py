@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.process import ProcessBridge
 
-_logger = get_logger("ui.panels.process.base")
+_logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 4
 _SPACING: Final[int] = 4
