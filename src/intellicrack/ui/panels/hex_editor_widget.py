@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-_logger = get_logger("ui.panels.hex_editor_widget")
+_logger = get_logger(__name__)
 
 _BYTES_PER_ROW = 16
 _OFFSET_CHARS = 10
@@ -468,6 +468,11 @@ class HexEditorWidget(QAbstractScrollArea):
             ValueError: If the mode string is not a recognised display mode.
         """
         if mode not in _MODE_PARAMS:
+            _logger.warning(
+                "hex_editor_invalid_display_mode",
+                requested_mode=mode,
+                valid_modes=list(_MODE_PARAMS),
+            )
             msg = f"{_ERR_UNKNOWN_MODE}: {mode!r}. Valid modes: {list(_MODE_PARAMS)}"
             raise ValueError(msg)
         self._display_mode = mode
@@ -842,6 +847,11 @@ class HexEditorWidget(QAbstractScrollArea):
             try:
                 val_f = cast("float", struct.unpack_from("<f", padded)[0])
             except struct.error:
+                _logger.warning(
+                    "hex_editor_float32_unpack_failed",
+                    byte_count=len(padded),
+                    expected=padded_size,
+                )
                 return "         ?"
             if math.isnan(val_f):
                 return "       NaN"
@@ -852,6 +862,11 @@ class HexEditorWidget(QAbstractScrollArea):
             try:
                 val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
+                _logger.warning(
+                    "hex_editor_float64_unpack_failed",
+                    byte_count=len(padded),
+                    expected=padded_size,
+                )
                 return "                     ?"
             if math.isnan(val_d):
                 return "                   NaN"
@@ -1426,7 +1441,7 @@ class HexEditorWidget(QAbstractScrollArea):
                         write_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
-                        _logger.debug("write_failed", offset=self._cursor_offset)
+                        _logger.warning("hex_editor_overwrite_failed", offset=self._cursor_offset, exc_info=True)
             else:
                 insert_fn = getattr(self._document, "insert_bytes", None)
                 if callable(insert_fn):
@@ -1434,7 +1449,7 @@ class HexEditorWidget(QAbstractScrollArea):
                         insert_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
-                        _logger.debug("insert_failed", offset=self._cursor_offset)
+                        _logger.warning("hex_editor_insert_failed", offset=self._cursor_offset, exc_info=True)
 
             self._nibble_index = 0
             self._pending_nibble = 0
@@ -1460,7 +1475,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     write_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.debug("ascii_write_failed", offset=self._cursor_offset)
+                    _logger.warning("hex_editor_ascii_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
             insert_fn = getattr(self._document, "insert_bytes", None)
             if callable(insert_fn):
@@ -1468,7 +1483,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     insert_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.debug("ascii_insert_failed", offset=self._cursor_offset)
+                    _logger.warning("hex_editor_ascii_insert_failed", offset=self._cursor_offset, exc_info=True)
 
         self.data_changed.emit()
         self._move_cursor(self._cursor_offset + 1)
@@ -1499,7 +1514,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 self.data_changed.emit()
                 self._move_cursor(start)
             except (RuntimeError, ValueError, IndexError, OSError):
-                _logger.debug("delete_selection_failed")
+                _logger.warning("hex_editor_delete_selection_failed", exc_info=True)
         else:
             offset = self._cursor_offset
             if backspace and offset > 0:
@@ -1510,7 +1525,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 self.data_changed.emit()
                 self._move_cursor(offset)
             except (RuntimeError, ValueError, IndexError, OSError):
-                _logger.debug("delete_byte_failed", offset=offset)
+                _logger.warning("hex_editor_delete_byte_failed", offset=offset, exc_info=True)
 
         self._update_scrollbar()
 
@@ -1579,7 +1594,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
                 except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.debug("paste_write_failed", offset=self._cursor_offset)
+                    _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
             insert_fn = getattr(self._document, "insert_bytes", None)
             if callable(insert_fn):
@@ -1588,7 +1603,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
                 except (RuntimeError, ValueError, IndexError, OSError):
-                    _logger.debug("paste_insert_failed", offset=self._cursor_offset)
+                    _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
 
         self.data_changed.emit()
         self._update_scrollbar()

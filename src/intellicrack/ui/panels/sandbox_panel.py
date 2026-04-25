@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
 
-_logger = get_logger("ui.panels.sandbox")
+_logger = get_logger(__name__)
 
 _EXEC_MARGIN: Final[int] = 4
 _EXEC_SPACING: Final[int] = 4
@@ -332,7 +332,11 @@ class SandboxPanel(AnalysisPanelBase):
             try:
                 run_bridge_coroutine(self._bridge.destroy(self.sandbox_id))
             except (RuntimeError, ConnectionError, OSError):
-                _logger.debug("sandbox_cleanup_destroy_skipped", exc_info=True)
+                _logger.warning(
+                    "sandbox_cleanup_destroy_skipped",
+                    sandbox_id=self.sandbox_id,
+                    exc_info=True,
+                )
 
     def set_bridge(self, bridge: SandboxBridge) -> None:
         """Set the sandbox bridge for all operations.
@@ -358,7 +362,7 @@ class SandboxPanel(AnalysisPanelBase):
             sandbox: The SandboxBase implementation to use.
         """
         self._sandbox = sandbox
-        _logger.warning("sandbox_set_deprecated", msg="Use set_bridge() instead")
+        _logger.warning("sandbox_set_deprecated", note="Use set_bridge() instead")
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
         """Set the sandbox manager (deprecated).
@@ -367,7 +371,7 @@ class SandboxPanel(AnalysisPanelBase):
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
-        _logger.warning("sandbox_manager_set_deprecated", msg="Use set_bridge() instead")
+        _logger.warning("sandbox_manager_set_deprecated", note="Use set_bridge() instead")
 
     def get_sandbox(self) -> SandboxBase | None:
         """Get the current sandbox backend (deprecated).
@@ -375,7 +379,7 @@ class SandboxPanel(AnalysisPanelBase):
         Returns:
             SandboxBase | None: The attached sandbox or None.
         """
-        _logger.warning("get_sandbox_deprecated", msg="Use get_bridge() instead")
+        _logger.warning("get_sandbox_deprecated", note="Use get_bridge() instead")
         return self._sandbox
 
     def _log(self, message: str) -> None:
@@ -484,7 +488,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
 
-        _logger.debug("sandbox_destroy_started", sandbox_id=self.sandbox_id)
+        _logger.info("sandbox_destroy_started", sandbox_id=self.sandbox_id)
         self.destroy_btn.setEnabled(False)
         self._run_async(
             self._bridge.destroy(self.sandbox_id),

@@ -33,7 +33,7 @@ if sys.platform == "win32" or TYPE_CHECKING:
     import winreg
 
 
-_logger = get_logger("ui.panels.hxd_panel")
+_logger = get_logger(__name__)
 
 _HXD_REGISTRY_PATHS: Final[list[str]] = [
     r"SOFTWARE\mh-nexus\HxD\CurrentVersion",
@@ -280,7 +280,11 @@ class HxDPanel(QWidget):
                     self.embedded_container.setParent(None)
                     self.embedded_container.deleteLater()
                 except RuntimeError:
-                    pass
+                    _logger.warning(
+                        "hxd_existing_container_release_failed",
+                        pid=pid,
+                        exc_info=True,
+                    )
             self.embedded_container = container
             layout = self._embed_host.layout()
             if layout is None:
@@ -322,7 +326,10 @@ class HxDPanel(QWidget):
                         self.process.kill()
                         self.process.waitForFinished(_PROCESS_TERM_TIMEOUT_MS)
             except RuntimeError:
-                pass
+                _logger.warning(
+                    "hxd_process_terminate_failed",
+                    exc_info=True,
+                )
             self.process = None
 
         if self.embedded_container is not None:
@@ -330,7 +337,10 @@ class HxDPanel(QWidget):
                 self.embedded_container.setParent(None)
                 self.embedded_container.deleteLater()
             except RuntimeError:
-                pass
+                _logger.warning(
+                    "hxd_embedded_container_release_failed",
+                    exc_info=True,
+                )
             self.embedded_container = None
 
         if self._embed_timer is not None:

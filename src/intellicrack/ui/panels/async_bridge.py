@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
     from PyQt6.QtCore import QObject
 
-_logger = get_logger("ui.panels.async_bridge")
+_logger = get_logger(__name__)
 
 
 class _LoopState:
@@ -95,7 +95,7 @@ def _ensure_loop() -> asyncio.AbstractEventLoop:
 
         if not ready.wait(timeout=_LOOP_READY_TIMEOUT):
             _logger.warning(
-                "bridge_event_loop_ready_timeout",
+                "bridge_event_loop_initialization_timed_out",
                 thread_name=thread.name,
                 timeout_s=_LOOP_READY_TIMEOUT,
             )
@@ -232,7 +232,7 @@ def shutdown_bridge_loop() -> None:
 
     _state.loop = None
     _state.thread = None
-    _logger.debug("bridge_event_loop_shutdown", had_loop=True)
+    _logger.info("bridge_event_loop_shutdown", had_loop=True)
 
 
 def _log_task_exception(task: asyncio.Task[object]) -> None:

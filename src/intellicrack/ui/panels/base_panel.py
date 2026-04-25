@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
 
-_logger = get_logger("ui.panels.base_panel")
+_logger = get_logger(__name__)
 
 _BASE_MARGIN: Final[int] = 4
 _BASE_SPACING: Final[int] = 4
