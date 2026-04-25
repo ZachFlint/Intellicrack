@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-_logger = get_logger("providers.ollama")
+_logger = get_logger(__name__)
 
 _CLOUD_HOST_FRAGMENTS: tuple[str, ...] = ("ollama.com", "ollama.ai")
 
@@ -150,7 +150,8 @@ class OllamaProvider(LLMProviderBase):
         self._local_available: bool = False
         self._cloud_available: bool = False
         self._connect_timeout: float = 300.0
-        self._logger = get_logger("providers.ollama").bind(provider="ollama")
+        self._logger = get_logger(__name__).bind(provider="ollama")
+        self._logger.info("ollama_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -231,7 +232,7 @@ class OllamaProvider(LLMProviderBase):
                 self._local_client = None
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError) as e:
             self._local_available = False
-            self._logger.debug("local_ollama_unavailable", error=str(e))
+            self._logger.warning("local_ollama_unavailable", error=str(e))
             if self._local_client:
                 await self._local_client.aclose()
                 self._local_client = None
@@ -371,6 +372,7 @@ class OllamaProvider(LLMProviderBase):
             ProviderError: If not connected.
         """
         if not self.connected:
+            self._logger.error("ollama_list_models_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         self._logger.debug("ollama_listing_models")
@@ -517,8 +519,10 @@ class OllamaProvider(LLMProviderBase):
                 propagate as the appropriate ``ProviderError`` subclass.
         """
         if not self.connected:
+            self._logger.error("ollama_generate_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
+        self._logger.info("ollama_generate_starting", model=model, max_tokens=max_tokens)
         client, base_url, actual_model = self._get_client_and_model(model)
         body: dict[str, object] = {
             "model": actual_model,
@@ -570,6 +574,7 @@ class OllamaProvider(LLMProviderBase):
                 propagate as the appropriate ``ProviderError`` subclass.
         """
         if not self.connected:
+            self._logger.error("ollama_embeddings_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         client, base_url, actual_model = self._get_client_and_model(model)
@@ -755,11 +760,13 @@ class OllamaProvider(LLMProviderBase):
         """
         if model.startswith("cloud/"):
             if not self._cloud_available or not self._cloud_client:
+                self._logger.error("ollama_cloud_unavailable", model=model)
                 raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
             return self._cloud_client, self.CLOUD_API_URL, model[6:]
 
         if model.startswith("local/"):
             if not self._local_available or not self._local_client:
+                self._logger.error("ollama_local_unavailable", model=model)
                 raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
             return self._local_client, self._local_url, model[6:]
 
@@ -768,6 +775,7 @@ class OllamaProvider(LLMProviderBase):
         if self._cloud_available and self._cloud_client:
             return self._cloud_client, self.CLOUD_API_URL, model
 
+        self._logger.error("ollama_no_client_available", model=model)
         raise ProviderError(_ERR_NO_CLIENT, provider_name="ollama")
 
     async def _fetch_model_metadata(
@@ -821,7 +829,7 @@ class OllamaProvider(LLMProviderBase):
                 if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
                     has_tools = True
             except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError, ProviderError) as show_exc:
-                self._logger.debug(
+                self._logger.warning(
                     "ollama_show_failed",
                     model=name,
                     error=str(show_exc),
@@ -870,6 +878,7 @@ class OllamaProvider(LLMProviderBase):
                 propagate as the appropriate ``ProviderError`` subclass.
         """
         if not self.connected:
+            self._logger.error("ollama_chat_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         self._cancel_requested = False
@@ -1203,6 +1212,7 @@ class OllamaProvider(LLMProviderBase):
                 the underlying transport propagate unchanged.
         """
         if not self.connected:
+            self._logger.error("ollama_chat_stream_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
         self._cancel_requested = False
@@ -1305,7 +1315,7 @@ class OllamaProvider(LLMProviderBase):
                     try:
                         chunk_data = json.loads(line)
                     except json.JSONDecodeError as exc:
-                        self._logger.debug("stream_json_parse_skipped", error=str(exc))
+                        self._logger.warning("stream_json_parse_skipped", error=str(exc))
                         continue
                     last_chunk_data = cast("dict[str, Any]", chunk_data)
                     message_obj_raw: object = last_chunk_data.get("message")
@@ -1460,7 +1470,7 @@ class OllamaProvider(LLMProviderBase):
                     try:
                         chunk_data = json.loads(payload)
                     except json.JSONDecodeError as exc:
-                        self._logger.debug("stream_json_parse_skipped", error=str(exc))
+                        self._logger.warning("stream_json_parse_skipped", error=str(exc))
                         continue
                     self._record_usage_from_openai_payload(cast("dict[str, Any]", chunk_data))
                     choices = cast("list[dict[str, Any]]", chunk_data.get("choices") or [])
@@ -1549,6 +1559,7 @@ class OllamaProvider(LLMProviderBase):
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
+        self._logger.info("ollama_cancel_requested")
         self._cancel_requested = True
 
     @override

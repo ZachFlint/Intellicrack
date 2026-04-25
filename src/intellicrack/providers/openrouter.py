@@ -58,6 +58,8 @@ HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_RATE_LIMITED = 429
 
+_logger = get_logger(__name__)
+
 
 class OpenRouterProvider(LLMProviderBase):
     """OpenRouter API provider implementation.
@@ -76,7 +78,8 @@ class OpenRouterProvider(LLMProviderBase):
         super().__init__()
         self.client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
-        self._logger = get_logger("providers.openrouter").bind(provider="openrouter")
+        self._logger = get_logger(__name__).bind(provider="openrouter")
+        self._logger.info("openrouter_provider_initialized")
 
     @property
     def name(self) -> ProviderName:
@@ -98,13 +101,14 @@ class OpenRouterProvider(LLMProviderBase):
             ProviderError: If connection fails.
         """
         if not credentials.api_key:
+            self._logger.error("openrouter_connect_no_api_key")
             raise AuthenticationError(_ERR_KEY_REQUIRED)
 
         if self.client is not None:
             try:
                 await self.client.aclose()
             except (ConnectionError, TimeoutError, OSError, RuntimeError, httpx.HTTPError) as exc:
-                self._logger.debug(
+                self._logger.warning(
                     "openrouter_existing_client_close_error",
                     error=str(exc),
                 )
@@ -401,10 +405,13 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if status_code == HTTP_UNAUTHORIZED:
             msg = f"{_ERR_INVALID_KEY % status_code}: {body_text}"
+            _logger.warning("openrouter_stream_unauthorized", status_code=status_code)
             raise AuthenticationError(msg)
         if status_code == HTTP_RATE_LIMITED:
             msg = f"{_ERR_RATE_LIMITED}: {body_text}"
+            _logger.warning("openrouter_stream_rate_limited", status_code=status_code)
             raise RateLimitError(msg)
+        _logger.error("openrouter_stream_http_error", status_code=status_code)
         raise ProviderError(_ERR_STREAM_FAILED % f"HTTP {status_code}: {body_text}")
 
     @staticmethod
@@ -545,7 +552,8 @@ class OpenRouterProvider(LLMProviderBase):
                         "openrouter_chat_stream_http_error",
                         model=model,
                         status_code=response.status_code,
-                        body=body_text[:1024],
+                        response_size=len(body_bytes),
+                        response_excerpt=body_text[:256],
                     )
                     self._raise_stream_http_error(response.status_code, body_text)
                 async for line in response.aiter_lines():
@@ -580,7 +588,7 @@ class OpenRouterProvider(LLMProviderBase):
                                             arguments=cast("str | None", fn.get("arguments")),
                                         )
                         except json.JSONDecodeError as exc:
-                            self._logger.debug("stream_json_parse_skipped", error=str(exc))
+                            self._logger.warning("stream_json_parse_skipped", error=str(exc))
                             continue
 
             self._pending_tool_calls = tc_buffer.finalize()
