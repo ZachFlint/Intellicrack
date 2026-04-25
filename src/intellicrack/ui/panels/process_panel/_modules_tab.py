@@ -36,7 +36,7 @@ from intellicrack.ui.panels.qt_compat import set_header_labels
 if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
 
-_logger = get_logger("ui.panels.process.modules_tab")
+_logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4

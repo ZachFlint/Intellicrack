@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
     from intellicrack.core.types import ThreadInfo
 
-_logger = get_logger("ui.panels.process.system_tab")
+_logger = get_logger(__name__)
 
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
