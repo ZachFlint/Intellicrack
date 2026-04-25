@@ -66,7 +66,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from types import ModuleType
 
-_logger = get_logger("bridges.x64dbg")
+_logger = get_logger(__name__)
 _IS_WIN32: bool = os.name == "nt"
 
 # Optional disassembler/assembler imports
@@ -547,6 +547,7 @@ class X64DbgBridge(DebuggerBridge):
     def __init__(self) -> None:
         """Initialize the X64DbgBridge instance."""
         super().__init__()
+        self._logger = self._logger.bind(tool_name="x64dbg")
         self._x64dbg_path: Path | None = None
         self._process: Popen[bytes] | None = None
         self._pipe_client: NamedPipeClient | None = None
@@ -569,6 +570,12 @@ class X64DbgBridge(DebuggerBridge):
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe"],
         )
+        self._logger.info(
+            "x64dbg_bridge_initialized",
+            default_port=self.DEFAULT_PORT,
+            command_timeout=self.COMMAND_TIMEOUT,
+            tool_name="x64dbg",
+        )
 
     @property
     def attached_pid(self) -> int | None:
@@ -586,6 +593,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: The PID to set, or None to clear.
         """
+        self._logger.info("attached_pid_set", pid=value, tool_name="x64dbg")
         self._attached_pid = value
 
     @property
@@ -604,6 +612,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: The binary file path, or None to clear.
         """
+        self._logger.info("binary_path_set", binary_path=str(value) if value else None, tool_name="x64dbg")
         self._binary_path = value
 
     @property
@@ -622,6 +631,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: True for 64-bit mode, False for 32-bit.
         """
+        self._logger.info("is_64bit_set", is_64bit=value, tool_name="x64dbg")
         self._is_64bit = value
 
     @property
@@ -687,6 +697,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: The next breakpoint ID value.
         """
+        self._logger.info("next_bp_id_set", next_bp_id=value, tool_name="x64dbg")
         self._next_bp_id = value
 
     @property
@@ -714,6 +725,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: The next watchpoint ID value.
         """
+        self._logger.info("next_wp_id_set", next_wp_id=value, tool_name="x64dbg")
         self._next_wp_id = value
 
     @property
@@ -732,6 +744,7 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             value: The x64dbg installation path, or None to clear.
         """
+        self._logger.info("x64dbg_path_set", x64dbg_path=str(value) if value else None, tool_name="x64dbg")
         self._x64dbg_path = value
 
     @property
@@ -1876,6 +1889,11 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             bool: True if x64dbg can be used.
         """
+        self._logger.info(
+            "x64dbg_is_available_started",
+            x64dbg_path=str(self._x64dbg_path) if self._x64dbg_path else None,
+            tool_name="x64dbg",
+        )
         if self._x64dbg_path is None:
             return False
 
@@ -1900,6 +1918,7 @@ class X64DbgBridge(DebuggerBridge):
                 becomes available.
         """
         if self._x64dbg_path is None:
+            _logger.error("x64dbg_path_not_set", is_64bit=is_64bit, tool_name="x64dbg")
             msg = "x64dbg path not set"
             raise ToolError(msg)
 
@@ -1909,6 +1928,12 @@ class X64DbgBridge(DebuggerBridge):
             exe_path = self._x64dbg_path / "release" / "x32" / "x32dbg.exe"
 
         if not await asyncio.to_thread(exe_path.exists):
+            _logger.error(
+                "x64dbg_executable_not_found",
+                exe_path=str(exe_path),
+                is_64bit=is_64bit,
+                tool_name="x64dbg",
+            )
             msg = f"x64dbg executable not found: {exe_path}"
             raise ToolError(msg)
 
@@ -2022,6 +2047,12 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             callback: Function to call on debug events.
         """
+        self._logger.info(
+            "event_callback_registered",
+            callback=str(callback),
+            registered_count=len(self.event_callbacks) + 1,
+            tool_name="x64dbg",
+        )
         self.event_callbacks.append(callback)
 
     def unregister_event_callback(
@@ -2036,7 +2067,7 @@ class X64DbgBridge(DebuggerBridge):
         try:
             self.event_callbacks.remove(callback)
         except ValueError:
-            _logger.debug("event_callback_not_found_for_removal", callback=str(callback))
+            _logger.warning("event_callback_not_found_for_removal", callback=str(callback))
 
     def _handle_event(self, message: dict[str, Any]) -> None:
         """Handle asynchronous debug events from x64dbg.
@@ -2148,6 +2179,7 @@ class X64DbgBridge(DebuggerBridge):
             ToolError: If command fails.
         """
         if self._process is None:
+            _logger.error("x64dbg_send_command_not_running", command=command, tool_name="x64dbg")
             msg = "x64dbg not running"
             raise ToolError(msg)
 
@@ -2170,6 +2202,7 @@ class X64DbgBridge(DebuggerBridge):
             ToolError: If load fails.
         """
         if not await asyncio.to_thread(path.exists):
+            _logger.error("x64dbg_load_file_not_found", binary_path=str(path), tool_name="x64dbg")
             msg = f"File not found: {path}"
             raise ToolError(msg)
 
@@ -2220,7 +2253,12 @@ class X64DbgBridge(DebuggerBridge):
         try:
             data = path.read_bytes()
         except OSError as e:
-            _logger.debug("architecture_detection_failed", error=str(e))
+            _logger.warning(
+                "architecture_detection_failed",
+                binary_path=str(path),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return True
 
         if len(data) < PE_MAGIC_OFFSET:
@@ -2289,8 +2327,13 @@ class X64DbgBridge(DebuggerBridge):
                 return not bool(is_wow64.value) if ok else True
             finally:
                 kernel32.CloseHandle(handle)
-        except (OSError, AttributeError):
-            _logger.debug("wow64_check_failed_assuming_64bit")
+        except (OSError, AttributeError) as exc:
+            _logger.warning(
+                "wow64_check_failed_assuming_64bit",
+                pid=pid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return True
 
     async def detach(self) -> None:
@@ -2547,7 +2590,7 @@ class X64DbgBridge(DebuggerBridge):
             except ToolError as exc:
                 if not self._is_recoverable_pipe_error(exc):
                     raise
-                _logger.debug("wp_list_pipe_unavailable", error=str(exc))
+                _logger.warning("wp_list_pipe_unavailable", error=str(exc), error_type=type(exc).__name__)
                 result = None
             if isinstance(result, list):
                 for wp_data in result:
@@ -2606,8 +2649,13 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(value, str):
                 try:
                     return int(value, 0)
-                except ValueError:
-                    _logger.debug("register_value_parse_failed", value=str(value))
+                except ValueError as exc:
+                    _logger.warning(
+                        "register_value_parse_failed",
+                        value=str(value),
+                        error=str(exc),
+                        error_type=type(exc).__name__,
+                    )
                     return 0
             return 0
 
@@ -2789,7 +2837,11 @@ class X64DbgBridge(DebuggerBridge):
                 msg = f"WriteProcessMemory failed at 0x{address:X}"
                 raise ToolError(msg)
 
-            _logger.info("memory_written", bytes=bytes_written.value, address=hex(address))
+            _logger.info(
+                "memory_written",
+                size=bytes_written.value,
+                address=hex(address),
+            )
             return bytes_written.value
 
         finally:
@@ -2956,7 +3008,12 @@ class X64DbgBridge(DebuggerBridge):
         try:
             modules = await self._get_modules()
         except ToolError as mod_err:
-            _logger.debug("memory_regions_modules_unavailable", error=str(mod_err))
+            _logger.warning(
+                "memory_regions_modules_unavailable",
+                pid=self._attached_pid,
+                error=str(mod_err),
+                error_type=type(mod_err).__name__,
+            )
             modules = []
 
         def _resolve_module(base: int) -> str | None:
@@ -3059,7 +3116,13 @@ class X64DbgBridge(DebuggerBridge):
             if not self._is_recoverable_pipe_error(exc):
                 raise
             last_error = exc
-            _logger.debug("disasm_pipe_unavailable_using_capstone", error=str(exc))
+            _logger.warning(
+                "disasm_pipe_unavailable_using_capstone",
+                address=hex(address),
+                count=count,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
 
         capstone = get_capstone()
         if capstone is None:
@@ -3067,13 +3130,12 @@ class X64DbgBridge(DebuggerBridge):
             msg = f"Capstone disassembler not available. Install with: pixi add capstone-engine{detail}"
             raise ToolError(msg)
 
+        capstone_lines: list[DisassemblyLine] = []
         try:
             data = await self.read_memory(address, count * 15)
 
             mode = capstone.CS_MODE_64 if self._is_64bit else capstone.CS_MODE_32
             md = capstone.Cs(capstone.CS_ARCH_X86, mode)
-
-            capstone_lines: list[DisassemblyLine] = []
 
             for instr in md.disasm(data, address):
                 capstone_lines.append(
@@ -3087,12 +3149,10 @@ class X64DbgBridge(DebuggerBridge):
                 )
                 if len(capstone_lines) >= count:
                     break
-
         except Exception:
             _logger.exception("disassembly_failed", address=hex(address), count=count)
             return []
-        else:
-            return capstone_lines
+        return capstone_lines
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
@@ -3142,7 +3202,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("stack_trace_pipe_unavailable_walking_manually", error=str(exc))
+            _logger.warning(
+                "stack_trace_pipe_unavailable_walking_manually",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
 
         frames_fallback: list[StackFrame] = []
 
@@ -3225,10 +3289,23 @@ class X64DbgBridge(DebuggerBridge):
         """
         if isinstance(pattern, str):
             pattern = bytes.fromhex(pattern.replace(" ", ""))
+        self._logger.info(
+            "scan_memory_started",
+            pattern_size=len(pattern),
+            tool_name="x64dbg",
+            pid=self._attached_pid,
+        )
         if not pattern:
+            self._logger.error("scan_memory_pattern_empty", tool_name="x64dbg")
             msg = "scan_memory: pattern must be non-empty"
             raise ToolError(msg, tool_name="x64dbg")
         if len(pattern) < MIN_PATTERN_LENGTH:
+            self._logger.error(
+                "scan_memory_pattern_too_short",
+                pattern_size=len(pattern),
+                min_pattern_length=MIN_PATTERN_LENGTH,
+                tool_name="x64dbg",
+            )
             msg = f"scan_memory: pattern too short for reliable scan (got {len(pattern)} bytes, need at least {MIN_PATTERN_LENGTH})"
             raise ToolError(msg, tool_name="x64dbg")
 
@@ -3562,6 +3639,7 @@ class X64DbgBridge(DebuggerBridge):
             list[ModuleInfo]: List of loaded module information with
             entry points populated where the PE header is readable.
         """
+        self._logger.info("get_modules_started", pid=self._attached_pid, tool_name="x64dbg")
         modules = await self._get_modules()
         for module in modules:
             module.entry_point = await self._read_module_entry_point(module.base_address, module.name)
@@ -3586,7 +3664,13 @@ class X64DbgBridge(DebuggerBridge):
         try:
             _, pe_header = await self._read_pe_header(base_address, module_name, size=256)
         except ToolError as exc:
-            _logger.debug("module_entry_point_read_failed", module_name=module_name, base=hex(base_address), error=str(exc))
+            _logger.warning(
+                "module_entry_point_read_failed",
+                module_name=module_name,
+                base=hex(base_address),
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return 0
 
         entry_offset = NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET
@@ -3603,6 +3687,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[ThreadInfo]: List of thread information.
         """
+        self._logger.info("get_threads_started", pid=self._attached_pid, tool_name="x64dbg")
         return await self._get_threads()
 
     async def get_process_info(self) -> ProcessInfo | None:
@@ -3614,6 +3699,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             ProcessInfo | None: ProcessInfo with populated threads and modules, or None if not attached.
         """
+        self._logger.info("get_process_info_started", pid=self._attached_pid, tool_name="x64dbg")
         if self._attached_pid is None:
             return None
 
@@ -3681,7 +3767,12 @@ class X64DbgBridge(DebuggerBridge):
             try:
                 data = await self.read_memory(region.base_address, min(region.size, MAX_MEMORY_READ_SIZE))
             except ToolError as exc:
-                _logger.debug("pattern_search_region_read_failed", base=hex(region.base_address), error=str(exc))
+                _logger.warning(
+                    "pattern_search_region_read_failed",
+                    base=hex(region.base_address),
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
                 continue
 
             for i in range(len(data) - pat_len + 1):
@@ -3793,7 +3884,13 @@ class X64DbgBridge(DebuggerBridge):
                 {"start": start, "end": end},
             )
         except ToolError as exc:
-            _logger.debug("labels_list_failed", error=str(exc))
+            _logger.warning(
+                "labels_list_failed",
+                start=hex(start),
+                end=hex(end),
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
 
         labels: list[dict[str, Any]] = []
@@ -3806,7 +3903,13 @@ class X64DbgBridge(DebuggerBridge):
                     text = raw_text if isinstance(raw_text, str) else ""
                     try:
                         addr = int(addr_str, 0)
-                    except ValueError:
+                    except ValueError as parse_exc:
+                        _logger.warning(
+                            "label_address_parse_failed",
+                            address_str=addr_str,
+                            error=str(parse_exc),
+                            error_type=type(parse_exc).__name__,
+                        )
                         continue
                     if start <= addr <= end:
                         labels.append({"address": addr_str, "text": text})
@@ -3842,7 +3945,13 @@ class X64DbgBridge(DebuggerBridge):
                 {"start": start, "end": end},
             )
         except ToolError as exc:
-            _logger.debug("comments_list_failed", error=str(exc))
+            _logger.warning(
+                "comments_list_failed",
+                start=hex(start),
+                end=hex(end),
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
 
         comments: list[dict[str, Any]] = []
@@ -3855,7 +3964,13 @@ class X64DbgBridge(DebuggerBridge):
                     text = raw_text if isinstance(raw_text, str) else ""
                     try:
                         addr = int(addr_str, 0)
-                    except ValueError:
+                    except ValueError as parse_exc:
+                        _logger.warning(
+                            "comment_address_parse_failed",
+                            address_str=addr_str,
+                            error=str(parse_exc),
+                            error_type=type(parse_exc).__name__,
+                        )
                         continue
                     if start <= addr <= end:
                         comments.append({"address": addr_str, "text": text})
@@ -4029,7 +4144,7 @@ class X64DbgBridge(DebuggerBridge):
             list[dict[str, Any]]: List of section dicts with name, virtual_address, virtual_size,
             raw_size, and characteristics.
         """
-        _logger.debug("module_sections_reading", module=module_name)
+        _logger.debug("module_sections_reading", module_name=module_name)
         base_address = await self._resolve_module_base(module_name)
         pe_offset, pe_header = await self._read_pe_header(base_address, module_name)
 
@@ -4066,12 +4181,23 @@ class X64DbgBridge(DebuggerBridge):
         export_dir_offset = 24 + (112 if is_pe64 else 96)
 
         if export_dir_offset + 8 > len(pe_header):
+            _logger.error(
+                "pe_export_header_too_small",
+                base_address=hex(base_address),
+                pe_header_size=len(pe_header),
+                export_dir_offset=export_dir_offset,
+            )
             msg = "PE header too small for export directory"
             raise ToolError(msg)
 
         export_rva = struct.unpack_from("<I", pe_header, export_dir_offset)[0]
 
         if export_rva == 0 or struct.unpack_from("<I", pe_header, export_dir_offset + 4)[0] == 0:
+            _logger.error(
+                "pe_no_export_directory",
+                base_address=hex(base_address),
+                export_rva=export_rva,
+            )
             msg = "No export directory"
             raise ToolError(msg)
 
@@ -4120,11 +4246,12 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug(
+            _logger.warning(
                 "export_name_read_recoverable",
-                module=module_name,
+                module_name=module_name,
                 ordinal=ordinal,
                 error=str(exc),
+                error_type=type(exc).__name__,
             )
             return f"ordinal_{ordinal}", exc
 
@@ -4184,19 +4311,24 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[dict[str, Any]]: List of export dicts with ordinal, name, and address.
         """
-        _logger.debug("module_exports_reading", module=module_name)
+        _logger.debug("module_exports_reading", module_name=module_name)
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
         try:
             tables = await self._read_export_tables(base_address, pe_header)
         except ToolError as exc:
-            _logger.debug("export_tables_read_failed", module=module_name, error=str(exc))
+            _logger.warning(
+                "export_tables_read_failed",
+                module_name=module_name,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
 
         exports, last_error = await self._build_export_entries(base_address, module_name, tables)
         if last_error is not None:
-            _logger.debug("module_exports_partial", module=module_name, last_error=str(last_error))
+            _logger.debug("module_exports_partial", module_name=module_name, last_error=str(last_error))
         return exports
 
     async def get_entry_point(self, module_name: str | None = None) -> dict[str, Any]:
@@ -4242,7 +4374,7 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.debug(
             "entry_point_read",
-            module=target_module,
+            module_name=target_module,
             base=hex(base_address),
             pe_offset=hex(pe_offset),
             rva=hex(entry_rva),
@@ -4271,6 +4403,13 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
+        self._logger.info(
+            "trace_start_started",
+            address=hex(address) if address is not None else None,
+            condition=condition,
+            log_text=log_text,
+            tool_name="x64dbg",
+        )
         if address is not None and log_text is not None:
             await self._send_pipe_command("exec", {"command": f"TraceSetLog {hex(address)}, {log_text}"})
         if address is not None and condition is not None:
@@ -4299,7 +4438,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with code, handling, and success status.
         """
-        _logger.info("exception_config_set", code=hex(code), handling=handling)
+        _logger.info("x64dbg_exception_handling_set", code=hex(code), handling=handling)
         handling_map = {"break": 1, "ignore": 0, "log": 2}
         handling_code = handling_map.get(handling, 1)
         await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"})
@@ -4342,7 +4481,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[dict[str, Any]]: List of import dicts with iatRva, iatVa, ordinal, name, undecoratedName.
         """
-        _logger.debug("module_imports_reading", module=module_name)
+        _logger.debug("module_imports_reading", module_name=module_name)
         result = await self._send_pipe_command("mod_imports", {"name": module_name})
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
@@ -4376,7 +4515,7 @@ class X64DbgBridge(DebuggerBridge):
             dict[str, Any]: Dict with ``success``, ``module``, and any
             ``references`` returned by the plugin.
         """
-        _logger.debug("finding_string_references", module=module)
+        _logger.debug("finding_string_references", module_name=module)
         result = await self._send_pipe_command(
             "ref_search",
             {"module": module, "type": "string"},
@@ -4394,7 +4533,7 @@ class X64DbgBridge(DebuggerBridge):
             dict[str, Any]: Dict with ``success``, ``module``, and any
             ``references`` returned by the plugin.
         """
-        _logger.debug("finding_intermodular_calls", module=module)
+        _logger.debug("finding_intermodular_calls", module_name=module)
         result = await self._send_pipe_command(
             "ref_search",
             {"module": module, "type": "intermodular"},
@@ -4454,7 +4593,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("db_save_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "db_save_pipe_unavailable_using_script",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command("dbsave")
         return {"success": True}
 
@@ -4473,7 +4616,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("db_load_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "db_load_pipe_unavailable_using_script",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command("dbload")
         return {"success": True}
 
@@ -4492,7 +4639,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("db_clear_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "db_clear_pipe_unavailable_using_script",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command("dbclear")
         return {"success": True}
 
@@ -4505,13 +4656,17 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
-        _logger.debug("patches_listing")
+        _logger.info("patches_listing")
         try:
             result = await self._send_pipe_command("patch_list")
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("patch_list_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "patch_list_pipe_unavailable",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
@@ -4535,7 +4690,12 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("patch_restore_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "patch_restore_pipe_unavailable_using_script",
+                address=hex(address),
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command(f"patchrestore {hex(address)}")
         return {"success": True, "address": hex(address)}
 
@@ -4620,7 +4780,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("seh_chain_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "seh_chain_pipe_unavailable",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
@@ -4641,7 +4805,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("peb_read_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "peb_read_pipe_unavailable",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return {}
         if _is_str_obj_dict(result):
             return dict(result)
@@ -4668,7 +4836,12 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("teb_read_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "teb_read_pipe_unavailable",
+                tid=tid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return {}
         if _is_str_obj_dict(result):
             return dict(result)
@@ -4686,13 +4859,18 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
-        _logger.debug("pe_directories_reading", module=module_name)
+        _logger.debug("pe_directories_reading", module_name=module_name)
         try:
             result = await self._send_pipe_command("pe_directories", {"module": module_name})
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("pe_directories_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "pe_directories_pipe_unavailable",
+                module_name=module_name,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
@@ -4716,7 +4894,12 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("watch_add_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "watch_add_pipe_unavailable_using_script",
+                expression=expression,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command(f'AddWatch "{expression}"')
         return {"success": True, "expression": expression}
 
@@ -4738,7 +4921,12 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("watch_remove_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "watch_remove_pipe_unavailable_using_script",
+                index=index,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command(f"DelWatch {index}")
         return {"success": True, "index": index}
 
@@ -4757,7 +4945,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("watch_list_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "watch_list_pipe_unavailable",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return []
         if isinstance(result, list):
             return [dict(entry) if _is_str_obj_dict(entry) else {} for entry in result]
@@ -4883,7 +5075,13 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("trace_record_pipe_unavailable", error=str(exc))
+            _logger.warning(
+                "trace_record_pipe_unavailable",
+                address=hex(address),
+                size=size,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             return {"address": hex(address), "hitCount": 0}
         if _is_str_obj_dict(result):
             return dict(result)
@@ -4991,7 +5189,14 @@ class X64DbgBridge(DebuggerBridge):
                 file does not exist or is empty, or if the inline rule
                 text is shorter than one byte.
         """
-        _logger.info("yara_scanning")
+        _logger.info(
+            "yara_scanning",
+            rule_path=rule_path,
+            address=hex(address),
+            size=size,
+            tool_name="x64dbg",
+            pid=self._attached_pid,
+        )
         if not rule_text and not rule_path:
             raise ToolError(_ERR_YARA_NO_RULE, tool_name="x64dbg")
 
@@ -5147,7 +5352,11 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("plugin_list_pipe_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "plugin_list_pipe_unavailable_using_script",
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command("pluglist")
             return []
         if isinstance(result, list):
@@ -5324,6 +5533,12 @@ class X64DbgBridge(DebuggerBridge):
         try:
             peb = await self.read_peb()
         except ToolError as peb_err:
+            _logger.warning(
+                "anti_debug_read_peb_failed",
+                error=str(peb_err),
+                error_type=type(peb_err).__name__,
+                pid=self._attached_pid,
+            )
             for name in all_checks:
                 errors[name] = f"read_peb failed: {peb_err}"
             return {"success": False, "status": status, "errors": errors}
@@ -5337,6 +5552,12 @@ class X64DbgBridge(DebuggerBridge):
         try:
             peb_addr = int(peb_addr_raw, 0)
         except ValueError as parse_err:
+            _logger.warning(
+                "anti_debug_peb_address_parse_failed",
+                peb_address=peb_addr_raw,
+                error=str(parse_err),
+                error_type=type(parse_err).__name__,
+            )
             for name in all_checks:
                 errors[name] = f"invalid PEB address: {parse_err}"
             return {"success": False, "status": status, "errors": errors}
@@ -5346,6 +5567,12 @@ class X64DbgBridge(DebuggerBridge):
                 await self.write_memory(peb_addr + 2, b"\x00")
                 status["being_debugged"] = True
             except ToolError as bd_err:
+                _logger.warning(
+                    "anti_debug_being_debugged_patch_failed",
+                    address=hex(peb_addr + 2),
+                    error=str(bd_err),
+                    error_type=type(bd_err).__name__,
+                )
                 errors["being_debugged"] = str(bd_err)
 
         if "nt_global_flag" in all_checks:
@@ -5354,6 +5581,12 @@ class X64DbgBridge(DebuggerBridge):
                 await self.write_memory(peb_addr + flag_offset, b"\x00\x00\x00\x00")
                 status["nt_global_flag"] = True
             except ToolError as nt_err:
+                _logger.warning(
+                    "anti_debug_nt_global_flag_patch_failed",
+                    address=hex(peb_addr + flag_offset),
+                    error=str(nt_err),
+                    error_type=type(nt_err).__name__,
+                )
                 errors["nt_global_flag"] = str(nt_err)
 
         result: dict[str, Any] = {
@@ -5393,7 +5626,13 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if not self._is_recoverable_pipe_error(exc):
                 raise
-            _logger.debug("scylla_rpc_unavailable_using_script", error=str(exc))
+            _logger.warning(
+                "scylla_rpc_unavailable_using_script",
+                oep=hex(oep),
+                output_path=output_path,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             await self._send_command(f"scylla.searchIAT {hex(oep)}")
             await self._send_command("scylla.autoFix")
             await self._send_command(f'scylla.dump "{output_path}"')
@@ -5438,7 +5677,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[dict[str, Any]]: List of TLS callback dicts with address.
         """
-        _logger.debug("tls_callbacks_reading", module=module_name)
+        _logger.debug("tls_callbacks_reading", module_name=module_name)
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
@@ -5478,7 +5717,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and breakpoints set.
         """
-        _logger.info("tls_callbacks_breaking", module=module_name)
+        _logger.info("tls_callbacks_breaking", module_name=module_name)
         callbacks = await self.get_tls_callbacks(module_name)
         for cb in callbacks:
             addr_str = cb.get("address", "0")
@@ -5496,7 +5735,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             list[dict[str, Any]]: List of resource dicts with type, id, size, and rva.
         """
-        _logger.debug("resources_reading", module=module_name)
+        _logger.debug("resources_reading", module_name=module_name)
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
