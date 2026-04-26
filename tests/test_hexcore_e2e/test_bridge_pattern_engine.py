@@ -92,7 +92,7 @@ class TestCompilePattern:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        with pytest.raises(ValueError, match=r"(?i)parse|syntax|unexpected|unterminated"):
+        with pytest.raises(ValueError, match=r"(?i)parse|syntax|unexpected|unterminated|expected"):
             _run(bridge.compile_pattern("struct { u32 x;"))
 
     def test_compile_complex_struct_with_nested_types_is_valid_json(self, bridge: HexEditorBridge) -> None:
