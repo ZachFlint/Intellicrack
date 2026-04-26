@@ -30,11 +30,19 @@ import psutil
 
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.sandbox._log_helpers import (
-    coerce_protocol as _coerce_network_protocol,
-    format_yara_match as _format_yara_match,
-    infer_direction as _coerce_network_direction,
-    split_addr_port as _split_address,
+from intellicrack.sandbox._log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox._log_parsers import (
+    parse_api_trace_log,
+    parse_clipboard_log,
+    parse_dll_log,
+    parse_file_log,
+    parse_injection_log,
+    parse_kernel_object_log,
+    parse_network_log,
+    parse_process_log,
+    parse_registry_log,
+    parse_resource_log,
+    parse_service_log,
 )
 from intellicrack.sandbox.base import (
     ApiCall,
@@ -54,9 +62,6 @@ from intellicrack.sandbox.base import (
     SandboxError,
     SandboxTimeoutError,
     ServiceChange,
-    validate_file_operation,
-    validate_process_operation,
-    validate_registry_operation,
 )
 
 
@@ -72,14 +77,6 @@ _ACCEL_DETECT_TIMEOUT = 10
 _ACCEL_TEST_TIMEOUT = 5
 _PROCESS_COMMUNICATE_TIMEOUT = 30
 _SNAPSHOT_LINE_MIN_PARTS = 2
-_FILE_LOG_MIN_PARTS = 3
-_NETWORK_LOG_MIN_PARTS = 10
-_PROCESS_LOG_MIN_PARTS = 4
-_NETWORK_LOG_PROTOCOL_INDEX = 5
-_NETWORK_LOG_BYTES_SENT_INDEX = 6
-_NETWORK_LOG_BYTES_RECV_INDEX = 7
-_NETWORK_LOG_PID_INDEX = 8
-_NETWORK_LOG_PNAME_INDEX = 9
 _SCREENSHOT_STABILITY_POLL_DELAY_S = 0.05
 _SCREENSHOT_STABILITY_MAX_POLLS = 100
 _SCREENSHOT_INITIAL_DELAY_S = 0.05
@@ -94,13 +91,6 @@ _MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
     "resource_monitor.ps1",
     "service_monitor.ps1",
 )
-_SERVICE_LOG_MIN_PARTS = 6
-_KERNEL_OBJ_LOG_MIN_PARTS = 6
-_DLL_LOG_MIN_PARTS = 6
-_INJECTION_LOG_MIN_PARTS = 7
-_RESOURCE_LOG_MIN_PARTS = 7
-_CLIPBOARD_LOG_MIN_PARTS = 7
-_API_TRACE_LOG_MIN_PARTS = 7
 _RETURNCODE_SUCCESS = 0
 
 _ERR_NO_FREE_PORTS = "no free ports"
@@ -124,8 +114,6 @@ _ERR_COPY_FROM_SANDBOX = "copy from sandbox failed"
 _ERR_SNAPSHOT_CREATE = "snapshot create failed"
 _ERR_SNAPSHOT_RESTORE = "snapshot restore failed"
 _ERR_SNAPSHOT_DELETE = "snapshot delete failed"
-_PROCESS_LOG_NAME_INDEX = 3
-_PROCESS_LOG_PATH_INDEX = 4
 _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
 PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
@@ -1415,7 +1403,8 @@ class QEMUSandbox(SandboxBase):
         validated against a short allowlist (``powershell``, ``cmd``, any
         ``.exe`` under ``Z:\``, ``System32`` or ``SysWOW64``), and
         (4) emits process, file, and extended network telemetry in the
-        ten-field schema parsed by :meth:`_parse_network_log`.
+        ten-field schema parsed by
+        :func:`intellicrack.sandbox._log_parsers.parse_network_log`.
 
         Returns:
             str: Full PowerShell script source (UTF-8).
@@ -2190,420 +2179,24 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         Returns:
             _MonitoringLogs: All monitor-log parse results collected from
             the shared ``logs`` folder. Each field is populated from the
-            matching ``_parse_*`` method and defaults to an empty list
-            when the corresponding log file is absent.
+            corresponding parser in :mod:`intellicrack.sandbox._log_parsers`
+            and defaults to an empty list when the matching log file is
+            absent.
         """
+        shared = self._shared_folder
         return _MonitoringLogs(
-            file_changes=await self._parse_file_log(),
-            registry_changes=await self._parse_registry_log(),
-            network_activity=await self._parse_network_log(),
-            process_activity=await self._parse_process_log(),
-            api_calls=await self._parse_api_trace_log(),
-            service_changes=await self._parse_service_log(),
-            kernel_objects=await self._parse_kernel_object_log(),
-            dll_loads=await self._parse_dll_log(),
-            injection_events=await self._parse_injection_log(),
-            resource_samples=await self._parse_resource_log(),
-            clipboard_events=await self._parse_clipboard_log(),
+            file_changes=await parse_file_log(shared, "file_changes.log"),
+            registry_changes=await parse_registry_log(shared, "registry_changes.log"),
+            network_activity=await parse_network_log(shared, "network_activity.log"),
+            process_activity=await parse_process_log(shared, "process_activity.log"),
+            api_calls=await parse_api_trace_log(shared, "api_trace.log"),
+            service_changes=await parse_service_log(shared, "service_monitor.log"),
+            kernel_objects=await parse_kernel_object_log(shared, "kernel_object_monitor.log"),
+            dll_loads=await parse_dll_log(shared, "dll_monitor.log"),
+            injection_events=await parse_injection_log(shared, "injection_monitor.log"),
+            resource_samples=await parse_resource_log(shared, "resource_monitor.log"),
+            clipboard_events=await parse_clipboard_log(shared, "clipboard_monitor.log"),
         )
-
-    async def _parse_file_log(self) -> list[FileChange]:
-        """Parse file monitoring log.
-
-        Returns:
-            list[FileChange]: List of file changes detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "file_changes.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        changes: list[FileChange] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _FILE_LOG_MIN_PARTS:
-                    changes.append(
-                        FileChange(
-                            path=parts[2],
-                            operation=validate_file_operation(parts[1]),
-                            old_path=None,
-                            timestamp=parts[0],
-                            size=None,
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("file_log_parse_failed", extra={"error": str(e)})
-
-        return changes
-
-    async def _parse_registry_log(self) -> list[RegistryChange]:
-        """Parse registry monitoring log.
-
-        Returns:
-            list[RegistryChange]: List of registry changes detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "registry_changes.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        changes: list[RegistryChange] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _FILE_LOG_MIN_PARTS:
-                    changes.append(
-                        RegistryChange(
-                            key=parts[2],
-                            value_name=None,
-                            operation=validate_registry_operation(parts[1]),
-                            value_type=None,
-                            value_data=None,
-                            timestamp=parts[0],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("registry_log_parse_failed", extra={"error": str(e)})
-
-        return changes
-
-    async def _parse_network_log(self) -> list[NetworkActivity]:
-        """Parse network monitoring log with the 10-field schema.
-
-        Expected line format::
-
-            timestamp|operation|local_addr:port|remote_addr:port|state|protocol|bytes_sent|bytes_received|pid|process_name
-
-        ``operation`` is preserved for diagnostics but not surfaced in the
-        :class:`NetworkActivity` TypedDict. ``direction`` is derived from
-        ``state`` via :func:`intellicrack.sandbox._log_helpers.infer_direction`.
-
-        Returns:
-            list[NetworkActivity]: Parsed network activity samples.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "network_activity.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        activities: list[NetworkActivity] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) < _NETWORK_LOG_MIN_PARTS:
-                    continue
-                local_addr, local_port = _split_address(parts[2])
-                remote_addr, remote_port = _split_address(parts[3])
-                state_token = parts[4]
-                protocol = _coerce_network_protocol(parts[_NETWORK_LOG_PROTOCOL_INDEX])
-                direction = _coerce_network_direction(state_token)
-                bytes_sent_raw = parts[_NETWORK_LOG_BYTES_SENT_INDEX]
-                bytes_recv_raw = parts[_NETWORK_LOG_BYTES_RECV_INDEX]
-                activities.append(
-                    NetworkActivity(
-                        protocol=protocol,
-                        direction=direction,
-                        local_address=local_addr,
-                        local_port=local_port,
-                        remote_address=remote_addr,
-                        remote_port=remote_port,
-                        timestamp=parts[0],
-                        bytes_sent=int(bytes_sent_raw) if bytes_sent_raw.isdigit() else 0,
-                        bytes_received=int(bytes_recv_raw) if bytes_recv_raw.isdigit() else 0,
-                    ),
-                )
-        except (OSError, ValueError) as e:
-            _logger.warning("network_log_parse_failed", extra={"error": str(e)})
-
-        return activities
-
-    async def _parse_process_log(self) -> list[ProcessActivity]:
-        """Parse process monitoring log.
-
-        Returns:
-            list[ProcessActivity]: List of process activity detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "process_activity.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        activities: list[ProcessActivity] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="ignore")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _PROCESS_LOG_MIN_PARTS:
-                    activities.append(
-                        ProcessActivity(
-                            pid=int(parts[2]) if parts[2].isdigit() else 0,
-                            name=parts[_PROCESS_LOG_NAME_INDEX] if len(parts) > _PROCESS_LOG_NAME_INDEX else "",
-                            path=parts[_PROCESS_LOG_PATH_INDEX] if len(parts) > _PROCESS_LOG_PATH_INDEX else None,
-                            command_line=None,
-                            parent_pid=None,
-                            operation=validate_process_operation(parts[1]),
-                            exit_code=None,
-                            timestamp=parts[0],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("process_log_parse_failed", extra={"error": str(e)})
-
-        return activities
-
-    async def _parse_service_log(self) -> list[ServiceChange]:
-        """Parse service monitoring log.
-
-        Returns:
-            list[ServiceChange]: List of service changes detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "service_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[ServiceChange] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _SERVICE_LOG_MIN_PARTS:
-                    results.append(
-                        ServiceChange(
-                            timestamp=parts[0],
-                            operation=parts[1],
-                            service_name=parts[2],
-                            display_name=parts[3],
-                            binary_path=parts[4],
-                            start_type=parts[5],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("service_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_kernel_object_log(self) -> list[KernelObjectActivity]:
-        """Parse kernel object monitoring log.
-
-        Returns:
-            list[KernelObjectActivity]: List of kernel object activity detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "kernel_object_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[KernelObjectActivity] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _KERNEL_OBJ_LOG_MIN_PARTS:
-                    results.append(
-                        KernelObjectActivity(
-                            timestamp=parts[0],
-                            object_type=parts[1],
-                            name=parts[2],
-                            pid=int(parts[3]) if parts[3].isdigit() else 0,
-                            process_name=parts[4],
-                            operation=parts[5],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("kernel_object_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_dll_log(self) -> list[DllLoadEvent]:
-        """Parse DLL monitoring log.
-
-        Returns:
-            list[DllLoadEvent]: List of DLL load events detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "dll_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[DllLoadEvent] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _DLL_LOG_MIN_PARTS:
-                    results.append(
-                        DllLoadEvent(
-                            timestamp=parts[0],
-                            pid=int(parts[1]) if parts[1].isdigit() else 0,
-                            process_name=parts[2],
-                            dll_path=parts[3],
-                            base_address=parts[4],
-                            size=int(parts[5]) if parts[5].isdigit() else 0,
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("dll_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_injection_log(self) -> list[InjectionEvent]:
-        """Parse injection monitoring log.
-
-        Returns:
-            list[InjectionEvent]: List of injection events detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "injection_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[InjectionEvent] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _INJECTION_LOG_MIN_PARTS:
-                    results.append(
-                        InjectionEvent(
-                            timestamp=parts[0],
-                            source_pid=int(parts[1]) if parts[1].isdigit() else 0,
-                            source_name=parts[2],
-                            target_pid=int(parts[3]) if parts[3].isdigit() else 0,
-                            target_name=parts[4],
-                            injection_type=parts[5],
-                            api_calls=[a.strip() for a in parts[6].split(",") if a.strip()],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("injection_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_resource_log(self) -> list[ResourceSample]:
-        """Parse resource monitoring log.
-
-        Returns:
-            list[ResourceSample]: List of resource usage samples collected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "resource_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[ResourceSample] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _RESOURCE_LOG_MIN_PARTS:
-                    results.append(
-                        ResourceSample(
-                            timestamp=parts[0],
-                            cpu_percent=float(parts[1]) if parts[1] else 0.0,
-                            memory_mb=float(parts[2]) if parts[2] else 0.0,
-                            disk_read_bytes=int(parts[3]) if parts[3].isdigit() else 0,
-                            disk_write_bytes=int(parts[4]) if parts[4].isdigit() else 0,
-                            net_sent_bytes=int(parts[5]) if parts[5].isdigit() else 0,
-                            net_recv_bytes=int(parts[6]) if parts[6].isdigit() else 0,
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("resource_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_clipboard_log(self) -> list[ClipboardEvent]:
-        """Parse clipboard monitoring log.
-
-        Returns:
-            list[ClipboardEvent]: List of clipboard events detected during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "clipboard_monitor.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[ClipboardEvent] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _CLIPBOARD_LOG_MIN_PARTS:
-                    results.append(
-                        ClipboardEvent(
-                            timestamp=parts[0],
-                            operation=parts[1],
-                            format=parts[2],
-                            content_preview=parts[3],
-                            size_bytes=int(parts[4]) if parts[4].isdigit() else 0,
-                            pid=int(parts[5]) if parts[5].isdigit() else 0,
-                            process_name=parts[6],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("clipboard_log_parse_failed", extra={"error": str(e)})
-
-        return results
-
-    async def _parse_api_trace_log(self) -> list[ApiCall]:
-        """Parse API trace monitoring log.
-
-        Returns:
-            list[ApiCall]: List of API calls captured during execution.
-        """
-        if self._shared_folder is None:
-            return []
-
-        log_path = self._shared_folder / "logs" / "api_trace.log"
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-
-        results: list[ApiCall] = []
-        try:
-            raw_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8", errors="replace")
-            for line in raw_text.splitlines():
-                parts = line.split("|")
-                if len(parts) >= _API_TRACE_LOG_MIN_PARTS:
-                    results.append(
-                        ApiCall(
-                            timestamp=parts[0],
-                            process_name=parts[1],
-                            pid=int(parts[2]) if parts[2].isdigit() else 0,
-                            api_name=parts[3],
-                            module=parts[4],
-                            arguments=[a.strip() for a in parts[5].split(",") if a.strip()],
-                            return_value=parts[6],
-                        ),
-                    )
-        except (OSError, ValueError) as e:
-            _logger.warning("api_trace_log_parse_failed", extra={"error": str(e)})
-
-        return results
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.
