@@ -10,9 +10,8 @@ import asyncio
 import posixpath
 import shutil
 from pathlib import Path
-from typing import Any, Final, override
+from typing import Any, Final, cast
 
-from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -27,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
 _logger = get_logger(__name__)
@@ -37,6 +37,7 @@ _MIN_TIMEOUT: Final[int] = 5
 _MAX_TIMEOUT: Final[int] = 300
 _WDAG_PATH: Final[str] = r"C:\Users\WDAGUtilityAccount\Desktop"
 _CONTAINER_TMP_PREFIX: Final[str] = posixpath.join("/", "tmp")
+_DOCKER_CONTAINER_NAME: Final[str] = "intellicrack_sandbox"
 
 
 async def _run_command(
@@ -81,136 +82,141 @@ async def _run_command(
     )
 
 
-class SandboxWorker(QThread):
-    """Background worker for sandbox operations.
+def execute_sandbox_operation(
+    operation: str,
+    file_path: str,
+    sandbox_type: str,
+    dest_path: str,
+    command_args: str,
+    timeout: int,
+) -> dict[str, Any]:
+    """Run a sandbox save or test operation synchronously.
 
-    Runs sandbox save or test operations in a background thread to
-    avoid blocking the Qt main thread during subprocess execution.
+    Spins up a temporary asyncio event loop on the worker thread to drive
+    the underlying ``asyncio`` subprocess invocations and returns the
+    aggregated result dictionary.
 
-    Attributes:
-        finished_signal: Emitted with result dict on success.
-        error_signal: Emitted with error message on failure.
+    Args:
+        operation: Either ``"save"`` or ``"test"``.
+        file_path: Path to the binary file on the host.
+        sandbox_type: Sandbox backend (``"docker"``, ``"qemu"``, ``"windows_sandbox"``).
+        dest_path: Destination path inside the sandbox.
+        command_args: Whitespace-separated command-line arguments for ``"test"``.
+        timeout: Maximum wait time in seconds for any subprocess.
+
+    Returns:
+        dict[str, Any]: For ``"save"`` operations, ``{"sandbox_path", "status"}``.
+            For ``"test"`` operations, ``{"exit_code", "stdout", "stderr"}``.
     """
-
-    finished_signal: pyqtSignal = pyqtSignal(dict)
-    error_signal: pyqtSignal = pyqtSignal(str)
-
-    def __init__(
-        self,
-        operation: str,
-        file_path: str,
-        sandbox_type: str,
-        dest_path: str,
-        command_args: str,
-        timeout: int,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the SandboxWorker with operation parameters.
-
-        Args:
-            operation: Either ``"save"`` or ``"test"``.
-            file_path: Path to the binary file.
-            sandbox_type: Sandbox backend (``"docker"``, ``"qemu"``, ``"windows_sandbox"``).
-            dest_path: Destination path inside the sandbox.
-            command_args: Command-line arguments for test execution.
-            timeout: Maximum wait time in seconds.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self._operation = operation
-        self._file_path = file_path
-        self._sandbox_type = sandbox_type
-        self._dest_path = dest_path
-        self._command_args = command_args
-        self._timeout = timeout
-
-    @override
-    def run(self) -> None:
-        """Execute the sandbox operation in the background thread."""
-        loop = asyncio.new_event_loop()
-        try:
-            result = loop.run_until_complete(
-                self._do_save() if self._operation == "save" else self._do_test(),
+    loop = asyncio.new_event_loop()
+    try:
+        if operation == "save":
+            return loop.run_until_complete(
+                _do_save(file_path, sandbox_type, dest_path, wait_seconds=timeout),
             )
-            self.finished_signal.emit(result)
-        except (OSError, ValueError, TimeoutError, RuntimeError) as exc:
-            self.error_signal.emit(str(exc))
-        finally:
-            loop.close()
+        return loop.run_until_complete(
+            _do_test(file_path, sandbox_type, dest_path, command_args, wait_seconds=timeout),
+        )
+    finally:
+        loop.close()
 
-    async def _do_save(self) -> dict[str, Any]:
-        """Copy the file into the sandbox environment.
 
-        Returns:
-            dict[str, Any]: Result with sandbox_path and status.
+async def _do_save(
+    file_path: str,
+    sandbox_type: str,
+    dest_path: str,
+    wait_seconds: int,
+) -> dict[str, Any]:
+    """Copy the file into the sandbox environment.
 
-        Raises:
-            FileNotFoundError: If the source file does not exist.
-            OSError: If the copy operation fails.
-        """
-        src = Path(self._file_path)
-        src_exists = await asyncio.get_event_loop().run_in_executor(None, src.exists)
-        if not src_exists:
-            msg = f"Source file not found: {self._file_path}"
-            raise FileNotFoundError(msg)
+    Args:
+        file_path: Path to the source binary on the host.
+        sandbox_type: Sandbox backend identifier.
+        dest_path: Destination path inside the sandbox.
+        wait_seconds: Maximum subprocess wait time in seconds.
 
-        if self._sandbox_type == "docker":
-            container_name = "intellicrack_sandbox"
-            dest = self._dest_path or f"{_CONTAINER_TMP_PREFIX}/{src.name}"
-            exit_code, _, stderr = await _run_command(
-                ["docker", "cp", str(src), f"{container_name}:{dest}"],
-                self._timeout,
-            )
-            if exit_code != 0:
-                msg = f"docker cp failed: {stderr.strip()}"
-                raise OSError(msg)
-            return {"sandbox_path": dest, "status": "copied"}
+    Returns:
+        dict[str, Any]: Result with ``sandbox_path`` and ``status`` keys.
 
-        if self._sandbox_type == "qemu":
-            dest = self._dest_path or f"{_CONTAINER_TMP_PREFIX}/{src.name}"
-            exit_code, _, stderr = await _run_command(
-                ["scp", "-o", "StrictHostKeyChecking=no", str(src), f"localhost:{dest}"],
-                self._timeout,
-            )
-            if exit_code != 0:
-                msg = f"scp failed: {stderr.strip()}"
-                raise OSError(msg)
-            return {"sandbox_path": dest, "status": "copied"}
+    Raises:
+        FileNotFoundError: If the source file does not exist.
+        OSError: If the copy operation fails.
+    """
+    src = Path(file_path)
+    src_exists = await asyncio.get_event_loop().run_in_executor(None, src.exists)
+    if not src_exists:
+        msg = f"Source file not found: {file_path}"
+        raise FileNotFoundError(msg)
 
-        dest_dir = Path(self._dest_path) if self._dest_path else Path(_WDAG_PATH)
-        dest_file = dest_dir / src.name
-        shutil.copy2(str(src), str(dest_file))
-        return {"sandbox_path": str(dest_file), "status": "copied"}
+    if sandbox_type == "docker":
+        dest = dest_path or f"{_CONTAINER_TMP_PREFIX}/{src.name}"
+        exit_code, _, stderr = await _run_command(
+            ["docker", "cp", str(src), f"{_DOCKER_CONTAINER_NAME}:{dest}"],
+            wait_seconds,
+        )
+        if exit_code != 0:
+            msg = f"docker cp failed: {stderr.strip()}"
+            raise OSError(msg)
+        return {"sandbox_path": dest, "status": "copied"}
 
-    async def _do_test(self) -> dict[str, Any]:
-        """Execute the binary inside the sandbox and capture output.
+    if sandbox_type == "qemu":
+        dest = dest_path or f"{_CONTAINER_TMP_PREFIX}/{src.name}"
+        exit_code, _, stderr = await _run_command(
+            ["scp", "-o", "StrictHostKeyChecking=no", str(src), f"localhost:{dest}"],
+            wait_seconds,
+        )
+        if exit_code != 0:
+            msg = f"scp failed: {stderr.strip()}"
+            raise OSError(msg)
+        return {"sandbox_path": dest, "status": "copied"}
 
-        Returns:
-            dict[str, Any]: Result with exit_code, stdout, and stderr.
-        """
-        if self._sandbox_type == "docker":
-            container_name = "intellicrack_sandbox"
-            dest = self._dest_path or f"{_CONTAINER_TMP_PREFIX}/{Path(self._file_path).name}"
-            cmd = ["docker", "exec", container_name, dest]
-            if self._command_args:
-                cmd.extend(self._command_args.split())
-        elif self._sandbox_type == "qemu":
-            dest = self._dest_path or f"{_CONTAINER_TMP_PREFIX}/{Path(self._file_path).name}"
-            cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "localhost", dest]
-            if self._command_args:
-                cmd.extend(self._command_args.split())
-        else:
-            dest = self._dest_path or str(Path(_WDAG_PATH) / Path(self._file_path).name)
-            cmd = [dest]
-            if self._command_args:
-                cmd.extend(self._command_args.split())
+    dest_dir = Path(dest_path) if dest_path else Path(_WDAG_PATH)
+    dest_file = dest_dir / src.name
+    shutil.copy2(str(src), str(dest_file))
+    return {"sandbox_path": str(dest_file), "status": "copied"}
 
-        exit_code, stdout, stderr = await _run_command(cmd, self._timeout)
-        return {
-            "exit_code": exit_code,
-            "stdout": stdout,
-            "stderr": stderr,
-        }
+
+async def _do_test(
+    file_path: str,
+    sandbox_type: str,
+    dest_path: str,
+    command_args: str,
+    wait_seconds: int,
+) -> dict[str, Any]:
+    """Execute the binary inside the sandbox and capture output.
+
+    Args:
+        file_path: Path to the binary on the host (used to derive default dest).
+        sandbox_type: Sandbox backend identifier.
+        dest_path: Path of the binary inside the sandbox.
+        command_args: Whitespace-separated command-line arguments.
+        wait_seconds: Maximum subprocess wait time in seconds.
+
+    Returns:
+        dict[str, Any]: Result with ``exit_code``, ``stdout``, and ``stderr`` keys.
+    """
+    if sandbox_type == "docker":
+        dest = dest_path or f"{_CONTAINER_TMP_PREFIX}/{Path(file_path).name}"
+        cmd = ["docker", "exec", _DOCKER_CONTAINER_NAME, dest]
+        if command_args:
+            cmd.extend(command_args.split())
+    elif sandbox_type == "qemu":
+        dest = dest_path or f"{_CONTAINER_TMP_PREFIX}/{Path(file_path).name}"
+        cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "localhost", dest]
+        if command_args:
+            cmd.extend(command_args.split())
+    else:
+        dest = dest_path or str(Path(_WDAG_PATH) / Path(file_path).name)
+        cmd = [dest]
+        if command_args:
+            cmd.extend(command_args.split())
+
+    exit_code, stdout, stderr = await _run_command(cmd, wait_seconds)
+    return {
+        "exit_code": exit_code,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
 
 
 class SandboxMixin:
@@ -224,7 +230,7 @@ class SandboxMixin:
     _sandbox_timeout_spin: QSpinBox | None
     _sandbox_output: QPlainTextEdit | None
     _sandbox_status: QLabel | None
-    _sandbox_worker: SandboxWorker | None
+    _sandbox_worker: GenericCallableWorker | None
 
     def _create_sandbox_tab(self) -> QWidget:
         """Create the Sandbox side panel tab widget.
@@ -304,7 +310,7 @@ class SandboxMixin:
         self._launch_sandbox_worker("test")
 
     def _launch_sandbox_worker(self, operation: str) -> None:
-        """Create and start a SandboxWorker for the given operation.
+        """Create and start a generic worker driving ``execute_sandbox_operation``.
 
         Args:
             operation: Either ``"save"`` or ``"test"``.
@@ -320,18 +326,36 @@ class SandboxMixin:
         if self._sandbox_status is not None:
             self._sandbox_status.setText(f"Running {operation}...")
 
-        worker = SandboxWorker(
-            operation=operation,
-            file_path=str(self.file_path),
-            sandbox_type=sandbox_type,
-            dest_path=dest_path,
-            command_args=command_args,
-            timeout=timeout,
+        worker = GenericCallableWorker(
+            execute_sandbox_operation,
+            operation,
+            str(self.file_path),
+            sandbox_type,
+            dest_path,
+            command_args,
+            timeout,
         )
-        worker.finished_signal.connect(self._on_sandbox_finished)
-        worker.error_signal.connect(self._on_sandbox_error)
+        _: object = worker.call_finished.connect(self._on_sandbox_finished_obj)
+        _ = worker.call_error.connect(self._on_sandbox_error_obj)
         self._sandbox_worker = worker
         worker.start()
+
+    def _on_sandbox_finished_obj(self, result: object) -> None:
+        """Forward worker results to the typed sandbox handler.
+
+        Args:
+            result: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(result, dict):
+            self._on_sandbox_finished(cast("dict[str, Any]", result))
+
+    def _on_sandbox_error_obj(self, exc: object) -> None:
+        """Forward worker exceptions to the typed sandbox error handler.
+
+        Args:
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        self._on_sandbox_error(str(exc))
 
     def _on_sandbox_finished(self, result: dict[str, Any]) -> None:
         """Handle successful sandbox operation completion.

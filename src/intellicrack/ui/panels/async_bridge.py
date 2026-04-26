@@ -11,8 +11,9 @@ thread to preserve asyncio primitives across calls. Includes both blocking and n
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -20,7 +21,9 @@ from intellicrack.core.logging import get_logger
 
 
 __all__ = [
+    "WORKER_DEFAULT_EXCEPTIONS",
     "BridgeCallWorker",
+    "GenericCallableWorker",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "shutdown_bridge_loop",
@@ -33,6 +36,27 @@ if TYPE_CHECKING:
     from PyQt6.QtCore import QObject
 
 _logger = get_logger(__name__)
+
+
+WORKER_DEFAULT_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    ArithmeticError,
+    AttributeError,
+    LookupError,
+    OSError,
+    PermissionError,
+    RuntimeError,
+    SyntaxError,
+    TimeoutError,
+    TypeError,
+    ValueError,
+    json.JSONDecodeError,
+)
+"""Default exception classes caught by ``GenericCallableWorker``.
+
+This tuple is the union of error types currently raised by hex-editor
+mixin callables. Worker callers may pass a narrower or broader tuple
+via the ``exceptions`` constructor argument.
+"""
 
 
 class _LoopState:
@@ -154,6 +178,69 @@ class BridgeCallWorker(QThread):
         except (TimeoutError, RuntimeError, OSError, ValueError, TypeError, asyncio.CancelledError) as exc:
             _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
+
+
+class GenericCallableWorker(QThread):
+    """Worker thread for non-blocking execution of synchronous callables.
+
+    Runs an arbitrary synchronous ``func(*args, **kwargs)`` on a background
+    QThread and emits ``call_finished`` with the return value or
+    ``call_error`` with the raised exception. Auto-cleans up via
+    ``deleteLater`` when the underlying QThread finishes.
+
+    This is the synchronous counterpart to :class:`BridgeCallWorker` and
+    is intended for FFI calls into native modules (PyO3, ctypes) and
+    pure-Python compute helpers that should not block the Qt event loop.
+
+    Attributes:
+        call_finished: Signal emitted with the callable's return value on success.
+        call_error: Signal emitted with the raised exception object on failure.
+    """
+
+    call_finished: pyqtSignal = pyqtSignal(object)
+    call_error: pyqtSignal = pyqtSignal(object)
+
+    def __init__(
+        self,
+        func: Callable[..., object],
+        /,
+        *args: object,
+        exceptions: tuple[type[BaseException], ...] = WORKER_DEFAULT_EXCEPTIONS,
+        parent: QObject | None = None,
+        **kwargs: object,
+    ) -> None:
+        """Initialise the worker with the callable and its arguments.
+
+        Args:
+            func: Synchronous callable to execute on the background thread.
+            *args: Positional arguments forwarded to ``func``.
+            exceptions: Exception classes captured and re-emitted via
+                ``call_error``. Anything outside this tuple propagates and
+                terminates the thread.
+            parent: Parent QObject for Qt ownership and cleanup.
+            **kwargs: Keyword arguments forwarded to ``func``.
+        """
+        super().__init__(parent)
+        self._func: Callable[..., object] = func
+        self._args: tuple[object, ...] = args
+        self._kwargs: dict[str, Any] = dict(kwargs)
+        self._exceptions: tuple[type[BaseException], ...] = exceptions
+        _: object = self.finished.connect(self.deleteLater)
+
+    @override
+    def run(self) -> None:
+        """Execute the callable and emit the result or captured exception."""
+        try:
+            result = self._func(*self._args, **self._kwargs)
+        except self._exceptions as exc:
+            _logger.exception(
+                "generic_callable_worker_failed",
+                func_name=getattr(self._func, "__name__", repr(self._func)),
+                error_type=type(exc).__name__,
+            )
+            self.call_error.emit(exc)
+            return
+        self.call_finished.emit(result)
 
 
 def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
