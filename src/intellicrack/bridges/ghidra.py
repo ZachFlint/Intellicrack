@@ -22,7 +22,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, cast
 
-from intellicrack.bridges._pe_format import pe_machine_to_arch
+from intellicrack.bridges._pe_format import (
+    detect_format,
+    detect_format_and_arch,
+)
 from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
@@ -55,48 +58,8 @@ _logger = get_logger(__name__)
 
 _RemoteExecFunc = Callable[[str], object]
 
-_MIN_HEADER_SIZE = 4
-_PE_POINTER_OFFSET = 0x3C
-_PE_POINTER_END = 0x40
-_PE_HEADER_MIN = 6
-_PE_MAGIC = b"PE\x00\x00"
-_MZ_MAGIC = b"MZ"
-_ELF_MAGIC = b"\x7fELF"
-_MACHO_MAGIC_BE32 = b"\xfe\xed\xfa\xce"
-_MACHO_MAGIC_LE32 = b"\xce\xfa\xed\xfe"
-_MACHO_MAGIC_BE64 = b"\xfe\xed\xfa\xcf"
-_MACHO_MAGIC_LE64 = b"\xcf\xfa\xed\xfe"
-_MACHO_MAGICS = {
-    _MACHO_MAGIC_BE32,
-    _MACHO_MAGIC_LE32,
-    _MACHO_MAGIC_BE64,
-    _MACHO_MAGIC_LE64,
-}
-_MACHO_MAGICS_64 = {_MACHO_MAGIC_BE64, _MACHO_MAGIC_LE64}
-_MACHO_MAGICS_BE = {_MACHO_MAGIC_BE32, _MACHO_MAGIC_BE64}
-_MACHO_HEADER_MIN = 8
-_MACHO_CPU_TYPE_X86 = 0x07
-_MACHO_CPU_TYPE_X86_64 = 0x01000007
-_MACHO_CPU_TYPE_ARM = 0x0C
-_MACHO_CPU_TYPE_ARM64 = 0x0100000C
-_MACHO_CPU_TYPE_PPC = 0x12
-_MACHO_CPU_TYPE_PPC64 = 0x01000012
-_ELF_CLASS_64 = 2
-_ELF_DATA_BE = 2
-_ELF_E_MACHINE_OFFSET = 0x12
-_ELF_E_MACHINE_END = 0x14
-_ELF_EM_386 = 0x03
-_ELF_EM_ARM = 0x28
-_ELF_EM_X86_64 = 0x3E
-_ELF_EM_AARCH64 = 0xB7
-_ELF_EM_MIPS = 0x08
-_ELF_EM_PPC = 0x14
-_ELF_EM_PPC64 = 0x15
-_ELF_EM_RISCV = 0xF3
 _JAVA_SIGNED_THRESHOLD = 127
 _JAVA_SIGNED_RANGE = 256
-_ELF_EI_CLASS_OFFSET = 4
-_ELF_EI_DATA_OFFSET = 5
 _ARCH_64_POINTER_BYTES = 8
 
 _ERR_NOT_CONNECTED = "Ghidra not connected"
@@ -1666,22 +1629,19 @@ metadata
 
     @staticmethod
     def _detect_format(data: bytes) -> str:
-        """Detect binary format.
+        """Detect binary format from magic bytes.
+
+        Delegates to :func:`detect_format` in ``bridges/_pe_format`` for
+        the shared magic-byte comparison.
 
         Args:
             data: Binary data.
 
         Returns:
-            str: Format string.
+            str: Format string (``"pe"``, ``"elf"``, ``"macho"``,
+            ``"zip"``, or ``"raw"``).
         """
-        if len(data) < _MIN_HEADER_SIZE:
-            return "raw"
-
-        if data[:2] == _MZ_MAGIC:
-            return "pe"
-        if data[:4] == _ELF_MAGIC:
-            return "elf"
-        return "macho" if data[:4] in _MACHO_MAGICS else "raw"
+        return detect_format(data)
 
     @staticmethod
     def _detect_architecture(data: bytes) -> tuple[str, bool]:
@@ -1689,9 +1649,12 @@ metadata
 
         Covers PE (x86, x86_64, ARM, ARM64, IA64, MIPS, PPC, RISC-V),
         ELF (x86, x86_64, ARM, AArch64, MIPS, PPC/PPC64, RISC-V), and
-        Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries. The PE
-        branch delegates to :func:`pe_machine_to_arch` for the canonical
-        ``IMAGE_FILE_MACHINE_*`` table.
+        Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries.
+        Delegates to :func:`detect_format_and_arch` in
+        ``bridges/_pe_format`` (which itself uses
+        :func:`pe_machine_to_arch` for the canonical
+        ``IMAGE_FILE_MACHINE_*`` table) and discards the format component
+        to preserve the historical ``(arch, is_64bit)`` shape.
 
         Args:
             data: Binary data.
@@ -1699,68 +1662,8 @@ metadata
         Returns:
             tuple[str, bool]: Tuple of (architecture, is_64bit).
         """
-        if len(data) < _MIN_HEADER_SIZE:
-            return "unknown", False
-
-        if data[:2] == _MZ_MAGIC and len(data) > _PE_POINTER_END:
-            pe_offset = int.from_bytes(
-                data[_PE_POINTER_OFFSET:_PE_POINTER_END],
-                "little",
-            )
-            if len(data) > pe_offset + _PE_HEADER_MIN and data[pe_offset : pe_offset + 4] == _PE_MAGIC:
-                machine = int.from_bytes(
-                    data[pe_offset + 4 : pe_offset + 6],
-                    "little",
-                )
-                return pe_machine_to_arch(machine)
-
-        if data[:4] == _ELF_MAGIC and len(data) >= _ELF_E_MACHINE_END:
-            is_64 = len(data) > _ELF_EI_CLASS_OFFSET and data[_ELF_EI_CLASS_OFFSET] == _ELF_CLASS_64
-            byte_order: Literal["little", "big"] = (
-                "big" if len(data) > _ELF_EI_DATA_OFFSET and data[_ELF_EI_DATA_OFFSET] == _ELF_DATA_BE else "little"
-            )
-            e_machine = int.from_bytes(
-                data[_ELF_E_MACHINE_OFFSET:_ELF_E_MACHINE_END],
-                byte_order,
-            )
-            if e_machine == _ELF_EM_X86_64:
-                return "x86_64", True
-            if e_machine == _ELF_EM_386:
-                return "x86", False
-            if e_machine == _ELF_EM_ARM:
-                return "arm", False
-            if e_machine == _ELF_EM_AARCH64:
-                return "arm64", True
-            if e_machine == _ELF_EM_MIPS:
-                return ("mips64", True) if is_64 else ("mips", False)
-            if e_machine == _ELF_EM_PPC:
-                return "ppc", False
-            if e_machine == _ELF_EM_PPC64:
-                return "ppc64", True
-            if e_machine == _ELF_EM_RISCV:
-                return ("riscv64", True) if is_64 else ("riscv", False)
-            return ("unknown", True) if is_64 else ("unknown", False)
-
-        if data[:4] in _MACHO_MAGICS and len(data) >= _MACHO_HEADER_MIN:
-            macho_magic = data[:4]
-            is_64 = macho_magic in _MACHO_MAGICS_64
-            mach_order: Literal["little", "big"] = "big" if macho_magic in _MACHO_MAGICS_BE else "little"
-            cpu_type = int.from_bytes(data[4:8], mach_order)
-            if cpu_type == _MACHO_CPU_TYPE_X86_64:
-                return "x86_64", True
-            if cpu_type == _MACHO_CPU_TYPE_X86:
-                return "x86", False
-            if cpu_type == _MACHO_CPU_TYPE_ARM64:
-                return "arm64", True
-            if cpu_type == _MACHO_CPU_TYPE_ARM:
-                return "arm", False
-            if cpu_type == _MACHO_CPU_TYPE_PPC64:
-                return "ppc64", True
-            if cpu_type == _MACHO_CPU_TYPE_PPC:
-                return "ppc", False
-            return ("unknown", True) if is_64 else ("unknown", False)
-
-        return "unknown", False
+        _fmt, arch, is_64bit = detect_format_and_arch(data)
+        return arch, is_64bit
 
     async def _query_ghidra_arch(self) -> tuple[str, bool] | None:
         """Query the active Ghidra program for its architecture via RPC.

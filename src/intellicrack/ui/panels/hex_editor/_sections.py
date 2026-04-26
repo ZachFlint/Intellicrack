@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, cast, runtime_checkable
 
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem
 
+from intellicrack.bridges._pe_format import detect_format
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_async
 from intellicrack.ui.panels.hex_editor._base import (
@@ -30,6 +31,15 @@ _logger = get_logger(__name__)
 
 _STRINGS_MIN_LENGTH: Final[int] = 4
 _STRINGS_MAX_RESULTS: Final[int] = 5000
+
+
+_FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
+    "pe": ("PE", "IMAGE_DOS_HEADER"),
+    "elf": ("ELF", "ELF_HEADER_64"),
+    "macho": ("Mach-O", "MACH_HEADER_64"),
+    "zip": ("ZIP", "ZIP_LOCAL_FILE_HEADER"),
+}
+"""Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
 
 
 @runtime_checkable
@@ -411,32 +421,13 @@ class SectionsMixin:
         else:
             magic = b""
 
-        detected = ""
-        pe_magic = b"\x4d\x5a"
-        elf_magic = b"\x7fELF"
-        zip_magic = b"\x50\x4b\x03\x04"
-        macho_magics = {
-            b"\xfe\xed\xfa\xce",
-            b"\xfe\xed\xfa\xcf",
-            b"\xce\xfa\xed\xfe",
-            b"\xcf\xfa\xed\xfe",
-        }
-        if len(magic) >= len(pe_magic) and magic[:2] == pe_magic:
-            detected = "PE"
-            self._select_template("IMAGE_DOS_HEADER")
-        elif len(magic) >= len(elf_magic) and magic[:4] == elf_magic:
-            detected = "ELF"
-            self._select_template("ELF_HEADER_64")
-        elif len(magic) >= len(elf_magic) and magic[:4] in macho_magics:
-            detected = "Mach-O"
-            self._select_template("MACH_HEADER_64")
-        elif len(magic) >= len(zip_magic) and magic[:4] == zip_magic:
-            detected = "ZIP"
-            self._select_template("ZIP_LOCAL_FILE_HEADER")
-
-        if detected and self._file_info_label is not None:
-            current = self._file_info_label.text()
-            self._file_info_label.setText(f"{current} [{detected}]")
+        entry = _FORMAT_TO_TEMPLATE.get(detect_format(magic))
+        if entry is not None:
+            detected, template_name = entry
+            self._select_template(template_name)
+            if self._file_info_label is not None:
+                current = self._file_info_label.text()
+                self._file_info_label.setText(f"{current} [{detected}]")
 
         self._try_pattern_registry_match()
 
