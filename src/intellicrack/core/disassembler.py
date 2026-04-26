@@ -10,10 +10,10 @@ binary-header detection for PE, ELF, and Mach-O targets.
 
 from __future__ import annotations
 
-import struct
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from intellicrack.bridges._pe_format import detect_format_and_arch
 from intellicrack.bridges.base import DisassemblyLine
 from intellicrack.core.logging import get_logger
 
@@ -35,29 +35,29 @@ _ERR_NO_CAPSTONE = "capstone is not available"
 _ERR_RISCV_UNAVAIL = "riscv support not available in this capstone build"
 _ERR_UNSUPPORTED_ARCH = "unsupported architecture"
 
-_MIN_HEADER_BYTES: int = 4
-_MIN_PE_HEADER_BYTES: int = 64
-_MIN_ELF_HEADER_BYTES: int = 20
-_MIN_MACHO_HEADER_BYTES: int = 8
 
-_PE_MACHINE_I386: int = 0x014C
-_PE_MACHINE_AMD64: int = 0x8664
-_PE_MACHINE_ARM: int = 0x01C0
-_PE_MACHINE_ARM64: int = 0xAA64
+_CAPSTONE_ARCH_MODE_MAP: dict[str, tuple[str, str]] = {
+    "x86_64": ("x86", "64"),
+    "x86": ("x86", "32"),
+    "arm64": ("arm64", "arm"),
+    "arm": ("arm", "arm"),
+    "mips": ("mips", "32"),
+    "mips64": ("mips", "64"),
+    "riscv": ("riscv", "32"),
+    "riscv64": ("riscv", "64"),
+    "riscv128": ("riscv", "64"),
+}
+"""Map a canonical :func:`detect_format_and_arch` arch string to capstone ``(arch, mode)``.
 
-_ELF_CLASS_64: int = 2
-_ELF_EM_386: int = 0x03
-_ELF_EM_X86_64: int = 0x3E
-_ELF_EM_ARM: int = 0x28
-_ELF_EM_AARCH64: int = 0xB7
-_ELF_EM_MIPS: int = 0x08
-_ELF_EM_RISCV: int = 0xF3
+Capstone's mode field is overloaded: ``"32"`` / ``"64"`` for x86 and MIPS,
+the literal string ``"arm"`` for ARM/AArch64. RISC-V 128-bit is squashed
+to ``"64"`` because capstone has no separate 128-bit mode.
+"""
 
-_MACHO_MAGIC_32: int = 0xFEEDFACE
-_MACHO_MAGIC_64: int = 0xFEEDFACF
-_MACHO_CPU_X86: int = 7
-_MACHO_CPU_ARM: int = 12
-_MACHO_CPU_64_FLAG: int = 0x01000000
+
+_CAPSTONE_DEFAULT_ARCH_MODE: tuple[str, str] = ("x86", "64")
+"""Fallback ``(arch, mode)`` returned by :meth:`HexDisassembler.auto_detect_arch` when the format is unrecognised."""
+
 
 __all__ = [
     "DisasmInstruction",
@@ -292,9 +292,11 @@ class HexDisassembler:
     def auto_detect_arch(data: bytes) -> tuple[str, str]:
         """Detect architecture from PE, ELF, or Mach-O binary headers.
 
-        Inspects the first bytes of *data* to identify common binary
-        format magic values and reads the machine / CPU-type fields to
-        determine the most appropriate architecture and mode strings.
+        Delegates magic-byte and machine-field decoding to
+        :func:`intellicrack.bridges._pe_format.detect_format_and_arch`,
+        then maps the canonical ``(arch, is_64bit)`` result into the
+        capstone ``(arch, mode)`` shape that :meth:`disassemble`
+        expects.
 
         Args:
             data: Raw binary data, including at least the file header.
@@ -304,66 +306,18 @@ class HexDisassembler:
             :meth:`disassemble`.  Falls back to ``("x86", "64")`` when
             the format is unrecognised.
         """
-        if len(data) < _MIN_HEADER_BYTES:
-            return ("x86", "64")
-
-        # ------ PE -------------------------------------------------------
-        if data[:2] == b"MZ" and len(data) >= _MIN_PE_HEADER_BYTES:
-            pe_offset = struct.unpack_from("<I", data, 60)[0]
-            if pe_offset + 6 <= len(data) and data[pe_offset : pe_offset + 4] == b"PE\x00\x00":
-                machine = struct.unpack_from("<H", data, pe_offset + 4)[0]
-                _logger.debug("pe_machine_detected", machine=hex(machine))
-                if machine == _PE_MACHINE_I386:
-                    return ("x86", "32")
-                if machine == _PE_MACHINE_AMD64:
-                    return ("x86", "64")
-                if machine == _PE_MACHINE_ARM:
-                    return ("arm", "arm")
-                if machine == _PE_MACHINE_ARM64:
-                    return ("arm64", "arm")
-
-        # ------ ELF ------------------------------------------------------
-        if data[:4] == b"\x7fELF" and len(data) >= _MIN_ELF_HEADER_BYTES:
-            is_64 = data[4] == _ELF_CLASS_64
-            e_machine = struct.unpack_from("<H", data, 18)[0]
-            _logger.debug("elf_machine_detected", e_machine=hex(e_machine))
-            if e_machine == _ELF_EM_386:
-                return ("x86", "64" if is_64 else "32")
-            if e_machine == _ELF_EM_X86_64:
-                return ("x86", "64")
-            if e_machine == _ELF_EM_ARM:
-                return ("arm", "arm")
-            if e_machine == _ELF_EM_AARCH64:
-                return ("arm64", "arm")
-            if e_machine == _ELF_EM_MIPS:
-                return ("mips", "64" if is_64 else "32")
-            if e_machine == _ELF_EM_RISCV:
-                return ("riscv", "64" if is_64 else "32")
-
-        # ------ Mach-O ---------------------------------------------------
-        if len(data) >= _MIN_MACHO_HEADER_BYTES:
-            magic_le = struct.unpack_from("<I", data[:4])[0]
-            magic_be = struct.unpack_from(">I", data[:4])[0]
-            if magic_le in {_MACHO_MAGIC_32, _MACHO_MAGIC_64} or magic_be in {
-                _MACHO_MAGIC_32,
-                _MACHO_MAGIC_64,
-            }:
-                little_endian = magic_le in {_MACHO_MAGIC_32, _MACHO_MAGIC_64}
-                fmt = "<I" if little_endian else ">I"
-                cputype = struct.unpack_from(fmt, data[4:8])[0]
-                _logger.debug("macho_cputype_detected", cputype=hex(cputype))
-
-                if cputype == _MACHO_CPU_X86:
-                    return ("x86", "32")
-                if cputype == (_MACHO_CPU_X86 | _MACHO_CPU_64_FLAG):
-                    return ("x86", "64")
-                if cputype == _MACHO_CPU_ARM:
-                    return ("arm", "arm")
-                if cputype == (_MACHO_CPU_ARM | _MACHO_CPU_64_FLAG):
-                    return ("arm64", "arm")
-
-        _logger.debug("arch_detection_fallback", reason="unrecognised binary format")
-        return ("x86", "64")
+        fmt, arch, is_64bit = detect_format_and_arch(data)
+        _logger.debug(
+            "auto_detect_arch_result",
+            fmt=fmt,
+            arch=arch,
+            is_64bit=is_64bit,
+        )
+        result = _CAPSTONE_ARCH_MODE_MAP.get(arch)
+        if result is None:
+            _logger.debug("arch_detection_fallback", reason="unrecognised binary format")
+            return _CAPSTONE_DEFAULT_ARCH_MODE
+        return result
 
     def get_supported_architectures(self) -> list[dict[str, str]]:
         """Return metadata for every architecture supported at runtime.

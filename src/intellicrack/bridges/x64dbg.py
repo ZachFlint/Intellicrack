@@ -22,6 +22,8 @@ from intellicrack.bridges._pe_format import (
     PE_SECTION_CHARACTERISTIC_EXECUTE,
     PE_SECTION_CHARACTERISTIC_READ,
     PE_SECTION_CHARACTERISTIC_WRITE,
+    PE_SIGNATURE,
+    detect_format,
     get_data_directory_offset,
     is_pe64_optional_header,
     read_data_directory_entry,
@@ -3964,14 +3966,14 @@ class X64DbgBridge(DebuggerBridge):
         """
         _logger.debug("pe_header_reading", base_address=hex(base_address), module_name=module_name)
         dos_header = await self.read_memory(base_address, 64)
-        if dos_header[:2] != b"MZ":
+        if detect_format(dos_header) != "pe":
             msg = f"Invalid DOS header in {module_name}"
             raise ToolError(msg)
 
         pe_offset = read_dos_e_lfanew(dos_header)
         pe_header = await self.read_memory(base_address + pe_offset, size)
 
-        if pe_header[:4] != b"PE\x00\x00":
+        if pe_header[:4] != PE_SIGNATURE:
             msg = f"Invalid PE signature in {module_name}"
             raise ToolError(msg)
 

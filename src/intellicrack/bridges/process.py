@@ -18,7 +18,12 @@ from ctypes import wintypes
 from pathlib import Path
 from typing import Literal, cast, override
 
-from intellicrack.bridges._pe_format import pe_machine_to_arch
+from intellicrack.bridges._pe_format import (
+    PE_DOS_LFANEW_OFFSET,
+    PE_SIGNATURE,
+    detect_format,
+    pe_machine_to_arch,
+)
 from intellicrack.bridges._win32_types import (
     CONTEXT32,
     CONTEXT64,
@@ -189,10 +194,7 @@ _REG_TYPE_SZ = 1
 _REG_TYPE_EXPAND_SZ = 2
 
 _SEARCH_CHUNK_SIZE = 0x100000
-_PE_DOS_SIGNATURE = 0x5A4D
-_PE_HEADER_OFFSET_FIELD = 0x3C
 _PE_SIGNATURE_SIZE = 4
-_PE_SIGNATURE = 0x00004550
 
 _JOB_QUERY_INFORMATION = 0x0004
 
@@ -1314,11 +1316,10 @@ class ProcessBridge(ToolBridgeBase):
             ):
                 return None
 
-            dos_sig = struct.unpack_from("<H", dos_header.raw, 0)[0]
-            if dos_sig != _PE_DOS_SIGNATURE:
+            if detect_format(dos_header.raw) != "pe":
                 return None
 
-            pe_offset = struct.unpack_from("<I", dos_header.raw, _PE_HEADER_OFFSET_FIELD)[0]
+            pe_offset = struct.unpack_from("<I", dos_header.raw, PE_DOS_LFANEW_OFFSET)[0]
 
             header_buffer = ctypes.create_string_buffer(_PE_SIGNATURE_SIZE + 0x14)
             if not self._kernel32.ReadProcessMemory(
@@ -1330,8 +1331,7 @@ class ProcessBridge(ToolBridgeBase):
             ):
                 return None
 
-            pe_sig = struct.unpack_from("<I", header_buffer.raw, 0)[0]
-            if pe_sig != _PE_SIGNATURE:
+            if header_buffer.raw[:_PE_SIGNATURE_SIZE] != PE_SIGNATURE:
                 return None
 
             machine = struct.unpack_from(

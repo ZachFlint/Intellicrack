@@ -18,21 +18,30 @@ The helpers cover the structural pieces shared across PE parsers:
 - Data Directory offset arithmetic and entry unpack
 - Section header unpack and iteration
 - RVA-to-file-offset translation via the section table
+- Magic-byte file-format detection (PE / ELF / Mach-O / ZIP / raw)
+- Combined format-and-architecture detection across PE / ELF / Mach-O
 
-The module deliberately does not own architecture-string normalisation
-or magic-byte format detection; those are handled separately and may be
-added to this same module in a follow-up unit. Names below are chosen
-to leave room for those additions without collision.
+The architecture-string convention used by :func:`detect_format_and_arch`
+is the canonical set ``"x86"`` / ``"x86_64"`` / ``"arm"`` / ``"arm64"``
+/ ``"mips"`` / ``"mips64"`` / ``"ppc"`` / ``"ppc64"`` / ``"riscv"`` /
+``"riscv64"`` / ``"unknown"``, matching ``bridges/ghidra.py`` and
+``core/orchestrator.py``. Callers that want a different shape (for
+example the capstone ``("x86", "32")`` tuple) wrap the helper output
+locally.
 """
 
 from __future__ import annotations
 
 import struct
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Literal
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+
+
+FormatName = Literal["pe", "elf", "macho", "zip", "raw"]
+"""Canonical magic-byte file-format names returned by :func:`detect_format`."""
 
 
 type SectionHeaderDict = dict[str, int | str]
@@ -429,6 +438,300 @@ def iterate_section_headers(
         yield unpack_section_header(data, entry_offset)
 
 
+ELF_MAGIC: Final[bytes] = b"\x7fELF"
+"""Four-byte ELF identification magic at offset 0 of every ELF binary."""
+
+ELF_EI_CLASS_OFFSET: Final[int] = 4
+"""Offset of the ``EI_CLASS`` byte inside the ELF identification array."""
+
+ELF_EI_DATA_OFFSET: Final[int] = 5
+"""Offset of the ``EI_DATA`` (endianness) byte inside the ELF identification array."""
+
+ELF_E_MACHINE_OFFSET: Final[int] = 0x12
+"""Offset of the ``e_machine`` u16 field inside the ELF header."""
+
+ELF_E_MACHINE_END: Final[int] = 0x14
+"""End offset (exclusive) of the ``e_machine`` u16 field; equal to ``ELF_E_MACHINE_OFFSET + 2``."""
+
+ELF_CLASS_64: Final[int] = 2
+"""``EI_CLASS`` value indicating an ELFCLASS64 binary."""
+
+ELF_DATA_BIG_ENDIAN: Final[int] = 2
+"""``EI_DATA`` value indicating big-endian byte order."""
+
+ELF_EM_386: Final[int] = 0x03
+"""ELF ``e_machine`` value for Intel 80386."""
+
+ELF_EM_X86_64: Final[int] = 0x3E
+"""ELF ``e_machine`` value for AMD x86-64."""
+
+ELF_EM_ARM: Final[int] = 0x28
+"""ELF ``e_machine`` value for ARM."""
+
+ELF_EM_AARCH64: Final[int] = 0xB7
+"""ELF ``e_machine`` value for ARM AArch64."""
+
+ELF_EM_MIPS: Final[int] = 0x08
+"""ELF ``e_machine`` value for MIPS."""
+
+ELF_EM_PPC: Final[int] = 0x14
+"""ELF ``e_machine`` value for PowerPC 32-bit."""
+
+ELF_EM_PPC64: Final[int] = 0x15
+"""ELF ``e_machine`` value for PowerPC 64-bit."""
+
+ELF_EM_RISCV: Final[int] = 0xF3
+"""ELF ``e_machine`` value for RISC-V."""
+
+MACHO_MAGIC_BE32: Final[bytes] = b"\xfe\xed\xfa\xce"
+"""Mach-O 32-bit big-endian magic (``MH_MAGIC``)."""
+
+MACHO_MAGIC_LE32: Final[bytes] = b"\xce\xfa\xed\xfe"
+"""Mach-O 32-bit little-endian magic (``MH_CIGAM``)."""
+
+MACHO_MAGIC_BE64: Final[bytes] = b"\xfe\xed\xfa\xcf"
+"""Mach-O 64-bit big-endian magic (``MH_MAGIC_64``)."""
+
+MACHO_MAGIC_LE64: Final[bytes] = b"\xcf\xfa\xed\xfe"
+"""Mach-O 64-bit little-endian magic (``MH_CIGAM_64``)."""
+
+_MACHO_MAGICS: Final[frozenset[bytes]] = frozenset(
+    {MACHO_MAGIC_BE32, MACHO_MAGIC_LE32, MACHO_MAGIC_BE64, MACHO_MAGIC_LE64},
+)
+"""Every Mach-O magic byte sequence (32-bit and 64-bit, little- and big-endian)."""
+
+_MACHO_MAGICS_64: Final[frozenset[bytes]] = frozenset({MACHO_MAGIC_BE64, MACHO_MAGIC_LE64})
+"""Mach-O magics that identify a 64-bit image."""
+
+_MACHO_MAGICS_BE: Final[frozenset[bytes]] = frozenset({MACHO_MAGIC_BE32, MACHO_MAGIC_BE64})
+"""Mach-O magics whose header fields are stored big-endian."""
+
+MACHO_HEADER_MIN_SIZE: Final[int] = 8
+"""Minimum bytes required to read the Mach-O magic and ``cputype`` fields."""
+
+MACHO_CPU_TYPE_X86: Final[int] = 0x07
+"""Mach-O ``cputype`` value for Intel x86."""
+
+MACHO_CPU_TYPE_X86_64: Final[int] = 0x01000007
+"""Mach-O ``cputype`` value for x86-64 (CPU_ARCH_ABI64 | CPU_TYPE_X86)."""
+
+MACHO_CPU_TYPE_ARM: Final[int] = 0x0C
+"""Mach-O ``cputype`` value for ARM."""
+
+MACHO_CPU_TYPE_ARM64: Final[int] = 0x0100000C
+"""Mach-O ``cputype`` value for ARM64 (CPU_ARCH_ABI64 | CPU_TYPE_ARM)."""
+
+MACHO_CPU_TYPE_PPC: Final[int] = 0x12
+"""Mach-O ``cputype`` value for PowerPC."""
+
+MACHO_CPU_TYPE_PPC64: Final[int] = 0x01000012
+"""Mach-O ``cputype`` value for 64-bit PowerPC."""
+
+ZIP_MAGIC: Final[bytes] = b"\x50\x4b\x03\x04"
+"""ZIP local-file-header magic (``PK\\x03\\x04``)."""
+
+_PE_DETECT_MIN_SIZE: Final[int] = 2
+"""Minimum bytes required to compare the two-byte ``MZ`` magic."""
+
+_FOUR_BYTE_MAGIC_SIZE: Final[int] = 4
+"""Minimum bytes required to compare any of the four-byte file-format magics (ELF, Mach-O, ZIP)."""
+
+_PE_HEADER_AFTER_LFANEW: Final[int] = 6
+"""Bytes required after ``e_lfanew`` to read the PE signature plus the Machine field."""
+
+
+_MACHO_CPU_TYPE_ARCH_TABLE: Final[dict[int, tuple[str, bool]]] = {
+    MACHO_CPU_TYPE_X86_64: ("x86_64", True),
+    MACHO_CPU_TYPE_X86: ("x86", False),
+    MACHO_CPU_TYPE_ARM64: ("arm64", True),
+    MACHO_CPU_TYPE_ARM: ("arm", False),
+    MACHO_CPU_TYPE_PPC64: ("ppc64", True),
+    MACHO_CPU_TYPE_PPC: ("ppc", False),
+}
+"""Lookup table mapping Mach-O ``cputype`` values to ``(arch, is_64bit)``.
+
+Architecture strings follow the canonical convention shared with
+:func:`pe_machine_to_arch` and :meth:`GhidraBridge._detect_architecture`.
+"""
+
+
+def detect_format(data: bytes) -> FormatName:
+    r"""Identify a binary format from the first few bytes of ``data``.
+
+    Performs only magic-byte comparison; no further structural parsing
+    or validation. Buffers shorter than the magic of every supported
+    format fall through to ``"raw"``. The PE branch matches solely on
+    the two-byte ``MZ`` DOS magic so live-process callers (which read
+    only the DOS header before fetching the NT headers) reach the same
+    answer as on-disk callers.
+
+    Args:
+        data: Raw header bytes from a file or process memory. Only the
+            first four bytes are inspected.
+
+    Returns:
+        FormatName: ``"pe"`` for ``MZ`` (DOS / PE / NE / LE),
+        ``"elf"`` for ``\x7fELF``, ``"macho"`` for any of the four
+        Mach-O magics, ``"zip"`` for ``PK\x03\x04``, otherwise
+        ``"raw"``.
+    """
+    data_len = len(data)
+    if data_len >= _PE_DETECT_MIN_SIZE and data[:2] == PE_DOS_SIGNATURE:
+        return "pe"
+    if data_len < _FOUR_BYTE_MAGIC_SIZE:
+        return "raw"
+    head4 = data[:4]
+    if head4 == ELF_MAGIC:
+        return "elf"
+    if head4 in _MACHO_MAGICS:
+        return "macho"
+    if head4 == ZIP_MAGIC:
+        return "zip"
+    return "raw"
+
+
+def _detect_pe_arch(data: bytes) -> tuple[str, bool] | None:
+    """Resolve PE architecture from a buffer that begins with a DOS header.
+
+    Args:
+        data: Buffer beginning with the DOS header. Must contain the
+            full DOS header, the NT signature, and the COFF Machine
+            field for a successful parse.
+
+    Returns:
+        tuple[str, bool] | None: ``(arch, is_64bit)`` per
+        :func:`pe_machine_to_arch`, or ``None`` when the headers do
+        not parse as a valid PE.
+    """
+    if len(data) <= PE_DOS_LFANEW_OFFSET + 3:
+        return None
+    pe_offset = read_dos_e_lfanew(data)
+    if pe_offset <= 0 or len(data) < pe_offset + _PE_HEADER_AFTER_LFANEW:
+        return None
+    if data[pe_offset : pe_offset + 4] != PE_SIGNATURE:
+        return None
+    machine = int(struct.unpack_from("<H", data, pe_offset + 4)[0])
+    return pe_machine_to_arch(machine)
+
+
+def _detect_elf_arch(data: bytes) -> tuple[str, bool]:
+    """Resolve ELF architecture from a buffer that begins with the ELF header.
+
+    The endianness of ``e_machine`` follows ``EI_DATA`` at offset 5;
+    when the buffer is too short to inspect ``EI_DATA`` the parser
+    falls back to little-endian. Bitness comes from ``EI_CLASS`` at
+    offset 4.
+
+    Args:
+        data: Buffer beginning with the four-byte ELF magic. Must
+            contain at least ``ELF_E_MACHINE_END`` bytes for the
+            ``e_machine`` field to be parseable.
+
+    Returns:
+        tuple[str, bool]: ``(arch, is_64bit)``. Falls back to
+        ``("unknown", is_64bit)`` for unrecognised ``e_machine`` values
+        and ``("unknown", False)`` when the header is too short.
+    """
+    if len(data) < ELF_E_MACHINE_END:
+        return "unknown", False
+    is_64 = len(data) > ELF_EI_CLASS_OFFSET and data[ELF_EI_CLASS_OFFSET] == ELF_CLASS_64
+    byte_order: Literal["little", "big"] = (
+        "big" if len(data) > ELF_EI_DATA_OFFSET and data[ELF_EI_DATA_OFFSET] == ELF_DATA_BIG_ENDIAN else "little"
+    )
+    e_machine = int.from_bytes(data[ELF_E_MACHINE_OFFSET:ELF_E_MACHINE_END], byte_order)
+    if e_machine == ELF_EM_X86_64:
+        return "x86_64", True
+    if e_machine == ELF_EM_386:
+        return "x86", False
+    if e_machine == ELF_EM_ARM:
+        return "arm", False
+    if e_machine == ELF_EM_AARCH64:
+        return "arm64", True
+    if e_machine == ELF_EM_MIPS:
+        return ("mips64", True) if is_64 else ("mips", False)
+    if e_machine == ELF_EM_PPC:
+        return "ppc", False
+    if e_machine == ELF_EM_PPC64:
+        return "ppc64", True
+    if e_machine == ELF_EM_RISCV:
+        return ("riscv64", True) if is_64 else ("riscv", False)
+    return "unknown", is_64
+
+
+def _detect_macho_arch(data: bytes) -> tuple[str, bool]:
+    """Resolve Mach-O architecture from a buffer that begins with the magic.
+
+    Endianness and bitness derive from which of the four Mach-O magic
+    values appear in the first four bytes. The ``cputype`` field follows
+    immediately and is decoded with the matching byte order.
+
+    Args:
+        data: Buffer beginning with one of the four Mach-O magic
+            sequences. Must contain at least ``MACHO_HEADER_MIN_SIZE``
+            bytes for the ``cputype`` field to be parseable.
+
+    Returns:
+        tuple[str, bool]: ``(arch, is_64bit)``. Falls back to
+        ``("unknown", is_64bit)`` for unrecognised ``cputype`` values
+        and ``("unknown", False)`` when the header is too short.
+    """
+    if len(data) < MACHO_HEADER_MIN_SIZE:
+        return "unknown", False
+    macho_magic = data[:4]
+    is_64 = macho_magic in _MACHO_MAGICS_64
+    byte_order: Literal["little", "big"] = "big" if macho_magic in _MACHO_MAGICS_BE else "little"
+    cpu_type = int.from_bytes(data[4:8], byte_order)
+    return _MACHO_CPU_TYPE_ARCH_TABLE.get(cpu_type, ("unknown", is_64))
+
+
+def detect_format_and_arch(data: bytes) -> tuple[str, str, bool]:
+    r"""Identify file format, architecture, and bitness from header bytes.
+
+    Composes :func:`detect_format` with format-specific architecture
+    decoders for PE / ELF / Mach-O. For PE buffers without a valid
+    ``PE\x00\x00`` signature at ``e_lfanew``, the architecture is
+    reported as ``"unknown"`` while the format remains ``"pe"`` so
+    callers can distinguish a bare-DOS ``MZ`` image from a fully
+    formed PE. For ZIP and raw inputs both arch and bitness reflect
+    that the buffer is not an executable image (``"unknown"``,
+    ``False``).
+
+    The architecture string convention is the canonical set used by
+    :meth:`GhidraBridge._detect_architecture` and the orchestrator's
+    ``_ARCH_KEYWORDS`` map: ``"x86"``, ``"x86_64"``, ``"arm"``,
+    ``"arm64"``, ``"ia64"``, ``"mips"``, ``"mips64"``, ``"ppc"``,
+    ``"ppc64"``, ``"riscv"``, ``"riscv64"``, ``"riscv128"``, or
+    ``"unknown"``. Callers that need a different shape (for example the
+    capstone ``("x86", "32")`` tuple form) wrap the return value
+    locally.
+
+    Args:
+        data: Raw header bytes from a file or process memory.
+
+    Returns:
+        tuple[str, str, bool]: ``(format, arch, is_64bit)``. ``format``
+        is one of the :data:`FormatName` literals. ``arch`` is the
+        canonical architecture name, or ``"unknown"`` when the format
+        does not encode an architecture or the machine code is
+        unrecognised. ``is_64bit`` is ``True`` when the architecture
+        is a 64-bit one, otherwise ``False``.
+    """
+    fmt = detect_format(data)
+    if fmt == "pe":
+        pe_result = _detect_pe_arch(data)
+        if pe_result is None:
+            return "pe", "unknown", False
+        arch, is_64 = pe_result
+        return "pe", arch, is_64
+    if fmt == "elf":
+        arch, is_64 = _detect_elf_arch(data)
+        return "elf", arch, is_64
+    if fmt == "macho":
+        arch, is_64 = _detect_macho_arch(data)
+        return "macho", arch, is_64
+    return fmt, "unknown", False
+
+
 def rva_to_file_offset(
     sections: Iterable[SectionHeaderDict],
     rva: int,
@@ -469,6 +772,32 @@ def rva_to_file_offset(
 
 
 __all__: list[str] = [
+    "ELF_CLASS_64",
+    "ELF_DATA_BIG_ENDIAN",
+    "ELF_EI_CLASS_OFFSET",
+    "ELF_EI_DATA_OFFSET",
+    "ELF_EM_386",
+    "ELF_EM_AARCH64",
+    "ELF_EM_ARM",
+    "ELF_EM_MIPS",
+    "ELF_EM_PPC",
+    "ELF_EM_PPC64",
+    "ELF_EM_RISCV",
+    "ELF_EM_X86_64",
+    "ELF_E_MACHINE_END",
+    "ELF_E_MACHINE_OFFSET",
+    "ELF_MAGIC",
+    "MACHO_CPU_TYPE_ARM",
+    "MACHO_CPU_TYPE_ARM64",
+    "MACHO_CPU_TYPE_PPC",
+    "MACHO_CPU_TYPE_PPC64",
+    "MACHO_CPU_TYPE_X86",
+    "MACHO_CPU_TYPE_X86_64",
+    "MACHO_HEADER_MIN_SIZE",
+    "MACHO_MAGIC_BE32",
+    "MACHO_MAGIC_BE64",
+    "MACHO_MAGIC_LE32",
+    "MACHO_MAGIC_LE64",
     "PE32PLUS_OPTIONAL_HEADER_SIZE",
     "PE32_OPTIONAL_HEADER_SIZE",
     "PE_COFF_HEADER_SIZE",
@@ -498,7 +827,11 @@ __all__: list[str] = [
     "PE_SECTION_CHARACTERISTIC_WRITE",
     "PE_SECTION_HEADER_SIZE",
     "PE_SIGNATURE",
+    "ZIP_MAGIC",
+    "FormatName",
     "SectionHeaderDict",
+    "detect_format",
+    "detect_format_and_arch",
     "get_data_directory_offset",
     "is_pe64_optional_header",
     "iterate_section_headers",
