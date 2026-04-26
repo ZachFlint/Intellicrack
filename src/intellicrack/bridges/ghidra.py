@@ -22,6 +22,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from intellicrack.bridges._pe_format import pe_machine_to_arch
 from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
@@ -92,18 +93,6 @@ _ELF_EM_MIPS = 0x08
 _ELF_EM_PPC = 0x14
 _ELF_EM_PPC64 = 0x15
 _ELF_EM_RISCV = 0xF3
-_MACHINE_AMD64 = 0x8664
-_MACHINE_I386 = 0x14C
-_MACHINE_ARM = 0x1C0
-_MACHINE_ARMNT = 0x1C4
-_MACHINE_ARM64 = 0xAA64
-_MACHINE_MIPS = 0x166
-_MACHINE_MIPS16 = 0x266
-_MACHINE_POWERPC = 0x1F0
-_MACHINE_POWERPCFP = 0x1F1
-_MACHINE_RISCV32 = 0x5032
-_MACHINE_RISCV64 = 0x5064
-_MACHINE_RISCV128 = 0x5128
 _JAVA_SIGNED_THRESHOLD = 127
 _JAVA_SIGNED_RANGE = 256
 _ELF_EI_CLASS_OFFSET = 4
@@ -1698,9 +1687,11 @@ metadata
     def _detect_architecture(data: bytes) -> tuple[str, bool]:
         """Detect CPU architecture from raw header bytes.
 
-        Covers PE (x86, x86_64, ARM, ARM64, MIPS, PPC, RISC-V), ELF
-        (x86, x86_64, ARM, AArch64, MIPS, PPC/PPC64, RISC-V), and
-        Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries.
+        Covers PE (x86, x86_64, ARM, ARM64, IA64, MIPS, PPC, RISC-V),
+        ELF (x86, x86_64, ARM, AArch64, MIPS, PPC/PPC64, RISC-V), and
+        Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries. The PE
+        branch delegates to :func:`pe_machine_to_arch` for the canonical
+        ``IMAGE_FILE_MACHINE_*`` table.
 
         Args:
             data: Binary data.
@@ -1721,23 +1712,7 @@ metadata
                     data[pe_offset + 4 : pe_offset + 6],
                     "little",
                 )
-                if machine == _MACHINE_AMD64:
-                    return "x86_64", True
-                if machine == _MACHINE_I386:
-                    return "x86", False
-                if machine in {_MACHINE_ARM, _MACHINE_ARMNT}:
-                    return "arm", False
-                if machine == _MACHINE_ARM64:
-                    return "arm64", True
-                if machine in {_MACHINE_MIPS, _MACHINE_MIPS16}:
-                    return "mips", False
-                if machine in {_MACHINE_POWERPC, _MACHINE_POWERPCFP}:
-                    return "ppc", False
-                if machine == _MACHINE_RISCV32:
-                    return "riscv", False
-                if machine in {_MACHINE_RISCV64, _MACHINE_RISCV128}:
-                    return "riscv64", True
-                return "unknown", False
+                return pe_machine_to_arch(machine)
 
         if data[:4] == _ELF_MAGIC and len(data) >= _ELF_E_MACHINE_END:
             is_64 = len(data) > _ELF_EI_CLASS_OFFSET and data[_ELF_EI_CLASS_OFFSET] == _ELF_CLASS_64

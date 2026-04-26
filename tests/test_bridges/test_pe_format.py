@@ -25,6 +25,19 @@ from intellicrack.bridges._pe_format import (
     PE_DOS_HEADER_SIZE,
     PE_DOS_LFANEW_OFFSET,
     PE_DOS_SIGNATURE,
+    PE_MACHINE_AMD64,
+    PE_MACHINE_ARM,
+    PE_MACHINE_ARM64,
+    PE_MACHINE_ARMNT,
+    PE_MACHINE_I386,
+    PE_MACHINE_IA64,
+    PE_MACHINE_MIPS,
+    PE_MACHINE_MIPS16,
+    PE_MACHINE_POWERPC,
+    PE_MACHINE_POWERPCFP,
+    PE_MACHINE_RISCV32,
+    PE_MACHINE_RISCV64,
+    PE_MACHINE_RISCV128,
     PE_OPTIONAL_HEADER_MAGIC_PE32,
     PE_OPTIONAL_HEADER_MAGIC_PE32PLUS,
     PE_OPTIONAL_HEADER_OFFSET,
@@ -37,6 +50,7 @@ from intellicrack.bridges._pe_format import (
     is_pe64_optional_header,
     iterate_section_headers,
     optional_header_size_for,
+    pe_machine_to_arch,
     read_data_directory_entry,
     read_dos_e_lfanew,
     rva_to_file_offset,
@@ -729,3 +743,128 @@ class TestEndToEndPe32Plus:
             rva, size = read_data_directory_entry(image, helper_offset)
             assert rva == 0
             assert size == 0
+
+
+class TestPeMachineToArch:
+    """Validate :func:`pe_machine_to_arch` against the documented machine table."""
+
+    def test_amd64_maps_to_x86_64_64bit(self) -> None:
+        """Verify AMD64 (0x8664) maps to ``("x86_64", True)``."""
+        assert pe_machine_to_arch(PE_MACHINE_AMD64) == ("x86_64", True)
+
+    def test_i386_maps_to_x86_32bit(self) -> None:
+        """Verify I386 (0x014C) maps to ``("x86", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_I386) == ("x86", False)
+
+    def test_arm_maps_to_arm_32bit(self) -> None:
+        """Verify ARM (0x01C0) maps to ``("arm", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_ARM) == ("arm", False)
+
+    def test_armnt_maps_to_arm_32bit(self) -> None:
+        """Verify ARMNT (0x01C4) maps to ``("arm", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_ARMNT) == ("arm", False)
+
+    def test_arm64_maps_to_arm64_64bit(self) -> None:
+        """Verify ARM64 (0xAA64) maps to ``("arm64", True)``."""
+        assert pe_machine_to_arch(PE_MACHINE_ARM64) == ("arm64", True)
+
+    def test_ia64_maps_to_ia64_64bit(self) -> None:
+        """Verify IA64 (0x0200) maps to ``("ia64", True)``."""
+        assert pe_machine_to_arch(PE_MACHINE_IA64) == ("ia64", True)
+
+    def test_mips_maps_to_mips_32bit(self) -> None:
+        """Verify MIPS (0x0166) maps to ``("mips", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_MIPS) == ("mips", False)
+
+    def test_mips16_maps_to_mips_32bit(self) -> None:
+        """Verify MIPS16 (0x0266) maps to ``("mips", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_MIPS16) == ("mips", False)
+
+    def test_powerpc_maps_to_ppc_32bit(self) -> None:
+        """Verify POWERPC (0x01F0) maps to ``("ppc", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_POWERPC) == ("ppc", False)
+
+    def test_powerpcfp_maps_to_ppc_32bit(self) -> None:
+        """Verify POWERPCFP (0x01F1) maps to ``("ppc", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_POWERPCFP) == ("ppc", False)
+
+    def test_riscv32_maps_to_riscv_32bit(self) -> None:
+        """Verify RISCV32 (0x5032) maps to ``("riscv", False)``."""
+        assert pe_machine_to_arch(PE_MACHINE_RISCV32) == ("riscv", False)
+
+    def test_riscv64_maps_to_riscv64_64bit(self) -> None:
+        """Verify RISCV64 (0x5064) maps to ``("riscv64", True)``."""
+        assert pe_machine_to_arch(PE_MACHINE_RISCV64) == ("riscv64", True)
+
+    def test_riscv128_maps_to_riscv128_64bit(self) -> None:
+        """Verify RISCV128 (0x5128) maps to ``("riscv128", True)``."""
+        assert pe_machine_to_arch(PE_MACHINE_RISCV128) == ("riscv128", True)
+
+    def test_unknown_machine_returns_unknown_false(self) -> None:
+        """Verify an unrecognised machine value returns ``("unknown", False)``."""
+        assert pe_machine_to_arch(0xDEAD) == ("unknown", False)
+
+    def test_zero_machine_returns_unknown_false(self) -> None:
+        """Verify ``IMAGE_FILE_MACHINE_UNKNOWN`` (0) returns ``("unknown", False)``."""
+        assert pe_machine_to_arch(0x0000) == ("unknown", False)
+
+    def test_real_pe32_buffer_round_trip(self) -> None:
+        """Verify the helper agrees with a parsed real-shape PE32 image."""
+        sec = _build_section_header(
+            name=b".text",
+            virtual_size=0x1000,
+            virtual_address=0x1000,
+            raw_size=0x1000,
+            raw_offset=0x400,
+            characteristics=PE_SECTION_CHARACTERISTIC_READ | PE_SECTION_CHARACTERISTIC_EXECUTE,
+        )
+        image, e_lfanew = _build_pe_image(
+            is_pe64=False,
+            sections=[sec],
+            image_base=_DEFAULT_IMAGE_BASE_PE32,
+        )
+        machine, _num_sections, _opt_size, _flags = unpack_coff_header(image, e_lfanew + 4)
+        arch, is_64bit = pe_machine_to_arch(machine)
+        assert arch == "x86"
+        assert is_64bit is False
+
+    def test_real_pe32plus_buffer_round_trip(self) -> None:
+        """Verify the helper agrees with a parsed real-shape PE32+ image."""
+        sec = _build_section_header(
+            name=b".rdata",
+            virtual_size=0x500,
+            virtual_address=0x2000,
+            raw_size=0x600,
+            raw_offset=0x1400,
+            characteristics=PE_SECTION_CHARACTERISTIC_READ,
+        )
+        image, e_lfanew = _build_pe_image(
+            is_pe64=True,
+            sections=[sec],
+            image_base=_DEFAULT_IMAGE_BASE_PE64,
+        )
+        machine, _num_sections, _opt_size, _flags = unpack_coff_header(image, e_lfanew + 4)
+        arch, is_64bit = pe_machine_to_arch(machine)
+        assert arch == "x86_64"
+        assert is_64bit is True
+
+    def test_arm64_buffer_round_trip(self) -> None:
+        """Verify a synthesised ARM64 PE image round-trips through ``pe_machine_to_arch``."""
+        sec = _build_section_header(
+            name=b".text",
+            virtual_size=0x100,
+            virtual_address=0x1000,
+            raw_size=0x100,
+            raw_offset=0x400,
+            characteristics=PE_SECTION_CHARACTERISTIC_READ | PE_SECTION_CHARACTERISTIC_EXECUTE,
+        )
+        image, e_lfanew = _build_pe_image(
+            is_pe64=True,
+            sections=[sec],
+            image_base=_DEFAULT_IMAGE_BASE_PE64,
+            machine=PE_MACHINE_ARM64,
+        )
+        machine, _num_sections, _opt_size, _flags = unpack_coff_header(image, e_lfanew + 4)
+        arch, is_64bit = pe_machine_to_arch(machine)
+        assert arch == "arm64"
+        assert is_64bit is True
