@@ -17,7 +17,7 @@ import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 import openai
 
@@ -41,6 +41,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable, Generator
 
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
+
+    import structlog
 
     from intellicrack.core.types import ProviderName
 
@@ -845,6 +847,48 @@ class LLMProviderBase(ABC):
         except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
             self._logger.warning(failed_event, error=str(exc), **extra)
             raise ProviderError(messages.request_failed % exc) from exc
+
+    @staticmethod
+    def _safe_parse_stream_json(
+        line: str,
+        *,
+        logger: structlog.stdlib.BoundLogger,
+        event: str = "stream_json_parse_skipped",
+    ) -> dict[str, Any] | None:
+        """Parse a streaming response line as JSON, skipping malformed lines.
+
+        Streaming providers receive responses one chunk per line. Some lines
+        can be empty, contain SSE control framing, or be truncated when a
+        connection drops mid-chunk. This helper centralises the
+        parse-or-skip behaviour: it returns the parsed dict on success,
+        returns ``None`` on JSON decode failure (after emitting a structured
+        warning), and returns ``None`` for empty/whitespace-only lines.
+
+        Args:
+            line: The raw line from the streaming response.
+            logger: Bound structlog logger used to emit a structured
+                warning when JSON parsing fails. Provider-specific
+                bindings (e.g. ``provider="ollama"``) flow through.
+            event: Structured-log event name emitted on parse failure.
+                Defaults to ``"stream_json_parse_skipped"`` to preserve
+                the existing event taxonomy used by openrouter and
+                ollama.
+
+        Returns:
+            dict[str, Any] | None: The parsed JSON object when ``line``
+            decodes to a JSON object, or ``None`` when the line is
+            empty, decodes to a non-object value, or fails to parse.
+        """
+        if not line:
+            return None
+        try:
+            decoded: object = json.loads(line)
+        except json.JSONDecodeError as exc:
+            logger.warning(event, error=str(exc))
+            return None
+        if not isinstance(decoded, dict):
+            return None
+        return cast("dict[str, Any]", decoded)
 
 
 class ToolCallBufferManager:
