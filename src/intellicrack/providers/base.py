@@ -11,12 +11,15 @@ Anthropic, OpenAI, Google, Ollama, and OpenRouter.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+
+import openai
 
 from intellicrack.core.logging import get_logger, log_provider_response
 from intellicrack.core.types import (
@@ -35,7 +38,7 @@ from intellicrack.core.types import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable, Generator
 
     from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
@@ -61,6 +64,33 @@ class UsageInfo:
     prompt_tokens: int = field(default=0)
     completion_tokens: int = field(default=0)
     total_tokens: int = field(default=0)
+
+
+@dataclass(frozen=True, slots=True)
+class OpenAIErrorMessages:
+    """Provider-specific message templates for OpenAI SDK error translation.
+
+    Each template is a printf-style format string carrying a single
+    string substitution slot for the underlying exception text.
+    Templates are interpolated when a matching SDK exception is
+    intercepted by
+    :meth:`LLMProviderBase._translate_openai_errors`.
+
+    Attributes:
+        auth_invalid: Template raised on
+            :class:`openai.AuthenticationError`.
+        rate_limited: Template raised on
+            :class:`openai.RateLimitError`.
+        api_error: Template raised on :class:`openai.APIError`.
+        request_failed: Template raised on transport failures
+            (``ConnectionError``, ``TimeoutError``, ``OSError``,
+            ``ValueError``).
+    """
+
+    auth_invalid: str
+    rate_limited: str
+    api_error: str
+    request_failed: str
 
 
 class JSONSchemaProperty(TypedDict, total=False):
@@ -684,6 +714,137 @@ class LLMProviderBase(ABC):
                 )
 
         return converted
+
+    @staticmethod
+    def _build_usage_from_openai_completion(response: object) -> UsageInfo | None:
+        """Extract token-usage statistics from an OpenAI ``ChatCompletion``.
+
+        Reads the ``usage`` attribute from a non-streaming chat
+        completion response and constructs a :class:`UsageInfo`
+        instance. Falls back to ``prompt + completion`` when the
+        provider omits ``total_tokens``. Returns ``None`` when the
+        response has no ``usage`` attribute or it is ``None``.
+
+        Args:
+            response: The OpenAI-compatible chat completion response.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present
+            on the response, otherwise ``None``.
+        """
+        usage = getattr(response, "usage", None)
+        return LLMProviderBase._build_usage_from_openai_chunk(usage)
+
+    @staticmethod
+    def _build_usage_from_openai_chunk(chunk_usage: object) -> UsageInfo | None:
+        """Extract token-usage statistics from an OpenAI streaming chunk.
+
+        Reads ``prompt_tokens``, ``completion_tokens``, and
+        ``total_tokens`` from a chunk's ``usage`` field, falling back
+        to ``prompt + completion`` when ``total_tokens`` is missing or
+        zero.
+
+        Args:
+            chunk_usage: The ``usage`` attribute from a streaming chunk
+                or other OpenAI-compatible usage object.
+
+        Returns:
+            UsageInfo | None: Populated UsageInfo when usage is present,
+            otherwise ``None``.
+        """
+        if chunk_usage is None:
+            return None
+        prompt = int(getattr(chunk_usage, "prompt_tokens", 0) or 0)
+        completion = int(getattr(chunk_usage, "completion_tokens", 0) or 0)
+        total = int(getattr(chunk_usage, "total_tokens", 0) or 0) or (prompt + completion)
+        return UsageInfo(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=total,
+        )
+
+    @staticmethod
+    def _extract_system_messages(messages: list[Message]) -> str | None:
+        """Concatenate every ``system``-role message into a single string.
+
+        Iterates ``messages`` in order, keeping only messages whose
+        ``role`` is ``"system"`` and whose ``content`` is non-empty,
+        and joins their content with double-newline separators.
+        Returns ``None`` when no system message contributes any
+        content, mirroring the behaviour of provider SDKs (Anthropic,
+        Google) that treat the absence of a system instruction as a
+        distinct request shape.
+
+        Args:
+            messages: Conversation messages to scan.
+
+        Returns:
+            str | None: The joined system instruction text, or ``None``
+            when no system message contributed any content.
+        """
+        system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
+        return "\n\n".join(system_parts) if system_parts else None
+
+    @contextlib.contextmanager
+    def _translate_openai_errors(
+        self,
+        *,
+        log_prefix: str,
+        messages: OpenAIErrorMessages,
+        log_extra: dict[str, object] | None = None,
+    ) -> Generator[None]:
+        """Convert ``openai`` SDK exceptions into Intellicrack typed errors.
+
+        Wraps a region of OpenAI SDK calls so that
+        :class:`openai.AuthenticationError`,
+        :class:`openai.RateLimitError`, :class:`openai.APIError`, and
+        common transport failures (``ConnectionError``,
+        ``TimeoutError``, ``OSError``, ``ValueError``) are logged
+        using the provider's structured logger and re-raised as the
+        Intellicrack-typed equivalents
+        (:class:`AuthenticationError`, :class:`RateLimitError`,
+        :class:`ProviderError`).
+
+        Args:
+            log_prefix: Stem for the structured-log event (e.g.
+                ``"openai_chat"`` produces
+                ``"openai_chat_auth_failed"``,
+                ``"openai_chat_rate_limited"``, etc.).
+            messages: Provider-specific format-string templates used
+                to build the typed exception messages.
+            log_extra: Optional structured-log keyword fields to
+                attach to every emitted warning (e.g.
+                ``{"model": "gpt-4o"}``).
+
+        Yields:
+            None: Execution proceeds inside the protected block.
+
+        Raises:
+            AuthenticationError: When the SDK reports authentication
+                failure.
+            ProviderError: When the SDK reports a non-rate-limit API
+                error or a transport-level failure.
+            RateLimitError: When the SDK reports rate limiting.
+        """
+        extra: dict[str, object] = dict(log_extra) if log_extra else {}
+        auth_event = log_prefix + "_auth_failed"
+        rate_event = log_prefix + "_rate_limited"
+        api_event = log_prefix + "_api_error"
+        failed_event = log_prefix + "_failed"
+        try:
+            yield
+        except openai.AuthenticationError as exc:
+            self._logger.warning(auth_event, error=str(exc), **extra)
+            raise AuthenticationError(messages.auth_invalid % exc) from exc
+        except openai.RateLimitError as exc:
+            self._logger.warning(rate_event, error=str(exc), **extra)
+            raise RateLimitError(messages.rate_limited % exc) from exc
+        except openai.APIError as exc:
+            self._logger.warning(api_event, error=str(exc), **extra)
+            raise ProviderError(messages.api_error % exc) from exc
+        except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
+            self._logger.warning(failed_event, error=str(exc), **extra)
+            raise ProviderError(messages.request_failed % exc) from exc
 
 
 class ToolCallBufferManager:

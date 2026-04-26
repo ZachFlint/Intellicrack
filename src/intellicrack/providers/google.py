@@ -292,7 +292,7 @@ class GoogleProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("google_cache_ignored")
 
-        system_instruction = self._extract_system_instruction(messages)
+        system_instruction = self._extract_system_messages(messages)
         gemini_contents = self.convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
 
@@ -437,7 +437,7 @@ class GoogleProvider(LLMProviderBase):
             max_tokens=max_tokens,
         )
 
-        system_instruction = self._extract_system_instruction(messages)
+        system_instruction = self._extract_system_messages(messages)
         gemini_contents = self.convert_messages_to_provider_format(messages)
         gemini_tools = self._build_tool_declarations(tools) if tools else None
         chunk_count = 0
@@ -625,21 +625,6 @@ class GoogleProvider(LLMProviderBase):
                 msg = f"{_MSG_CONTENT_BLOCKED}: {reason_name}"
                 _logger.warning("google_response_blocked", reason=reason_name)
                 raise ProviderError(msg)
-
-    @staticmethod
-    def _extract_system_instruction(
-        messages: list[Message],
-    ) -> str | None:
-        """Extract and concatenate all system messages into a single instruction.
-
-        Args:
-            messages: List of Message objects to scan.
-
-        Returns:
-            str | None: Concatenated system instruction text, or None if no system messages.
-        """
-        system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
-        return "\n\n".join(system_parts) if system_parts else None
 
     @staticmethod
     def _create_config(
