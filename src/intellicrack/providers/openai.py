@@ -14,9 +14,6 @@ from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
 from openai import AsyncStream
-from openai.types.chat.chat_completion_message_function_tool_call import (
-    ChatCompletionMessageFunctionToolCall,
-)
 
 from intellicrack.core.logging import get_logger, log_provider_request
 from intellicrack.core.types import (
@@ -51,7 +48,6 @@ if TYPE_CHECKING:
         ChatCompletionToolParam,
     )
     from openai.types.chat.chat_completion import ChatCompletion
-    from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
 
 _ERR_NOT_CONNECTED = "Not connected to OpenAI API"
@@ -347,7 +343,7 @@ class OpenAIProvider(LLMProviderBase):
 
         response_message = response.choices[0].message
         content = response_message.content if response_message.content is not None else ""
-        tool_calls = self._parse_openai_tool_calls(response_message)
+        tool_calls = self._parse_openai_format_tool_calls(response_message)
         self._pending_usage = self._build_usage_from_completion(response)
 
         return self._build_chat_response(
@@ -471,38 +467,6 @@ class OpenAIProvider(LLMProviderBase):
             completion_tokens=completion,
             total_tokens=total,
         )
-
-    def _parse_openai_tool_calls(
-        self,
-        response_message: ChatCompletionMessage,
-    ) -> list[ToolCall]:
-        """Parse tool calls from an OpenAI API response message.
-
-        Args:
-            response_message: The message from the OpenAI API response.
-
-        Returns:
-            list[ToolCall]: List of parsed ToolCall instances.
-        """
-        tool_calls: list[ToolCall] = []
-        if not response_message.tool_calls:
-            return tool_calls
-
-        for tc in response_message.tool_calls:
-            if not isinstance(tc, ChatCompletionMessageFunctionToolCall):
-                continue
-            tool_call = self._parse_tool_call_common(
-                call_id=tc.id,
-                function_name=tc.function.name,
-                raw_arguments=tc.function.arguments,
-            )
-            tool_calls.append(tool_call)
-            self._logger.debug(
-                "tool_call_parsed",
-                tool_name=tool_call.tool_name,
-                arguments_count=len(tool_call.arguments),
-            )
-        return tool_calls
 
     async def chat_stream(
         self,
