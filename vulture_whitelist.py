@@ -4,8 +4,10 @@
 intellicrack.__init__.__getattr__  # unused-function
 intellicrack.bridges._pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API, audit Group 20)
 intellicrack.bridges._pe_format.PE_DOS_SIGNATURE  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.PE_DOS_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
 intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API, audit Group 20)
 intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.PE_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
 intellicrack.bridges._pe_format.iterate_section_headers  # unused-function (public API, audit Group 20)
 intellicrack.bridges._pe_format.rva_to_file_offset  # unused-function (public API, audit Group 20)
 intellicrack.bridges.base.matched_bytes  # unused-variable

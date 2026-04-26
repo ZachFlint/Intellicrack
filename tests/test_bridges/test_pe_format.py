@@ -48,6 +48,7 @@ from intellicrack.bridges._pe_format import (
     PE_DOS_HEADER_SIZE,
     PE_DOS_LFANEW_OFFSET,
     PE_DOS_SIGNATURE,
+    PE_DOS_SIGNATURE_INT,
     PE_MACHINE_AMD64,
     PE_MACHINE_ARM,
     PE_MACHINE_ARM64,
@@ -69,6 +70,7 @@ from intellicrack.bridges._pe_format import (
     PE_SECTION_CHARACTERISTIC_WRITE,
     PE_SECTION_HEADER_SIZE,
     PE_SIGNATURE,
+    PE_SIGNATURE_INT,
     ZIP_MAGIC,
     detect_format,
     detect_format_and_arch,
@@ -661,6 +663,72 @@ class TestRvaToFileOffset:
             },
         ]
         assert rva_to_file_offset(sections, 0x2050) == 0x1450
+
+
+class TestMagicConstants:
+    """Validate the canonical magic-byte / signature constants.
+
+    These values must match the Microsoft PE/COFF specification exactly
+    because every bridge that consolidates onto :mod:`_pe_format`
+    compares unpacked bytes (or unpacked little-endian integers)
+    against them.
+    """
+
+    def test_dos_signature_bytes_value(self) -> None:
+        """Verify the DOS signature is the literal ``b'MZ'``."""
+        assert PE_DOS_SIGNATURE == b"MZ"
+
+    def test_dos_signature_int_value(self) -> None:
+        """Verify the DOS signature integer matches the spec value 0x5A4D."""
+        assert PE_DOS_SIGNATURE_INT == 0x5A4D
+
+    def test_dos_signature_int_round_trips_bytes(self) -> None:
+        """Verify ``PE_DOS_SIGNATURE_INT`` equals the little-endian decode of ``PE_DOS_SIGNATURE``."""
+        assert int.from_bytes(PE_DOS_SIGNATURE, "little") == PE_DOS_SIGNATURE_INT
+
+    def test_pe_signature_bytes_value(self) -> None:
+        r"""Verify the PE signature is the literal ``b'PE\x00\x00'``."""
+        assert PE_SIGNATURE == b"PE\x00\x00"
+
+    def test_pe_signature_int_value(self) -> None:
+        """Verify the PE signature integer matches the spec value 0x00004550."""
+        assert PE_SIGNATURE_INT == 0x00004550
+
+    def test_pe_signature_int_round_trips_bytes(self) -> None:
+        """Verify ``PE_SIGNATURE_INT`` equals the little-endian decode of ``PE_SIGNATURE``."""
+        assert int.from_bytes(PE_SIGNATURE, "little") == PE_SIGNATURE_INT
+
+    def test_dos_lfanew_offset_value(self) -> None:
+        """Verify ``e_lfanew`` lives at offset 0x3C in the DOS header."""
+        assert PE_DOS_LFANEW_OFFSET == 0x3C
+
+    def test_dos_header_size_value(self) -> None:
+        """Verify the DOS header is 64 bytes (0x40)."""
+        assert PE_DOS_HEADER_SIZE == 0x40
+
+    def test_optional_header_offset_value(self) -> None:
+        """Verify the Optional Header offset within NT headers is 24 (0x18).
+
+        That is, 4 bytes of PE signature plus 20 bytes of COFF File Header.
+        """
+        assert PE_OPTIONAL_HEADER_OFFSET == 0x18
+        assert PE_OPTIONAL_HEADER_OFFSET == 4 + PE_COFF_HEADER_SIZE
+
+    def test_optional_header_magic_pe32plus_value(self) -> None:
+        """Verify the PE32+ optional-header magic equals 0x20B."""
+        assert PE_OPTIONAL_HEADER_MAGIC_PE32PLUS == 0x20B
+
+    def test_optional_header_magic_pe32_value(self) -> None:
+        """Verify the PE32 optional-header magic equals 0x10B."""
+        assert PE_OPTIONAL_HEADER_MAGIC_PE32 == 0x10B
+
+    def test_pe_signature_int_unpacks_from_signature_bytes(self) -> None:
+        """Verify ``struct.unpack_from('<I', PE_SIGNATURE)`` matches ``PE_SIGNATURE_INT``."""
+        assert struct.unpack_from("<I", PE_SIGNATURE)[0] == PE_SIGNATURE_INT
+
+    def test_dos_signature_int_unpacks_from_signature_bytes(self) -> None:
+        """Verify ``struct.unpack_from('<H', PE_DOS_SIGNATURE)`` matches ``PE_DOS_SIGNATURE_INT``."""
+        assert struct.unpack_from("<H", PE_DOS_SIGNATURE)[0] == PE_DOS_SIGNATURE_INT
 
 
 class TestEndToEndPe32:
