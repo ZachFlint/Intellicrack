@@ -31,8 +31,8 @@ from intellicrack.core.types import (
 )
 from intellicrack.providers.base import (
     LLMProviderBase,
+    OpenAIErrorMessages,
     ToolCallBufferManager,
-    UsageInfo,
     create_openai_tool_schema,
 )
 
@@ -53,6 +53,13 @@ _ERR_RATE_LIMITED = "Grok rate limit exceeded: %s"
 _ERR_API_ERROR = "Grok API error: %s"
 _ERR_REQUEST_FAILED = "Grok request failed: %s"
 _ERR_STREAM_FAILED = "Grok stream failed: %s"
+
+_GROK_CHAT_ERRORS = OpenAIErrorMessages(
+    auth_invalid=_ERR_INVALID_API_KEY,
+    rate_limited=_ERR_RATE_LIMITED,
+    api_error=_ERR_API_ERROR,
+    request_failed=_ERR_REQUEST_FAILED,
+)
 
 if TYPE_CHECKING:
     import asyncio
@@ -346,7 +353,7 @@ class GrokProvider(LLMProviderBase):
         response_message = response.choices[0].message
         content = response_message.content if response_message.content is not None else ""
         tool_calls = self._parse_openai_format_tool_calls(response_message)
-        self._pending_usage = self._build_usage_from_completion(response)
+        self._pending_usage = self._build_usage_from_openai_completion(response)
 
         return self._build_chat_response(
             provider="grok",
@@ -368,6 +375,10 @@ class GrokProvider(LLMProviderBase):
     ) -> ChatCompletion:
         """Execute the Grok API chat completion call with error handling.
 
+        OpenAI SDK exceptions surface inside the call are translated to
+        Intellicrack typed errors by
+        :meth:`LLMProviderBase._translate_openai_errors`.
+
         Args:
             model: Model ID to use.
             messages: Formatted messages for the API.
@@ -380,16 +391,17 @@ class GrokProvider(LLMProviderBase):
             ChatCompletion: The chat completion response object.
 
         Raises:
-            AuthenticationError: If the API key is invalid.
-            ProviderError: If the API call fails.
-            RateLimitError: If rate limited.
+            ProviderError: If the client is not yet connected.
         """
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
 
-        try:
+        with self._translate_openai_errors(
+            log_prefix="grok_chat",
+            messages=_GROK_CHAT_ERRORS,
+        ):
             if tools is not None and tool_choice is not None:
                 if use_max_completion_tokens:
                     return await self.client.chat.completions.create(
@@ -437,63 +449,6 @@ class GrokProvider(LLMProviderBase):
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-        except openai.AuthenticationError as e:
-            self._logger.warning("grok_chat_auth_failed", error=str(e))
-            raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
-        except openai.RateLimitError as e:
-            self._logger.warning("grok_chat_rate_limited", error=str(e))
-            raise RateLimitError(_ERR_RATE_LIMITED % e) from e
-        except openai.APIError as e:
-            self._logger.warning("grok_chat_api_error", error=str(e))
-            raise ProviderError(_ERR_API_ERROR % e) from e
-        except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            self._logger.warning("grok_chat_request_failed", error=str(e))
-            raise ProviderError(_ERR_REQUEST_FAILED % e) from e
-
-    @staticmethod
-    def _build_usage_from_completion(response: ChatCompletion) -> UsageInfo | None:
-        """Extract token-usage statistics from a Grok chat completion.
-
-        Args:
-            response: The Grok API chat completion response.
-
-        Returns:
-            UsageInfo | None: Populated UsageInfo when usage is present on
-            the response, otherwise ``None``.
-        """
-        usage = getattr(response, "usage", None)
-        if usage is None:
-            return None
-        prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
-        completion = int(getattr(usage, "completion_tokens", 0) or 0)
-        total = int(getattr(usage, "total_tokens", 0) or 0) or (prompt + completion)
-        return UsageInfo(
-            prompt_tokens=prompt,
-            completion_tokens=completion,
-            total_tokens=total,
-        )
-
-    @staticmethod
-    def _build_usage_from_chunk_usage(chunk_usage: object) -> UsageInfo | None:
-        """Extract token-usage statistics from a Grok streaming chunk usage field.
-
-        Args:
-            chunk_usage: The ``usage`` attribute from a streaming chunk.
-
-        Returns:
-            UsageInfo | None: Populated UsageInfo when usage is present,
-            otherwise ``None``.
-        """
-        if chunk_usage is None:
-            return None
-        prompt = int(getattr(chunk_usage, "prompt_tokens", 0) or 0)
-        completion = int(getattr(chunk_usage, "completion_tokens", 0) or 0)
-        total = int(getattr(chunk_usage, "total_tokens", 0) or 0) or (prompt + completion)
-        return UsageInfo(
-            prompt_tokens=prompt,
-            completion_tokens=completion,
-            total_tokens=total,
-        )
 
     async def chat_stream(
         self,
@@ -625,7 +580,7 @@ class GrokProvider(LLMProviderBase):
                     break
                 chunk_usage = getattr(chunk, "usage", None)
                 if chunk_usage is not None:
-                    self._pending_usage = self._build_usage_from_chunk_usage(chunk_usage)
+                    self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
                 if not chunk.choices:
                     continue
                 delta = chunk.choices[0].delta
