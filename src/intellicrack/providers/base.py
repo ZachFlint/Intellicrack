@@ -40,9 +40,8 @@ from intellicrack.core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable, Generator
 
-    from openai.types.chat.chat_completion_message import ChatCompletionMessage
-
     import structlog
+    from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
     from intellicrack.core.types import ProviderName
 
@@ -192,6 +191,43 @@ def parse_tool_call(
         function_name=function_name,
         arguments=parsed_args,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class HttpErrorMessages:
+    """Provider-specific message templates for HTTP-status exception translation.
+
+    Used by :meth:`LLMProviderBase._raise_typed_for_status` to translate
+    HTTP error responses (401, 403, 429, 503) returned by REST-based
+    providers into Intellicrack typed exceptions
+    (:class:`AuthenticationError`, :class:`RateLimitError`,
+    :class:`ProviderError`).
+
+    Each template is a printf-style format string carrying a single
+    ``%s`` substitution slot. The helper interpolates the originating
+    exception (or, for HTTP 503, the result of
+    ``extract_503_message``) into that slot before raising.
+
+    Attributes:
+        auth_invalid: Template raised on HTTP 401 / 403, interpolated
+            with the originating exception text.
+        rate_limited: Template raised on HTTP 429, interpolated with
+            the originating exception text.
+        service_unavailable: Template raised on HTTP 503, interpolated
+            with the result of ``extract_503_message``.
+    """
+
+    auth_invalid: str
+    rate_limited: str
+    service_unavailable: str
+
+
+HTTP_UNAUTHORIZED: int = 401
+HTTP_FORBIDDEN: int = 403
+HTTP_RATE_LIMITED: int = 429
+HTTP_SERVICE_UNAVAILABLE: int = 503
+
+_AUTH_STATUS_CODES: frozenset[int] = frozenset({HTTP_UNAUTHORIZED, HTTP_FORBIDDEN})
 
 
 class LLMProviderBase(ABC):
@@ -786,6 +822,55 @@ class LLMProviderBase(ABC):
         """
         system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
         return "\n\n".join(system_parts) if system_parts else None
+
+    @staticmethod
+    def _raise_typed_for_status(
+        status_code: int,
+        exc: Exception,
+        *,
+        messages: HttpErrorMessages,
+        extract_503_message: Callable[[Exception], str] | None = None,
+    ) -> None:
+        """Raise an Intellicrack typed exception for a known HTTP status code.
+
+        Translates the HTTP status codes that providers consistently
+        map to typed exceptions (401/403 to
+        :class:`AuthenticationError`, 429 to :class:`RateLimitError`,
+        503 to :class:`ProviderError`) by raising the matching
+        Intellicrack typed exception in place, chained from ``exc``
+        via ``raise ... from exc``. Status codes that do not match any
+        known typed mapping return ``None`` so the caller can apply a
+        provider-specific fall-through ``raise ProviderError(...)`` on
+        the next line.
+
+        Args:
+            status_code: HTTP status code from the failing response.
+            exc: The originating exception that the helper chains via
+                ``raise ... from exc``. Its ``str(exc)`` is also
+                interpolated into the matching message template.
+            messages: Provider-specific :class:`HttpErrorMessages`
+                carrying the printf-style templates raised by the
+                helper.
+            extract_503_message: Optional callable that extracts a
+                human-readable model-loading message from ``exc``.
+                When supplied and ``status_code`` is 503, the
+                callable's return value is interpolated into
+                ``messages.service_unavailable`` and a
+                :class:`ProviderError` is raised. When omitted, HTTP
+                503 falls through to the caller's default handling.
+
+        Raises:
+            AuthenticationError: When ``status_code`` is 401 or 403.
+            ProviderError: When ``status_code`` is 503 and
+                ``extract_503_message`` is supplied.
+            RateLimitError: When ``status_code`` is 429.
+        """
+        if status_code in _AUTH_STATUS_CODES:
+            raise AuthenticationError(messages.auth_invalid % exc) from exc
+        if status_code == HTTP_RATE_LIMITED:
+            raise RateLimitError(messages.rate_limited % exc) from exc
+        if status_code == HTTP_SERVICE_UNAVAILABLE and extract_503_message is not None:
+            raise ProviderError(messages.service_unavailable % extract_503_message(exc)) from exc
 
     @contextlib.contextmanager
     def _translate_openai_errors(

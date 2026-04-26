@@ -1,0 +1,211 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
+
+"""Tests for the provider HTTP-status -> typed-exception helper.
+
+Validates :meth:`intellicrack.providers.base.LLMProviderBase._raise_typed_for_status`
+and :class:`intellicrack.providers.base.HttpErrorMessages` against the
+exact behaviour the OpenRouter and HuggingFace providers depend on.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from typing import Any
+
+import pytest
+
+from intellicrack.core.types import (
+    AuthenticationError,
+    ProviderError,
+    RateLimitError,
+)
+from intellicrack.providers.base import (
+    HttpErrorMessages,
+    LLMProviderBase,
+)
+
+
+_RAISE_TYPED_FOR_STATUS_ATTR = "_raise_typed_for_status"
+
+_raise_typed_for_status: Any = getattr(LLMProviderBase, _RAISE_TYPED_FOR_STATUS_ATTR)
+
+
+_HF_MESSAGES = HttpErrorMessages(
+    auth_invalid="Invalid HuggingFace API token: %s",
+    rate_limited="HuggingFace rate limit exceeded: %s",
+    service_unavailable="HuggingFace model is loading and not yet ready: %s",
+)
+
+_OR_REST_MESSAGES = HttpErrorMessages(
+    auth_invalid="Invalid OpenRouter API key: %s",
+    rate_limited="OpenRouter rate limit exceeded: %s",
+    service_unavailable="OpenRouter API error: %s",
+)
+
+
+def _extract_503(_exc: Exception) -> str:
+    """Extract a deterministic 503 body for tests.
+
+    Args:
+        _exc: The exception being inspected (unused in tests).
+
+    Returns:
+        str: A fixed string standing in for the decoded body.
+    """
+    return "model is loading"
+
+
+def test_returns_none_for_unmatched_status() -> None:
+    """Status codes outside 401/403/429/503 yield ``None`` and never raise."""
+    cause = RuntimeError("server error")
+    result = _raise_typed_for_status(
+        500,
+        cause,
+        messages=_HF_MESSAGES,
+        extract_503_message=_extract_503,
+    )
+    assert result is None
+
+
+def test_returns_none_for_zero_sentinel_status() -> None:
+    """A ``0`` sentinel (no status) yields ``None`` for caller fall-through."""
+    cause = RuntimeError("no status")
+    result = _raise_typed_for_status(
+        0,
+        cause,
+        messages=_HF_MESSAGES,
+        extract_503_message=_extract_503,
+    )
+    assert result is None
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_auth_status_raises_authentication_error(status_code: int) -> None:
+    """HTTP 401 and 403 raise :class:`AuthenticationError` chained from ``exc``.
+
+    Args:
+        status_code: The HTTP status code under test.
+    """
+    cause = RuntimeError("bad creds")
+    with pytest.raises(AuthenticationError) as info:
+        _raise_typed_for_status(
+            status_code,
+            cause,
+            messages=_HF_MESSAGES,
+        )
+    assert "Invalid HuggingFace API token" in str(info.value)
+    assert "bad creds" in str(info.value)
+    assert info.value.__cause__ is cause
+
+
+def test_rate_limited_raises_rate_limit_error() -> None:
+    """HTTP 429 raises :class:`RateLimitError` chained from ``exc``."""
+    cause = RuntimeError("too many requests")
+    with pytest.raises(RateLimitError) as info:
+        _raise_typed_for_status(
+            429,
+            cause,
+            messages=_OR_REST_MESSAGES,
+        )
+    assert str(info.value) == "OpenRouter rate limit exceeded: too many requests"
+    assert info.value.__cause__ is cause
+
+
+def test_service_unavailable_raises_provider_error_with_extract() -> None:
+    """HTTP 503 with ``extract_503_message`` raises :class:`ProviderError`."""
+    cause = RuntimeError("model loading")
+    with pytest.raises(ProviderError) as info:
+        _raise_typed_for_status(
+            503,
+            cause,
+            messages=_HF_MESSAGES,
+            extract_503_message=_extract_503,
+        )
+    assert str(info.value) == "HuggingFace model is loading and not yet ready: model is loading"
+    assert info.value.__cause__ is cause
+
+
+def test_service_unavailable_returns_none_without_extract_callback() -> None:
+    """HTTP 503 without ``extract_503_message`` falls through to caller."""
+    cause = RuntimeError("loading")
+    result = _raise_typed_for_status(
+        503,
+        cause,
+        messages=_HF_MESSAGES,
+    )
+    assert result is None
+
+
+def test_openrouter_rest_auth_format_matches_inline_block() -> None:
+    """OpenRouter REST auth raises with ``_ERR_INVALID_KEY % str(exc)`` text."""
+    cause = RuntimeError("401 Unauthorized")
+    with pytest.raises(AuthenticationError) as info:
+        _raise_typed_for_status(
+            401,
+            cause,
+            messages=_OR_REST_MESSAGES,
+        )
+    assert str(info.value) == "Invalid OpenRouter API key: 401 Unauthorized"
+    assert info.value.__cause__ is cause
+
+
+def test_extract_503_callback_receives_originating_exception() -> None:
+    """The ``extract_503_message`` callable receives the originating exception."""
+    seen: list[Exception] = []
+
+    def _capture(exc: Exception) -> str:
+        """Record the inbound exception and return a fixed message.
+
+        Args:
+            exc: The originating exception passed by the helper.
+
+        Returns:
+            str: A fixed string standing in for the decoded body.
+        """
+        seen.append(exc)
+        return "captured"
+
+    cause = RuntimeError("captured-cause")
+    with pytest.raises(ProviderError):
+        _raise_typed_for_status(
+            503,
+            cause,
+            messages=_HF_MESSAGES,
+            extract_503_message=_capture,
+        )
+    assert seen == [cause]
+
+
+def test_http_error_messages_is_frozen_dataclass() -> None:
+    """``HttpErrorMessages`` instances cannot be mutated post-construction."""
+    msgs = HttpErrorMessages(
+        auth_invalid="a",
+        rate_limited="b",
+        service_unavailable="c",
+    )
+    assert dataclasses.is_dataclass(msgs)
+    fields = dataclasses.fields(msgs)
+    field_names = {f.name for f in fields}
+    assert field_names == {"auth_invalid", "rate_limited", "service_unavailable"}
+    attribute_to_mutate = "auth_invalid"
+    mutable: object = msgs
+    with pytest.raises((AttributeError, TypeError)):
+        setattr(mutable, attribute_to_mutate, "x")
+
+
+def test_http_error_messages_uses_slots() -> None:
+    """``HttpErrorMessages`` declares ``__slots__`` to forbid extra attributes."""
+    msgs = HttpErrorMessages(
+        auth_invalid="a",
+        rate_limited="b",
+        service_unavailable="c",
+    )
+    cls_slots = type(msgs).__slots__
+    assert set(cls_slots) == {"auth_invalid", "rate_limited", "service_unavailable"}
+    attribute_to_inject = "extra_attribute"
+    mutable: object = msgs
+    with pytest.raises((AttributeError, TypeError)):
+        setattr(mutable, attribute_to_inject, "y")
