@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
@@ -81,8 +82,6 @@ _CRASH_COLUMNS: Final[list[str]] = ["PID", "Process", "Summary", "Time"]
 _NATIVE_TYPES: Final[list[str]] = ["pointer", "int", "uint", "void", "float", "double", "int32", "uint32", "int64", "uint64"]
 _CALLING_CONVENTIONS: Final[list[str]] = ["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"]
 _PROTECTIONS: Final[list[str]] = ["---", "r--", "rw-", "r-x", "rwx"]
-_ASCII_PRINTABLE_MIN: Final[int] = 32
-_ASCII_PRINTABLE_MAX: Final[int] = 127
 
 
 class FridaPanel(AnalysisPanelBase):
@@ -1665,7 +1664,7 @@ class FridaPanel(AnalysisPanelBase):
             result: Raw bytes from the bridge.
         """
         if isinstance(result, (bytes, bytearray)):
-            self._mem_hex_display.setPlainText(self._format_hex_dump(bytes(result), base_addr))
+            self._mem_hex_display.setPlainText(format_hex_dump(bytes(result), base_addr))
         else:
             self._mem_hex_display.setPlainText(str(result))
 
@@ -1809,25 +1808,6 @@ class FridaPanel(AnalysisPanelBase):
             on_success=lambda r: self._mem_prot_result.setText("OK" if r else "Failed"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Set protection failed: {e}"),
         )
-
-    @staticmethod
-    def _format_hex_dump(data: bytes, base_address: int) -> str:
-        """Format raw bytes as a hex dump with addresses and ASCII.
-
-        Args:
-            data: Raw bytes to format.
-            base_address: Starting address for display.
-
-        Returns:
-            str: Formatted hex dump string.
-        """
-        lines: list[str] = []
-        for offset in range(0, len(data), 16):
-            chunk = data[offset : offset + 16]
-            hex_part = " ".join(f"{b:02X}" for b in chunk)
-            ascii_part = "".join(chr(b) if _ASCII_PRINTABLE_MIN <= b < _ASCII_PRINTABLE_MAX else "." for b in chunk)
-            lines.append(f"{base_address + offset:08X}  {hex_part:<48s}  {ascii_part}")
-        return "\n".join(lines)
 
     @staticmethod
     def _parse_hex_address(text: str) -> int | None:

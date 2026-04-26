@@ -10,6 +10,7 @@ dialogs.
 
 from __future__ import annotations
 
+from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.app import AsyncWorker, MainWindow
 from intellicrack.ui.chat import ChatInput, ChatPanel, MessageBubble
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
@@ -83,6 +84,7 @@ __all__: list[str] = [
     "ToolStatusDialog",
     "ToolTab",
     "XRefPanel",
+    "format_hex_dump",
     "get_assets_path",
     "get_highlighter_for_language",
     "get_resource_path",

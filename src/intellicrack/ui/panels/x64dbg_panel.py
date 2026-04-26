@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
@@ -62,9 +63,6 @@ _STACK_COLUMNS = ["Address", "Value", "Info"]
 _MODULE_COLUMNS = ["Name", "Base", "Size", "Path"]
 _THREAD_COLUMNS = ["TID", "Priority", "State"]
 _BP_COLUMNS = ["Address", "Type", "Condition", "Hits", "Enabled"]
-_MEM_DUMP_BYTES_PER_LINE = 16
-_PRINTABLE_LOW = 32
-_PRINTABLE_HIGH = 127
 
 _WP_COLUMNS = ["Address", "Size", "Type", "Enabled", "Hits"]
 _SEARCH_COLUMNS = ["#", "Address", "Match", "Context"]
@@ -1630,7 +1628,7 @@ class X64DbgPanel(AnalysisPanelBase):
             result: The memory data bytes.
         """
         data: bytes = result if isinstance(result, bytes) else b""
-        self._mem_dump.setPlainText(self._format_hex_dump(address, data))
+        self._mem_dump.setPlainText(format_hex_dump(data, address, address_prefix="0x"))
         self._mem_read_btn.setEnabled(True)
 
     def _on_mem_read_error(self, exc: object) -> None:
@@ -2590,23 +2588,3 @@ class X64DbgPanel(AnalysisPanelBase):
             on_success=self._apply_memmap,
             on_error=lambda _: _logger.warning("x64dbg_refresh_memmap_failed"),
         )
-
-    @staticmethod
-    def _format_hex_dump(address: int, data: bytes) -> str:
-        """Format raw bytes as a hex dump string.
-
-        Args:
-            address: Starting address of the data.
-            data: Raw bytes to format.
-
-        Returns:
-            str: Formatted hex dump string.
-        """
-        lines: list[str] = []
-        for offset in range(0, len(data), _MEM_DUMP_BYTES_PER_LINE):
-            chunk = data[offset : offset + _MEM_DUMP_BYTES_PER_LINE]
-            hex_part = " ".join(f"{b:02X}" for b in chunk)
-            ascii_part = "".join(chr(b) if _PRINTABLE_LOW <= b < _PRINTABLE_HIGH else "." for b in chunk)
-            addr = address + offset
-            lines.append(f"0x{addr:08X}  {hex_part:<48s}  {ascii_part}")
-        return "\n".join(lines)
