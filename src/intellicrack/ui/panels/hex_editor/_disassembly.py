@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -22,12 +22,12 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
-from intellicrack.ui.panels.hex_editor._base import (
-    DEFAULT_DISASM_COUNT,
-    MAX_INSN_BYTES,
-    HexDisassembler_cls,
-    disassembler_available,
-)
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.hex_editor._base import DEFAULT_DISASM_COUNT, MAX_INSN_BYTES
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -48,6 +48,7 @@ class DisassemblyMixin:
     _disasm_count_spin: QSpinBox | None
     _disasm_follow_cursor: QCheckBox | None
     _disasm_table: QTableWidget | None
+    _bridge: HexEditorBridge | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to the given byte offset.
@@ -124,16 +125,24 @@ class DisassemblyMixin:
         return container
 
     def _on_disassemble(self) -> None:
-        """Disassemble bytes at the current cursor offset and populate the table."""
+        """Disassemble bytes at the current cursor offset and populate the table.
+
+        Routes the request through :meth:`HexEditorBridge.disassemble` via
+        :func:`run_bridge_coroutine_async` so the operation runs on the
+        persistent bridge event loop and the Qt main thread stays
+        responsive. Results and errors are delivered back via signal
+        callbacks.
+        """
         if self.document is None or self._disasm_table is None:
             return
 
-        if not disassembler_available or HexDisassembler_cls is None:
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
             parent = self if isinstance(self, QWidget) else None
             show_warning(
                 parent,
-                "Capstone Unavailable",
-                "Capstone is not installed. Install with: pip install capstone",
+                "Hex Editor Bridge Unavailable",
+                "The hex editor bridge is not attached to this panel.",
             )
             return
 
@@ -142,37 +151,16 @@ class DisassemblyMixin:
         if self._hex_widget is not None:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
 
-        read_len = count * MAX_INSN_BYTES
         try:
             doc_len: int = self.document.length()
-            available = doc_len - cursor_offset
-            if available <= 0:
-                return
-            read_len = min(read_len, available)
-            raw: object = self.document.read(cursor_offset, read_len)
-            if isinstance(raw, (list, bytearray)):
-                data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
-            elif isinstance(raw, bytes):
-                data = raw
-            else:
-                return
         except (AttributeError, ValueError):
-            _logger.exception("disasm_read_failed", offset=cursor_offset, read_len=read_len)
+            _logger.exception("disasm_doc_length_failed")
             return
-
-        disassembler = HexDisassembler_cls()
-        if not disassembler.available:
-            parent = self if isinstance(self, QWidget) else None
-            show_warning(
-                parent,
-                "Capstone Unavailable",
-                "Capstone is not installed. Install with: pip install capstone",
-            )
+        if doc_len - cursor_offset <= 0:
             return
 
         arch_text = self._disasm_arch_combo.currentText() if self._disasm_arch_combo is not None else "Auto Detect"
         mode_text = self._disasm_mode_combo.currentText() if self._disasm_mode_combo is not None else "64-bit"
-
         mode_map: dict[str, str] = {
             "64-bit": "64",
             "32-bit": "32",
@@ -181,21 +169,18 @@ class DisassemblyMixin:
             "Thumb": "thumb",
         }
         mode_str = mode_map.get(mode_text, "64")
-
-        if arch_text == "Auto Detect":
-            arch_str, mode_str = disassembler.auto_detect_arch(data)
-        else:
-            arch_map: dict[str, str] = {
-                "x86": "x86",
-                "ARM": "arm",
-                "ARM64": "arm64",
-                "MIPS": "mips",
-                "PPC": "ppc",
-                "SPARC": "sparc",
-                "SystemZ": "systemz",
-                "RISC-V": "riscv",
-            }
-            arch_str = arch_map.get(arch_text, "x86")
+        arch_map: dict[str, str] = {
+            "Auto Detect": "auto",
+            "x86": "x86",
+            "ARM": "arm",
+            "ARM64": "arm64",
+            "MIPS": "mips",
+            "PPC": "ppc",
+            "SPARC": "sparc",
+            "SystemZ": "systemz",
+            "RISC-V": "riscv",
+        }
+        arch_str = arch_map.get(arch_text, "auto")
 
         binary_path = getattr(self, "file_path", None)
         binary_path_str = str(binary_path) if binary_path is not None else "<in-memory>"
@@ -206,31 +191,60 @@ class DisassemblyMixin:
             arch=arch_str,
             mode=mode_str,
             count=count,
-            data_size=len(data),
+            read_window=count * MAX_INSN_BYTES,
         )
-        try:
-            instructions = disassembler.disassemble(data, base_addr=cursor_offset, arch=arch_str, mode=mode_str, count=count)
-        except (RuntimeError, ValueError):
-            _logger.exception(
-                "disasm_failed",
-                binary_path=binary_path_str,
-                offset=cursor_offset,
-                arch=arch_str,
-                mode=mode_str,
-            )
+        parent_obj = self if isinstance(self, QWidget) else None
+        run_bridge_coroutine_async(
+            bridge.disassemble(cursor_offset, count, arch_str, mode_str),
+            on_success=self._on_disassemble_success,
+            on_error=self._on_disassemble_error,
+            parent=parent_obj,
+        )
+
+    def _on_disassemble_success(self, result: object) -> None:
+        """Populate the disassembly table from the bridge result.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.disassemble`. Each dict contains
+                ``address``, ``bytes`` (hex string), ``mnemonic``,
+                ``operands``, and ``size`` keys.
+        """
+        if self._disasm_table is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("disasm_unexpected_result_type", result_type=type(result).__name__)
             return
 
+        instructions = cast("list[dict[str, Any]]", result)
         self._disasm_table.setRowCount(0)
         for insn in instructions:
+            address_val = insn.get("address", 0)
+            bytes_hex = str(insn.get("bytes", ""))
+            mnemonic = str(insn.get("mnemonic", ""))
+            operands = str(insn.get("operands", ""))
+            try:
+                address_int = int(address_val)
+            except (TypeError, ValueError):
+                address_int = 0
+            hex_str = " ".join(bytes_hex[i : i + 2] for i in range(0, len(bytes_hex), 2))
             row = self._disasm_table.rowCount()
             self._disasm_table.insertRow(row)
-            hex_str = " ".join(f"{b:02x}" for b in insn.raw_bytes)
-            self._disasm_table.setItem(row, 0, QTableWidgetItem(f"0x{insn.address:08X}"))
+            self._disasm_table.setItem(row, 0, QTableWidgetItem(f"0x{address_int:08X}"))
             self._disasm_table.setItem(row, 1, QTableWidgetItem(hex_str))
-            self._disasm_table.setItem(row, 2, QTableWidgetItem(insn.mnemonic))
-            self._disasm_table.setItem(row, 3, QTableWidgetItem(insn.op_str))
+            self._disasm_table.setItem(row, 2, QTableWidgetItem(mnemonic))
+            self._disasm_table.setItem(row, 3, QTableWidgetItem(operands))
 
         _logger.info("disasm_complete", instruction_count=len(instructions))
+
+    @staticmethod
+    def _on_disassemble_error(exc: object) -> None:
+        """Log a disassembly failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("disasm_failed", error_type=type(exc).__name__, error=str(exc))
 
     def _on_cursor_moved_disasm(self, offset: int) -> None:
         """Auto-disassemble when Follow Cursor is active.
