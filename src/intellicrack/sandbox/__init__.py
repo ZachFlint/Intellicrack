@@ -9,6 +9,7 @@ This package provides sandbox environments for safe execution and behavioral ana
 
 from __future__ import annotations
 
+from intellicrack.sandbox import _log_parsers as log_parsers
 from intellicrack.sandbox.base import (
     ApiCall,
     BehaviorMatch,
@@ -78,6 +79,7 @@ __all__: list[str] = [
     "ServiceChange",
     "TimelineEvent",
     "WindowsSandbox",
+    "log_parsers",
     "validate_file_operation",
     "validate_process_operation",
     "validate_registry_operation",
