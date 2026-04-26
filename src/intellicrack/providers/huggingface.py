@@ -40,7 +40,6 @@ from intellicrack.core.types import (
     ProviderCredentials,
     ProviderError,
     ProviderName,
-    RateLimitError,
     ThinkingConfig,
     ToolCall,
     ToolChoice,
@@ -48,6 +47,7 @@ from intellicrack.core.types import (
     ToolDefinition,
 )
 from intellicrack.providers.base import (
+    HttpErrorMessages,
     LLMProviderBase,
     ToolCallBufferManager,
     UsageInfo,
@@ -114,20 +114,46 @@ _ERR_CONNECT_FAILED = "Failed to connect to HuggingFace: %s"
 _ERR_LIST_MODELS_FAILED = "Failed to list HuggingFace models: %s"
 _ERR_NO_RESPONSE_CHOICES = "No response choices returned"
 _ERR_API_ERROR = "HuggingFace API error: %s"
-_ERR_RATE_LIMITED = "HuggingFace rate limit exceeded"
+_ERR_RATE_LIMITED = "HuggingFace rate limit exceeded: %s"
 _ERR_BAD_REQUEST = "HuggingFace bad request: %s"
 _ERR_TIMEOUT = "HuggingFace inference timeout: %s"
 _ERR_STREAM_FAILED = "HuggingFace stream failed: %s"
 
-HTTP_UNAUTHORIZED = 401
-HTTP_FORBIDDEN = 403
-HTTP_NOT_FOUND = 404
-HTTP_RATE_LIMITED = 429
-HTTP_INTERNAL_ERROR = 500
-HTTP_SERVICE_UNAVAILABLE = 503
-
 _MODEL_LIST_LIMIT = 100
 _DEFAULT_CONTEXT_WINDOW = 4096
+
+_HF_HTTP_MSGS = HttpErrorMessages(
+    auth_invalid=_ERR_CREDENTIAL_INVALID,
+    rate_limited=_ERR_RATE_LIMITED,
+    service_unavailable=_ERR_MODEL_LOADING,
+)
+
+
+def _hf_status_code(exc: BaseException) -> int:
+    """Return the HTTP status code associated with a HuggingFace exception.
+
+    HuggingFace's :class:`HfHubHTTPError` exposes the originating
+    response via a ``response`` attribute when one is available, but
+    transport-level failures or synthetic exceptions can leave it
+    unset. Returns ``0`` as a sentinel meaning "no status" so callers
+    can pass the result to
+    :meth:`LLMProviderBase._raise_typed_for_status` without first
+    distinguishing the missing case; ``0`` does not match any of the
+    helper's known status codes so the caller's fall-through ``raise``
+    is reached unchanged.
+
+    Args:
+        exc: The exception raised by the SDK.
+
+    Returns:
+        int: The HTTP status code, or ``0`` when the exception does
+        not carry a response.
+    """
+    response = getattr(exc, "response", None)
+    code = getattr(response, "status_code", None)
+    if isinstance(code, int):
+        return code
+    return 0
 
 
 class HuggingFaceProvider(LLMProviderBase):
@@ -172,7 +198,9 @@ class HuggingFaceProvider(LLMProviderBase):
 
         Creates an ``AsyncInferenceClient`` and verifies the token with a
         ``whoami()`` probe via ``HfApi`` (executed in a worker thread since
-        ``HfApi`` is synchronous).
+        ``HfApi`` is synchronous). HTTP errors raised by the connect probe
+        are translated to Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
 
         Args:
             credentials: Must contain ``api_key`` set to a HuggingFace token.
@@ -202,7 +230,7 @@ class HuggingFaceProvider(LLMProviderBase):
         try:
             identity = await asyncio.to_thread(whoami)
         except HfHubHTTPError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            status_code = _hf_status_code(exc)
             self._logger.warning(
                 "huggingface_connect_failed",
                 status_code=status_code,
@@ -210,10 +238,7 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             self.connected = False
             await self._close_client()
-            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
-            if status_code == HTTP_SERVICE_UNAVAILABLE:
-                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_CONNECT_FAILED % exc) from exc
         except (ConnectionError, TimeoutError, OSError) as exc:
             self._logger.warning(
@@ -234,7 +259,7 @@ class HuggingFaceProvider(LLMProviderBase):
         )
 
     @staticmethod
-    def _extract_503_message(exc: HfHubHTTPError) -> str:
+    def _extract_503_message(exc: BaseException) -> str:
         """Extract a human-readable message from a 503 service-unavailable error.
 
         HuggingFace returns 503 when a model is still loading.  The body is
@@ -242,9 +267,14 @@ class HuggingFaceProvider(LLMProviderBase):
         router occasionally returns HTML, which raises ``json.JSONDecodeError``
         / ``httpx.DecodingError`` / ``ValueError``.  This helper guards the
         decode and falls back to a generic "Model is loading" message.
+        Accepts any ``BaseException`` so it can be passed to
+        :meth:`LLMProviderBase._raise_typed_for_status` as the
+        ``extract_503_message`` callable; non-``HfHubHTTPError`` exceptions
+        simply lack a ``response`` attribute and produce the fallback message.
 
         Args:
-            exc: The HfHubHTTPError raised by the SDK.
+            exc: The exception raised by the SDK; only ``HfHubHTTPError``
+                instances carry a usable ``response`` attribute.
 
         Returns:
             str: A human-readable error message describing the 503 cause.
@@ -296,13 +326,14 @@ class HuggingFaceProvider(LLMProviderBase):
         Queries ``HfApi.list_models`` filtered to text-generation models
         with warm inference endpoints, then normalises the results into
         ``ModelInfo`` objects.  The call is dispatched to a worker thread
-        because ``HfApi`` is synchronous.
+        because ``HfApi`` is synchronous. HTTP errors are translated to
+        Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
 
         Returns:
             list[ModelInfo]: List of available models with their capabilities.
 
         Raises:
-            AuthenticationError: If HuggingFace returns 401/403 while listing.
             ProviderError: If not connected or the listing call fails.
         """
         if not self.connected or self._hf_api is None:
@@ -329,16 +360,13 @@ class HuggingFaceProvider(LLMProviderBase):
         try:
             raw_models = await asyncio.to_thread(_fetch)
         except HfHubHTTPError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            status_code = _hf_status_code(exc)
             self._logger.warning(
                 "huggingface_list_models_failed",
                 status_code=status_code,
                 error_type=type(exc).__name__,
             )
-            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
-            if status_code == HTTP_SERVICE_UNAVAILABLE:
-                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
         except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
             self._logger.warning(
@@ -464,6 +492,9 @@ class HuggingFaceProvider(LLMProviderBase):
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request via ``AsyncInferenceClient``.
 
+        HTTP errors are translated to Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
+
         Args:
             messages: Conversation history.
             model: Model ID to use (e.g. ``meta-llama/Meta-Llama-3-8B-Instruct``).
@@ -479,8 +510,6 @@ class HuggingFaceProvider(LLMProviderBase):
                 (assistant message, parsed tool calls or ``None``).
 
         Raises:
-            AuthenticationError: If HuggingFace returns 401/403.
-            RateLimitError: If HuggingFace returns 429.
             ProviderError: If not connected, the response is empty, or the
                 underlying SDK raises a non-auth/rate-limit error.
         """
@@ -527,19 +556,14 @@ class HuggingFaceProvider(LLMProviderBase):
             self._logger.warning("huggingface_timeout", model=model, error=str(exc))
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
         except HfHubHTTPError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            status_code = _hf_status_code(exc)
             self._logger.warning(
                 "huggingface_chat_http_error",
                 model=model,
                 status_code=status_code,
                 error_type=type(exc).__name__,
             )
-            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
-            if status_code == HTTP_RATE_LIMITED:
-                raise RateLimitError(_ERR_RATE_LIMITED) from exc
-            if status_code == HTTP_SERVICE_UNAVAILABLE:
-                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             self._logger.warning(
@@ -605,6 +629,9 @@ class HuggingFaceProvider(LLMProviderBase):
     ) -> AsyncIterator[str]:
         """Stream chat completion chunks from the HuggingFace Inference API.
 
+        HTTP errors are translated to Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
+
         Args:
             messages: Conversation history.
             model: Model ID to use.
@@ -619,8 +646,6 @@ class HuggingFaceProvider(LLMProviderBase):
             str: Text chunks as they arrive from the stream.
 
         Raises:
-            AuthenticationError: If HuggingFace returns 401/403.
-            RateLimitError: If HuggingFace returns 429.
             ProviderError: If not connected or the stream fails transportwise.
         """
         if not self.connected or self.client is None:
@@ -667,19 +692,14 @@ class HuggingFaceProvider(LLMProviderBase):
             self._logger.warning("huggingface_stream_timeout", model=model, error=str(exc))
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
         except HfHubHTTPError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            status_code = _hf_status_code(exc)
             self._logger.warning(
                 "huggingface_stream_http_error",
                 model=model,
                 status_code=status_code,
                 error_type=type(exc).__name__,
             )
-            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
-            if status_code == HTTP_RATE_LIMITED:
-                raise RateLimitError(_ERR_RATE_LIMITED) from exc
-            if status_code == HTTP_SERVICE_UNAVAILABLE:
-                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             self._logger.warning(
@@ -748,19 +768,14 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_TIMEOUT % exc) from exc
         except HfHubHTTPError as exc:
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            status_code = _hf_status_code(exc)
             self._logger.warning(
                 "huggingface_stream_http_error",
                 model=model,
                 status_code=status_code,
                 error_type=type(exc).__name__,
             )
-            if status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
-                raise AuthenticationError(_ERR_CREDENTIAL_INVALID % exc) from exc
-            if status_code == HTTP_RATE_LIMITED:
-                raise RateLimitError(_ERR_RATE_LIMITED) from exc
-            if status_code == HTTP_SERVICE_UNAVAILABLE:
-                raise ProviderError(_ERR_MODEL_LOADING % self._extract_503_message(exc)) from exc
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
             raise ProviderError(_ERR_API_ERROR % exc) from exc
         except TimeoutError as exc:
             if self._cancel_requested:
