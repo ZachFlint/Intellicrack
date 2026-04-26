@@ -198,8 +198,8 @@ def test_logger_binding_is_preserved_in_emitted_event() -> None:
     assert events[0]["model"] == "x/y"
 
 
-def test_whitespace_only_line_returns_none_silently() -> None:
-    """Whitespace-only lines parse to ``None`` without warning.
+def test_whitespace_only_line_returns_none_with_warning() -> None:
+    """Whitespace-only lines parse to ``None`` and emit a warning.
 
     ``json.loads("   ")`` raises ``JSONDecodeError`` so the helper must
     log the failure rather than silently swallow it. This documents the
