@@ -37,6 +37,8 @@ from intellicrack.core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
 
+    from openai.types.chat.chat_completion_message import ChatCompletionMessage
+
     from intellicrack.core.types import ProviderName
 
 _T = TypeVar("_T")
@@ -531,6 +533,55 @@ class LLMProviderBase(ABC):
             function_name=function_name,
             raw_arguments=raw_arguments,
         )
+
+    def _parse_openai_format_tool_calls(
+        self,
+        response_message: ChatCompletionMessage,
+    ) -> list[ToolCall]:
+        """Parse tool calls from an OpenAI-compatible response message.
+
+        Iterates ``response_message.tool_calls`` and converts each entry
+        whose ``function`` attribute is present into a :class:`ToolCall`
+        via :meth:`_parse_tool_call_common`. Entries missing a
+        ``function`` attribute (e.g. custom tool calls or non-function
+        union members) are silently skipped.
+
+        Uses ``getattr`` so the helper works both with the strongly
+        typed OpenAI SDK response shape and with the looser response
+        shapes returned by OpenAI-compatible backends such as Grok.
+
+        Args:
+            response_message: The assistant message returned by an
+                OpenAI-compatible chat completion endpoint.
+
+        Returns:
+            list[ToolCall]: List of parsed :class:`ToolCall` instances,
+            in the same order they appeared in ``response_message``.
+        """
+        tool_calls: list[ToolCall] = []
+        if not response_message.tool_calls:
+            return tool_calls
+
+        for tc in response_message.tool_calls:
+            tc_function = getattr(tc, "function", None)
+            if tc_function is None:
+                continue
+            function_name = getattr(tc_function, "name", None)
+            raw_arguments = getattr(tc_function, "arguments", None)
+            if not isinstance(function_name, str) or not isinstance(raw_arguments, str):
+                continue
+            tool_call = self._parse_tool_call_common(
+                call_id=tc.id,
+                function_name=function_name,
+                raw_arguments=raw_arguments,
+            )
+            tool_calls.append(tool_call)
+            self._logger.debug(
+                "tool_call_parsed",
+                tool_name=tool_call.tool_name,
+                arguments_count=len(tool_call.arguments),
+            )
+        return tool_calls
 
     @staticmethod
     def _serialize_tool_result(result: object) -> str:
