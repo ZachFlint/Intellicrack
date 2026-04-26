@@ -259,11 +259,11 @@ class TestHexPatLexerTokenization:
         assert "bar" in identifiers
 
     def test_tokenize_hex_number(self) -> None:
-        """Hex number literals are tokenized as NUMBER tokens with their raw value."""
+        """Hex number literals are tokenized as NUMBER tokens with the integer value as text."""
         source = "struct S { u8 x; }; u8 v = 0xFF;"
         tokens = HexPatLexer(source).tokenize()
-        numbers = [t.value for t in tokens if t.type == TokenType.NUMBER]
-        assert "0xFF" in numbers
+        numbers = [int(t.value, 0) for t in tokens if t.type == TokenType.NUMBER]
+        assert 0xFF in numbers
 
     def test_tokenize_line_numbers_advance_correctly(self) -> None:
         """Token line numbers reflect newlines in the source."""
