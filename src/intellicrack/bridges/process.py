@@ -18,6 +18,7 @@ from ctypes import wintypes
 from pathlib import Path
 from typing import Literal, cast, override
 
+from intellicrack.bridges._pe_format import pe_machine_to_arch
 from intellicrack.bridges._win32_types import (
     CONTEXT32,
     CONTEXT64,
@@ -413,7 +414,7 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         name="process.detect_architecture",
         description="Detect whether a process is 32-bit or 64-bit",
         parameters=[ToolParameter(name="pid", type="integer", description="Process ID", required=True)],
-        returns="Architecture string (x64, x86, Unknown)",
+        returns="Architecture string (x86_64, x86, arm64, arm, Unknown)",
     ),
     ToolFunction(
         name="process.get_token_privileges",
@@ -1132,17 +1133,19 @@ class ProcessBridge(ToolBridgeBase):
         """Detect whether a process is 32-bit or 64-bit.
 
         Uses ``IsWow64Process2`` when available for accurate architecture
-        identification on modern Windows (distinguishes x86, x64, ARM, and
-        ARM64 native / emulated combinations). Falls back to parsing the
-        PE header Machine field of the main module when the Win32 call
-        reports ``IMAGE_FILE_MACHINE_UNKNOWN``, and finally to the legacy
-        ``IsWow64Process`` + pointer-size heuristic.
+        identification on modern Windows (distinguishes x86, x86_64, ARM,
+        and ARM64 native / emulated combinations). Falls back to parsing
+        the PE header Machine field of the main module when the Win32
+        call reports ``IMAGE_FILE_MACHINE_UNKNOWN``, and finally to the
+        legacy ``IsWow64Process`` + pointer-size heuristic. Architecture
+        names follow the canonical convention shared with
+        :class:`GhidraBridge` and the orchestrator.
 
         Args:
             pid: Process ID.
 
         Returns:
-            str: Architecture string such as ``'x64'``, ``'x86'``,
+            str: Architecture string such as ``'x86_64'``, ``'x86'``,
                 ``'arm64'``, ``'arm'``, or ``'Unknown'``.
         """
         _logger.info("process_detect_architecture_started", pid=pid)
@@ -1241,19 +1244,25 @@ class ProcessBridge(ToolBridgeBase):
     def _machine_to_arch_string(machine: int) -> str:
         """Translate an ``IMAGE_FILE_MACHINE_*`` value to an arch string.
 
+        Delegates to :func:`pe_machine_to_arch` for the canonical
+        ``(arch, is_64bit)`` mapping and returns just the arch name.
+        Unknown machine values become ``'Unknown'`` (capitalised) to
+        match the contract documented on
+        :meth:`detect_architecture`.
+
         Args:
             machine: Win32 ``IMAGE_FILE_MACHINE_*`` constant value.
 
         Returns:
-            str: Architecture string like ``'x64'``, ``'x86'``,
-                ``'arm64'``, ``'arm'``, or ``'Unknown'``.
+            str: Architecture string like ``'x86_64'``, ``'x86'``,
+                ``'arm64'``, ``'arm'``, ``'ia64'``, ``'mips'``,
+                ``'ppc'``, ``'riscv'``, ``'riscv64'``, ``'riscv128'``,
+                or ``'Unknown'``.
         """
-        machine_map: dict[int, str] = {
-            IMAGE_FILE_MACHINE_I386: "x86",
-            IMAGE_FILE_MACHINE_AMD64: "x64",
-            IMAGE_FILE_MACHINE_ARM64: "arm64",
-        }
-        return machine_map.get(machine, "Unknown")
+        arch, _is_64bit = pe_machine_to_arch(machine)
+        if arch == "unknown":
+            return "Unknown"
+        return arch
 
     def _detect_arch_via_pe_header(self, pid: int) -> str | None:
         """Detect architecture by parsing the PE header of the main module.
@@ -1357,7 +1366,7 @@ class ProcessBridge(ToolBridgeBase):
                 return "x86"
 
         pointer_bits = struct.calcsize("P") * _BITS_PER_BYTE
-        return "x64" if pointer_bits == _POINTER_BITS_64 else "x86"
+        return "x86_64" if pointer_bits == _POINTER_BITS_64 else "x86"
 
     async def open_process(
         self,
