@@ -6,10 +6,13 @@
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.wintypes
 import sys
 
 import pytest
 
+from intellicrack.bridges import named_pipe_client, x64dbg
 from intellicrack.bridges._win32_types import (
     CONTEXT_ALL,
     CONTEXT_AMD64,
@@ -18,9 +21,30 @@ from intellicrack.bridges._win32_types import (
     CONTEXT_FLOATING_POINT,
     CONTEXT_INTEGER,
     CONTEXT_SEGMENTS,
+    GENERIC_READ,
+    GENERIC_WRITE,
     HKEY_LOCAL_MACHINE,
+    IMAGE_FILE_MACHINE_AMD64,
+    IMAGE_FILE_MACHINE_ARM,
+    IMAGE_FILE_MACHINE_ARM64,
+    IMAGE_FILE_MACHINE_ARMNT,
+    IMAGE_FILE_MACHINE_I386,
+    IMAGE_FILE_MACHINE_IA64,
+    INVALID_HANDLE_VALUE,
+    MEM_COMMIT,
+    MEM_RELEASE,
+    MEM_RESERVE,
+    NT_HEADERS_OPTIONAL_OFFSET,
+    OPEN_EXISTING,
+    PE_HEADER_OFFSET,
+    PE_MAGIC_OFFSET,
     PROCESS_ALL_ACCESS,
+    PROCESS_QUERY_INFORMATION,
+    PROCESS_VM_OPERATION,
+    PROCESS_VM_READ,
+    PROCESS_VM_WRITE,
     TH32CS_SNAPALL,
+    TH32CS_SNAPPROCESS,
     THREAD_ALL_ACCESS,
     THREAD_STATE_NAMES,
     mem_type_to_string,
@@ -153,6 +177,150 @@ class TestConstantSpotChecks:
         assert len(THREAD_STATE_NAMES) == 8
         for i in range(8):
             assert i in THREAD_STATE_NAMES
+
+
+class TestInvalidHandleValue:
+    """Tests for the dynamic INVALID_HANDLE_VALUE computation."""
+
+    def test_constant_is_int(self) -> None:
+        """Verify INVALID_HANDLE_VALUE is an int."""
+        assert isinstance(INVALID_HANDLE_VALUE, int)
+
+    def test_value_matches_expected_bit_pattern(self) -> None:
+        """Verify INVALID_HANDLE_VALUE matches the platform pointer width."""
+        if sys.platform == "win32":
+            expected = ctypes.wintypes.HANDLE(-1).value
+            assert expected == INVALID_HANDLE_VALUE
+            void_ptr_size = ctypes.sizeof(ctypes.c_void_p)
+            if void_ptr_size == 8:
+                assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF
+            else:
+                assert INVALID_HANDLE_VALUE == 0xFFFFFFFF
+        else:
+            assert INVALID_HANDLE_VALUE == 0xFFFFFFFF
+
+
+class TestGenericAccessConstants:
+    """Tests for CreateFileW / CreateNamedPipeW generic-access constants."""
+
+    def test_generic_read_value(self) -> None:
+        """Verify GENERIC_READ equals 0x80000000."""
+        assert GENERIC_READ == 0x80000000
+
+    def test_generic_write_value(self) -> None:
+        """Verify GENERIC_WRITE equals 0x40000000."""
+        assert GENERIC_WRITE == 0x40000000
+
+    def test_open_existing_value(self) -> None:
+        """Verify OPEN_EXISTING equals 3."""
+        assert OPEN_EXISTING == 3
+
+
+class TestPeHeaderOffsets:
+    """Tests for PE header layout offset constants."""
+
+    def test_pe_header_offset(self) -> None:
+        """Verify PE_HEADER_OFFSET equals 0x3C (DOS e_lfanew)."""
+        assert PE_HEADER_OFFSET == 0x3C
+
+    def test_pe_magic_offset(self) -> None:
+        """Verify PE_MAGIC_OFFSET equals 0x40 (end of e_lfanew)."""
+        assert PE_MAGIC_OFFSET == 0x40
+
+    def test_nt_headers_optional_offset(self) -> None:
+        """Verify NT_HEADERS_OPTIONAL_OFFSET equals 0x18."""
+        assert NT_HEADERS_OPTIONAL_OFFSET == 0x18
+
+    def test_offsets_are_distinct(self) -> None:
+        """Verify the three PE offsets do not collide."""
+        offsets = {PE_HEADER_OFFSET, PE_MAGIC_OFFSET, NT_HEADERS_OPTIONAL_OFFSET}
+        assert len(offsets) == 3
+
+
+class TestPeMachineConstants:
+    """Tests for IMAGE_FILE_MACHINE_* constants used in PE COFF parsing."""
+
+    def test_i386_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_I386 equals 0x014C."""
+        assert IMAGE_FILE_MACHINE_I386 == 0x014C
+
+    def test_amd64_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_AMD64 equals 0x8664."""
+        assert IMAGE_FILE_MACHINE_AMD64 == 0x8664
+
+    def test_arm_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_ARM equals 0x01C0."""
+        assert IMAGE_FILE_MACHINE_ARM == 0x01C0
+
+    def test_armnt_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_ARMNT equals 0x01C4."""
+        assert IMAGE_FILE_MACHINE_ARMNT == 0x01C4
+
+    def test_arm64_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_ARM64 equals 0xAA64."""
+        assert IMAGE_FILE_MACHINE_ARM64 == 0xAA64
+
+    def test_ia64_value(self) -> None:
+        """Verify IMAGE_FILE_MACHINE_IA64 equals 0x0200."""
+        assert IMAGE_FILE_MACHINE_IA64 == 0x0200
+
+
+class TestConsumersUseCanonicalConstants:
+    """Verify Win32 constant consumers import from ``_win32_types`` (audit Group 1)."""
+
+    def test_x64dbg_imports_canonical_invalid_handle_value(self) -> None:
+        """Verify x64dbg's INVALID_HANDLE_VALUE equals the canonical value."""
+        assert x64dbg.INVALID_HANDLE_VALUE == INVALID_HANDLE_VALUE
+
+    def test_x64dbg_imports_canonical_pe_header_offset(self) -> None:
+        """Verify x64dbg's PE_HEADER_OFFSET matches the canonical value."""
+        assert x64dbg.PE_HEADER_OFFSET == PE_HEADER_OFFSET
+
+    def test_x64dbg_imports_canonical_pe_magic_offset(self) -> None:
+        """Verify x64dbg's PE_MAGIC_OFFSET matches the canonical value."""
+        assert x64dbg.PE_MAGIC_OFFSET == PE_MAGIC_OFFSET
+
+    def test_x64dbg_imports_canonical_nt_headers_optional_offset(self) -> None:
+        """Verify x64dbg's NT_HEADERS_OPTIONAL_OFFSET matches the canonical value."""
+        assert x64dbg.NT_HEADERS_OPTIONAL_OFFSET == NT_HEADERS_OPTIONAL_OFFSET
+
+    def test_x64dbg_imports_canonical_pe_machine_constants(self) -> None:
+        """Verify x64dbg's PE32_MACHINE / PE64_MACHINE map to canonical IMAGE_FILE_MACHINE_*."""
+        assert x64dbg.PE32_MACHINE == IMAGE_FILE_MACHINE_I386
+        assert x64dbg.PE64_MACHINE == IMAGE_FILE_MACHINE_AMD64
+
+    def test_x64dbg_imports_canonical_th32cs_snapprocess(self) -> None:
+        """Verify x64dbg's TH32CS_SNAPPROCESS matches the canonical value."""
+        assert x64dbg.TH32CS_SNAPPROCESS == TH32CS_SNAPPROCESS
+
+    def test_x64dbg_win_mem_constants_match_canonical(self) -> None:
+        """Verify x64dbg's WIN_MEM_* aliases match canonical MEM_* constants."""
+        assert x64dbg.WIN_MEM_COMMIT == MEM_COMMIT
+        assert x64dbg.WIN_MEM_RESERVE == MEM_RESERVE
+        assert x64dbg.WIN_MEM_RELEASE == MEM_RELEASE
+
+    def test_x64dbg_win_process_constants_match_canonical(self) -> None:
+        """Verify x64dbg's WIN_PROCESS_* aliases match canonical PROCESS_* constants."""
+        assert x64dbg.WIN_PROCESS_QUERY_INFORMATION == PROCESS_QUERY_INFORMATION
+        assert x64dbg.WIN_PROCESS_VM_OPERATION == PROCESS_VM_OPERATION
+        assert x64dbg.WIN_PROCESS_VM_READ == PROCESS_VM_READ
+        assert x64dbg.WIN_PROCESS_VM_WRITE == PROCESS_VM_WRITE
+
+    def test_named_pipe_client_uses_canonical_invalid_handle_value(self) -> None:
+        """Verify named_pipe_client uses the canonical INVALID_HANDLE_VALUE."""
+        assert named_pipe_client.INVALID_HANDLE_VALUE == INVALID_HANDLE_VALUE
+
+    def test_named_pipe_client_uses_canonical_open_existing(self) -> None:
+        """Verify named_pipe_client uses the canonical OPEN_EXISTING."""
+        assert named_pipe_client.OPEN_EXISTING == OPEN_EXISTING
+
+    def test_named_pipe_client_uses_canonical_generic_read(self) -> None:
+        """Verify named_pipe_client uses the canonical GENERIC_READ."""
+        assert named_pipe_client.GENERIC_READ == GENERIC_READ
+
+    def test_named_pipe_client_uses_canonical_generic_write(self) -> None:
+        """Verify named_pipe_client uses the canonical GENERIC_WRITE."""
+        assert named_pipe_client.GENERIC_WRITE == GENERIC_WRITE
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")

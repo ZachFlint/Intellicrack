@@ -16,6 +16,12 @@ from ctypes import wintypes
 from dataclasses import dataclass
 from typing import Any, ClassVar, cast
 
+from intellicrack.bridges._win32_types import (
+    GENERIC_READ,
+    GENERIC_WRITE,
+    INVALID_HANDLE_VALUE,
+    OPEN_EXISTING,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
 
@@ -25,11 +31,6 @@ _logger = get_logger(__name__)
 
 _LENGTH_PREFIX_SIZE = 4
 _CHUNK_SIZE = 65536
-
-_GENERIC_READ = 0x80000000
-_GENERIC_WRITE = 0x40000000
-_OPEN_EXISTING = 3
-_INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
 
 
 if sys.platform == "win32":
@@ -366,15 +367,15 @@ class NamedPipeClient:
 
         handle: int | None = kernel32.CreateFileW(
             pipe_name,
-            _GENERIC_READ | _GENERIC_WRITE,
+            GENERIC_READ | GENERIC_WRITE,
             0,
             None,
-            _OPEN_EXISTING,
+            OPEN_EXISTING,
             0,
             None,
         )
 
-        if handle is None or handle == _INVALID_HANDLE_VALUE:
+        if handle is None or handle == INVALID_HANDLE_VALUE:
             error = ctypes.get_last_error()
             hint = self._PIPE_ERROR_HINTS.get(error, "")
             _logger.error(
