@@ -60,8 +60,23 @@ PE_DOS_HEADER_SIZE: Final[int] = 0x40
 PE_SIGNATURE: Final[bytes] = b"PE\x00\x00"
 """IMAGE_NT_HEADERS signature bytes."""
 
+PE_SIGNATURE_INT: Final[int] = 0x00004550
+"""IMAGE_NT_HEADERS signature as a little-endian ``u32``.
+
+Equal to ``int.from_bytes(PE_SIGNATURE, 'little')``. Use this form when
+comparing against a value already unpacked with ``struct.unpack_from('<I', ...)``.
+"""
+
 PE_DOS_SIGNATURE: Final[bytes] = b"MZ"
 """IMAGE_DOS_HEADER signature bytes."""
+
+PE_DOS_SIGNATURE_INT: Final[int] = 0x5A4D
+"""IMAGE_DOS_HEADER signature as a little-endian ``u16``.
+
+Equal to ``int.from_bytes(PE_DOS_SIGNATURE, 'little')``. Use this form
+when comparing against a value already unpacked with
+``struct.unpack_from('<H', ...)``.
+"""
 
 PE_COFF_HEADER_SIZE: Final[int] = 20
 """Size of the IMAGE_FILE_HEADER (COFF header) structure."""
@@ -805,6 +820,7 @@ __all__: list[str] = [
     "PE_DOS_HEADER_SIZE",
     "PE_DOS_LFANEW_OFFSET",
     "PE_DOS_SIGNATURE",
+    "PE_DOS_SIGNATURE_INT",
     "PE_MACHINE_AMD64",
     "PE_MACHINE_ARM",
     "PE_MACHINE_ARM64",
@@ -827,6 +843,7 @@ __all__: list[str] = [
     "PE_SECTION_CHARACTERISTIC_WRITE",
     "PE_SECTION_HEADER_SIZE",
     "PE_SIGNATURE",
+    "PE_SIGNATURE_INT",
     "ZIP_MAGIC",
     "FormatName",
     "SectionHeaderDict",
