@@ -9,7 +9,6 @@ This module provides integration with OpenRouter which provides access to many d
 
 from __future__ import annotations
 
-import json
 import time
 import uuid
 from datetime import UTC, datetime
@@ -568,28 +567,26 @@ class OpenRouterProvider(LLMProviderBase):
                         data_str = line[6:]
                         if data_str == "[DONE]":
                             break
-                        try:
-                            data = json.loads(data_str)
-                            chunk_usage = self._build_usage_from_data(data)
-                            if chunk_usage is not None:
-                                self._pending_usage = chunk_usage
-                            if choices := data.get("choices", []):
-                                delta = choices[0].get("delta", {})
-                                if content := delta.get("content", ""):
-                                    chunks_yielded += 1
-                                    yield content
-                                if tc_deltas := delta.get("tool_calls"):
-                                    for tc_d in tc_deltas:
-                                        fn = cast("dict[str, Any]", tc_d.get("function") or {})
-                                        tc_buffer.accumulate(
-                                            index=cast("int", tc_d.get("index", 0)),
-                                            call_id=cast("str | None", tc_d.get("id")),
-                                            name=cast("str | None", fn.get("name")),
-                                            arguments=cast("str | None", fn.get("arguments")),
-                                        )
-                        except json.JSONDecodeError as exc:
-                            self._logger.warning("stream_json_parse_skipped", error=str(exc))
+                        data = self._safe_parse_stream_json(data_str, logger=self._logger)
+                        if data is None:
                             continue
+                        chunk_usage = self._build_usage_from_data(data)
+                        if chunk_usage is not None:
+                            self._pending_usage = chunk_usage
+                        if choices := data.get("choices", []):
+                            delta = choices[0].get("delta", {})
+                            if content := delta.get("content", ""):
+                                chunks_yielded += 1
+                                yield content
+                            if tc_deltas := delta.get("tool_calls"):
+                                for tc_d in tc_deltas:
+                                    fn = cast("dict[str, Any]", tc_d.get("function") or {})
+                                    tc_buffer.accumulate(
+                                        index=cast("int", tc_d.get("index", 0)),
+                                        call_id=cast("str | None", tc_d.get("id")),
+                                        name=cast("str | None", fn.get("name")),
+                                        arguments=cast("str | None", fn.get("arguments")),
+                                    )
 
             self._pending_tool_calls = tc_buffer.finalize()
 
