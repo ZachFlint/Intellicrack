@@ -2,192 +2,91 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""HexPat DSL compiler: lexer, parser, and JSON codegen.
+"""HexPat DSL compiler that emits JSON templates from the shared AST.
 
-Compiles a C-like pattern definition language (.hexpat)
-into JSON template definitions consumable by the Rust hex editor core.
+This module is a thin compatibility/code-generation layer that delegates
+lexing and parsing to the canonical HexPat pipeline in
+``intellicrack.core.hexpat`` and walks the resulting AST to produce a
+JSON template definition consumable by the Rust hex editor core.
+
+The lexer, parser, AST, and error types are re-exported from this module
+for backward compatibility with previously published symbol paths.
 """
 
 from __future__ import annotations
 
-import enum
 import json
-from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, Final
 
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+from intellicrack.core.hexpat.ast_nodes import (
+    AddressOfExpr,
+    ArrayType,
+    AutoType,
+    BinaryExpr,
+    BitfieldDecl,
+    BitfieldEntry,
+    BoolLiteral,
+    CharLiteral,
+    ConditionalField,
+    DeclNode,
+    DollarExpr,
+    EnumDecl,
+    EnumEntry,
+    ExprNode,
+    ExprStmt,
+    FieldDecl,
+    FloatLiteral,
+    ForStmt,
+    FunctionDecl,
+    IdentifierExpr,
+    MatchStmt,
+    NamedType,
+    NamespaceDecl,
+    NullLiteral,
+    NumberLiteral,
+    PaddingType,
+    PlacementStmt,
+    PointerType,
+    PrimitiveType,
+    SizeofExpr,
+    StmtNode,
+    StringLiteral,
+    StructDecl,
+    TryStmt,
+    TypeNameOfExpr,
+    TypeNode,
+    UnaryExpr,
+    UnionDecl,
+    UsingDecl,
+    VarDecl,
+    WhileStmt,
+)
+from intellicrack.core.hexpat.errors import HexPatError, HexPatParseError
+from intellicrack.core.hexpat.lexer import HexPatLexer
+from intellicrack.core.hexpat.parser import HexPatParser
+from intellicrack.core.hexpat.tokens import Token, TokenType
 from intellicrack.core.logging import get_logger
 
 
 _logger = get_logger(__name__)
 
 
-class HexPatError(Exception):
-    """Error raised during HexPat DSL compilation."""
-
-    def __init__(self, message: str, line: int = 0, column: int = 0) -> None:
-        """Initialize the HexPatError with a message and source location.
-
-        Args:
-            message: Human-readable error description.
-            line: Source line number where the error occurred.
-            column: Source column number where the error occurred.
-        """
-        self.message = message
-        self.line = line
-        self.column = column
-        super().__init__(f"line {line}, col {column}: {message}")
-        _logger.debug(
-            "hexpat_error_constructed",
-            error_message=message,
-            line=line,
-            column=column,
-        )
+__all__: list[str] = [
+    "HexPatCodegen",
+    "HexPatCompiler",
+    "HexPatError",
+    "HexPatLexer",
+    "HexPatParser",
+    "Token",
+    "TokenType",
+]
 
 
-class TokenType(enum.Enum):
-    """Token types produced by the lexer."""
-
-    STRUCT = "struct"
-    UNION = "union"
-    ENUM = "enum"
-    BITFIELD = "bitfield"
-    IF = "if"
-    ELSE = "else"
-    MATCH = "match"
-    WHILE = "while"
-    FOR = "for"
-    U8 = "u8"
-    U16 = "u16"
-    U32 = "u32"
-    U64 = "u64"
-    S8 = "s8"
-    S16 = "s16"
-    S32 = "s32"
-    S64 = "s64"
-    FLOAT = "float"
-    DOUBLE = "double"
-    CHAR = "char"
-    CHAR16 = "char16"
-    BOOL = "bool"
-    U128 = "u128"
-    S128 = "s128"
-    PADDING = "padding"
-    LE = "le"
-    BE = "be"
-    SIZEOF = "sizeof"
-    ADDRESSOF = "addressof"
-    IDENTIFIER = "identifier"
-    NUMBER = "number"
-    STRING_LITERAL = "string"
-    LBRACE = "{"
-    RBRACE = "}"
-    LBRACKET = "["
-    RBRACKET = "]"
-    LPAREN = "("
-    RPAREN = ")"
-    SEMICOLON = ";"
-    COMMA = ","
-    COLON = ":"
-    STAR = "*"
-    DOT = "."
-    PLUS = "+"
-    MINUS = "-"
-    SLASH = "/"
-    PERCENT = "%"
-    AMPERSAND = "&"
-    PIPE = "|"
-    CARET = "^"
-    TILDE = "~"
-    BANG = "!"
-    ASSIGN = "="
-    EQUALS = "=="
-    NOT_EQUALS = "!="
-    LESS = "<"
-    GREATER = ">"
-    LESS_EQUAL = "<="
-    GREATER_EQUAL = ">="
-    LSHIFT = "<<"
-    RSHIFT = ">>"
-    DOUBLE_LBRACKET = "[["
-    DOUBLE_RBRACKET = "]]"
-    DOLLAR = "$"
-    EOF = "eof"
-
-
-@dataclass
-class Token:
-    """A lexer token.
-
-    Attributes:
-        type: Token type.
-        value: Raw text of the token.
-        line: Source line number.
-        column: Source column number.
-    """
-
-    type: TokenType
-    value: str
-    line: int
-    column: int
-
-
-_KEYWORD_MAP: dict[str, TokenType] = {
-    "struct": TokenType.STRUCT,
-    "union": TokenType.UNION,
-    "enum": TokenType.ENUM,
-    "bitfield": TokenType.BITFIELD,
-    "if": TokenType.IF,
-    "else": TokenType.ELSE,
-    "match": TokenType.MATCH,
-    "while": TokenType.WHILE,
-    "for": TokenType.FOR,
-    "u8": TokenType.U8,
-    "u16": TokenType.U16,
-    "u32": TokenType.U32,
-    "u64": TokenType.U64,
-    "s8": TokenType.S8,
-    "s16": TokenType.S16,
-    "s32": TokenType.S32,
-    "s64": TokenType.S64,
-    "float": TokenType.FLOAT,
-    "double": TokenType.DOUBLE,
-    "char": TokenType.CHAR,
-    "char16": TokenType.CHAR16,
-    "bool": TokenType.BOOL,
-    "u128": TokenType.U128,
-    "s128": TokenType.S128,
-    "padding": TokenType.PADDING,
-    "le": TokenType.LE,
-    "be": TokenType.BE,
-    "sizeof": TokenType.SIZEOF,
-    "addressof": TokenType.ADDRESSOF,
-}
-
-_RUNTIME_ONLY_TOKENS: frozenset[TokenType] = frozenset({
-    TokenType.MATCH,
-    TokenType.WHILE,
-    TokenType.FOR,
-})
-
-_PRIMITIVE_TOKENS: frozenset[TokenType] = frozenset({
-    TokenType.U8,
-    TokenType.U16,
-    TokenType.U32,
-    TokenType.U64,
-    TokenType.U128,
-    TokenType.S8,
-    TokenType.S16,
-    TokenType.S32,
-    TokenType.S64,
-    TokenType.S128,
-    TokenType.FLOAT,
-    TokenType.DOUBLE,
-    TokenType.CHAR,
-    TokenType.CHAR16,
-    TokenType.BOOL,
-})
-
-_TYPE_MAP: dict[str, dict[str, str]] = {
+_TYPE_MAP: Final[dict[str, dict[str, str]]] = {
     "u8": {"type": "UInt8"},
     "u16": {"type": "UInt16"},
     "u32": {"type": "UInt32"},
@@ -206,1040 +105,116 @@ _TYPE_MAP: dict[str, dict[str, str]] = {
 }
 
 
-@dataclass
-class NumberLiteral:
-    """Numeric literal expression node.
-
-    Attributes:
-        value: Integer value.
-    """
-
-    value: int
-
-
-@dataclass
-class StringLiteral:
-    """String literal expression node.
-
-    Attributes:
-        value: String content (without quotes).
-    """
-
-    value: str
-
-
-@dataclass
-class IdentifierExpr:
-    """Identifier reference expression node.
-
-    Attributes:
-        name: Identifier name.
-    """
-
-    name: str
-
-
-@dataclass
-class DollarExpr:
-    """Current offset ($) expression node."""
-
-
-@dataclass
-class SizeofExpr:
-    """Sizeof() expression node.
-
-    Attributes:
-        target: Name of the target type or field.
-    """
-
-    target: str
-
-
-@dataclass
-class BinaryExpr:
-    """Binary operator expression node.
-
-    Attributes:
-        op: Operator string.
-        left: Left operand.
-        right: Right operand.
-    """
-
-    op: str
-    left: ExprNode
-    right: ExprNode
-
-
-@dataclass
-class UnaryExpr:
-    """Unary operator expression node.
-
-    Attributes:
-        op: Operator string.
-        operand: Operand expression.
-    """
-
-    op: str
-    operand: ExprNode
-
-
-@dataclass
-class AddressofExpr:
-    """Addressof() expression node.
-
-    Attributes:
-        target: Name of the target field.
-    """
-
-    target: str
-
-
-ExprNode = NumberLiteral | StringLiteral | IdentifierExpr | DollarExpr | SizeofExpr | AddressofExpr | BinaryExpr | UnaryExpr
-
-
-@dataclass
-class PrimitiveType:
-    """Primitive type AST node.
-
-    Attributes:
-        name: Type name (e.g. "u8", "u32").
-    """
-
-    name: str
-
-
-@dataclass
-class StructRefType:
-    """Struct reference type AST node.
-
-    Attributes:
-        name: Referenced struct name.
-    """
-
-    name: str
-
-
-@dataclass
-class PaddingType:
-    """Padding type AST node.
-
-    Attributes:
-        size: Size expression.
-    """
-
-    size: ExprNode
-
-
-@dataclass
-class PointerType:
-    """Pointer type AST node.
-
-    Attributes:
-        pointee: The type this pointer points to.
-        line: Source line number.
-        column: Source column number.
-    """
-
-    pointee: TypeNode
-    line: int
-    column: int
-
-
-TypeNode = PrimitiveType | StructRefType | PaddingType | PointerType
-
-
-@dataclass
-class FieldNode:
-    """Field declaration AST node.
-
-    Attributes:
-        name: Field name.
-        type_node: Type of the field.
-        endianness: Endianness prefix or None.
-        array_size: Array size expression or None.
-        annotations: Annotation key-value pairs.
-    """
-
-    name: str
-    type_node: TypeNode
-    endianness: str | None = None
-    array_size: ExprNode | None = None
-    annotations: dict[str, ExprNode] = field(default_factory=dict)
-
-
-@dataclass
-class ConditionalField:
-    """Conditional field declaration AST node.
-
-    Attributes:
-        condition: Condition expression.
-        true_fields: Fields if condition is true.
-        false_fields: Fields if condition is false.
-    """
-
-    condition: ExprNode
-    true_fields: list[FieldNode | ConditionalField]
-    false_fields: list[FieldNode | ConditionalField]
-
-
-@dataclass
-class StructDecl:
-    """Struct declaration AST node.
-
-    Attributes:
-        name: Struct name.
-        fields: List of field nodes.
-    """
-
-    name: str
-    fields: list[FieldNode | ConditionalField]
-
-
-@dataclass
-class UnionDecl:
-    """Union declaration AST node.
-
-    Attributes:
-        name: Union name.
-        fields: List of field nodes.
-    """
-
-    name: str
-    fields: list[FieldNode]
-
-
-@dataclass
-class EnumDecl:
-    """Enum declaration AST node.
-
-    Attributes:
-        name: Enum name.
-        backing_type: Backing integer type.
-        values: List of (name, value) pairs.
-    """
-
-    name: str
-    backing_type: TypeNode
-    values: list[tuple[str, int]]
-
-
-@dataclass
-class BitfieldDecl:
-    """Bitfield declaration AST node.
-
-    Attributes:
-        name: Bitfield name.
-        fields: List of (name, bit_width) pairs.
-    """
-
-    name: str
-    fields: list[tuple[str, int]]
-
-
-DeclNode = StructDecl | UnionDecl | EnumDecl | BitfieldDecl
-
-
-_SINGLE_CHAR_TOKENS: dict[str, TokenType] = {
-    "$": TokenType.DOLLAR,
-    "{": TokenType.LBRACE,
-    "}": TokenType.RBRACE,
-    "(": TokenType.LPAREN,
-    ")": TokenType.RPAREN,
-    ";": TokenType.SEMICOLON,
-    ",": TokenType.COMMA,
-    ":": TokenType.COLON,
-    ".": TokenType.DOT,
-    "+": TokenType.PLUS,
-    "-": TokenType.MINUS,
-    "/": TokenType.SLASH,
-    "%": TokenType.PERCENT,
-    "~": TokenType.TILDE,
-    "^": TokenType.CARET,
-    "*": TokenType.STAR,
-    "&": TokenType.AMPERSAND,
-    "|": TokenType.PIPE,
+_COMPARISON_OP_MAP: Final[dict[str, str]] = {
+    "==": "Eq",
+    "!=": "Ne",
+    ">": "Gt",
+    "<": "Lt",
+    ">=": "Ge",
+    "<=": "Le",
+    "&": "BitAnd",
 }
 
 
-class HexPatLexer:
-    """Tokenizer for HexPat DSL source code."""
-
-    def __init__(self, source: str) -> None:
-        """Initialize the HexPatLexer with source code to tokenize.
-
-        Args:
-            source: Source code string to tokenize.
-        """
-        self._source = source
-        self._pos = 0
-        self._line = 1
-        self._col = 1
-        self._tokens: list[Token] = []
-        _logger.debug("hexpat_lexer_initialized", source_length=len(source))
-
-    def tokenize(self) -> list[Token]:
-        """Tokenize the entire source into a list of tokens.
-
-        Returns:
-            list[Token]: List of tokens including a trailing EOF token.
-
-        Raises:
-            HexPatError: On unterminated strings or unexpected characters.
-        """
-        while self._pos < len(self._source):
-            self._skip_whitespace_and_comments()
-            if self._pos >= len(self._source):
-                break
-            ch = self._source[self._pos]
-
-            if ch == '"':
-                self._read_string()
-            elif ch in _SINGLE_CHAR_TOKENS:
-                tt = _SINGLE_CHAR_TOKENS[ch]
-                self._tokens.append(Token(tt, ch, self._line, self._col))
-                self._advance()
-            elif ch in {"[", "]", "!", "=", "<", ">"}:
-                self._read_multi_char_operator(ch)
-            elif ch.isdigit():
-                self._read_number()
-            elif ch.isalpha() or ch == "_":
-                self._read_identifier()
-            else:
-                msg = f"unexpected character '{ch}'"
-                raise HexPatError(msg, self._line, self._col)
-
-        self._tokens.append(Token(TokenType.EOF, "", self._line, self._col))
-        return self._tokens
-
-    def _read_multi_char_operator(self, ch: str) -> None:
-        """Read a potentially multi-character operator token.
-
-        Args:
-            ch: The current character.
-        """
-        nxt = self._peek(1)
-        if ch == "[":
-            if nxt == "[":
-                self._tokens.append(Token(TokenType.DOUBLE_LBRACKET, "[[", self._line, self._col))
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.LBRACKET, "[", self._line, self._col))
-            self._advance()
-        elif ch == "]":
-            if nxt == "]":
-                self._tokens.append(Token(TokenType.DOUBLE_RBRACKET, "]]", self._line, self._col))
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.RBRACKET, "]", self._line, self._col))
-            self._advance()
-        elif ch == "!":
-            if nxt == "=":
-                self._tokens.append(Token(TokenType.NOT_EQUALS, "!=", self._line, self._col))
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.BANG, "!", self._line, self._col))
-            self._advance()
-        elif ch == "=":
-            if nxt == "=":
-                self._tokens.append(Token(TokenType.EQUALS, "==", self._line, self._col))
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.ASSIGN, "=", self._line, self._col))
-            self._advance()
-        elif ch == "<":
-            if nxt == "=":
-                self._tokens.append(Token(TokenType.LESS_EQUAL, "<=", self._line, self._col))
-                self._advance()
-                self._advance()
-            elif nxt == "<":
-                self._tokens.append(Token(TokenType.LSHIFT, "<<", self._line, self._col))
-                self._advance()
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.LESS, "<", self._line, self._col))
-                self._advance()
-        elif ch == ">":
-            if nxt == "=":
-                self._tokens.append(Token(TokenType.GREATER_EQUAL, ">=", self._line, self._col))
-                self._advance()
-                self._advance()
-            elif nxt == ">":
-                self._tokens.append(Token(TokenType.RSHIFT, ">>", self._line, self._col))
-                self._advance()
-                self._advance()
-            else:
-                self._tokens.append(Token(TokenType.GREATER, ">", self._line, self._col))
-                self._advance()
-
-    def _advance(self) -> None:
-        """Advance the position by one character."""
-        if self._pos < len(self._source):
-            if self._source[self._pos] == "\n":
-                self._line += 1
-                self._col = 1
-            else:
-                self._col += 1
-            self._pos += 1
-
-    def _peek(self, offset: int = 0) -> str:
-        """Peek at a character at current position plus offset.
-
-        Args:
-            offset: Number of characters ahead to look.
-
-        Returns:
-            str: Character at position, or empty string if out of bounds.
-        """
-        idx = self._pos + offset
-        return self._source[idx] if idx < len(self._source) else ""
-
-    def _skip_whitespace_and_comments(self) -> None:
-        """Skip whitespace and comments.
-
-        Raises:
-            HexPatError: If a block comment is not terminated.
-        """
-        while self._pos < len(self._source):
-            ch = self._source[self._pos]
-            if ch in {" ", "\t", "\r", "\n"}:
-                self._advance()
-            elif ch == "/" and self._peek(1) == "/":
-                while self._pos < len(self._source) and self._source[self._pos] != "\n":
-                    self._advance()
-            elif ch == "/" and self._peek(1) == "*":
-                comment_line = self._line
-                comment_col = self._col
-                self._advance()
-                self._advance()
-                found_end = False
-                while self._pos < len(self._source):
-                    if self._source[self._pos] == "*" and self._peek(1) == "/":
-                        self._advance()
-                        self._advance()
-                        found_end = True
-                        break
-                    self._advance()
-                if not found_end:
-                    msg = "unterminated block comment"
-                    raise HexPatError(msg, comment_line, comment_col)
-            else:
-                break
-
-    def _read_string(self) -> None:
-        """Read a string literal token.
-
-        Raises:
-            HexPatError: If the string literal is not terminated.
-        """
-        start_line = self._line
-        start_col = self._col
-        self._advance()
-        chars: list[str] = []
-        while self._pos < len(self._source):
-            ch = self._source[self._pos]
-            self._advance()
-            if ch == "\\":
-                if self._pos < len(self._source):
-                    esc = self._source[self._pos]
-                    escape_map = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"'}
-                    chars.append(escape_map.get(esc, esc))
-                    self._advance()
-            elif ch == '"':
-                self._tokens.append(Token(TokenType.STRING_LITERAL, "".join(chars), start_line, start_col))
-                return
-            else:
-                chars.append(ch)
-        msg = "unterminated string literal"
-        raise HexPatError(msg, start_line, start_col)
-
-    def _read_number(self) -> None:
-        """Read a numeric literal token."""
-        start_line = self._line
-        start_col = self._col
-        start_pos = self._pos
-
-        if self._source[self._pos] == "0" and self._peek(1) in {"x", "X"}:
-            self._advance()
-            self._advance()
-            while self._pos < len(self._source) and (self._source[self._pos].isdigit() or self._source[self._pos] in "abcdefABCDEF"):
-                self._advance()
-        else:
-            while self._pos < len(self._source) and self._source[self._pos].isdigit():
-                self._advance()
-
-        text = self._source[start_pos : self._pos]
-        self._tokens.append(Token(TokenType.NUMBER, text, start_line, start_col))
-
-    def _read_identifier(self) -> None:
-        """Read an identifier or keyword token."""
-        start_line = self._line
-        start_col = self._col
-        start_pos = self._pos
-        while self._pos < len(self._source) and (self._source[self._pos].isalnum() or self._source[self._pos] == "_"):
-            self._advance()
-        text = self._source[start_pos : self._pos]
-        token_type = _KEYWORD_MAP.get(text, TokenType.IDENTIFIER)
-        self._tokens.append(Token(token_type, text, start_line, start_col))
-
-
-class HexPatParser:
-    """Recursive descent parser for HexPat DSL."""
-
-    def __init__(self, tokens: list[Token]) -> None:
-        """Initialize the HexPatParser with a list of tokens.
-
-        Args:
-            tokens: List of tokens from the lexer.
-        """
-        self._tokens = tokens
-        self._pos = 0
-
-    def parse(self) -> list[DeclNode]:
-        """Parse the token stream into a list of declarations.
-
-        Returns:
-            list[DeclNode]: List of parsed declaration AST nodes.
-        """
-        decls: list[DeclNode] = []
-        while not self._at_end():
-            decl = self._parse_declaration()
-            if decl is not None:
-                decls.append(decl)
-        return decls
-
-    def _current(self) -> Token:
-        """Get the current token.
-
-        Returns:
-            Token: Current token.
-        """
-        return self._tokens[self._pos]
-
-    def _at_end(self) -> bool:
-        """Check if at the end of tokens.
-
-        Returns:
-            bool: True if at EOF.
-        """
-        return self._current().type == TokenType.EOF
-
-    def _advance(self) -> Token:
-        """Advance and return the current token.
-
-        Returns:
-            Token: The token that was current before advancing.
-        """
-        tok = self._current()
-        if not self._at_end():
-            self._pos += 1
-        return tok
-
-    def _expect(self, tt: TokenType) -> Token:
-        """Expect and consume a specific token type.
-
-        Args:
-            tt: Expected token type.
-
-        Returns:
-            Token: The consumed token.
-
-        Raises:
-            HexPatError: If current token doesn't match expected type.
-        """
-        tok = self._current()
-        if tok.type != tt:
-            msg = f"expected {tt.value}, got '{tok.value}'"
-            raise HexPatError(msg, tok.line, tok.column)
-        return self._advance()
-
-    def _match(self, *types: TokenType) -> Token | None:
-        """Consume token if it matches any of the given types.
-
-        Args:
-            *types: Token types to match against.
-
-        Returns:
-            Token | None: Consumed token, or None if no match.
-        """
-        return self._advance() if self._current().type in types else None
-
-    def _parse_declaration(self) -> DeclNode | None:
-        """Parse a top-level declaration.
-
-        Returns:
-            DeclNode | None: Parsed declaration or None.
-
-        Raises:
-            HexPatError: On unexpected tokens.
-        """
-        tok = self._current()
-        if tok.type == TokenType.STRUCT:
-            return self._parse_struct()
-        if tok.type == TokenType.UNION:
-            return self._parse_union()
-        if tok.type == TokenType.ENUM:
-            return self._parse_enum()
-        if tok.type == TokenType.BITFIELD:
-            return self._parse_bitfield()
-        if tok.type in _RUNTIME_ONLY_TOKENS:
-            msg = (
-                f"'{tok.value}' is a runtime construct that cannot be compiled "
-                f"to a static JSON template; use the HexPat interpreter "
-                f"for patterns containing {tok.value} statements"
-            )
-            raise HexPatError(msg, tok.line, tok.column)
-        if tok.type == TokenType.SEMICOLON:
-            self._advance()
-            return None
-        if tok.type == TokenType.IDENTIFIER and tok.value in {
-            "fn",
-            "namespace",
-            "using",
-            "const",
-            "return",
-            "break",
-            "continue",
-        }:
-            self._skip_construct()
-            return None
-        msg = f"expected declaration, got '{tok.value}'"
-        raise HexPatError(msg, tok.line, tok.column)
-
-    def _skip_construct(self) -> None:
-        """Skip an unsupported construct by consuming tokens until balanced."""
-        brace_depth = 0
-        while not self._at_end():
-            tok = self._advance()
-            if tok.type == TokenType.LBRACE:
-                brace_depth += 1
-            elif tok.type == TokenType.RBRACE:
-                if brace_depth <= 1:
-                    self._match(TokenType.SEMICOLON)
-                    return
-                brace_depth -= 1
-            elif tok.type == TokenType.SEMICOLON and brace_depth == 0:
-                return
-
-    def _parse_struct(self) -> StructDecl:
-        """Parse a struct declaration.
-
-        Returns:
-            StructDecl: Parsed struct declaration.
-        """
-        self._expect(TokenType.STRUCT)
-        name_tok = self._expect(TokenType.IDENTIFIER)
-        self._expect(TokenType.LBRACE)
-        fields = self._parse_field_list()
-        self._expect(TokenType.RBRACE)
-        self._match(TokenType.SEMICOLON)
-        return StructDecl(name=name_tok.value, fields=fields)
-
-    def _parse_union(self) -> UnionDecl:
-        """Parse a union declaration.
-
-        Returns:
-            UnionDecl: Parsed union declaration.
-        """
-        self._expect(TokenType.UNION)
-        name_tok = self._expect(TokenType.IDENTIFIER)
-        self._expect(TokenType.LBRACE)
-        fields: list[FieldNode] = []
-        while self._current().type != TokenType.RBRACE and not self._at_end():
-            f = self._parse_field()
-            if isinstance(f, FieldNode):
-                fields.append(f)
-        self._expect(TokenType.RBRACE)
-        self._match(TokenType.SEMICOLON)
-        return UnionDecl(name=name_tok.value, fields=fields)
-
-    def _parse_enum(self) -> EnumDecl:
-        """Parse an enum declaration with optional auto-incrementing values.
-
-        Returns:
-            EnumDecl: Parsed enum declaration.
-        """
-        self._expect(TokenType.ENUM)
-        name_tok = self._expect(TokenType.IDENTIFIER)
-        self._expect(TokenType.COLON)
-        backing = self._parse_type_spec()
-        self._expect(TokenType.LBRACE)
-        values: list[tuple[str, int]] = []
-        counter = 0
-        while self._current().type != TokenType.RBRACE and not self._at_end():
-            val_name = self._expect(TokenType.IDENTIFIER)
-            if self._match(TokenType.ASSIGN):
-                val_num = self._expect(TokenType.NUMBER)
-                counter = int(val_num.value, 0)
-            values.append((val_name.value, counter))
-            counter += 1
-            self._match(TokenType.COMMA)
-        self._expect(TokenType.RBRACE)
-        self._match(TokenType.SEMICOLON)
-        return EnumDecl(name=name_tok.value, backing_type=backing, values=values)
-
-    def _parse_bitfield(self) -> BitfieldDecl:
-        """Parse a bitfield declaration.
-
-        Returns:
-            BitfieldDecl: Parsed bitfield declaration.
-        """
-        self._expect(TokenType.BITFIELD)
-        name_tok = self._expect(TokenType.IDENTIFIER)
-        self._expect(TokenType.LBRACE)
-        fields: list[tuple[str, int]] = []
-        while self._current().type != TokenType.RBRACE and not self._at_end():
-            field_name = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.COLON)
-            width_tok = self._expect(TokenType.NUMBER)
-            width = int(width_tok.value, 0)
-            fields.append((field_name.value, width))
-            self._expect(TokenType.SEMICOLON)
-        self._expect(TokenType.RBRACE)
-        self._match(TokenType.SEMICOLON)
-        return BitfieldDecl(name=name_tok.value, fields=fields)
-
-    def _parse_field_list(self) -> list[FieldNode | ConditionalField]:
-        """Parse a list of fields within braces.
-
-        Returns:
-            list[FieldNode | ConditionalField]: Parsed field list.
-        """
-        fields: list[FieldNode | ConditionalField] = []
-        while self._current().type != TokenType.RBRACE and not self._at_end():
-            f = self._parse_field()
-            fields.append(f)
-        return fields
-
-    def _parse_field(self) -> FieldNode | ConditionalField:
-        """Parse a single field or conditional.
-
-        Returns:
-            FieldNode | ConditionalField: Parsed field node.
-        """
-        if self._current().type == TokenType.IF:
-            return self._parse_conditional()
-
-        endianness: str | None = None
-        if self._current().type in {TokenType.LE, TokenType.BE}:
-            endianness = self._advance().value.lower()
-
-        if self._current().type == TokenType.PADDING:
-            return self._parse_padding_field(endianness)
-
-        type_node: TypeNode = self._parse_type_spec()
-
-        if self._current().type == TokenType.STAR:
-            star_tok = self._advance()
-            type_node = PointerType(
-                pointee=type_node,
-                line=star_tok.line,
-                column=star_tok.column,
-            )
-
-        name_tok = self._expect(TokenType.IDENTIFIER)
-
-        array_size: ExprNode | None = None
-        if self._current().type == TokenType.LBRACKET:
-            self._advance()
-            array_size = self._parse_expression()
-            self._expect(TokenType.RBRACKET)
-
-        annotations: dict[str, ExprNode] = {}
-        if self._current().type == TokenType.DOUBLE_LBRACKET:
-            annotations = self._parse_annotations()
-
-        self._expect(TokenType.SEMICOLON)
-        return FieldNode(
-            name=name_tok.value,
-            type_node=type_node,
-            endianness=endianness,
-            array_size=array_size,
-            annotations=annotations,
-        )
-
-    def _parse_padding_field(self, endianness: str | None) -> FieldNode:
-        """Parse a padding field declaration.
-
-        Args:
-            endianness: Endianness prefix or None.
-
-        Returns:
-            FieldNode: Parsed padding field node.
-        """
-        self._expect(TokenType.PADDING)
-        self._expect(TokenType.LBRACKET)
-        size_expr = self._parse_expression()
-        self._expect(TokenType.RBRACKET)
-
-        annotations: dict[str, ExprNode] = {}
-        if self._current().type == TokenType.DOUBLE_LBRACKET:
-            annotations = self._parse_annotations()
-
-        self._expect(TokenType.SEMICOLON)
-        return FieldNode(
-            name="_padding",
-            type_node=PaddingType(size=size_expr),
-            endianness=endianness,
-            annotations=annotations,
-        )
-
-    def _parse_conditional(self) -> ConditionalField:
-        """Parse a conditional field block.
-
-        Returns:
-            ConditionalField: Parsed conditional field.
-        """
-        self._expect(TokenType.IF)
-        self._expect(TokenType.LPAREN)
-        condition = self._parse_expression()
-        self._expect(TokenType.RPAREN)
-        self._expect(TokenType.LBRACE)
-        true_fields = self._parse_field_list()
-        self._expect(TokenType.RBRACE)
-
-        false_fields: list[FieldNode | ConditionalField] = []
-        if self._current().type == TokenType.ELSE:
-            self._advance()
-            self._expect(TokenType.LBRACE)
-            false_fields = self._parse_field_list()
-            self._expect(TokenType.RBRACE)
-
-        return ConditionalField(
-            condition=condition,
-            true_fields=true_fields,
-            false_fields=false_fields,
-        )
-
-    def _parse_type_spec(self) -> TypeNode:
-        """Parse a type specifier.
-
-        Returns:
-            TypeNode: Parsed type node.
-
-        Raises:
-            HexPatError: On unknown type.
-        """
-        tok = self._current()
-        if tok.type in _PRIMITIVE_TOKENS:
-            self._advance()
-            return PrimitiveType(name=tok.value.lower())
-        if tok.type == TokenType.PADDING:
-            self._advance()
-            self._expect(TokenType.LBRACKET)
-            size_expr = self._parse_expression()
-            self._expect(TokenType.RBRACKET)
-            return PaddingType(size=size_expr)
-        if tok.type == TokenType.IDENTIFIER:
-            self._advance()
-            return StructRefType(name=tok.value)
-        msg = f"expected type, got '{tok.value}'"
-        raise HexPatError(msg, tok.line, tok.column)
-
-    def _parse_annotations(self) -> dict[str, ExprNode]:
-        """Parse an annotation block ``[[ ... ]]``.
-
-        Returns:
-            dict[str, ExprNode]: Parsed annotations.
-        """
-        self._expect(TokenType.DOUBLE_LBRACKET)
-        annotations: dict[str, ExprNode] = {}
-        while self._current().type != TokenType.DOUBLE_RBRACKET and not self._at_end():
-            key_tok = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.LPAREN)
-            value_expr = self._parse_expression()
-            self._expect(TokenType.RPAREN)
-            annotations[key_tok.value] = value_expr
-            self._match(TokenType.COMMA)
-        self._expect(TokenType.DOUBLE_RBRACKET)
-        return annotations
-
-    def _parse_expression(self) -> ExprNode:
-        """Parse an expression.
-
-        Returns:
-            ExprNode: Parsed expression node.
-        """
-        return self._parse_bitwise_or()
-
-    def _parse_bitwise_or(self) -> ExprNode:
-        """Parse a bitwise OR expression (lowest binary precedence).
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_bitwise_xor()
-        while self._current().type == TokenType.PIPE:
-            op_tok = self._advance()
-            right = self._parse_bitwise_xor()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_bitwise_xor(self) -> ExprNode:
-        """Parse a bitwise XOR expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_bitwise_and()
-        while self._current().type == TokenType.CARET:
-            op_tok = self._advance()
-            right = self._parse_bitwise_and()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_bitwise_and(self) -> ExprNode:
-        """Parse a bitwise AND expression.
-
-        Bitwise AND is lower precedence than equality so that
-        ``flag & MASK != 0`` parses as ``(flag & MASK) != 0`` to match the
-        intent of pattern authors writing bit-mask predicates. C's official
-        precedence places AND below equality, which would parse the same
-        text as ``flag & (MASK != 0)``; the alternative chosen here matches
-        ImHex pattern language conventions and avoids the C precedence
-        footgun in DSL source.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_comparison()
-        while self._current().type == TokenType.AMPERSAND:
-            op_tok = self._advance()
-            right = self._parse_comparison()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_comparison(self) -> ExprNode:
-        """Parse a comparison expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_additive()
-        while self._current().type in {
-            TokenType.EQUALS,
-            TokenType.NOT_EQUALS,
-            TokenType.LESS,
-            TokenType.GREATER,
-            TokenType.LESS_EQUAL,
-            TokenType.GREATER_EQUAL,
-        }:
-            op_tok = self._advance()
-            right = self._parse_additive()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_additive(self) -> ExprNode:
-        """Parse an additive expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_multiplicative()
-        while self._current().type in {TokenType.PLUS, TokenType.MINUS}:
-            op_tok = self._advance()
-            right = self._parse_multiplicative()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_multiplicative(self) -> ExprNode:
-        """Parse a multiplicative expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        left = self._parse_unary()
-        while self._current().type in {TokenType.STAR, TokenType.SLASH, TokenType.PERCENT}:
-            op_tok = self._advance()
-            right = self._parse_unary()
-            left = BinaryExpr(op=op_tok.value, left=left, right=right)
-        return left
-
-    def _parse_unary(self) -> ExprNode:
-        """Parse a unary expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-        """
-        if self._current().type in {TokenType.MINUS, TokenType.TILDE, TokenType.BANG}:
-            op_tok = self._advance()
-            operand = self._parse_unary()
-            return UnaryExpr(op=op_tok.value, operand=operand)
-        return self._parse_primary()
-
-    def _parse_primary(self) -> ExprNode:
-        """Parse a primary expression.
-
-        Returns:
-            ExprNode: Parsed expression.
-
-        Raises:
-            HexPatError: On unexpected token.
-        """
-        tok = self._current()
-        if tok.type == TokenType.NUMBER:
-            self._advance()
-            return NumberLiteral(value=int(tok.value, 0))
-        if tok.type == TokenType.STRING_LITERAL:
-            self._advance()
-            return StringLiteral(value=tok.value)
-        if tok.type == TokenType.DOLLAR:
-            self._advance()
-            return DollarExpr()
-        if tok.type == TokenType.SIZEOF:
-            self._advance()
-            self._expect(TokenType.LPAREN)
-            target = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.RPAREN)
-            return SizeofExpr(target=target.value)
-        if tok.type == TokenType.ADDRESSOF:
-            self._advance()
-            self._expect(TokenType.LPAREN)
-            target = self._expect(TokenType.IDENTIFIER)
-            self._expect(TokenType.RPAREN)
-            return AddressofExpr(target=target.value)
-        if tok.type == TokenType.IDENTIFIER:
-            self._advance()
-            return IdentifierExpr(name=tok.value)
-        if tok.type == TokenType.LPAREN:
-            self._advance()
-            expr = self._parse_expression()
-            self._expect(TokenType.RPAREN)
-            return expr
-        msg = f"expected expression, got '{tok.value}'"
-        raise HexPatError(msg, tok.line, tok.column)
+_INVERT_OP_MAP: Final[dict[str, str]] = {
+    "Eq": "Ne",
+    "Ne": "Eq",
+    "Gt": "Le",
+    "Lt": "Ge",
+    "Ge": "Lt",
+    "Le": "Gt",
+    "BitAnd": "BitAndZero",
+    "BitAndZero": "BitAnd",
+}
+
+
+_ENDIANNESS_MAP: Final[dict[str, str]] = {"le": "little", "be": "big"}
+
+
+_RUNTIME_DECL_LABELS: Final[dict[type, str]] = {
+    FunctionDecl: "function",
+    NamespaceDecl: "namespace",
+    UsingDecl: "using",
+}
+
+
+_RUNTIME_STMT_LABELS: Final[dict[type, str]] = {
+    WhileStmt: "while",
+    ForStmt: "for",
+    MatchStmt: "match",
+    TryStmt: "try",
+    VarDecl: "var",
+    ExprStmt: "expression statement",
+}
+
+
+_RUNTIME_STMT_TYPES: Final[tuple[type, ...]] = tuple(_RUNTIME_STMT_LABELS.keys())
 
 
 class HexPatCodegen:
-    """Generates JSON template definitions from a HexPat AST."""
+    """Generates JSON template definitions from a HexPat AST.
 
-    def __init__(self, declarations: list[DeclNode]) -> None:
-        """Initialize the HexPatCodegen with parsed declarations.
+    Walks the shared HexPat AST produced by
+    ``intellicrack.core.hexpat.parser.HexPatParser`` and emits a
+    JSON-serializable template definition. Runtime constructs that have no
+    static representation are rejected during the walk.
+    """
+
+    def __init__(self, declarations: Sequence[DeclNode | StmtNode]) -> None:
+        """Initialize the HexPatCodegen with parsed top-level AST nodes.
+
+        Top-level runtime-only declarations and statements raise
+        :class:`HexPatError` from :meth:`_reject_runtime_top_level`.
 
         Args:
-            declarations: List of parsed declaration nodes.
+            declarations: Sequence of top-level AST nodes produced by
+                :class:`HexPatParser`. Items typically include
+                :class:`StructDecl`, :class:`UnionDecl`, :class:`EnumDecl`,
+                and :class:`BitfieldDecl`. Top-level placement statements
+                or other ``StmtNode`` values are rejected at construction
+                time as they have no representation in the static JSON
+                template.
         """
-        self._decls = declarations
-        self._nested_structs: dict[str, StructDecl] = {}
-        self._nested_unions: dict[str, UnionDecl] = {}
-        self._nested_enums: dict[str, EnumDecl] = {}
-        self._nested_bitfields: dict[str, BitfieldDecl] = {}
-        self._collect_nested()
+        self._reject_runtime_top_level(declarations)
+        self._decls: list[DeclNode] = [node for node in declarations if isinstance(node, (StructDecl, UnionDecl, EnumDecl, BitfieldDecl))]
+        self._nested_enums: dict[str, EnumDecl] = {decl.name: decl for decl in self._decls if isinstance(decl, EnumDecl)}
         _logger.debug(
             "hexpat_codegen_initialized",
-            declaration_count=len(declarations),
+            declaration_count=len(self._decls),
         )
 
-    def _collect_nested(self) -> None:
-        """Index nested declarations by name for StructRef resolution."""
-        for decl in self._decls:
-            if isinstance(decl, StructDecl):
-                self._nested_structs[decl.name] = decl
-            elif isinstance(decl, UnionDecl):
-                self._nested_unions[decl.name] = decl
-            elif isinstance(decl, EnumDecl):
-                self._nested_enums[decl.name] = decl
-            else:
-                self._nested_bitfields[decl.name] = decl
+    @staticmethod
+    def _reject_runtime_top_level(declarations: Sequence[DeclNode | StmtNode]) -> None:
+        """Reject top-level runtime-only declarations and statements.
+
+        Args:
+            declarations: Sequence of top-level AST nodes.
+
+        Raises:
+            HexPatError: If any node is a runtime-only declaration or
+                statement that has no representation in the static JSON
+                template.
+        """
+        for decl in declarations:
+            decl_type = type(decl)
+            decl_label = _RUNTIME_DECL_LABELS.get(decl_type)
+            if decl_label is not None:
+                msg = (
+                    f"'{decl_label}' is a runtime construct that cannot be "
+                    f"compiled to a static JSON template; use the HexPat "
+                    f"interpreter for patterns containing {decl_label} "
+                    f"declarations"
+                )
+                raise HexPatError(msg, decl.line, decl.column)
+            stmt_label = _RUNTIME_STMT_LABELS.get(decl_type)
+            if stmt_label is not None:
+                msg = (
+                    f"top-level '{stmt_label}' is a runtime construct that "
+                    f"cannot be compiled to a static JSON template; use the "
+                    f"HexPat interpreter for patterns containing "
+                    f"{stmt_label} statements"
+                )
+                raise HexPatError(msg, decl.line, decl.column)
 
     def generate(self) -> dict[str, Any]:
         """Generate the JSON template dict from all declarations.
@@ -1250,39 +225,42 @@ class HexPatCodegen:
         Raises:
             HexPatError: If no struct declaration is found.
         """
-        main_struct: StructDecl | None = next((decl for decl in self._decls if isinstance(decl, StructDecl)), None)
+        main_struct: StructDecl | None = next(
+            (decl for decl in self._decls if isinstance(decl, StructDecl)),
+            None,
+        )
         if main_struct is None:
             msg = "no struct declaration found"
             _logger.error("hexpat_generate_no_struct_declaration")
             raise HexPatError(msg)
 
         fields: list[dict[str, Any]] = []
-        for f in main_struct.fields:
-            fields.extend(self._gen_field(f))
+        for stmt in main_struct.body:
+            fields.extend(self._gen_field(stmt))
 
         types: dict[str, dict[str, Any]] = {}
         for decl in self._decls:
             if isinstance(decl, StructDecl) and decl.name != main_struct.name:
                 struct_fields: list[dict[str, Any]] = []
-                for f in decl.fields:
-                    struct_fields.extend(self._gen_field(f))
+                for stmt in decl.body:
+                    struct_fields.extend(self._gen_field(stmt))
                 types[decl.name] = {"kind": "struct", "fields": struct_fields}
             elif isinstance(decl, UnionDecl):
                 union_fields: list[dict[str, Any]] = []
-                for f in decl.fields:
-                    union_fields.extend(self._gen_field(f))
+                for stmt in decl.body:
+                    union_fields.extend(self._gen_field(stmt))
                 types[decl.name] = {"kind": "union", "fields": union_fields}
             elif isinstance(decl, EnumDecl):
                 backing = self._gen_type(decl.backing_type)
                 types[decl.name] = {
                     "kind": "enum",
                     "backing_type": backing,
-                    "values": list(decl.values),
+                    "values": self._gen_enum_values(decl.entries),
                 }
             elif isinstance(decl, BitfieldDecl):
                 types[decl.name] = {
                     "kind": "bitfield",
-                    "fields": list(decl.fields),
+                    "fields": self._gen_bitfield_entries(decl.entries),
                 }
 
         result: dict[str, Any] = {
@@ -1295,22 +273,95 @@ class HexPatCodegen:
             result["types"] = types
         return result
 
-    def _gen_field(self, node: FieldNode | ConditionalField) -> list[dict[str, Any]]:
-        """Generate field definition dicts from a field node.
+    def _gen_enum_values(
+        self,
+        entries: tuple[EnumEntry, ...],
+    ) -> list[tuple[str, int]]:
+        """Compute concrete integer values for enum entries.
+
+        Auto-incrementing semantics match the original HexPat compiler:
+        explicit ``= value`` resets the counter; subsequent entries are
+        emitted with the previous counter incremented by one. If an entry
+        value is not a compile-time integer constant,
+        :meth:`_eval_const_expr` raises :class:`HexPatError`.
+
+        Args:
+            entries: Tuple of enum entries from an :class:`EnumDecl`.
+
+        Returns:
+            list[tuple[str, int]]: List of ``(name, value)`` pairs ready
+            for JSON emission.
+        """
+        result: list[tuple[str, int]] = []
+        counter = 0
+        for entry in entries:
+            if entry.value is not None:
+                counter = self._eval_const_expr(entry.value)
+            result.append((entry.name, counter))
+            counter += 1
+        return result
+
+    @staticmethod
+    def _gen_bitfield_entries(
+        entries: tuple[BitfieldEntry, ...],
+    ) -> list[tuple[str, int]]:
+        """Convert bitfield AST entries into ``(name, width)`` JSON pairs.
+
+        If a bitfield width expression is not a compile-time integer
+        constant, :meth:`_eval_const_expr` raises :class:`HexPatError`.
+
+        Args:
+            entries: Tuple of bitfield entries from a :class:`BitfieldDecl`.
+
+        Returns:
+            list[tuple[str, int]]: List of ``(name, width)`` pairs.
+        """
+        result: list[tuple[str, int]] = []
+        for entry in entries:
+            width = HexPatCodegen._eval_const_expr(entry.width)
+            result.append((entry.name, width))
+        return result
+
+    def _gen_field(self, node: StmtNode) -> list[dict[str, Any]]:
+        """Generate field definition dicts from a struct/union body statement.
 
         Conditionals may produce multiple fields (if + else branches).
 
         Args:
-            node: Field or conditional field AST node.
+            node: An AST statement node from a struct or union body.
 
         Returns:
             list[dict[str, Any]]: List of JSON field definitions.
+
+        Raises:
+            HexPatError: If the node is a runtime-only construct that has
+                no static JSON representation.
         """
         if isinstance(node, ConditionalField):
             return self._gen_conditional(node)
-        return [self._gen_regular_field(node)]
+        if isinstance(node, FieldDecl):
+            return [self._gen_regular_field(node)]
+        if isinstance(node, _RUNTIME_STMT_TYPES):
+            label = _RUNTIME_STMT_LABELS[type(node)]
+            msg = (
+                f"'{label}' is a runtime construct that cannot be compiled "
+                f"to a static JSON template; use the HexPat interpreter "
+                f"for patterns containing {label} statements"
+            )
+            line = getattr(node, "line", 0)
+            column = getattr(node, "column", 0)
+            raise HexPatError(msg, line, column)
+        if isinstance(node, PlacementStmt):
+            msg = "top-level placement statements are not supported inside a struct/union body when compiling to JSON"
+            line = getattr(node, "line", 0)
+            column = getattr(node, "column", 0)
+            raise HexPatError(msg, line, column)
+        msg = f"unsupported AST node '{type(node).__name__}' in struct body"
+        line = getattr(node, "line", 0)
+        column = getattr(node, "column", 0)
+        raise HexPatError(msg, line, column)
 
-    def _gen_regular_field(self, node: FieldNode) -> dict[str, Any]:
+    def _gen_regular_field(self, node: FieldDecl) -> dict[str, Any]:
         """Generate a regular field definition dict.
 
         Args:
@@ -1318,12 +369,31 @@ class HexPatCodegen:
 
         Returns:
             dict[str, Any]: JSON field definition.
-        """
-        field_type = self._gen_type(node.type_node)
 
-        if isinstance(node.type_node, PointerType):
-            pointee = node.type_node.pointee
-            if isinstance(pointee, StructRefType):
+        Raises:
+            HexPatError: If a constituent expression cannot be evaluated at
+                compile time.
+        """
+        type_node = node.type_node
+        array_size_expr = node.array_size
+        while_condition_expr = node.while_condition
+
+        if while_condition_expr is not None:
+            msg = "while-conditioned arrays are runtime constructs and cannot be compiled to a static JSON template"
+            raise HexPatError(msg, node.line, node.column)
+
+        if isinstance(type_node, ArrayType):
+            if type_node.while_condition is not None:
+                msg = "while-conditioned arrays are runtime constructs and cannot be compiled to a static JSON template"
+                raise HexPatError(msg, node.line, node.column)
+            array_size_expr = type_node.size
+            type_node = type_node.element
+
+        field_type = self._gen_type(type_node)
+
+        if node.is_pointer or isinstance(type_node, PointerType):
+            pointee = type_node.pointee if isinstance(type_node, PointerType) else type_node
+            if isinstance(pointee, NamedType):
                 target = pointee.name
                 ptr_base: dict[str, Any] = {"type": "UInt64"}
             elif isinstance(pointee, PrimitiveType):
@@ -1339,21 +409,21 @@ class HexPatCodegen:
                     "target_template": target,
                 },
             }
-        elif node.array_size is not None:
-            if isinstance(node.array_size, NumberLiteral):
+        elif array_size_expr is not None:
+            if isinstance(array_size_expr, NumberLiteral):
                 field_type = {
                     "type": "Array",
                     "params": {
                         "element_type": field_type,
-                        "count": node.array_size.value,
+                        "count": array_size_expr.value,
                     },
                 }
-            elif isinstance(node.array_size, IdentifierExpr):
+            elif isinstance(array_size_expr, IdentifierExpr):
                 field_type = {
                     "type": "DynamicArray",
                     "params": {
                         "element_type": field_type,
-                        "count_field": node.array_size.name,
+                        "count_field": array_size_expr.name,
                     },
                 }
             else:
@@ -1361,7 +431,7 @@ class HexPatCodegen:
                     "type": "Array",
                     "params": {
                         "element_type": field_type,
-                        "count": self._eval_const_expr(node.array_size),
+                        "count": self._eval_const_expr(array_size_expr),
                     },
                 }
 
@@ -1371,11 +441,12 @@ class HexPatCodegen:
             "description": "",
         }
 
-        if node.endianness is not None:
-            result["endianness"] = "little" if node.endianness == "le" else "big"
+        endianness = self._resolve_endianness(node)
+        if endianness is not None:
+            result["endianness"] = endianness
 
         validation: dict[str, Any] = {}
-        for key, expr in node.annotations.items():
+        for key, expr in node.annotations:
             if key == "color" and isinstance(expr, StringLiteral):
                 result["color"] = expr.value
             elif key == "description" and isinstance(expr, StringLiteral):
@@ -1392,14 +463,35 @@ class HexPatCodegen:
 
         return result
 
+    @staticmethod
+    def _resolve_endianness(node: FieldDecl) -> str | None:
+        """Resolve the endianness keyword for a field into the JSON form.
+
+        Endianness may appear on the FieldDecl itself (via a leading
+        ``le``/``be`` token), or carried along on the underlying type when
+        the parser folds the prefix into a :class:`PrimitiveType`,
+        :class:`ArrayType`, or :class:`PointerType`.
+
+        Args:
+            node: The field declaration node.
+
+        Returns:
+            str | None: ``"little"`` or ``"big"`` when an endianness
+            specifier was present, otherwise ``None``.
+        """
+        keyword = node.endianness or getattr(node.type_node, "endianness", None)
+        if keyword is None:
+            return None
+        return _ENDIANNESS_MAP.get(keyword.lower())
+
     def _gen_conditional(self, node: ConditionalField) -> list[dict[str, Any]]:
         """Generate conditional field definition dicts.
 
         For ``if``/``else`` constructs, emits the true-branch as a
-        ``Conditional`` field. If ``false_fields`` exist, emits a second
-        ``Conditional`` with an inverted comparison so the two emitted
-        ``Conditional`` instructions partition the space of the original
-        predicate exactly.
+        ``Conditional`` field. If ``false_fields`` is non-empty, emits a
+        second ``Conditional`` with an inverted comparison so the two
+        emitted ``Conditional`` instructions partition the space of the
+        original predicate exactly.
 
         The Rust runtime exposes a dedicated :code:`BitAndZero` opcode whose
         semantics are :code:`(field & mask) == 0`, the natural inverse of
@@ -1423,24 +515,15 @@ class HexPatCodegen:
                 condition_field = node.condition.left.name
             if isinstance(node.condition.right, NumberLiteral):
                 condition_value = node.condition.right.value
-            op_map: dict[str, str] = {
-                "==": "Eq",
-                "!=": "Ne",
-                ">": "Gt",
-                "<": "Lt",
-                ">=": "Ge",
-                "<=": "Le",
-                "&": "BitAnd",
-            }
-            condition_op = op_map.get(node.condition.op, "Eq")
+            condition_op = _COMPARISON_OP_MAP.get(node.condition.op, "Eq")
         elif isinstance(node.condition, IdentifierExpr):
             condition_field = node.condition.name
             condition_value = 0
             condition_op = "Ne"
 
         true_inner: list[dict[str, Any]] = []
-        for f in node.true_fields:
-            true_inner.extend(self._gen_field(f))
+        for stmt in node.true_fields:
+            true_inner.extend(self._gen_field(stmt))
 
         results: list[dict[str, Any]] = [
             {
@@ -1459,21 +542,11 @@ class HexPatCodegen:
         ]
 
         if node.false_fields:
-            invert_map: dict[str, str] = {
-                "Eq": "Ne",
-                "Ne": "Eq",
-                "Gt": "Le",
-                "Lt": "Ge",
-                "Ge": "Lt",
-                "Le": "Gt",
-                "BitAnd": "BitAndZero",
-                "BitAndZero": "BitAnd",
-            }
-            inverted_op = invert_map.get(condition_op, "Ne")
+            inverted_op = _INVERT_OP_MAP.get(condition_op, "Ne")
 
             else_inner: list[dict[str, Any]] = []
-            for f in node.false_fields:
-                else_inner.extend(self._gen_field(f))
+            for stmt in node.false_fields:
+                else_inner.extend(self._gen_field(stmt))
 
             results.append({
                 "name": f"_else_{condition_field}",
@@ -1492,13 +565,17 @@ class HexPatCodegen:
         return results
 
     def _gen_type(self, type_node: TypeNode) -> dict[str, Any]:
-        """Generate a JSON field type from a type node.
+        """Generate a JSON field type from a type AST node.
 
         Args:
             type_node: Type AST node.
 
         Returns:
             dict[str, Any]: JSON field type.
+
+        Raises:
+            HexPatError: If the type cannot be expressed in the static JSON
+                template (e.g. ``auto`` types, while-conditioned arrays).
         """
         if isinstance(type_node, PrimitiveType):
             mapped = _TYPE_MAP.get(type_node.name)
@@ -1512,7 +589,22 @@ class HexPatCodegen:
                 "type": "Pointer",
                 "params": {"pointer_type": inner, "target_template": ""},
             }
-
+        if isinstance(type_node, ArrayType):
+            if type_node.while_condition is not None:
+                msg = "while-conditioned arrays are runtime constructs and cannot be compiled to a static JSON template"
+                raise HexPatError(msg, type_node.line, type_node.column)
+            element = self._gen_type(type_node.element)
+            if type_node.size is None:
+                msg = "array type missing a compile-time size"
+                raise HexPatError(msg, type_node.line, type_node.column)
+            count = self._eval_const_expr(type_node.size)
+            return {
+                "type": "Array",
+                "params": {"element_type": element, "count": count},
+            }
+        if isinstance(type_node, AutoType):
+            msg = "'auto' types cannot be resolved at compile time; use the HexPat interpreter for patterns relying on type inference"
+            raise HexPatError(msg, type_node.line, type_node.column)
         if type_node.name in self._nested_enums:
             enum_decl = self._nested_enums[type_node.name]
             backing = self._gen_type(enum_decl.backing_type)
@@ -1520,7 +612,7 @@ class HexPatCodegen:
                 "type": "Enum",
                 "params": {
                     "backing_type": backing,
-                    "values": list(enum_decl.values),
+                    "values": self._gen_enum_values(enum_decl.entries),
                 },
             }
         return {"type": "StructRef", "params": type_node.name}
@@ -1549,11 +641,15 @@ class HexPatCodegen:
         """
         if isinstance(expr, NumberLiteral):
             return expr.value
+        if isinstance(expr, BoolLiteral):
+            return 1 if expr.value else 0
+        if isinstance(expr, CharLiteral):
+            return ord(expr.value) if expr.value else 0
         if isinstance(expr, UnaryExpr):
             if expr.op == "-":
                 return -HexPatCodegen._eval_const_expr(expr.operand)
             msg = f"unary operator '{expr.op}' is not a compile-time constant expression"
-            raise HexPatError(msg)
+            raise HexPatError(msg, expr.line, expr.column)
         if isinstance(expr, BinaryExpr):
             left = HexPatCodegen._eval_const_expr(expr.left)
             right = HexPatCodegen._eval_const_expr(expr.right)
@@ -1566,40 +662,61 @@ class HexPatCodegen:
             if expr.op == "/":
                 if right == 0:
                     msg = "division by zero in constant expression"
-                    raise HexPatError(msg)
+                    raise HexPatError(msg, expr.line, expr.column)
                 return left // right
             if expr.op == "%":
                 if right == 0:
                     msg = "modulo by zero in constant expression"
-                    raise HexPatError(msg)
+                    raise HexPatError(msg, expr.line, expr.column)
                 return left % right
             msg = f"binary operator '{expr.op}' is not a compile-time constant expression"
-            raise HexPatError(msg)
+            raise HexPatError(msg, expr.line, expr.column)
         if isinstance(expr, IdentifierExpr):
             msg = f"identifier '{expr.name}' cannot be resolved at compile time; use a numeric literal"
-            raise HexPatError(msg)
+            raise HexPatError(msg, expr.line, expr.column)
         if isinstance(expr, SizeofExpr):
-            msg = f"sizeof({expr.target}) is not a compile-time constant expression"
-            raise HexPatError(msg)
-        if isinstance(expr, AddressofExpr):
-            msg = f"addressof({expr.target}) is not a compile-time constant expression"
-            raise HexPatError(msg)
+            target_repr = getattr(expr.target, "name", type(expr.target).__name__)
+            msg = f"sizeof({target_repr}) is not a compile-time constant expression"
+            raise HexPatError(msg, expr.line, expr.column)
+        if isinstance(expr, AddressOfExpr):
+            target_repr = getattr(expr.target, "name", type(expr.target).__name__)
+            msg = f"addressof({target_repr}) is not a compile-time constant expression"
+            raise HexPatError(msg, expr.line, expr.column)
+        if isinstance(expr, TypeNameOfExpr):
+            msg = "typenameof(...) is not a compile-time constant expression"
+            raise HexPatError(msg, expr.line, expr.column)
         if isinstance(expr, DollarExpr):
             msg = "current-offset marker '$' is not a compile-time constant expression"
-            raise HexPatError(msg)
-        msg = "string literal cannot be used where an integer constant is required"
-        raise HexPatError(msg)
+            raise HexPatError(msg, expr.line, expr.column)
+        if isinstance(expr, FloatLiteral):
+            msg = "float literal cannot be used where an integer constant is required"
+            raise HexPatError(msg, expr.line, expr.column)
+        if isinstance(expr, StringLiteral):
+            msg = "string literal cannot be used where an integer constant is required"
+            raise HexPatError(msg, expr.line, expr.column)
+        if isinstance(expr, NullLiteral):
+            msg = "null literal cannot be used where an integer constant is required"
+            raise HexPatError(msg, expr.line, expr.column)
+        label = type(expr).__name__
+        msg = f"{label} is not a compile-time constant expression"
+        raise HexPatError(msg, expr.line, expr.column)
 
 
 class HexPatCompiler:
     """Compiles HexPat DSL source code into JSON template definitions.
 
-    Orchestrates the lexer, parser, and codegen pipeline.
+    Orchestrates the lexer, parser, and codegen pipeline. Lexing and
+    parsing are delegated to the canonical implementations in
+    ``intellicrack.core.hexpat``; this class adds AST-walk validation and
+    the static JSON code generator.
     """
 
     @staticmethod
     def compile(source: str) -> str:
         """Compile DSL source to a JSON string.
+
+        On lexing, parsing, or code-generation failure,
+        :meth:`compile_to_dict` raises :class:`HexPatError`.
 
         Args:
             source: HexPat DSL source code.
@@ -1619,12 +736,18 @@ class HexPatCompiler:
 
         Returns:
             dict[str, Any]: JSON-compatible template definition dict.
+
+        Raises:
+            HexPatError: If lexing, parsing, or code generation fails.
         """
         lexer = HexPatLexer(source)
         tokens = lexer.tokenize()
         parser = HexPatParser(tokens)
-        declarations = parser.parse()
-        codegen = HexPatCodegen(declarations)
+        try:
+            declarations = parser.parse()
+        except HexPatParseError as exc:
+            raise HexPatError(exc.message, exc.line, exc.column, exc.file) from exc
+        codegen = HexPatCodegen(list(declarations))
         result = codegen.generate()
         _logger.debug("hexpat_compiled", template_name=result.get("name", ""))
         return result
