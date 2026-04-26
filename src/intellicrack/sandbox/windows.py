@@ -20,12 +20,20 @@ import time
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Literal, cast
+from typing import IO, TYPE_CHECKING, Any, cast
 
 from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.sandbox._log_helpers import (
+    coerce_protocol as _coerce_protocol,
+    format_yara_match as _format_yara_match,
+    infer_direction as _infer_direction,
+    safe_float as _safe_float,
+    safe_int as _safe_int,
+    split_addr_port as _split_addr_port,
+)
 from intellicrack.sandbox.base import (
     ApiCall,
     ClipboardEvent,
@@ -123,8 +131,6 @@ _ERR_EXTRACT_FILES_FAILED = "Dropped file extraction failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_DISPATCHER_NOT_READY = "Sandbox dispatcher did not signal ready"
 _ERR_SCRIPTS_NOT_FOUND = "Sandbox monitor scripts directory not found"
-
-_YARA_MATCH_MIN_FIELDS = 3
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent / "scripts"
 
@@ -1363,9 +1369,8 @@ class WindowsSandbox(SandboxBase):
                 continue
             local_addr, local_port = _split_addr_port(parts[2])
             remote_addr, remote_port = _split_addr_port(parts[3])
-            state = parts[4].lower()
             protocol = _coerce_protocol(parts[5])
-            direction = _infer_direction(state)
+            direction = _infer_direction(parts[4])
             bytes_sent = _safe_int(parts[6])
             bytes_recv = _safe_int(parts[7])
             out.append(
@@ -2259,135 +2264,6 @@ async def _read_dispatcher_result(paths: _DispatcherPaths) -> tuple[int, str, st
             errors="ignore",
         )
     return (exit_code, stdout, stderr)
-
-
-def _split_addr_port(value: str) -> tuple[str, int]:
-    """Split an ``address:port`` literal into its components.
-
-    Args:
-        value: String of the form ``address:port`` or ``[ipv6]:port``.
-
-    Returns:
-        tuple[str, int]: Parsed address and port; port is ``0`` if unparseable.
-    """
-    if not value:
-        return ("", 0)
-    if value.startswith("[") and "]:" in value:
-        addr, _, port_str = value.partition("]:")
-        addr = addr.lstrip("[")
-        return (addr, _safe_int(port_str))
-    addr, sep, port_str = value.rpartition(":")
-    if not sep:
-        return (value, 0)
-    return (addr, _safe_int(port_str))
-
-
-def _coerce_protocol(value: str) -> Literal["tcp", "udp", "icmp", "other"]:
-    """Normalize a protocol label.
-
-    Args:
-        value: Raw protocol string from the monitor log.
-
-    Returns:
-        Literal["tcp", "udp", "icmp", "other"]: One of the canonical protocol labels.
-    """
-    lowered = value.strip().lower()
-    if lowered == "tcp":
-        return "tcp"
-    if lowered == "udp":
-        return "udp"
-    if lowered == "icmp":
-        return "icmp"
-    return "other"
-
-
-def _infer_direction(state: str) -> Literal["inbound", "outbound"]:
-    """Infer the network-activity direction from a TCP/UDP state string.
-
-    Args:
-        state: Raw state string from the network log.
-
-    Returns:
-        Literal["inbound", "outbound"]: Inbound for listen/bound states, outbound otherwise.
-    """
-    if state in {"listen", "bound"}:
-        return "inbound"
-    return "outbound"
-
-
-def _safe_int(value: str) -> int:
-    """Convert to int, returning 0 on failure.
-
-    Args:
-        value: Candidate numeric string.
-
-    Returns:
-        int: Parsed integer, or 0 if ``value`` is not numeric.
-    """
-    s = value.strip()
-    if not s:
-        return 0
-    try:
-        return int(s)
-    except (TypeError, ValueError):
-        try:
-            return int(float(s))
-        except (TypeError, ValueError):
-            return 0
-
-
-def _safe_float(value: str) -> float:
-    """Convert to float, returning ``0.0`` on failure.
-
-    Args:
-        value: Candidate numeric string.
-
-    Returns:
-        float: Parsed float, or ``0.0`` if ``value`` is not numeric.
-    """
-    s = value.strip()
-    if not s:
-        return 0.0
-    try:
-        return float(s)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
-    """Normalize a YARA match object into a plain dict.
-
-    Args:
-        m: YARA match object.
-        source: Origin file that produced the match.
-        scan_type: Either ``files`` or ``memory``.
-
-    Returns:
-        dict[str, Any]: Dictionary describing the rule, namespace, tags, and matched strings.
-    """
-    rule: str = getattr(m, "rule", "")
-    namespace: str = getattr(m, "namespace", "")
-    tags: list[str] = list(getattr(m, "tags", []))
-    raw_strings: list[Any] = list(getattr(m, "strings", []))
-    formatted: list[dict[str, Any]] = []
-    for s in raw_strings:
-        if len(s) >= _YARA_MATCH_MIN_FIELDS:
-            data_val: Any = s[2]
-            formatted.append(
-                {
-                    "offset": s[0],
-                    "identifier": s[1],
-                    "data": data_val.hex() if isinstance(data_val, bytes) else str(data_val),
-                },
-            )
-    return {
-        "rule": rule,
-        "namespace": namespace,
-        "tags": tags,
-        "strings": formatted,
-        "source": source,
-        "scan_type": scan_type,
-    }
 
 
 def _minidump_via_dbghelp(pid: int, dump_path: Path) -> tuple[bool, str]:
