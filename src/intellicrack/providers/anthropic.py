@@ -411,7 +411,7 @@ class AnthropicProvider(LLMProviderBase):
         self._pending_usage = None
         self._pending_thinking.clear()
 
-        system_prompt = self.get_system_prompt(messages)
+        system_prompt = self._extract_system_messages(messages)
         anthropic_messages = self.convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
@@ -510,7 +510,7 @@ class AnthropicProvider(LLMProviderBase):
         self._pending_thinking.clear()
 
         log_provider_request("anthropic", model, len(messages), len(tools or []))
-        system_prompt = self.get_system_prompt(messages)
+        system_prompt = self._extract_system_messages(messages)
         anthropic_messages = self.convert_messages_to_provider_format(messages)
         typed_messages = cast("list[MessageParam]", anthropic_messages)
         anthropic_tools: list[dict[str, object]] | None = None
@@ -713,16 +713,3 @@ class AnthropicProvider(LLMProviderBase):
             tool_schemas = create_anthropic_tool_schema(tool)
             anthropic_tools.extend(cast("dict[str, object]", schema) for schema in tool_schemas)
         return anthropic_tools
-
-    @staticmethod
-    def get_system_prompt(messages: list[Message]) -> str | None:
-        """Extract and concatenate all system messages into a single prompt.
-
-        Args:
-            messages: List of messages to scan.
-
-        Returns:
-            str | None: Concatenated system prompt content, or None if no system messages.
-        """
-        system_parts: list[str] = [msg.content for msg in messages if msg.role == "system" and msg.content]
-        return "\n\n".join(system_parts) if system_parts else None
