@@ -1310,14 +1310,10 @@ class OllamaProvider(LLMProviderBase):
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
                         break
-                    if not line:
+                    chunk_data = self._safe_parse_stream_json(line, logger=self._logger)
+                    if chunk_data is None:
                         continue
-                    try:
-                        chunk_data = json.loads(line)
-                    except json.JSONDecodeError as exc:
-                        self._logger.warning("stream_json_parse_skipped", error=str(exc))
-                        continue
-                    last_chunk_data = cast("dict[str, Any]", chunk_data)
+                    last_chunk_data = chunk_data
                     message_obj_raw: object = last_chunk_data.get("message")
                     if isinstance(message_obj_raw, dict):
                         message_obj: dict[str, Any] = cast("dict[str, Any]", message_obj_raw)
@@ -1467,12 +1463,10 @@ class OllamaProvider(LLMProviderBase):
                         continue
                     if payload == "[DONE]":
                         break
-                    try:
-                        chunk_data = json.loads(payload)
-                    except json.JSONDecodeError as exc:
-                        self._logger.warning("stream_json_parse_skipped", error=str(exc))
+                    chunk_data = self._safe_parse_stream_json(payload, logger=self._logger)
+                    if chunk_data is None:
                         continue
-                    self._record_usage_from_openai_payload(cast("dict[str, Any]", chunk_data))
+                    self._record_usage_from_openai_payload(chunk_data)
                     choices = cast("list[dict[str, Any]]", chunk_data.get("choices") or [])
                     if not choices:
                         continue
