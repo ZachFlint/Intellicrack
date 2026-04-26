@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, cast
 
-from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QFileDialog,
     QLabel,
@@ -22,7 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine
 
 
 _logger = get_logger(__name__)
@@ -32,51 +31,28 @@ if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
-class DiffWorker(QThread):
-    """Background worker that delegates byte-level comparison to HexEditorBridge.
+def execute_diff(bridge: HexEditorBridge, path_a: str, path_b: str) -> dict[str, Any]:
+    """Run a byte-level file comparison through the hex-editor bridge.
 
-    Attributes:
-        diff_finished: Emitted with result dict containing diff regions.
-        diff_error: Emitted with error message string on failure.
+    Args:
+        bridge: HexEditorBridge instance providing ``compare_files``.
+        path_a: Path to the first file.
+        path_b: Path to the second file.
+
+    Returns:
+        dict[str, Any]: Diff result enriched with ``path_a`` / ``path_b`` keys.
+
+    Raises:
+        TypeError: If the bridge returns a non-dict result.
     """
-
-    diff_finished: pyqtSignal = pyqtSignal(dict)
-    diff_error: pyqtSignal = pyqtSignal(str)
-
-    def __init__(
-        self,
-        bridge: HexEditorBridge,
-        path_a: str,
-        path_b: str,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the DiffWorker with bridge + two file paths.
-
-        Args:
-            bridge: HexEditorBridge instance providing compare_files.
-            path_a: Path to the first file.
-            path_b: Path to the second file.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self._bridge = bridge
-        self._path_a = path_a
-        self._path_b = path_b
-
-    @override
-    def run(self) -> None:
-        """Delegate byte-diff to HexEditorBridge.compare_files via async bridge."""
-        try:
-            raw: object = run_bridge_coroutine(self._bridge.compare_files(self._path_a, self._path_b))
-            if not isinstance(raw, dict):
-                self.diff_error.emit("compare_files returned non-dict result")
-                return
-            result: dict[str, Any] = raw
-            result.setdefault("path_a", self._path_a)
-            result.setdefault("path_b", self._path_b)
-            self.diff_finished.emit(result)
-        except (RuntimeError, OSError, ValueError) as exc:
-            self.diff_error.emit(str(exc))
+    raw: object = run_bridge_coroutine(bridge.compare_files(path_a, path_b))
+    if not isinstance(raw, dict):
+        msg = "compare_files returned non-dict result"
+        raise TypeError(msg)
+    result: dict[str, Any] = raw
+    result.setdefault("path_a", path_a)
+    result.setdefault("path_b", path_b)
+    return result
 
 
 class ComparisonMixin:
@@ -87,7 +63,7 @@ class ComparisonMixin:
     _hex_widget: Any | None
     _diff_results_tree: QTreeWidget | None
     _diff_summary_label: QLabel | None
-    _diff_worker: DiffWorker | None
+    _diff_worker: GenericCallableWorker | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to a specific offset.
@@ -178,11 +154,29 @@ class ComparisonMixin:
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText("Computing diff...")
 
-        worker = DiffWorker(bridge, path_a, compare_path)
-        worker.diff_finished.connect(self._on_diff_finished)
-        worker.diff_error.connect(self._on_diff_error)
+        worker = GenericCallableWorker(execute_diff, bridge, path_a, compare_path)
+        _: object = worker.call_finished.connect(self._on_diff_finished_obj)
+        _ = worker.call_error.connect(self._on_diff_error_obj)
         self._diff_worker = worker
         worker.start()
+
+    def _on_diff_finished_obj(self, result: object) -> None:
+        """Forward worker results to the typed diff handler.
+
+        Args:
+            result: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(result, dict):
+            typed: dict[str, Any] = cast("dict[str, Any]", result)
+            self._on_diff_finished(typed)
+
+    def _on_diff_error_obj(self, exc: object) -> None:
+        """Forward worker exceptions to the typed diff error handler.
+
+        Args:
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        self._on_diff_error(str(exc))
 
     def _on_diff_finished(self, result: dict[str, Any]) -> None:
         """Handle completed diff computation and populate the results tree.

@@ -7,9 +7,9 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, Final, override
+from typing import Any, Final, cast
 
-from PyQt6.QtCore import QRegularExpression, QThread, pyqtSignal
+from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.hex_editor._base import MAX_SEARCH_RESULTS
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -39,6 +40,7 @@ _ALIGN_SPIN_WIDTH: Final[int] = 50
 _MAX_INPUT_WIDTH: Final[int] = 100
 _HIGHLIGHT_DARK: Final[str] = "#FFAA00"
 _HIGHLIGHT_LIGHT: Final[str] = "#FF8800"
+_NUMERIC_SCAN_CHUNK_SIZE: Final[int] = 65536
 
 
 def _get_highlight_color() -> str:
@@ -52,222 +54,170 @@ def _get_highlight_color() -> str:
     return _HIGHLIGHT_LIGHT
 
 
-class SearchWorker(QThread):
-    """Background worker for hex/text/regex search operations.
+def execute_text_search(
+    document: object,
+    mode: str,
+    query: str,
+    encoding: str,
+    max_results: int,
+) -> list[tuple[int, int]]:
+    """Run a hex/text/regex search against the supplied document.
 
-    Executes document search FFI calls on a background thread to
-    avoid blocking the Qt main thread on large files.
+    Args:
+        document: Hex document object exposing ``search_hex``, ``search_text``,
+            ``search_text_encoded``, and/or ``search_regex``.
+        mode: Search mode label (``"Hex"``, ``"Text"``, ``"Regex"``).
+        query: Search query string.
+        encoding: Text encoding name for text-mode searches.
+        max_results: Maximum number of matches to return.
 
-    Attributes:
-        search_finished: Signal emitted with results on success.
-        search_error: Signal emitted with the exception on failure.
+    Returns:
+        list[tuple[int, int]]: List of ``(offset, length)`` match tuples.
+            An empty list is returned for unrecognised modes.
     """
-
-    search_finished: pyqtSignal = pyqtSignal(list)
-    search_error: pyqtSignal = pyqtSignal(object)
-
-    def __init__(
-        self,
-        document: object,
-        mode: str,
-        query: str,
-        encoding: str,
-        max_results: int,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the SearchWorker with search parameters.
-
-        Args:
-            document: Hex document to search within.
-            mode: Search mode (``"hex"``, ``"text"``, ``"regex"``).
-            query: Search query string.
-            encoding: Text encoding for text-mode search.
-            max_results: Maximum number of results to return.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self._document: Any = document
-        self._mode: str = mode
-        self.query: str = query
-        self._encoding: str = encoding
-        self.max_results: int = max_results
-        _: object = self.finished.connect(self.deleteLater)
-
-    @override
-    def run(self) -> None:
-        """Execute the search on the background thread."""
-        try:
-            results = self._execute_search()
-            self.search_finished.emit(results)
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("search_worker_failed", mode=self._mode)
-            self.search_error.emit(exc)
-
-    def _execute_search(self) -> list[tuple[int, int]]:
-        """Dispatch to the appropriate document search method.
-
-        Returns:
-            list[tuple[int, int]]: List of (offset, length) match tuples.
-        """
-        if self._mode == "Hex":
-            raw = self._document.search_hex(self.query, self.max_results)
-        elif self._mode == "Text":
-            if hasattr(self._document, "search_text_encoded"):
-                raw = self._document.search_text_encoded(
-                    self.query,
-                    self._encoding,
-                    case_sensitive=True,
-                    max_results=self.max_results,
-                )
-            else:
-                raw = self._document.search_text(
-                    self.query,
-                    self._encoding,
-                    case_sensitive=True,
-                    max_results=self.max_results,
-                )
-        elif self._mode == "Regex":
-            raw = self._document.search_regex(self.query, self.max_results)
-        else:
-            return []
-        return [(r[0], r[1]) for r in raw]
-
-
-class NumericSearchWorker(QThread):
-    """Background worker for numeric value search with Python fallback.
-
-    Scans the document chunk-by-chunk for numeric values matching
-    the given range, running entirely on a background thread.
-
-    Attributes:
-        search_finished: Signal emitted with results on success.
-        search_error: Signal emitted with the exception on failure.
-    """
-
-    search_finished: pyqtSignal = pyqtSignal(list)
-    search_error: pyqtSignal = pyqtSignal(object)
-
-    def __init__(
-        self,
-        document: object,
-        min_val: float,
-        max_val: float,
-        fmt: str,
-        byte_width: int,
-        alignment: int,
-        max_results: int,
-        *,
-        use_native: bool,
-        size: int = 4,
-        signed: bool = False,
-        big_endian: bool = False,
-        is_range: bool = False,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the NumericSearchWorker with numeric search parameters.
-
-        Args:
-            document: Hex document to search within.
-            min_val: Minimum numeric value to match.
-            max_val: Maximum numeric value to match.
-            fmt: Struct format string for packing/unpacking.
-            byte_width: Width in bytes of the numeric type.
-            alignment: Byte alignment for scan positions.
-            max_results: Maximum number of results to return.
-            use_native: Whether to use native Rust search backend.
-            size: Size of the numeric type in bytes.
-            signed: Whether to interpret values as signed.
-            big_endian: Whether to use big-endian byte order.
-            is_range: Whether to search for a range of values.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self._document: Any = document
-        self._min_val: float = min_val
-        self._max_val: float = max_val
-        self._fmt: str = fmt
-        self._byte_width: int = byte_width
-        self._alignment: int = alignment
-        self.max_results: int = max_results
-        self._use_native: bool = use_native
-        self._size: int = size
-        self._signed: bool = signed
-        self._big_endian: bool = big_endian
-        self._is_range: bool = is_range
-        _: object = self.finished.connect(self.deleteLater)
-
-    @override
-    def run(self) -> None:
-        """Execute the numeric search on the background thread."""
-        try:
-            results = self._search_native() if self._use_native else self._search_fallback()
-            self.search_finished.emit(results)
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("numeric_search_worker_failed")
-            self.search_error.emit(exc)
-
-    def _search_native(self) -> list[tuple[int, int]]:
-        """Use the document's native numeric search FFI methods.
-
-        Dispatches to ``search_numeric_range`` for range queries or
-        ``search_numeric`` for exact-value queries, with correct Rust
-        FFI argument order.
-
-        Returns:
-            list[tuple[int, int]]: List of (offset, byte_width) match tuples.
-        """
-        if self._is_range and hasattr(self._document, "search_numeric_range"):
-            raw = self._document.search_numeric_range(
-                (int(self._min_val), int(self._max_val)),
-                self._size,
-                self._signed,
-                self._big_endian,
-                self._alignment,
-                self.max_results,
-            )
-        elif hasattr(self._document, "search_numeric"):
-            raw = self._document.search_numeric(
-                int(self._min_val),
-                self._size,
-                self._signed,
-                self._big_endian,
-                self._alignment,
-                self.max_results,
+    doc: Any = document
+    if mode == "Hex":
+        raw = doc.search_hex(query, max_results)
+    elif mode == "Text":
+        if hasattr(doc, "search_text_encoded"):
+            raw = doc.search_text_encoded(
+                query,
+                encoding,
+                case_sensitive=True,
+                max_results=max_results,
             )
         else:
-            return self._search_fallback()
-        return [(r[0], self._byte_width) for r in raw]
+            raw = doc.search_text(
+                query,
+                encoding,
+                case_sensitive=True,
+                max_results=max_results,
+            )
+    elif mode == "Regex":
+        raw = doc.search_regex(query, max_results)
+    else:
+        return []
+    return [(r[0], r[1]) for r in raw]
 
-    def _search_fallback(self) -> list[tuple[int, int]]:
-        """Scan the document chunk-by-chunk for matching numeric values.
 
-        Returns:
-            list[tuple[int, int]]: List of (offset, byte_width) match tuples.
-        """
-        results: list[tuple[int, int]] = []
-        doc_len: int = self._document.length()
-        chunk_size = 65536
-        offset = 0
-        while offset < doc_len and len(results) < self.max_results:
-            read_len = min(chunk_size, doc_len - offset)
-            raw: bytes | bytearray | list[int] = self._document.read(offset, read_len)
-            chunk = raw if isinstance(raw, bytes) else bytes(raw)
-            for i in range(len(chunk) - self._byte_width + 1):
-                abs_off = offset + i
-                if self._alignment > 1 and abs_off % self._alignment != 0:
-                    continue
-                try:
-                    (val,) = struct.unpack_from(self._fmt, chunk, i)
-                    fval = float(val)
-                    if self._min_val <= fval <= self._max_val:
-                        results.append((abs_off, self._byte_width))
-                        if len(results) >= self.max_results:
-                            break
-                except struct.error:
-                    _logger.exception("numeric_search_unpack_failed", offset=abs_off)
-                    continue
-            offset += max(1, read_len - self._byte_width + 1)
-        return results
+def execute_numeric_search(
+    document: object,
+    min_val: float,
+    max_val: float,
+    fmt: str,
+    byte_width: int,
+    alignment: int,
+    max_results: int,
+    *,
+    use_native: bool,
+    size: int,
+    signed: bool,
+    big_endian: bool,
+    is_range: bool,
+) -> list[tuple[int, int]]:
+    """Run a numeric value search using native FFI when available.
+
+    Dispatches to the document's ``search_numeric_range`` or
+    ``search_numeric`` FFI methods when ``use_native`` is true and they
+    are available, otherwise falls back to a chunked Python scan.
+
+    Args:
+        document: Hex document object.
+        min_val: Minimum numeric value to match (inclusive).
+        max_val: Maximum numeric value to match (inclusive).
+        fmt: ``struct`` format string used by the Python fallback.
+        byte_width: Width in bytes of the numeric type.
+        alignment: Byte alignment for scan positions.
+        max_results: Maximum number of matches to return.
+        use_native: Whether to attempt the native FFI methods first.
+        size: Size of the numeric type in bytes (used by FFI).
+        signed: Whether to interpret values as signed.
+        big_endian: Whether to use big-endian byte order.
+        is_range: Whether to search for a range of values.
+
+    Returns:
+        list[tuple[int, int]]: List of ``(offset, byte_width)`` match tuples.
+    """
+    doc: Any = document
+    if use_native:
+        if is_range and hasattr(doc, "search_numeric_range"):
+            raw = doc.search_numeric_range(
+                (int(min_val), int(max_val)),
+                size,
+                signed,
+                big_endian,
+                alignment,
+                max_results,
+            )
+            return [(r[0], byte_width) for r in raw]
+        if hasattr(doc, "search_numeric"):
+            raw = doc.search_numeric(
+                int(min_val),
+                size,
+                signed,
+                big_endian,
+                alignment,
+                max_results,
+            )
+            return [(r[0], byte_width) for r in raw]
+    return _numeric_search_fallback(
+        document,
+        min_val,
+        max_val,
+        fmt,
+        byte_width,
+        alignment,
+        max_results,
+    )
+
+
+def _numeric_search_fallback(
+    document: object,
+    min_val: float,
+    max_val: float,
+    fmt: str,
+    byte_width: int,
+    alignment: int,
+    max_results: int,
+) -> list[tuple[int, int]]:
+    """Scan the document chunk-by-chunk for matching numeric values.
+
+    Args:
+        document: Hex document object exposing ``length`` and ``read``.
+        min_val: Minimum numeric value to match (inclusive).
+        max_val: Maximum numeric value to match (inclusive).
+        fmt: ``struct`` format string used to unpack each candidate.
+        byte_width: Width in bytes of the numeric type.
+        alignment: Byte alignment for scan positions.
+        max_results: Maximum number of matches to return.
+
+    Returns:
+        list[tuple[int, int]]: List of ``(offset, byte_width)`` match tuples.
+    """
+    doc: Any = document
+    results: list[tuple[int, int]] = []
+    doc_len: int = doc.length()
+    offset = 0
+    while offset < doc_len and len(results) < max_results:
+        read_len = min(_NUMERIC_SCAN_CHUNK_SIZE, doc_len - offset)
+        raw: bytes | bytearray | list[int] = doc.read(offset, read_len)
+        chunk = raw if isinstance(raw, bytes) else bytes(raw)
+        for i in range(len(chunk) - byte_width + 1):
+            abs_off = offset + i
+            if alignment > 1 and abs_off % alignment != 0:
+                continue
+            try:
+                (val,) = struct.unpack_from(fmt, chunk, i)
+                fval = float(val)
+            except struct.error:
+                _logger.exception("numeric_search_unpack_failed", offset=abs_off)
+                continue
+            if min_val <= fval <= max_val:
+                results.append((abs_off, byte_width))
+                if len(results) >= max_results:
+                    break
+        offset += max(1, read_len - byte_width + 1)
+    return results
 
 
 class SearchMixin:
@@ -280,8 +230,8 @@ class SearchMixin:
     _encoding_combo: QComboBox | None
     _search_results: list[tuple[int, int]]
     _search_index: int
-    _search_worker: SearchWorker | None
-    _numeric_search_worker: NumericSearchWorker | None
+    _search_worker: GenericCallableWorker | None
+    _numeric_search_worker: GenericCallableWorker | None
     _search_status_label: QLabel | None
     _numeric_search_frame: QFrame | None
     _numeric_value_input: QLineEdit | None
@@ -316,16 +266,26 @@ class SearchMixin:
 
         self._search_input.setEnabled(False)
 
-        self._search_worker = SearchWorker(
+        self._search_worker = GenericCallableWorker(
+            execute_text_search,
             self._document,
             mode,
             query,
             encoding,
             MAX_SEARCH_RESULTS,
         )
-        self._search_worker.search_finished.connect(self._on_search_finished)
-        self._search_worker.search_error.connect(self._on_search_error)
+        _: object = self._search_worker.call_finished.connect(self._on_search_finished_obj)
+        _ = self._search_worker.call_error.connect(self._on_search_error)
         self._search_worker.start()
+
+    def _on_search_finished_obj(self, results: object) -> None:
+        """Forward results from the generic worker to the typed handler.
+
+        Args:
+            results: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(results, list):
+            self._on_search_finished(cast("list[tuple[int, int]]", results))
 
     def _on_search_finished(self, results: list[tuple[int, int]]) -> None:
         """Handle completed search results from the background worker.
@@ -555,7 +515,8 @@ class SearchMixin:
 
         self._numeric_value_input.setEnabled(False)
 
-        self._numeric_search_worker = NumericSearchWorker(
+        self._numeric_search_worker = GenericCallableWorker(
+            execute_numeric_search,
             self._document,
             min_val,
             max_val,
@@ -569,9 +530,18 @@ class SearchMixin:
             big_endian=big_endian,
             is_range=(range_mode and bool(max_text)),
         )
-        self._numeric_search_worker.search_finished.connect(self._on_numeric_search_finished)
-        self._numeric_search_worker.search_error.connect(self._on_numeric_search_error)
+        _: object = self._numeric_search_worker.call_finished.connect(self._on_numeric_search_finished_obj)
+        _ = self._numeric_search_worker.call_error.connect(self._on_numeric_search_error)
         self._numeric_search_worker.start()
+
+    def _on_numeric_search_finished_obj(self, results: object) -> None:
+        """Forward numeric search results from the generic worker to the typed handler.
+
+        Args:
+            results: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(results, list):
+            self._on_numeric_search_finished(cast("list[tuple[int, int]]", results))
 
     def _on_numeric_search_finished(self, results: list[tuple[int, int]]) -> None:
         """Handle completed numeric search results from the background worker.

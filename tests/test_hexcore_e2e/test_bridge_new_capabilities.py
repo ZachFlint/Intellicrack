@@ -4,7 +4,7 @@
 """E2E tests for newly wired hexcore bridge capabilities.
 
 Covers encode_text, search_bytes, search_numeric_range, search_text_encoded
-preference, NumericSearchWorker native dispatch, and process memory bridge
+preference, native numeric-search dispatch, and process memory bridge
 methods. All tests operate on real HexDocument instances backed by the Rust
 hexcore piece table.
 """
@@ -431,8 +431,8 @@ class TestDeadCodeRemoval:
         assert patched.replace(" ", "").lower() == "deadbeef"
 
 
-class TestNumericSearchWorkerDispatch:
-    """Tests for NumericSearchWorker native FFI argument dispatch."""
+class TestNumericSearchDispatch:
+    """Tests for the native FFI argument dispatch of bridge numeric search."""
 
     def test_search_numeric_exact_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """The bridge search_numeric must find an exact uint32 value.

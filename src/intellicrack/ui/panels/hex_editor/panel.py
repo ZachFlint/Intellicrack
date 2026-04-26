@@ -61,10 +61,10 @@ from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
 from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
 from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
 from intellicrack.ui.panels.hex_editor._scripting import ScriptingMixin
-from intellicrack.ui.panels.hex_editor._search import NumericSearchWorker, SearchMixin, SearchWorker
+from intellicrack.ui.panels.hex_editor._search import SearchMixin
 from intellicrack.ui.panels.hex_editor._sections import SectionsMixin
 from intellicrack.ui.panels.hex_editor._signatures import SignaturesMixin
-from intellicrack.ui.panels.hex_editor._statistics import StatisticsMixin, StatisticsWorker
+from intellicrack.ui.panels.hex_editor._statistics import StatisticsMixin
 from intellicrack.ui.panels.hex_editor._templates import TemplatesMixin
 from intellicrack.ui.panels.hex_editor._transforms import TransformsMixin
 from intellicrack.ui.panels.hex_editor._widgets import (
@@ -83,6 +83,7 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.bridges.hex_state import HexDocumentState
+    from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 _MODE_LABEL_WIDTH: Final[int] = 30
 _SEARCH_MODE_WIDTH: Final[int] = 80
@@ -210,9 +211,9 @@ class HexEditorPanel(
         self._control_pct_label: QLabel | None = None
         self._high_pct_label: QLabel | None = None
         self._classification_label: QLabel | None = None
-        self._statistics_worker: StatisticsWorker | None = None
-        self._search_worker: SearchWorker | None = None
-        self._numeric_search_worker: NumericSearchWorker | None = None
+        self._statistics_worker: GenericCallableWorker | None = None
+        self._search_worker: GenericCallableWorker | None = None
+        self._numeric_search_worker: GenericCallableWorker | None = None
         self._hash_algo_combo: QComboBox | None = None
         self._hash_result_label: QLabel | None = None
         self._numeric_search_frame: QFrame | None = None
