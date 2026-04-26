@@ -10,9 +10,10 @@ import hashlib
 from pathlib import Path
 from typing import Any, cast
 
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QTreeWidget, QTreeWidgetItem, QWidget
+from PyQt6.QtWidgets import QFileDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._dialogs import show_info, show_warning
 
 
 _logger = get_logger(__name__)
@@ -105,7 +106,7 @@ class PatchesMixin:
         patch_count = self._patches_tree.topLevelItemCount()
         if patch_count == 0:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.information(parent, "Export Patches", "No patches to export.")
+            show_info(parent, "Export Patches", "No patches to export.")
             return
         parent = self if isinstance(self, QWidget) else None
         result = QFileDialog.getSaveFileName(
@@ -122,10 +123,10 @@ class PatchesMixin:
             patch_data = self._dispatch_export_patches(suffix)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
             _logger.exception("patches_export_failed", suffix=suffix)
-            QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
+            show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
         if patch_data is None:
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "Export Patches",
                 f"Unsupported patch format for extension {suffix!r}.",
@@ -142,7 +143,7 @@ class PatchesMixin:
             Path(save_path).write_bytes(patch_data)
         except OSError as exc:
             _logger.exception("patches_export_write_failed", path=save_path)
-            QMessageBox.warning(parent, "Export Patches", f"Export failed:\n{exc}")
+            show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
         _logger.info(
             "patches_exported",
@@ -151,7 +152,7 @@ class PatchesMixin:
             suffix=suffix,
             size=len(patch_data),
         )
-        QMessageBox.information(parent, "Export Patches", f"Exported {patch_count} patch(es).")
+        show_info(parent, "Export Patches", f"Exported {patch_count} patch(es).")
 
     def _dispatch_export_patches(self, suffix: str) -> bytes | None:
         """Dispatch patch export to the appropriate hexcore document method.
@@ -268,7 +269,7 @@ class PatchesMixin:
             patch_bytes = Path(file_path_str).read_bytes()
         except OSError as exc:
             _logger.exception("patches_import_read_failed", path=file_path_str)
-            QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
+            show_warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
 
         suffix = Path(file_path_str).suffix.lower()
@@ -276,10 +277,10 @@ class PatchesMixin:
             applied = self._dispatch_import_patches(suffix, patch_bytes)
         except (AttributeError, OSError, RuntimeError, ValueError) as exc:
             _logger.exception("patches_import_failed", suffix=suffix)
-            QMessageBox.warning(parent, "Import Patches", f"Import failed:\n{exc}")
+            show_warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
         if applied is None:
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "Import Patches",
                 f"Unsupported patch format for extension {suffix!r}.",
@@ -292,7 +293,7 @@ class PatchesMixin:
                 update_fn()
         self._on_data_changed()
         _logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
-        QMessageBox.information(parent, "Import Patches", f"Applied {applied} patch record(s).")
+        show_info(parent, "Import Patches", f"Applied {applied} patch record(s).")
 
     def _dispatch_import_patches(self, suffix: str, patch_bytes: bytes) -> int | None:
         """Dispatch patch import to the appropriate hexcore document method.

@@ -31,7 +31,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -55,6 +54,7 @@ from intellicrack.credentials.oauth import (
     get_oauth_manager,
 )
 from intellicrack.credentials.store import CredentialStore
+from intellicrack.ui._dialogs import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
@@ -1262,11 +1262,11 @@ class ProviderConfigDialog(QDialog):
     def _on_set_active(self) -> None:
         """Handle set active button click."""
         if self._current_provider is None:
-            QMessageBox.warning(self, "No Selection", "Please select a provider first.")
+            show_warning(self, "No Selection", "Please select a provider first.")
             return
 
         if self._registry is None:
-            QMessageBox.warning(self, "Registry Error", "Provider registry not available.")
+            show_warning(self, "Registry Error", "Provider registry not available.")
             return
 
         try:
@@ -1281,10 +1281,10 @@ class ProviderConfigDialog(QDialog):
             )
         except ValueError:
             _logger.warning("unknown_provider_name", provider=self._current_provider)
-            QMessageBox.critical(self, "Error", f"Unknown provider: {self._current_provider}")
+            show_error(self, "Error", f"Unknown provider: {self._current_provider}")
         except (RuntimeError, AttributeError) as e:
             _logger.warning("set_active_provider_failed", provider=self._current_provider, error=str(e))
-            QMessageBox.critical(self, "Error", f"Failed to set active provider: {e}")
+            show_error(self, "Error", f"Failed to set active provider: {e}")
 
     def _refresh_provider_status(self) -> None:
         """Refresh the connection status for all providers."""
@@ -1747,13 +1747,13 @@ class ProviderSettingsWidget(QFrame):
             _logger.info("ollama_model_pulled", model=model_name)
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._set_status(message or f"Pulled {model_name}")
-            QMessageBox.information(self, "Ollama Pull", message or f"Pulled {model_name}")
+            show_info(self, "Ollama Pull", message or f"Pulled {model_name}")
             QTimer.singleShot(500, self._auto_refresh_models)
         else:
             _logger.warning("ollama_pull_failed", model=model_name, error=message)
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
             self._set_status(message or f"Failed to pull {model_name}")
-            QMessageBox.warning(self, "Ollama Pull Failed", message or f"Failed to pull {model_name}")
+            show_warning(self, "Ollama Pull Failed", message or f"Failed to pull {model_name}")
 
     def _setup_xpu_settings(self, layout: QVBoxLayout) -> None:
         """Build the XPU / Device Settings group box for Local Transformers.
@@ -1938,7 +1938,7 @@ class ProviderSettingsWidget(QFrame):
         mb = cache_spin.value()
         set_global_cache_size(mb * 1024 * 1024)
         _logger.info("cache_size_applied", size_mb=mb)
-        QMessageBox.information(self, "Cache", f"Cache limit set to {mb} MB")
+        show_info(self, "Cache", f"Cache limit set to {mb} MB")
 
     def _on_clear_cache(self) -> None:
         """Clear the global model cache and XPU memory cache."""
@@ -1948,7 +1948,7 @@ class ProviderSettingsWidget(QFrame):
             clear_xpu_cache()
         self._refresh_xpu_memory()
         _logger.info("caches_cleared")
-        QMessageBox.information(self, "Cache", "Model cache and XPU cache cleared")
+        show_info(self, "Cache", "Model cache and XPU cache cleared")
 
     def _on_check_requirements(self) -> None:
         """Run Windows requirements check and display results."""
@@ -1981,7 +1981,7 @@ class ProviderSettingsWidget(QFrame):
         info = self.get_provider_device_info()
         if info is not None:
             _logger.info("device_info_displayed", keys=list(info.keys()))
-            QMessageBox.information(self, "Device Info", "\n".join(f"{k}: {v}" for k, v in info.items()))
+            show_info(self, "Device Info", "\n".join(f"{k}: {v}" for k, v in info.items()))
 
     def _on_detect_xpu_dtype(self) -> None:
         """Handle XPU dtype detection button click."""
@@ -1994,7 +1994,7 @@ class ProviderSettingsWidget(QFrame):
                 idx = dtype_combo.findText(display_dtype)
                 if idx >= 0:
                     dtype_combo.setCurrentIndex(idx)
-            QMessageBox.information(self, "XPU Dtype", f"Optimal dtype: {display_dtype}")
+            show_info(self, "XPU Dtype", f"Optimal dtype: {display_dtype}")
 
     def _on_lookup_generation(self) -> None:
         """Handle generation cost lookup button click."""
@@ -2008,13 +2008,13 @@ class ProviderSettingsWidget(QFrame):
         if result is not None:
             _logger.info("generation_lookup", id=gen_id)
             cost_lines = [f"{k}: {v}" for k, v in result.items()]
-            QMessageBox.information(
+            show_info(
                 self,
                 "Generation Cost",
                 f"Generation: {gen_id}\n\n" + "\n".join(cost_lines),
             )
         else:
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Lookup Failed",
                 f"No data found for generation ID: {gen_id}",
@@ -2445,7 +2445,7 @@ class ProviderSettingsWidget(QFrame):
                 "provider_settings_save_failed",
                 provider=self.provider_id,
             )
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Save Error",
                 f"Failed to save settings: {e}",
@@ -2474,7 +2474,7 @@ class ProviderSettingsWidget(QFrame):
                     loader.save_to_env_file("OLLAMA_HOST", host)
         except OSError as e:
             _logger.warning("env_file_update_failed", error=str(e))
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Save Warning",
                 f"Settings saved but failed to update .env file: {e}",

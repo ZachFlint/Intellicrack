@@ -45,6 +45,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.sandbox.base import SandboxConfig
 
+from ._dialogs import show_info, show_warning
 from .panels.async_bridge import run_bridge_coroutine
 from .resources import IconManager
 
@@ -576,7 +577,7 @@ class SandboxConfigDialog(QDialog):
     def _test_sandbox(self) -> None:
         """Test sandbox by launching a simple instance."""
         if not self._is_available:
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Sandbox Unavailable",
                 "Windows Sandbox is not available on this system.",
@@ -654,13 +655,13 @@ class SandboxConfigDialog(QDialog):
             self._progress_dialog = None
 
         if success:
-            QMessageBox.information(
+            show_info(
                 self,
                 "Test Complete",
                 f"Sandbox test passed!\n\n{message}",
             )
         else:
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Test Failed",
                 f"Sandbox test failed:\n\n{message}",
@@ -704,7 +705,7 @@ class SandboxConfigDialog(QDialog):
                 operation="save",
                 config_file=str(self.CONFIG_FILE),
             )
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Save Error",
                 f"Failed to save sandbox settings:\n{e}",
