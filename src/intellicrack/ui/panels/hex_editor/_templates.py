@@ -18,6 +18,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.bridges._pe_format import (
+    PE_COFF_HEADER_SIZE,
+    PE_DOS_HEADER_SIZE,
+    PE_DOS_LFANEW_OFFSET,
+    PE_OPTIONAL_HEADER_OFFSET,
+    PE_SIGNATURE,
+    read_dos_e_lfanew,
+    unpack_coff_header,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -28,7 +37,6 @@ _logger = get_logger(__name__)
 _TEMPLATE_COLOR_DARK: Final[str] = "#44FF44"
 _TEMPLATE_COLOR_LIGHT: Final[str] = "#2E7D32"
 _MAGIC_MIN_LEN: Final[int] = 2
-_DOS_HEADER_SIZE: Final[int] = 0x40
 _ELF_CLASS_64: Final[int] = 2
 _MAX_BOOKMARK_SECTIONS: Final[int] = 20
 
@@ -316,7 +324,7 @@ class TemplatesMixin:
             return
 
         try:
-            dos_raw: object = self.document.read(0, 64)
+            dos_raw: object = self.document.read(0, PE_DOS_HEADER_SIZE)
             if isinstance(dos_raw, bytes):
                 dos_data = dos_raw
             elif isinstance(dos_raw, bytearray):
@@ -328,62 +336,35 @@ class TemplatesMixin:
         except (AttributeError, ValueError):
             return
 
-        self.document.add_bookmark(0, 64, "DOS Header", "#FF6B6B")
+        self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", "#FF6B6B")
 
-        if len(dos_data) < _DOS_HEADER_SIZE:
+        if len(dos_data) < PE_DOS_LFANEW_OFFSET + 4:
             return
-        e_lfanew = int.from_bytes(dos_data[0x3C:_DOS_HEADER_SIZE], "little")
+        e_lfanew = read_dos_e_lfanew(dos_data)
 
         try:
-            pe_sig_raw: object = self.document.read(e_lfanew, 4)
-            if isinstance(pe_sig_raw, bytes):
-                pe_sig = pe_sig_raw
-            elif isinstance(pe_sig_raw, bytearray):
-                pe_sig = bytes(pe_sig_raw)
-            elif isinstance(pe_sig_raw, list):
-                pe_sig = bytes(cast("list[int]", pe_sig_raw))
+            coff_raw: object = self.document.read(e_lfanew, 4 + PE_COFF_HEADER_SIZE)
+            if isinstance(coff_raw, bytes):
+                coff_data = coff_raw
+            elif isinstance(coff_raw, bytearray):
+                coff_data = bytes(coff_raw)
+            elif isinstance(coff_raw, list):
+                coff_data = bytes(cast("list[int]", coff_raw))
             else:
                 return
         except (AttributeError, ValueError):
             return
 
-        if pe_sig != b"PE\x00\x00":
+        if len(coff_data) < 4 + PE_COFF_HEADER_SIZE or coff_data[:4] != PE_SIGNATURE:
             return
 
-        self.document.add_bookmark(e_lfanew, 24, "PE File Header", "#4ECDC4")
+        self.document.add_bookmark(e_lfanew, PE_OPTIONAL_HEADER_OFFSET, "PE File Header", "#4ECDC4")
 
-        try:
-            hdr_raw: object = self.document.read(e_lfanew + 20, 2)
-            if isinstance(hdr_raw, bytes):
-                hdr_data = hdr_raw
-            elif isinstance(hdr_raw, bytearray):
-                hdr_data = bytes(hdr_raw)
-            elif isinstance(hdr_raw, list):
-                hdr_data = bytes(cast("list[int]", hdr_raw))
-            else:
-                return
-        except (AttributeError, ValueError):
-            return
-
-        opt_size = int.from_bytes(hdr_data[:2], "little")
+        _machine, num_sections, opt_size, _characteristics = unpack_coff_header(coff_data, 4)
         if opt_size > 0:
-            self.document.add_bookmark(e_lfanew + 24, opt_size, "Optional Header", "#4ECDC4")
+            self.document.add_bookmark(e_lfanew + PE_OPTIONAL_HEADER_OFFSET, opt_size, "Optional Header", "#4ECDC4")
 
-        try:
-            num_sections_raw: object = self.document.read(e_lfanew + 6, 2)
-            if isinstance(num_sections_raw, bytes):
-                ns_data = num_sections_raw
-            elif isinstance(num_sections_raw, bytearray):
-                ns_data = bytes(num_sections_raw)
-            elif isinstance(num_sections_raw, list):
-                ns_data = bytes(cast("list[int]", num_sections_raw))
-            else:
-                return
-        except (AttributeError, ValueError):
-            return
-
-        num_sections = int.from_bytes(ns_data[:2], "little")
-        section_offset = e_lfanew + 24 + opt_size
+        section_offset = e_lfanew + PE_OPTIONAL_HEADER_OFFSET + opt_size
 
         self._bookmark_pe_sections(section_offset, num_sections)
         self._refresh_bookmarks()

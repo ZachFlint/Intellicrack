@@ -29,6 +29,13 @@ from itertools import cycle, islice
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, get_args
 
+from intellicrack.bridges._pe_format import (
+    is_pe64_optional_header,
+    read_dos_e_lfanew,
+    unpack_coff_header,
+    unpack_optional_header_image_base,
+    unpack_section_header,
+)
 from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, ToolName, ToolParameter
@@ -231,7 +238,6 @@ _U32_MASK = 0xFFFFFFFF
 _U64_MASK = 0xFFFFFFFFFFFFFFFF
 _BITS_PER_BYTE = 8
 _BIT_INDEX_MAX = 7
-_PE32_PLUS_MAGIC = 0x20B
 _ELF_CLASS_64 = 2
 _ELF_DATA_LE = 1
 _PE_LFANEW_OFFSET = 0x3C
@@ -4492,20 +4498,16 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         try:
-            e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
+            e_lfanew = read_dos_e_lfanew(self._read_doc_bytes(_PE_LFANEW_OFFSET, 4))
             if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
                 return []
 
             coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
-            num_sections = struct.unpack_from("<H", coff_header, 2)[0]
-            opt_header_size = struct.unpack_from("<H", coff_header, 16)[0]
+            _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
             opt_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE
             opt_header = self._read_doc_bytes(opt_offset, min(opt_header_size, _DOS_HEADER_SIZE))
-            image_base = (
-                struct.unpack_from("<Q", opt_header, 24)[0]
-                if struct.unpack_from("<H", opt_header, 0)[0] == _PE32_PLUS_MAGIC
-                else struct.unpack_from("<I", opt_header, 28)[0]
-            )
+            is_pe64 = is_pe64_optional_header(opt_header, 0)
+            image_base = unpack_optional_header_image_base(opt_header, 0, is_pe64=is_pe64)
 
             mappings: list[dict[str, int]] = [
                 {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
@@ -4546,10 +4548,12 @@ class HexEditorBridge(ToolBridgeBase):
         """
         for i in range(count):
             sec_data = self._read_doc_bytes(section_offset + i * _PE_SECTION_ENTRY_SIZE, _PE_SECTION_ENTRY_SIZE)
-            virtual_addr = struct.unpack_from("<I", sec_data, 12)[0]
-            raw_size = struct.unpack_from("<I", sec_data, 16)[0]
-            raw_offset = struct.unpack_from("<I", sec_data, 20)[0]
-            sec_length = max(struct.unpack_from("<I", sec_data, 8)[0], raw_size)
+            section = unpack_section_header(sec_data, 0)
+            virtual_addr = cast("int", section["virtual_address"])
+            raw_size = cast("int", section["raw_size"])
+            raw_offset = cast("int", section["raw_offset"])
+            virtual_size = cast("int", section["virtual_size"])
+            sec_length = max(virtual_size, raw_size)
             sec_va = image_base + virtual_addr
             if self.document is not None and hasattr(self.document, "add_va_mapping"):
                 self.document.add_va_mapping(raw_offset, sec_va, sec_length)
