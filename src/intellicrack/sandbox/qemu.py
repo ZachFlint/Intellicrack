@@ -30,6 +30,12 @@ import psutil
 
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.sandbox._log_helpers import (
+    coerce_protocol as _coerce_network_protocol,
+    format_yara_match as _format_yara_match,
+    infer_direction as _coerce_network_direction,
+    split_addr_port as _split_address,
+)
 from intellicrack.sandbox.base import (
     ApiCall,
     ClipboardEvent,
@@ -74,7 +80,6 @@ _NETWORK_LOG_BYTES_SENT_INDEX = 6
 _NETWORK_LOG_BYTES_RECV_INDEX = 7
 _NETWORK_LOG_PID_INDEX = 8
 _NETWORK_LOG_PNAME_INDEX = 9
-_ADDR_PORT_PARTS = 2
 _SCREENSHOT_STABILITY_POLL_DELAY_S = 0.05
 _SCREENSHOT_STABILITY_MAX_POLLS = 100
 _SCREENSHOT_INITIAL_DELAY_S = 0.05
@@ -135,7 +140,6 @@ _ERR_MEMORY_DUMP_FAILED = "memory dump failed"
 _ERR_EXTRACT_FILES_FAILED = "dropped file extraction failed"
 _ERR_YARA_SCAN_FAILED = "YARA scan failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
-_YARA_MATCH_MIN_FIELDS = 3
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
 _ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
@@ -2270,55 +2274,6 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         return changes
 
-    @staticmethod
-    def _coerce_network_protocol(raw: str) -> Literal["tcp", "udp", "icmp", "other"]:
-        """Map a raw protocol string to the ``NetworkActivity`` literal.
-
-        Args:
-            raw: Protocol token from the guest log (case-insensitive).
-
-        Returns:
-            Literal['tcp', 'udp', 'icmp', 'other']: Normalized protocol.
-        """
-        value = raw.strip().lower()
-        if value == "tcp":
-            return "tcp"
-        if value == "udp":
-            return "udp"
-        return "icmp" if value == "icmp" else "other"
-
-    @staticmethod
-    def _coerce_network_direction(state: str) -> Literal["inbound", "outbound"]:
-        """Derive connection direction from the state token.
-
-        ``Listen`` and ``Bound`` indicate an inbound listener; all other
-        states (``Established``, ``TimeWait``, etc.) are treated as
-        outbound for reporting purposes.
-
-        Args:
-            state: State token from the guest log.
-
-        Returns:
-            Literal['inbound', 'outbound']: Derived direction.
-        """
-        normalized = state.strip().lower()
-        return "inbound" if normalized in {"listen", "bound"} else "outbound"
-
-    @staticmethod
-    def _split_address(addr_port: str) -> tuple[str, int]:
-        """Split an ``address:port`` token into its components.
-
-        Args:
-            addr_port: Combined ``address:port`` string.
-
-        Returns:
-            tuple[str, int]: Address and integer port (``0`` if missing).
-        """
-        parts = addr_port.rsplit(":", 1)
-        if len(parts) != _ADDR_PORT_PARTS:
-            return (addr_port, 0)
-        return (parts[0], int(parts[1]) if parts[1].isdigit() else 0)
-
     async def _parse_network_log(self) -> list[NetworkActivity]:
         """Parse network monitoring log with the 10-field schema.
 
@@ -2328,7 +2283,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         ``operation`` is preserved for diagnostics but not surfaced in the
         :class:`NetworkActivity` TypedDict. ``direction`` is derived from
-        ``state`` via :meth:`_coerce_network_direction`.
+        ``state`` via :func:`intellicrack.sandbox._log_helpers.infer_direction`.
 
         Returns:
             list[NetworkActivity]: Parsed network activity samples.
@@ -2347,11 +2302,11 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                 parts = line.split("|")
                 if len(parts) < _NETWORK_LOG_MIN_PARTS:
                     continue
-                local_addr, local_port = self._split_address(parts[2])
-                remote_addr, remote_port = self._split_address(parts[3])
+                local_addr, local_port = _split_address(parts[2])
+                remote_addr, remote_port = _split_address(parts[3])
                 state_token = parts[4]
-                protocol = self._coerce_network_protocol(parts[_NETWORK_LOG_PROTOCOL_INDEX])
-                direction = self._coerce_network_direction(state_token)
+                protocol = _coerce_network_protocol(parts[_NETWORK_LOG_PROTOCOL_INDEX])
+                direction = _coerce_network_direction(state_token)
                 bytes_sent_raw = parts[_NETWORK_LOG_BYTES_SENT_INDEX]
                 bytes_recv_raw = parts[_NETWORK_LOG_BYTES_RECV_INDEX]
                 activities.append(
@@ -3250,29 +3205,6 @@ rule PackedBinary {
 }
 """
             compiled_rules = await asyncio.to_thread(yara_compile, source=default_rules)
-
-        def _format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
-            rule: str = getattr(m, "rule", "")
-            namespace: str = getattr(m, "namespace", "")
-            tags: list[str] = list(getattr(m, "tags", []))
-            raw_strings: list[Any] = list(getattr(m, "strings", []))
-            formatted_strings: list[dict[str, Any]] = []
-            for s in raw_strings:
-                if len(s) >= _YARA_MATCH_MIN_FIELDS:
-                    data_val: Any = s[2]
-                    formatted_strings.append({
-                        "offset": s[0],
-                        "identifier": s[1],
-                        "data": data_val.hex() if isinstance(data_val, bytes) else str(data_val),
-                    })
-            return {
-                "rule": rule,
-                "namespace": namespace,
-                "tags": tags,
-                "strings": formatted_strings,
-                "source": source,
-                "scan_type": scan_type,
-            }
 
         matches: list[dict[str, Any]] = []
         output_dir = self._shared_folder / "output"
