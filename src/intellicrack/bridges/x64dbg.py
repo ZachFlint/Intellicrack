@@ -17,6 +17,18 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
+from intellicrack.bridges._pe_format import (
+    PE_OPTIONAL_HEADER_OFFSET,
+    PE_SECTION_CHARACTERISTIC_EXECUTE,
+    PE_SECTION_CHARACTERISTIC_READ,
+    PE_SECTION_CHARACTERISTIC_WRITE,
+    get_data_directory_offset,
+    is_pe64_optional_header,
+    read_data_directory_entry,
+    read_dos_e_lfanew,
+    unpack_coff_header,
+    unpack_section_header,
+)
 from intellicrack.bridges._win32_types import (
     CMD_LINE_OFFSET_32,
     CMD_LINE_OFFSET_64,
@@ -3956,7 +3968,7 @@ class X64DbgBridge(DebuggerBridge):
             msg = f"Invalid DOS header in {module_name}"
             raise ToolError(msg)
 
-        pe_offset = struct.unpack_from("<I", dos_header, PE_HEADER_OFFSET)[0]
+        pe_offset = read_dos_e_lfanew(dos_header)
         pe_header = await self.read_memory(base_address + pe_offset, size)
 
         if pe_header[:4] != b"PE\x00\x00":
@@ -3977,22 +3989,18 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with section name, addresses, sizes, and permissions.
         """
-        name_bytes = sec_data[sec_offset : sec_offset + 8]
-        sec_name = name_bytes.split(b"\x00")[0].decode("ascii", errors="replace")
-        virtual_size = struct.unpack_from("<I", sec_data, sec_offset + 8)[0]
-        virtual_address = struct.unpack_from("<I", sec_data, sec_offset + 12)[0]
-        raw_size = struct.unpack_from("<I", sec_data, sec_offset + 16)[0]
-        characteristics = struct.unpack_from("<I", sec_data, sec_offset + 36)[0]
-
+        section = unpack_section_header(sec_data, sec_offset)
+        virtual_address = cast("int", section["virtual_address"])
+        characteristics = cast("int", section["characteristics"])
         return {
-            "name": sec_name,
+            "name": section["name"],
             "virtual_address": hex(base_address + virtual_address),
-            "virtual_size": virtual_size,
-            "raw_size": raw_size,
+            "virtual_size": section["virtual_size"],
+            "raw_size": section["raw_size"],
             "characteristics": hex(characteristics),
-            "readable": bool(characteristics & 0x40000000),
-            "writable": bool(characteristics & 0x80000000),
-            "executable": bool(characteristics & 0x20000000),
+            "readable": bool(characteristics & PE_SECTION_CHARACTERISTIC_READ),
+            "writable": bool(characteristics & PE_SECTION_CHARACTERISTIC_WRITE),
+            "executable": bool(characteristics & PE_SECTION_CHARACTERISTIC_EXECUTE),
         }
 
     async def get_module_sections(self, module_name: str) -> list[dict[str, Any]]:
@@ -4009,8 +4017,7 @@ class X64DbgBridge(DebuggerBridge):
         base_address = await self._resolve_module_base(module_name)
         pe_offset, pe_header = await self._read_pe_header(base_address, module_name)
 
-        num_sections = struct.unpack_from("<H", pe_header, 6)[0]
-        optional_header_size = struct.unpack_from("<H", pe_header, 20)[0]
+        _machine, num_sections, optional_header_size, _characteristics = unpack_coff_header(pe_header, 4)
         section_table_offset = 24 + optional_header_size
 
         sections: list[dict[str, Any]] = []
@@ -4037,23 +4044,22 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If PE header too small or no exports.
         """
-        machine = struct.unpack_from("<H", pe_header, 4)[0]
-        is_pe64 = machine == PE64_MACHINE
-        export_dir_offset = 24 + (112 if is_pe64 else 96)
+        is_pe64 = is_pe64_optional_header(pe_header, PE_OPTIONAL_HEADER_OFFSET)
+        export_dir_offset = get_data_directory_offset(0, is_pe64=is_pe64, entry_index=0)
 
         if export_dir_offset + 8 > len(pe_header):
             msg = "PE header too small for export directory"
             raise ToolError(msg)
 
-        export_rva = struct.unpack_from("<I", pe_header, export_dir_offset)[0]
+        export_rva, export_size = read_data_directory_entry(pe_header, export_dir_offset)
 
-        if export_rva == 0 or struct.unpack_from("<I", pe_header, export_dir_offset + 4)[0] == 0:
+        if export_rva == 0 or export_size == 0:
             msg = "No export directory"
             raise ToolError(msg)
 
         export_dir = await self.read_memory(
             base_address + export_rva,
-            min(struct.unpack_from("<I", pe_header, export_dir_offset + 4)[0], PE_EXPORT_DIR_MIN_SIZE),
+            min(export_size, PE_EXPORT_DIR_MIN_SIZE),
         )
 
         num_functions = struct.unpack_from("<I", export_dir, 20)[0]
@@ -5418,14 +5424,12 @@ class X64DbgBridge(DebuggerBridge):
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
-        machine = struct.unpack_from("<H", pe_header, 4)[0]
-        is_pe64 = machine == PE64_MACHINE
-        tls_dir_offset = 24 + (is_pe64 * 112 + (1 - is_pe64) * 96) + 72
+        is_pe64 = is_pe64_optional_header(pe_header, PE_OPTIONAL_HEADER_OFFSET)
+        tls_dir_offset = get_data_directory_offset(0, is_pe64=is_pe64, entry_index=9)
         if tls_dir_offset + 8 > len(pe_header):
             return []
 
-        tls_rva = struct.unpack_from("<I", pe_header, tls_dir_offset)[0]
-        tls_size = struct.unpack_from("<I", pe_header, tls_dir_offset + 4)[0]
+        tls_rva, tls_size = read_data_directory_entry(pe_header, tls_dir_offset)
         if tls_rva == 0 or tls_size == 0:
             return []
 
@@ -5476,14 +5480,12 @@ class X64DbgBridge(DebuggerBridge):
         base_address = await self._resolve_module_base(module_name)
         _, pe_header = await self._read_pe_header(base_address, module_name, size=512)
 
-        machine = struct.unpack_from("<H", pe_header, 4)[0]
-        is_pe64 = machine == PE64_MACHINE
-        rsrc_dir_offset = 24 + (is_pe64 * 112 + (1 - is_pe64) * 96) + 16
+        is_pe64 = is_pe64_optional_header(pe_header, PE_OPTIONAL_HEADER_OFFSET)
+        rsrc_dir_offset = get_data_directory_offset(0, is_pe64=is_pe64, entry_index=2)
         if rsrc_dir_offset + 8 > len(pe_header):
             return []
 
-        rsrc_rva = struct.unpack_from("<I", pe_header, rsrc_dir_offset)[0]
-        rsrc_size = struct.unpack_from("<I", pe_header, rsrc_dir_offset + 4)[0]
+        rsrc_rva, rsrc_size = read_data_directory_entry(pe_header, rsrc_dir_offset)
         if rsrc_rva == 0 or rsrc_size == 0:
             return []
 

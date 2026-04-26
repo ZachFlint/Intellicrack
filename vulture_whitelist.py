@@ -2,6 +2,12 @@
 # Bridge methods dispatched via getattr(), Qt virtual overrides, ctypes _fields_.
 
 intellicrack.__init__.__getattr__  # unused-function
+intellicrack.bridges._pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.PE_DOS_SIGNATURE  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API, audit Group 20)
+intellicrack.bridges._pe_format.iterate_section_headers  # unused-function (public API, audit Group 20)
+intellicrack.bridges._pe_format.rva_to_file_offset  # unused-function (public API, audit Group 20)
 intellicrack.bridges.base.matched_bytes  # unused-variable
 intellicrack.bridges.cutter.get_function  # unused-method
 intellicrack.bridges.cutter.search_bytes  # unused-method
