@@ -91,6 +91,97 @@ PE_SECTION_CHARACTERISTIC_WRITE: Final[int] = 0x80000000
 """IMAGE_SCN_MEM_WRITE."""
 
 
+PE_MACHINE_I386: Final[int] = 0x014C
+"""IMAGE_FILE_MACHINE_I386 (Intel 386)."""
+
+PE_MACHINE_AMD64: Final[int] = 0x8664
+"""IMAGE_FILE_MACHINE_AMD64 (x64 / x86-64)."""
+
+PE_MACHINE_ARM: Final[int] = 0x01C0
+"""IMAGE_FILE_MACHINE_ARM (ARM little-endian)."""
+
+PE_MACHINE_ARMNT: Final[int] = 0x01C4
+"""IMAGE_FILE_MACHINE_ARMNT (ARM Thumb-2 little-endian)."""
+
+PE_MACHINE_ARM64: Final[int] = 0xAA64
+"""IMAGE_FILE_MACHINE_ARM64 (ARM64 little-endian)."""
+
+PE_MACHINE_IA64: Final[int] = 0x0200
+"""IMAGE_FILE_MACHINE_IA64 (Intel Itanium)."""
+
+PE_MACHINE_MIPS: Final[int] = 0x0166
+"""IMAGE_FILE_MACHINE_R4000 (MIPS little-endian)."""
+
+PE_MACHINE_MIPS16: Final[int] = 0x0266
+"""IMAGE_FILE_MACHINE_MIPS16."""
+
+PE_MACHINE_POWERPC: Final[int] = 0x01F0
+"""IMAGE_FILE_MACHINE_POWERPC (Power PC little-endian)."""
+
+PE_MACHINE_POWERPCFP: Final[int] = 0x01F1
+"""IMAGE_FILE_MACHINE_POWERPCFP (Power PC with floating point support)."""
+
+PE_MACHINE_RISCV32: Final[int] = 0x5032
+"""IMAGE_FILE_MACHINE_RISCV32 (RISC-V 32-bit)."""
+
+PE_MACHINE_RISCV64: Final[int] = 0x5064
+"""IMAGE_FILE_MACHINE_RISCV64 (RISC-V 64-bit)."""
+
+PE_MACHINE_RISCV128: Final[int] = 0x5128
+"""IMAGE_FILE_MACHINE_RISCV128 (RISC-V 128-bit)."""
+
+
+_PE_MACHINE_ARCH_TABLE: Final[dict[int, tuple[str, bool]]] = {
+    PE_MACHINE_I386: ("x86", False),
+    PE_MACHINE_AMD64: ("x86_64", True),
+    PE_MACHINE_ARM: ("arm", False),
+    PE_MACHINE_ARMNT: ("arm", False),
+    PE_MACHINE_ARM64: ("arm64", True),
+    PE_MACHINE_IA64: ("ia64", True),
+    PE_MACHINE_MIPS: ("mips", False),
+    PE_MACHINE_MIPS16: ("mips", False),
+    PE_MACHINE_POWERPC: ("ppc", False),
+    PE_MACHINE_POWERPCFP: ("ppc", False),
+    PE_MACHINE_RISCV32: ("riscv", False),
+    PE_MACHINE_RISCV64: ("riscv64", True),
+    PE_MACHINE_RISCV128: ("riscv128", True),
+}
+"""Lookup table mapping ``IMAGE_FILE_MACHINE_*`` values to ``(arch, is_64bit)``.
+
+Architecture strings follow the canonical convention used by
+:meth:`GhidraBridge._detect_architecture` and the orchestrator's
+``_ARCH_KEYWORDS`` map: ``x86_64`` for AMD64, ``x86`` for I386,
+``arm`` / ``arm64`` for AArch32 / AArch64, ``ia64`` for Itanium,
+``mips`` (32-bit MIPS), ``ppc`` (32-bit PowerPC), and
+``riscv`` / ``riscv64`` / ``riscv128`` for the three RISC-V variants.
+Callers that need a different convention (for example ``"x64"`` instead
+of ``"x86_64"``) translate the helper's output at the call site.
+"""
+
+
+def pe_machine_to_arch(machine: int) -> tuple[str, bool]:
+    """Translate an ``IMAGE_FILE_MACHINE_*`` value to an architecture tuple.
+
+    The architecture string follows the canonical convention shared with
+    :meth:`GhidraBridge._detect_architecture` and the orchestrator's
+    ``_ARCH_KEYWORDS`` map (``x86_64``, ``x86``, ``arm``, ``arm64``,
+    ``ia64``, ``mips``, ``ppc``, ``riscv``, ``riscv64``, ``riscv128``).
+    Unknown / unrecognised machine values return ``("unknown", False)``.
+
+    Args:
+        machine: Win32 ``IMAGE_FILE_MACHINE_*`` constant value as
+            extracted from the COFF File Header's Machine field.
+
+    Returns:
+        tuple[str, bool]: ``(arch, is_64bit)`` where ``arch`` is the
+        canonical architecture name and ``is_64bit`` reflects the bit
+        width of the architecture (``True`` for AMD64 / ARM64 / IA64 /
+        RISC-V 64+128, ``False`` for everything else including
+        unknown).
+    """
+    return _PE_MACHINE_ARCH_TABLE.get(machine, ("unknown", False))
+
+
 def read_dos_e_lfanew(data: bytes) -> int:
     """Read ``e_lfanew`` (NT-headers pointer) from a DOS header buffer.
 
@@ -385,6 +476,19 @@ __all__: list[str] = [
     "PE_DOS_HEADER_SIZE",
     "PE_DOS_LFANEW_OFFSET",
     "PE_DOS_SIGNATURE",
+    "PE_MACHINE_AMD64",
+    "PE_MACHINE_ARM",
+    "PE_MACHINE_ARM64",
+    "PE_MACHINE_ARMNT",
+    "PE_MACHINE_I386",
+    "PE_MACHINE_IA64",
+    "PE_MACHINE_MIPS",
+    "PE_MACHINE_MIPS16",
+    "PE_MACHINE_POWERPC",
+    "PE_MACHINE_POWERPCFP",
+    "PE_MACHINE_RISCV32",
+    "PE_MACHINE_RISCV64",
+    "PE_MACHINE_RISCV128",
     "PE_OPTIONAL_HEADER_MAGIC_PE32",
     "PE_OPTIONAL_HEADER_MAGIC_PE32PLUS",
     "PE_OPTIONAL_HEADER_MAGIC_ROM",
@@ -399,6 +503,7 @@ __all__: list[str] = [
     "is_pe64_optional_header",
     "iterate_section_headers",
     "optional_header_size_for",
+    "pe_machine_to_arch",
     "read_data_directory_entry",
     "read_dos_e_lfanew",
     "rva_to_file_offset",

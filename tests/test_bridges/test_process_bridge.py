@@ -435,13 +435,13 @@ class TestProcessListing:
         assert memory_mb > 0
 
     async def test_detect_architecture_self(self, process_bridge: ProcessBridge) -> None:
-        """Verify architecture detection returns x64 on 64-bit Python.
+        """Verify architecture detection returns the canonical arch on the current process.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         arch = await process_bridge.detect_architecture(os.getpid())
-        expected = "x64" if struct.calcsize("P") * 8 == 64 else "x86"
+        expected = "x86_64" if struct.calcsize("P") * 8 == 64 else "x86"
         assert arch == expected
 
     async def test_detect_architecture_invalid_pid(self, process_bridge: ProcessBridge) -> None:
