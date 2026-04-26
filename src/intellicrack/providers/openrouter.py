@@ -31,6 +31,7 @@ from intellicrack.core.types import (
     ToolDefinition,
 )
 from intellicrack.providers.base import (
+    HttpErrorMessages,
     LLMProviderBase,
     ToolCallBufferManager,
     UsageInfo,
@@ -48,16 +49,18 @@ _ERR_INVALID_KEY = "Invalid OpenRouter API key: %s"
 _ERR_CONNECT_FAILED = "Failed to connect to OpenRouter: %s"
 _ERR_LIST_MODELS_FAILED = "Failed to list OpenRouter models: %s"
 _ERR_API_ERROR = "OpenRouter API error: %s"
-_ERR_RATE_LIMITED = "OpenRouter rate limit exceeded"
+_ERR_RATE_LIMITED = "OpenRouter rate limit exceeded: %s"
 _ERR_NO_RESPONSE_CHOICES = "No response choices returned"
 _ERR_STREAM_FAILED = "OpenRouter stream failed: %s"
 _ERR_GET_GENERATION_FAILED = "Failed to get generation: %s"
 
 HTTP_BAD_REQUEST = 400
-HTTP_UNAUTHORIZED = 401
-HTTP_RATE_LIMITED = 429
 
-_logger = get_logger(__name__)
+_REST_HTTP_MSGS = HttpErrorMessages(
+    auth_invalid=_ERR_INVALID_KEY,
+    rate_limited=_ERR_RATE_LIMITED,
+    service_unavailable=_ERR_API_ERROR,
+)
 
 
 class OpenRouterProvider(LLMProviderBase):
@@ -91,6 +94,10 @@ class OpenRouterProvider(LLMProviderBase):
 
     async def connect(self, credentials: ProviderCredentials) -> None:
         """Connect to OpenRouter API.
+
+        HTTP errors raised by the connect probe are translated to
+        Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
 
         Args:
             credentials: Must contain api_key.
@@ -136,8 +143,7 @@ class OpenRouterProvider(LLMProviderBase):
                 "openrouter_connect_failed",
                 status_code=e.response.status_code,
             )
-            if e.response.status_code == HTTP_UNAUTHORIZED:
-                raise AuthenticationError(_ERR_INVALID_KEY % e) from e
+            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self.connected = False
@@ -259,6 +265,9 @@ class OpenRouterProvider(LLMProviderBase):
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request through OpenRouter.
 
+        HTTP errors are translated to Intellicrack typed errors by
+        :meth:`LLMProviderBase._raise_typed_for_status`.
+
         Args:
             messages: Conversation history.
             model: Model ID to use.
@@ -273,9 +282,7 @@ class OpenRouterProvider(LLMProviderBase):
             tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
 
         Raises:
-            AuthenticationError: If the API key is rejected by OpenRouter.
             ProviderError: If not connected or request fails.
-            RateLimitError: If rate limited.
         """
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -333,13 +340,6 @@ class OpenRouterProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_API_ERROR % e) from e
 
-        if response.status_code == HTTP_RATE_LIMITED:
-            self._logger.warning(
-                "openrouter_rate_limited",
-                model=model,
-            )
-            raise RateLimitError(_ERR_RATE_LIMITED)
-
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
@@ -348,8 +348,7 @@ class OpenRouterProvider(LLMProviderBase):
                 model=model,
                 status_code=e.response.status_code,
             )
-            if e.response.status_code == HTTP_UNAUTHORIZED:
-                raise AuthenticationError(_ERR_INVALID_KEY % e) from e
+            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
             raise ProviderError(_ERR_API_ERROR % e) from e
 
         data = response.json()
@@ -389,29 +388,36 @@ class OpenRouterProvider(LLMProviderBase):
 
         return message, tool_calls or None
 
-    @staticmethod
-    def _raise_stream_http_error(status_code: int, body_text: str) -> None:
-        """Translate a stream HTTP error into the appropriate typed exception.
+    @classmethod
+    def _raise_for_stream_status(cls, status_code: int, body_text: str) -> None:
+        """Raise an Intellicrack typed exception for a streaming HTTP error.
+
+        Wraps the streaming status/body in a synthetic
+        :class:`ProviderError` and delegates to
+        :meth:`LLMProviderBase._raise_typed_for_status` so 401, 403,
+        429, and 503 responses raise the expected typed exception
+        (:class:`AuthenticationError` for 401/403,
+        :class:`RateLimitError` for 429,
+        :class:`ProviderError` for 503). For any other non-success
+        status the helper falls through and this method raises a
+        :class:`ProviderError` formatted with
+        :data:`_ERR_STREAM_FAILED`.
 
         Args:
-            status_code: HTTP status code returned by OpenRouter.
-            body_text: Decoded response body text from OpenRouter.
+            status_code: HTTP status code returned by the streaming
+                endpoint.
+            body_text: Decoded response body text (or replacement
+                bytes when decoding failed).
 
         Raises:
-            AuthenticationError: If OpenRouter returned HTTP 401.
-            RateLimitError: If OpenRouter returned HTTP 429.
-            ProviderError: For any other non-success HTTP status.
+            ProviderError: For any non-success status that the base
+                helper does not translate to a more specific typed
+                exception.
         """
-        if status_code == HTTP_UNAUTHORIZED:
-            msg = f"{_ERR_INVALID_KEY % status_code}: {body_text}"
-            _logger.warning("openrouter_stream_unauthorized", status_code=status_code)
-            raise AuthenticationError(msg)
-        if status_code == HTTP_RATE_LIMITED:
-            msg = f"{_ERR_RATE_LIMITED}: {body_text}"
-            _logger.warning("openrouter_stream_rate_limited", status_code=status_code)
-            raise RateLimitError(msg)
-        _logger.error("openrouter_stream_http_error", status_code=status_code)
-        raise ProviderError(_ERR_STREAM_FAILED % f"HTTP {status_code}: {body_text}")
+        stream_detail = f"HTTP {status_code}: {body_text}"
+        stream_exc = ProviderError(stream_detail)
+        cls._raise_typed_for_status(status_code, stream_exc, messages=_REST_HTTP_MSGS)
+        raise ProviderError(_ERR_STREAM_FAILED % stream_detail) from stream_exc
 
     @staticmethod
     def _build_usage_from_data(data: dict[str, Any]) -> UsageInfo | None:
@@ -554,7 +560,7 @@ class OpenRouterProvider(LLMProviderBase):
                         response_size=len(body_bytes),
                         response_excerpt=body_text[:256],
                     )
-                    self._raise_stream_http_error(response.status_code, body_text)
+                    self._raise_for_stream_status(response.status_code, body_text)
                 async for line in response.aiter_lines():
                     if self._cancel_requested:
                         self._logger.info(
