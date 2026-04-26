@@ -26,35 +26,27 @@ from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.sandbox._log_helpers import (
-    coerce_protocol as _coerce_protocol,
-    format_yara_match as _format_yara_match,
-    infer_direction as _infer_direction,
-    safe_float as _safe_float,
-    safe_int as _safe_int,
-    split_addr_port as _split_addr_port,
+from intellicrack.sandbox._log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox._log_parsers import (
+    parse_api_trace_log,
+    parse_clipboard_log,
+    parse_dll_log,
+    parse_file_log,
+    parse_injection_log,
+    parse_kernel_object_log,
+    parse_network_log,
+    parse_process_log,
+    parse_registry_log,
+    parse_resource_log,
+    parse_service_log,
 )
 from intellicrack.sandbox.base import (
-    ApiCall,
-    ClipboardEvent,
-    DllLoadEvent,
     ExecutionReport,
     ExecutionResult,
-    FileChange,
-    InjectionEvent,
-    KernelObjectActivity,
-    NetworkActivity,
-    ProcessActivity,
-    RegistryChange,
-    ResourceSample,
     SandboxBase,
     SandboxConfig,
     SandboxError,
     SandboxTimeoutError,
-    ServiceChange,
-    validate_file_operation,
-    validate_process_operation,
-    validate_registry_operation,
 )
 
 
@@ -81,28 +73,6 @@ _ERROR_ACCESS_DENIED = 5
 _PROCESS_QUERY_INFORMATION = 0x0400
 _PROCESS_VM_READ = 0x0010
 _WM_CLOSE = 0x0010
-
-_FILE_LOG_MIN_PARTS = 3
-_REGISTRY_LOG_MIN_PARTS = 3
-_NETWORK_LOG_MIN_PARTS = 10
-_PROCESS_LOG_MIN_PARTS = 4
-_SERVICE_LOG_MIN_PARTS = 6
-_KERNEL_LOG_MIN_PARTS = 6
-_DLL_LOG_MIN_PARTS = 6
-_INJECTION_LOG_MIN_PARTS = 7
-_RESOURCE_LOG_MIN_PARTS = 7
-_CLIPBOARD_LOG_MIN_PARTS = 7
-_API_LOG_MIN_PARTS = 7
-
-_FILE_LOG_OLD_PATH_IDX = 3
-_FILE_LOG_SIZE_IDX = 4
-_REGISTRY_LOG_VALUE_NAME_IDX = 3
-_REGISTRY_LOG_VALUE_TYPE_IDX = 4
-_REGISTRY_LOG_VALUE_DATA_IDX = 5
-_PROCESS_LOG_PATH_IDX = 4
-_PROCESS_LOG_CMD_IDX = 5
-_PROCESS_LOG_PPID_IDX = 6
-_PROCESS_LOG_EXIT_IDX = 7
 
 _RETURNCODE_SUCCESS = 0
 _RETURNCODE_FAILURE = -1
@@ -1248,367 +1218,18 @@ class WindowsSandbox(SandboxBase):
         Args:
             report: Report to populate with parsed monitor output.
         """
-        report.file_changes = await self._parse_file_log()
-        report.registry_changes = await self._parse_registry_log()
-        report.network_activity = await self._parse_network_log()
-        report.process_activity = await self._parse_process_log()
-        report.service_changes = await self._parse_service_log()
-        report.kernel_objects = await self._parse_kernel_object_log()
-        report.dll_loads = await self._parse_dll_log()
-        report.injection_events = await self._parse_injection_log()
-        report.resource_samples = await self._parse_resource_log()
-        report.clipboard_events = await self._parse_clipboard_log()
-        report.api_calls = await self._parse_api_trace_log()
-
-    async def _read_log_lines(self, name: str) -> list[str]:
-        """Read a log file under ``<shared>/logs`` and split into stripped lines.
-
-        Args:
-            name: Relative log file name (e.g. ``file_monitor.log``).
-
-        Returns:
-            list[str]: List of non-empty stripped lines in the log file.
-        """
-        if self._shared_folder is None:
-            return []
-        log_path = self._shared_folder / "logs" / name
-        if not await asyncio.to_thread(log_path.exists):
-            return []
-        try:
-            raw = await asyncio.to_thread(
-                log_path.read_text,
-                encoding="utf-8",
-                errors="ignore",
-            )
-        except OSError as err:
-            _logger.warning("log_read_failed", log=name, error=str(err))
-            return []
-        return [line for line in (ln.strip() for ln in raw.splitlines()) if line]
-
-    async def _parse_file_log(self) -> list[FileChange]:
-        """Parse ``file_monitor.log`` into :class:`FileChange` entries.
-
-        Log format: ``timestamp|operation|path|old_path|size``.
-
-        Returns:
-            list[FileChange]: Parsed file-system changes.
-        """
-        out: list[FileChange] = []
-        for line in await self._read_log_lines("file_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _FILE_LOG_MIN_PARTS:
-                continue
-            old_path = parts[_FILE_LOG_OLD_PATH_IDX] if len(parts) > _FILE_LOG_OLD_PATH_IDX and parts[_FILE_LOG_OLD_PATH_IDX] else None
-            size: int | None = None
-            if len(parts) > _FILE_LOG_SIZE_IDX and parts[_FILE_LOG_SIZE_IDX].isdigit():
-                size = int(parts[_FILE_LOG_SIZE_IDX])
-            out.append(
-                FileChange(
-                    path=parts[2],
-                    operation=validate_file_operation(parts[1]),
-                    old_path=old_path,
-                    timestamp=parts[0],
-                    size=size,
-                ),
-            )
-        return out
-
-    async def _parse_registry_log(self) -> list[RegistryChange]:
-        """Parse ``registry_monitor.log`` into :class:`RegistryChange` entries.
-
-        Log format: ``timestamp|operation|key|value_name|value_type|value_data``.
-
-        Returns:
-            list[RegistryChange]: Parsed registry changes.
-        """
-        out: list[RegistryChange] = []
-        for line in await self._read_log_lines("registry_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _REGISTRY_LOG_MIN_PARTS:
-                continue
-            value_name = (
-                parts[_REGISTRY_LOG_VALUE_NAME_IDX]
-                if len(parts) > _REGISTRY_LOG_VALUE_NAME_IDX and parts[_REGISTRY_LOG_VALUE_NAME_IDX]
-                else None
-            )
-            value_type = (
-                parts[_REGISTRY_LOG_VALUE_TYPE_IDX]
-                if len(parts) > _REGISTRY_LOG_VALUE_TYPE_IDX and parts[_REGISTRY_LOG_VALUE_TYPE_IDX]
-                else None
-            )
-            value_data = (
-                parts[_REGISTRY_LOG_VALUE_DATA_IDX]
-                if len(parts) > _REGISTRY_LOG_VALUE_DATA_IDX and parts[_REGISTRY_LOG_VALUE_DATA_IDX]
-                else None
-            )
-            out.append(
-                RegistryChange(
-                    key=parts[2],
-                    value_name=value_name,
-                    operation=validate_registry_operation(parts[1]),
-                    value_type=value_type,
-                    value_data=value_data,
-                    timestamp=parts[0],
-                ),
-            )
-        return out
-
-    async def _parse_network_log(self) -> list[NetworkActivity]:
-        """Parse ``network_monitor.log`` into :class:`NetworkActivity` entries.
-
-        Log format (10 fields):
-        ``timestamp|operation|local_addr:port|remote_addr:port|state|protocol|bytes_sent|bytes_received|pid|process_name``.
-
-        Returns:
-            list[NetworkActivity]: Parsed network activity records.
-        """
-        out: list[NetworkActivity] = []
-        for line in await self._read_log_lines("network_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _NETWORK_LOG_MIN_PARTS:
-                continue
-            local_addr, local_port = _split_addr_port(parts[2])
-            remote_addr, remote_port = _split_addr_port(parts[3])
-            protocol = _coerce_protocol(parts[5])
-            direction = _infer_direction(parts[4])
-            bytes_sent = _safe_int(parts[6])
-            bytes_recv = _safe_int(parts[7])
-            out.append(
-                NetworkActivity(
-                    protocol=protocol,
-                    direction=direction,
-                    local_address=local_addr,
-                    local_port=local_port,
-                    remote_address=remote_addr,
-                    remote_port=remote_port,
-                    timestamp=parts[0],
-                    bytes_sent=bytes_sent,
-                    bytes_received=bytes_recv,
-                ),
-            )
-        return out
-
-    async def _parse_process_log(self) -> list[ProcessActivity]:
-        """Parse ``process_monitor.log`` into :class:`ProcessActivity` entries.
-
-        Log format: ``timestamp|operation|pid|name|path|command_line|parent_pid|exit_code``.
-
-        Returns:
-            list[ProcessActivity]: Parsed process activity records.
-        """
-        out: list[ProcessActivity] = []
-        for line in await self._read_log_lines("process_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _PROCESS_LOG_MIN_PARTS:
-                continue
-            pid = _safe_int(parts[2])
-            path = parts[_PROCESS_LOG_PATH_IDX] if len(parts) > _PROCESS_LOG_PATH_IDX and parts[_PROCESS_LOG_PATH_IDX] else None
-            cmd_line = parts[_PROCESS_LOG_CMD_IDX] if len(parts) > _PROCESS_LOG_CMD_IDX and parts[_PROCESS_LOG_CMD_IDX] else None
-            parent_pid: int | None = (
-                _safe_int(parts[_PROCESS_LOG_PPID_IDX]) if len(parts) > _PROCESS_LOG_PPID_IDX and parts[_PROCESS_LOG_PPID_IDX] else None
-            )
-            exit_code = None
-            if len(parts) > _PROCESS_LOG_EXIT_IDX and parts[_PROCESS_LOG_EXIT_IDX] and parts[_PROCESS_LOG_EXIT_IDX].lstrip("-").isdigit():
-                exit_code = int(parts[_PROCESS_LOG_EXIT_IDX])
-            out.append(
-                ProcessActivity(
-                    pid=pid,
-                    name=parts[3],
-                    path=path,
-                    command_line=cmd_line,
-                    parent_pid=parent_pid,
-                    operation=validate_process_operation(parts[1]),
-                    exit_code=exit_code,
-                    timestamp=parts[0],
-                ),
-            )
-        return out
-
-    async def _parse_service_log(self) -> list[ServiceChange]:
-        """Parse ``service_monitor.log`` into :class:`ServiceChange` entries.
-
-        Log format: ``timestamp|operation|service_name|display_name|binary_path|start_type``.
-
-        Returns:
-            list[ServiceChange]: Parsed Windows service changes.
-        """
-        out: list[ServiceChange] = []
-        for line in await self._read_log_lines("service_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _SERVICE_LOG_MIN_PARTS:
-                continue
-            out.append(
-                ServiceChange(
-                    service_name=parts[2],
-                    display_name=parts[3],
-                    binary_path=parts[4],
-                    start_type=parts[5],
-                    operation=parts[1],
-                    timestamp=parts[0],
-                ),
-            )
-        return out
-
-    async def _parse_kernel_object_log(self) -> list[KernelObjectActivity]:
-        """Parse ``kernel_object_monitor.log`` into :class:`KernelObjectActivity` entries.
-
-        Log format: ``timestamp|object_type|name|pid|process_name|operation``.
-
-        Returns:
-            list[KernelObjectActivity]: Parsed kernel-object activity records.
-        """
-        out: list[KernelObjectActivity] = []
-        for line in await self._read_log_lines("kernel_object_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _KERNEL_LOG_MIN_PARTS:
-                continue
-            out.append(
-                KernelObjectActivity(
-                    object_type=parts[1],
-                    name=parts[2],
-                    pid=_safe_int(parts[3]),
-                    process_name=parts[4],
-                    operation=parts[5],
-                    timestamp=parts[0],
-                ),
-            )
-        return out
-
-    async def _parse_dll_log(self) -> list[DllLoadEvent]:
-        """Parse ``dll_monitor.log`` into :class:`DllLoadEvent` entries.
-
-        Log format: ``timestamp|pid|process_name|dll_path|base_address|size``.
-
-        Returns:
-            list[DllLoadEvent]: Parsed DLL-load events.
-        """
-        out: list[DllLoadEvent] = []
-        for line in await self._read_log_lines("dll_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _DLL_LOG_MIN_PARTS:
-                continue
-            out.append(
-                DllLoadEvent(
-                    timestamp=parts[0],
-                    pid=_safe_int(parts[1]),
-                    process_name=parts[2],
-                    dll_path=parts[3],
-                    base_address=parts[4],
-                    size=_safe_int(parts[5]),
-                ),
-            )
-        return out
-
-    async def _parse_injection_log(self) -> list[InjectionEvent]:
-        """Parse ``injection_monitor.log`` into :class:`InjectionEvent` entries.
-
-        Log format:
-        ``timestamp|source_pid|source_name|target_pid|target_name|injection_type|api_calls``.
-
-        Returns:
-            list[InjectionEvent]: Parsed injection events.
-        """
-        out: list[InjectionEvent] = []
-        for line in await self._read_log_lines("injection_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _INJECTION_LOG_MIN_PARTS:
-                continue
-            api_calls_raw = parts[6]
-            api_calls = [c.strip() for c in api_calls_raw.split(",") if c.strip()]
-            out.append(
-                InjectionEvent(
-                    timestamp=parts[0],
-                    source_pid=_safe_int(parts[1]),
-                    source_name=parts[2],
-                    target_pid=_safe_int(parts[3]),
-                    target_name=parts[4],
-                    injection_type=parts[5],
-                    api_calls=api_calls,
-                ),
-            )
-        return out
-
-    async def _parse_resource_log(self) -> list[ResourceSample]:
-        """Parse ``resource_monitor.log`` into :class:`ResourceSample` entries.
-
-        Log format:
-        ``timestamp|cpu_percent|memory_mb|disk_read_bytes|disk_write_bytes|net_sent|net_recv``.
-
-        Returns:
-            list[ResourceSample]: Parsed resource samples.
-        """
-        out: list[ResourceSample] = []
-        for line in await self._read_log_lines("resource_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _RESOURCE_LOG_MIN_PARTS:
-                continue
-            out.append(
-                ResourceSample(
-                    timestamp=parts[0],
-                    cpu_percent=_safe_float(parts[1]),
-                    memory_mb=_safe_float(parts[2]),
-                    disk_read_bytes=_safe_int(parts[3]),
-                    disk_write_bytes=_safe_int(parts[4]),
-                    net_sent_bytes=_safe_int(parts[5]),
-                    net_recv_bytes=_safe_int(parts[6]),
-                ),
-            )
-        return out
-
-    async def _parse_clipboard_log(self) -> list[ClipboardEvent]:
-        """Parse ``clipboard_monitor.log`` into :class:`ClipboardEvent` entries.
-
-        Log format:
-        ``timestamp|operation|format|content_preview|size_bytes|pid|process_name``.
-
-        Returns:
-            list[ClipboardEvent]: Parsed clipboard events.
-        """
-        out: list[ClipboardEvent] = []
-        for line in await self._read_log_lines("clipboard_monitor.log"):
-            parts = line.split("|")
-            if len(parts) < _CLIPBOARD_LOG_MIN_PARTS:
-                continue
-            out.append(
-                ClipboardEvent(
-                    timestamp=parts[0],
-                    operation=parts[1],
-                    format=parts[2],
-                    content_preview=parts[3],
-                    size_bytes=_safe_int(parts[4]),
-                    pid=_safe_int(parts[5]),
-                    process_name=parts[6],
-                ),
-            )
-        return out
-
-    async def _parse_api_trace_log(self) -> list[ApiCall]:
-        """Parse ``api_trace.log`` into :class:`ApiCall` entries.
-
-        Log format:
-        ``timestamp|process_name|pid|api_name|module|arguments|return_value``.
-
-        Returns:
-            list[ApiCall]: Parsed API-call records.
-        """
-        out: list[ApiCall] = []
-        for line in await self._read_log_lines("api_trace.log"):
-            parts = line.split("|")
-            if len(parts) < _API_LOG_MIN_PARTS:
-                continue
-            arguments = [a for a in parts[5].split(";") if a] if parts[5] else []
-            out.append(
-                ApiCall(
-                    timestamp=parts[0],
-                    process_name=parts[1],
-                    pid=_safe_int(parts[2]),
-                    api_name=parts[3],
-                    module=parts[4],
-                    arguments=arguments,
-                    return_value=parts[6],
-                ),
-            )
-        return out
+        shared = self._shared_folder
+        report.file_changes = await parse_file_log(shared)
+        report.registry_changes = await parse_registry_log(shared)
+        report.network_activity = await parse_network_log(shared)
+        report.process_activity = await parse_process_log(shared)
+        report.service_changes = await parse_service_log(shared)
+        report.kernel_objects = await parse_kernel_object_log(shared)
+        report.dll_loads = await parse_dll_log(shared)
+        report.injection_events = await parse_injection_log(shared)
+        report.resource_samples = await parse_resource_log(shared)
+        report.clipboard_events = await parse_clipboard_log(shared)
+        report.api_calls = await parse_api_trace_log(shared)
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.
