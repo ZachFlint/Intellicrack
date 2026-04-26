@@ -18,7 +18,29 @@ from typing import ClassVar, Final
 
 _IS_WINDOWS: Final[bool] = sys.platform == "win32"
 
-INVALID_HANDLE_VALUE: Final[int] = 0xFFFFFFFFFFFFFFFF
+
+def _compute_invalid_handle_value() -> int:
+    """Compute the platform-correct ``INVALID_HANDLE_VALUE`` constant.
+
+    Uses ``wintypes.HANDLE(-1).value`` on Windows so the bit pattern matches
+    what the kernel returns from APIs like ``CreateFileW`` and
+    ``CreateToolhelp32Snapshot``. On 64-bit Python this yields
+    ``0xFFFFFFFFFFFFFFFF``; on 32-bit Python this yields ``0xFFFFFFFF``.
+    Falls back to the 32-bit DWORD-mask value on non-Windows platforms where
+    the constant is unused.
+
+    Returns:
+        int: ``0xFFFFFFFFFFFFFFFF`` on 64-bit Windows, ``0xFFFFFFFF`` on
+        32-bit Windows or non-Windows hosts.
+    """
+    if _IS_WINDOWS:
+        value = wintypes.HANDLE(-1).value
+        if value is not None:
+            return value
+    return 0xFFFFFFFF
+
+
+INVALID_HANDLE_VALUE: Final[int] = _compute_invalid_handle_value()
 
 # ---------------------------------------------------------------------------
 # Process access rights
@@ -140,6 +162,18 @@ IMAGE_FILE_MACHINE_ARMNT: Final[int] = 0x01C4
 IMAGE_FILE_MACHINE_IA64: Final[int] = 0x0200
 
 # ---------------------------------------------------------------------------
+# PE header layout offsets (DOS / NT / OptionalHeader navigation)
+# ---------------------------------------------------------------------------
+PE_HEADER_OFFSET: Final[int] = 0x3C
+"""Offset of the ``e_lfanew`` field inside the DOS header pointing to the NT headers."""
+
+PE_MAGIC_OFFSET: Final[int] = 0x40
+"""Byte immediately following the ``e_lfanew`` field (4-byte little-endian)."""
+
+NT_HEADERS_OPTIONAL_OFFSET: Final[int] = 0x18
+"""Offset from the NT headers signature to the start of the OptionalHeader."""
+
+# ---------------------------------------------------------------------------
 # SCM constants
 # ---------------------------------------------------------------------------
 SC_MANAGER_ENUMERATE_SERVICE: Final[int] = 0x0004
@@ -171,6 +205,17 @@ INFINITE: Final[int] = 0xFFFFFFFF
 WAIT_OBJECT_0: Final[int] = 0x00000000
 WAIT_TIMEOUT: Final[int] = 0x00000102
 WAIT_FAILED: Final[int] = 0xFFFFFFFF
+
+# ---------------------------------------------------------------------------
+# Generic file/object access rights (CreateFileW, CreateNamedPipeW, etc.)
+# ---------------------------------------------------------------------------
+GENERIC_READ: Final[int] = 0x80000000
+GENERIC_WRITE: Final[int] = 0x40000000
+
+# ---------------------------------------------------------------------------
+# CreateFileW disposition values
+# ---------------------------------------------------------------------------
+OPEN_EXISTING: Final[int] = 3
 
 # ---------------------------------------------------------------------------
 # Pipe constants

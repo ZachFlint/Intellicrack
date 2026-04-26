@@ -99,7 +99,6 @@ intellicrack.bridges.sandbox_bridge.snapshot_restore  # unused-method
 intellicrack.bridges.sandbox_bridge.snapshot_list  # unused-method
 intellicrack.bridges.sandbox_bridge.snapshot_delete  # unused-method
 intellicrack.bridges.schemas.input_schema  # unused-variable
-intellicrack.bridges.x64dbg.WIN_PAGE_EXECUTE_READWRITE  # unused-variable
 intellicrack.bridges.x64dbg.MAX_LOCAL_VARS  # unused-variable
 intellicrack.bridges.x64dbg.dwFlags  # unused-attribute
 intellicrack.bridges.x64dbg.wShowWindow  # unused-attribute

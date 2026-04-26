@@ -19,8 +19,35 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
 from intellicrack.bridges._win32_types import (
     CMD_LINE_OFFSET_32,
+    CMD_LINE_OFFSET_64,
+    IMAGE_FILE_MACHINE_AMD64 as PE64_MACHINE,
+    IMAGE_FILE_MACHINE_I386 as PE32_MACHINE,
+    INVALID_HANDLE_VALUE,
+    MEM_COMMIT as WIN_MEM_COMMIT,
+    MEM_IMAGE as MEM_IMAGE_FLAG,
+    MEM_MAPPED as MEM_MAPPED_FLAG,
+    MEM_PRIVATE as MEM_PRIVATE_FLAG,
+    MEM_RELEASE as WIN_MEM_RELEASE,
+    MEM_RESERVE as WIN_MEM_RESERVE,
+    NT_HEADERS_OPTIONAL_OFFSET,
+    PAGE_EXECUTE,
+    PAGE_EXECUTE_READ,
+    PAGE_EXECUTE_READWRITE as PAGE_EXECUTE_READWRITE_FLAG,
+    PAGE_NOACCESS,
+    PAGE_READONLY,
+    PAGE_READWRITE,
+    PE_HEADER_OFFSET,
+    PE_MAGIC_OFFSET,
+    PROCESS_QUERY_INFORMATION as WIN_PROCESS_QUERY_INFORMATION,
+    PROCESS_VM_OPERATION as WIN_PROCESS_VM_OPERATION,
+    PROCESS_VM_READ as WIN_PROCESS_VM_READ,
+    PROCESS_VM_WRITE as WIN_PROCESS_VM_WRITE,
     SYSTEM_HANDLE_INFORMATION_EX,
     SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX,
+    TH32CS_SNAPMODULE,
+    TH32CS_SNAPMODULE32,
+    TH32CS_SNAPPROCESS,
+    TH32CS_SNAPTHREAD,
     SystemExtendedHandleInformation,
     get_ntdll,
 )
@@ -123,63 +150,13 @@ def get_keystone() -> ModuleType | None:
     return _keystone
 
 
-# Windows API constants
-WIN_PROCESS_VM_READ = 0x0010
-WIN_PROCESS_VM_WRITE = 0x0020
-WIN_PROCESS_VM_OPERATION = 0x0008
-WIN_PROCESS_QUERY_INFORMATION = 0x0400
 WIN_NO_INHERIT_HANDLE: bool = False
-WIN_MEM_COMMIT = 0x1000
-WIN_MEM_RESERVE = 0x2000
-WIN_MEM_RELEASE = 0x8000
-WIN_PAGE_EXECUTE_READWRITE = 0x40
-PE_HEADER_OFFSET = 0x3C
-PE_MAGIC_OFFSET = 0x40
-PE64_MACHINE = 0x8664
-PE32_MACHINE = 0x14C
-MEM_COMMIT_FLAG = 0x1000
-MEM_MAPPED_FLAG = 0x40000
-MEM_PRIVATE_FLAG = 0x20000
-MEM_IMAGE_FLAG = 0x1000000
 MAX_USER_ADDRESS_64 = 0x7FFFFFFFFFFF
 MIN_PATTERN_LENGTH = 16
 MAX_MEMORY_READ_SIZE = 0x100000
 DWORD_MASK = 0xFFFFFFFF
-
-
-def _compute_invalid_handle_value() -> int:
-    """Compute the platform-correct ``INVALID_HANDLE_VALUE`` constant.
-
-    Uses ``wintypes.HANDLE(-1).value`` on Windows so the bit pattern
-    matches what the kernel returns from APIs like
-    ``CreateToolhelp32Snapshot``. Falls back to ``DWORD_MASK`` on
-    non-Windows platforms where the constant is unused.
-
-    Returns:
-        int: ``0xFFFFFFFFFFFFFFFF`` on 64-bit Windows, ``0xFFFFFFFF``
-        on 32-bit Windows or non-Windows hosts.
-    """
-    if sys.platform == "win32":
-        value = wintypes.HANDLE(-1).value
-        if value is not None:
-            return value
-    return DWORD_MASK
-
-
-INVALID_HANDLE_VALUE: int = _compute_invalid_handle_value()
-PAGE_NOACCESS = 0x01
-PAGE_READONLY = 0x02
-PAGE_READWRITE = 0x04
-PAGE_EXECUTE = 0x10
-PAGE_EXECUTE_READ = 0x20
-PAGE_EXECUTE_READWRITE_FLAG = 0x40
-TH32CS_SNAPPROCESS = 0x00000002
-TH32CS_SNAPTHREAD = 0x00000004
-TH32CS_SNAPMODULE = 0x00000008
-TH32CS_SNAPMODULE32 = 0x00000010
 PEB_PROCESS_PARAMS_OFFSET_64 = 0x20
 PEB_PROCESS_PARAMS_OFFSET_32 = 0x10
-CMD_LINE_OFFSET_64 = 0x70
 POINTER_SIZE_64 = 8
 POINTER_SIZE_32 = 4
 UNICODE_STRING_SIZE_64 = 16
@@ -225,7 +202,6 @@ _ERR_YARA_RULE_FILE_EMPTY = "YARA rule file is empty"
 _ERR_YARA_RULE_FILE_NOT_FOUND = "YARA rule file not found"
 MIN_YARA_PATTERN_BYTES = 1
 PE_ENTRY_POINT_OFFSET = 0x28
-NT_HEADERS_OPTIONAL_OFFSET = 0x18
 _HANDLE_QUERY_MAX_BUFFER = 0x10000000
 
 BreakpointType = Literal["software", "hardware", "memory"]
@@ -2988,7 +2964,7 @@ class X64DbgBridge(DebuggerBridge):
                 if result == 0:
                     break
 
-                if mbi.State == MEM_COMMIT_FLAG:
+                if mbi.State == WIN_MEM_COMMIT:
                     prot_map = {
                         PAGE_NOACCESS: "---",
                         PAGE_READONLY: "r--",
