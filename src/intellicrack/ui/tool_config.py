@@ -49,6 +49,7 @@ from intellicrack.core._subprocess import TimeoutExpired
 from intellicrack.core.config import get_config_file
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
+from intellicrack.ui._dialogs import show_info, show_warning
 from intellicrack.ui.resources import IconManager
 
 
@@ -1093,7 +1094,7 @@ class ToolSettingsWidget(QFrame):
     def _install_tool(self) -> None:
         """Install the tool."""
         if self._tool_id in {"frida", "process", "binary"}:
-            QMessageBox.information(
+            show_info(
                 self,
                 "Installation",
                 f"{self._display_name} is built-in and does not require installation.",
@@ -1101,7 +1102,7 @@ class ToolSettingsWidget(QFrame):
             return
 
         if self._tool_id not in ToolInstallWorker.DOWNLOAD_URLS:
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Installation",
                 f"Automatic installation not available for {self._display_name}.\n\nPlease download and install manually.",
@@ -1145,10 +1146,10 @@ class ToolSettingsWidget(QFrame):
         self._install_progress.setVisible(False)
 
         if success:
-            QMessageBox.information(self, "Installation Complete", message)
+            show_info(self, "Installation Complete", message)
             self._check_status()
         else:
-            QMessageBox.warning(self, "Installation Failed", message)
+            show_warning(self, "Installation Failed", message)
 
     def get_settings(self) -> dict[str, Any]:
         """Get current settings as a dictionary.
@@ -1183,7 +1184,7 @@ class ToolSettingsWidget(QFrame):
                 json.dump(all_settings, f, indent=2)
         except OSError as e:
             _logger.warning("tool_settings_save_failed", tool_id=self._tool_id, error=str(e))
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Save Error",
                 f"Failed to save settings: {e}",

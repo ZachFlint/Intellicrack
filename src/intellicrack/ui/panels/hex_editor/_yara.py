@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QTreeWidget,
@@ -22,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.hex_editor._base import (
     YARA_MATCH_DISPLAY_BYTES,
     YaraScanner_cls,
@@ -128,7 +128,7 @@ class YaraMixin:
 
         if not yara_scanner_available or YaraScanner_cls is None:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "YARA Unavailable",
                 "YARA is not installed. Install with: pip install yara-python",
@@ -138,7 +138,7 @@ class YaraMixin:
         scanner = YaraScanner_cls()
         if not scanner.available:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "YARA Unavailable",
                 "YARA is not installed. Install with: pip install yara-python",

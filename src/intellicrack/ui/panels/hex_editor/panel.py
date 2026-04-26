@@ -24,7 +24,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QMenu,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
@@ -39,6 +38,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
@@ -591,7 +591,7 @@ class HexEditorPanel(
             bool: True if the file was loaded successfully.
         """
         if not hexcore_available or hexcore is None:
-            QMessageBox.warning(
+            show_warning(
                 self,
                 "Hex Core Not Available",
                 "The intellicrack_hexcore Rust extension is not installed.\n"
@@ -634,7 +634,7 @@ class HexEditorPanel(
 
         except OSError as exc:
             _logger.warning("file_load_failed", path=str(path))
-            QMessageBox.warning(self, "Load Failed", f"Failed to open file:\n{exc}")
+            show_warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
         else:
             _logger.info("file_loaded", path=str(path), size=doc_len)
@@ -664,7 +664,7 @@ class HexEditorPanel(
                 self._on_save_as()
                 return
         except OSError as exc:
-            QMessageBox.warning(self, "Save Failed", f"Failed to save:\n{exc}")
+            show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
         else:
             self._on_data_changed()
             if self.state_holder is not None and file_path is not None:
@@ -681,7 +681,7 @@ class HexEditorPanel(
             try:
                 self.document.save(save_path)
             except OSError as exc:
-                QMessageBox.warning(self, "Save Failed", f"Failed to save:\n{exc}")
+                show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
             else:
                 self.file_path = Path(save_path)
                 self._on_data_changed()
