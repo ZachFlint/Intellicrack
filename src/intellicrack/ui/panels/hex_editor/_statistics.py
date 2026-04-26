@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import dataclasses
 import math
-from typing import TYPE_CHECKING, Any, cast, override
+from typing import TYPE_CHECKING, Any, cast
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.hex_editor._base import (
     BYTE_TYPE_DIST_MIN_LEN,
     BYTE_VALUES_COUNT,
@@ -61,140 +62,123 @@ class _StatisticsResult:
     classification_block_size: int
 
 
-class StatisticsWorker(QThread):
-    """Background worker for computing hex editor statistics.
+def compute_statistics(document: object, entropy_block_size: int) -> _StatisticsResult:
+    """Compute Shannon entropy, byte distribution, and content classification.
 
-    Performs entropy calculation, byte distribution, byte type
-    distribution, and content classification on a background thread
-    to avoid blocking the Qt main thread on large files.
+    Args:
+        document: Hex document object exposing ``byte_statistics`` and
+            optionally ``entropy_map``, ``byte_distribution_full``,
+            ``byte_type_distribution``, and ``content_classification``.
+        entropy_block_size: Block size in bytes used for per-block entropy
+            and classification calculations.
 
-    Attributes:
-        stats_finished: Signal emitted with the result on success.
-        stats_error: Signal emitted with the exception on failure.
+    Returns:
+        _StatisticsResult: Bundle of all computed statistics.
     """
+    doc: Any = document
+    stats: list[tuple[int, int]] = list(doc.byte_statistics())
+    total: int = sum(s[1] for s in stats)
 
-    stats_finished: pyqtSignal = pyqtSignal(object)
-    stats_error: pyqtSignal = pyqtSignal(object)
+    entropy: float = 0.0
+    if total > 0:
+        for _byte_val, count in stats:
+            if count > 0:
+                prob = count / total
+                entropy -= prob * math.log2(prob)
 
-    def __init__(
-        self,
-        document: object,
-        entropy_block_size: int,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the StatisticsWorker with document and block size.
+    return _StatisticsResult(
+        byte_stats=stats,
+        total=total,
+        entropy=entropy,
+        entropy_values=_compute_entropy_map(document, entropy_block_size),
+        entropy_block_size=entropy_block_size,
+        dist_counts=_compute_byte_distribution(document),
+        type_dist=_compute_type_distribution(document),
+        classification=_compute_classification(document, entropy_block_size),
+        classification_block_size=entropy_block_size,
+    )
 
-        Args:
-            document: Hex document to compute statistics for.
-            entropy_block_size: Block size in bytes for entropy calculation.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self.document: Any = document
-        self._entropy_block_size: int = entropy_block_size
-        _: object = self.finished.connect(self.deleteLater)
 
-    @override
-    def run(self) -> None:
-        """Execute all statistics computations in the background thread."""
-        try:
-            result = self._compute()
-            self.stats_finished.emit(result)
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.exception("statistics_worker_failed")
-            self.stats_error.emit(exc)
+def _compute_entropy_map(document: object, block_size: int) -> list[float] | None:
+    """Compute per-block entropy values from the document.
 
-    def _compute(self) -> _StatisticsResult:
-        """Perform the actual statistics computation.
+    Args:
+        document: Hex document object.
+        block_size: Block size in bytes for entropy calculation.
 
-        Returns:
-            _StatisticsResult: Computed statistics data.
-        """
-        stats: list[tuple[int, int]] = list(self.document.byte_statistics())
-        total: int = sum(s[1] for s in stats)
+    Returns:
+        list[float] | None: Per-block entropy values, or None if unavailable.
+    """
+    entropy_map_fn: Any = getattr(document, "entropy_map", None)
+    if not callable(entropy_map_fn):
+        return None
+    try:
+        raw_map: list[float] = cast("list[float]", entropy_map_fn(block_size))
+        return [float(v) for v in raw_map] if raw_map else []
+    except (AttributeError, ValueError, TypeError):
+        _logger.exception("entropy_map_failed")
+        return None
 
-        entropy: float = 0.0
-        if total > 0:
-            for _byte_val, count in stats:
-                if count > 0:
-                    prob = count / total
-                    entropy -= prob * math.log2(prob)
 
-        return _StatisticsResult(
-            byte_stats=stats,
-            total=total,
-            entropy=entropy,
-            entropy_values=self._compute_entropy_map(),
-            entropy_block_size=self._entropy_block_size,
-            dist_counts=self._compute_byte_distribution(),
-            type_dist=self._compute_type_distribution(),
-            classification=self._compute_classification(),
-            classification_block_size=self._entropy_block_size,
-        )
+def _compute_byte_distribution(document: object) -> list[int] | None:
+    """Compute the 256-element byte frequency distribution.
 
-    def _compute_entropy_map(self) -> list[float] | None:
-        """Compute per-block entropy values from the document.
+    Args:
+        document: Hex document object.
 
-        Returns:
-            list[float] | None: Per-block entropy values, or None if unavailable.
-        """
-        entropy_map_fn: Any = getattr(self.document, "entropy_map", None)
-        if not callable(entropy_map_fn):
-            return None
-        try:
-            raw_map: list[float] = cast("list[float]", entropy_map_fn(self._entropy_block_size))
-            return [float(v) for v in raw_map] if raw_map else []
-        except (AttributeError, ValueError, TypeError):
-            _logger.exception("entropy_map_failed")
-            return None
+    Returns:
+        list[int] | None: Byte frequency counts, or None if unavailable.
+    """
+    dist_fn: Any = getattr(document, "byte_distribution_full", None)
+    if not callable(dist_fn):
+        return None
+    try:
+        raw_dist: list[int] = cast("list[int]", dist_fn())
+        return [int(v) for v in raw_dist] if raw_dist else [0] * BYTE_VALUES_COUNT
+    except (AttributeError, ValueError, TypeError):
+        _logger.exception("byte_distribution_failed")
+        return None
 
-    def _compute_byte_distribution(self) -> list[int] | None:
-        """Compute the 256-element byte frequency distribution.
 
-        Returns:
-            list[int] | None: Byte frequency counts, or None if unavailable.
-        """
-        dist_fn: Any = getattr(self.document, "byte_distribution_full", None)
-        if not callable(dist_fn):
-            return None
-        try:
-            raw_dist: list[int] = cast("list[int]", dist_fn())
-            return [int(v) for v in raw_dist] if raw_dist else [0] * BYTE_VALUES_COUNT
-        except (AttributeError, ValueError, TypeError):
-            _logger.exception("byte_distribution_failed")
-            return None
+def _compute_type_distribution(document: object) -> tuple[int, ...] | None:
+    """Compute byte type distribution counts.
 
-    def _compute_type_distribution(self) -> tuple[int, ...] | None:
-        """Compute byte type distribution counts.
+    Args:
+        document: Hex document object.
 
-        Returns:
-            tuple[int, ...] | None: Byte type counts, or None if unavailable.
-        """
-        type_fn: Any = getattr(self.document, "byte_type_distribution", None)
-        if not callable(type_fn):
-            return None
-        try:
-            raw_type: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
-            return tuple(int(v) for v in raw_type)
-        except (AttributeError, ValueError, TypeError):
-            _logger.exception("byte_type_distribution_failed")
-            return None
+    Returns:
+        tuple[int, ...] | None: Byte type counts, or None if unavailable.
+    """
+    type_fn: Any = getattr(document, "byte_type_distribution", None)
+    if not callable(type_fn):
+        return None
+    try:
+        raw_type: tuple[int, ...] = cast("tuple[int, ...]", type_fn())
+        return tuple(int(v) for v in raw_type)
+    except (AttributeError, ValueError, TypeError):
+        _logger.exception("byte_type_distribution_failed")
+        return None
 
-    def _compute_classification(self) -> list[int] | None:
-        """Compute per-block content classification.
 
-        Returns:
-            list[int] | None: Classification values per block, or None if unavailable.
-        """
-        class_fn: Any = getattr(self.document, "content_classification", None)
-        if not callable(class_fn):
-            return None
-        try:
-            raw_class: list[int] = cast("list[int]", class_fn(self._entropy_block_size))
-            return [int(v) for v in raw_class] if raw_class else None
-        except (AttributeError, ValueError, TypeError):
-            _logger.exception("content_classification_failed")
-            return None
+def _compute_classification(document: object, block_size: int) -> list[int] | None:
+    """Compute per-block content classification.
+
+    Args:
+        document: Hex document object.
+        block_size: Block size in bytes used for the classification.
+
+    Returns:
+        list[int] | None: Classification values per block, or None if unavailable.
+    """
+    class_fn: Any = getattr(document, "content_classification", None)
+    if not callable(class_fn):
+        return None
+    try:
+        raw_class: list[int] = cast("list[int]", class_fn(block_size))
+        return [int(v) for v in raw_class] if raw_class else None
+    except (AttributeError, ValueError, TypeError):
+        _logger.exception("content_classification_failed")
+        return None
 
 
 class StatisticsMixin:
@@ -211,7 +195,7 @@ class StatisticsMixin:
     _control_pct_label: QLabel | None
     _high_pct_label: QLabel | None
     _classification_label: QLabel | None
-    _statistics_worker: StatisticsWorker | None
+    _statistics_worker: GenericCallableWorker | None
 
     def _update_statistics(self) -> None:
         """Update the statistics tab with entropy graph, histogram, and byte tree.
@@ -224,7 +208,7 @@ class StatisticsMixin:
         if self.document is None:
             return
 
-        worker_attr: StatisticsWorker | None = getattr(self, "_statistics_worker", None)
+        worker_attr: GenericCallableWorker | None = getattr(self, "_statistics_worker", None)
         if worker_attr is not None and worker_attr.isRunning():
             _logger.warning("statistics_update_skipped", reason="worker active")
             return
@@ -238,9 +222,14 @@ class StatisticsMixin:
         self._set_statistics_computing()
 
         parent_obj: QThread | None = self if isinstance(self, QThread) else None
-        worker = StatisticsWorker(self.document, ENTROPY_BLOCK_SIZE, parent_obj)
-        _ = worker.stats_finished.connect(self._on_statistics_computed)
-        _ = worker.stats_error.connect(self._on_statistics_error)
+        worker = GenericCallableWorker(
+            compute_statistics,
+            self.document,
+            ENTROPY_BLOCK_SIZE,
+            parent=parent_obj,
+        )
+        _: object = worker.call_finished.connect(self._on_statistics_computed)
+        _ = worker.call_error.connect(self._on_statistics_error)
         self._statistics_worker = worker
         worker.start()
 

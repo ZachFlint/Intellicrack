@@ -6,20 +6,12 @@
 
 from __future__ import annotations
 
-from intellicrack.ui.panels.hex_editor._comparison import DiffWorker
-from intellicrack.ui.panels.hex_editor._sandbox import SandboxWorker
-from intellicrack.ui.panels.hex_editor._scripting import ScriptWorker
-from intellicrack.ui.panels.hex_editor._search import NumericSearchWorker, SearchWorker
-from intellicrack.ui.panels.hex_editor._signatures import SignatureScanWorker
+from intellicrack.ui.panels.hex_editor._search import execute_numeric_search, execute_text_search
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
 
 __all__: list[str] = [
-    "DiffWorker",
     "HexEditorPanel",
-    "NumericSearchWorker",
-    "SandboxWorker",
-    "ScriptWorker",
-    "SearchWorker",
-    "SignatureScanWorker",
+    "execute_numeric_search",
+    "execute_text_search",
 ]

@@ -12,9 +12,8 @@ import hashlib
 import io
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Protocol, override
+from typing import TYPE_CHECKING, Any, Final, Protocol, cast, override
 
-from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat, QTextDocument
 from PyQt6.QtWidgets import (
     QFileDialog,
@@ -29,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
 _logger = get_logger(__name__)
@@ -930,108 +930,70 @@ def _safe_hasattr(target: object, name: object) -> bool:
     return hasattr(target, name)
 
 
-class ScriptWorker(QThread):
-    """Background worker for executing Python scripts.
+def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str, Any]:
+    """Run a user-supplied Python script in a sandboxed namespace.
 
-    Runs user-supplied Python source code in a sandboxed namespace
-    validated by an AST whitelist. Captures stdout to avoid blocking
-    the GUI thread and reports results via Qt signals.
+    Validates the script via :func:`_validate_script_ast`, builds a safe
+    builtin set, captures stdout, executes the source, and returns the
+    captured output plus the names of any non-callable user variables.
 
-    Attributes:
-        script_finished: Emitted with result dict on success.
-        script_error: Emitted with error message on failure.
+    Args:
+        source: Python script source code to execute.
+        doc_api: Document API providing safe hex document access.
+
+    Returns:
+        dict[str, Any]: Dict with ``output``, ``error`` (always ``None``
+            on success), and ``variables`` (mapping of user-defined
+            non-callable variable names to their ``repr`` strings).
     """
+    _validate_script_ast(source)
 
-    script_finished: pyqtSignal = pyqtSignal(dict)
-    script_error: pyqtSignal = pyqtSignal(str)
+    safe_builtins = _build_safe_builtins()
 
-    def __init__(
-        self,
-        source: str,
-        doc_api: _DocAPI | _ReadOnlyDocAPI,
-        parent: QThread | None = None,
+    stdout_capture = io.StringIO()
+
+    def _safe_print(
+        *values: object,
+        sep: str | None = " ",
+        end: str | None = "\n",
+        **kwargs: object,
     ) -> None:
-        """Initialize the ScriptWorker with script source and document API.
+        """Replacement for ``print`` that writes to the captured buffer.
 
         Args:
-            source: Python script source code to execute.
-            doc_api: Document API providing safe hex document access.
-            parent: Parent QObject.
+            *values: Values to print.
+            sep: Separator string between values.
+            end: String appended after the last value.
+            **kwargs: Additional keyword arguments (only ``flush`` is honoured).
         """
-        super().__init__(parent)
-        self._source = source
-        self._doc_api = doc_api
+        text = (sep or " ").join(str(v) for v in values) + (end or "\n")
+        stdout_capture.write(text)
+        if kwargs.get("flush"):
+            stdout_capture.flush()
 
-    @override
-    def run(self) -> None:
-        """Execute the script in a restricted namespace."""
-        try:
-            result = self._execute()
-            self.script_finished.emit(result)
-        except PermissionError as exc:
-            self.script_error.emit(f"PermissionError: {exc}")
-        except SyntaxError as exc:
-            self.script_error.emit(f"SyntaxError: {exc}")
-        except (
-            RuntimeError,
-            ValueError,
-            TypeError,
-            KeyError,
-            IndexError,
-            AttributeError,
-            ArithmeticError,
-            LookupError,
-            OSError,
-        ) as exc:
-            self.script_error.emit(f"{type(exc).__name__}: {exc}")
+    safe_builtins["print"] = _safe_print
+    safe_builtins["getattr"] = _safe_getattr
+    safe_builtins["setattr"] = _safe_setattr
+    safe_builtins["hasattr"] = _safe_hasattr
 
-    def _execute(self) -> dict[str, Any]:
-        """Run the source in a sandboxed namespace and capture output.
+    namespace: dict[str, Any] = {
+        "__builtins__": safe_builtins,
+        "doc": doc_api,
+    }
 
-        Returns:
-            dict[str, Any]: Dict with output, error (if any), and
-                user-defined variable names.
-        """
-        _validate_script_ast(self._source)
+    compiled = compile(source, "<script>", "exec")
+    exec(compiled, namespace)  # noqa: S102
 
-        safe_builtins = _build_safe_builtins()
+    user_vars: dict[str, str] = {}
+    for key, val in namespace.items():
+        if not key.startswith("_") and key != "doc" and not callable(val):
+            user_vars[key] = repr(val)
 
-        stdout_capture = io.StringIO()
-
-        def _safe_print(
-            *values: object,
-            sep: str | None = " ",
-            end: str | None = "\n",
-            **kwargs: object,
-        ) -> None:
-            text = (sep or " ").join(str(v) for v in values) + (end or "\n")
-            stdout_capture.write(text)
-            if kwargs.get("flush"):
-                stdout_capture.flush()
-
-        safe_builtins["print"] = _safe_print
-        safe_builtins["getattr"] = _safe_getattr
-        safe_builtins["setattr"] = _safe_setattr
-        safe_builtins["hasattr"] = _safe_hasattr
-
-        namespace: dict[str, Any] = {
-            "__builtins__": safe_builtins,
-            "doc": self._doc_api,
-        }
-
-        compiled = compile(self._source, "<script>", "exec")
-        exec(compiled, namespace)  # noqa: S102
-
-        user_vars: dict[str, str] = {}
-        for key, val in namespace.items():
-            if not key.startswith("_") and key != "doc" and not callable(val):
-                user_vars[key] = repr(val)
-
-        return {
-            "output": stdout_capture.getvalue(),
-            "error": None,
-            "variables": user_vars,
-        }
+    return {
+        "output": stdout_capture.getvalue(),
+        "error": None,
+        "variables": user_vars,
+    }
 
 
 class ScriptingMixin:
@@ -1043,7 +1005,7 @@ class ScriptingMixin:
     _side_tabs: QTabWidget | None
     _script_editor: QPlainTextEdit | None
     _script_output: QPlainTextEdit | None
-    _script_worker: ScriptWorker | None
+    _script_worker: GenericCallableWorker | None
     _script_status: QLabel | None
 
     def _create_scripting_tab(self) -> QWidget:
@@ -1143,11 +1105,28 @@ class ScriptingMixin:
         if self._script_status is not None:
             self._script_status.setText("Running...")
 
-        worker = ScriptWorker(source, doc_api)
-        worker.script_finished.connect(self._on_script_finished)
-        worker.script_error.connect(self._on_script_error)
+        worker = GenericCallableWorker(execute_script, source, doc_api)
+        _: object = worker.call_finished.connect(self._on_script_finished_obj)
+        _ = worker.call_error.connect(self._on_script_error_obj)
         self._script_worker = worker
         worker.start()
+
+    def _on_script_finished_obj(self, result: object) -> None:
+        """Forward worker results to the typed script handler.
+
+        Args:
+            result: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(result, dict):
+            self._on_script_finished(cast("dict[str, Any]", result))
+
+    def _on_script_error_obj(self, exc: object) -> None:
+        """Forward worker exceptions to the typed script error handler.
+
+        Args:
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        self._on_script_error(f"{type(exc).__name__}: {exc}")
 
     def _on_load_script(self) -> None:
         """Load a Python script file into the editor."""

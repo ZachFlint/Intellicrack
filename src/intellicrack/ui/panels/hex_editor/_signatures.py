@@ -9,9 +9,8 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Final, cast, override
+from typing import Any, Final, cast
 
-from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -25,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
 _logger = get_logger(__name__)
@@ -35,325 +35,318 @@ _NDB_LINE_FIELDS: Final[int] = 4
 _HDB_LINE_FIELDS: Final[int] = 3
 
 
-class SignatureScanWorker(QThread):
-    """Background worker for scanning documents against signature databases.
+def execute_signature_scan(
+    doc_data: bytes,
+    db_type: str,
+    db_path: str,
+) -> list[dict[str, Any]]:
+    """Scan ``doc_data`` against the selected signature database.
 
-    Supports DIE-style JSON databases, ClamAV .ndb/.hdb files, and
-    custom JSON signature formats.
+    Args:
+        doc_data: Full document contents as bytes.
+        db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
+        db_path: Path to the signature database file.
 
-    Attributes:
-        scan_finished: Emitted with list of match dicts on success.
-        scan_error: Emitted with error message on failure.
+    Returns:
+        list[dict[str, Any]]: List of match dicts with ``name``, ``type``,
+            ``version``, ``offset``, and ``details`` keys.
     """
+    if db_type == "die":
+        return _scan_die(doc_data, db_path)
+    if db_type == "clamav":
+        return _scan_clamav(doc_data, db_path)
+    return _scan_custom(doc_data, db_path)
 
-    scan_finished: pyqtSignal = pyqtSignal(list)
-    scan_error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(
-        self,
-        doc_data: bytes,
-        db_type: str,
-        db_path: str,
-        parent: QThread | None = None,
-    ) -> None:
-        """Initialize the SignatureScanWorker with document data and database info.
+def _scan_die(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
+    """Scan using a DIE-style JSON signature database.
 
-        Args:
-            doc_data: Full document contents as bytes.
-            db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
-            db_path: Path to the signature database file.
-            parent: Parent QObject.
-        """
-        super().__init__(parent)
-        self._doc_data = doc_data
-        self._db_type = db_type
-        self._db_path = db_path
+    Args:
+        doc_data: Full document contents as bytes.
+        db_path: Path to the DIE JSON database file.
 
-    @override
-    def run(self) -> None:
-        """Execute the signature scan in the background thread."""
-        try:
-            if self._db_type == "die":
-                results = self._scan_die()
-            elif self._db_type == "clamav":
-                results = self._scan_clamav()
+    Returns:
+        list[dict[str, Any]]: List of match dicts with ``name``, ``type``,
+            ``version``, and ``offset`` keys.
+    """
+    db_text = Path(db_path).read_text(encoding="utf-8")
+    db_entries: list[dict[str, Any]] = json.loads(db_text)
+    results: list[dict[str, Any]] = []
+
+    ep_bytes = doc_data[:_MAX_ENTRY_POINT_BYTES]
+
+    for entry in db_entries:
+        patterns: list[Any] = list(entry.get("patterns", []))
+        sig_name = str(entry.get("name", "unknown"))
+        sig_type = str(entry.get("type", "unknown"))
+        sig_version = str(entry.get("version", ""))
+
+        for pattern_info in patterns:
+            if isinstance(pattern_info, str):
+                hex_pattern = pattern_info
+                scan_offset = "ep"
+            elif isinstance(pattern_info, dict):
+                typed_pattern_info = cast("dict[str, object]", pattern_info)
+                hex_pattern = str(typed_pattern_info.get("pattern", ""))
+                scan_offset = str(typed_pattern_info.get("offset", "ep"))
             else:
-                results = self._scan_custom()
-            self.scan_finished.emit(results)
-        except (OSError, json.JSONDecodeError, ValueError, KeyError) as exc:
-            self.scan_error.emit(str(exc))
-
-    def _scan_die(self) -> list[dict[str, Any]]:
-        """Scan using a DIE-style JSON signature database.
-
-        Returns:
-            list[dict[str, Any]]: List of match dicts with name, type,
-                version, and offset keys.
-        """
-        db_text = Path(self._db_path).read_text(encoding="utf-8")
-        db_entries: list[dict[str, Any]] = json.loads(db_text)
-        results: list[dict[str, Any]] = []
-
-        ep_bytes = self._doc_data[:_MAX_ENTRY_POINT_BYTES]
-
-        for entry in db_entries:
-            patterns: list[Any] = list(entry.get("patterns", []))
-            sig_name = str(entry.get("name", "unknown"))
-            sig_type = str(entry.get("type", "unknown"))
-            sig_version = str(entry.get("version", ""))
-
-            for pattern_info in patterns:
-                if isinstance(pattern_info, str):
-                    hex_pattern = pattern_info
-                    scan_offset = "ep"
-                elif isinstance(pattern_info, dict):
-                    typed_pattern_info = cast("dict[str, object]", pattern_info)
-                    hex_pattern = str(typed_pattern_info.get("pattern", ""))
-                    scan_offset = str(typed_pattern_info.get("offset", "ep"))
-                else:
-                    continue
-
-                try:
-                    pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
-                except ValueError:
-                    _logger.warning(
-                        "die_pattern_decode_failed",
-                        sig_name=sig_name,
-                        hex_pattern=hex_pattern,
-                    )
-                    continue
-
-                if scan_offset == "ep":
-                    idx = ep_bytes.find(pattern_bytes)
-                    if idx >= 0:
-                        results.append({
-                            "name": sig_name,
-                            "type": sig_type,
-                            "version": sig_version,
-                            "offset": idx,
-                            "details": f"Entry point match at +{idx}",
-                        })
-                elif scan_offset == "any":
-                    idx = self._doc_data.find(pattern_bytes)
-                    if idx >= 0:
-                        results.append({
-                            "name": sig_name,
-                            "type": sig_type,
-                            "version": sig_version,
-                            "offset": idx,
-                            "details": f"Full scan match at 0x{idx:X}",
-                        })
-                else:
-                    try:
-                        fixed_offset = int(scan_offset, 0)
-                    except ValueError:
-                        _logger.warning(
-                            "die_offset_parse_failed",
-                            sig_name=sig_name,
-                            scan_offset=scan_offset,
-                        )
-                        continue
-                    if fixed_offset + len(pattern_bytes) <= len(self._doc_data):
-                        region = self._doc_data[fixed_offset : fixed_offset + len(pattern_bytes)]
-                        if region == pattern_bytes:
-                            results.append({
-                                "name": sig_name,
-                                "type": sig_type,
-                                "version": sig_version,
-                                "offset": fixed_offset,
-                                "details": f"Fixed offset match at 0x{fixed_offset:X}",
-                            })
-
-        return results
-
-    def _scan_clamav(self) -> list[dict[str, Any]]:
-        """Scan using ClamAV .ndb or .hdb signature files.
-
-        Returns:
-            list[dict[str, Any]]: List of match dicts with malware_name,
-                sig_type, and offset keys.
-        """
-        db_path = Path(self._db_path)
-        suffix = db_path.suffix.lower()
-        lines = db_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        if suffix == ".hdb":
-            return self._scan_clamav_hdb(lines)
-        return self._scan_clamav_ndb(lines)
-
-    def _scan_clamav_hdb(self, lines: list[str]) -> list[dict[str, Any]]:
-        """Scan ClamAV hash-based (.hdb) signatures.
-
-        Args:
-            lines: Lines from the .hdb signature file.
-
-        Returns:
-            list[dict[str, Any]]: Match results.
-        """
-        file_md5 = hashlib.md5(self._doc_data).hexdigest()  # noqa: S324
-        file_size = len(self._doc_data)
-        results: list[dict[str, Any]] = []
-        for line in lines:
-            parts = line.strip().split(":")
-            if len(parts) < _HDB_LINE_FIELDS:
                 continue
-            sig_md5 = parts[0].lower()
-            sig_name = parts[2]
-            try:
-                sig_size = int(parts[1])
-            except ValueError:
-                _logger.warning(
-                    "hdb_size_parse_failed",
-                    sig_name=sig_name,
-                    sig_size=parts[1],
-                )
-                continue
-            if sig_md5 == file_md5 and sig_size == file_size:
-                results.append({
-                    "name": sig_name,
-                    "type": "hash",
-                    "version": "",
-                    "offset": 0,
-                    "details": f"MD5 hash match (size={file_size})",
-                })
-        return results
-
-    def _scan_clamav_ndb(self, lines: list[str]) -> list[dict[str, Any]]:
-        """Scan ClamAV pattern-based (.ndb) signatures.
-
-        Args:
-            lines: Lines from the .ndb signature file.
-
-        Returns:
-            list[dict[str, Any]]: Match results.
-        """
-        results: list[dict[str, Any]] = []
-        for line in lines:
-            parts = line.strip().split(":")
-            if len(parts) < _NDB_LINE_FIELDS:
-                continue
-            sig_name = parts[0]
-            sig_offset_spec = parts[2]
-            sig_hex = parts[3]
-            try:
-                clean_hex = sig_hex.replace("*", "").replace("?", "")
-                if not clean_hex:
-                    continue
-                pattern_bytes = bytes.fromhex(clean_hex)
-            except ValueError:
-                _logger.warning(
-                    "ndb_pattern_decode_failed",
-                    sig_name=sig_name,
-                    sig_hex=sig_hex,
-                )
-                continue
-            if sig_offset_spec == "*":
-                idx = self._doc_data.find(pattern_bytes)
-                if idx >= 0:
-                    results.append({
-                        "name": sig_name,
-                        "type": "ndb",
-                        "version": "",
-                        "offset": idx,
-                        "details": f"Pattern match at 0x{idx:X}",
-                    })
-            elif sig_offset_spec == "EP+0" and self._doc_data[: len(pattern_bytes)] == pattern_bytes:
-                results.append({
-                    "name": sig_name,
-                    "type": "ndb",
-                    "version": "",
-                    "offset": 0,
-                    "details": "Entry point match",
-                })
-            else:
-                try:
-                    offset_val = int(sig_offset_spec, 0)
-                except ValueError:
-                    _logger.warning(
-                        "ndb_offset_parse_failed",
-                        sig_name=sig_name,
-                        sig_offset_spec=sig_offset_spec,
-                    )
-                    continue
-                end = offset_val + len(pattern_bytes)
-                if end <= len(self._doc_data) and self._doc_data[offset_val:end] == pattern_bytes:
-                    results.append({
-                        "name": sig_name,
-                        "type": "ndb",
-                        "version": "",
-                        "offset": offset_val,
-                        "details": f"Fixed offset match at 0x{offset_val:X}",
-                    })
-        return results
-
-    def _scan_custom(self) -> list[dict[str, Any]]:
-        """Scan using a custom JSON signature database.
-
-        Expected format: list of objects with name, pattern (hex), offset, type.
-
-        Returns:
-            list[dict[str, Any]]: List of match dicts.
-        """
-        db_text = Path(self._db_path).read_text(encoding="utf-8")
-        entries: list[dict[str, str]] = json.loads(db_text)
-        results: list[dict[str, Any]] = []
-
-        for entry in entries:
-            sig_name = entry.get("name", "unknown")
-            hex_pattern = entry.get("pattern", "")
-            offset_spec = entry.get("offset", "any")
-            sig_type = entry.get("type", "unknown")
 
             try:
                 pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
             except ValueError:
                 _logger.warning(
-                    "custom_pattern_decode_failed",
+                    "die_pattern_decode_failed",
                     sig_name=sig_name,
                     hex_pattern=hex_pattern,
                 )
                 continue
 
-            if offset_spec == "ep":
-                idx = self._doc_data[:_MAX_ENTRY_POINT_BYTES].find(pattern_bytes)
+            if scan_offset == "ep":
+                idx = ep_bytes.find(pattern_bytes)
                 if idx >= 0:
                     results.append({
                         "name": sig_name,
                         "type": sig_type,
-                        "version": "",
+                        "version": sig_version,
                         "offset": idx,
                         "details": f"Entry point match at +{idx}",
                     })
-            elif offset_spec == "any":
-                idx = self._doc_data.find(pattern_bytes)
+            elif scan_offset == "any":
+                idx = doc_data.find(pattern_bytes)
                 if idx >= 0:
                     results.append({
                         "name": sig_name,
                         "type": sig_type,
-                        "version": "",
+                        "version": sig_version,
                         "offset": idx,
                         "details": f"Full scan match at 0x{idx:X}",
                     })
             else:
                 try:
-                    fixed_offset = int(offset_spec, 0)
+                    fixed_offset = int(scan_offset, 0)
                 except ValueError:
                     _logger.warning(
-                        "custom_offset_parse_failed",
+                        "die_offset_parse_failed",
                         sig_name=sig_name,
-                        offset_spec=offset_spec,
+                        scan_offset=scan_offset,
                     )
                     continue
-                end = fixed_offset + len(pattern_bytes)
-                if end <= len(self._doc_data) and self._doc_data[fixed_offset:end] == pattern_bytes:
-                    results.append({
-                        "name": sig_name,
-                        "type": sig_type,
-                        "version": "",
-                        "offset": fixed_offset,
-                        "details": f"Fixed offset match at 0x{fixed_offset:X}",
-                    })
+                if fixed_offset + len(pattern_bytes) <= len(doc_data):
+                    region = doc_data[fixed_offset : fixed_offset + len(pattern_bytes)]
+                    if region == pattern_bytes:
+                        results.append({
+                            "name": sig_name,
+                            "type": sig_type,
+                            "version": sig_version,
+                            "offset": fixed_offset,
+                            "details": f"Fixed offset match at 0x{fixed_offset:X}",
+                        })
 
-        return results
+    return results
+
+
+def _scan_clamav(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
+    """Scan using ClamAV .ndb or .hdb signature files.
+
+    Args:
+        doc_data: Full document contents as bytes.
+        db_path: Path to the ClamAV signature file.
+
+    Returns:
+        list[dict[str, Any]]: List of match dicts with ``name``, ``type``,
+            and ``offset`` keys.
+    """
+    db_file = Path(db_path)
+    suffix = db_file.suffix.lower()
+    lines = db_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    if suffix == ".hdb":
+        return _scan_clamav_hdb(doc_data, lines)
+    return _scan_clamav_ndb(doc_data, lines)
+
+
+def _scan_clamav_hdb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
+    """Scan ClamAV hash-based (.hdb) signatures.
+
+    Args:
+        doc_data: Full document contents as bytes.
+        lines: Lines from the .hdb signature file.
+
+    Returns:
+        list[dict[str, Any]]: Match results.
+    """
+    file_md5 = hashlib.md5(doc_data).hexdigest()  # noqa: S324
+    file_size = len(doc_data)
+    results: list[dict[str, Any]] = []
+    for line in lines:
+        parts = line.strip().split(":")
+        if len(parts) < _HDB_LINE_FIELDS:
+            continue
+        sig_md5 = parts[0].lower()
+        sig_name = parts[2]
+        try:
+            sig_size = int(parts[1])
+        except ValueError:
+            _logger.warning(
+                "hdb_size_parse_failed",
+                sig_name=sig_name,
+                sig_size=parts[1],
+            )
+            continue
+        if sig_md5 == file_md5 and sig_size == file_size:
+            results.append({
+                "name": sig_name,
+                "type": "hash",
+                "version": "",
+                "offset": 0,
+                "details": f"MD5 hash match (size={file_size})",
+            })
+    return results
+
+
+def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
+    """Scan ClamAV pattern-based (.ndb) signatures.
+
+    Args:
+        doc_data: Full document contents as bytes.
+        lines: Lines from the .ndb signature file.
+
+    Returns:
+        list[dict[str, Any]]: Match results.
+    """
+    results: list[dict[str, Any]] = []
+    for line in lines:
+        parts = line.strip().split(":")
+        if len(parts) < _NDB_LINE_FIELDS:
+            continue
+        sig_name = parts[0]
+        sig_offset_spec = parts[2]
+        sig_hex = parts[3]
+        try:
+            clean_hex = sig_hex.replace("*", "").replace("?", "")
+            if not clean_hex:
+                continue
+            pattern_bytes = bytes.fromhex(clean_hex)
+        except ValueError:
+            _logger.warning(
+                "ndb_pattern_decode_failed",
+                sig_name=sig_name,
+                sig_hex=sig_hex,
+            )
+            continue
+        if sig_offset_spec == "*":
+            idx = doc_data.find(pattern_bytes)
+            if idx >= 0:
+                results.append({
+                    "name": sig_name,
+                    "type": "ndb",
+                    "version": "",
+                    "offset": idx,
+                    "details": f"Pattern match at 0x{idx:X}",
+                })
+        elif sig_offset_spec == "EP+0" and doc_data[: len(pattern_bytes)] == pattern_bytes:
+            results.append({
+                "name": sig_name,
+                "type": "ndb",
+                "version": "",
+                "offset": 0,
+                "details": "Entry point match",
+            })
+        else:
+            try:
+                offset_val = int(sig_offset_spec, 0)
+            except ValueError:
+                _logger.warning(
+                    "ndb_offset_parse_failed",
+                    sig_name=sig_name,
+                    sig_offset_spec=sig_offset_spec,
+                )
+                continue
+            end = offset_val + len(pattern_bytes)
+            if end <= len(doc_data) and doc_data[offset_val:end] == pattern_bytes:
+                results.append({
+                    "name": sig_name,
+                    "type": "ndb",
+                    "version": "",
+                    "offset": offset_val,
+                    "details": f"Fixed offset match at 0x{offset_val:X}",
+                })
+    return results
+
+
+def _scan_custom(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
+    """Scan using a custom JSON signature database.
+
+    Expected format: list of objects with name, pattern (hex), offset, type.
+
+    Args:
+        doc_data: Full document contents as bytes.
+        db_path: Path to the custom JSON signature file.
+
+    Returns:
+        list[dict[str, Any]]: List of match dicts.
+    """
+    db_text = Path(db_path).read_text(encoding="utf-8")
+    entries: list[dict[str, str]] = json.loads(db_text)
+    results: list[dict[str, Any]] = []
+
+    for entry in entries:
+        sig_name = entry.get("name", "unknown")
+        hex_pattern = entry.get("pattern", "")
+        offset_spec = entry.get("offset", "any")
+        sig_type = entry.get("type", "unknown")
+
+        try:
+            pattern_bytes = bytes.fromhex(hex_pattern.replace(" ", ""))
+        except ValueError:
+            _logger.warning(
+                "custom_pattern_decode_failed",
+                sig_name=sig_name,
+                hex_pattern=hex_pattern,
+            )
+            continue
+
+        if offset_spec == "ep":
+            idx = doc_data[:_MAX_ENTRY_POINT_BYTES].find(pattern_bytes)
+            if idx >= 0:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": "",
+                    "offset": idx,
+                    "details": f"Entry point match at +{idx}",
+                })
+        elif offset_spec == "any":
+            idx = doc_data.find(pattern_bytes)
+            if idx >= 0:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": "",
+                    "offset": idx,
+                    "details": f"Full scan match at 0x{idx:X}",
+                })
+        else:
+            try:
+                fixed_offset = int(offset_spec, 0)
+            except ValueError:
+                _logger.warning(
+                    "custom_offset_parse_failed",
+                    sig_name=sig_name,
+                    offset_spec=offset_spec,
+                )
+                continue
+            end = fixed_offset + len(pattern_bytes)
+            if end <= len(doc_data) and doc_data[fixed_offset:end] == pattern_bytes:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": "",
+                    "offset": fixed_offset,
+                    "details": f"Fixed offset match at 0x{fixed_offset:X}",
+                })
+
+    return results
 
 
 class SignaturesMixin:
@@ -364,7 +357,7 @@ class SignaturesMixin:
     _sig_db_type_combo: QComboBox | None
     _sig_db_path_label: QLabel | None
     _sig_results_tree: QTreeWidget | None
-    _sig_worker: SignatureScanWorker | None
+    _sig_worker: GenericCallableWorker | None
     _sig_db_path: str
 
     def goto_offset(self, offset: int) -> None:
@@ -463,11 +456,28 @@ class SignaturesMixin:
         if self._sig_results_tree is not None:
             self._sig_results_tree.clear()
 
-        worker = SignatureScanWorker(doc_data, db_type, self._sig_db_path)
-        worker.scan_finished.connect(self._on_sig_scan_finished)
-        worker.scan_error.connect(self._on_sig_scan_error)
+        worker = GenericCallableWorker(execute_signature_scan, doc_data, db_type, self._sig_db_path)
+        _: object = worker.call_finished.connect(self._on_sig_scan_finished_obj)
+        _ = worker.call_error.connect(self._on_sig_scan_error_obj)
         self._sig_worker = worker
         worker.start()
+
+    def _on_sig_scan_finished_obj(self, results: object) -> None:
+        """Forward worker results to the typed signature scan handler.
+
+        Args:
+            results: Raw object emitted by ``GenericCallableWorker.call_finished``.
+        """
+        if isinstance(results, list):
+            self._on_sig_scan_finished(cast("list[object]", results))
+
+    def _on_sig_scan_error_obj(self, exc: object) -> None:
+        """Forward worker exceptions to the typed signature scan error handler.
+
+        Args:
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        self._on_sig_scan_error(str(exc))
 
     def _on_sig_scan_finished(self, results: list[object]) -> None:
         """Populate the results tree with scan matches.
