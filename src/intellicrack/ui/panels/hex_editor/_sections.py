@@ -7,20 +7,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Final, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, Protocol, cast, runtime_checkable
 
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_async
 from intellicrack.ui.panels.hex_editor._base import (
     PREVIEW_BYTES,
     DataReaderCls,
     PatternRegistryCls,
     hexpat_interpreter_available,
-    pefile,
-    pefile_available,
 )
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -98,6 +100,7 @@ class SectionsMixin:
     _pattern_status_label: QLabel | None
     _pattern_registry: Any | None
     _strings_worker: GenericCallableWorker | None
+    _bridge: HexEditorBridge | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to the given byte offset.
@@ -114,105 +117,179 @@ class SectionsMixin:
         """
 
     def _populate_sections(self) -> None:
-        """Populate the sections tree using pefile."""
-        if self.sections_tree is None or self.file_path is None:
+        """Populate the sections tree by routing through the hex editor bridge.
+
+        Calls :meth:`HexEditorBridge.get_pe_sections` via
+        :func:`run_bridge_coroutine_async` so the parse runs on the
+        persistent bridge event loop. Bridge results are rendered on
+        the Qt main thread through the success callback.
+        """
+        if self.sections_tree is None:
             return
 
         self.sections_tree.clear()
 
-        if not pefile_available or pefile is None:
-            _logger.warning("pefile_not_available")
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            _logger.warning("sections_bridge_unavailable")
             return
 
-        try:
-            pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError):
-            _logger.exception("sections_parse_failed", file_path=str(self.file_path))
-            return
+        run_bridge_coroutine_async(
+            bridge.get_pe_sections(),
+            on_success=self._on_pe_sections_ready,
+            on_error=self._on_pe_sections_failed,
+        )
 
-        try:
-            sections = getattr(pe, "sections", None)
-            if sections is not None:
-                for section in sections:
-                    name = section.Name.decode("utf-8", errors="replace").rstrip("\x00")
-                    vaddr = f"0x{section.VirtualAddress:08X}"
-                    vsize = f"0x{section.Misc_VirtualSize:08X}"
-                    rawsize = f"0x{section.SizeOfRawData:08X}"
-                    item = QTreeWidgetItem([name, vaddr, vsize, rawsize])
-                    self.sections_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError):
-            _logger.exception("sections_parse_failed", file_path=str(self.file_path))
-        finally:
-            pe.close()
+    def _on_pe_sections_ready(self, result: object) -> None:
+        """Render PE section dicts into the sections tree.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.get_pe_sections`. Each dict
+                exposes ``name``, ``virtual_address``, ``virtual_size``,
+                ``raw_size``, and ``raw_offset`` keys.
+        """
+        if self.sections_tree is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("sections_unexpected_result_type", result_type=type(result).__name__)
+            return
+        sections = cast("list[dict[str, Any]]", result)
+        for section in sections:
+            name = str(section.get("name", ""))
+            virtual_address = int(section.get("virtual_address", 0))
+            virtual_size = int(section.get("virtual_size", 0))
+            raw_size = int(section.get("raw_size", 0))
+            item = QTreeWidgetItem(
+                [
+                    name,
+                    f"0x{virtual_address:08X}",
+                    f"0x{virtual_size:08X}",
+                    f"0x{raw_size:08X}",
+                ],
+            )
+            self.sections_tree.addTopLevelItem(item)
+
+    @staticmethod
+    def _on_pe_sections_failed(exc: object) -> None:
+        """Log a PE sections parse failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("sections_parse_failed", error_type=type(exc).__name__, error=str(exc))
 
     def _populate_imports(self) -> None:
-        """Populate the imports tree using pefile."""
-        if self._imports_tree is None or self.file_path is None:
+        """Populate the imports tree by routing through the hex editor bridge.
+
+        Calls :meth:`HexEditorBridge.get_pe_imports` via
+        :func:`run_bridge_coroutine_async` so the parse runs on the
+        persistent bridge event loop. Bridge results are rendered on
+        the Qt main thread through the success callback.
+        """
+        if self._imports_tree is None:
             return
 
         self._imports_tree.clear()
 
-        if not pefile_available or pefile is None:
-            _logger.warning("pefile_not_available_for_imports")
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            _logger.warning("imports_bridge_unavailable")
             return
 
-        try:
-            pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError):
-            _logger.exception("imports_parse_failed", file_path=str(self.file_path))
-            return
+        run_bridge_coroutine_async(
+            bridge.get_pe_imports(),
+            on_success=self._on_pe_imports_ready,
+            on_error=self._on_pe_imports_failed,
+        )
 
-        try:
-            dir_entry: dict[str, int] = getattr(pefile, "DIRECTORY_ENTRY", {})
-            pe.parse_data_directories(directories=[dir_entry.get("IMAGE_DIRECTORY_ENTRY_IMPORT", 1)])
-            import_dir = getattr(pe, "DIRECTORY_ENTRY_IMPORT", None)
-            if import_dir is not None:
-                for entry in import_dir:
-                    dll_name = entry.dll.decode("utf-8", errors="replace") if entry.dll else "unknown"
-                    for imp in entry.imports:
-                        func_name = imp.name.decode("utf-8", errors="replace") if imp.name else f"Ordinal {imp.ordinal}"
-                        addr = f"0x{imp.address:08X}" if imp.address else "N/A"
-                        item = QTreeWidgetItem([dll_name, func_name, addr])
-                        self._imports_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError):
-            _logger.exception("imports_parse_failed", file_path=str(self.file_path))
-        finally:
-            pe.close()
+    def _on_pe_imports_ready(self, result: object) -> None:
+        """Render PE import dicts into the imports tree.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.get_pe_imports`. Each dict
+                exposes ``dll``, ``function``, ``address``, and
+                ``ordinal`` keys.
+        """
+        if self._imports_tree is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("imports_unexpected_result_type", result_type=type(result).__name__)
+            return
+        entries = cast("list[dict[str, Any]]", result)
+        for entry in entries:
+            dll_name = str(entry.get("dll", "unknown"))
+            function_name = str(entry.get("function", ""))
+            address_val = int(entry.get("address", 0))
+            address_text = f"0x{address_val:08X}" if address_val else "N/A"
+            item = QTreeWidgetItem([dll_name, function_name, address_text])
+            self._imports_tree.addTopLevelItem(item)
+
+    @staticmethod
+    def _on_pe_imports_failed(exc: object) -> None:
+        """Log a PE imports parse failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("imports_parse_failed", error_type=type(exc).__name__, error=str(exc))
 
     def _populate_exports(self) -> None:
-        """Populate the exports tree using pefile."""
-        if self._exports_tree is None or self.file_path is None:
+        """Populate the exports tree by routing through the hex editor bridge.
+
+        Calls :meth:`HexEditorBridge.get_pe_exports` via
+        :func:`run_bridge_coroutine_async` so the parse runs on the
+        persistent bridge event loop. Bridge results are rendered on
+        the Qt main thread through the success callback.
+        """
+        if self._exports_tree is None:
             return
 
         self._exports_tree.clear()
 
-        if not pefile_available or pefile is None:
-            _logger.warning("pefile_not_available_for_exports")
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            _logger.warning("exports_bridge_unavailable")
             return
 
-        try:
-            pe = pefile.PE(str(self.file_path), fast_load=True)
-        except (AttributeError, ValueError, OSError):
-            _logger.exception("exports_parse_failed", file_path=str(self.file_path))
-            return
+        run_bridge_coroutine_async(
+            bridge.get_pe_exports(),
+            on_success=self._on_pe_exports_ready,
+            on_error=self._on_pe_exports_failed,
+        )
 
-        try:
-            dir_entry_exp: dict[str, int] = getattr(pefile, "DIRECTORY_ENTRY", {})
-            pe.parse_data_directories(directories=[dir_entry_exp.get("IMAGE_DIRECTORY_ENTRY_EXPORT", 0)])
-            export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
-            if export_dir is not None:
-                symbols = getattr(export_dir, "symbols", None)
-                if symbols is not None:
-                    for exp in symbols:
-                        name = exp.name.decode("utf-8", errors="replace") if exp.name else f"Ordinal {exp.ordinal}"
-                        addr = f"0x{exp.address:08X}" if exp.address else "N/A"
-                        ordinal = str(exp.ordinal) if exp.ordinal is not None else "N/A"
-                        item = QTreeWidgetItem([name, addr, ordinal])
-                        self._exports_tree.addTopLevelItem(item)
-        except (AttributeError, ValueError):
-            _logger.exception("exports_parse_failed", file_path=str(self.file_path))
-        finally:
-            pe.close()
+    def _on_pe_exports_ready(self, result: object) -> None:
+        """Render PE export dicts into the exports tree.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.get_pe_exports`. Each dict
+                exposes ``name``, ``address``, and ``ordinal`` keys.
+        """
+        if self._exports_tree is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("exports_unexpected_result_type", result_type=type(result).__name__)
+            return
+        entries = cast("list[dict[str, Any]]", result)
+        for entry in entries:
+            name = str(entry.get("name", ""))
+            address_val = int(entry.get("address", 0))
+            address_text = f"0x{address_val:08X}" if address_val else "N/A"
+            ordinal_val = entry.get("ordinal")
+            ordinal_text = str(ordinal_val) if ordinal_val is not None else "N/A"
+            item = QTreeWidgetItem([name, address_text, ordinal_text])
+            self._exports_tree.addTopLevelItem(item)
+
+    @staticmethod
+    def _on_pe_exports_failed(exc: object) -> None:
+        """Log a PE exports parse failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("exports_parse_failed", error_type=type(exc).__name__, error=str(exc))
 
     def _populate_strings(self) -> None:
         """Populate the strings tab asynchronously via a ``GenericCallableWorker``.

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QFileDialog,
@@ -22,12 +22,13 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
-from intellicrack.ui.panels.hex_editor._base import (
-    YARA_MATCH_DISPLAY_BYTES,
-    YaraScanner_cls,
-    yara_scanner_available,
-)
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.hex_editor._base import YARA_MATCH_DISPLAY_BYTES
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -58,6 +59,7 @@ class YaraMixin:
     _yara_file_count_label: QLabel | None
     _yara_inline_editor: QPlainTextEdit | None
     _yara_results_tree: QTreeWidget | None
+    _bridge: HexEditorBridge | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to the given byte offset.
@@ -122,26 +124,25 @@ class YaraMixin:
                 self._yara_file_count_label.setText(f"{len(self._yara_rule_files)} file(s) selected")
 
     def _on_yara_scan(self) -> None:
-        """Compile YARA rules and scan the current document."""
+        """Compile YARA rules and scan the current document via the bridge.
+
+        Routes the request through :meth:`HexEditorBridge.yara_scan` (or
+        :meth:`HexEditorBridge.yara_scan_files` when no inline source is
+        present) via :func:`run_bridge_coroutine_async`. Results and
+        errors are delivered back via signal callbacks so the Qt main
+        thread is never blocked while compiling rules or scanning very
+        large documents.
+        """
         if self.document is None or self._yara_results_tree is None:
             return
 
-        if not yara_scanner_available or YaraScanner_cls is None:
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
             parent = self if isinstance(self, QWidget) else None
             show_warning(
                 parent,
-                "YARA Unavailable",
-                "YARA is not installed. Install with: pip install yara-python",
-            )
-            return
-
-        scanner = YaraScanner_cls()
-        if not scanner.available:
-            parent = self if isinstance(self, QWidget) else None
-            show_warning(
-                parent,
-                "YARA Unavailable",
-                "YARA is not installed. Install with: pip install yara-python",
+                "Hex Editor Bridge Unavailable",
+                "The hex editor bridge is not attached to this panel.",
             )
             return
 
@@ -149,49 +150,98 @@ class YaraMixin:
         if self._yara_inline_editor is not None:
             inline_source = self._yara_inline_editor.toPlainText().strip()
 
-        matches: Any = None
-        try:
-            if inline_source:
-                compiled_rules = scanner.compile_source(inline_source)
-            elif self._yara_rule_files:
-                compiled_rules = scanner.compile_rules(self._yara_rule_files)
-            else:
-                return
-
-            doc_len: int = self.document.length()
-            raw: object = self.document.read(0, doc_len)
-            if isinstance(raw, (list, bytearray)):
-                data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
-            elif isinstance(raw, bytes):
-                data = raw
-            else:
-                return
-
-            matches = scanner.scan_data(data, compiled_rules)
-
-        except (RuntimeError, OSError, ValueError):
-            _logger.exception("yara_scan_failed")
+        parent_obj = self if isinstance(self, QWidget) else None
+        if inline_source:
+            run_bridge_coroutine_async(
+                bridge.yara_scan(inline_source),
+                on_success=self._on_yara_scan_success,
+                on_error=self._on_yara_scan_error,
+                parent=parent_obj,
+            )
             return
 
-        if matches is None:
+        if self._yara_rule_files:
+            rule_paths_arg = ",".join(self._yara_rule_files)
+            run_bridge_coroutine_async(
+                bridge.yara_scan_files(rule_paths_arg),
+                on_success=self._on_yara_scan_success,
+                on_error=self._on_yara_scan_error,
+                parent=parent_obj,
+            )
+
+    @staticmethod
+    def _append_yara_match_strings(rule_item: QTreeWidgetItem, match: dict[str, Any]) -> list[tuple[int, int]]:
+        """Append child rows for each ``strings`` entry in a YARA match dict.
+
+        Args:
+            rule_item: Tree item representing the parent rule that the
+                children should be attached to.
+            match: One element of the bridge's match list, expected to
+                contain a ``strings`` list of ``{identifier, offset,
+                data}`` dicts where ``data`` is a hex-encoded string.
+
+        Returns:
+            list[tuple[int, int]]: List of ``(offset, length)`` pairs
+                for each string match successfully appended; the caller
+                uses these to drive hex-widget highlighting.
+        """
+        offsets: list[tuple[int, int]] = []
+        raw_strings: object = match.get("strings")
+        if not isinstance(raw_strings, list):
+            return offsets
+        preview_chars = YARA_MATCH_DISPLAY_BYTES * 2
+        for raw_entry in cast("list[object]", raw_strings):
+            if not isinstance(raw_entry, dict):
+                continue
+            entry = cast("dict[str, Any]", raw_entry)
+            offset_raw: Any = entry.get("offset")
+            if offset_raw is None:
+                continue
+            try:
+                offset_int = int(offset_raw)
+            except (TypeError, ValueError):
+                continue
+            identifier = str(entry.get("identifier", ""))
+            data_hex = str(entry.get("data", ""))
+            preview = data_hex[:preview_chars]
+            match_hex = " ".join(preview[i : i + 2].upper() for i in range(0, len(preview), 2))
+            child = QTreeWidgetItem(
+                [
+                    "",
+                    f"0x{offset_int:08X}",
+                    identifier,
+                    match_hex,
+                ],
+            )
+            rule_item.addChild(child)
+            offsets.append((offset_int, len(data_hex) // 2))
+        return offsets
+
+    def _on_yara_scan_success(self, result: object) -> None:
+        """Render bridge YARA matches into the results tree.
+
+        Args:
+            result: ``list[dict]`` payload returned by the bridge. Each
+                dict contains ``rule``, ``tags``, ``meta``,
+                ``namespace``, and ``strings`` keys; ``strings`` is a
+                list of ``{identifier, offset, data}`` dicts where
+                ``data`` is a hex-encoded string.
+        """
+        if self._yara_results_tree is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("yara_unexpected_result_type", result_type=type(result).__name__)
             return
 
+        matches = cast("list[dict[str, Any]]", result)
         self._yara_results_tree.clear()
         all_match_offsets: list[tuple[int, int]] = []
 
         for match in matches:
-            rule_item = QTreeWidgetItem([match.rule_name, "", "", ""])
+            rule_name = str(match.get("rule", ""))
+            rule_item = QTreeWidgetItem([rule_name, "", "", ""])
             self._yara_results_tree.addTopLevelItem(rule_item)
-            for string_match in match.strings:
-                match_hex = " ".join(f"{b:02X}" for b in string_match.data[:YARA_MATCH_DISPLAY_BYTES])
-                child = QTreeWidgetItem([
-                    "",
-                    f"0x{string_match.offset:08X}",
-                    string_match.identifier,
-                    match_hex,
-                ])
-                rule_item.addChild(child)
-                all_match_offsets.append((string_match.offset, len(string_match.data)))
+            all_match_offsets.extend(self._append_yara_match_strings(rule_item, match))
             rule_item.setExpanded(aexpand=True)
 
         if all_match_offsets and self._hex_widget is not None:
@@ -202,6 +252,15 @@ class YaraMixin:
                 highlight_fn(highlights, "yara")
 
         _logger.info("yara_scan_complete", match_count=len(matches))
+
+    @staticmethod
+    def _on_yara_scan_error(exc: object) -> None:
+        """Log a YARA scan failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("yara_scan_failed", error_type=type(exc).__name__, error=str(exc))
 
     def _on_yara_result_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
         """Navigate to the YARA match offset when a result child is double-clicked.

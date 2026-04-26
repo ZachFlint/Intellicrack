@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, get_args
 
 from intellicrack.bridges._pe_format import (
     is_pe64_optional_header,
+    iterate_section_headers,
     read_dos_e_lfanew,
     unpack_coff_header,
     unpack_optional_header_image_base,
@@ -226,6 +227,16 @@ try:
     _pipeline_available = True
 except (ImportError, OSError) as _exc:
     _logger.debug("transform_pipeline_unavailable", error=str(_exc))
+
+_pefile_mod: Any = None
+_pefile_available: bool = False
+try:
+    import pefile as _pefile_import
+
+    _pefile_mod = _pefile_import
+    _pefile_available = True
+except ImportError as _exc:
+    _logger.debug("pefile_unavailable", error=str(_exc))
 
 
 _JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
@@ -872,6 +883,34 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(name="rule_paths", type="string", description="Comma-separated paths to .yar files."),
                     ],
                     returns="List of match dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.get_pe_sections",
+                    description="Parse PE section headers from the open document and return them as dicts.",
+                    parameters=[],
+                    returns=(
+                        "List of {name, virtual_address, virtual_size, raw_size, raw_offset, "
+                        "characteristics} dicts, one per PE section. Empty list when the open "
+                        "document is not a PE."
+                    ),
+                ),
+                ToolFunction(
+                    name="hex_editor.get_pe_imports",
+                    description="Parse the PE import directory and return imports grouped by DLL.",
+                    parameters=[],
+                    returns=(
+                        "List of {dll, function, address, ordinal} dicts, one entry per imported "
+                        "symbol. Empty list when the open document is not a PE or has no imports."
+                    ),
+                ),
+                ToolFunction(
+                    name="hex_editor.get_pe_exports",
+                    description="Parse the PE export directory and return exported symbols.",
+                    parameters=[],
+                    returns=(
+                        "List of {name, address, ordinal} dicts, one entry per exported symbol. "
+                        "Empty list when the open document is not a PE or has no exports."
+                    ),
                 ),
                 ToolFunction(
                     name="hex_editor.apply_transform",
@@ -3070,6 +3109,212 @@ class HexEditorBridge(ToolBridgeBase):
             for m in raw_matches
         ]
 
+    async def get_pe_sections(self) -> list[dict[str, Any]]:
+        """Parse PE section headers for the currently open document.
+
+        Reads the document bytes through the same path used by
+        :meth:`_detect_pe_va_mappings` and walks the section table via the
+        shared :mod:`intellicrack.bridges._pe_format` helpers. The result
+        is shape-stable for both PE32 and PE32+ images and never hits
+        :mod:`pefile` for the section walk so it does not require an
+        on-disk file path.
+
+        Returns:
+            list[dict[str, Any]]: One dict per section with keys
+                ``name``, ``virtual_address``, ``virtual_size``,
+                ``raw_size``, ``raw_offset``, and ``characteristics``.
+                Returns an empty list when the open document is not a
+                PE, has a malformed header, or no document is open.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = _ERR_NO_DOCUMENT
+            raise RuntimeError(msg)
+
+        doc_len: int = self.document.length()
+        if doc_len < _DOS_HEADER_SIZE:
+            return []
+
+        try:
+            dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+            if dos_header[:2] != b"MZ":
+                return []
+
+            e_lfanew = read_dos_e_lfanew(dos_header)
+            if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
+                return []
+
+            coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
+            _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
+            section_table_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + opt_header_size
+            count = min(num_sections, _MAX_PE_SECTIONS)
+            if count <= 0:
+                return []
+
+            section_bytes = self._read_doc_bytes(section_table_offset, count * _PE_SECTION_ENTRY_SIZE)
+            sections: list[dict[str, Any]] = [
+                {
+                    "name": section["name"],
+                    "virtual_address": section["virtual_address"],
+                    "virtual_size": section["virtual_size"],
+                    "raw_size": section["raw_size"],
+                    "raw_offset": section["raw_offset"],
+                    "characteristics": section["characteristics"],
+                }
+                for section in iterate_section_headers(section_bytes, 0, count)
+            ]
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("get_pe_sections_failed", error=str(exc))
+            return []
+        else:
+            _logger.debug("get_pe_sections_completed", count=len(sections))
+            return sections
+
+    async def get_pe_imports(self) -> list[dict[str, Any]]:
+        """Parse the PE import directory and return imports grouped by DLL.
+
+        Loads the document bytes into memory, parses them with
+        :mod:`pefile`, and walks ``DIRECTORY_ENTRY_IMPORT``. The bridge
+        reads from the open ``HexDocument`` rather than the on-disk
+        path so it works for documents that were opened from a process
+        memory region or modified in place.
+
+        Returns:
+            list[dict[str, Any]]: One dict per imported symbol with
+                keys ``dll`` (DLL name as a string), ``function``
+                (resolved name or ``Ordinal N``), ``address`` (IAT slot
+                address as an integer or 0 when unresolved), and
+                ``ordinal`` (integer ordinal or 0 when name-imported).
+                Returns an empty list when the open document is not a
+                PE, has no import directory, or pefile is not
+                installed.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = _ERR_NO_DOCUMENT
+            raise RuntimeError(msg)
+
+        if not _pefile_available or _pefile_mod is None:
+            _logger.warning("get_pe_imports_failed_pefile_unavailable")
+            return []
+
+        data = self._read_all_doc_bytes()
+        if len(data) < _MIN_HEADER_SIZE or data[:2] != b"MZ":
+            return []
+
+        try:
+            pe = _pefile_mod.PE(data=data, fast_load=True)
+        except (AttributeError, ValueError, OSError) as exc:
+            _logger.warning("get_pe_imports_failed_parse", error=str(exc))
+            return []
+
+        results: list[dict[str, Any]] = []
+        try:
+            dir_entry: dict[str, int] = getattr(_pefile_mod, "DIRECTORY_ENTRY", {})
+            pe.parse_data_directories(directories=[dir_entry.get("IMAGE_DIRECTORY_ENTRY_IMPORT", 1)])
+            import_dir: Any = getattr(pe, "DIRECTORY_ENTRY_IMPORT", None)
+            if import_dir is not None:
+                for entry in import_dir:
+                    dll_bytes: Any = getattr(entry, "dll", None)
+                    dll_name = dll_bytes.decode("utf-8", errors="replace") if dll_bytes else "unknown"
+                    raw_imports: Any = getattr(entry, "imports", None)
+                    imports_list: list[Any] = list(raw_imports) if raw_imports is not None else []
+                    for imp in imports_list:
+                        name_bytes: Any = getattr(imp, "name", None)
+                        ordinal_val: int = int(getattr(imp, "ordinal", 0) or 0)
+                        function_name = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
+                        address_val: int = int(getattr(imp, "address", 0) or 0)
+                        results.append(
+                            {
+                                "dll": dll_name,
+                                "function": function_name,
+                                "address": address_val,
+                                "ordinal": ordinal_val,
+                            },
+                        )
+        except (AttributeError, ValueError) as exc:
+            _logger.warning("get_pe_imports_failed_walk", error=str(exc))
+            results = []
+        finally:
+            pe.close()
+
+        _logger.debug("get_pe_imports_completed", count=len(results))
+        return results
+
+    async def get_pe_exports(self) -> list[dict[str, Any]]:
+        """Parse the PE export directory and return exported symbols.
+
+        Loads the document bytes into memory, parses them with
+        :mod:`pefile`, and walks ``DIRECTORY_ENTRY_EXPORT``. The bridge
+        reads from the open ``HexDocument`` rather than the on-disk
+        path so it works for documents that were opened from a process
+        memory region or modified in place.
+
+        Returns:
+            list[dict[str, Any]]: One dict per exported symbol with
+                keys ``name`` (resolved symbol name or ``Ordinal N``),
+                ``address`` (RVA as an integer or 0 when unresolved),
+                and ``ordinal`` (integer ordinal). Returns an empty
+                list when the open document is not a PE, has no export
+                directory, or pefile is not installed.
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = _ERR_NO_DOCUMENT
+            raise RuntimeError(msg)
+
+        if not _pefile_available or _pefile_mod is None:
+            _logger.warning("get_pe_exports_failed_pefile_unavailable")
+            return []
+
+        data = self._read_all_doc_bytes()
+        if len(data) < _MIN_HEADER_SIZE or data[:2] != b"MZ":
+            return []
+
+        try:
+            pe = _pefile_mod.PE(data=data, fast_load=True)
+        except (AttributeError, ValueError, OSError) as exc:
+            _logger.warning("get_pe_exports_failed_parse", error=str(exc))
+            return []
+
+        results: list[dict[str, Any]] = []
+        try:
+            dir_entry: dict[str, int] = getattr(_pefile_mod, "DIRECTORY_ENTRY", {})
+            pe.parse_data_directories(directories=[dir_entry.get("IMAGE_DIRECTORY_ENTRY_EXPORT", 0)])
+            export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
+            if export_dir is not None:
+                raw_symbols: Any = getattr(export_dir, "symbols", None)
+                symbols: list[Any] = list(raw_symbols) if raw_symbols is not None else []
+                for exp in symbols:
+                    name_bytes: Any = getattr(exp, "name", None)
+                    ordinal_val: int = int(getattr(exp, "ordinal", 0) or 0)
+                    name_str = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
+                    address_val: int = int(getattr(exp, "address", 0) or 0)
+                    results.append(
+                        {
+                            "name": name_str,
+                            "address": address_val,
+                            "ordinal": ordinal_val,
+                        },
+                    )
+        except (AttributeError, ValueError) as exc:
+            _logger.warning("get_pe_exports_failed_walk", error=str(exc))
+            results = []
+        finally:
+            pe.close()
+
+        _logger.debug("get_pe_exports_completed", count=len(results))
+        return results
+
     async def apply_transform(
         self,
         name: str,
@@ -4498,7 +4743,8 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         try:
-            e_lfanew = read_dos_e_lfanew(self._read_doc_bytes(_PE_LFANEW_OFFSET, 4))
+            dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+            e_lfanew = read_dos_e_lfanew(dos_header)
             if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
                 return []
 
