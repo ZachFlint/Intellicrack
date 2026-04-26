@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
-    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -22,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.hex_editor._base import (
     DEFAULT_DISASM_COUNT,
     MAX_INSN_BYTES,
@@ -130,7 +130,7 @@ class DisassemblyMixin:
 
         if not disassembler_available or HexDisassembler_cls is None:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "Capstone Unavailable",
                 "Capstone is not installed. Install with: pip install capstone",
@@ -163,7 +163,7 @@ class DisassemblyMixin:
         disassembler = HexDisassembler_cls()
         if not disassembler.available:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(
+            show_warning(
                 parent,
                 "Capstone Unavailable",
                 "Capstone is not installed. Install with: pip install capstone",

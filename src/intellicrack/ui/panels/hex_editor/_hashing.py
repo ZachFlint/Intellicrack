@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
 
 
@@ -65,7 +66,7 @@ class HashingMixin:
             data = raw if isinstance(raw, bytes) else bytes(raw)
         except (ValueError, AttributeError, TypeError) as exc:
             if isinstance(self, QWidget):
-                QMessageBox.warning(self, "Custom CRC", f"Failed to read document data:\n{exc}")
+                show_warning(self, "Custom CRC", f"Failed to read document data:\n{exc}")
         else:
             parent = self if isinstance(self, QWidget) else None
             dlg = CustomCrcDialog(data, parent)
@@ -165,8 +166,8 @@ class HashingMixin:
         try:
             self.document.repair_pe_checksum()
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            QMessageBox.warning(parent, "Repair Failed", str(exc))
             _logger.exception("pe_checksum_repair_failed")
+            show_warning(parent, "Repair Failed", str(exc))
             return
 
         if self._pe_checksum_status is not None:
