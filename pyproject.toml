@@ -440,7 +440,7 @@ lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
   "S324",
 ]
 lint.per-file-ignores."src/intellicrack/ui/tools.py" = [ "PLR0904" ]
-lint.per-file-ignores."tests/**" = [ "B009", "PLR2004", "PLR6301", "S101", "S102", "S404" ]
+lint.per-file-ignores."tests/**" = [ "B009", "PLR2004", "PLR6301", "S101", "S102", "S404", "S603" ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = [ "PTH123", "RET503", "RUF013", "RUF022", "TID252", "TRY400" ]
 lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -681,6 +681,7 @@ ini_options.markers = [
   "unit: Unit tests",
   "xpu: Tests requiring Intel XPU hardware",
   "b580: Tests specific to Intel Arc B580 GPU",
+  "spawns_process: Test spawns external OS processes; runs only inside the Docker sandbox",
 ]
 
 [tool.coverage]
