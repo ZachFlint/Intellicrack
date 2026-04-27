@@ -6,24 +6,162 @@
 """Global pytest fixtures for Intellicrack tests.
 
 This module provides shared fixtures for credential loading, API key availability
-checks, XPU hardware detection, and common test utilities used across all test modules.
-Sandbox isolation is handled by the Docker-based harness at
+checks, XPU hardware detection, and common test utilities used across all test
+modules. It also wires in the suite-wide process cleanup safety net:
+
+* The :func:`pytest_configure` hook registers the ``spawns_process`` marker.
+* The :func:`pytest_collection_modifyitems` hook auto-skips tests marked with
+  ``spawns_process`` when running outside the Intellicrack Docker sandbox,
+  unless the operator sets ``INTELLICRACK_ALLOW_HOST_PROCESS_TESTS=1``. This
+  mechanism prevents notepad / ollama / debuggee processes from spawning on
+  a developer's host when pytest is invoked directly.
+* The :func:`process_orphan_killer` autouse session fixture snapshots the
+  pytest interpreter's descendants at session start and forcibly terminates
+  any new descendants left over at session end as a final safety net.
+
+Sandbox isolation itself is handled by the Docker-based harness at
 ``scripts/sandbox/docker_sandbox.py``; pytest itself runs normally here.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 import httpx
 import pytest
 
+from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
+from tests._helpers.process_cleanup import (
+    ALLOW_HOST_PROCESS_TESTS_ENV,
+    SANDBOX_ENV_VAR,
+    allow_host_process_tests,
+    is_sandboxed,
+    kill_new_descendants,
+    snapshot_descendants,
+)
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 _HTTP_OK = 200
+
+_SPAWNS_PROCESS_MARKER = "spawns_process"
+_HOST_SKIP_REASON = (
+    f"Test spawns external processes; refusing to run on host. Use "
+    f"'just test' (Docker sandbox) or set {ALLOW_HOST_PROCESS_TESTS_ENV}=1 "
+    "to override."
+)
+
+_logger = get_logger("tests.conftest")
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register Intellicrack-specific pytest markers.
+
+    Args:
+        config: Active pytest configuration object.
+    """
+    config.addinivalue_line(
+        "markers",
+        f"{_SPAWNS_PROCESS_MARKER}: test spawns external OS processes; runs only inside the Docker sandbox",
+    )
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
+    """Skip ``spawns_process`` tests when not running inside the Docker sandbox.
+
+    Tests that spawn real processes (notepad, ollama, target binaries, debuggee
+    processes) are intended to run only inside the Intellicrack Docker test
+    sandbox. When pytest is invoked directly on the host, those tests would
+    leak processes onto the developer's machine, so they are auto-skipped
+    unless :data:`tests._helpers.process_cleanup.ALLOW_HOST_PROCESS_TESTS_ENV`
+    is truthy.
+
+    Args:
+        config: Active pytest configuration object.
+        items: Mutable list of collected test items to filter.
+    """
+    del config
+    if is_sandboxed() or allow_host_process_tests():
+        return
+    skip_marker = pytest.mark.skip(reason=_HOST_SKIP_REASON)
+    for item in items:
+        if item.get_closest_marker(_SPAWNS_PROCESS_MARKER) is not None:
+            item.add_marker(skip_marker)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def process_orphan_killer() -> Generator[None]:
+    """Kill any descendant processes that survive past session teardown.
+
+    Snapshots the pytest interpreter's descendant PID set at session start;
+    on teardown, forcibly terminates any descendants that were spawned during
+    the run and are still alive. This is a defence in depth against fixtures
+    that fail to clean up (assertion failures, timeouts, ``KeyboardInterrupt``,
+    or third-party libraries that fork without registering with our
+    :class:`tests._helpers.process_cleanup.ManagedProcess` wrapper).
+
+    Yields:
+        None: Yields control to the test session.
+    """
+    baseline = snapshot_descendants()
+    try:
+        yield
+    finally:
+        leaked = kill_new_descendants(baseline)
+        if leaked:
+            _logger.warning(
+                "tests_process_leak_swept",
+                leaked_pids=leaked,
+                sandboxed=is_sandboxed(),
+                sandbox_env=SANDBOX_ENV_VAR,
+            )
+
+
+@pytest.fixture(autouse=True)
+def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[None]:
+    """Kill leftover descendants per test for ``spawns_process``-marked items.
+
+    The session-level :func:`process_orphan_killer` reaps descendants only at
+    session end; that's too late for fast iterative test runs where dozens of
+    leaked debuggees would pile up between tests. This per-test fixture scopes
+    the safety net to each individual test marked with ``spawns_process``,
+    snapshotting descendants before the test runs and killing any new ones
+    that remain after teardown.
+
+    The fixture is a no-op for tests without the marker so it adds zero
+    overhead to the non-process-spawning unit tests.
+
+    Args:
+        request: The pytest fixture request object used to inspect markers.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    node = cast("pytest.Item", request.node)
+    if node.get_closest_marker(_SPAWNS_PROCESS_MARKER) is None:
+        yield
+        return
+    baseline = snapshot_descendants()
+    try:
+        yield
+    finally:
+        leaked = kill_new_descendants(baseline)
+        if leaked:
+            _logger.warning(
+                "tests_process_leak_swept_per_test",
+                leaked_pids=leaked,
+                test_id=node.nodeid,
+            )
 
 
 @pytest.fixture(scope="session")
