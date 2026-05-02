@@ -21,13 +21,19 @@ import threading
 import time
 from ctypes import wintypes
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 
-from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.process import (
+    PEB64,
+    TLS_ARRAY_OFFSET_X64,
+    TLS_ARRAY_OFFSET_X86,
+    TLS_STATIC_SLOT_COUNT,
+    ProcessBridge,
+)
 from intellicrack.core.types import ToolError, ToolName
 
 
@@ -2434,3 +2440,370 @@ class TestF0015DotnetByCor20Header:
             with contextlib.suppress(ProcessLookupError):
                 async_proc.kill()
             await async_proc.wait()
+
+
+class _K32StubNoIsWow64:
+    """Minimal kernel32 stub that lacks both IsWow64Process variants.
+
+    Used as a drop-in for the real WinDLL in tests that verify the
+    ToolError raise path when neither WOW64 detection API is present.
+    hasattr() returns False for IsWow64Process and IsWow64Process2.
+    """
+
+
+class _BridgeNoWow64Apis(ProcessBridge):
+    """ProcessBridge subclass where _call_iswow64process2 always returns None.
+
+    Also installs a kernel32 stub that lacks IsWow64Process so that both
+    API paths are absent.  Used to test the ToolError raise path for F-0034.
+    """
+
+    def __init__(self) -> None:
+        """Initialize with a kernel32 stub that lacks both WOW64 APIs."""
+        super().__init__()
+        vars(self)["_kernel32"] = _K32StubNoIsWow64()
+
+    def _call_iswow64process2(self, handle: int) -> tuple[int, int] | None:
+        """Return None unconditionally to simulate missing IsWow64Process2.
+
+        Args:
+            handle: Process handle (ignored).
+
+        Returns:
+            tuple[int, int] | None: Always None.
+        """
+        del handle
+        return None
+
+
+class TestF0034NoSilentWow64Fallback:
+    """F-0034: _target_is_64bit must raise ToolError when both WOW64 APIs are absent."""
+
+    def test_raises_when_kernel32_is_none(self) -> None:
+        """Verify ToolError is raised when kernel32 handle is None.
+
+        Uses an uninitialized bridge (kernel32 is None before initialize()).
+        """
+        bridge = ProcessBridge()
+        target_is_64bit = getattr(bridge, "_target_is_64bit")
+        with pytest.raises(ToolError, match="WOW64 detection unavailable"):
+            target_is_64bit(0xFFFFFFFF)
+
+    def test_raises_when_iswow64_apis_missing(self) -> None:
+        """Verify ToolError is raised when both IsWow64Process APIs are absent.
+
+        Uses _BridgeNoWow64Apis which installs a stub kernel32 lacking
+        IsWow64Process and overrides _call_iswow64process2 to return None,
+        then verifies the bridge raises rather than silently returning the
+        host pointer size.
+        """
+        bridge = _BridgeNoWow64Apis()
+        target_is_64bit_fn = getattr(bridge, "_target_is_64bit")
+        with pytest.raises(ToolError, match="WOW64 detection unavailable"):
+            target_is_64bit_fn(0xFFFFFFFF)
+
+
+class TestF0011PEBSize:
+    """F-0011: read_peb uses ctypes.sizeof(PEB) buffer, not fixed 0x100."""
+
+    async def test_peb_raw_length_matches_struct_size(self, process_bridge: ProcessBridge) -> None:
+        """Verify PEB raw bytes length equals ctypes.sizeof(PEB64) on x64.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        await process_bridge.open_process(os.getpid(), "all")
+        try:
+            result = await process_bridge.read_peb(os.getpid())
+        finally:
+            await process_bridge.close()
+
+        raw = result.get("raw")
+        assert isinstance(raw, bytes), "raw key must be bytes"
+        expected = ctypes.sizeof(PEB64)
+        assert len(raw) == expected, f"Expected PEB raw length {expected}, got {len(raw)}"
+
+    async def test_peb_contains_known_fields(self, process_bridge: ProcessBridge) -> None:
+        """Verify PEB dict contains image_base_address and process_parameters_address.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        await process_bridge.open_process(os.getpid(), "all")
+        try:
+            result = await process_bridge.read_peb(os.getpid())
+        finally:
+            await process_bridge.close()
+
+        assert isinstance(result.get("image_base_address"), int)
+        assert isinstance(result.get("process_parameters_address"), int)
+        assert result["image_base_address"] != 0
+        assert result["process_parameters_address"] != 0
+
+
+class TestF0028ReadTEBPerTid:
+    """F-0028: read_teb opens its own process handle per thread ID."""
+
+    async def test_teb_base_differs_between_threads(self, process_bridge: ProcessBridge) -> None:
+        """Verify main thread and spawned thread have different TEB base addresses.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        main_tid_holder: list[int] = []
+        worker_tid_holder: list[int] = []
+        event = threading.Event()
+
+        def _get_main_tid() -> None:
+            if sys.platform == "win32":
+                main_tid_holder.append(ctypes.windll.kernel32.GetCurrentThreadId())
+
+        def _worker() -> None:
+            if sys.platform == "win32":
+                worker_tid_holder.append(ctypes.windll.kernel32.GetCurrentThreadId())
+            event.wait()
+
+        _get_main_tid()
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        await asyncio.sleep(0.1)
+
+        try:
+            if not main_tid_holder or not worker_tid_holder:
+                pytest.skip("Could not get thread IDs")
+
+            main_tid = main_tid_holder[0]
+            worker_tid = worker_tid_holder[0]
+
+            main_teb = await process_bridge.read_teb(main_tid)
+            worker_teb = await process_bridge.read_teb(worker_tid)
+
+            main_addr = main_teb.get("teb_address")
+            worker_addr = worker_teb.get("teb_address")
+
+            assert isinstance(main_addr, int)
+            assert main_addr != 0
+            assert isinstance(worker_addr, int)
+            assert worker_addr != 0
+            assert main_addr != worker_addr, "Main and worker thread TEBs must have different addresses"
+        finally:
+            event.set()
+            t.join(timeout=2)
+
+
+class TestF0022TLSArrayPointer:
+    """F-0022: tls_array_base in TEB dict reflects correct static TLS array offset."""
+
+    async def test_tls_array_base_at_correct_offset(self, process_bridge: ProcessBridge) -> None:
+        """Verify tls_array_base equals teb_address + architecture-correct offset.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        if sys.platform != "win32":
+            pytest.skip("Windows only")
+
+        main_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        teb = await process_bridge.read_teb(main_tid)
+
+        teb_addr = teb.get("teb_address")
+        tls_array_base = teb.get("tls_array_base")
+
+        assert isinstance(teb_addr, int)
+        assert teb_addr != 0
+        assert isinstance(tls_array_base, int)
+        assert tls_array_base != 0
+
+        is_x64 = ctypes.sizeof(ctypes.c_void_p) == 8
+        expected_offset = TLS_ARRAY_OFFSET_X64 if is_x64 else TLS_ARRAY_OFFSET_X86
+        assert tls_array_base == teb_addr + expected_offset, (
+            f"tls_array_base {hex(tls_array_base)} != teb_address {hex(teb_addr)} + offset {hex(expected_offset)}"
+        )
+
+    async def test_tls_array_base_key_present_not_tls_expansion_slots(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify dict has tls_array_base key and not the old tls_expansion_slots key.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        if sys.platform != "win32":
+            pytest.skip("Windows only")
+
+        main_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        teb = await process_bridge.read_teb(main_tid)
+
+        assert "tls_array_base" in teb, "tls_array_base key must be present"
+        assert "tls_expansion_slots" not in teb, "old tls_expansion_slots key must not be present"
+
+
+class TestF0021StaticTLSSlots:
+    """F-0021: get_tls_values reads static TLS array at correct TEB offset."""
+
+    async def test_tls_slot_value_readable(self, attached_bridge: ProcessBridge) -> None:
+        """Verify a TLS slot value set by TlsSetValue is returned by get_tls_values.
+
+        Allocates a TLS slot, writes a known sentinel value, then reads
+        the static TLS array via the bridge and checks the sentinel appears
+        at the correct slot index.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        if sys.platform != "win32":
+            pytest.skip("Windows only")
+
+        k32 = ctypes.windll.kernel32
+        slot: int = k32.TlsAlloc()
+        if slot == 0xFFFFFFFF:
+            pytest.skip("TlsAlloc failed")
+
+        sentinel = 0xDEADBEEF
+        try:
+            k32.TlsSetValue(slot, ctypes.c_void_p(sentinel))
+            main_tid = k32.GetCurrentThreadId()
+            tls_values = await attached_bridge.get_tls_values(main_tid)
+
+            found = next((s for s in tls_values if s.get("index") == slot), None)
+            assert found is not None, f"TLS slot {slot} with value {hex(sentinel)} not found in {tls_values}"
+            found_value = cast("int", found["value"])
+            assert found_value == sentinel, f"Expected {hex(sentinel)}, got {hex(found_value)}"
+        finally:
+            k32.TlsFree(slot)
+
+    async def test_tls_values_returns_list_of_dicts(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
+        """Verify get_tls_values returns a list of dicts each with index and value.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            main_thread_tid: Windows thread id of the first thread enumerated in the current process.
+        """
+        result = await attached_bridge.get_tls_values(main_thread_tid)
+        assert isinstance(result, list)
+        for entry in result:
+            assert "index" in entry
+            assert "value" in entry
+            assert isinstance(entry["index"], int)
+            assert isinstance(entry["value"], int)
+            assert 0 <= entry["index"] < TLS_STATIC_SLOT_COUNT
+
+
+class TestF0033FullEnvironmentBlock:
+    """F-0033: read_environment reads the full env block without a 64 KiB cap."""
+
+    async def test_large_env_block_no_cap(self, process_bridge: ProcessBridge) -> None:
+        """Verify environment variables totalling >64 KiB are all readable.
+
+        Spawns a child process with 100 KiB of environment variable data
+        (via a single large env var) and verifies the bridge reads the full
+        block including the large variable.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        large_value = "X" * (100 * 1024)
+        child_env = {**os.environ, "INTELLICRACK_LARGE_TEST": large_value}
+
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            "import time; time.sleep(30)",
+            env=child_env,
+        )
+        try:
+            assert proc.pid is not None
+            await process_bridge.open_process(proc.pid, "all")
+            try:
+                env_vars = await process_bridge.get_environment(proc.pid)
+            finally:
+                await process_bridge.close()
+
+            assert "INTELLICRACK_LARGE_TEST" in env_vars, "Large env var must be present"
+            assert env_vars["INTELLICRACK_LARGE_TEST"] == large_value, (
+                f"Large env var truncated: expected {len(large_value)} chars, got {len(env_vars['INTELLICRACK_LARGE_TEST'])}"
+            )
+        finally:
+            proc.kill()
+            await proc.wait()
+
+
+class TestF0012EnvOffsets:
+    """F-0012/F-0046: _extract_env_pointer uses correct offsets and types."""
+
+    async def test_env_offsets_child_known_vars(self, process_bridge: ProcessBridge) -> None:
+        """Verify known env vars are readable from a child process on x64.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        test_vars = {
+            "INTELLICRACK_TEST_A": "hello_world",
+            "INTELLICRACK_TEST_B": "value_123",
+            "INTELLICRACK_TEST_C": "unicode_test",
+        }
+        child_env = {**os.environ, **test_vars}
+
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            "import time; time.sleep(30)",
+            env=child_env,
+        )
+        try:
+            assert proc.pid is not None
+            await process_bridge.open_process(proc.pid, "all")
+            try:
+                env_vars = await process_bridge.get_environment(proc.pid)
+            finally:
+                await process_bridge.close()
+
+            for key, expected_val in test_vars.items():
+                assert key in env_vars, f"Expected env var {key!r} missing"
+                assert env_vars[key] == expected_val, f"{key}: expected {expected_val!r}, got {env_vars[key]!r}"
+        finally:
+            proc.kill()
+            await proc.wait()
+
+    def test_extract_env_pointer_64bit_offsets(self) -> None:
+        """Verify _extract_env_pointer reads correct x64 offsets.
+
+        Builds a synthetic RTL_USER_PROCESS_PARAMETERS buffer with known
+        values at the x64 Environment (0x80) and EnvironmentSize (0x3F0)
+        offsets, then verifies _extract_env_pointer returns them.
+        """
+        buf_size = 0x400
+        raw = bytearray(buf_size)
+
+        env_ptr_val = 0x00007FFF_DEADBE00
+        env_size_val = 0x0001_2345
+        struct.pack_into("<Q", raw, 0x80, env_ptr_val)
+        struct.pack_into("<Q", raw, 0x3F0, env_size_val)
+
+        extract = getattr(ProcessBridge, "_extract_env_pointer")
+        ptr, size = extract(bytes(raw), target_is_64bit=True)
+
+        assert ptr == env_ptr_val, f"env_ptr mismatch: {hex(ptr)} != {hex(env_ptr_val)}"
+        assert size == env_size_val, f"env_size mismatch: {hex(size)} != {hex(env_size_val)}"
+
+    def test_extract_env_pointer_32bit_offsets(self) -> None:
+        """Verify _extract_env_pointer reads correct x86 offsets.
+
+        Builds a synthetic RTL_USER_PROCESS_PARAMETERS buffer with known
+        values at the x86 Environment (0x48) and EnvironmentSize (0x290)
+        offsets, then verifies _extract_env_pointer returns them.
+        """
+        buf_size = 0x2A0
+        raw = bytearray(buf_size)
+
+        env_ptr_val = 0x004A_1234
+        env_size_val = 0x0000_5678
+        struct.pack_into("<I", raw, 0x48, env_ptr_val)
+        struct.pack_into("<I", raw, 0x290, env_size_val)
+
+        extract = getattr(ProcessBridge, "_extract_env_pointer")
+        ptr, size = extract(bytes(raw), target_is_64bit=False)
+
+        assert ptr == env_ptr_val, f"env_ptr mismatch: {hex(ptr)} != {hex(env_ptr_val)}"
+        assert size == env_size_val, f"env_size mismatch: {hex(size)} != {hex(env_size_val)}"
