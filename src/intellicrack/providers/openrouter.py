@@ -56,6 +56,9 @@ _ERR_GET_GENERATION_FAILED = "Failed to get generation: %s"
 
 HTTP_BAD_REQUEST = 400
 
+_REASONING_BUDGET_LOW: int = 4000
+_REASONING_BUDGET_MEDIUM: int = 16000
+
 _REST_HTTP_MSGS = HttpErrorMessages(
     auth_invalid=_ERR_INVALID_KEY,
     rate_limited=_ERR_RATE_LIMITED,
@@ -395,9 +398,13 @@ class OpenRouterProvider(LLMProviderBase):
         """POST a chat completion request and translate HTTP errors.
 
         Used as the inner coroutine for
-        :meth:`LLMProviderBase._retry_with_backoff` so transient
-        rate-limit responses propagate as :class:`RateLimitError` and
-        get retried with exponential backoff.
+        :meth:`LLMProviderBase._retry_with_backoff`.  HTTP errors from
+        the response are translated by
+        :meth:`LLMProviderBase._raise_typed_for_status`, which raises
+        :class:`AuthenticationError` for 401/403,
+        :class:`RateLimitError` for 429, or :class:`ProviderError` for
+        503; the helper itself raises :class:`ProviderError` directly
+        for transport failures and other non-retryable HTTP errors.
 
         Args:
             request_body: JSON body for ``POST /chat/completions``.
@@ -407,9 +414,8 @@ class OpenRouterProvider(LLMProviderBase):
             httpx.Response: Successful response with status 2xx.
 
         Raises:
-            AuthenticationError: When the API rejects credentials.
-            ProviderError: On non-retryable failures.
-            RateLimitError: On HTTP 429.
+            ProviderError: On transport failures, non-retryable HTTP
+                status codes, or HTTP 503 returned by the upstream.
         """
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -459,9 +465,9 @@ class OpenRouterProvider(LLMProviderBase):
         if thinking is None or not thinking.enabled:
             return None
         budget = thinking.budget_tokens
-        if budget <= 4000:
+        if budget <= _REASONING_BUDGET_LOW:
             return "low"
-        return "medium" if budget <= 16000 else "high"
+        return "medium" if budget <= _REASONING_BUDGET_MEDIUM else "high"
 
     @staticmethod
     def _apply_cache_control(messages: list[dict[str, object]]) -> None:

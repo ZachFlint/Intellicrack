@@ -501,23 +501,7 @@ class GoogleProvider(LLMProviderBase):
                 self._pending_usage = self._extract_usage(last_chunk)
                 if thinking_parts:
                     self._pending_thinking.extend(thinking_parts)
-
-                if hasattr(last_chunk, "function_calls") and last_chunk.function_calls:
-                    tool_calls: list[ToolCall] = []
-                    for idx, fc in enumerate(last_chunk.function_calls):
-                        func_name = fc.name or ""
-                        args = dict(fc.args) if fc.args else {}
-                        tool_name = func_name.split(".")[0] if "." in func_name else func_name
-                        tool_calls.append(
-                            ToolCall(
-                                id=f"call_{idx}",
-                                tool_name=tool_name,
-                                function_name=func_name,
-                                arguments=args,
-                            ),
-                        )
-                    self._pending_tool_calls = tool_calls
-
+                self._pending_tool_calls = self._extract_function_calls(last_chunk)
                 self._logger.info(
                     "google_chat_stream_completed",
                     model=model,
@@ -794,6 +778,42 @@ class GoogleProvider(LLMProviderBase):
                 )
 
         return content, tool_calls
+
+    @staticmethod
+    def _extract_function_calls(chunk: GenerateContentResponse) -> list[ToolCall]:
+        """Convert ``response.function_calls`` into :class:`ToolCall` entries.
+
+        Streaming and non-streaming Gemini responses surface tool
+        invocations through the ``function_calls`` accessor.  This
+        helper converts each entry into a :class:`ToolCall`, deriving
+        ``tool_name`` from the dotted prefix of the function name when
+        present and assigning a synthetic ``call_<idx>`` identifier so
+        downstream tool routing has a stable id.
+
+        Args:
+            chunk: Gemini streaming chunk or response object.
+
+        Returns:
+            list[ToolCall]: Parsed tool calls in source order, or an
+            empty list when the chunk has no function calls.
+        """
+        function_calls = getattr(chunk, "function_calls", None)
+        if not function_calls:
+            return []
+        tool_calls: list[ToolCall] = []
+        for idx, fc in enumerate(function_calls):
+            func_name = fc.name or ""
+            args = dict(fc.args) if fc.args else {}
+            tool_name = func_name.split(".")[0] if "." in func_name else func_name
+            tool_calls.append(
+                ToolCall(
+                    id=f"call_{idx}",
+                    tool_name=tool_name,
+                    function_name=func_name,
+                    arguments=args,
+                ),
+            )
+        return tool_calls
 
     @staticmethod
     def _extract_visible_chunk_text(chunk: GenerateContentResponse) -> str:

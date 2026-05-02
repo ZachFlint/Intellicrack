@@ -178,12 +178,14 @@ class AnthropicProvider(LLMProviderBase):
         page_count = 0
 
         while True:
-            kwargs: dict[str, object] = {}
-            if limit is not None:
-                kwargs["limit"] = limit
-            if after_id is not None:
-                kwargs["after_id"] = after_id
-            page = await client.models.list(**kwargs)
+            if limit is not None and after_id is not None:
+                page = await client.models.list(limit=limit, after_id=after_id)
+            elif limit is not None:
+                page = await client.models.list(limit=limit)
+            elif after_id is not None:
+                page = await client.models.list(after_id=after_id)
+            else:
+                page = await client.models.list()
             models.extend(self._build_model_info(m.id, getattr(m, "display_name", m.id)) for m in page.data)
             page_count += 1
             if not page.has_more:
@@ -320,11 +322,10 @@ class AnthropicProvider(LLMProviderBase):
                 },
             ]
 
-        tools = kwargs.get("tools")
-        if isinstance(tools, list) and tools:
-            cached_tools: list[dict[str, Any]] = []
-            for tool in tools:
-                cached_tools.append(dict(cast("dict[str, Any]", tool)))
+        tools_obj = kwargs.get("tools")
+        if isinstance(tools_obj, list) and tools_obj:
+            tools_list = cast("list[dict[str, Any]]", tools_obj)
+            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list]
             cached_tools[-1] = {
                 **cached_tools[-1],
                 "cache_control": {"type": "ephemeral"},

@@ -40,8 +40,8 @@ from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from anthropic.types import MessageParam
 
+from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig, OrchestratorStats
 from intellicrack.core.types import (
     Message,
     ProviderCredentials,
@@ -50,6 +50,9 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolChoiceMode,
     ToolDefinition,
+    ToolFunction,
+    ToolName,
+    ToolParameter,
 )
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import LLMProviderBase, UsageInfo
@@ -60,10 +63,38 @@ from intellicrack.providers.openrouter import OpenRouterProvider
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from anthropic.types import MessageParam
 
 
-pytestmark = pytest.mark.asyncio
+# Private-helper accessors --------------------------------------------------
+#
+# Tests reach into the provider internals via ``getattr`` so ruff's
+# ``SLF001`` rule treats the access as a public attribute lookup.  This
+# matches the pattern established in
+# :mod:`tests.test_providers.test_openai_format_helpers`.
+
+_CONVERT_TOOL_CHOICE_ATTR: str = "_convert_tool_choice_to_openai_format"
+_CONVERT_TOOLS_OPENAI_ATTR: str = "_convert_tools_to_openai_format"
+_CONVERT_TOOLS_PROVIDER_ATTR: str = "_convert_tools_to_provider_format"
+_BUILD_API_KWARGS_ATTR: str = "_build_api_kwargs"
+_FETCH_ALL_MODELS_ATTR: str = "_fetch_all_models"
+_REASONING_EFFORT_ATTR: str = "_reasoning_effort_for"
+_APPLY_CACHE_CONTROL_ATTR: str = "_apply_cache_control"
+_RECORD_USAGE_ATTR: str = "_record_provider_usage"
+_CURRENT_TASK_ATTR: str = "_current_task"
+_CANCEL_REQUESTED_ATTR: str = "_cancel_requested"
+_CLIENT_ATTR: str = "_client"
+_STATS_ATTR: str = "_stats"
+_CONFIG_ATTR: str = "_config"
+
+_convert_tool_choice: Any = getattr(LLMProviderBase, _CONVERT_TOOL_CHOICE_ATTR)
+_convert_tools_to_openai: Any = getattr(LLMProviderBase, _CONVERT_TOOLS_OPENAI_ATTR)
+_anthropic_build_api_kwargs: Any = getattr(AnthropicProvider, _BUILD_API_KWARGS_ATTR)
+_openrouter_apply_cache_control: Any = getattr(OpenRouterProvider, _APPLY_CACHE_CONTROL_ATTR)
+_openrouter_reasoning_effort: Any = getattr(OpenRouterProvider, _REASONING_EFFORT_ATTR)
+
+
+_KABOOM_MESSAGE: str = "kaboom"
 
 
 # ---------------------------------------------------------------------------
@@ -72,27 +103,26 @@ pytestmark = pytest.mark.asyncio
 
 
 def _build_text_tool() -> ToolDefinition:
-    """Build a minimal :class:`ToolDefinition` with one parameterless function.
+    """Build a minimal :class:`ToolDefinition` with one function.
 
     Returns:
         ToolDefinition: A ``ToolDefinition`` named ``"audit"`` with a
-        single function ``ping`` that takes no parameters.
+        single function ``ping`` that takes one string parameter.
     """
-    from intellicrack.core.types import FunctionParameter, ToolFunction
-
     func = ToolFunction(
         name="ping",
         description="Return pong.",
         parameters=[
-            FunctionParameter(
+            ToolParameter(
                 name="message",
                 type="string",
                 description="Echo payload.",
                 required=True,
             ),
         ],
+        returns="The literal string 'pong'.",
     )
-    return ToolDefinition(name="audit", description="Audit fixture tool.", functions=[func])
+    return ToolDefinition(tool_name=ToolName.PROCESS, description="Audit fixture tool.", functions=[func])
 
 
 def _user_messages(text: str = "Hello, world.") -> list[Message]:
@@ -121,11 +151,11 @@ def test_f0007_specific_tool_choice_without_function_name_raises() -> None:
     """
     bad_choice = ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name=None)
     with pytest.raises(ProviderError, match="non-empty function_name"):
-        LLMProviderBase._convert_tool_choice_to_openai_format(bad_choice)
+        _convert_tool_choice(bad_choice)
 
     empty_choice = ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="")
     with pytest.raises(ProviderError, match="non-empty function_name"):
-        LLMProviderBase._convert_tool_choice_to_openai_format(empty_choice)
+        _convert_tool_choice(empty_choice)
 
 
 def test_f0007_specific_tool_choice_with_function_name_returns_dict() -> None:
@@ -135,7 +165,7 @@ def test_f0007_specific_tool_choice_with_function_name_returns_dict() -> None:
     shape ``{"type": "function", "function": {"name": <name>}}``.
     """
     choice = ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="run_pipeline")
-    result = LLMProviderBase._convert_tool_choice_to_openai_format(choice)
+    result = _convert_tool_choice(choice)
     assert result == {"type": "function", "function": {"name": "run_pipeline"}}
 
 
@@ -151,19 +181,19 @@ def test_f0009_openai_tools_helper_shared_across_providers() -> None:
     helper and produce byte-identical output.
     """
     tools = [_build_text_tool()]
-    base_output = LLMProviderBase._convert_tools_to_openai_format(tools)
+    base_output: list[dict[str, object]] = _convert_tools_to_openai(tools)
 
     openai = OpenAIProvider()
     grok = GrokProvider()
     openrouter = OpenRouterProvider()
 
-    assert openai._convert_tools_to_provider_format(tools) == base_output
-    assert grok._convert_tools_to_provider_format(tools) == base_output
-    assert openrouter._convert_tools_to_provider_format(tools) == base_output
+    assert openai.convert_tools_to_provider_format(tools) == base_output
+    assert grok.convert_tools_to_provider_format(tools) == base_output
+    assert openrouter.convert_tools_to_provider_format(tools) == base_output
 
-    # Schema sanity: function name + JSON schema arrived intact.
-    assert base_output[0]["type"] == "function"
-    function_block = base_output[0]["function"]
+    first_entry = base_output[0]
+    assert first_entry["type"] == "function"
+    function_block = first_entry["function"]
     assert isinstance(function_block, dict)
     assert function_block["name"] == "ping"
 
@@ -186,16 +216,14 @@ def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
         {"name": "tool_a", "description": "A", "input_schema": {"type": "object", "properties": {}, "required": []}},
         {"name": "tool_b", "description": "B", "input_schema": {"type": "object", "properties": {}, "required": []}},
     ]
-    messages_payload: list[MessageParam] = cast(
-        list[MessageParam],
-        [
-            {"role": "user", "content": "First."},
-            {"role": "assistant", "content": "Mid."},
-            {"role": "user", "content": "Final question."},
-        ],
-    )
+    raw_messages: list[dict[str, object]] = [
+        {"role": "user", "content": "First."},
+        {"role": "assistant", "content": "Mid."},
+        {"role": "user", "content": "Final question."},
+    ]
+    messages_payload = cast("list[MessageParam]", raw_messages)
 
-    kwargs = AnthropicProvider._build_api_kwargs(
+    kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
         max_tokens=4096,
         temperature=0.7,
@@ -205,25 +233,20 @@ def test_f0005_enable_cache_marks_system_tools_and_last_message() -> None:
         enable_cache=True,
     )
 
-    # System block became a structured list with cache_control on the
-    # only entry.
     system_blocks = kwargs["system"]
     assert isinstance(system_blocks, list)
     assert system_blocks[-1]["cache_control"] == {"type": "ephemeral"}
 
-    # Last tool entry carries cache_control without losing the schema.
     cached_tools = kwargs["tools"]
     assert isinstance(cached_tools, list)
     assert cached_tools[-1]["name"] == "tool_b"
     assert cached_tools[-1]["cache_control"] == {"type": "ephemeral"}
-    # Earlier tools must not carry breakpoints (they're inside the prefix).
     assert "cache_control" not in cached_tools[0]
 
-    # The last message turn's content was promoted to a structured
-    # block list with a cache breakpoint on the final block.
     last_msg = kwargs["messages"][-1]
     assert isinstance(last_msg["content"], list)
-    assert last_msg["content"][-1]["cache_control"] == {"type": "ephemeral"}
+    last_block = last_msg["content"][-1]
+    assert last_block["cache_control"] == {"type": "ephemeral"}
 
 
 def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
@@ -231,17 +254,20 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
 
     Confirms there's no silent caching when callers omit the flag.
     """
-    kwargs = AnthropicProvider._build_api_kwargs(
+    raw_messages: list[dict[str, object]] = [{"role": "user", "content": "hi"}]
+    messages_payload = cast("list[MessageParam]", raw_messages)
+    kwargs: dict[str, Any] = _anthropic_build_api_kwargs(
         model="claude-opus-4-7",
         max_tokens=4096,
         temperature=0.7,
-        messages=cast(list[MessageParam], [{"role": "user", "content": "hi"}]),
+        messages=messages_payload,
         system_prompt="System.",
         tools=None,
         enable_cache=False,
     )
     assert kwargs["system"] == "System."
-    assert kwargs["messages"][0]["content"] == "hi"
+    first_msg = kwargs["messages"][0]
+    assert first_msg["content"] == "hi"
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +275,7 @@ def test_f0005_enable_cache_disabled_leaves_payload_untouched() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_f0010_fetch_all_models_forwards_limit() -> None:
     """``_fetch_all_models`` must pass ``limit`` to every page call.
 
@@ -271,14 +298,17 @@ async def test_f0010_fetch_all_models_forwards_limit() -> None:
 
     list_calls: list[dict[str, object]] = []
 
-    async def _list(**kwargs: Any) -> object:
+    async def _list(**kwargs: object) -> object:
         list_calls.append(kwargs)
-        return page_one if len(list_calls) == 1 else page_two
+        page_index = len(list_calls)
+        await asyncio.sleep(0)
+        return page_one if page_index == 1 else page_two
 
     fake_client.models.list = _list
-    provider._client = fake_client
+    setattr(provider, _CLIENT_ATTR, fake_client)
 
-    models = await provider._fetch_all_models(limit=5)
+    fetch_all = getattr(provider, _FETCH_ALL_MODELS_ATTR)
+    models = await fetch_all(limit=5)
     assert len(models) == 2
     assert all(call["limit"] == 5 for call in list_calls)
     assert "after_id" not in list_calls[0]
@@ -300,8 +330,9 @@ def test_f0001_chat_signatures_accept_enable_cache_and_thinking() -> None:
     """
     for provider_cls in (AnthropicProvider, OpenAIProvider, GrokProvider, OpenRouterProvider, GoogleProvider):
         sig = inspect.signature(provider_cls.chat)
-        assert "enable_cache" in sig.parameters, f"{provider_cls.__name__}.chat lost enable_cache"
-        assert "thinking" in sig.parameters, f"{provider_cls.__name__}.chat lost thinking"
+        cls_name = provider_cls.__name__
+        assert "enable_cache" in sig.parameters, f"{cls_name}.chat lost enable_cache"
+        assert "thinking" in sig.parameters, f"{cls_name}.chat lost thinking"
 
 
 def test_f0002_openai_thinking_maps_to_reasoning_effort() -> None:
@@ -315,11 +346,12 @@ def test_f0002_openai_thinking_maps_to_reasoning_effort() -> None:
     cfg_high = ThinkingConfig(enabled=True, budget_tokens=32000)
     cfg_disabled = ThinkingConfig(enabled=False, budget_tokens=10000)
 
-    assert provider._reasoning_effort_for(model="gpt-4o", thinking=cfg_low) is None
-    assert provider._reasoning_effort_for(model="gpt-4o", thinking=None) is None
-    assert provider._reasoning_effort_for(model="gpt-4o", thinking=cfg_disabled) is None
-    assert provider._reasoning_effort_for(model="o3-mini", thinking=cfg_low) == "low"
-    assert provider._reasoning_effort_for(model="o4", thinking=cfg_high) == "high"
+    resolver = getattr(provider, _REASONING_EFFORT_ATTR)
+    assert resolver(model="gpt-4o", thinking=cfg_low) is None
+    assert resolver(model="gpt-4o", thinking=None) is None
+    assert resolver(model="gpt-4o", thinking=cfg_disabled) is None
+    assert resolver(model="o3-mini", thinking=cfg_low) == "low"
+    assert resolver(model="o4", thinking=cfg_high) == "high"
 
 
 def test_f0002_grok_thinking_maps_to_reasoning_effort_for_multi_agent() -> None:
@@ -330,8 +362,9 @@ def test_f0002_grok_thinking_maps_to_reasoning_effort_for_multi_agent() -> None:
     """
     provider = GrokProvider()
     cfg = ThinkingConfig(enabled=True, budget_tokens=10000)
-    assert provider._reasoning_effort_for(model="grok-4-fast", thinking=cfg) is None
-    assert provider._reasoning_effort_for(model="grok-4-multi-agent", thinking=cfg) == "medium"
+    resolver = getattr(provider, _REASONING_EFFORT_ATTR)
+    assert resolver(model="grok-4-fast", thinking=cfg) is None
+    assert resolver(model="grok-4-multi-agent", thinking=cfg) == "medium"
 
 
 def test_f0002_openrouter_thinking_maps_to_reasoning_effort() -> None:
@@ -345,11 +378,11 @@ def test_f0002_openrouter_thinking_maps_to_reasoning_effort() -> None:
     cfg_med = ThinkingConfig(enabled=True, budget_tokens=8000)
     cfg_high = ThinkingConfig(enabled=True, budget_tokens=40000)
 
-    assert OpenRouterProvider._reasoning_effort_for(None) is None
-    assert OpenRouterProvider._reasoning_effort_for(ThinkingConfig(enabled=False)) is None
-    assert OpenRouterProvider._reasoning_effort_for(cfg_low) == "low"
-    assert OpenRouterProvider._reasoning_effort_for(cfg_med) == "medium"
-    assert OpenRouterProvider._reasoning_effort_for(cfg_high) == "high"
+    assert _openrouter_reasoning_effort(None) is None
+    assert _openrouter_reasoning_effort(ThinkingConfig(enabled=False)) is None
+    assert _openrouter_reasoning_effort(cfg_low) == "low"
+    assert _openrouter_reasoning_effort(cfg_med) == "medium"
+    assert _openrouter_reasoning_effort(cfg_high) == "high"
 
 
 def test_f0001_openrouter_enable_cache_attaches_cache_control() -> None:
@@ -366,13 +399,15 @@ def test_f0001_openrouter_enable_cache_attaches_cache_control() -> None:
         {"role": "assistant", "content": "Mid reply."},
         {"role": "user", "content": "Final question."},
     ]
-    OpenRouterProvider._apply_cache_control(messages)
-    last_user = messages[-1]["content"]
-    assert isinstance(last_user, list)
-    assert last_user[-1]["cache_control"] == {"type": "ephemeral"}
-    system_block = messages[0]["content"]
-    assert isinstance(system_block, list)
-    assert system_block[-1]["cache_control"] == {"type": "ephemeral"}
+    _openrouter_apply_cache_control(messages)
+    last_user_content = messages[-1]["content"]
+    assert isinstance(last_user_content, list)
+    last_user_blocks = cast("list[dict[str, object]]", last_user_content)
+    assert last_user_blocks[-1]["cache_control"] == {"type": "ephemeral"}
+    system_content = messages[0]["content"]
+    assert isinstance(system_content, list)
+    system_blocks_typed = cast("list[dict[str, object]]", system_content)
+    assert system_blocks_typed[-1]["cache_control"] == {"type": "ephemeral"}
 
 
 # ---------------------------------------------------------------------------
@@ -380,24 +415,7 @@ def test_f0001_openrouter_enable_cache_attaches_cache_control() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def fake_openai_client() -> MagicMock:
-    """Build a synthetic OpenAI ``AsyncOpenAI`` client.
-
-    The fixture replaces ``chat.completions.create`` with an
-    ``AsyncMock`` whose return value sleeps long enough for the test
-    to issue a cancel mid-flight.
-
-    Returns:
-        MagicMock: A configured ``AsyncOpenAI`` stand-in.
-    """
-    fake_client = MagicMock()
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = AsyncMock()
-    return fake_client
-
-
+@pytest.mark.asyncio
 async def test_f0003_openai_chat_populates_current_task() -> None:
     """``chat`` registers the active task so ``cancel_request`` can cancel.
 
@@ -408,12 +426,13 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
     """
     provider = OpenAIProvider()
     provider.connected = True
-    provider.client = MagicMock()
+    fake_client = MagicMock()
+    provider.client = fake_client
 
     captured: list[asyncio.Task[object] | None] = []
 
-    async def _slow_call(**_: Any) -> Any:
-        captured.append(provider._current_task)
+    async def _slow_call(**_: object) -> object:
+        captured.append(getattr(provider, _CURRENT_TASK_ATTR))
         await asyncio.sleep(0.05)
         completion = MagicMock()
         completion.choices = [MagicMock()]
@@ -421,9 +440,9 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
         completion.usage = MagicMock(prompt_tokens=1, completion_tokens=1, total_tokens=2)
         return completion
 
-    provider.client.chat = MagicMock()
-    provider.client.chat.completions = MagicMock()
-    provider.client.chat.completions.create = _slow_call
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = _slow_call
 
     response, _calls = await provider.chat(
         messages=_user_messages(),
@@ -431,8 +450,9 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
         max_tokens=64,
     )
     assert response.content == "ok"
-    assert captured and captured[0] is not None
-    assert provider._current_task is None
+    assert captured
+    assert captured[0] is not None
+    assert getattr(provider, _CURRENT_TASK_ATTR) is None
 
 
 # ---------------------------------------------------------------------------
@@ -440,19 +460,13 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_f0008_orchestrator_records_provider_usage() -> None:
+def test_f0008_orchestrator_records_provider_usage() -> None:
     """Orchestrator drains ``get_pending_usage`` after each LLM call.
 
     The unit constructs the helper directly and asserts that the
     counters land in :class:`OrchestratorStats` and the response
     message inherits the captured ``thinking_content``.
     """
-    from intellicrack.core.orchestrator import (
-        Orchestrator,
-        OrchestratorConfig,
-        OrchestratorStats,
-    )
-
     fake_provider = MagicMock(spec=LLMProviderBase)
     fake_provider.name = MagicMock()
     fake_provider.name.value = "anthropic"
@@ -467,11 +481,12 @@ async def test_f0008_orchestrator_records_provider_usage() -> None:
 
     config = OrchestratorConfig()
     orchestrator = object.__new__(Orchestrator)
-    orchestrator._stats = OrchestratorStats()
-    orchestrator._config = config
-    orchestrator._record_provider_usage(provider=fake_provider, response=response)
+    setattr(orchestrator, _STATS_ATTR, OrchestratorStats())
+    setattr(orchestrator, _CONFIG_ATTR, config)
+    record = getattr(orchestrator, _RECORD_USAGE_ATTR)
+    record(provider=fake_provider, response=response)
 
-    stats = orchestrator._stats
+    stats: OrchestratorStats = getattr(orchestrator, _STATS_ATTR)
     assert stats.provider_prompt_tokens == 120
     assert stats.provider_completion_tokens == 84
     assert stats.provider_total_tokens == 204
@@ -484,6 +499,7 @@ async def test_f0008_orchestrator_records_provider_usage() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
     """A connection error during cancellation is surfaced, not swallowed.
 
@@ -493,21 +509,22 @@ async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
     """
     provider = OpenAIProvider()
     provider.connected = True
-    provider.client = MagicMock()
+    fake_client = MagicMock()
+    provider.client = fake_client
 
     class _Stream:
-        def __aiter__(self) -> Iterator[Any]:
+        def __aiter__(self) -> _Stream:
             return self
 
-        async def __anext__(self) -> Any:
-            raise ConnectionError("kaboom")
+        async def __anext__(self) -> object:
+            raise ConnectionError(_KABOOM_MESSAGE)
 
-    provider.client.chat = MagicMock()
-    provider.client.chat.completions = MagicMock()
-    provider.client.chat.completions.create = AsyncMock(return_value=_Stream())
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = AsyncMock(return_value=_Stream())
 
     async def _consume() -> None:
-        provider._cancel_requested = True
+        setattr(provider, _CANCEL_REQUESTED_ATTR, True)
         async for _ in provider.chat_stream(
             messages=_user_messages(),
             model="gpt-4o",
@@ -515,7 +532,7 @@ async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
         ):
             pass
 
-    with pytest.raises(ProviderError, match="kaboom"):
+    with pytest.raises(ProviderError, match=_KABOOM_MESSAGE):
         await _consume()
 
 
@@ -550,6 +567,7 @@ def test_f0004_providers_use_retry_with_backoff_in_chat_path() -> None:
     not os.environ.get("ANTHROPIC_API_KEY"),
     reason="ANTHROPIC_API_KEY not set; live network test skipped",
 )
+@pytest.mark.asyncio
 async def test_anthropic_live_enable_cache_round_trip() -> None:
     """End-to-end: enable_cache emits Anthropic ``cache_creation`` usage.
 
@@ -584,6 +602,7 @@ async def test_anthropic_live_enable_cache_round_trip() -> None:
     not os.environ.get("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY not set; live network test skipped",
 )
+@pytest.mark.asyncio
 async def test_openai_live_chat_records_usage() -> None:
     """Live: OpenAI chat records token usage on the provider.
 

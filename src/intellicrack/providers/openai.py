@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any, TypedDict, cast, override
+from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
 from openai import AsyncStream
@@ -43,10 +43,12 @@ if TYPE_CHECKING:
     from openai.types.chat import (
         ChatCompletionChunk,
         ChatCompletionMessageParam,
+        ChatCompletionStreamOptionsParam,
         ChatCompletionToolChoiceOptionParam,
         ChatCompletionToolParam,
     )
     from openai.types.chat.chat_completion import ChatCompletion
+    from openai.types.shared import ReasoningEffort
 
 
 _ERR_NOT_CONNECTED = "Not connected to OpenAI API"
@@ -86,7 +88,7 @@ def _supports_reasoning_effort(model_id: str) -> bool:
     return model_id.startswith(("o1", "o3", "o4", "o5", "o6"))
 
 
-def _thinking_to_reasoning_effort(thinking: ThinkingConfig) -> str:
+def _thinking_to_reasoning_effort(thinking: ThinkingConfig) -> ReasoningEffort:
     """Map a :class:`ThinkingConfig` to an OpenAI ``reasoning_effort`` value.
 
     The OpenAI o-series API exposes a discrete ``"low"`` /
@@ -100,7 +102,7 @@ def _thinking_to_reasoning_effort(thinking: ThinkingConfig) -> str:
             helper.
 
     Returns:
-        str: One of ``"low"``, ``"medium"``, ``"high"``.
+        ReasoningEffort: One of ``"low"``, ``"medium"``, ``"high"``.
     """
     if thinking.budget_tokens <= _OPENAI_REASONING_BUDGET_LOW:
         return "low"
@@ -423,7 +425,7 @@ class OpenAIProvider(LLMProviderBase):
         *,
         model: str,
         thinking: ThinkingConfig | None,
-    ) -> str | None:
+    ) -> ReasoningEffort | None:
         """Resolve the ``reasoning_effort`` value for a chat completion.
 
         OpenAI exposes ``reasoning_effort`` only on the o-series
@@ -438,9 +440,10 @@ class OpenAIProvider(LLMProviderBase):
                 ``None``.
 
         Returns:
-            str | None: ``"low"`` / ``"medium"`` / ``"high"`` when the
-            request should set ``reasoning_effort``; ``None`` when the
-            parameter must be omitted.
+            ReasoningEffort | None: ``"low"`` / ``"medium"`` /
+            ``"high"`` when the request should set
+            ``reasoning_effort``; ``None`` when the parameter must be
+            omitted.
         """
         if thinking is None or not thinking.enabled:
             return None
@@ -448,6 +451,108 @@ class OpenAIProvider(LLMProviderBase):
             self._logger.debug("openai_thinking_ignored_non_reasoning_model", model=model)
             return None
         return _thinking_to_reasoning_effort(thinking)
+
+    async def _open_openai_stream(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+        tool_choice: ChatCompletionToolChoiceOptionParam | None,
+        reasoning_effort: ReasoningEffort | None,
+    ) -> AsyncStream[ChatCompletionChunk]:
+        """Open an OpenAI streaming chat completion with optional reasoning_effort.
+
+        Picks the right typed overload of
+        ``chat.completions.create(stream=True)`` based on whether
+        ``tools``, ``tool_choice``, and ``reasoning_effort`` are
+        present, so basedpyright keeps full type information for the
+        returned stream and the chunks it yields.
+
+        Args:
+            model: Model identifier.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum response tokens.
+            tools: Formatted tools, or ``None``.
+            tool_choice: Tool selection mode, or ``None``.
+            reasoning_effort: ``reasoning_effort`` value for o-series
+                reasoning models, or ``None``.
+
+        Returns:
+            AsyncStream[ChatCompletionChunk]: Live SSE stream of
+            chat-completion chunks.
+
+        Raises:
+            ProviderError: If the SDK client is not yet connected.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
+        if tools is not None and tool_choice is not None and reasoning_effort is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+                tool_choice=tool_choice,
+                reasoning_effort=reasoning_effort,
+            )
+        if tools is not None and tool_choice is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+        if tools is not None and reasoning_effort is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+                reasoning_effort=reasoning_effort,
+            )
+        if tools is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+            )
+        if reasoning_effort is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                reasoning_effort=reasoning_effort,
+            )
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+            stream_options=stream_options,
+        )
 
     async def _make_openai_api_call(
         self,
@@ -458,7 +563,7 @@ class OpenAIProvider(LLMProviderBase):
         max_tokens: int,
         tools: list[ChatCompletionToolParam] | None,
         tool_choice: ChatCompletionToolChoiceOptionParam | None = None,
-        reasoning_effort: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> ChatCompletion:
         """Execute the OpenAI API chat completion call with error handling.
 
@@ -496,19 +601,56 @@ class OpenAIProvider(LLMProviderBase):
             messages=_OPENAI_CHAT_ERRORS,
             log_extra={"model": model},
         ):
-            request_kwargs: dict[str, Any] = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            }
-            if tools is not None:
-                request_kwargs["tools"] = tools
+            if tools is not None and tool_choice is not None and reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    reasoning_effort=reasoning_effort,
+                )
             if tools is not None and tool_choice is not None:
-                request_kwargs["tool_choice"] = tool_choice
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
+            if tools is not None and reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    reasoning_effort=reasoning_effort,
+                )
+            if tools is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                )
             if reasoning_effort is not None:
-                request_kwargs["reasoning_effort"] = reasoning_effort
-            return await self.client.chat.completions.create(**request_kwargs)
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
 
     async def chat_stream(
         self,
@@ -574,49 +716,37 @@ class OpenAIProvider(LLMProviderBase):
 
         try:
             typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
-            stream_kwargs: dict[str, Any] = {
-                "model": model,
-                "messages": typed_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            }
-            if openai_tools:
-                stream_kwargs["tools"] = cast("list[ChatCompletionToolParam]", openai_tools)
-                if tool_choice_value is not None:
-                    stream_kwargs["tool_choice"] = tool_choice_value
-            if reasoning_effort is not None:
-                stream_kwargs["reasoning_effort"] = reasoning_effort
-
-            stream: AsyncStream[ChatCompletionChunk] = await self.client.chat.completions.create(**stream_kwargs)
+            stream: AsyncStream[ChatCompletionChunk] = await self._open_openai_stream(
+                model=model,
+                messages=typed_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=cast("list[ChatCompletionToolParam] | None", openai_tools) if openai_tools else None,
+                tool_choice=tool_choice_value,
+                reasoning_effort=reasoning_effort,
+            )
 
             tc_buffer = ToolCallBufferManager()
 
-            try:
-                async for chunk in stream:
-                    if self._cancel_requested:
-                        break
-                    chunk_usage = getattr(chunk, "usage", None)
-                    if chunk_usage is not None:
-                        self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
-                    if not chunk.choices:
-                        continue
-                    delta = chunk.choices[0].delta
-                    if delta.content:
-                        yield delta.content
-                    if delta.tool_calls:
-                        for tc_delta in delta.tool_calls:
-                            tc_buffer.accumulate(
-                                index=tc_delta.index,
-                                call_id=tc_delta.id,
-                                name=tc_delta.function.name if tc_delta.function else None,
-                                arguments=tc_delta.function.arguments if tc_delta.function else None,
-                            )
-            except (ConnectionError, TimeoutError, OSError, openai.APIError, ValueError):
+            async for chunk in stream:
                 if self._cancel_requested:
-                    self._logger.debug("openai_stream_cancelled_with_error", model=model)
-                raise
+                    break
+                chunk_usage = getattr(chunk, "usage", None)
+                if chunk_usage is not None:
+                    self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        tc_buffer.accumulate(
+                            index=tc_delta.index,
+                            call_id=tc_delta.id,
+                            name=tc_delta.function.name if tc_delta.function else None,
+                            arguments=tc_delta.function.arguments if tc_delta.function else None,
+                        )
 
             self._pending_tool_calls = tc_buffer.finalize()
 
