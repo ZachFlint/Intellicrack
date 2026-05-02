@@ -973,6 +973,18 @@ class MemoryProtectionFlags(TypedDict):
     raw: int
 
 
+_STATE_TABLE: Final[dict[int, str]] = {
+    MEM_COMMIT: "committed",
+    MEM_RESERVE: "reserved",
+    MEM_FREE: "free",
+}
+
+_MEM_TYPE_TABLE: Final[dict[int, str]] = {
+    MEM_PRIVATE: "private",
+    MEM_MAPPED: "mapped",
+    MEM_IMAGE: "image",
+}
+
 _PROT_FLAG_TABLE: Final[dict[int, tuple[bool, bool, bool, bool]]] = {
     PAGE_NOACCESS: (False, False, False, False),
     PAGE_READONLY: (True, False, False, False),
@@ -1061,13 +1073,8 @@ def state_to_string(state: int) -> str:
         str: State label such as ``committed``, ``reserved``, ``free``,
         or ``unknown(0x...)`` for unrecognised values.
     """
-    state_map: dict[int, str] = {
-        MEM_COMMIT: "committed",
-        MEM_RESERVE: "reserved",
-        MEM_FREE: "free",
-    }
-    if state in state_map:
-        return state_map[state]
+    if state in _STATE_TABLE:
+        return _STATE_TABLE[state]
     _logger.debug("unknown_memory_state", state=hex(state))
     return f"unknown(0x{state:x})"
 
@@ -1086,12 +1093,7 @@ def mem_type_to_string(mem_type: int) -> str:
         str: Type label such as ``private``, ``mapped``, ``image``, or
         ``unknown(0x...)`` for unrecognised values.
     """
-    type_map: dict[int, str] = {
-        MEM_PRIVATE: "private",
-        MEM_MAPPED: "mapped",
-        MEM_IMAGE: "image",
-    }
-    if mem_type in type_map:
-        return type_map[mem_type]
+    if mem_type in _MEM_TYPE_TABLE:
+        return _MEM_TYPE_TABLE[mem_type]
     _logger.debug("unknown_memory_type", mem_type=hex(mem_type))
     return f"unknown(0x{mem_type:x})"

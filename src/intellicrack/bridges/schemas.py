@@ -695,16 +695,7 @@ def validate_tool_for_provider(
         list[ValidationError]: List of validation errors (empty if valid).
     """
     errors = validate_tool_definition(tool)
-    if provider not in {
-        ProviderName.ANTHROPIC,
-        ProviderName.OPENAI,
-        ProviderName.GOOGLE,
-        ProviderName.OLLAMA,
-        ProviderName.OPENROUTER,
-        ProviderName.HUGGINGFACE,
-        ProviderName.GROK,
-        ProviderName.LOCAL_TRANSFORMERS,
-    }:
+    if provider not in set(ProviderName):
         errors.append(
             ValidationError(
                 f"Provider '{provider}' has no schema converter",

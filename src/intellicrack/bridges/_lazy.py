@@ -61,9 +61,9 @@ def resolve(name: str, package_globals: dict[str, object]) -> type[ToolBridgeBas
     module_path, attr_name = LAZY_EXPORTS[name]
     module = importlib.import_module(module_path)
     raw_value: object = getattr(module, attr_name)
-    if not isinstance(raw_value, type) or not (
-        issubclass(raw_value, ToolBridgeBase) or raw_value.__qualname__ == "ToolInstaller"
-    ):
+    is_bridge = isinstance(raw_value, type) and issubclass(raw_value, ToolBridgeBase)
+    is_installer = isinstance(raw_value, type) and attr_name == "ToolInstaller"
+    if not (is_bridge or is_installer):
         msg = f"lazy export {name!r} from {module_path!r} is not a bridge or installer class"
         raise TypeError(msg)
     value = cast("type[ToolBridgeBase | ToolInstaller]", raw_value)
