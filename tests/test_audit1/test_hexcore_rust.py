@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from intellicrack.bridges.hex_editor import HexEditorBridge
+
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -102,8 +104,6 @@ class TestF0002SwapBlocksRequiresEqualLengths:
         Args:
             tmp_path: Pytest temp directory.
         """
-        from intellicrack.bridges.hex_editor import HexEditorBridge
-
         bridge = HexEditorBridge()
         _run(bridge.initialize())
         f = tmp_path / "swap_unequal.bin"
