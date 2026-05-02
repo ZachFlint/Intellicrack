@@ -390,8 +390,8 @@ class TestF0016PatternRegistryRaises:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        object.__setattr__(bridge, "_hexpat_interpreter_available", False)
-        object.__setattr__(bridge, "_pattern_registry", None)
+        bridge._hexpat_interpreter_available = False
+        bridge._pattern_registry = None
         with pytest.raises(RuntimeError):
             _run(bridge.list_hexpat_patterns())
 
@@ -407,8 +407,8 @@ class TestF0016PatternRegistryRaises:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        object.__setattr__(bridge, "_hexpat_interpreter_available", False)
-        object.__setattr__(bridge, "_pattern_registry", None)
+        bridge._hexpat_interpreter_available = False
+        bridge._pattern_registry = None
         with pytest.raises(RuntimeError):
             _run(bridge.auto_detect_pattern())
 
@@ -1023,7 +1023,7 @@ class TestF0046CopyAsRequiresSelection:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        object.__setattr__(bridge, "_selection", None)
+        bridge._selection = None
         with pytest.raises(ToolError, match="no selection active"):
             _run(bridge.copy_as("hex"))
 
@@ -1055,11 +1055,7 @@ class TestF0048InitializeMergesHighlightRules:
     def test_initialize_merges_holder_and_bridge_rules(self) -> None:
         """Bridge-side rules survive initialize when not overridden by holder."""
         bridge = HexEditorBridge()
-        object.__setattr__(
-            bridge,
-            "_highlight_rules",
-            {"rule_a": {"id": "rule_a", "color": "#111111"}},
-        )
+        bridge._highlight_rules = {"rule_a": {"id": "rule_a", "color": "#111111"}}
         state = HexDocumentState()
         state.set_highlight_rule("rule_b", {"id": "rule_b", "color": "#222222"})
         bridge.set_state_holder(state)
@@ -1073,11 +1069,7 @@ class TestF0048InitializeMergesHighlightRules:
     def test_holder_rule_takes_precedence_on_conflict(self) -> None:
         """Holder rules take precedence over bridge-side rules with same id."""
         bridge = HexEditorBridge()
-        object.__setattr__(
-            bridge,
-            "_highlight_rules",
-            {"shared": {"id": "shared", "color": "#AAAAAA"}},
-        )
+        bridge._highlight_rules = {"shared": {"id": "shared", "color": "#AAAAAA"}}
         state = HexDocumentState()
         state.set_highlight_rule("shared", {"id": "shared", "color": "#BBBBBB"})
         bridge.set_state_holder(state)

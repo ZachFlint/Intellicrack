@@ -440,7 +440,7 @@ lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
   "S324",
 ]
 lint.per-file-ignores."src/intellicrack/ui/tools.py" = [ "PLR0904" ]
-lint.per-file-ignores."tests/**" = [ "B009", "PLR2004", "PLR6301", "S101", "S102", "S404", "S603" ]
+lint.per-file-ignores."tests/**" = [ "B009", "PLR2004", "PLR6301", "S101", "S102", "S404", "S603", "SLF001" ]
 lint.fixable = [ "ALL" ]
 lint.unfixable = [ "PTH123", "RET503", "RUF013", "RUF022", "TID252", "TRY400" ]
 lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -671,6 +671,7 @@ follow_imports = "skip"
 [tool.pytest]
 ini_options.minversion = "8.0"
 ini_options.testpaths = [ "tests" ]
+ini_options.pythonpath = [ "src" ]
 ini_options.addopts = [ "-ra", "--strict-markers" ]
 ini_options.python_files = [ "test_*.py", "*_test.py" ]
 ini_options.python_classes = [ "Test*" ]

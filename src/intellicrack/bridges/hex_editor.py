@@ -242,7 +242,6 @@ except ImportError as _exc:
 _JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
 _PRINTABLE_MIN = 0x20
 _PRINTABLE_MAX = 0x7E
-_PRINTABLE_HIGH = 0x7F
 _HIGH_BIT_MIN = 0x80
 _DIGRAM_MIN_DOC_LEN = 2
 _MIN_HEADER_SIZE = 4
@@ -2104,22 +2103,23 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("bytes_replaced", pattern_length=len(pattern_bytes), replacements=count)
 
         if count > 0 and self.state_holder is not None:
-            if pre_match_offsets and len(pre_match_offsets) >= count:
-                pat_len = len(pattern_bytes)
-                rep_len = len(replacement_bytes)
-                delta_per_match = rep_len - pat_len
-                envelope_len = max(pat_len, rep_len)
+            pat_len = len(pattern_bytes)
+            rep_len = len(replacement_bytes)
+            same_size = pat_len == rep_len
+            if same_size and pre_match_offsets and len(pre_match_offsets) >= count:
                 pre_match_offsets.sort()
-                for i, original_offset in enumerate(pre_match_offsets[:count]):
-                    new_offset = original_offset + delta_per_match * i
-                    self.state_holder.notify_data_modified(new_offset, envelope_len, source="bridge")
+                for original_offset in pre_match_offsets[:count]:
+                    self.state_holder.notify_data_modified(original_offset, pat_len, source="bridge")
             else:
-                _logger.warning(
-                    "replace_bytes_using_wholesale_notify",
-                    reason="search_bytes_unavailable_or_count_mismatch",
-                    matches_pre=len(pre_match_offsets),
-                    replaced=count,
-                )
+                if not same_size or not pre_match_offsets:
+                    _logger.warning(
+                        "replace_bytes_using_wholesale_notify",
+                        reason="size_change_or_search_unavailable",
+                        pat_len=pat_len,
+                        rep_len=rep_len,
+                        matches_pre=len(pre_match_offsets),
+                        replaced=count,
+                    )
                 doc_len: int = self.document.length()
                 self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
@@ -2473,6 +2473,10 @@ class HexEditorBridge(ToolBridgeBase):
                 no patterns" so callers cannot mistake an outage for an
                 empty community-pattern shelf.
         """
+        if not self._hexpat_interpreter_available or _PatternRegistry is None:
+            _logger.error("list_hexpat_patterns_failed_registry_unavailable")
+            msg = "pattern registry not available"
+            raise RuntimeError(msg)
         registry = self._get_pattern_registry()
         patterns = registry.list_patterns()
         _logger.debug("hexpat_patterns_listed", count=len(patterns))
@@ -3382,7 +3386,7 @@ class HexEditorBridge(ToolBridgeBase):
                     null_count += 1
                 elif byte >= _HIGH_BIT_MIN:
                     high_count += 1
-                elif _PRINTABLE_MIN <= byte < _PRINTABLE_HIGH or byte in _WHITESPACE_BYTES:
+                elif _PRINTABLE_MIN <= byte <= _PRINTABLE_MAX or byte in _WHITESPACE_BYTES:
                     printable_count += 1
                 else:
                     control_count += 1
