@@ -65,8 +65,6 @@ PYTHON_TO_JSON_TYPES: dict[str, str] = {
     "bool": "boolean",
     "list": "array",
     "dict": "object",
-    "None": "null",
-    "NoneType": "null",
 }
 
 GOOGLE_TYPE_MAP: dict[str, str] = {
@@ -178,22 +176,54 @@ class ValidationError:
         return f"[{self.severity.upper()}] {self.location}: {self.message}"
 
 
-def normalize_type(param_type: str) -> str:
-    """Normalize a parameter type to JSON Schema type.
+def is_recognized_type(param_type: str) -> bool:
+    """Check whether a parameter type string is a recognised type alias.
 
-    Handles Python type names and ensures consistent type strings.
+    A type is recognised when its lower-cased / whitespace-stripped form
+    matches a key in ``PYTHON_TO_JSON_TYPES`` or a member of
+    ``VALID_JSON_SCHEMA_TYPES``. Types outside this set (parameterised
+    generics like ``list[int]``, optional unions like ``int|None``,
+    arbitrary class names) are rejected because they cannot be advertised
+    to LLM providers without information loss.
+
+    Args:
+        param_type: The type string to test.
+
+    Returns:
+        bool: True when the type is one of the recognised aliases.
+    """
+    param_type_lower = param_type.lower().strip()
+    return param_type_lower in PYTHON_TO_JSON_TYPES or param_type_lower in VALID_JSON_SCHEMA_TYPES
+
+
+def normalize_type(param_type: str) -> str:
+    """Normalize a parameter type string to a JSON Schema type.
+
+    Recognised inputs (Python aliases such as ``int``/``str``/``list``
+    or JSON Schema names such as ``integer``/``string``/``array``) are
+    returned as their JSON Schema equivalents. Unrecognised inputs fall
+    back to ``"string"`` and emit a ``schema_type_fallback`` warning so
+    the offending type cannot be silently downgraded without leaving an
+    audit trail. Callers that need to decide between
+    ``raise``/``warn``/``coerce`` should pre-check with
+    :func:`is_recognized_type`.
 
     Args:
         param_type: The type string to normalize.
 
     Returns:
-        str: Normalized JSON Schema type string.
+        str: A JSON Schema type drawn from ``VALID_JSON_SCHEMA_TYPES``.
     """
     param_type_lower = param_type.lower().strip()
     if param_type_lower in PYTHON_TO_JSON_TYPES:
         return PYTHON_TO_JSON_TYPES[param_type_lower]
     if param_type_lower in VALID_JSON_SCHEMA_TYPES:
         return param_type_lower
+    _logger.warning(
+        "schema_type_fallback",
+        param_type=param_type,
+        normalized="string",
+    )
     return "string"
 
 
@@ -344,8 +374,8 @@ def validate_tool_parameter(
             ),
         )
 
-    normalized_type = normalize_type(param.type)
-    if normalized_type not in VALID_JSON_SCHEMA_TYPES:
+    if not is_recognized_type(param.type):
+        normalized_type = normalize_type(param.type)
         errors.append(
             ValidationError(
                 f"Invalid type '{param.type}' (normalized to '{normalized_type}')",
@@ -642,13 +672,58 @@ def get_all_schemas_for_provider(
     return all_schemas
 
 
+def validate_tool_for_provider(
+    tool: ToolDefinition,
+    provider: ProviderName,
+) -> list[ValidationError]:
+    """Validate a tool definition for a specific provider without allocating schema dicts.
+
+    This is the cheap path used by the orchestrator at the top of every
+    agent loop iteration: it walks the tool definition, normalises every
+    parameter type once (so unknown types surface as
+    ``schema_type_fallback`` warnings), and confirms the chosen provider
+    has a code path in ``get_schema_for_provider``. It deliberately does
+    not allocate the per-provider dict trees that ``get_schema_for_provider``
+    would build because the orchestrator hands the raw ``ToolDefinition``
+    list to ``_call_llm`` and each provider re-converts on its own.
+
+    Args:
+        tool: The tool definition to validate.
+        provider: The target LLM provider.
+
+    Returns:
+        list[ValidationError]: List of validation errors (empty if valid).
+    """
+    errors = validate_tool_definition(tool)
+    if provider not in set(ProviderName):
+        errors.append(
+            ValidationError(
+                f"Provider '{provider}' has no schema converter",
+                str(tool.tool_name),
+                "error",
+            ),
+        )
+    has_errors = any(e.severity == "error" for e in errors)
+    if has_errors:
+        _logger.warning(
+            "tool_validation_failed",
+            tool=str(tool.tool_name),
+            provider=str(provider),
+            error_count=len(errors),
+        )
+    return errors
+
+
 def validate_and_convert(
     tool: ToolDefinition,
     provider: ProviderName,
 ) -> tuple[list[dict[str, Any]], list[ValidationError]]:
     """Validate a tool definition and convert to provider schema.
 
-    Combines validation and conversion in a single call.
+    Combines validation and conversion in a single call. This builds the
+    provider-specific dict tree, so callers that only need validation
+    diagnostics should prefer ``validate_tool_for_provider`` to avoid the
+    allocation cost.
 
     Args:
         tool: The tool definition to validate and convert.

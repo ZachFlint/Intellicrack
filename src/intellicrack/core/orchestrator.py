@@ -24,8 +24,7 @@ import structlog.contextvars
 
 from intellicrack.bridges.schemas import (
     build_schema_parameters,
-    get_all_schemas_for_provider,
-    validate_and_convert,
+    validate_tool_for_provider,
 )
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
@@ -1311,9 +1310,11 @@ class Orchestrator:
     ) -> None:
         """Validate tool definitions against the provider's schema format.
 
-        Logs warnings for any validation errors found. Uses
-        ``validate_and_convert`` and ``get_all_schemas_for_provider``
-        from the schemas module for provider-specific validation.
+        Logs warnings for any validation errors found. Uses the pure
+        ``validate_tool_for_provider`` validation pass so we do not
+        allocate per-provider schema dicts that the orchestrator never
+        consumes (each provider re-converts in its own ``chat`` /
+        ``chat_stream`` path).
 
         Args:
             tools: Tool definitions to validate.
@@ -1321,7 +1322,7 @@ class Orchestrator:
         """
         provider_name = provider.name
         for tool in tools:
-            _schemas, errors = validate_and_convert(tool, provider_name)
+            errors = validate_tool_for_provider(tool, provider_name)
             for err in errors:
                 _logger.warning(
                     "tool_schema_validation_error",
@@ -1340,12 +1341,6 @@ class Orchestrator:
                     param_count=len(func.parameters),
                     schema_keys=list(param_schema.keys()),
                 )
-        all_schemas = get_all_schemas_for_provider(tools, provider_name)
-        _logger.debug(
-            "tool_schemas_prepared",
-            provider=provider_name.value,
-            schema_count=len(all_schemas),
-        )
 
     async def _should_confirm(self, call: ToolCall) -> bool:
         """Check if tool call requires user confirmation.
