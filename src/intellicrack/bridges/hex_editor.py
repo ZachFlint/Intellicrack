@@ -4845,7 +4845,7 @@ class HexEditorBridge(ToolBridgeBase):
         b"\xbf\xba\xfe\xca",
     })
     _MACHO_64BIT_MAGICS: frozenset[bytes] = frozenset({b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe"})
-    _MACHO_LE_MAGICS: frozenset[bytes] = frozenset({b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf"})
+    _MACHO_LE_MAGICS: frozenset[bytes] = frozenset({b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe"})
     _MACHO_HEADER_SIZE_64: int = 32
     _MACHO_HEADER_SIZE_32: int = 28
     _MACHO_LC_HDR_SIZE: int = 8
@@ -4879,7 +4879,7 @@ class HexEditorBridge(ToolBridgeBase):
 
         try:
             mappings = self._collect_macho_segment_mappings(magic)
-        except (struct.error, RuntimeError, OSError) as exc:
+        except (struct.error, RuntimeError, OSError, ValueError) as exc:
             _logger.warning("macho_va_detection_failed", error=str(exc))
             return []
 
@@ -5402,7 +5402,7 @@ class HexEditorBridge(ToolBridgeBase):
         try:
             self._bookmark_macho_load_commands(magic, bookmarks, added_indices)
             _logger.info("macho_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError) as exc:
+        except (struct.error, RuntimeError, OSError, ValueError) as exc:
             _logger.warning(
                 "macho_structure_bookmark_failed",
                 error=str(exc),
@@ -5502,7 +5502,7 @@ class HexEditorBridge(ToolBridgeBase):
             self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, added_indices, colors[3])
 
             _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError) as exc:
+        except (struct.error, RuntimeError, OSError, ValueError) as exc:
             _logger.warning(
                 "pe_structure_bookmark_failed",
                 error=str(exc),
@@ -5630,7 +5630,7 @@ class HexEditorBridge(ToolBridgeBase):
                 )
 
             _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError) as exc:
+        except (struct.error, RuntimeError, OSError, ValueError) as exc:
             _logger.warning(
                 "elf_structure_bookmark_failed",
                 error=str(exc),
@@ -6531,7 +6531,7 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.error("compute_doc_md5_invalid_chunk_size", chunk_size=effective_chunk)
             msg = f"chunk_size must be positive, got {effective_chunk}"
             raise ValueError(msg)
-        hasher = hashlib.md5()  # noqa: S324
+        hasher = hashlib.md5(usedforsecurity=False)
         doc_len: int = self.document.length()
         offset = 0
         while offset < doc_len:
