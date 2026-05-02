@@ -9,6 +9,7 @@ This module provides integration with Anthropic's Claude models for chat complet
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -46,7 +47,6 @@ from intellicrack.providers.base import (
 
 
 if TYPE_CHECKING:
-    from asyncio import Task
     from collections.abc import AsyncIterator
 
 _MSG_API_KEY_REQUIRED = "API key required"
@@ -72,7 +72,7 @@ class AnthropicProvider(LLMProviderBase):
         """Initialize the AnthropicProvider instance."""
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
-        self._current_task: Task[Any] | None = None
+        self._current_task: asyncio.Task[Any] | None = None
         self._logger = get_logger(__name__).bind(provider="anthropic")
         self._logger.info("anthropic_provider_initialized")
 
@@ -535,8 +535,15 @@ class AnthropicProvider(LLMProviderBase):
             enable_cache=enable_cache,
         )
 
+        api_task: asyncio.Task[AnthropicMessage] = asyncio.create_task(
+            self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs)),
+        )
+        self._current_task = cast("asyncio.Task[Any]", api_task)
         try:
-            response = await self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs))
+            try:
+                response = await api_task
+            finally:
+                self._current_task = None
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls, thinking_text = self._parse_response_blocks(response)
             self._pending_usage = self._build_usage_from_message(response)
@@ -673,17 +680,20 @@ class AnthropicProvider(LLMProviderBase):
                     error=str(e),
                 )
                 raise RateLimitError(_MSG_STREAM_FAILED) from e
-            if not self._cancel_requested:
-                self._logger.warning(
-                    "anthropic_stream_status_error",
-                    status_code=status_code,
-                    error=str(e),
-                )
-                raise ProviderError(_MSG_STREAM_FAILED) from e
+            self._logger.warning(
+                "anthropic_stream_status_error",
+                status_code=status_code,
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_MSG_STREAM_FAILED) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
-            if not self._cancel_requested:
-                self._logger.warning("anthropic_stream_failed", error=str(e))
-                raise ProviderError(_MSG_STREAM_FAILED) from e
+            self._logger.warning(
+                "anthropic_stream_failed",
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
