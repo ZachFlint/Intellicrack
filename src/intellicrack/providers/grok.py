@@ -35,6 +35,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
+    map_thinking_budget_to_effort,
 )
 
 
@@ -43,10 +44,6 @@ _GROK_3_CONTEXT_WINDOW = 131072
 _GROK_2_CONTEXT_WINDOW = 131072
 _GROK_1_CONTEXT_WINDOW = 8192
 _GROK_DEFAULT_CONTEXT_WINDOW = 131072
-
-_REASONING_BUDGET_LOW: int = 4000
-_REASONING_BUDGET_MEDIUM: int = 16000
-_REASONING_BUDGET_HIGH: int = 32000
 
 _ERR_KEY_REQUIRED = "Grok API key is required"
 _ERR_NOT_CONNECTED = "Not connected to Grok API"
@@ -432,12 +429,10 @@ class GrokProvider(LLMProviderBase):
         if not self._supports_reasoning_effort(model):
             self._logger.debug("grok_thinking_ignored_auto_reasoning_model", model=model)
             return None
-        budget = thinking.budget_tokens
-        if budget <= _REASONING_BUDGET_LOW:
-            return "low"
-        if budget <= _REASONING_BUDGET_MEDIUM:
-            return "medium"
-        return "high" if budget <= _REASONING_BUDGET_HIGH else "xhigh"
+        return cast(
+            "ReasoningEffort",
+            map_thinking_budget_to_effort(thinking.budget_tokens, allow_xhigh=True),
+        )
 
     async def _make_grok_api_call(
         self,

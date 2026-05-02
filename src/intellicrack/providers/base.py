@@ -229,6 +229,44 @@ HTTP_SERVICE_UNAVAILABLE: int = 503
 
 _AUTH_STATUS_CODES: frozenset[int] = frozenset({HTTP_UNAUTHORIZED, HTTP_FORBIDDEN})
 
+REASONING_EFFORT_LOW_THRESHOLD: int = 4000
+REASONING_EFFORT_MEDIUM_THRESHOLD: int = 16000
+REASONING_EFFORT_HIGH_THRESHOLD: int = 32000
+
+
+def map_thinking_budget_to_effort(
+    budget_tokens: int,
+    *,
+    allow_xhigh: bool = False,
+) -> str:
+    """Map a :attr:`ThinkingConfig.budget_tokens` to a reasoning_effort level.
+
+    Shared mapping for OpenAI-compatible APIs (OpenAI o-series,
+    Grok-multi-agent, OpenRouter) that expose a discrete ``"low"`` /
+    ``"medium"`` / ``"high"`` knob rather than a token budget.  The
+    thresholds match OpenAI's documented effort tiers and are reused
+    verbatim across providers so a single ``ThinkingConfig`` propagates
+    consistently.
+
+    Args:
+        budget_tokens: Caller-supplied thinking budget in tokens.
+        allow_xhigh: When ``True``, budgets above
+            :data:`REASONING_EFFORT_HIGH_THRESHOLD` map to ``"xhigh"``
+            instead of ``"high"``.  Grok exposes ``"xhigh"``; OpenAI and
+            OpenRouter currently top out at ``"high"``.
+
+    Returns:
+        str: One of ``"low"``, ``"medium"``, ``"high"``, or
+        ``"xhigh"``.
+    """
+    if budget_tokens <= REASONING_EFFORT_LOW_THRESHOLD:
+        return "low"
+    if budget_tokens <= REASONING_EFFORT_MEDIUM_THRESHOLD:
+        return "medium"
+    if not allow_xhigh:
+        return "high"
+    return "high" if budget_tokens <= REASONING_EFFORT_HIGH_THRESHOLD else "xhigh"
+
 
 class LLMProviderBase(ABC):
     """Abstract base class for LLM providers.

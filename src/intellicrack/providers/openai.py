@@ -34,6 +34,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
+    map_thinking_budget_to_effort,
 )
 
 
@@ -68,8 +69,7 @@ _OPENAI_CHAT_ERRORS = OpenAIErrorMessages(
     request_failed=_ERR_REQUEST_FAILED,
 )
 
-_OPENAI_REASONING_BUDGET_LOW: int = 4000
-_OPENAI_REASONING_BUDGET_MEDIUM: int = 16000
+_REASONING_MODEL_PREFIXES: tuple[str, ...] = ("o1", "o3", "o4", "o5", "o6")
 
 
 def _supports_reasoning_effort(model_id: str) -> bool:
@@ -85,28 +85,7 @@ def _supports_reasoning_effort(model_id: str) -> bool:
         ``reasoning_effort``; ``False`` for non-reasoning chat models
         such as the GPT-4o family.
     """
-    return model_id.startswith(("o1", "o3", "o4", "o5", "o6"))
-
-
-def _thinking_to_reasoning_effort(thinking: ThinkingConfig) -> ReasoningEffort:
-    """Map a :class:`ThinkingConfig` to an OpenAI ``reasoning_effort`` value.
-
-    The OpenAI o-series API exposes a discrete ``"low"`` /
-    ``"medium"`` / ``"high"`` knob rather than a token budget.  This
-    helper picks the bucket whose nominal token spend most closely
-    matches the caller's :attr:`ThinkingConfig.budget_tokens`.
-
-    Args:
-        thinking: Extended thinking configuration.  ``thinking.enabled``
-            is *not* checked; callers gate on it before invoking this
-            helper.
-
-    Returns:
-        ReasoningEffort: One of ``"low"``, ``"medium"``, ``"high"``.
-    """
-    if thinking.budget_tokens <= _OPENAI_REASONING_BUDGET_LOW:
-        return "low"
-    return "medium" if thinking.budget_tokens <= _OPENAI_REASONING_BUDGET_MEDIUM else "high"
+    return model_id.startswith(_REASONING_MODEL_PREFIXES)
 
 
 class OpenAIMessageContent(TypedDict, total=False):
@@ -450,7 +429,7 @@ class OpenAIProvider(LLMProviderBase):
         if not _supports_reasoning_effort(model):
             self._logger.debug("openai_thinking_ignored_non_reasoning_model", model=model)
             return None
-        return _thinking_to_reasoning_effort(thinking)
+        return cast("ReasoningEffort", map_thinking_budget_to_effort(thinking.budget_tokens))
 
     async def _open_openai_stream(
         self,

@@ -36,6 +36,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     ToolCallBufferManager,
     UsageInfo,
+    map_thinking_budget_to_effort,
 )
 
 
@@ -55,9 +56,6 @@ _ERR_STREAM_FAILED = "OpenRouter stream failed: %s"
 _ERR_GET_GENERATION_FAILED = "Failed to get generation: %s"
 
 HTTP_BAD_REQUEST = 400
-
-_REASONING_BUDGET_LOW: int = 4000
-_REASONING_BUDGET_MEDIUM: int = 16000
 
 _REST_HTTP_MSGS = HttpErrorMessages(
     auth_invalid=_ERR_INVALID_KEY,
@@ -464,10 +462,7 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if thinking is None or not thinking.enabled:
             return None
-        budget = thinking.budget_tokens
-        if budget <= _REASONING_BUDGET_LOW:
-            return "low"
-        return "medium" if budget <= _REASONING_BUDGET_MEDIUM else "high"
+        return map_thinking_budget_to_effort(thinking.budget_tokens)
 
     @staticmethod
     def _apply_cache_control(messages: list[dict[str, object]]) -> None:
