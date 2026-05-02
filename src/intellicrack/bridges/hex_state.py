@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 
-_NOTIFY_MAX_DEPTH: int = 64
+NOTIFY_MAX_DEPTH: int = 64
 """Maximum number of reentrant ``_notify`` events drained per outer dispatch.
 
 Re-entrant emissions triggered from inside a callback are queued and
@@ -688,7 +688,7 @@ class HexDocumentState:
         cross-thread emissions proceed independently because the
         re-entrancy state is per-thread; the underlying callback list is
         snapshot under the lock so registrations are race-free.  A
-        runaway callback chain is bounded by ``_NOTIFY_MAX_DEPTH`` so an
+        runaway callback chain is bounded by ``NOTIFY_MAX_DEPTH`` so an
         observer that keeps re-emitting cannot loop forever, but
         legitimate downstream events still flow.
 
@@ -707,7 +707,7 @@ class HexDocumentState:
         try:
             self._dispatch_one(event_type, data, source)
             dispatched = 1
-            while queue and dispatched < _NOTIFY_MAX_DEPTH:
+            while queue and dispatched < NOTIFY_MAX_DEPTH:
                 pending = queue.popleft()
                 self._dispatch_one(pending.event_type, pending.data, pending.source)
                 dispatched += 1
@@ -715,7 +715,7 @@ class HexDocumentState:
                 _logger.warning(
                     "notify_drain_truncated",
                     pending=len(queue),
-                    cap=_NOTIFY_MAX_DEPTH,
+                    cap=NOTIFY_MAX_DEPTH,
                 )
                 queue.clear()
         finally:

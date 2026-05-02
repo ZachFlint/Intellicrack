@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 
 from intellicrack.bridges.hex_state import (
-    _NOTIFY_MAX_DEPTH,
+    NOTIFY_MAX_DEPTH,
     HexDocumentEvent,
     HexDocumentState,
     StateCallbackFn,
@@ -666,7 +666,7 @@ class TestReentrancyGuard:
 
         Re-entrant emissions are queued and drained after the outer
         dispatch finishes (so downstream events still reach observers),
-        but a runaway chain is bounded by ``_NOTIFY_MAX_DEPTH`` so
+        but a runaway chain is bounded by ``NOTIFY_MAX_DEPTH`` so
         infinite loops cannot happen.
         """
         state = HexDocumentState()
@@ -680,7 +680,7 @@ class TestReentrancyGuard:
         state.register_callback(reentrant_cb)
         state.set_cursor(1)
 
-        assert call_count == _NOTIFY_MAX_DEPTH
+        assert call_count == NOTIFY_MAX_DEPTH
 
     def test_dispatch_state_released_after_normal_dispatch(self) -> None:
         """Per-thread dispatch state is released so subsequent calls work."""

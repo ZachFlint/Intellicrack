@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from intellicrack.bridges.hex_state import (
-    _NOTIFY_MAX_DEPTH,
+    NOTIFY_MAX_DEPTH,
     HexDocumentEvent,
     HexDocumentState,
 )
@@ -275,7 +275,7 @@ class TestF0036NotifyDropsDownstreamEvents:
 
         With unbounded queueing this would loop forever, so the fix
         bounds total per-outer dispatch invocations at
-        ``_NOTIFY_MAX_DEPTH``.  This proves that legitimate downstream
+        ``NOTIFY_MAX_DEPTH``.  This proves that legitimate downstream
         events are delivered (count grows beyond 1) while infinite loops
         are still terminated cleanly.
         """
@@ -290,7 +290,7 @@ class TestF0036NotifyDropsDownstreamEvents:
         state.register_callback(runaway)
         state.set_cursor(1)
 
-        assert call_count == _NOTIFY_MAX_DEPTH
+        assert call_count == NOTIFY_MAX_DEPTH
 
 
 class TestF0037SetDocumentLengthOutsideLock:
@@ -348,7 +348,7 @@ class TestF0037SetDocumentLengthOutsideLock:
                 if last_open is None:
                     continue
                 event_size = last_open["size"]
-                if event_size not in (doc_a.length(), doc_b.length()):
+                if event_size not in {doc_a.length(), doc_b.length()}:
                     with errors_lock:
                         errors.append(f"unknown event_size={event_size}")
 
@@ -420,7 +420,7 @@ class TestF0037SetDocumentLengthOutsideLock:
             opens = [d["size"] for evt, d in events if evt is HexDocumentEvent.DOCUMENT_OPENED]
         assert 999 in opens
         assert 42 in opens
-        assert all(size in (999, 42) for size in opens)
+        assert all(size in {999, 42} for size in opens)
 
 
 class TestF0038DisplayModeAsymmetricLocking:
@@ -561,9 +561,9 @@ class TestF0039PropertyGettersUnlocked:
 
                 returned = threading.Event()
 
-                def reader(prop_name: str = name) -> None:
+                def reader(prop_name: str = name, done: threading.Event = returned) -> None:
                     _ = getattr(state, prop_name)
-                    returned.set()
+                    done.set()
 
                 reader_thread = threading.Thread(target=reader)
                 reader_thread.start()
