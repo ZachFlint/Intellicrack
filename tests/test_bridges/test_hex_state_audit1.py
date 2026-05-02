@@ -28,6 +28,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from intellicrack.bridges.hex_state import (
     NOTIFY_MAX_DEPTH,
     HexDocumentEvent,
@@ -685,3 +687,55 @@ class TestF0058ClearAllEmitsOnlyDocumentClosed:
         state.clear_all()
 
         assert events == []
+
+
+class TestF0036QueueClearedOnUnhandledException:
+    """F-0036 queue leak — ``_notify`` must clear the re-entrant queue on any exit.
+
+    When a callback raises an exception type NOT in the narrow transport
+    tuple (e.g. ``KeyError``), control jumps from the ``try`` body to
+    ``finally`` without clearing the per-thread pending queue.  The next
+    unrelated ``_notify`` on the same thread would then drain stale
+    events from the failed dispatch.
+
+    The fix moves ``queue.clear()`` into the ``finally`` block so every
+    exit path — normal, truncated, or exceptional — leaves the queue
+    empty.
+    """
+
+    def test_f0036_queue_cleared_when_callback_raises_unhandled_exception(self) -> None:
+        """Queue must be empty after an unhandled exception exits ``_notify``.
+
+        Callback A re-enters ``_notify`` via ``state.set_cursor`` and
+        then raises ``KeyError``.  Callback B records every event it
+        sees.  After catching the ``KeyError`` from the outer call, an
+        UNRELATED ``_notify`` (``SELECTION_CHANGED``) is triggered.
+        Callback B must see ONLY the new event — not leftover events
+        from the failed dispatch.
+        """
+        state = HexDocumentState()
+        b_events: list[HexDocumentEvent] = []
+
+        err_msg = "deliberate unhandled error from A"
+
+        def callback_a(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            if event_type is HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(0, 4)
+                raise KeyError(err_msg)
+
+        def callback_b(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            b_events.append(event_type)
+
+        state.register_callback(callback_a)
+        state.register_callback(callback_b)
+
+        with pytest.raises(KeyError, match=err_msg):
+            state.set_cursor(10)
+
+        b_events.clear()
+
+        state.set_selection(5, 10)
+
+        assert b_events == [HexDocumentEvent.SELECTION_CHANGED], (
+            f"Expected only SELECTION_CHANGED but got {b_events}"
+        )

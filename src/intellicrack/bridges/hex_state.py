@@ -704,6 +704,7 @@ class HexDocumentState:
 
         queue = self._get_thread_queue()
         self._set_dispatching(active=True)
+        truncated_count = 0
         try:
             self._dispatch_one(event_type, data, source)
             dispatched = 1
@@ -711,12 +712,13 @@ class HexDocumentState:
                 pending = queue.popleft()
                 self._dispatch_one(pending.event_type, pending.data, pending.source)
                 dispatched += 1
-            if queue:
+            truncated_count = len(queue)
+        finally:
+            if truncated_count:
                 _logger.warning(
                     "notify_drain_truncated",
-                    pending=len(queue),
+                    pending=truncated_count,
                     cap=NOTIFY_MAX_DEPTH,
                 )
-                queue.clear()
-        finally:
+            queue.clear()
             self._set_dispatching(active=False)
