@@ -71,6 +71,8 @@ _OPENAI_CHAT_ERRORS = OpenAIErrorMessages(
 
 _REASONING_MODEL_PREFIXES: tuple[str, ...] = ("o1", "o3", "o4", "o5", "o6")
 
+_O_SERIES_TEMPERATURE: float = 1.0
+
 
 def _supports_reasoning_effort(model_id: str) -> bool:
     """Return True when the model accepts the ``reasoning_effort`` parameter.
@@ -431,6 +433,22 @@ class OpenAIProvider(LLMProviderBase):
             return None
         return cast("ReasoningEffort", map_thinking_budget_to_effort(thinking.budget_tokens))
 
+    @staticmethod
+    def _supports_max_completion_tokens(model_id: str) -> bool:
+        """Determine whether a model requires ``max_completion_tokens``.
+
+        OpenAI o-series reasoning models (o1, o3, o4, o5, o6) require the
+        ``max_completion_tokens`` field instead of the legacy ``max_tokens``
+        parameter.  Non-reasoning models continue to use ``max_tokens``.
+
+        Args:
+            model_id: OpenAI model identifier.
+
+        Returns:
+            bool: True if the model expects ``max_completion_tokens``.
+        """
+        return model_id.lower().startswith(_REASONING_MODEL_PREFIXES)
+
     async def _open_openai_stream(
         self,
         *,
@@ -442,18 +460,20 @@ class OpenAIProvider(LLMProviderBase):
         tool_choice: ChatCompletionToolChoiceOptionParam | None,
         reasoning_effort: ReasoningEffort | None,
     ) -> AsyncStream[ChatCompletionChunk]:
-        """Open an OpenAI streaming chat completion with optional reasoning_effort.
+        """Open an OpenAI streaming chat completion with correct parameter dispatch.
 
         Picks the right typed overload of
         ``chat.completions.create(stream=True)`` based on whether
-        ``tools``, ``tool_choice``, and ``reasoning_effort`` are
-        present, so basedpyright keeps full type information for the
-        returned stream and the chunks it yields.
+        ``tools``, ``tool_choice``, and ``reasoning_effort`` are present,
+        and dispatches between ``max_completion_tokens`` (o-series) and
+        ``max_tokens`` (all other models) so basedpyright keeps full type
+        information for the returned stream and the chunks it yields.
+        O-series models also require ``temperature=1.0``.
 
         Args:
             model: Model identifier.
             messages: Formatted messages for the API.
-            temperature: Sampling temperature.
+            temperature: Sampling temperature (overridden to 1.0 for o-series).
             max_tokens: Maximum response tokens.
             tools: Formatted tools, or ``None``.
             tool_choice: Tool selection mode, or ``None``.
@@ -470,55 +490,120 @@ class OpenAIProvider(LLMProviderBase):
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
         stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
-        if tools is not None and tool_choice is not None and reasoning_effort is not None:
-            return await self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=True,
-                stream_options=stream_options,
-                tools=tools,
-                tool_choice=tool_choice,
-                reasoning_effort=reasoning_effort,
-            )
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        effective_temperature = _O_SERIES_TEMPERATURE if reasoning_effort is not None else temperature
         if tools is not None and tool_choice is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options=stream_options,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    reasoning_effort=reasoning_effort,
+                )
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=effective_temperature,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
                 tools=tools,
                 tool_choice=tool_choice,
-            )
-        if tools is not None and reasoning_effort is not None:
-            return await self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=True,
-                stream_options=stream_options,
-                tools=tools,
-                reasoning_effort=reasoning_effort,
             )
         if tools is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options=stream_options,
+                        tools=tools,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                )
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    reasoning_effort=reasoning_effort,
+                )
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=effective_temperature,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
                 tools=tools,
+            )
+        if use_max_completion_tokens:
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=effective_temperature,
+                max_completion_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
             )
         if reasoning_effort is not None:
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=effective_temperature,
                 max_tokens=max_tokens,
                 stream=True,
                 stream_options=stream_options,
@@ -527,7 +612,7 @@ class OpenAIProvider(LLMProviderBase):
         return await self.client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=temperature,
+            temperature=effective_temperature,
             max_tokens=max_tokens,
             stream=True,
             stream_options=stream_options,
@@ -548,12 +633,14 @@ class OpenAIProvider(LLMProviderBase):
 
         OpenAI SDK exceptions surface inside the call are translated to
         Intellicrack typed errors by
-        :meth:`LLMProviderBase._translate_openai_errors`.
+        :meth:`LLMProviderBase._translate_openai_errors`.  O-series models
+        require ``max_completion_tokens`` instead of ``max_tokens`` and must
+        receive ``temperature=1.0``; this method dispatches both accordingly.
 
         Args:
             model: Model ID to use.
             messages: Formatted messages for the API.
-            temperature: Sampling temperature.
+            temperature: Sampling temperature (overridden to 1.0 for o-series).
             max_tokens: Maximum tokens in response.
             tools: Formatted tools for the API, or None.
             tool_choice: How the model should select tools.
@@ -569,65 +656,120 @@ class OpenAIProvider(LLMProviderBase):
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        effective_temperature = _O_SERIES_TEMPERATURE if reasoning_effort is not None else temperature
+
         self._logger.debug(
             "openai_api_call_starting",
             model=model,
             has_tools=bool(tools),
             reasoning_effort=reasoning_effort,
+            use_max_completion_tokens=use_max_completion_tokens,
         )
         with self._translate_openai_errors(
             log_prefix="openai_chat",
             messages=_OPENAI_CHAT_ERRORS,
             log_extra={"model": model},
         ):
-            if tools is not None and tool_choice is not None and reasoning_effort is not None:
-                return await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    tools=tools,
-                    tool_choice=tool_choice,
-                    reasoning_effort=reasoning_effort,
-                )
             if tools is not None and tool_choice is not None:
+                if use_max_completion_tokens:
+                    if reasoning_effort is not None:
+                        return await self.client.chat.completions.create(
+                            model=model,
+                            messages=messages,
+                            temperature=effective_temperature,
+                            max_completion_tokens=max_tokens,
+                            tools=tools,
+                            tool_choice=tool_choice,
+                            reasoning_effort=reasoning_effort,
+                        )
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_completion_tokens=max_tokens,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                    )
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_tokens=max_tokens,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        reasoning_effort=reasoning_effort,
+                    )
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=effective_temperature,
                     max_tokens=max_tokens,
                     tools=tools,
                     tool_choice=tool_choice,
-                )
-            if tools is not None and reasoning_effort is not None:
-                return await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    tools=tools,
-                    reasoning_effort=reasoning_effort,
                 )
             if tools is not None:
+                if use_max_completion_tokens:
+                    if reasoning_effort is not None:
+                        return await self.client.chat.completions.create(
+                            model=model,
+                            messages=messages,
+                            temperature=effective_temperature,
+                            max_completion_tokens=max_tokens,
+                            tools=tools,
+                            reasoning_effort=reasoning_effort,
+                        )
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_completion_tokens=max_tokens,
+                        tools=tools,
+                    )
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_tokens=max_tokens,
+                        tools=tools,
+                        reasoning_effort=reasoning_effort,
+                    )
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=effective_temperature,
                     max_tokens=max_tokens,
                     tools=tools,
+                )
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=effective_temperature,
+                        max_completion_tokens=max_tokens,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=effective_temperature,
+                    max_completion_tokens=max_tokens,
                 )
             if reasoning_effort is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=effective_temperature,
                     max_tokens=max_tokens,
                     reasoning_effort=reasoning_effort,
                 )
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=temperature,
+                temperature=effective_temperature,
                 max_tokens=max_tokens,
             )
 

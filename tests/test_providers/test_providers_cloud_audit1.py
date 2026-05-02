@@ -367,6 +367,51 @@ def test_f0002_grok_thinking_maps_to_reasoning_effort_for_multi_agent() -> None:
     assert resolver(model="grok-4-multi-agent", thinking=cfg) == "medium"
 
 
+@pytest.mark.asyncio
+async def test_f0002_openai_o_series_uses_max_completion_tokens_and_temp_1() -> None:
+    """O-series chat uses ``max_completion_tokens`` and forces ``temperature=1.0``.
+
+    OpenAI rejects o-series requests that send ``max_tokens`` (legacy field)
+    or any temperature other than ``1.0``.  The bridge must dispatch
+    ``max_completion_tokens`` and pin temperature when ``reasoning_effort``
+    is active.
+    """
+    provider = OpenAIProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    provider.client = fake_client
+
+    captured_kwargs: list[dict[str, object]] = []
+
+    async def _capture(**kwargs: object) -> object:
+        await asyncio.sleep(0)
+        captured_kwargs.append(dict(kwargs))
+        completion = MagicMock()
+        completion.choices = [MagicMock()]
+        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
+        completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+        return completion
+
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = _capture
+
+    await provider.chat(
+        messages=_user_messages("hello"),
+        model="o4-mini",
+        temperature=0.7,
+        max_tokens=1024,
+        thinking=ThinkingConfig(enabled=True, budget_tokens=10000),
+    )
+
+    assert captured_kwargs, "No API call was captured"
+    kwargs = captured_kwargs[0]
+    assert "max_completion_tokens" in kwargs, "o-series must use max_completion_tokens"
+    assert "max_tokens" not in kwargs, "o-series must NOT use max_tokens"
+    assert kwargs["max_completion_tokens"] == 1024
+    assert kwargs["temperature"] == pytest.approx(1.0), "o-series must use temperature=1.0"
+
+
 def test_f0002_openrouter_thinking_maps_to_reasoning_effort() -> None:
     """OpenRouter forwards ``reasoning.effort`` whenever thinking is enabled.
 
@@ -456,6 +501,62 @@ async def test_f0003_openai_chat_populates_current_task() -> None:
 
 
 # ---------------------------------------------------------------------------
+# F-0003 — Anthropic non-streaming cancel populates _current_task
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_f0003_anthropic_chat_populates_current_task() -> None:
+    """Anthropic ``chat`` registers the active task so ``cancel_request`` can cancel.
+
+    F-0003 was that the Anthropic non-streaming path never assigned
+    ``self._current_task``, making ``cancel_request`` a no-op.  The fix
+    wraps the ``_retry_with_backoff`` call in ``asyncio.create_task`` and
+    assigns the handle for the duration of the request.
+    """
+    provider = AnthropicProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    setattr(provider, _CLIENT_ATTR, fake_client)
+
+    in_flight = asyncio.Event()
+    release = asyncio.Event()
+    captured_task: list[object] = []
+
+    async def _slow_create(**_: object) -> object:
+        in_flight.set()
+        await release.wait()
+        msg = MagicMock()
+        msg.content = [MagicMock(type="text", text="done")]
+        msg.usage = MagicMock(input_tokens=1, output_tokens=1, cache_creation_input_tokens=0, cache_read_input_tokens=0)
+        return msg
+
+    fake_client.messages = MagicMock()
+    fake_client.messages.create = _slow_create
+
+    async def _chat_then_observe() -> None:
+        await in_flight.wait()
+        current = getattr(provider, _CURRENT_TASK_ATTR)
+        captured_task.append(current)
+        release.set()
+
+    chat_coro = provider.chat(
+        messages=_user_messages("hello"),
+        model="claude-opus-4-7",
+        max_tokens=64,
+    )
+    _, observer_result = await asyncio.gather(chat_coro, _chat_then_observe())
+    _ = observer_result
+
+    assert len(captured_task) == 1, "Observer did not run"
+    task = captured_task[0]
+    assert task is not None, "_current_task was None during in-flight call"
+    assert isinstance(task, asyncio.Task), f"_current_task is not an asyncio.Task: {type(task)}"
+    assert task.done(), "Task should be done after chat() returned"
+    assert getattr(provider, _CURRENT_TASK_ATTR) is None, "_current_task not cleared after call"
+
+
+# ---------------------------------------------------------------------------
 # F-0008 — orchestrator drains pending usage and thinking
 # ---------------------------------------------------------------------------
 
@@ -533,6 +634,147 @@ async def test_f0006_openai_chat_stream_reraises_on_cancel_and_error() -> None:
             pass
 
     with pytest.raises(ProviderError, match=_KABOOM_MESSAGE):
+        await _consume()
+
+
+# ---------------------------------------------------------------------------
+# F-0006 — 4-provider swallow-on-cancel pattern removed
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_f0006_openrouter_chat_stream_reraises_on_cancel_and_error() -> None:
+    """OpenRouter stream re-raises transport errors even when cancel flag is set.
+
+    Previously ``if not self._cancel_requested: raise`` swallowed the
+    transport error when the cancel flag was set.  The fix always raises
+    :class:`ProviderError` so real connection failures are surfaced.
+    """
+    provider = OpenRouterProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    provider.client = fake_client
+
+    class _FailCtx:
+        async def __aenter__(self) -> object:
+            raise ConnectionError(_KABOOM_MESSAGE)
+
+        async def __aexit__(self, *_: object) -> bool:
+            return False
+
+    fake_client.stream = MagicMock(return_value=_FailCtx())
+
+    async def _consume() -> None:
+        setattr(provider, _CANCEL_REQUESTED_ATTR, True)
+        async for _ in provider.chat_stream(
+            messages=_user_messages(),
+            model="openai/gpt-4o",
+            max_tokens=32,
+        ):
+            pass
+
+    with pytest.raises(ProviderError, match=_KABOOM_MESSAGE):
+        await _consume()
+
+
+@pytest.mark.asyncio
+async def test_f0006_grok_chat_stream_reraises_on_cancel_and_error() -> None:
+    """Grok stream re-raises transport errors even when cancel flag is set.
+
+    Previously ``if not self._cancel_requested: raise`` swallowed the
+    error.  The fix always raises :class:`ProviderError`.
+    """
+    provider = GrokProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    provider.client = fake_client
+
+    class _ErrStream:
+        def __aiter__(self) -> _ErrStream:
+            return self
+
+        async def __anext__(self) -> object:
+            raise ConnectionError(_KABOOM_MESSAGE)
+
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = AsyncMock(return_value=_ErrStream())
+
+    async def _consume() -> None:
+        setattr(provider, _CANCEL_REQUESTED_ATTR, True)
+        async for _ in provider.chat_stream(
+            messages=_user_messages(),
+            model="grok-3",
+            max_tokens=32,
+        ):
+            pass
+
+    with pytest.raises(ProviderError, match=_KABOOM_MESSAGE):
+        await _consume()
+
+
+@pytest.mark.asyncio
+async def test_f0006_anthropic_chat_stream_reraises_on_cancel_and_error() -> None:
+    """Anthropic stream re-raises transport errors even when cancel flag is set.
+
+    Previously ``if not self._cancel_requested: raise`` in the
+    ``except (ConnectionError, ...)`` clause swallowed errors during
+    cancellation.  The fix always raises :class:`ProviderError`.
+    """
+    provider = AnthropicProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    setattr(provider, _CLIENT_ATTR, fake_client)
+
+    stream_ctx = MagicMock()
+    stream_ctx.__aenter__ = AsyncMock(side_effect=ConnectionError(_KABOOM_MESSAGE))
+    stream_ctx.__aexit__ = AsyncMock(return_value=False)
+    fake_client.messages = MagicMock()
+    fake_client.messages.stream = MagicMock(return_value=stream_ctx)
+
+    async def _consume() -> None:
+        setattr(provider, _CANCEL_REQUESTED_ATTR, True)
+        async for _ in provider.chat_stream(
+            messages=_user_messages(),
+            model="claude-opus-4-7",
+            max_tokens=32,
+        ):
+            pass
+
+    with pytest.raises(ProviderError):
+        await _consume()
+
+
+@pytest.mark.asyncio
+async def test_f0006_google_chat_stream_reraises_on_cancel_and_error() -> None:
+    """Google stream re-raises transport errors even when cancel flag is set.
+
+    Previously ``if not self._cancel_requested: raise`` swallowed the
+    error.  The fix always raises :class:`ProviderError`.
+    """
+    provider = GoogleProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    provider.client = fake_client
+
+    async def _raise_stream(*_args: object, **_kwargs: object) -> object:
+        await asyncio.sleep(0)
+        raise ConnectionError(_KABOOM_MESSAGE)
+
+    fake_client.aio = MagicMock()
+    fake_client.aio.models = MagicMock()
+    fake_client.aio.models.generate_content_stream = _raise_stream
+
+    async def _consume() -> None:
+        setattr(provider, _CANCEL_REQUESTED_ATTR, True)
+        async for _ in provider.chat_stream(
+            messages=_user_messages(),
+            model="gemini-2.0-flash",
+            max_tokens=32,
+        ):
+            pass
+
+    with pytest.raises(ProviderError):
         await _consume()
 
 
