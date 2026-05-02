@@ -171,6 +171,8 @@ pub enum TemplateError {
     CircularReference(String),
     #[error("validation failed: {0}")]
     ValidationFailed(String),
+    #[error("unknown type in sizeof(): {0}")]
+    UnknownType(String),
 }
 
 pub struct TemplateRegistry {
