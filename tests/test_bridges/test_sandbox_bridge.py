@@ -858,7 +858,7 @@ class TestF0012AnalysisModuleCache:
         real_module = MagicMock()
         real_module.extract_iocs = MagicMock(return_value=[])
 
-        def counting_import(_name: str) -> object:
+        def counting_import() -> object:
             nonlocal call_count
             call_count += 1
             return real_module

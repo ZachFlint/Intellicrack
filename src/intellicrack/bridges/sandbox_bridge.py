@@ -117,9 +117,11 @@ def json_safe(value: object) -> object:
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
-        return {k: json_safe(v) for k, v in value.items()}
+        d = cast("dict[object, object]", value)
+        return {k: json_safe(v) for k, v in d.items()}
     if isinstance(value, list):
-        return [json_safe(item) for item in value]
+        lst = cast("list[object]", value)
+        return [json_safe(item) for item in lst]
     return value
 
 
@@ -144,7 +146,8 @@ def dataclass_to_dict(obj: object) -> dict[str, Any]:
         msg = f"Expected a dataclass instance, got {type(obj).__name__}"
         raise ToolError(msg)
 
-    raw: dict[str, Any] = dataclasses.asdict(obj)
+    dc_instance = cast("Any", obj)
+    raw: dict[str, Any] = dataclasses.asdict(dc_instance)
     safe = json_safe(raw)
     try:
         json.dumps(safe)
