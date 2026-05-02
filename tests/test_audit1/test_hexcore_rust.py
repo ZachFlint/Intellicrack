@@ -68,7 +68,7 @@ class TestF0001MoveBlockUndo:
         assert doc.read(12, 4) == b"AAAA"
 
         assert doc.undo() is True
-        assert doc.read_all() == b"AAAABBBBCCCCDDDD"
+        assert doc.read(0, doc.length()) == b"AAAABBBBCCCCDDDD"
 
     def test_redo_after_undo_reapplies_source_zeroing_and_dest_overwrite(self) -> None:
         """Verify redo reproduces the original move (source cleared, dest written).
@@ -79,10 +79,10 @@ class TestF0001MoveBlockUndo:
         doc = hexcore_mod.HexDocument.open_bytes(b"AAAABBBBCCCCDDDD")
         doc.move_block(0, 4, 12)
         doc.undo()
-        assert doc.read_all() == b"AAAABBBBCCCCDDDD"
+        assert doc.read(0, doc.length()) == b"AAAABBBBCCCCDDDD"
 
         assert doc.redo() is True
-        assert doc.read_all() == b"\x00\x00\x00\x00BBBBCCCCAAAA"
+        assert doc.read(0, doc.length()) == b"\x00\x00\x00\x00BBBBCCCCAAAA"
 
 
 class TestF0002SwapBlocksRequiresEqualLengths:
