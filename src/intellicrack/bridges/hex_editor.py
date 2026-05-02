@@ -14,6 +14,7 @@ import asyncio
 import base64
 import hashlib
 import html
+import importlib
 import inspect as _inspect_mod
 import json
 import math
@@ -7670,8 +7671,6 @@ def _generate_pdf(
             installed; PDF export cannot proceed without it and the
             caller needs an actionable diagnostic.
     """
-    import importlib  # noqa: PLC0415
-
     try:
         fpdf_mod = importlib.import_module("fpdf")
     except ImportError as exc:
