@@ -111,37 +111,53 @@ class HexDocumentState:
     def document(self) -> HexDocumentFull | None:
         """Get the active HexDocument instance.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             HexDocumentFull | None: Active HexDocument or None if no document is open.
         """
-        return self._document
+        with self._lock:
+            return self._document
 
     @property
     def file_path(self) -> Path | None:
         """Get the path to the currently loaded file.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             Path | None: File path or None if no file is loaded.
         """
-        return self._file_path
+        with self._lock:
+            return self._file_path
 
     @property
     def cursor_offset(self) -> int:
         """Get the current cursor offset.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        partially-updated value observed by this getter.
+
         Returns:
             int: Current byte offset of the cursor.
         """
-        return self._cursor_offset
+        with self._lock:
+            return self._cursor_offset
 
     @property
     def selection(self) -> tuple[int, int] | None:
         """Get the current selection range.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.
         """
-        return self._selection
+        with self._lock:
+            return self._selection
 
     def get_current_state(self) -> dict[str, Any]:
         """Get a consistent snapshot of all document state.
