@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
 import pytest
 import structlog.testing
 
+import intellicrack.bridges as bridges_pkg
+from intellicrack.bridges._lazy import resolve as resolve_lazy
 from intellicrack.bridges._win32_types import (
     MEM_COMMIT,
     MEM_FREE,
@@ -45,6 +47,12 @@ from intellicrack.bridges._win32_types import (
     state_to_string,
 )
 from intellicrack.bridges.base import ToolBridgeBase
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.bridges.schemas import (
     ValidationError,
     is_recognized_type,
@@ -52,6 +60,7 @@ from intellicrack.bridges.schemas import (
     validate_tool_for_provider,
     validate_tool_parameter,
 )
+from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import (
     ProviderName,
     ToolDefinition,
@@ -59,10 +68,6 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
-
-
-if TYPE_CHECKING:
-    pass
 
 
 _PARAM_DESC: Final[str] = "test parameter"
@@ -236,7 +241,7 @@ def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
         "intellicrack.bridges.process",
         "intellicrack.bridges.installer",
     ]
-    for mod in heavy + ["intellicrack.bridges"]:
+    for mod in [*heavy, "intellicrack.bridges"]:
         sys.modules.pop(mod, None)
     importlib.import_module("intellicrack.bridges")
     loaded = [m for m in heavy if m in sys.modules]
@@ -244,21 +249,28 @@ def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
 
 
 def test_f0004_bridges_lazy_accessor_returns_class() -> None:
-    """Lazy access via ``__getattr__`` must yield the real bridge class."""
-    import intellicrack.bridges as bridges_pkg
+    """Lazy access via ``_lazy.resolve`` must yield the real bridge class.
 
+    Exercises the typed ``resolve`` entry point directly so the test
+    is a fully-typed call rather than a stringly-typed ``getattr``
+    workaround. The package-level ``__getattr__`` is a one-line
+    delegate to this function.
+    """
     sys.modules.pop("intellicrack.bridges.process", None)
-    cls = bridges_pkg.ProcessBridge
+    scratch_globals: dict[str, object] = {}
+    cls = resolve_lazy("ProcessBridge", scratch_globals)
     assert cls.__name__ == "ProcessBridge"
     assert "intellicrack.bridges.process" in sys.modules
+    assert "ProcessBridge" in scratch_globals
+    assert bridges_pkg.__name__ == "intellicrack.bridges"
 
 
 def test_f0004_bridges_unknown_attribute_raises() -> None:
-    """Unknown attributes must still raise ``AttributeError``."""
-    import intellicrack.bridges as bridges_pkg
-
+    """Unknown attributes must still raise ``AttributeError`` from ``resolve``."""
+    scratch_globals: dict[str, object] = {}
     with pytest.raises(AttributeError, match="NotARealBridge"):
-        bridges_pkg.__getattr__("NotARealBridge")
+        resolve_lazy("NotARealBridge", scratch_globals)
+    assert bridges_pkg.__name__ == "intellicrack.bridges"
 
 
 # ---------------------------------------------------------------------------
@@ -383,14 +395,6 @@ def test_f0007_toolbridgebase_shutdown_is_abstract() -> None:
 
 def test_f0007_concrete_bridges_override_shutdown() -> None:
     """All concrete bridges must override ``shutdown`` directly."""
-    from intellicrack.bridges.cutter import CutterBridge
-    from intellicrack.bridges.frida_bridge import FridaBridge
-    from intellicrack.bridges.ghidra import GhidraBridge
-    from intellicrack.bridges.hex_editor import HexEditorBridge
-    from intellicrack.bridges.process import ProcessBridge
-    from intellicrack.bridges.sandbox_bridge import SandboxBridge
-    from intellicrack.bridges.x64dbg import X64DbgBridge
-
     bridge_classes: tuple[type[ToolBridgeBase], ...] = (
         CutterBridge,
         FridaBridge,

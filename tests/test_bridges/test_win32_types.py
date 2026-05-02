@@ -117,8 +117,8 @@ class TestStateToString:
         assert state_to_string(0x10000) == "free"
 
     def test_unknown(self) -> None:
-        """Verify unrecognized state returns 'unknown'."""
-        assert state_to_string(0x9999) == "unknown"
+        """Verify unrecognized state returns ``unknown(0x...)``."""
+        assert state_to_string(0x9999) == "unknown(0x9999)"
 
 
 class TestMemTypeToString:
@@ -137,8 +137,8 @@ class TestMemTypeToString:
         assert mem_type_to_string(0x1000000) == "image"
 
     def test_unknown(self) -> None:
-        """Verify unrecognized type returns 'unknown'."""
-        assert mem_type_to_string(0) == "unknown"
+        """Verify unrecognized type returns ``unknown(0x...)``."""
+        assert mem_type_to_string(0) == "unknown(0x0)"
 
 
 class TestConstantSpotChecks:

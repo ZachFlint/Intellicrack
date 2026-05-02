@@ -8,18 +8,19 @@ This package provides bridge interfaces for controlling external tools
 including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process
 manipulation.
 
-Heavy bridge submodules (each pulling in optional dependencies such as
-``frida``, ``r2pipe``, ``ghidra-bridge``, the Win32 ctypes layer, or the
-``hexcore`` Rust extension) are loaded lazily through PEP 562
-``__getattr__``. Cheap symbols from :mod:`intellicrack.bridges.base`
-remain eagerly imported because every dependent module needs them and
-they have no transitive imports beyond the standard library.
+Heavy bridge submodules are loaded lazily through PEP 562
+``__getattr__`` -- the wiring lives in :mod:`intellicrack.bridges._lazy`
+to keep this ``__init__`` focused on docstrings and re-exports. Cheap
+symbols from :mod:`intellicrack.bridges.base` remain eagerly imported
+because every dependent module needs them and they have no transitive
+imports beyond the standard library.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
+from intellicrack.bridges._lazy import resolve as _resolve_lazy
 from intellicrack.bridges.base import (
     BinaryOperationsBridge,
     BridgeCapabilities,
@@ -70,27 +71,11 @@ __all__: list[str] = [
 ]
 
 
-_LAZY_EXPORTS: Final[dict[str, tuple[str, str]]] = {
-    "CutterBridge": ("intellicrack.bridges.cutter", "CutterBridge"),
-    "FridaBridge": ("intellicrack.bridges.frida_bridge", "FridaBridge"),
-    "GhidraBridge": ("intellicrack.bridges.ghidra", "GhidraBridge"),
-    "HexEditorBridge": ("intellicrack.bridges.hex_editor", "HexEditorBridge"),
-    "ProcessBridge": ("intellicrack.bridges.process", "ProcessBridge"),
-    "SandboxBridge": ("intellicrack.bridges.sandbox_bridge", "SandboxBridge"),
-    "ToolInstaller": ("intellicrack.bridges.installer", "ToolInstaller"),
-    "X64DbgBridge": ("intellicrack.bridges.x64dbg", "X64DbgBridge"),
-}
-
-
 def __getattr__(name: str) -> type[ToolBridgeBase | ToolInstaller]:
-    """Lazily import heavy bridge submodules on first attribute access.
+    """Resolve a lazy export from :data:`intellicrack.bridges._lazy.LAZY_EXPORTS`.
 
-    Implements PEP 562 module-level ``__getattr__`` so that importing
-    ``intellicrack.bridges`` does not transitively load
-    :mod:`frida`, :mod:`r2pipe`, the Win32 ``ctypes`` layer, or the
-    Rust ``hexcore`` extension. Each lazy class is resolved through
-    :data:`_LAZY_EXPORTS` and cached on the package module so future
-    look-ups bypass this hook.
+    Delegates to :func:`intellicrack.bridges._lazy.resolve`, which
+    raises ``AttributeError`` for unregistered names.
 
     Args:
         name: Attribute name being requested from the package.
@@ -98,24 +83,12 @@ def __getattr__(name: str) -> type[ToolBridgeBase | ToolInstaller]:
     Returns:
         type[ToolBridgeBase | ToolInstaller]: The resolved bridge or
             installer class.
-
-    Raises:
-        AttributeError: If ``name`` is not in :data:`_LAZY_EXPORTS`.
     """
-    if name in _LAZY_EXPORTS:
-        module_path, attr_name = _LAZY_EXPORTS[name]
-        import importlib
-
-        module = importlib.import_module(module_path)
-        value = getattr(module, attr_name)
-        globals()[name] = value
-        return value
-    msg = f"module 'intellicrack.bridges' has no attribute {name!r}"
-    raise AttributeError(msg)
+    return _resolve_lazy(name, globals())
 
 
 def __dir__() -> list[str]:
-    """Return module attributes including the lazy exports.
+    """Return the package's public attributes including lazy exports.
 
     Returns:
         list[str]: Sorted list of public attributes plus lazy exports.
