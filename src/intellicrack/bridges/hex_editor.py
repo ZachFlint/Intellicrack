@@ -4335,10 +4335,9 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> bool:
         """Swap two non-overlapping blocks of bytes.
 
-        Audit-1 F-0002: ``len_a`` must equal ``len_b``. Mismatched lengths
-        cannot be swapped without zero-padding or truncating one side, which
-        silently corrupts data; the bridge rejects the call with
-        ``ValueError`` instead of producing nonsense output.
+        Both blocks must have the same length. Mismatched lengths cannot be
+        swapped without zero-padding or truncating one side, which silently
+        corrupts data; the bridge rejects the call with ``ValueError`` instead.
 
         Args:
             offset_a: Start of block A.
