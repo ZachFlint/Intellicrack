@@ -10,10 +10,12 @@ so this implementation leverages the OpenAI SDK with a custom base URL.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import TYPE_CHECKING, TypedDict, cast, override
 
 import openai
+from openai import AsyncStream
 
 from intellicrack.core.logging import get_logger, log_provider_request
 from intellicrack.core.types import (
@@ -33,7 +35,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
-    create_openai_tool_schema,
+    map_thinking_budget_to_effort,
 )
 
 
@@ -62,11 +64,17 @@ _GROK_CHAT_ERRORS = OpenAIErrorMessages(
 )
 
 if TYPE_CHECKING:
-    import asyncio
     from collections.abc import AsyncIterator
 
-    from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolChoiceOptionParam, ChatCompletionToolParam
+    from openai.types.chat import (
+        ChatCompletionChunk,
+        ChatCompletionMessageParam,
+        ChatCompletionStreamOptionsParam,
+        ChatCompletionToolChoiceOptionParam,
+        ChatCompletionToolParam,
+    )
     from openai.types.chat.chat_completion import ChatCompletion
+    from openai.types.shared import ReasoningEffort
 
 
 class GrokMessageContent(TypedDict, total=False):
@@ -290,6 +298,11 @@ class GrokProvider(LLMProviderBase):
     ) -> tuple[Message, list[ToolCall] | None]:
         """Send a chat completion request to Grok.
 
+        ``thinking`` is honoured on Grok models that expose it through
+        the OpenAI-compatible ``reasoning_effort`` parameter
+        (``grok-4-multi-agent``).  Grok-4 / Grok-4-fast reason
+        automatically, so the parameter is intentionally omitted there.
+
         Args:
             messages: Conversation history.
             model: Model ID to use.
@@ -297,8 +310,11 @@ class GrokProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
             tool_choice: How the model should select tools.
-            thinking: Extended thinking configuration (ignored by Grok).
-            enable_cache: Whether to enable prompt caching (ignored by Grok).
+            thinking: Extended thinking configuration.  Forwarded as
+                ``reasoning_effort`` for ``grok-*-multi-agent`` models.
+            enable_cache: Whether to enable prompt caching.  Grok caches
+                automatically when the same prompt prefix is reused; the
+                parameter is logged for symmetry.
 
         Returns:
             tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
@@ -327,10 +343,9 @@ class GrokProvider(LLMProviderBase):
                 "ChatCompletionToolChoiceOptionParam",
                 self._convert_tool_choice_to_openai_format(tool_choice),
             )
-        if thinking is not None and thinking.enabled:
-            self._logger.debug("grok_thinking_ignored")
+        reasoning_effort = self._reasoning_effort_for(model=model, thinking=thinking)
         if enable_cache:
-            self._logger.debug("grok_cache_ignored")
+            self._logger.debug("grok_cache_auto", model=model)
 
         log_provider_request(
             provider="grok",
@@ -340,14 +355,24 @@ class GrokProvider(LLMProviderBase):
         )
 
         start_time = time.perf_counter()
-        response = await self._make_grok_api_call(
-            model=model,
-            messages=grok_messages_typed,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            tools=grok_tools_typed,
-            tool_choice=tool_choice_param,
+        api_task: asyncio.Task[ChatCompletion] = asyncio.create_task(
+            self._retry_with_backoff(
+                lambda: self._make_grok_api_call(
+                    model=model,
+                    messages=grok_messages_typed,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=grok_tools_typed,
+                    tool_choice=tool_choice_param,
+                    reasoning_effort=reasoning_effort,
+                ),
+            ),
         )
+        self._current_task = cast("asyncio.Task[object]", api_task)
+        try:
+            response = await api_task
+        finally:
+            self._current_task = None
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         response_message = response.choices[0].message
@@ -363,6 +388,52 @@ class GrokProvider(LLMProviderBase):
             duration_ms=duration_ms,
         )
 
+    @staticmethod
+    def _supports_reasoning_effort(model_id: str) -> bool:
+        """Return True when the Grok model accepts ``reasoning_effort``.
+
+        Per X.AI's documentation, ``reasoning_effort`` is only honoured
+        on the multi-agent variants such as ``grok-4-multi-agent``.
+        ``grok-4`` and ``grok-4-fast`` reason automatically and reject
+        the parameter, so it must be omitted for those families.
+
+        Args:
+            model_id: Grok model identifier.
+
+        Returns:
+            bool: ``True`` if the model accepts ``reasoning_effort``.
+        """
+        return "multi-agent" in model_id
+
+    def _reasoning_effort_for(
+        self,
+        *,
+        model: str,
+        thinking: ThinkingConfig | None,
+    ) -> ReasoningEffort | None:
+        """Resolve the ``reasoning_effort`` value for a Grok request.
+
+        Args:
+            model: Grok model identifier.
+            thinking: Caller-supplied thinking configuration, or
+                ``None``.
+
+        Returns:
+            ReasoningEffort | None: ``"low"``, ``"medium"``,
+            ``"high"``, or ``"xhigh"`` when the request should set
+            ``reasoning_effort``; ``None`` when the parameter must be
+            omitted.
+        """
+        if thinking is None or not thinking.enabled:
+            return None
+        if not self._supports_reasoning_effort(model):
+            self._logger.debug("grok_thinking_ignored_auto_reasoning_model", model=model)
+            return None
+        return cast(
+            "ReasoningEffort",
+            map_thinking_budget_to_effort(thinking.budget_tokens, allow_xhigh=True),
+        )
+
     async def _make_grok_api_call(
         self,
         *,
@@ -372,6 +443,7 @@ class GrokProvider(LLMProviderBase):
         max_tokens: int,
         tools: list[ChatCompletionToolParam] | None,
         tool_choice: ChatCompletionToolChoiceOptionParam | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> ChatCompletion:
         """Execute the Grok API chat completion call with error handling.
 
@@ -386,6 +458,8 @@ class GrokProvider(LLMProviderBase):
             max_tokens: Maximum tokens in response.
             tools: Formatted tools for the API, or None.
             tool_choice: How the model should select tools.
+            reasoning_effort: ``reasoning_effort`` value for Grok models
+                that expose it (multi-agent variants), or ``None``.
 
         Returns:
             ChatCompletion: The chat completion response object.
@@ -396,14 +470,61 @@ class GrokProvider(LLMProviderBase):
         if self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
-        use_max_completion_tokens = self._supports_max_completion_tokens(model)
-
         with self._translate_openai_errors(
             log_prefix="grok_chat",
             messages=_GROK_CHAT_ERRORS,
         ):
-            if tools is not None and tool_choice is not None:
-                if use_max_completion_tokens:
+            return await self._dispatch_grok_create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=tools,
+                tool_choice=tool_choice,
+                reasoning_effort=reasoning_effort,
+            )
+
+    async def _dispatch_grok_create(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+        tool_choice: ChatCompletionToolChoiceOptionParam | None,
+        reasoning_effort: ReasoningEffort | None,
+    ) -> ChatCompletion:
+        """Pick the right Grok ``chat.completions.create`` overload.
+
+        Grok-4 / Grok-5 require ``max_completion_tokens`` while the
+        legacy Grok-3 family uses ``max_tokens``.  This helper expands
+        every meaningful combination of ``tools``, ``tool_choice``,
+        ``reasoning_effort``, and the ``max_tokens`` field name into
+        explicit keyword-argument calls so basedpyright keeps full
+        type information for the response.
+
+        Args:
+            model: Grok model identifier.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum response tokens.
+            tools: Formatted tools, or ``None``.
+            tool_choice: Tool selection mode, or ``None``.
+            reasoning_effort: ``reasoning_effort`` value, or ``None``.
+
+        Returns:
+            ChatCompletion: Chat completion response.
+
+        Raises:
+            ProviderError: If the SDK client is not yet connected.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        if tools is not None and tool_choice is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
                     return await self.client.chat.completions.create(
                         model=model,
                         messages=messages,
@@ -411,7 +532,17 @@ class GrokProvider(LLMProviderBase):
                         max_completion_tokens=max_tokens,
                         tools=tools,
                         tool_choice=tool_choice,
+                        reasoning_effort=reasoning_effort,
                     )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
+            if reasoning_effort is not None:
                 return await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -419,36 +550,241 @@ class GrokProvider(LLMProviderBase):
                     max_tokens=max_tokens,
                     tools=tools,
                     tool_choice=tool_choice,
-                )
-            if tools is not None:
-                if use_max_completion_tokens:
-                    return await self.client.chat.completions.create(
-                        model=model,
-                        messages=messages,
-                        temperature=temperature,
-                        max_completion_tokens=max_tokens,
-                        tools=tools,
-                    )
-                return await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    tools=tools,
-                )
-            if use_max_completion_tokens:
-                return await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_completion_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
                 )
             return await self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                tools=tools,
+                tool_choice=tool_choice,
             )
+        if tools is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        tools=tools,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    tools=tools,
+                )
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=tools,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=tools,
+            )
+        if use_max_completion_tokens:
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_completion_tokens=max_tokens,
+            )
+        if reasoning_effort is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                reasoning_effort=reasoning_effort,
+            )
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    async def _open_grok_stream(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+        tool_choice: ChatCompletionToolChoiceOptionParam | None,
+        reasoning_effort: ReasoningEffort | None,
+    ) -> AsyncStream[ChatCompletionChunk]:
+        """Open a Grok streaming chat completion with the right kw overload.
+
+        Mirrors :meth:`_dispatch_grok_create` for streaming so
+        basedpyright keeps full type information for the returned
+        stream.
+
+        Args:
+            model: Grok model identifier.
+            messages: Formatted messages for the API.
+            temperature: Sampling temperature.
+            max_tokens: Maximum response tokens.
+            tools: Formatted tools, or ``None``.
+            tool_choice: Tool selection mode, or ``None``.
+            reasoning_effort: ``reasoning_effort`` value, or ``None``.
+
+        Returns:
+            AsyncStream[ChatCompletionChunk]: SSE stream of chunks.
+
+        Raises:
+            ProviderError: If the SDK client is not yet connected.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
+        if tools is not None and tool_choice is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options=stream_options,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                )
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    tool_choice=tool_choice,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+                tool_choice=tool_choice,
+            )
+        if tools is not None:
+            if use_max_completion_tokens:
+                if reasoning_effort is not None:
+                    return await self.client.chat.completions.create(
+                        model=model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_completion_tokens=max_tokens,
+                        stream=True,
+                        stream_options=stream_options,
+                        tools=tools,
+                        reasoning_effort=reasoning_effort,
+                    )
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                )
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    tools=tools,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                tools=tools,
+            )
+        if use_max_completion_tokens:
+            if reasoning_effort is not None:
+                return await self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_completion_tokens=max_tokens,
+                    stream=True,
+                    stream_options=stream_options,
+                    reasoning_effort=reasoning_effort,
+                )
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_completion_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+            )
+        if reasoning_effort is not None:
+            return await self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
+                stream_options=stream_options,
+                reasoning_effort=reasoning_effort,
+            )
+        return await self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+            stream_options=stream_options,
+        )
 
     async def chat_stream(
         self,
@@ -471,8 +807,11 @@ class GrokProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
             tool_choice: How the model should select tools.
-            thinking: Extended thinking configuration (ignored by Grok).
-            enable_cache: Whether to enable prompt caching (ignored by Grok).
+            thinking: Extended thinking configuration.  Forwarded as
+                ``reasoning_effort`` for ``grok-*-multi-agent`` models;
+                ignored on grok-4 / grok-4-fast (auto-reasoning).
+            enable_cache: Whether to enable prompt caching.  Grok caches
+                automatically; the parameter is logged for symmetry.
 
         Yields:
             str: Text chunks as they arrive.
@@ -487,10 +826,8 @@ class GrokProvider(LLMProviderBase):
 
         self._cancel_requested = False
         self._pending_usage = None
-        if thinking is not None and thinking.enabled:
-            self._logger.debug("grok_stream_thinking_ignored")
         if enable_cache:
-            self._logger.debug("grok_stream_cache_ignored")
+            self._logger.debug("grok_stream_cache_auto", model=model)
 
         grok_messages_raw = self.convert_messages_to_provider_format(messages)
         grok_messages_typed = cast("list[ChatCompletionMessageParam]", grok_messages_raw)
@@ -507,71 +844,18 @@ class GrokProvider(LLMProviderBase):
                 self._convert_tool_choice_to_openai_format(tool_choice),
             )
 
-        use_max_completion_tokens = self._supports_max_completion_tokens(model)
+        reasoning_effort = self._reasoning_effort_for(model=model, thinking=thinking)
 
         try:
-            if grok_tools_typed and tool_choice_value is not None:
-                if use_max_completion_tokens:
-                    stream = await self.client.chat.completions.create(
-                        model=model,
-                        messages=grok_messages_typed,
-                        temperature=temperature,
-                        max_completion_tokens=max_tokens,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                        tools=grok_tools_typed,
-                        tool_choice=tool_choice_value,
-                    )
-                else:
-                    stream = await self.client.chat.completions.create(
-                        model=model,
-                        messages=grok_messages_typed,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                        tools=grok_tools_typed,
-                        tool_choice=tool_choice_value,
-                    )
-            elif grok_tools_typed:
-                if use_max_completion_tokens:
-                    stream = await self.client.chat.completions.create(
-                        model=model,
-                        messages=grok_messages_typed,
-                        temperature=temperature,
-                        max_completion_tokens=max_tokens,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                        tools=grok_tools_typed,
-                    )
-                else:
-                    stream = await self.client.chat.completions.create(
-                        model=model,
-                        messages=grok_messages_typed,
-                        temperature=temperature,
-                        max_tokens=max_tokens,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                        tools=grok_tools_typed,
-                    )
-            elif use_max_completion_tokens:
-                stream = await self.client.chat.completions.create(
-                    model=model,
-                    messages=grok_messages_typed,
-                    temperature=temperature,
-                    max_completion_tokens=max_tokens,
-                    stream=True,
-                    stream_options={"include_usage": True},
-                )
-            else:
-                stream = await self.client.chat.completions.create(
-                    model=model,
-                    messages=grok_messages_typed,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=True,
-                    stream_options={"include_usage": True},
-                )
+            stream = await self._open_grok_stream(
+                model=model,
+                messages=grok_messages_typed,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=grok_tools_typed,
+                tool_choice=tool_choice_value,
+                reasoning_effort=reasoning_effort,
+            )
 
             tc_buffer = ToolCallBufferManager()
 
@@ -650,8 +934,4 @@ class GrokProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in Grok's format.
         """
-        grok_tools: list[dict[str, object]] = []
-        for tool in tools:
-            tool_schemas = create_openai_tool_schema(tool)
-            grok_tools.extend(dict(schema) for schema in tool_schemas)
-        return grok_tools
+        return self._convert_tools_to_openai_format(tools)

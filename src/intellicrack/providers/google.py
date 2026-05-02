@@ -57,6 +57,7 @@ _MSG_PROHIBITED_CONTENT = "Response blocked for prohibited content"
 
 _AUTH_STATUS_CODES: Final = frozenset({401, 403})
 _RATE_LIMIT_STATUS_CODES: Final = frozenset({429})
+_HTTP_SERVER_ERROR_MIN: Final[int] = 500
 
 _BLOCKING_FINISH_REASONS: Final = frozenset({
     "SAFETY",
@@ -287,10 +288,8 @@ class GoogleProvider(LLMProviderBase):
             max_tokens=max_tokens,
         )
 
-        if thinking is not None and thinking.enabled:
-            self._logger.debug("google_thinking_ignored")
         if enable_cache:
-            self._logger.debug("google_cache_ignored")
+            self._logger.debug("google_cache_implicit", model=model)
 
         system_instruction = self._extract_system_messages(messages)
         gemini_contents = self.convert_messages_to_provider_format(messages)
@@ -312,16 +311,20 @@ class GoogleProvider(LLMProviderBase):
                 gemini_tools,
                 system_instruction,
                 tool_choice=tool_choice,
+                thinking=thinking,
             )
 
             client = self.client
             typed_contents = cast("types.ContentListUnionDict", gemini_contents)
 
             generate_task: asyncio.Task[GenerateContentResponse] = asyncio.create_task(
-                client.aio.models.generate_content(
-                    model=model,
-                    contents=typed_contents,
-                    config=config,
+                self._retry_with_backoff(
+                    lambda: self._call_generate_content(
+                        client=client,
+                        model=model,
+                        contents=typed_contents,
+                        config=config,
+                    ),
                 ),
             )
             self._current_task = cast("asyncio.Task[object]", generate_task)
@@ -336,6 +339,9 @@ class GoogleProvider(LLMProviderBase):
 
             content, tool_calls = self._parse_response(response)
             self._pending_usage = self._extract_usage(response)
+            thinking_text = self._extract_thinking_text(response)
+            if thinking_text:
+                self._pending_thinking.append(thinking_text)
 
             for tc in tool_calls:
                 self._logger.debug(
@@ -428,6 +434,9 @@ class GoogleProvider(LLMProviderBase):
 
         self._cancel_requested = False
         self._pending_usage = None
+        self._pending_thinking.clear()
+        if enable_cache:
+            self._logger.debug("google_stream_cache_implicit", model=model)
         self._logger.debug(
             "google_chat_stream_started",
             model=model,
@@ -449,6 +458,7 @@ class GoogleProvider(LLMProviderBase):
                 gemini_tools,
                 system_instruction,
                 tool_choice=tool_choice,
+                thinking=thinking,
             )
 
             client = self.client
@@ -468,6 +478,7 @@ class GoogleProvider(LLMProviderBase):
                 self._current_task = None
 
             last_chunk: GenerateContentResponse | None = None
+            thinking_parts: list[str] = []
             async for chunk in response_stream:
                 if self._cancel_requested:
                     self._logger.info(
@@ -478,29 +489,19 @@ class GoogleProvider(LLMProviderBase):
                     break
                 last_chunk = chunk
                 self._check_safety_block(chunk)
-                if hasattr(chunk, "text") and chunk.text:
+                chunk_thinking = self._extract_thinking_text(chunk)
+                if chunk_thinking:
+                    thinking_parts.append(chunk_thinking)
+                visible_text = self._extract_visible_chunk_text(chunk)
+                if visible_text:
                     chunk_count += 1
-                    yield chunk.text
+                    yield visible_text
 
             if not self._cancel_requested and last_chunk is not None:
                 self._pending_usage = self._extract_usage(last_chunk)
-
-                if hasattr(last_chunk, "function_calls") and last_chunk.function_calls:
-                    tool_calls: list[ToolCall] = []
-                    for idx, fc in enumerate(last_chunk.function_calls):
-                        func_name = fc.name or ""
-                        args = dict(fc.args) if fc.args else {}
-                        tool_name = func_name.split(".")[0] if "." in func_name else func_name
-                        tool_calls.append(
-                            ToolCall(
-                                id=f"call_{idx}",
-                                tool_name=tool_name,
-                                function_name=func_name,
-                                arguments=args,
-                            ),
-                        )
-                    self._pending_tool_calls = tool_calls
-
+                if thinking_parts:
+                    self._pending_thinking.extend(thinking_parts)
+                self._pending_tool_calls = self._extract_function_calls(last_chunk)
                 self._logger.info(
                     "google_chat_stream_completed",
                     model=model,
@@ -626,6 +627,53 @@ class GoogleProvider(LLMProviderBase):
                 _logger.warning("google_response_blocked", reason=reason_name)
                 raise ProviderError(msg)
 
+    async def _call_generate_content(
+        self,
+        *,
+        client: genai.Client,
+        model: str,
+        contents: types.ContentListUnionDict,
+        config: types.GenerateContentConfig,
+    ) -> GenerateContentResponse:
+        """Invoke ``client.aio.models.generate_content`` with retry-friendly errors.
+
+        Translates 429 rate-limit responses and 5xx server errors into
+        :class:`RateLimitError` so the caller's
+        :meth:`LLMProviderBase._retry_with_backoff` wrapper retries
+        them as transient failures.
+
+        Args:
+            client: The active ``genai.Client`` instance.
+            model: Model identifier.
+            contents: Formatted contents for the API.
+            config: Pre-built :class:`types.GenerateContentConfig`.
+
+        Returns:
+            GenerateContentResponse: The Gemini API response.
+
+        Raises:
+            APIError: Re-raised for non-retryable status codes after
+                the helper inspects them.
+            RateLimitError: When the API returns 429 or any 5xx status.
+        """
+        try:
+            return await client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except APIError as exc:
+            code = int(exc.code or 0)
+            if code in _RATE_LIMIT_STATUS_CODES or code >= _HTTP_SERVER_ERROR_MIN:
+                self._logger.warning(
+                    "google_chat_retryable",
+                    model=model,
+                    code=code,
+                    error=str(exc),
+                )
+                raise RateLimitError(_MSG_RATE_LIMITED) from exc
+            raise
+
     @staticmethod
     def _create_config(
         temperature: float,
@@ -633,6 +681,7 @@ class GoogleProvider(LLMProviderBase):
         gemini_tools: list[types.Tool] | None,
         system_instruction: str | None = None,
         tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
     ) -> types.GenerateContentConfig:
         """Create a GenerateContentConfig with the given parameters.
 
@@ -642,6 +691,11 @@ class GoogleProvider(LLMProviderBase):
             gemini_tools: Optional list of tool declarations.
             system_instruction: Optional system instruction text.
             tool_choice: How the model should select tools.
+            thinking: Extended-thinking configuration.  When enabled the
+                helper attaches a Google ``ThinkingConfig`` with the
+                requested ``thinking_budget`` and ``include_thoughts``
+                so reasoning summaries flow back through
+                ``self._pending_thinking``.
 
         Returns:
             types.GenerateContentConfig: Configured GenerateContentConfig instance.
@@ -668,12 +722,20 @@ class GoogleProvider(LLMProviderBase):
                     ),
                 )
 
+        thinking_config: types.ThinkingConfig | None = None
+        if thinking is not None and thinking.enabled:
+            thinking_config = types.ThinkingConfig(
+                thinking_budget=thinking.budget_tokens,
+                include_thoughts=True,
+            )
+
         return types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
             tools=tools_for_config,
             system_instruction=system_instruction,
             tool_config=tool_config,
+            thinking_config=thinking_config,
         )
 
     @staticmethod
@@ -709,9 +771,122 @@ class GoogleProvider(LLMProviderBase):
         if not content and hasattr(response, "candidates") and response.candidates:
             candidate = response.candidates[0]
             if hasattr(candidate, "content") and candidate.content and (parts := candidate.content.parts):
-                content = "".join(part.text for part in parts if hasattr(part, "text") and part.text)
+                content = "".join(
+                    part.text
+                    for part in parts
+                    if hasattr(part, "text") and part.text and not getattr(part, "thought", False)
+                )
 
         return content, tool_calls
+
+    @staticmethod
+    def _extract_function_calls(chunk: GenerateContentResponse) -> list[ToolCall]:
+        """Convert ``response.function_calls`` into :class:`ToolCall` entries.
+
+        Streaming and non-streaming Gemini responses surface tool
+        invocations through the ``function_calls`` accessor.  This
+        helper converts each entry into a :class:`ToolCall`, deriving
+        ``tool_name`` from the dotted prefix of the function name when
+        present and assigning a synthetic ``call_<idx>`` identifier so
+        downstream tool routing has a stable id.
+
+        Args:
+            chunk: Gemini streaming chunk or response object.
+
+        Returns:
+            list[ToolCall]: Parsed tool calls in source order, or an
+            empty list when the chunk has no function calls.
+        """
+        function_calls = getattr(chunk, "function_calls", None)
+        if not function_calls:
+            return []
+        tool_calls: list[ToolCall] = []
+        for idx, fc in enumerate(function_calls):
+            func_name = fc.name or ""
+            args = dict(fc.args) if fc.args else {}
+            tool_name = func_name.split(".")[0] if "." in func_name else func_name
+            tool_calls.append(
+                ToolCall(
+                    id=f"call_{idx}",
+                    tool_name=tool_name,
+                    function_name=func_name,
+                    arguments=args,
+                ),
+            )
+        return tool_calls
+
+    @staticmethod
+    def _extract_visible_chunk_text(chunk: GenerateContentResponse) -> str:
+        """Return text from a stream chunk excluding thought parts.
+
+        ``GenerateContentResponse.text`` returns the concatenation of
+        every textual part on the chunk, including parts whose
+        ``thought`` flag is ``True`` when ``include_thoughts=True``.
+        Streaming consumers want only the user-visible text, so this
+        helper walks the candidates manually and filters out thought
+        parts before joining.
+
+        Args:
+            chunk: A streaming Gemini response chunk.
+
+        Returns:
+            str: User-visible text from the chunk, or an empty string
+            when the chunk has only thought parts (or no text at all).
+        """
+        candidates = getattr(chunk, "candidates", None)
+        if not candidates:
+            return chunk.text or "" if hasattr(chunk, "text") else ""
+        pieces: list[str] = []
+        for candidate in candidates:
+            content_obj = getattr(candidate, "content", None)
+            if content_obj is None:
+                continue
+            parts = getattr(content_obj, "parts", None)
+            if not parts:
+                continue
+            for part in parts:
+                if getattr(part, "thought", False):
+                    continue
+                text = getattr(part, "text", None)
+                if isinstance(text, str) and text:
+                    pieces.append(text)
+        return "".join(pieces)
+
+    @staticmethod
+    def _extract_thinking_text(response: GenerateContentResponse) -> str:
+        """Extract reasoning text from thought parts on a Gemini response.
+
+        Gemini surfaces extended-thinking summaries as ``Part`` entries
+        whose ``thought`` flag is ``True``.  When ``include_thoughts``
+        is set on :class:`google.genai.types.ThinkingConfig`, this
+        helper concatenates every such part into a single string for
+        downstream consumers.
+
+        Args:
+            response: The raw Gemini API response (or stream chunk).
+
+        Returns:
+            str: Concatenated thinking text, or an empty string when no
+            thought parts are present.
+        """
+        candidates = getattr(response, "candidates", None)
+        if not candidates:
+            return ""
+        thoughts: list[str] = []
+        for candidate in candidates:
+            content_obj = getattr(candidate, "content", None)
+            if content_obj is None:
+                continue
+            parts = getattr(content_obj, "parts", None)
+            if not parts:
+                continue
+            for part in parts:
+                if not getattr(part, "thought", False):
+                    continue
+                text = getattr(part, "text", None)
+                if isinstance(text, str) and text:
+                    thoughts.append(text)
+        return "\n\n".join(thoughts)
 
     @override
     def _convert_messages_to_provider_format(
