@@ -749,14 +749,14 @@ class OpenRouterProvider(LLMProviderBase):
         except (AuthenticationError, RateLimitError, ProviderError):
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
-            if not self._cancel_requested:
-                self._logger.warning(
-                    "openrouter_chat_stream_failed",
-                    model=model,
-                    chunks_yielded=chunks_yielded,
-                    error=str(e),
-                )
-                raise ProviderError(_ERR_STREAM_FAILED % e) from e
+            self._logger.warning(
+                "openrouter_chat_stream_failed",
+                model=model,
+                chunks_yielded=chunks_yielded,
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

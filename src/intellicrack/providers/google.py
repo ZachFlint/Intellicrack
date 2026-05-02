@@ -509,8 +509,7 @@ class GoogleProvider(LLMProviderBase):
                 )
 
         except (AuthenticationError, ProviderError, RateLimitError):
-            if not self._cancel_requested:
-                raise
+            raise
         except APIError as e:
             self._logger.warning(
                 "google_chat_stream_failed",
@@ -518,9 +517,8 @@ class GoogleProvider(LLMProviderBase):
                 error=str(e),
                 code=e.code,
                 chunks_received=chunk_count,
+                cancel_requested=self._cancel_requested,
             )
-            if self._cancel_requested:
-                return
             if e.code in _AUTH_STATUS_CODES:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
             if e.code in _RATE_LIMIT_STATUS_CODES:
@@ -532,9 +530,9 @@ class GoogleProvider(LLMProviderBase):
                 model=model,
                 error=str(e),
                 chunks_received=chunk_count,
+                cancel_requested=self._cancel_requested,
             )
-            if not self._cancel_requested:
-                raise ProviderError(_MSG_STREAM_FAILED) from e
+            raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

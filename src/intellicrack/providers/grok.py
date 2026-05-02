@@ -891,9 +891,12 @@ class GrokProvider(LLMProviderBase):
             self._logger.warning("grok_stream_api_error", error=str(e))
             raise ProviderError(_ERR_API_ERROR % e) from e
         except (ConnectionError, TimeoutError, OSError, ValueError) as e:
-            if not self._cancel_requested:
-                self._logger.warning("grok_stream_failed", error=str(e))
-                raise ProviderError(_ERR_STREAM_FAILED % e) from e
+            self._logger.warning(
+                "grok_stream_failed",
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""
