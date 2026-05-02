@@ -120,7 +120,16 @@ class OrchestratorStats:
         total_tool_calls: Total tool calls executed.
         successful_tool_calls: Successful tool call count.
         failed_tool_calls: Failed tool call count.
-        total_tokens_used: Approximate tokens used.
+        total_tokens_used: Approximate tokens used (heuristic estimate).
+        provider_prompt_tokens: Real prompt-token totals reported by
+            providers via :meth:`LLMProviderBase.get_pending_usage`.
+        provider_completion_tokens: Real completion-token totals
+            reported by providers via
+            :meth:`LLMProviderBase.get_pending_usage`.
+        provider_total_tokens: Real combined-token totals reported by
+            providers via :meth:`LLMProviderBase.get_pending_usage`.
+        thinking_blocks_collected: Number of extended-thinking blocks
+            captured via :meth:`LLMProviderBase.get_pending_thinking`.
         average_response_time_ms: Average response time.
     """
 
@@ -129,6 +138,10 @@ class OrchestratorStats:
     successful_tool_calls: int = 0
     failed_tool_calls: int = 0
     total_tokens_used: int = 0
+    provider_prompt_tokens: int = 0
+    provider_completion_tokens: int = 0
+    provider_total_tokens: int = 0
+    thinking_blocks_collected: int = 0
     average_response_time_ms: float = 0.0
     _response_times: deque[float] = field(default_factory=lambda: deque(maxlen=1000))
 
@@ -156,6 +169,10 @@ class OrchestratorStats:
             "successful_tool_calls": self.successful_tool_calls,
             "failed_tool_calls": self.failed_tool_calls,
             "total_tokens_used": self.total_tokens_used,
+            "provider_prompt_tokens": self.provider_prompt_tokens,
+            "provider_completion_tokens": self.provider_completion_tokens,
+            "provider_total_tokens": self.provider_total_tokens,
+            "thinking_blocks_collected": self.thinking_blocks_collected,
             "average_response_time_ms": self.average_response_time_ms,
         }
 
@@ -966,6 +983,7 @@ class Orchestrator:
         response, tool_calls_result = result
         output_tokens = self._estimate_tokens(response.content)
         self._stats.total_tokens_used += output_tokens
+        self._record_provider_usage(provider=provider, response=response)
         _logger.debug(
             "llm_call_completed",
             response_length=len(response.content),
@@ -975,6 +993,52 @@ class Orchestrator:
         structlog.contextvars.unbind_contextvars("llm_streaming")
 
         return result
+
+    def _record_provider_usage(
+        self,
+        *,
+        provider: LLMProvider,
+        response: Message,
+    ) -> None:
+        """Drain pending usage and thinking buffers from the provider.
+
+        Each provider exposes :meth:`LLMProviderBase.get_pending_usage`
+        and :meth:`LLMProviderBase.get_pending_thinking` after every
+        chat / chat-stream call.  This helper folds those values into
+        :class:`OrchestratorStats` and copies the most recent thinking
+        text onto ``response.thinking_content`` so the assistant
+        message preserves the model's reasoning summary for downstream
+        callbacks and persistence.
+
+        Args:
+            provider: LLM provider that just produced the response.
+            response: Assistant message returned by the provider.
+                Mutated in place to attach ``thinking_content`` when
+                the provider reported any.
+        """
+        usage = provider.get_pending_usage()
+        if usage is not None:
+            self._stats.provider_prompt_tokens += usage.prompt_tokens
+            self._stats.provider_completion_tokens += usage.completion_tokens
+            self._stats.provider_total_tokens += usage.total_tokens
+            _logger.debug(
+                "provider_usage_recorded",
+                provider=provider.name.value,
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+            )
+        thinking_blocks = provider.get_pending_thinking()
+        if thinking_blocks:
+            self._stats.thinking_blocks_collected += len(thinking_blocks)
+            if response.thinking_content is None:
+                response.thinking_content = "\n\n".join(thinking_blocks)
+            _logger.debug(
+                "provider_thinking_recorded",
+                provider=provider.name.value,
+                blocks=len(thinking_blocks),
+                total_chars=sum(len(t) for t in thinking_blocks),
+            )
 
     def _should_use_streaming(
         self,

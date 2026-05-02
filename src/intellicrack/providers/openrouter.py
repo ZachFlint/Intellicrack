@@ -9,6 +9,7 @@ This module provides integration with OpenRouter which provides access to many d
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from datetime import UTC, datetime
@@ -79,6 +80,7 @@ class OpenRouterProvider(LLMProviderBase):
         super().__init__()
         self.client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
+        self._current_task: asyncio.Task[object] | None = None
         self._logger = get_logger(__name__).bind(provider="openrouter")
         self._logger.info("openrouter_provider_initialized")
 
@@ -265,7 +267,13 @@ class OpenRouterProvider(LLMProviderBase):
         """Send a chat completion request through OpenRouter.
 
         HTTP errors are translated to Intellicrack typed errors by
-        :meth:`LLMProviderBase._raise_typed_for_status`.
+        :meth:`LLMProviderBase._raise_typed_for_status`.  Transient
+        rate-limit failures are retried via
+        :meth:`LLMProviderBase._retry_with_backoff`.  ``enable_cache``
+        attaches OpenRouter's ``cache_control: ephemeral`` extension to
+        the last user message (and last system message) so Anthropic /
+        Gemini routes activate prompt caching.  ``thinking`` is
+        forwarded as ``reasoning_effort`` (low/medium/high) when set.
 
         Args:
             messages: Conversation history.
@@ -274,8 +282,12 @@ class OpenRouterProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
             tool_choice: How the model should select tools.
-            thinking: Extended thinking configuration (ignored by OpenRouter).
-            enable_cache: Whether to enable prompt caching (ignored by OpenRouter).
+            thinking: Extended thinking configuration.  Forwarded as
+                ``reasoning_effort`` when enabled.
+            enable_cache: Whether to enable prompt caching.  When
+                ``True``, ``cache_control: ephemeral`` is attached to
+                the last system and user message so OpenRouter's
+                Anthropic / Gemini backends activate caching.
 
         Returns:
             tuple[Message, list[ToolCall] | None]: Tuple of (assistant message, tool calls if any).
@@ -310,6 +322,9 @@ class OpenRouterProvider(LLMProviderBase):
 
         start_time = time.perf_counter()
 
+        if enable_cache:
+            self._apply_cache_control(openrouter_messages)
+
         request_body: dict[str, object] = {
             "model": model,
             "messages": openrouter_messages,
@@ -321,34 +336,18 @@ class OpenRouterProvider(LLMProviderBase):
             request_body["tools"] = self.convert_tools_to_provider_format(tools)
         if tool_choice is not None and tools:
             request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
-        if thinking is not None and thinking.enabled:
-            self._logger.debug("openrouter_thinking_ignored")
-        if enable_cache:
-            self._logger.debug("openrouter_cache_ignored")
+        reasoning_effort = self._reasoning_effort_for(thinking)
+        if reasoning_effort is not None:
+            request_body["reasoning"] = {"effort": reasoning_effort}
 
+        chat_task: asyncio.Task[httpx.Response] = asyncio.create_task(
+            self._retry_with_backoff(lambda: self._post_chat_completion(request_body=request_body, model=model)),
+        )
+        self._current_task = cast("asyncio.Task[object]", chat_task)
         try:
-            response = await self.client.post(
-                f"{self.BASE_URL}/chat/completions",
-                json=request_body,
-            )
-        except httpx.RequestError as e:
-            self._logger.warning(
-                "openrouter_chat_request_error",
-                model=model,
-                error=str(e),
-            )
-            raise ProviderError(_ERR_API_ERROR % e) from e
-
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            self._logger.warning(
-                "openrouter_chat_http_error",
-                model=model,
-                status_code=e.response.status_code,
-            )
-            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
-            raise ProviderError(_ERR_API_ERROR % e) from e
+            response = await chat_task
+        finally:
+            self._current_task = None
 
         data = response.json()
         duration_ms = (time.perf_counter() - start_time) * 1000
@@ -386,6 +385,139 @@ class OpenRouterProvider(LLMProviderBase):
         )
 
         return message, tool_calls or None
+
+    async def _post_chat_completion(
+        self,
+        *,
+        request_body: dict[str, object],
+        model: str,
+    ) -> httpx.Response:
+        """POST a chat completion request and translate HTTP errors.
+
+        Used as the inner coroutine for
+        :meth:`LLMProviderBase._retry_with_backoff` so transient
+        rate-limit responses propagate as :class:`RateLimitError` and
+        get retried with exponential backoff.
+
+        Args:
+            request_body: JSON body for ``POST /chat/completions``.
+            model: Model identifier, included in structured logs.
+
+        Returns:
+            httpx.Response: Successful response with status 2xx.
+
+        Raises:
+            AuthenticationError: When the API rejects credentials.
+            ProviderError: On non-retryable failures.
+            RateLimitError: On HTTP 429.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        try:
+            response = await self.client.post(
+                f"{self.BASE_URL}/chat/completions",
+                json=request_body,
+            )
+        except httpx.RequestError as e:
+            self._logger.warning(
+                "openrouter_chat_request_error",
+                model=model,
+                error=str(e),
+            )
+            raise ProviderError(_ERR_API_ERROR % e) from e
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            self._logger.warning(
+                "openrouter_chat_http_error",
+                model=model,
+                status_code=e.response.status_code,
+            )
+            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
+            raise ProviderError(_ERR_API_ERROR % e) from e
+        return response
+
+    @staticmethod
+    def _reasoning_effort_for(thinking: ThinkingConfig | None) -> str | None:
+        """Map a :class:`ThinkingConfig` to OpenRouter's ``reasoning.effort``.
+
+        OpenRouter accepts ``reasoning: {effort: "low" | "medium" |
+        "high"}`` and forwards it to backends that support reasoning
+        effort (OpenAI o-series, Grok-multi-agent, Claude with
+        extended thinking).  Backends that ignore the field receive the
+        request unchanged.
+
+        Args:
+            thinking: Caller-supplied thinking configuration, or
+                ``None``.
+
+        Returns:
+            str | None: ``"low"``, ``"medium"``, ``"high"`` when the
+            request should set ``reasoning.effort``; ``None`` when the
+            parameter must be omitted.
+        """
+        if thinking is None or not thinking.enabled:
+            return None
+        budget = thinking.budget_tokens
+        if budget <= 4000:
+            return "low"
+        return "medium" if budget <= 16000 else "high"
+
+    @staticmethod
+    def _apply_cache_control(messages: list[dict[str, object]]) -> None:
+        """Attach OpenRouter ``cache_control`` markers to long messages.
+
+        OpenRouter exposes Anthropic-style ephemeral prompt caching as
+        a per-content-block ``cache_control: {"type": "ephemeral"}``
+        marker.  This helper rewrites the last system and last user
+        message into the structured-block form (``[{"type": "text",
+        "text": ..., "cache_control": {...}}]``) so OpenRouter routes
+        cached requests to backends that honour the marker (Anthropic,
+        Gemini).  Mutates ``messages`` in place.
+
+        Args:
+            messages: List of OpenAI-format message dicts.
+        """
+        OpenRouterProvider._mark_role_for_cache(messages, role="system")
+        OpenRouterProvider._mark_role_for_cache(messages, role="user")
+
+    @staticmethod
+    def _mark_role_for_cache(
+        messages: list[dict[str, object]],
+        *,
+        role: str,
+    ) -> None:
+        """Tag the last message with the given role for caching.
+
+        Walks ``messages`` in reverse, finds the most recent message
+        whose ``role`` matches, and rewrites its ``content`` so the
+        final block carries ``cache_control: {"type": "ephemeral"}``.
+
+        Args:
+            messages: List of OpenAI-format message dicts to mutate.
+            role: ``"system"`` or ``"user"``.
+        """
+        for msg in reversed(messages):
+            if msg.get("role") != role:
+                continue
+            content = msg.get("content")
+            if isinstance(content, str):
+                msg["content"] = [
+                    {
+                        "type": "text",
+                        "text": content,
+                        "cache_control": {"type": "ephemeral"},
+                    },
+                ]
+                return
+            if isinstance(content, list) and content:
+                blocks = cast("list[dict[str, Any]]", content)
+                blocks[-1] = {
+                    **blocks[-1],
+                    "cache_control": {"type": "ephemeral"},
+                }
+                return
+            return
 
     @classmethod
     def _raise_for_stream_status(cls, status_code: int, body_text: str) -> None:
@@ -487,6 +619,12 @@ class OpenRouterProvider(LLMProviderBase):
     ) -> AsyncIterator[str]:
         """Stream a chat completion response from OpenRouter.
 
+        ``enable_cache`` attaches OpenRouter's ``cache_control:
+        ephemeral`` extension to the last user / system message so
+        Anthropic and Gemini routes activate caching.  ``thinking`` is
+        forwarded as ``reasoning: {effort: ...}`` for backends that
+        support it.
+
         Args:
             messages: Conversation history.
             model: Model ID to use.
@@ -494,8 +632,11 @@ class OpenRouterProvider(LLMProviderBase):
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
             tool_choice: How the model should select tools.
-            thinking: Extended thinking configuration (ignored by OpenRouter).
-            enable_cache: Whether to enable prompt caching (ignored by OpenRouter).
+            thinking: Extended thinking configuration.  Forwarded as
+                ``reasoning.effort`` when enabled.
+            enable_cache: Whether to enable prompt caching.  Adds the
+                ``cache_control: ephemeral`` extension to the last
+                user / system message.
 
         Yields:
             str: Text chunks as they arrive.
@@ -510,10 +651,8 @@ class OpenRouterProvider(LLMProviderBase):
 
         self._cancel_requested = False
         self._pending_usage = None
-        if thinking is not None and thinking.enabled:
-            self._logger.debug("openrouter_stream_thinking_ignored")
         if enable_cache:
-            self._logger.debug("openrouter_stream_cache_ignored")
+            self._logger.debug("openrouter_stream_cache_enabled", model=model)
 
         openrouter_messages = self.convert_messages_to_provider_format(messages)
 
@@ -529,6 +668,8 @@ class OpenRouterProvider(LLMProviderBase):
 
         chunks_yielded = 0
         tc_buffer = ToolCallBufferManager()
+        if enable_cache:
+            self._apply_cache_control(openrouter_messages)
         try:
             request_body: dict[str, object] = {
                 "model": model,
@@ -543,6 +684,9 @@ class OpenRouterProvider(LLMProviderBase):
                 request_body["tools"] = self.convert_tools_to_provider_format(tools)
             if tool_choice is not None and tools:
                 request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
+            reasoning_effort = self._reasoning_effort_for(thinking)
+            if reasoning_effort is not None:
+                request_body["reasoning"] = {"effort": reasoning_effort}
 
             async with self.client.stream(
                 "POST",
@@ -614,9 +758,21 @@ class OpenRouterProvider(LLMProviderBase):
                 raise ProviderError(_ERR_STREAM_FAILED % e) from e
 
     async def cancel_request(self) -> None:
-        """Cancel any in-flight request."""
+        """Cancel any in-flight request.
+
+        Sets the cancel flag (which streaming loops poll) and cancels
+        the active non-streaming task when one is registered, so both
+        ``chat`` and ``chat_stream`` paths abort cleanly.
+        """
         self._cancel_requested = True
-        self._logger.info("openrouter_request_cancelled", connected=self.connected)
+        had_active_task = self._current_task is not None and not self._current_task.done()
+        if had_active_task and self._current_task is not None:
+            self._current_task.cancel()
+        self._logger.info(
+            "openrouter_request_cancelled",
+            connected=self.connected,
+            had_active_task=had_active_task,
+        )
 
     @override
     def _convert_messages_to_provider_format(
