@@ -4569,8 +4569,6 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"{operation!r} requires a non-empty key; pass it as ``key_hex`` so the operation is applied"
             raise ToolError(msg)
         result = bytearray(len(data))
-        byte_mask = 0xFF
-        bits_per_byte = 8
         for i, b in enumerate(data):
             if operation == "xor":
                 result[i] = b ^ key[i % len(key)]
@@ -4579,17 +4577,17 @@ class HexEditorBridge(ToolBridgeBase):
             elif operation == "or":
                 result[i] = b | key[i % len(key)]
             elif operation == "not":
-                result[i] = (~b) & byte_mask
+                result[i] = (~b) & _BYTE_MASK
             elif operation == "shl":
-                result[i] = (b << count) & byte_mask
+                result[i] = (b << count) & _BYTE_MASK
             elif operation == "shr":
-                result[i] = (b >> count) & byte_mask
+                result[i] = (b >> count) & _BYTE_MASK
             elif operation == "rol":
-                shift = count % bits_per_byte
-                result[i] = ((b << shift) | (b >> (bits_per_byte - shift))) & byte_mask
+                shift = count % _BITS_PER_BYTE
+                result[i] = ((b << shift) | (b >> (_BITS_PER_BYTE - shift))) & _BYTE_MASK
             elif operation == "ror":
-                shift = count % bits_per_byte
-                result[i] = ((b >> shift) | (b << (bits_per_byte - shift))) & byte_mask
+                shift = count % _BITS_PER_BYTE
+                result[i] = ((b >> shift) | (b << (_BITS_PER_BYTE - shift))) & _BYTE_MASK
             else:
                 _logger.error("apply_arithmetic_fallback_unknown_operation", operation=operation)
                 msg = f"{_ERR_UNKNOWN_TRANSFORM}: {operation!r} has no pure-Python fallback implementation"
@@ -6160,30 +6158,25 @@ class HexEditorBridge(ToolBridgeBase):
             "binary": bin(parsed),
         }
 
-        byte_mask = 0xFF
-        u16_mask = 0xFFFF
-        u32_mask = 0xFFFFFFFF
-        u64_mask = 0xFFFFFFFFFFFFFFFF
-
-        if 0 <= parsed <= byte_mask:
+        if 0 <= parsed <= _BYTE_MASK:
             result["uint8"] = str(parsed)
             result["int8"] = str(struct.unpack("b", struct.pack("B", parsed))[0])
-        if 0 <= parsed <= u16_mask:
+        if 0 <= parsed <= _U16_MASK:
             result["uint16_le"] = str(parsed)
             result["int16_le"] = str(struct.unpack("<h", struct.pack("<H", parsed))[0])
-        if 0 <= parsed <= u32_mask:
+        if 0 <= parsed <= _U32_MASK:
             result["uint32_le"] = str(parsed)
             result["int32_le"] = str(struct.unpack("<i", struct.pack("<I", parsed))[0])
-        if 0 <= parsed <= u64_mask:
+        if 0 <= parsed <= _U64_MASK:
             result["uint64_le"] = str(parsed)
             result["int64_le"] = str(struct.unpack("<q", struct.pack("<Q", parsed))[0])
 
         try:
-            if 0 <= parsed <= u32_mask:
+            if 0 <= parsed <= _U32_MASK:
                 float_val: float = struct.unpack("<f", struct.pack("<I", parsed))[0]
                 if math.isfinite(float_val):
                     result["float32_le"] = str(float_val)
-            if 0 <= parsed <= u64_mask:
+            if 0 <= parsed <= _U64_MASK:
                 double_val: float = struct.unpack("<d", struct.pack("<Q", parsed))[0]
                 if math.isfinite(double_val):
                     result["float64_le"] = str(double_val)
@@ -6418,6 +6411,7 @@ class HexEditorBridge(ToolBridgeBase):
             db_entries.append(cast("dict[str, Any]", raw_entry))
 
         ep_bytes = self._read_doc_bytes(0, min(_MAX_EP_BYTES, self.document.length()))
+        doc_bytes = self._read_all_doc_bytes()
         results: list[dict[str, Any]] = []
 
         for entry in db_entries:
@@ -6436,16 +6430,17 @@ class HexEditorBridge(ToolBridgeBase):
                 continue
             patterns_list: list[Any] = cast("list[Any]", patterns_field)
             for pattern_info in patterns_list:
-                self._match_die_pattern(pattern_info, sig_info, ep_bytes, results)
+                self._match_die_pattern(pattern_info, sig_info, ep_bytes, doc_bytes, results)
 
         _logger.info("die_scan_completed", matches=len(results))
         return results
 
+    @staticmethod
     def _match_die_pattern(
-        self,
         pattern_info: str | dict[str, str] | object,
         sig_info: tuple[str, str, str],
         ep_bytes: bytes,
+        doc_bytes: bytes,
         results: list[dict[str, Any]],
     ) -> None:
         """Match a single DIE pattern against the document.
@@ -6454,6 +6449,7 @@ class HexEditorBridge(ToolBridgeBase):
             pattern_info: Pattern entry (string or dict).
             sig_info: Tuple of (name, type, version).
             ep_bytes: Entry point bytes for EP matching.
+            doc_bytes: Full document bytes for ``any`` offset matching.
             results: List to append matches to.
         """
         if isinstance(pattern_info, str):
@@ -6484,7 +6480,7 @@ class HexEditorBridge(ToolBridgeBase):
                     "details": f"Entry point match at +{idx}",
                 })
         elif scan_offset == "any":
-            idx = self._read_all_doc_bytes().find(pattern_bytes)
+            idx = doc_bytes.find(pattern_bytes)
             if idx >= 0:
                 results.append({
                     "name": sig_name,
@@ -6499,16 +6495,14 @@ class HexEditorBridge(ToolBridgeBase):
             except ValueError:
                 _logger.debug("die_pattern_invalid_offset", scan_offset=scan_offset, exc_info=True)
                 return
-            if self.document is not None and fixed_offset + len(pattern_bytes) <= self.document.length():
-                region = self._read_doc_bytes(fixed_offset, len(pattern_bytes))
-                if region == pattern_bytes:
-                    results.append({
-                        "name": sig_name,
-                        "type": sig_type,
-                        "version": sig_version,
-                        "offset": fixed_offset,
-                        "details": f"Fixed offset match at 0x{fixed_offset:X}",
-                    })
+            if fixed_offset + len(pattern_bytes) <= len(doc_bytes) and doc_bytes[fixed_offset : fixed_offset + len(pattern_bytes)] == pattern_bytes:
+                results.append({
+                    "name": sig_name,
+                    "type": sig_type,
+                    "version": sig_version,
+                    "offset": fixed_offset,
+                    "details": f"Fixed offset match at 0x{fixed_offset:X}",
+                })
 
     _DOC_HASH_CHUNK_BYTES: int = 1 << 20
 
@@ -6617,11 +6611,10 @@ class HexEditorBridge(ToolBridgeBase):
         file_size = self.document.length()
         file_md5 = self._compute_doc_md5_streaming()
         results: list[dict[str, Any]] = []
-        hdb_fields = 3
 
         for line in lines:
             parts = line.strip().split(":")
-            if len(parts) < hdb_fields:
+            if len(parts) < _HDB_MIN_FIELDS:
                 continue
             sig_md5 = parts[0].lower()
             sig_name = parts[2]
@@ -6660,11 +6653,10 @@ class HexEditorBridge(ToolBridgeBase):
         """
         data = self._read_all_doc_bytes()
         results: list[dict[str, Any]] = []
-        ndb_fields = 4
 
         for line in lines:
             parts = line.strip().split(":")
-            if len(parts) < ndb_fields:
+            if len(parts) < _NDB_MIN_FIELDS:
                 continue
             sig_name = parts[0]
             sig_offset_spec = parts[2]
@@ -6796,7 +6788,6 @@ class HexEditorBridge(ToolBridgeBase):
         entries: list[dict[str, str]] = json.loads(text)
         data = self._read_all_doc_bytes()
         results: list[dict[str, Any]] = []
-        max_ep_bytes = 256
 
         for entry in entries:
             sig_name = entry.get("name", "unknown")
@@ -6811,7 +6802,7 @@ class HexEditorBridge(ToolBridgeBase):
                 continue
 
             if offset_spec == "ep":
-                idx = data[:max_ep_bytes].find(pattern_bytes)
+                idx = data[:_MAX_EP_BYTES].find(pattern_bytes)
                 if idx >= 0:
                     results.append({
                         "name": sig_name,
