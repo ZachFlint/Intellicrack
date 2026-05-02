@@ -31,6 +31,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, get_args
 
 from intellicrack.bridges._pe_format import (
+    MACHO_MAGIC_BE32,
+    MACHO_MAGIC_BE64,
+    MACHO_MAGIC_LE32,
+    MACHO_MAGIC_LE64,
     is_pe64_optional_header,
     iterate_section_headers,
     read_dos_e_lfanew,
@@ -4816,8 +4820,19 @@ class HexEditorBridge(ToolBridgeBase):
             return await self._detect_macho_va_mappings(magic)
         return []
 
-    @staticmethod
-    def _is_macho_magic(magic: bytes) -> bool:
+    _ALL_MACHO_MAGICS: frozenset[bytes] = frozenset({
+        MACHO_MAGIC_BE32,
+        MACHO_MAGIC_LE32,
+        MACHO_MAGIC_BE64,
+        MACHO_MAGIC_LE64,
+        b"\xca\xfe\xba\xbe",
+        b"\xbe\xba\xfe\xca",
+        b"\xca\xfe\xba\xbf",
+        b"\xbf\xba\xfe\xca",
+    })
+
+    @classmethod
+    def _is_macho_magic(cls, magic: bytes) -> bool:
         """Return True if the four-byte magic is a Mach-O header magic.
 
         Args:
@@ -4827,16 +4842,7 @@ class HexEditorBridge(ToolBridgeBase):
             bool: True for any of MH_MAGIC, MH_CIGAM, MH_MAGIC_64,
                 MH_CIGAM_64, FAT_MAGIC, or FAT_MAGIC_64.
         """
-        return magic in {
-            b"\xfe\xed\xfa\xce",
-            b"\xce\xfa\xed\xfe",
-            b"\xfe\xed\xfa\xcf",
-            b"\xcf\xfa\xed\xfe",
-            b"\xca\xfe\xba\xbe",
-            b"\xbe\xba\xfe\xca",
-            b"\xca\xfe\xba\xbf",
-            b"\xbf\xba\xfe\xca",
-        }
+        return magic in cls._ALL_MACHO_MAGICS
 
     _MACHO_FAT_MAGICS: frozenset[bytes] = frozenset({
         b"\xca\xfe\xba\xbe",
@@ -4844,8 +4850,8 @@ class HexEditorBridge(ToolBridgeBase):
         b"\xca\xfe\xba\xbf",
         b"\xbf\xba\xfe\xca",
     })
-    _MACHO_64BIT_MAGICS: frozenset[bytes] = frozenset({b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe"})
-    _MACHO_LE_MAGICS: frozenset[bytes] = frozenset({b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe"})
+    _MACHO_64BIT_MAGICS: frozenset[bytes] = frozenset({MACHO_MAGIC_BE64, MACHO_MAGIC_LE64})
+    _MACHO_LE_MAGICS: frozenset[bytes] = frozenset({MACHO_MAGIC_LE32, MACHO_MAGIC_LE64})
     _MACHO_HEADER_SIZE_64: int = 32
     _MACHO_HEADER_SIZE_32: int = 28
     _MACHO_LC_HDR_SIZE: int = 8
@@ -6876,6 +6882,26 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.info("bps_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
 
+    @staticmethod
+    def _load_source_via_mmap(original_path: str) -> bytes:
+        """Read ``original_path`` into memory via :class:`mmap.mmap`.
+
+        Empty files short-circuit to ``b""`` since :func:`mmap.mmap`
+        rejects zero-length mappings on Windows.
+
+        Args:
+            original_path: Filesystem path of the source file.
+
+        Returns:
+            bytes: Source bytes.
+        """
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                return b""
+            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                return bytes(mm)
+
     def _export_patches_bps_via_backend(self, original_path: str) -> bytes:
         """Invoke the Rust backend's BPS exporter with an mmap'd source.
 
@@ -6891,13 +6917,7 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        with Path(original_path).open("rb") as fh:
-            source_size = os.fstat(fh.fileno()).st_size
-            if source_size == 0:
-                return self.document.export_patches_bps(b"")
-            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
-                source_view = bytes(mm)
-        return self.document.export_patches_bps(source_view)
+        return self.document.export_patches_bps(self._load_source_via_mmap(original_path))
 
     def _export_patches_bps_pyfallback(self, original_path: str) -> bytes:
         """Build a BPS patch in pure Python with mmap-backed source.
@@ -6914,13 +6934,7 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        with Path(original_path).open("rb") as fh:
-            source_size = os.fstat(fh.fileno()).st_size
-            if source_size == 0:
-                source_data: bytes = b""
-            else:
-                with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
-                    source_data = bytes(mm)
+        source_data = self._load_source_via_mmap(original_path)
         target_data = self._read_all_doc_bytes()
         return self._build_bps_patch(source_data, target_data)
 
@@ -7003,13 +7017,7 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        with Path(original_path).open("rb") as fh:
-            source_size = os.fstat(fh.fileno()).st_size
-            if source_size == 0:
-                return self.document.export_patches_ups(b"")
-            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
-                source_view = bytes(mm)
-        return self.document.export_patches_ups(source_view)
+        return self.document.export_patches_ups(self._load_source_via_mmap(original_path))
 
     def _export_patches_ups_pyfallback(self, original_path: str) -> bytes:
         """Build a UPS patch in pure Python with mmap-backed source.
@@ -7026,13 +7034,7 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        with Path(original_path).open("rb") as fh:
-            source_size = os.fstat(fh.fileno()).st_size
-            if source_size == 0:
-                source_data: bytes = b""
-            else:
-                with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
-                    source_data = bytes(mm)
+        source_data = self._load_source_via_mmap(original_path)
         target_data = self._read_all_doc_bytes()
         return self._build_ups_patch(source_data, target_data)
 
