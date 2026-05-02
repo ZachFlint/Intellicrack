@@ -4920,7 +4920,7 @@ class HexEditorBridge(ToolBridgeBase):
             entry = self._unpack_macho_segment_entry(cmd_offset, cmd_size, cmd_type, endian)
             if entry is not None:
                 mappings.append(entry)
-                if hasattr(self.document, "add_va_mapping"):
+                if self.document is not None and hasattr(self.document, "add_va_mapping"):
                     self.document.add_va_mapping(entry["file_offset"], entry["virtual_address"], entry["length"])
             cmd_offset += cmd_size
         return mappings
@@ -6399,15 +6399,16 @@ class HexEditorBridge(ToolBridgeBase):
             raise TypeError(msg)
 
         db_entries: list[dict[str, Any]] = []
-        for idx, entry in enumerate(raw_db):
-            if not isinstance(entry, dict):
-                _logger.error("scan_die_entry_not_dict", path=db_path, index=idx, entry_type=type(entry).__name__)
+        raw_list: list[object] = cast("list[object]", raw_db)
+        for idx, raw_entry in enumerate(raw_list):
+            if not isinstance(raw_entry, dict):
+                _logger.error("scan_die_entry_not_dict", path=db_path, index=idx, entry_type=type(raw_entry).__name__)
                 msg = (
                     f"DIE database {db_path!r} entry #{idx} is not a JSON object "
-                    f"(got {type(entry).__name__}); expected fields name, type, version, patterns"
+                    f"(got {type(raw_entry).__name__}); expected fields name, type, version, patterns"
                 )
                 raise TypeError(msg)
-            db_entries.append(cast("dict[str, Any]", entry))
+            db_entries.append(cast("dict[str, Any]", raw_entry))
 
         ep_bytes = self._read_doc_bytes(0, min(_MAX_EP_BYTES, self.document.length()))
         results: list[dict[str, Any]] = []
@@ -6418,7 +6419,7 @@ class HexEditorBridge(ToolBridgeBase):
                 str(entry.get("type", "unknown")),
                 str(entry.get("version", "")),
             )
-            patterns_field = entry.get("patterns", [])
+            patterns_field: object = entry.get("patterns", [])
             if not isinstance(patterns_field, list):
                 _logger.warning(
                     "scan_die_entry_patterns_not_list",
@@ -6426,7 +6427,8 @@ class HexEditorBridge(ToolBridgeBase):
                     patterns_type=type(patterns_field).__name__,
                 )
                 continue
-            for pattern_info in cast("list[Any]", list(patterns_field)):
+            patterns_list: list[Any] = cast("list[Any]", patterns_field)
+            for pattern_info in patterns_list:
                 self._match_die_pattern(pattern_info, sig_info, ep_bytes, results)
 
         _logger.info("die_scan_completed", matches=len(results))

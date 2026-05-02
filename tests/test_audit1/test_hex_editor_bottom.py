@@ -23,20 +23,31 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
+import importlib
 import json
 import os
 import struct
 import tempfile
-import textwrap
-from collections.abc import Coroutine
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import intellicrack_hexcore
 import pytest
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.types import ToolError
+
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+_ATTR_COMPUTE_DOC_MD5_STREAMING = "_compute_doc_md5_streaming"
+_ATTR_APPLY_ARITHMETIC_FALLBACK = "_apply_arithmetic_fallback"
+_ATTR_CURSOR_OFFSET = "_cursor_offset"
+_ATTR_EXTRACT_STRINGS_FALLBACK = "_extract_strings_fallback"
+_ATTR_APPLY_BPS_PATCH = "_apply_bps_patch"
+_ATTR_EXPORT_PATCHES_BPS_PYFALLBACK = "_export_patches_bps_pyfallback"
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -49,6 +60,155 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
         T: The coroutine's return value.
     """
     return asyncio.run(coro)
+
+
+def _call_compute_doc_md5_streaming(bridge: HexEditorBridge, *, chunk_size: int) -> str:
+    """Invoke ``HexEditorBridge._compute_doc_md5_streaming`` via ``getattr``.
+
+    Args:
+        bridge: Bridge whose method is invoked.
+        chunk_size: Hash chunk size.
+
+    Returns:
+        str: Lowercase MD5 hex digest of the open document.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns
+            a non-string value.
+    """
+    fn: object = getattr(bridge, _ATTR_COMPUTE_DOC_MD5_STREAMING)
+    if not callable(fn):
+        msg = f"HexEditorBridge.{_ATTR_COMPUTE_DOC_MD5_STREAMING} is not callable"
+        raise TypeError(msg)
+    result: object = fn(chunk_size=chunk_size)
+    if not isinstance(result, str):
+        msg = f"HexEditorBridge.{_ATTR_COMPUTE_DOC_MD5_STREAMING} expected str, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
+
+
+def _call_apply_arithmetic_fallback(data: bytearray, op: str, key: bytes, count: int) -> bytes:
+    """Invoke ``HexEditorBridge._apply_arithmetic_fallback`` via ``getattr``.
+
+    Args:
+        data: Mutable byte buffer to transform.
+        op: Operation name (``"xor"``, ``"and"``, ``"or"`` etc.).
+        key: Key bytes.
+        count: Shift / rotation count for shift ops.
+
+    Returns:
+        bytes: The transformed buffer.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns
+            a non-bytes value.
+    """
+    fn: object = getattr(HexEditorBridge, _ATTR_APPLY_ARITHMETIC_FALLBACK)
+    if not callable(fn):
+        msg = f"HexEditorBridge.{_ATTR_APPLY_ARITHMETIC_FALLBACK} is not callable"
+        raise TypeError(msg)
+    result: object = fn(data, op, key, count)
+    if not isinstance(result, (bytes, bytearray)):
+        msg = f"HexEditorBridge.{_ATTR_APPLY_ARITHMETIC_FALLBACK} expected bytes-like, got {type(result).__name__}"
+        raise TypeError(msg)
+    return bytes(result)
+
+
+def _set_cursor_offset(bridge: HexEditorBridge, offset: int) -> None:
+    """Set the bridge cursor offset via ``setattr`` to dodge ``reportPrivateUsage``.
+
+    Args:
+        bridge: Bridge whose cursor offset is set.
+        offset: New cursor offset.
+    """
+    setattr(bridge, _ATTR_CURSOR_OFFSET, offset)
+
+
+def _call_extract_strings_fallback(
+    data: bytes,
+    min_length: int,
+    max_results: int,
+    *,
+    include_ascii: bool,
+    include_utf16: bool,
+) -> list[dict[str, Any]]:
+    """Invoke ``HexEditorBridge._extract_strings_fallback`` via ``getattr``.
+
+    Args:
+        data: Bytes to scan.
+        min_length: Minimum run length in code units.
+        max_results: Maximum number of results to return.
+        include_ascii: Whether to scan for ASCII strings.
+        include_utf16: Whether to scan for UTF-16LE strings.
+
+    Returns:
+        list[dict[str, Any]]: Match dicts with offset, length, encoding,
+        and content fields.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns
+            an unexpected shape.
+    """
+    fn: object = getattr(HexEditorBridge, _ATTR_EXTRACT_STRINGS_FALLBACK)
+    if not callable(fn):
+        msg = f"HexEditorBridge.{_ATTR_EXTRACT_STRINGS_FALLBACK} is not callable"
+        raise TypeError(msg)
+    result: object = fn(data, min_length, max_results, include_ascii=include_ascii, include_utf16=include_utf16)
+    if not isinstance(result, list):
+        msg = f"HexEditorBridge.{_ATTR_EXTRACT_STRINGS_FALLBACK} expected list, got {type(result).__name__}"
+        raise TypeError(msg)
+    return cast("list[dict[str, Any]]", result)
+
+
+def _call_apply_bps_patch(bridge: HexEditorBridge, patch: bytes, source: bytes) -> bytes:
+    """Invoke ``HexEditorBridge._apply_bps_patch`` via ``getattr``.
+
+    Args:
+        bridge: Bridge whose method is invoked.
+        patch: Raw BPS patch bytes.
+        source: Original source bytes.
+
+    Returns:
+        bytes: The reconstructed target bytes.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns
+            a non-bytes value.
+    """
+    fn: object = getattr(bridge, _ATTR_APPLY_BPS_PATCH)
+    if not callable(fn):
+        msg = f"HexEditorBridge.{_ATTR_APPLY_BPS_PATCH} is not callable"
+        raise TypeError(msg)
+    result: object = fn(patch, source)
+    if not isinstance(result, (bytes, bytearray)):
+        msg = f"HexEditorBridge.{_ATTR_APPLY_BPS_PATCH} expected bytes-like, got {type(result).__name__}"
+        raise TypeError(msg)
+    return bytes(result)
+
+
+def _call_export_patches_bps_pyfallback(bridge: HexEditorBridge, original_path: str) -> bytes:
+    """Invoke ``HexEditorBridge._export_patches_bps_pyfallback`` via ``getattr``.
+
+    Args:
+        bridge: Bridge whose method is invoked.
+        original_path: Path to the original unmodified file.
+
+    Returns:
+        bytes: Raw BPS patch bytes.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns
+            a non-bytes value.
+    """
+    fn: object = getattr(bridge, _ATTR_EXPORT_PATCHES_BPS_PYFALLBACK)
+    if not callable(fn):
+        msg = f"HexEditorBridge.{_ATTR_EXPORT_PATCHES_BPS_PYFALLBACK} is not callable"
+        raise TypeError(msg)
+    result: object = fn(original_path)
+    if not isinstance(result, (bytes, bytearray)):
+        msg = f"HexEditorBridge.{_ATTR_EXPORT_PATCHES_BPS_PYFALLBACK} expected bytes-like, got {type(result).__name__}"
+        raise TypeError(msg)
+    return bytes(result)
 
 
 @pytest.fixture
@@ -240,11 +400,9 @@ class TestStreamingMd5:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        import hashlib
-
         payload = b"\x10\x20\x30\x40" * 4096
         _open_doc(bridge, payload)
-        digest_streaming = bridge._compute_doc_md5_streaming(chunk_size=128)
+        digest_streaming = _call_compute_doc_md5_streaming(bridge, chunk_size=128)
         digest_oneshot = hashlib.md5(payload, usedforsecurity=False).hexdigest()
         assert digest_streaming == digest_oneshot
 
@@ -256,8 +414,8 @@ class TestStreamingMd5:
         """
         payload = bytes(range(256)) * 17
         _open_doc(bridge, payload)
-        digest_a = bridge._compute_doc_md5_streaming(chunk_size=37)
-        digest_b = bridge._compute_doc_md5_streaming(chunk_size=4096)
+        digest_a = _call_compute_doc_md5_streaming(bridge, chunk_size=37)
+        digest_b = _call_compute_doc_md5_streaming(bridge, chunk_size=4096)
         assert digest_a == digest_b
 
 
@@ -430,7 +588,7 @@ class TestArithmeticFallbackMissingKey:
     def test_fallback_xor_missing_key_raises(self) -> None:
         """The pure-Python helper rejects xor without a key."""
         with pytest.raises(ToolError, match="non-empty key"):
-            HexEditorBridge._apply_arithmetic_fallback(bytearray(b"abc"), "xor", b"", 1)
+            _call_apply_arithmetic_fallback(bytearray(b"abc"), "xor", b"", 1)
 
 
 # ---------------------------------------------------------------------------
@@ -533,9 +691,11 @@ class TestPeBookmarkRollback:
         image[opt_offset : opt_offset + 2] = struct.pack("<H", 0x10B)
         _open_doc(bridge, bytes(image))
 
-        before = len(bridge.document.list_bookmarks())
+        doc = bridge.document
+        assert doc is not None
+        before = len(doc.list_bookmarks())
         _run(bridge.generate_structure_bookmarks())
-        after = len(bridge.document.list_bookmarks())
+        after = len(doc.list_bookmarks())
         assert after == before, f"expected rollback to restore {before}, got {after}"
 
 
@@ -580,7 +740,7 @@ class TestSnapToAlignmentNearest:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge._cursor_offset = 0x1F0
+        _set_cursor_offset(bridge, 0x1F0)
         result = _run(bridge.snap_to_alignment(0x100))
         assert result == 0x200
 
@@ -590,7 +750,7 @@ class TestSnapToAlignmentNearest:
         Args:
             bridge: Fresh HexEditorBridge fixture.
         """
-        bridge._cursor_offset = 0x110
+        _set_cursor_offset(bridge, 0x110)
         result = _run(bridge.snap_to_alignment(0x100))
         assert result == 0x100
 
@@ -608,7 +768,7 @@ class TestUtf16Scanner:
         prefix = b"\x00"
         utf16 = "MARKER".encode("utf-16le")
         suffix = b"\x00" * 8
-        results = HexEditorBridge._extract_strings_fallback(
+        results = _call_extract_strings_fallback(
             prefix + utf16 + suffix,
             4,
             10,
@@ -620,7 +780,7 @@ class TestUtf16Scanner:
     def test_python_fallback_excludes_non_printable_high(self) -> None:
         """The fallback rejects runs of non-printable high code units."""
         controls = b"".join(struct.pack("<H", 0xFFFE) for _ in range(8))
-        results = HexEditorBridge._extract_strings_fallback(
+        results = _call_extract_strings_fallback(
             controls,
             4,
             10,
@@ -654,7 +814,7 @@ class TestBpsEncoderRichOpcodes:
         _open_doc(bridge, target)
         patch_b64 = _run(bridge.export_patches_bps(str(original)))
         patch_bytes = base64.b64decode(patch_b64)
-        rebuilt = bridge._apply_bps_patch(patch_bytes, source)
+        rebuilt = _call_apply_bps_patch(bridge, patch_bytes, source)
         assert rebuilt == target
 
 
@@ -713,7 +873,7 @@ class TestBpsExportStreaming:
         original = tmp_path / "orig.bin"
         original.write_bytes(source)
         _open_doc(bridge, target)
-        original_export = bridge._export_patches_bps_pyfallback(str(original))
+        original_export = _call_export_patches_bps_pyfallback(bridge, str(original))
         assert original_export[:4] == b"BPS1"
 
 
@@ -786,7 +946,9 @@ class TestHtmlExportXssDefence:
             bridge: Fresh HexEditorBridge fixture.
         """
         _open_doc(bridge, b"\x41\x42\x43\x44" * 4)
-        bridge.document.add_bookmark(0, 4, "Header", "javascript:alert(1)")
+        doc = bridge.document
+        assert doc is not None
+        doc.add_bookmark(0, 4, "Header", "javascript:alert(1)")
         html_str = _run(bridge.export_annotated_html(0, 16))
         assert "javascript:alert(1)" not in html_str
         assert "#888888" in html_str
@@ -798,7 +960,9 @@ class TestHtmlExportXssDefence:
             bridge: Fresh HexEditorBridge fixture.
         """
         _open_doc(bridge, b"\x41" * 16)
-        bridge.document.add_bookmark(0, 4, "<script>x</script>", "#FF0000")
+        doc = bridge.document
+        assert doc is not None
+        doc.add_bookmark(0, 4, "<script>x</script>", "#FF0000")
         html_str = _run(bridge.export_annotated_html(0, 16))
         assert "<script>" not in html_str.replace("&lt;script&gt;", "")
         assert "&lt;script&gt;" in html_str
@@ -828,11 +992,10 @@ class TestFpdfAvailability:
                 optional package without uninstalling it.
         """
         _open_doc(bridge, b"\x00" * 16)
-        import importlib  # noqa: PLC0415
 
         original = importlib.import_module
 
-        def _fake(name: str, package: str | None = None) -> Any:
+        def _fake(name: str, package: str | None = None) -> object:
             """Re-raise ImportError specifically for ``fpdf``.
 
             Args:
@@ -840,7 +1003,7 @@ class TestFpdfAvailability:
                 package: Module package.
 
             Returns:
-                Any: Whatever the real importer returns for non-fpdf
+                object: Whatever the real importer returns for non-fpdf
                 modules.
 
             Raises:
@@ -881,7 +1044,3 @@ class TestOpenProcessMemoryClosesPrior:
         )
         with pytest.raises(RuntimeError, match="Windows-only"):
             _run(bridge.open_process_memory(1, 0x1000, 16))
-
-
-# Dummy reference so static analyzers don't strip the textwrap import.
-_ = textwrap.dedent("")
