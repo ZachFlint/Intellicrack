@@ -1497,6 +1497,14 @@ class OllamaProvider(LLMProviderBase):
     ) -> None:
         """Merge OpenAI-style tool-call deltas keyed by index.
 
+        Mirrors :meth:`_accumulate_native_tool_call_deltas` for the cloud
+        OpenAI-compatible streaming route. ``arguments`` may arrive either
+        as incremental string deltas (the canonical OpenAI shape) or as a
+        complete dict object on a single chunk (Ollama Cloud emits this
+        form for some models). Both shapes are preserved without loss; a
+        later string fragment never overwrites an already-captured dict
+        because once a dict has been recorded the entry is locked.
+
         Args:
             deltas: The ``tool_calls`` array from a single streaming chunk.
             accumulated: Mapping of delta ``index`` to the merged payload.
@@ -1518,9 +1526,12 @@ class OllamaProvider(LLMProviderBase):
             name_val = func_delta.get("name")
             if isinstance(name_val, str) and name_val:
                 entry_func["name"] = name_val
-            args_val = func_delta.get("arguments")
-            if isinstance(args_val, str) and args_val:
-                entry_func["arguments"] = cast("str", entry_func["arguments"]) + args_val
+            args_val: object = func_delta.get("arguments")
+            current_args: object = entry_func.get("arguments", "")
+            if isinstance(args_val, str) and args_val and isinstance(current_args, str):
+                entry_func["arguments"] = current_args + args_val
+            elif isinstance(args_val, dict):
+                entry_func["arguments"] = cast("dict[str, object]", args_val)
 
     def _finalize_openai_tool_calls(
         self,
@@ -1539,7 +1550,13 @@ class OllamaProvider(LLMProviderBase):
             entry = accumulated[index]
             func: dict[str, Any] = cast("dict[str, Any]", entry.get("function") or {})
             raw_args_obj: object = func.get("arguments")
-            raw_arguments = raw_args_obj if isinstance(raw_args_obj, str) and raw_args_obj else "{}"
+            raw_arguments: str | dict[str, object]
+            if isinstance(raw_args_obj, dict):
+                raw_arguments = cast("dict[str, object]", raw_args_obj)
+            elif isinstance(raw_args_obj, str) and raw_args_obj:
+                raw_arguments = raw_args_obj
+            else:
+                raw_arguments = "{}"
             call_id_val: object = entry.get("id")
             call_id = call_id_val if isinstance(call_id_val, str) and call_id_val else f"call_{index}"
             results.append(

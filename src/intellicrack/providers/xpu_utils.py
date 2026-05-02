@@ -199,14 +199,23 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
 
 
 def _parse_device_id_from_pnp(pnp_id: str) -> str:
-    r"""Parse device ID from PNP device ID string.
+    r"""Parse device ID from a PNP device ID string for Intel GPUs only.
+
+    The PNP ID is expected to start with ``PCI\VEN_<vendor>&DEV_<device>``;
+    only Intel-vendor entries (vendor ``0x8086``) yield a device ID. Anything
+    else returns the empty string so non-Intel GPUs cannot be misclassified
+    as Intel Arc devices downstream.
 
     Args:
-        pnp_id: PNP device ID string (e.g., PCI\VEN_8086&DEV_E20B...).
+        pnp_id: PNP device ID string (e.g., ``PCI\VEN_8086&DEV_E20B...``).
 
     Returns:
-        str: Extracted device ID or empty string.
+        str: Extracted device ID lower-cased, or empty string when the
+        vendor does not match Intel or no ``DEV_`` field is present.
     """
+    vendor_match = re.search(r"VEN_([0-9A-Fa-f]{4})", pnp_id)
+    if vendor_match is None or vendor_match[1].lower() != _INTEL_VENDOR_ID.lower():
+        return ""
     if match := re.search(r"DEV_([0-9A-Fa-f]{4})", pnp_id):
         return match[1].lower()
     return ""
@@ -327,7 +336,8 @@ def _is_b580_device(device_name: str, device_id: str) -> bool:
     Returns:
         bool: True if device is an Arc B580.
     """
-    result = device_id.lower() in {"e20b", "0xe20b"} or "b580" in device_name.lower()
+    normalized_device_id = device_id.lower()
+    result = normalized_device_id in {value.lower() for value in _B580_DEVICE_IDS} or "b580" in device_name.lower()
     _logger.debug(
         "xpu_b580_detection",
         device_name=device_name,
@@ -569,9 +579,15 @@ def _check_rebar_status() -> tuple[bool, str]:
     else:
         if result.returncode == 0:
             count = result.stdout.strip().splitlines()[-1].strip() if result.stdout.strip() else ""
-            if count and int(count) > 0:
-                _logger.debug("xpu_rebar_enabled", count=count)
-                return (True, "")
+            if count:
+                try:
+                    count_value = int(count)
+                except ValueError:
+                    _logger.debug("xpu_rebar_count_unparseable", raw_count=count)
+                else:
+                    if count_value > 0:
+                        _logger.debug("xpu_rebar_enabled", count=count_value)
+                        return (True, "")
         _logger.debug("xpu_rebar_not_detected")
         return (False, "Resizable BAR (ReBAR) may not be enabled. Enable in BIOS for optimal performance")
 
