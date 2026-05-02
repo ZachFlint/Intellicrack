@@ -283,6 +283,9 @@ _ERR_UNKNOWN_TRANSFORM: Final[str] = "unknown arithmetic transform"
 _ERR_PATCH_EXPORT_UNSUPPORTED: Final[str] = "patch export not supported by backend"
 _ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
 
+_READ_BYTES_MAX_LENGTH: Final[int] = 1 << 20
+_AI_CONTEXT_BOOKMARK_LIMIT: Final[int] = 64
+
 _COPY_AS_FORMATS: Final[frozenset[str]] = frozenset(
     {
         "hex",
@@ -348,9 +351,9 @@ class HexEditorBridge(ToolBridgeBase):
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_patching=True,
-            supports_scripting=True,
+            supports_scripting=False,
             supported_architectures=["x86", "x86_64", "arm", "arm64"],
-            supported_formats=["pe", "elf", "macho", "raw"],
+            supported_formats=["pe", "elf", "raw"],
         )
         _logger.info(
             "hex_editor_bridge_initialized",
@@ -833,9 +836,21 @@ class HexEditorBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="hex_editor.get_digram_matrix",
-                    description="Get 256x256 byte-pair frequency matrix.",
-                    parameters=[],
-                    returns="List of 65536 integer frequencies (row-major)",
+                    description="Get 256x256 byte-pair frequency matrix as a structured dict.",
+                    parameters=[
+                        ToolParameter(
+                            name="top_k",
+                            type="integer",
+                            description=(
+                                "When positive, return only the top K non-zero (a,b,count) "
+                                "entries; the full matrix is omitted. When 0, include the "
+                                "full 65536-element matrix."
+                            ),
+                            required=False,
+                            default=0,
+                        ),
+                    ],
+                    returns="Dict with total_pairs, unique_pairs, top_pairs (when top_k>0) or matrix",
                 ),
                 ToolFunction(
                     name="hex_editor.get_content_classification",
@@ -914,7 +929,7 @@ class HexEditorBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="hex_editor.apply_transform",
-                    description="Apply a data transform to a byte range.",
+                    description="Apply a data transform to a byte range, writing the result back into the document by default.",
                     parameters=[
                         ToolParameter(name="name", type="string", description="Transform name (e.g. xor_single, base64_encode)."),
                         ToolParameter(name="offset", type="integer", description="Start offset."),
@@ -926,16 +941,30 @@ class HexEditorBridge(ToolBridgeBase):
                             required=False,
                             default="{}",
                         ),
+                        ToolParameter(
+                            name="in_place",
+                            type="boolean",
+                            description="If true, write transformed bytes back to document at offset.",
+                            required=False,
+                            default=True,
+                        ),
                     ],
                     returns="Hex string of transformed bytes",
                 ),
                 ToolFunction(
                     name="hex_editor.apply_pipeline",
-                    description="Apply a transform pipeline to a byte range.",
+                    description="Apply a transform pipeline to a byte range, writing the result back into the document by default.",
                     parameters=[
                         ToolParameter(name="pipeline_json", type="string", description="JSON array of {name, params} steps."),
                         ToolParameter(name="offset", type="integer", description="Start offset."),
                         ToolParameter(name="length", type="integer", description="Number of bytes."),
+                        ToolParameter(
+                            name="in_place",
+                            type="boolean",
+                            description="If true, write transformed bytes back to document at offset.",
+                            required=False,
+                            default=True,
+                        ),
                     ],
                     returns="Hex string of transformed bytes",
                 ),
@@ -1390,6 +1419,12 @@ class HexEditorBridge(ToolBridgeBase):
                     returns="True",
                 ),
                 ToolFunction(
+                    name="hex_editor.get_alignment_grid",
+                    description="Get the current alignment grid size in bytes (0 means disabled).",
+                    parameters=[],
+                    returns="Integer grid size",
+                ),
+                ToolFunction(
                     name="hex_editor.verify_pe_checksum",
                     description="Verify the PE optional header checksum.",
                     parameters=[],
@@ -1537,7 +1572,11 @@ class HexEditorBridge(ToolBridgeBase):
             self._state.connected = True
             self._state.tool_running = True
             if self.state_holder is not None:
-                self._highlight_rules = self.state_holder.get_highlight_rules()
+                holder_rules = self.state_holder.get_highlight_rules()
+                merged_rules: dict[str, dict[str, Any]] = dict(holder_rules)
+                for rule_id, rule in self._highlight_rules.items():
+                    merged_rules.setdefault(rule_id, rule)
+                self._highlight_rules = merged_rules
                 self._display_mode = self.state_holder.get_display_mode()
             _logger.info("hex_editor_initialized", backend="rust_hexcore")
         else:
@@ -1577,6 +1616,12 @@ class HexEditorBridge(ToolBridgeBase):
     async def open_file(self, path: str) -> dict[str, Any]:
         """Open a binary file in the hex editor.
 
+        If a document is already open it is closed first so its
+        memory-mapped backing is released before the new document is
+        loaded; this avoids stacking up ``HexDocument`` instances and
+        leaking ``mmap`` handles when callers reuse the bridge across
+        multiple files.
+
         Args:
             path: Filesystem path to the file.
 
@@ -1590,23 +1635,32 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "intellicrack_hexcore not installed"
             raise RuntimeError(msg)
 
-        self.document = _hexcore_mod.HexDocument.open(path)
-        if self.document is None:
+        if self.document is not None:
+            _logger.info("open_file_closing_previous_document")
+            await self.close_file()
+
+        new_doc: Any = _hexcore_mod.HexDocument.open(path)
+        if new_doc is None:
             msg = f"failed to open {path}"
             raise RuntimeError(msg)
-        self._cursor_offset = 0
-        self._selection = None
-        self._state.binary_loaded = True
-        self._state.target_path = Path(path)
+        rust_path: str | None = new_doc.file_path() if hasattr(new_doc, "file_path") else None
+        canonical_path: Path = Path(rust_path) if rust_path is not None else Path(path)
 
-        doc_len: int = self.document.length()
-        _logger.info("file_opened", path=path, size=doc_len)
+        with self._state_lock:
+            self.document = new_doc
+            self._cursor_offset = 0
+            self._selection = None
+            self._state.binary_loaded = True
+            self._state.target_path = canonical_path
+
+        doc_len: int = new_doc.length()
+        _logger.info("file_opened", path=str(canonical_path), size=doc_len)
 
         if self.state_holder is not None:
-            self.state_holder.set_document(self.document, Path(path), source="bridge")
+            self.state_holder.set_document(new_doc, canonical_path, source="bridge")
 
         return {
-            "file_path": path,
+            "file_path": str(canonical_path),
             "size": doc_len,
             "modified": False,
         }
@@ -1614,17 +1668,22 @@ class HexEditorBridge(ToolBridgeBase):
     async def close_file(self) -> bool:
         """Close the currently open file.
 
+        Acquires the bridge ``_state_lock`` while clearing the document,
+        cursor, selection, and target path so concurrent readers cannot
+        observe a torn intermediate state where the document is gone but
+        the path/binary_loaded flag still claims a file is open.
+
         Returns:
             bool: True if a file was closed.
         """
-        if self.document is None:
-            return False
-
-        self.document = None
-        self._cursor_offset = 0
-        self._selection = None
-        self._state.binary_loaded = False
-        self._state.target_path = None
+        with self._state_lock:
+            if self.document is None:
+                return False
+            self.document = None
+            self._cursor_offset = 0
+            self._selection = None
+            self._state.binary_loaded = False
+            self._state.target_path = None
         if self.state_holder is not None:
             self.state_holder.set_document(None, None, source="bridge")
         _logger.info("file_closed")
@@ -1632,6 +1691,11 @@ class HexEditorBridge(ToolBridgeBase):
 
     async def read_bytes(self, offset: int, length: int) -> str:
         """Read bytes from the document as a hex string.
+
+        Enforces an upper bound of ``_READ_BYTES_MAX_LENGTH`` bytes per
+        call so a single LLM tool invocation cannot ask for the whole
+        document and force the bridge to materialise (and serialise to
+        a hex string roughly 3x the byte length) an unbounded payload.
 
         Args:
             offset: Byte offset to read from.
@@ -1642,11 +1706,28 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If ``length`` is negative or exceeds
+                ``_READ_BYTES_MAX_LENGTH``, or ``offset`` is negative.
         """
         if self.document is None:
             _logger.error("read_bytes_failed_no_document", offset=hex(offset), length=length)
             msg = "no document open"
             raise RuntimeError(msg)
+
+        if offset < 0:
+            msg = f"read_bytes offset must be non-negative, got {offset}"
+            raise ValueError(msg)
+        if length < 0:
+            msg = f"read_bytes length must be non-negative, got {length}"
+            raise ValueError(msg)
+        if length > _READ_BYTES_MAX_LENGTH:
+            _logger.error(
+                "read_bytes_failed_length_exceeds_cap",
+                length=length,
+                cap=_READ_BYTES_MAX_LENGTH,
+            )
+            msg = f"read_bytes length {length} exceeds the per-call cap {_READ_BYTES_MAX_LENGTH}; issue multiple read_bytes calls"
+            raise ValueError(msg)
 
         _logger.debug("bytes_read", offset=hex(offset), length=length)
         raw = self.document.read(offset, length)
@@ -1753,6 +1834,16 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("get_cursor_position_started", cursor_offset=hex(self._cursor_offset))
         return self._cursor_offset
 
+    async def get_alignment_grid(self) -> int:
+        """Get the current alignment grid size used by the visual display.
+
+        Returns:
+            int: Alignment grid size in bytes. ``0`` means the alignment
+            grid is disabled.
+        """
+        _logger.debug("get_alignment_grid_started", size=self._alignment_grid_size)
+        return self._alignment_grid_size
+
     async def select_range(self, start: int, end: int) -> bool:
         """Set the selection range.
 
@@ -1833,6 +1924,16 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> list[dict[str, int]]:
         """Search for text with encoding support.
 
+        Always dispatches to the native ``search_text_encoded`` method
+        on the underlying Rust document. The bridge no longer falls
+        back silently to ``search_text`` when ``search_text_encoded``
+        is missing or raises, because the legacy ``search_text`` does
+        not implement the same encoding-aware search and produces
+        different results for the same input. A missing or failing
+        encoded search now raises so callers cannot mistake "encoding
+        unsupported by backend" or "encoding name typo" for "no
+        matches".
+
         Args:
             text: Text string to search for.
             encoding: Text encoding (utf-8, utf-16le, shift-jis, euc-kr, etc.).
@@ -1843,17 +1944,20 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, int]]: List of dicts with offset and length keys.
 
         Raises:
-            RuntimeError: If no document is open.
+            RuntimeError: If no document is open or the backend does
+                not expose ``search_text_encoded``.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "search_text_encoded"):
-            results = self.document.search_text_encoded(text, encoding, case_sensitive, max_results)
-        else:
-            results = self.document.search_text(text, encoding, case_sensitive, max_results)
+        if not hasattr(self.document, "search_text_encoded"):
+            _logger.error("search_text_failed_backend_missing_search_text_encoded")
+            msg = "document backend does not expose search_text_encoded; rebuild intellicrack_hexcore to enable encoding-aware text search"
+            raise RuntimeError(msg)
+
+        results = self.document.search_text_encoded(text, encoding, case_sensitive, max_results)
         _logger.debug("search_text_completed", encoding=encoding, matches=len(results))
         return [{"offset": r[0], "length": r[1]} for r in results]
 
@@ -1882,6 +1986,20 @@ class HexEditorBridge(ToolBridgeBase):
     async def replace_bytes(self, pattern_hex: str, replacement_hex: str) -> int:
         """Find and replace all occurrences of a byte pattern.
 
+        Pre-scans the document for pattern occurrences via the
+        backend's ``search_bytes`` (when available) so the shared
+        ``HexDocumentState`` (when attached) receives a precise
+        ``data_modified`` event for each affected byte range instead
+        of the wholesale "0..document_length" event the legacy bridge
+        used to emit. The narrow events let observers (the GUI byte
+        view in particular) avoid a full repaint after every find/
+        replace operation.
+
+        When the backend does not expose ``search_bytes`` the bridge
+        falls back to a single document-wide notify so observers still
+        re-fetch their state, but the event is logged so the operator
+        can see why a precise notify was not possible.
+
         Args:
             pattern_hex: Hex string pattern to find (e.g. "4D 5A").
             replacement_hex: Hex string replacement (e.g. "90 90").
@@ -1897,13 +2015,38 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        pattern = list(bytes.fromhex(pattern_hex.replace(" ", "")))
-        replacement = list(bytes.fromhex(replacement_hex.replace(" ", "")))
-        count: int = self.document.replace_bytes(pattern, replacement)
-        _logger.debug("bytes_replaced", pattern_length=len(pattern), replacements=count)
+        pattern_bytes = bytes.fromhex(pattern_hex.replace(" ", ""))
+        replacement_bytes = bytes.fromhex(replacement_hex.replace(" ", ""))
+        pattern_list = list(pattern_bytes)
+        replacement_list = list(replacement_bytes)
+
+        pre_match_offsets: list[int] = []
+        if pattern_bytes and hasattr(self.document, "search_bytes"):
+            search_results = self.document.search_bytes(pattern_bytes, 0)
+            pre_match_offsets = [int(r[0]) for r in search_results]
+
+        count: int = self.document.replace_bytes(pattern_list, replacement_list)
+        _logger.debug("bytes_replaced", pattern_length=len(pattern_bytes), replacements=count)
+
         if count > 0 and self.state_holder is not None:
-            doc_len: int = self.document.length()
-            self.state_holder.notify_data_modified(0, doc_len, source="bridge")
+            if pre_match_offsets and len(pre_match_offsets) >= count:
+                pat_len = len(pattern_bytes)
+                rep_len = len(replacement_bytes)
+                delta_per_match = rep_len - pat_len
+                envelope_len = max(pat_len, rep_len)
+                pre_match_offsets.sort()
+                for i, original_offset in enumerate(pre_match_offsets[:count]):
+                    new_offset = original_offset + delta_per_match * i
+                    self.state_holder.notify_data_modified(new_offset, envelope_len, source="bridge")
+            else:
+                _logger.warning(
+                    "replace_bytes_using_wholesale_notify",
+                    reason="search_bytes_unavailable_or_count_mismatch",
+                    matches_pre=len(pre_match_offsets),
+                    replaced=count,
+                )
+                doc_len: int = self.document.length()
+                self.state_holder.notify_data_modified(0, doc_len, source="bridge")
         return count
 
     async def undo(self) -> bool:
@@ -2002,6 +2145,12 @@ class HexEditorBridge(ToolBridgeBase):
     async def apply_template(self, template_name: str, offset: int = 0) -> list[dict[str, Any]]:
         """Apply a struct template at a byte offset.
 
+        Notifies the shared ``HexDocumentState`` (when attached) that
+        a pattern-style operation was executed against the document so
+        downstream observers (the GUI's structure pane, AI context
+        synchronizer, etc.) can refresh their views just like they do
+        for :meth:`execute_pattern` and :meth:`execute_pattern_file`.
+
         Args:
             template_name: Name of the template (e.g. IMAGE_DOS_HEADER).
             offset: Byte offset to apply at.
@@ -2020,9 +2169,14 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.info("template_applied", template=template_name, offset=hex(offset))
         result = self.document.apply_template(template_name, offset)
         if not isinstance(result, list):
+            if self.state_holder is not None:
+                self.state_holder.notify_pattern_executed(template_name, 0, source="bridge")
             return []
         typed_list = cast("list[object]", result)
-        return [cast("dict[str, Any]", entry) for entry in typed_list if isinstance(entry, dict)]
+        fields: list[dict[str, Any]] = [cast("dict[str, Any]", entry) for entry in typed_list if isinstance(entry, dict)]
+        if self.state_holder is not None:
+            self.state_holder.notify_pattern_executed(template_name, len(fields), source="bridge")
+        return fields
 
     async def list_templates(self) -> list[dict[str, str]]:
         """List all available struct templates.
@@ -2237,13 +2391,14 @@ class HexEditorBridge(ToolBridgeBase):
 
         Returns:
             list[dict[str, str]]: List of dicts with name, description, and category.
-        """
-        try:
-            registry = self._get_pattern_registry()
-        except RuntimeError:
-            _logger.exception("hexpat_pattern_registry_unavailable")
-            return []
 
+        Raises:
+            RuntimeError: If the pattern registry module is unavailable.
+                Distinguishes "registry missing" from "registry returned
+                no patterns" so callers cannot mistake an outage for an
+                empty community-pattern shelf.
+        """
+        registry = self._get_pattern_registry()
         patterns = registry.list_patterns()
         _logger.debug("hexpat_patterns_listed", count=len(patterns))
         return [
@@ -2262,7 +2417,10 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, str]]: List of matching pattern dicts sorted by specificity.
 
         Raises:
-            RuntimeError: If no document is open.
+            RuntimeError: If no document is open or the pattern registry
+                / interpreter module is unavailable. Surfacing the error
+                lets callers distinguish "no patterns matched" (empty
+                list) from "the matcher could not run".
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -2270,14 +2428,11 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         if not self._hexpat_interpreter_available or _DataReader is None:
-            return []
+            _logger.error("auto_detect_pattern_failed_interpreter_unavailable")
+            msg = "hexpat interpreter not available; cannot auto-detect patterns"
+            raise RuntimeError(msg)
 
-        try:
-            registry = self._get_pattern_registry()
-        except RuntimeError:
-            _logger.exception("hexpat_pattern_registry_unavailable")
-            return []
-
+        registry = self._get_pattern_registry()
         data_reader = _DataReader.from_document(self.document)
         matches = registry.match_file(data_reader)
         _logger.debug("pattern_auto_detect", match_count=len(matches))
@@ -2375,6 +2530,14 @@ class HexEditorBridge(ToolBridgeBase):
     async def copy_as(self, fmt: str = "hex") -> str:
         """Format bytes at the cursor position or selection.
 
+        Requires an active selection. Previously the bridge silently
+        copied a single byte at the cursor when no selection was set,
+        which produced a meaningless one-byte payload that callers had
+        no way to distinguish from a deliberate single-byte selection.
+        The bridge now raises :class:`ToolError` when there is no
+        selection so the caller can surface a clear error to the user
+        or LLM rather than receive bogus data.
+
         Args:
             fmt: Output format - "hex", "c_array", "python", "base64",
                 "rust_array", "csharp_array", "java_array",
@@ -2386,7 +2549,8 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open.
-            ToolError: If ``fmt`` is not a recognized output format.
+            ToolError: If ``fmt`` is not a recognized output format
+                or if no selection is active.
         """
         if self.document is None:
             _logger.error("copy_as_failed_no_document_open", fmt=fmt)
@@ -2398,13 +2562,12 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"{_ERR_UNKNOWN_FORMAT}: {fmt!r} (supported: {sorted(_COPY_AS_FORMATS)})"
             raise ToolError(msg)
 
-        if self._selection is not None:
-            start, end = self._selection
-            length = end - start + 1
-        else:
-            _logger.warning("copy_as_no_selection", cursor_offset=self._cursor_offset)
-            start = self._cursor_offset
-            length = 1
+        if self._selection is None:
+            _logger.error("copy_as_failed_no_selection", cursor_offset=self._cursor_offset)
+            msg = f"{_ERR_NO_SELECTION}; call select_range(start, end) before copy_as"
+            raise ToolError(msg)
+        start, end = self._selection
+        length = end - start + 1
 
         raw = self.document.read(start, length)
         if isinstance(raw, bytes):
@@ -2526,6 +2689,12 @@ class HexEditorBridge(ToolBridgeBase):
     async def save(self, path: str | None = None) -> bool:
         """Save the document.
 
+        When ``path`` differs from the current ``target_path`` the
+        ``state.target_path`` is updated to the new location so
+        subsequent operations key off the canonical "file backing this
+        document" path. The shared ``HexDocumentState`` (when attached)
+        is also rebound to the new path so observers see the rename.
+
         Args:
             path: Save path. Uses original path if None.
 
@@ -2552,13 +2721,24 @@ class HexEditorBridge(ToolBridgeBase):
                 msg = "no file path; use save_as"
                 raise RuntimeError(msg)
 
-        _logger.info("file_saved", path=saved_path)
+        canonical_saved_path = Path(saved_path)
+        previous_path = self._state.target_path
+        if previous_path is None or Path(previous_path) != canonical_saved_path:
+            self._state.target_path = canonical_saved_path
+            if self.state_holder is not None:
+                self.state_holder.set_document(self.document, canonical_saved_path, source="bridge")
+
+        _logger.info("file_saved", path=str(canonical_saved_path))
         if self.state_holder is not None:
-            self.state_holder.notify_document_saved(str(saved_path), source="bridge")
+            self.state_holder.notify_document_saved(str(canonical_saved_path), source="bridge")
         return True
 
     async def save_as(self, path: str) -> bool:
         """Save the document to a new path.
+
+        Updates ``state.target_path`` to ``path`` so the bridge's notion
+        of "the file backing this document" tracks the rename (delegated
+        to :meth:`save`).
 
         Args:
             path: New file path.
@@ -2622,20 +2802,41 @@ class HexEditorBridge(ToolBridgeBase):
             "selection": list(self._selection) if self._selection else None,
         }
 
-    async def get_context_for_ai(self, include_bytes: int = 256) -> dict[str, Any]:
+    async def get_context_for_ai(
+        self,
+        include_bytes: int = 256,
+        bookmark_limit: int = _AI_CONTEXT_BOOKMARK_LIMIT,
+    ) -> dict[str, Any]:
         """Get hex editor context suitable for AI analysis.
 
         Collects document metadata, bytes around the cursor, data
         inspection at the cursor, selected bytes, and bookmarks into
         a single dict for injection into an AI conversation.
 
+        The bookmark list is capped at ``bookmark_limit`` entries
+        sorted by offset so a document with thousands of bookmarks
+        does not blow up the LLM token budget; the dict reports
+        ``bookmark_count_total`` (full count) and ``bookmark_truncated``
+        (whether the cap fired) so the caller knows the list is a
+        subset.
+
         Args:
             include_bytes: Number of bytes around the cursor to include.
+            bookmark_limit: Maximum number of bookmark entries to
+                include in the AI context. Must be non-negative; ``0``
+                returns no bookmarks.
 
         Returns:
             dict[str, Any]: Dict with document info, bytes_at_cursor, inspection,
             selected_bytes, and bookmarks.
+
+        Raises:
+            ValueError: If ``bookmark_limit`` is negative.
         """
+        if bookmark_limit < 0:
+            msg = f"bookmark_limit must be non-negative, got {bookmark_limit}"
+            raise ValueError(msg)
+
         context: dict[str, Any] = await self.get_document_info()
 
         if self.document is not None:
@@ -2669,8 +2870,19 @@ class HexEditorBridge(ToolBridgeBase):
                 context["selected_bytes"] = " ".join(f"{b:02X}" for b in sel_raw)
                 context["selection_range"] = [sel_start, sel_end]
 
-            bookmarks = self.document.list_bookmarks()
-            context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in bookmarks]
+            all_bookmarks = self.document.list_bookmarks()
+            sorted_bookmarks = sorted(all_bookmarks, key=lambda b: int(b[0]))
+            truncated = len(sorted_bookmarks) > bookmark_limit
+            visible = sorted_bookmarks[:bookmark_limit]
+            context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in visible]
+            context["bookmark_count_total"] = len(all_bookmarks)
+            context["bookmark_truncated"] = truncated
+            if truncated:
+                _logger.info(
+                    "ai_context_bookmarks_truncated",
+                    total=len(all_bookmarks),
+                    limit=bookmark_limit,
+                )
 
         return context
 
@@ -2681,8 +2893,11 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Save the current document into a sandbox environment.
 
-        Creates a sandbox instance and copies the document into it at the
-        given destination path.
+        Creates a sandbox instance and copies the document into it at
+        the given destination path. If the copy step fails the freshly
+        created sandbox instance is destroyed before the error is
+        re-raised so the bridge does not leak orphaned sandbox VMs/
+        containers when ``copy_to`` raises.
 
         Args:
             dest_path: Destination path inside the sandbox.
@@ -2717,6 +2932,8 @@ class HexEditorBridge(ToolBridgeBase):
             self.document.save(tmp_path)
             file_path_str = tmp_path
 
+        instance_id: str = ""
+        copy_succeeded = False
         try:
             create_fn = getattr(sandbox_bridge, "create", None)
             if not callable(create_fn):
@@ -2730,7 +2947,7 @@ class HexEditorBridge(ToolBridgeBase):
                 raw_create = await asyncio.to_thread(create_fn, sandbox_type=sandbox_type)
             create_result = cast("dict[str, Any]", raw_create)
 
-            instance_id: str = str(create_result.get("instance_id", ""))
+            instance_id = str(create_result.get("instance_id", ""))
 
             copy_fn = getattr(sandbox_bridge, "copy_to", None)
             if callable(copy_fn):
@@ -2743,7 +2960,25 @@ class HexEditorBridge(ToolBridgeBase):
                         source=file_path_str,
                         dest=dest_path,
                     )
+            copy_succeeded = True
         finally:
+            if not copy_succeeded and instance_id:
+                destroy_fn = getattr(sandbox_bridge, "destroy", None)
+                if callable(destroy_fn):
+                    try:
+                        if _inspect_mod.iscoroutinefunction(destroy_fn):
+                            await destroy_fn(instance_id=instance_id)
+                        else:
+                            await asyncio.to_thread(destroy_fn, instance_id=instance_id)
+                        _logger.warning(
+                            "save_to_sandbox_destroyed_orphan_instance",
+                            instance_id=instance_id,
+                        )
+                    except (RuntimeError, OSError, ValueError, TypeError):
+                        _logger.exception(
+                            "save_to_sandbox_failed_to_destroy_orphan_instance",
+                            instance_id=instance_id,
+                        )
             if tmp_path is not None:
                 try:
                     await asyncio.to_thread(Path(tmp_path).unlink)
@@ -2827,8 +3062,66 @@ class HexEditorBridge(ToolBridgeBase):
             return cast("dict[str, Any]", result)
         return {"exit_code": -1, "stdout": "", "stderr": str(result)}
 
+    @staticmethod
+    def _entropy_from_distribution(distribution: list[int], total: int) -> float:
+        """Compute Shannon entropy from a 256-bin byte histogram.
+
+        Args:
+            distribution: 256-element list of byte counts.
+            total: Total number of bytes contributing to the histogram.
+
+        Returns:
+            float: Entropy value in bits per byte (0.0..8.0). Returns
+            ``0.0`` for empty input.
+        """
+        if total <= 0:
+            return 0.0
+        entropy_value = 0.0
+        for count in distribution:
+            if count > 0:
+                p = count / total
+                entropy_value -= p * math.log2(p)
+        return entropy_value
+
+    def _compute_byte_distribution_python(self) -> list[int]:
+        """Fallback byte-frequency histogram computed in Python.
+
+        Streams the document through ``read`` in chunks so the full
+        contents do not have to be materialised at once when the Rust
+        ``byte_distribution_full`` accessor is missing from an older
+        backend.
+
+        Returns:
+            list[int]: 256-element list of byte counts (index = byte
+            value).
+
+        Raises:
+            RuntimeError: If no document is open.
+        """
+        if self.document is None:
+            msg = _ERR_NO_DOCUMENT
+            raise RuntimeError(msg)
+        counts = [0] * 256
+        chunk_size = 65536
+        doc_len: int = self.document.length()
+        offset = 0
+        while offset < doc_len:
+            length = min(chunk_size, doc_len - offset)
+            chunk = self._read_doc_bytes(offset, length)
+            for byte in chunk:
+                counts[byte] += 1
+            offset += length
+        return counts
+
     async def get_entropy(self) -> float:
         """Get Shannon entropy of the entire document.
+
+        Prefers the native ``entropy`` accessor on the underlying Rust
+        document and falls back to a Python computation built on top of
+        the public ``read``/``length`` API when the accessor is not
+        present (e.g. when running against an older
+        ``intellicrack_hexcore`` build) so the bridge keeps a coherent
+        contract regardless of backend version.
 
         Returns:
             float: Entropy value between 0.0 and 8.0.
@@ -2838,15 +3131,26 @@ class HexEditorBridge(ToolBridgeBase):
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
-        result: float = self.document.entropy()
-        _logger.debug("entropy_computed", value=result)
+        if hasattr(self.document, "entropy"):
+            result: float = float(self.document.entropy())
+            _logger.debug("entropy_computed", value=result)
+            return result
+
+        _logger.warning("entropy_native_unavailable_using_python_fallback")
+        distribution = self._compute_byte_distribution_python()
+        result = self._entropy_from_distribution(distribution, sum(distribution))
+        _logger.debug("entropy_computed_python", value=result)
         return result
 
     async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
         """Get per-block entropy values across the document.
+
+        Falls back to a Python computation that streams the document
+        block-by-block when the Rust ``entropy_map`` accessor is not
+        exposed by the backend.
 
         Args:
             block_size: Block size in bytes for entropy calculation.
@@ -2856,18 +3160,43 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If ``block_size`` is not positive.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
-        result = self.document.entropy_map(block_size)
-        _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
-        return [float(v) for v in result]
+        if block_size <= 0:
+            msg = f"block_size must be positive, got {block_size}"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "entropy_map"):
+            result = self.document.entropy_map(block_size)
+            _logger.debug("entropy_map_computed", blocks=len(result), block_size=block_size)
+            return [float(v) for v in result]
+
+        _logger.warning("entropy_map_native_unavailable_using_python_fallback", block_size=block_size)
+        doc_len: int = self.document.length()
+        out: list[float] = []
+        offset = 0
+        while offset < doc_len:
+            length = min(block_size, doc_len - offset)
+            chunk = self._read_doc_bytes(offset, length)
+            counts = [0] * 256
+            for byte in chunk:
+                counts[byte] += 1
+            out.append(self._entropy_from_distribution(counts, length))
+            offset += length
+        _logger.debug("entropy_map_computed_python", blocks=len(out), block_size=block_size)
+        return out
 
     async def get_byte_distribution(self) -> list[int]:
         """Get the 256-element byte frequency distribution.
+
+        Falls back to a Python streaming computation when the Rust
+        ``byte_distribution_full`` accessor is not exposed by the
+        backend so the contract holds across hexcore versions.
 
         Returns:
             list[int]: List of 256 integer counts, one per byte value.
@@ -2877,15 +3206,25 @@ class HexEditorBridge(ToolBridgeBase):
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
-        result = self.document.byte_distribution_full()
-        _logger.debug("byte_distribution_computed")
-        return [int(v) for v in result]
+        if hasattr(self.document, "byte_distribution_full"):
+            result = self.document.byte_distribution_full()
+            _logger.debug("byte_distribution_computed")
+            return [int(v) for v in result]
+
+        _logger.warning("byte_distribution_native_unavailable_using_python_fallback")
+        result_py = self._compute_byte_distribution_python()
+        _logger.debug("byte_distribution_computed_python")
+        return result_py
 
     async def get_byte_type_distribution(self) -> dict[str, int]:
         """Get byte type counts across the document.
+
+        Falls back to a Python streaming categoriser when the Rust
+        ``byte_type_distribution`` accessor is not exposed by the
+        backend.
 
         Returns:
             dict[str, int]: Dict with null_count, printable_count, control_count, high_count.
@@ -2895,38 +3234,156 @@ class HexEditorBridge(ToolBridgeBase):
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
 
-        result: Any = self.document.byte_type_distribution()
-        _logger.debug("byte_type_distribution_computed")
-        if isinstance(result, dict):
-            return cast("dict[str, int]", result)
-        items: list[Any] = list(result)
+        if hasattr(self.document, "byte_type_distribution"):
+            result: Any = self.document.byte_type_distribution()
+            _logger.debug("byte_type_distribution_computed")
+            if isinstance(result, dict):
+                return cast("dict[str, int]", result)
+            items: list[Any] = list(result)
+            return {
+                "null_count": int(items[0]),
+                "printable_count": int(items[1]),
+                "control_count": int(items[2]),
+                "high_count": int(items[3]),
+            }
+
+        _logger.warning("byte_type_distribution_native_unavailable_using_python_fallback")
+        null_count = 0
+        printable_count = 0
+        control_count = 0
+        high_count = 0
+        chunk_size = 65536
+        doc_len: int = self.document.length()
+        offset = 0
+        while offset < doc_len:
+            length = min(chunk_size, doc_len - offset)
+            chunk = self._read_doc_bytes(offset, length)
+            for byte in chunk:
+                if byte == 0:
+                    null_count += 1
+                elif byte >= 0x80:
+                    high_count += 1
+                elif 0x20 <= byte < 0x7F or byte in (0x09, 0x0A, 0x0D):
+                    printable_count += 1
+                else:
+                    control_count += 1
+            offset += length
+        _logger.debug("byte_type_distribution_computed_python")
         return {
-            "null_count": int(items[0]),
-            "printable_count": int(items[1]),
-            "control_count": int(items[2]),
-            "high_count": int(items[3]),
+            "null_count": null_count,
+            "printable_count": printable_count,
+            "control_count": control_count,
+            "high_count": high_count,
         }
 
-    async def get_digram_matrix(self) -> list[int]:
+    async def get_digram_matrix(self, top_k: int = 0) -> dict[str, Any]:
         """Get the 256x256 byte-pair frequency matrix.
 
+        Returns a structured dict so callers (in particular AI tool
+        invocations) can request a compact summary instead of the
+        ~400 KB JSON blob produced by the full 65536-element row-major
+        matrix.
+
+        When ``top_k`` is positive only the top ``top_k`` non-zero
+        ``(byte_a, byte_b, count)`` entries are returned in
+        ``top_pairs`` and ``matrix`` is omitted. When ``top_k`` is 0
+        (the default) the full ``matrix`` list is included so existing
+        callers that consume the row-major form still work.
+
+        Falls back to a Python streaming computation when the Rust
+        ``digram_matrix`` accessor is not exposed by the backend.
+
+        Args:
+            top_k: When positive, return only the top ``top_k``
+                non-zero (byte_a, byte_b, count) entries in
+                descending count order; the full matrix is omitted.
+                When ``0``, include the full 65536-element matrix.
+
         Returns:
-            list[int]: List of 65536 integer frequencies in row-major order.
+            dict[str, Any]: Dict with keys ``total_pairs`` (sum of all
+            counts), ``unique_pairs`` (number of distinct non-zero
+            pairs), ``top_pairs`` (list of dicts ``{a, b, count}`` when
+            ``top_k`` > 0), and ``matrix`` (full row-major list when
+            ``top_k`` == 0).
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If ``top_k`` is negative.
+        """
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = _ERR_NO_DOCUMENT
+            raise RuntimeError(msg)
+
+        if top_k < 0:
+            msg = f"top_k must be non-negative, got {top_k}"
+            raise ValueError(msg)
+
+        if hasattr(self.document, "digram_matrix"):
+            raw_matrix = [int(v) for v in self.document.digram_matrix()]
+        else:
+            _logger.warning("digram_matrix_native_unavailable_using_python_fallback")
+            raw_matrix = self._compute_digram_matrix_python()
+
+        total_pairs = sum(raw_matrix)
+        unique_pairs = sum(1 for v in raw_matrix if v > 0)
+        result: dict[str, Any] = {
+            "total_pairs": total_pairs,
+            "unique_pairs": unique_pairs,
+        }
+        if top_k > 0:
+            indexed = [(i, c) for i, c in enumerate(raw_matrix) if c > 0]
+            indexed.sort(key=lambda pair: pair[1], reverse=True)
+            result["top_pairs"] = [{"a": idx >> 8, "b": idx & 0xFF, "count": count} for idx, count in indexed[:top_k]]
+        else:
+            result["matrix"] = raw_matrix
+        _logger.debug(
+            "digram_matrix_computed",
+            top_k=top_k,
+            total_pairs=total_pairs,
+            unique_pairs=unique_pairs,
+        )
+        return result
+
+    def _compute_digram_matrix_python(self) -> list[int]:
+        """Streaming Python fallback for the 256x256 digram matrix.
+
+        Reads the document in 64 KiB chunks (with a 1-byte overlap so
+        digrams that straddle a chunk boundary are still counted) and
+        returns a 65536-element row-major frequency table.
+
+        Returns:
+            list[int]: Row-major 256x256 byte-pair counts. Empty
+            documents and 1-byte documents return an all-zero list
+            because no digram exists.
 
         Raises:
             RuntimeError: If no document is open.
         """
         if self.document is None:
-            _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
+            msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
-
-        result = self.document.digram_matrix()
-        _logger.debug("digram_matrix_computed")
-        return [int(v) for v in result]
+        counts = [0] * 65536
+        doc_len: int = self.document.length()
+        if doc_len < 2:
+            return counts
+        chunk_size = 65536
+        prev_byte: int | None = None
+        offset = 0
+        while offset < doc_len:
+            length = min(chunk_size, doc_len - offset)
+            chunk = self._read_doc_bytes(offset, length)
+            if prev_byte is not None and chunk:
+                counts[(prev_byte << 8) | chunk[0]] += 1
+            for i in range(1, len(chunk)):
+                counts[(chunk[i - 1] << 8) | chunk[i]] += 1
+            if chunk:
+                prev_byte = chunk[-1]
+            offset += length
+        return counts
 
     async def get_content_classification(self, block_size: int = 4096) -> list[int]:
         """Classify document blocks by content type.
@@ -3020,8 +3477,41 @@ class HexEditorBridge(ToolBridgeBase):
             for insn in raw_instructions
         ]
 
+    def _document_disk_path_if_unmodified(self) -> Path | None:
+        """Return the on-disk path of the document only when not modified.
+
+        Used by analyzers that can read straight from the file (yara,
+        pefile via ``name=``, etc.) so they can leverage the OS page
+        cache and memory-mapping instead of forcing a full document
+        load through Python.
+
+        Returns:
+            Path | None: Filesystem path of the file backing the
+            current document, or ``None`` when no document is open,
+            no path is known, the file no longer exists on disk, or
+            the document has unsaved modifications relative to the
+            on-disk bytes.
+        """
+        if self.document is None:
+            return None
+        rust_path: str | None = self.document.file_path() if hasattr(self.document, "file_path") else None
+        if rust_path is None:
+            return None
+        path = Path(rust_path)
+        if not path.is_file():
+            return None
+        if hasattr(self.document, "is_modified") and bool(self.document.is_modified()):
+            return None
+        return path
+
     async def yara_scan(self, rule_source: str) -> list[dict[str, Any]]:
         """Scan the document with a YARA rule given as source code.
+
+        When the document has an on-disk path and no unsaved
+        modifications the scan is delegated to ``yara.match(filepath=)``
+        so YARA can memory-map the file directly; otherwise the
+        document bytes are pulled into Python via :meth:`HexDocument.read`
+        and scanned in memory.
 
         Args:
             rule_source: YARA rule source code string.
@@ -3041,17 +3531,22 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "yara_scanner module not available"
             raise RuntimeError(msg)
 
-        doc_len: int = self.document.length()
-        raw = self.document.read(0, doc_len)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray) or not isinstance(raw, list):
-            data = bytes(raw)
-        else:
-            data = bytes(cast("list[int]", raw))
         scanner = _YaraScanner()
         compiled = scanner.compile_source(rule_source)
-        raw_matches = scanner.scan_data(data, compiled)
+        disk_path = self._document_disk_path_if_unmodified()
+        if disk_path is not None:
+            _logger.debug("yara_scan_using_disk_path", path=str(disk_path))
+            raw_matches = scanner.scan_file(disk_path, compiled)
+        else:
+            doc_len: int = self.document.length()
+            raw = self.document.read(0, doc_len)
+            if isinstance(raw, bytes):
+                data = raw
+            elif isinstance(raw, bytearray) or not isinstance(raw, list):
+                data = bytes(raw)
+            else:
+                data = bytes(cast("list[int]", raw))
+            raw_matches = scanner.scan_data(data, compiled)
         _logger.debug("yara_scan_completed", matches=len(raw_matches))
         return [
             {
@@ -3066,6 +3561,11 @@ class HexEditorBridge(ToolBridgeBase):
 
     async def yara_scan_files(self, rule_paths: str) -> list[dict[str, Any]]:
         """Scan the document with YARA rules loaded from files.
+
+        Like :meth:`yara_scan`, prefers ``yara.match(filepath=)`` when
+        the document has an on-disk path with no unsaved modifications
+        so the scan operates against the memory-mapped file rather than
+        a full in-Python copy.
 
         Args:
             rule_paths: Comma-separated paths to .yar rule files.
@@ -3085,18 +3585,23 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "yara_scanner module not available"
             raise RuntimeError(msg)
 
-        doc_len: int = self.document.length()
-        raw = self.document.read(0, doc_len)
-        if isinstance(raw, bytes):
-            data = raw
-        elif isinstance(raw, bytearray) or not isinstance(raw, list):
-            data = bytes(raw)
-        else:
-            data = bytes(cast("list[int]", raw))
         paths: list[str | Path] = [Path(p.strip()) for p in rule_paths.split(",") if p.strip()]
         scanner = _YaraScanner()
         compiled = scanner.compile_rules(paths)
-        raw_matches = scanner.scan_data(data, compiled)
+        disk_path = self._document_disk_path_if_unmodified()
+        if disk_path is not None:
+            _logger.debug("yara_scan_files_using_disk_path", path=str(disk_path))
+            raw_matches = scanner.scan_file(disk_path, compiled)
+        else:
+            doc_len: int = self.document.length()
+            raw = self.document.read(0, doc_len)
+            if isinstance(raw, bytes):
+                data = raw
+            elif isinstance(raw, bytearray) or not isinstance(raw, list):
+                data = bytes(raw)
+            else:
+                data = bytes(cast("list[int]", raw))
+            raw_matches = scanner.scan_data(data, compiled)
         _logger.debug("yara_scan_files_completed", rule_paths=paths, matches=len(raw_matches))
         return [
             {
@@ -3204,12 +3709,18 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.warning("get_pe_imports_failed_pefile_unavailable")
             return []
 
-        data = self._read_all_doc_bytes()
-        if len(data) < _MIN_HEADER_SIZE or data[:2] != b"MZ":
+        head = self._read_doc_bytes(0, _MIN_HEADER_SIZE)
+        if len(head) < _MIN_HEADER_SIZE or head[:2] != b"MZ":
             return []
 
+        disk_path = self._document_disk_path_if_unmodified()
         try:
-            pe = _pefile_mod.PE(data=data, fast_load=True)
+            if disk_path is not None:
+                _logger.debug("get_pe_imports_using_disk_path", path=str(disk_path))
+                pe = _pefile_mod.PE(name=str(disk_path), fast_load=True)
+            else:
+                data = self._read_all_doc_bytes()
+                pe = _pefile_mod.PE(data=data, fast_load=True)
         except (AttributeError, ValueError, OSError) as exc:
             _logger.warning("get_pe_imports_failed_parse", error=str(exc))
             return []
@@ -3276,12 +3787,18 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.warning("get_pe_exports_failed_pefile_unavailable")
             return []
 
-        data = self._read_all_doc_bytes()
-        if len(data) < _MIN_HEADER_SIZE or data[:2] != b"MZ":
+        head = self._read_doc_bytes(0, _MIN_HEADER_SIZE)
+        if len(head) < _MIN_HEADER_SIZE or head[:2] != b"MZ":
             return []
 
+        disk_path = self._document_disk_path_if_unmodified()
         try:
-            pe = _pefile_mod.PE(data=data, fast_load=True)
+            if disk_path is not None:
+                _logger.debug("get_pe_exports_using_disk_path", path=str(disk_path))
+                pe = _pefile_mod.PE(name=str(disk_path), fast_load=True)
+            else:
+                data = self._read_all_doc_bytes()
+                pe = _pefile_mod.PE(data=data, fast_load=True)
         except (AttributeError, ValueError, OSError) as exc:
             _logger.warning("get_pe_exports_failed_parse", error=str(exc))
             return []
@@ -3321,20 +3838,35 @@ class HexEditorBridge(ToolBridgeBase):
         offset: int,
         length: int,
         params_json: str = "{}",
+        *,
+        in_place: bool = True,
     ) -> str:
         """Apply a data transform to a byte range.
+
+        When ``in_place`` is true (the default) the transformed bytes
+        are written back into the document at ``offset`` so the
+        document reflects the result of the transform; the shared
+        ``HexDocumentState`` (when attached) is notified that the byte
+        range was modified.
 
         Args:
             name: Transform name (e.g. xor_single, base64_encode).
             offset: Start offset in the document.
             length: Number of bytes to transform.
             params_json: JSON dict of transform parameters. Byte values as hex strings.
+            in_place: When True, write the transformed bytes back into
+                the document at ``offset``. When False, only return the
+                transformed bytes without modifying the document.
 
         Returns:
             str: Hex string of the transformed bytes.
 
         Raises:
             RuntimeError: If the operation fails.
+            ValueError: If the transformed bytes have a different length
+                than the source range and ``in_place`` is True (the
+                bridge cannot replace a range with a different-length
+                slice without reflowing offsets).
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -3364,7 +3896,28 @@ class HexEditorBridge(ToolBridgeBase):
             data = bytes(result)
         else:
             data = bytes(cast("list[int]", result))
-        _logger.info("transform_applied", transform_name=name, offset=hex(offset), length=length)
+
+        if in_place:
+            if len(data) != length:
+                _logger.error(
+                    "transform_length_mismatch",
+                    transform_name=name,
+                    requested=length,
+                    produced=len(data),
+                )
+                msg = f"transform {name!r} produced {len(data)} bytes for a {length}-byte range; in-place application requires equal length"
+                raise ValueError(msg)
+            self.document.write_bytes(offset, data)
+            if self.state_holder is not None:
+                self.state_holder.notify_data_modified(offset, len(data), source="bridge")
+
+        _logger.info(
+            "transform_applied",
+            transform_name=name,
+            offset=hex(offset),
+            length=length,
+            in_place=in_place,
+        )
         return data.hex()
 
     async def apply_pipeline(
@@ -3372,19 +3925,31 @@ class HexEditorBridge(ToolBridgeBase):
         pipeline_json: str,
         offset: int,
         length: int,
+        *,
+        in_place: bool = True,
     ) -> str:
         """Apply a transform pipeline to a byte range.
+
+        When ``in_place`` is true (the default) the pipeline output is
+        written back into the document at ``offset`` so the document
+        reflects the pipeline result; the shared ``HexDocumentState``
+        (when attached) is notified that the byte range was modified.
 
         Args:
             pipeline_json: JSON array of {name, params} step dicts.
             offset: Start offset in the document.
             length: Number of bytes to transform.
+            in_place: When True, write the pipeline output back into
+                the document at ``offset``. When False, only return the
+                transformed bytes without modifying the document.
 
         Returns:
             str: Hex string of the transformed bytes.
 
         Raises:
             RuntimeError: If the operation fails.
+            ValueError: If the pipeline output has a different length
+                than the source range and ``in_place`` is True.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -3414,7 +3979,27 @@ class HexEditorBridge(ToolBridgeBase):
             if step_name in node_map:
                 pipeline.add_step(node_map[step_name], step_params)
         result = pipeline.execute(data)
-        _logger.info("pipeline_applied", steps=len(steps), offset=hex(offset), length=length)
+
+        if in_place:
+            if len(result) != length:
+                _logger.error(
+                    "pipeline_length_mismatch",
+                    requested=length,
+                    produced=len(result),
+                )
+                msg = f"pipeline produced {len(result)} bytes for a {length}-byte range; in-place application requires equal length"
+                raise ValueError(msg)
+            self.document.write_bytes(offset, result)
+            if self.state_holder is not None:
+                self.state_holder.notify_data_modified(offset, len(result), source="bridge")
+
+        _logger.info(
+            "pipeline_applied",
+            steps=len(steps),
+            offset=hex(offset),
+            length=length,
+            in_place=in_place,
+        )
         return result.hex()
 
     async def list_transforms(self) -> list[dict[str, str]]:
@@ -3582,6 +4167,14 @@ class HexEditorBridge(ToolBridgeBase):
             data = bytes(raw)
 
         mask = (1 << width) - 1
+        hex_width = width // 4
+
+        if width == 32 and poly == 0x04C11DB7 and init == 0xFFFFFFFF and refin and refout and xorout == 0xFFFFFFFF:
+            crc = zlib.crc32(data) & mask
+            _logger.debug("custom_crc_computed_zlib", width=width, result=hex(crc))
+            return f"{crc:0{hex_width}X}"
+
+        crc = init & mask
 
         def reflect(val: int, bits: int) -> int:
             """Reflect the low ``bits`` of ``val`` around its centre bit.
@@ -3603,18 +4196,23 @@ class HexEditorBridge(ToolBridgeBase):
                 val >>= 1
             return reflected
 
-        crc = init & mask
-        for byte in data:
-            b = reflect(byte, 8) if refin else byte
-            crc ^= b << (width - 8)
+        table = [0] * 256
+        top_bit = 1 << (width - 1)
+        for i in range(256):
+            entry_in = reflect(i, 8) if refin else i
+            entry = entry_in << (width - 8)
             for _ in range(8):
-                crc = ((crc << 1) ^ poly) & mask if crc & (1 << (width - 1)) else (crc << 1) & mask
+                entry = ((entry << 1) ^ poly) & mask if entry & top_bit else (entry << 1) & mask
+            table[i] = entry
+
+        shift = width - 8
+        for byte in data:
+            crc = ((crc << 8) ^ table[((crc >> shift) ^ byte) & 0xFF]) & mask
         if refout:
             crc = reflect(crc, width)
         crc ^= xorout
         crc &= mask
 
-        hex_width = width // 4
         _logger.debug("custom_crc_computed", width=width, result=hex(crc), hex_width=hex_width)
         return f"{crc:0{hex_width}X}"
 
@@ -3665,13 +4263,19 @@ class HexEditorBridge(ToolBridgeBase):
                 return await self.export_patches_bps(original_path)
             return await self.export_patches_ups(original_path)
 
+        native_method = "export_patches_ips32" if normalized == "ips32" else "export_patches_ips"
         raw: bytes
-        if normalized == "ips32" and hasattr(self.document, "export_patches_ips32"):
-            raw = self.document.export_patches_ips32()
-        elif normalized == "ips" and hasattr(self.document, "export_patches_ips"):
-            raw = self.document.export_patches_ips()
+        if hasattr(self.document, native_method):
+            raw = getattr(self.document, native_method)()
+            _logger.debug("export_patches_used_native", patch_format=normalized, method=native_method)
         elif hasattr(self.document, "get_patches"):
             patches: list[tuple[int, bytes]] = self.document.get_patches()
+            _logger.warning(
+                "export_patches_native_unavailable_using_python_builder",
+                patch_format=normalized,
+                missing_method=native_method,
+                patch_count=len(patches),
+            )
             raw = self._build_ips_from_patches(patches, ips32=(normalized == "ips32"))
         else:
             _logger.error("export_patches_failed_unsupported_format", patch_format=normalized)
@@ -3804,23 +4408,67 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> bytes:
         """Build IPS or IPS32 binary data from a list of patch tuples.
 
+        Validates each patch record so out-of-range offsets, oversized
+        data chunks, or negative values raise :class:`OverflowError`
+        rather than silently truncating high bits.
+
+        Standard IPS supports 24-bit offsets (``0..0xFFFFFE``; the value
+        ``0x454F46`` is reserved by the ``EOF`` marker) and 16-bit data
+        sizes (``1..0xFFFF``). IPS32 widens the offset to a full 32 bits
+        (``0..0xFFFFFFFF`` excluding ``0x4545_4F46`` which is reserved
+        by the ``EEOF`` terminator) but keeps the 16-bit size field.
+
         Args:
             patches: List of (offset, data) tuples.
             ips32: If True, produce IPS32 format; otherwise standard IPS.
 
         Returns:
             bytes: Complete IPS/IPS32 binary blob.
+
+        Raises:
+            OverflowError: If any patch's offset or data length cannot
+                be represented in the chosen format's fields.
         """
+        ips_offset_max = 0xFFFFFF
+        ips32_offset_max = 0xFFFFFFFF
+        ips_size_max = 0xFFFF
+        ips_eof_offset = int.from_bytes(b"EOF", "big")
+        ips32_eof_offset = int.from_bytes(b"EEOF", "big")
+
         parts: list[bytes] = []
         if ips32:
             parts.append(b"IPS32")
         else:
             parts.append(b"PATCH")
         for offset, data in patches:
+            if offset < 0:
+                msg = f"IPS patch offset {offset} is negative"
+                raise OverflowError(msg)
             size = len(data)
+            if size == 0:
+                msg = f"IPS patch at offset {offset} is empty"
+                raise OverflowError(msg)
+            if size > ips_size_max:
+                msg = (
+                    f"IPS patch at offset {offset} is {size} bytes which exceeds the "
+                    f"{ips_size_max}-byte IPS record limit; split into multiple records"
+                )
+                raise OverflowError(msg)
             if ips32:
+                if offset > ips32_offset_max:
+                    msg = f"IPS32 patch offset {offset} exceeds 32-bit field ({ips32_offset_max:#x})"
+                    raise OverflowError(msg)
+                if offset == ips32_eof_offset:
+                    msg = f"IPS32 patch offset {offset:#x} collides with the EEOF terminator marker"
+                    raise OverflowError(msg)
                 parts.append(struct.pack(">I", offset))
             else:
+                if offset > ips_offset_max:
+                    msg = f"IPS patch offset {offset} exceeds 24-bit field ({ips_offset_max:#x}); use IPS32 format"
+                    raise OverflowError(msg)
+                if offset == ips_eof_offset:
+                    msg = f"IPS patch offset {offset:#x} collides with the EOF terminator marker; use IPS32 format"
+                    raise OverflowError(msg)
                 parts.append(struct.pack(">I", offset)[1:])
             parts.extend((struct.pack(">H", size), data))
         if ips32:
@@ -3837,6 +4485,14 @@ class HexEditorBridge(ToolBridgeBase):
         and a single fill byte, which expands to ``run_length`` copies
         of the fill byte at ``offset``.
 
+        IPS streams must be terminated by the appropriate end marker
+        (``b"EOF"`` for standard IPS, ``b"EEOF"`` for the IPS32
+        extension produced by :meth:`_build_ips_from_patches`). Truncated
+        records or a missing terminator raise
+        :class:`RuntimeError` rather than being silently ignored, so
+        callers see corrupt patch blobs as failures instead of partial
+        applies.
+
         Args:
             raw: Raw IPS or IPS32 binary data.
 
@@ -3844,7 +4500,8 @@ class HexEditorBridge(ToolBridgeBase):
             int: Number of patch records applied.
 
         Raises:
-            RuntimeError: If the header is invalid.
+            RuntimeError: If the header is invalid, a record is
+                truncated, or the patch is missing its terminator.
         """
         pos = 0
         if raw[:_IPS_MAGIC_LEN] == _IPS32_MAGIC:
@@ -3860,36 +4517,65 @@ class HexEditorBridge(ToolBridgeBase):
             msg = _ERR_INVALID_IPS
             raise RuntimeError(msg)
 
+        terminator_len = len(eof_marker)
         count = 0
-        while pos < len(raw) and raw[pos : pos + len(eof_marker)] != eof_marker:
+        terminated = False
+        while pos < len(raw):
+            if raw[pos : pos + terminator_len] == eof_marker:
+                pos += terminator_len
+                terminated = True
+                break
+            header_len = 6 if ips32 else 5
+            if pos + header_len > len(raw):
+                _logger.error(
+                    "apply_ips_patches_failed_truncated_record_header",
+                    pos=pos,
+                    raw_len=len(raw),
+                    ips32=ips32,
+                )
+                msg = f"{_ERR_INVALID_IPS}: truncated record header at byte {pos} (need {header_len}, have {len(raw) - pos})"
+                raise RuntimeError(msg)
             if ips32:
-                if pos + 6 > len(raw):
-                    break
                 offset = struct.unpack(">I", raw[pos : pos + 4])[0]
                 size = struct.unpack(">H", raw[pos + 4 : pos + 6])[0]
-                pos += 6
             else:
-                if pos + 5 > len(raw):
-                    break
                 offset = struct.unpack(">I", b"\x00" + raw[pos : pos + 3])[0]
                 size = struct.unpack(">H", raw[pos + 3 : pos + 5])[0]
-                pos += 5
+            pos += header_len
             if size == 0:
-                if pos + 3 > len(raw):
-                    break
+                rle_len = 3
+                if pos + rle_len > len(raw):
+                    _logger.error(
+                        "apply_ips_patches_failed_truncated_rle_record",
+                        pos=pos,
+                        raw_len=len(raw),
+                    )
+                    msg = f"{_ERR_INVALID_IPS}: truncated RLE record at byte {pos} (need {rle_len}, have {len(raw) - pos})"
+                    raise RuntimeError(msg)
                 run_length = struct.unpack(">H", raw[pos : pos + 2])[0]
                 fill_value = raw[pos + 2]
-                pos += 3
+                pos += rle_len
                 patch_data = bytes([fill_value]) * run_length
             else:
                 if pos + size > len(raw):
-                    break
+                    _logger.error(
+                        "apply_ips_patches_failed_truncated_record_data",
+                        pos=pos,
+                        record_size=size,
+                        raw_len=len(raw),
+                    )
+                    msg = f"{_ERR_INVALID_IPS}: truncated record data at byte {pos} (need {size}, have {len(raw) - pos})"
+                    raise RuntimeError(msg)
                 patch_data = raw[pos : pos + size]
                 pos += size
             if self.document is not None:
                 _logger.info("ips_patch_record_write", offset=hex(offset), length=len(patch_data))
                 self.document.write_bytes(offset, patch_data)
             count += 1
+        if not terminated:
+            _logger.error("apply_ips_patches_failed_missing_terminator", raw_len=len(raw), terminator=eof_marker.decode("ascii"))
+            msg = f"{_ERR_INVALID_IPS}: missing {eof_marker.decode('ascii')} terminator"
+            raise RuntimeError(msg)
         return count
 
     async def search_numeric(
@@ -3911,6 +4597,12 @@ class HexEditorBridge(ToolBridgeBase):
         loaded, so any document held by this bridge is guaranteed to
         expose the native search APIs and no Python fallback is needed.
 
+        ``value_type`` is validated up-front against the documented
+        enum (``"uint"``, ``"int"``, ``"float"``) so a typo such as
+        ``"unsigned"`` raises :class:`ValueError` rather than silently
+        being interpreted as ``"uint"`` and producing meaningless
+        match offsets.
+
         Args:
             value: Numeric value to search for.
             size: Byte size of the value: 1, 2, 4, or 8.
@@ -3926,11 +4618,22 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open or the document does
                 not expose the native search APIs.
+            ValueError: If ``value_type`` or ``endianness`` is not one
+                of the documented enum values.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
+
+        if value_type not in {"uint", "int", "float"}:
+            _logger.error("search_numeric_failed_invalid_value_type", value_type=value_type)
+            msg = f"value_type must be 'uint', 'int', or 'float'; got {value_type!r}"
+            raise ValueError(msg)
+        if endianness not in {"little", "big"}:
+            _logger.error("search_numeric_failed_invalid_endianness", endianness=endianness)
+            msg = f"endianness must be 'little' or 'big'; got {endianness!r}"
+            raise ValueError(msg)
 
         big_endian = endianness == "big"
         if value_type == "float":
