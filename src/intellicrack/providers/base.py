@@ -527,6 +527,30 @@ class LLMProviderBase(ABC):
         """
         return self._convert_tools_to_provider_format(tools)
 
+    @staticmethod
+    def _convert_tools_to_openai_format(
+        tools: list[ToolDefinition],
+    ) -> list[dict[str, object]]:
+        """Build OpenAI-compatible tool dicts from internal tool definitions.
+
+        Shared conversion helper for providers that consume the OpenAI
+        function-calling tool schema (OpenAI, Grok, OpenRouter,
+        HuggingFace, Ollama).
+
+        Args:
+            tools: List of internal :class:`ToolDefinition` objects to
+                convert.
+
+        Returns:
+            list[dict[str, object]]: List of tool dicts in the OpenAI
+            ``{"type": "function", "function": {...}}`` format.
+        """
+        openai_tools: list[dict[str, object]] = []
+        for tool in tools:
+            tool_schemas = create_openai_tool_schema(tool)
+            openai_tools.extend(dict(schema) for schema in tool_schemas)
+        return openai_tools
+
     def convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -675,6 +699,13 @@ class LLMProviderBase(ABC):
 
         Returns:
             str | dict[str, object]: A string or dict suitable for the ``tool_choice`` API parameter.
+
+        Raises:
+            ProviderError: When ``tool_choice.mode`` is
+                :data:`ToolChoiceMode.SPECIFIC` but ``function_name`` is
+                missing or empty.  Sending an empty function name to an
+                OpenAI-compatible endpoint produces a 400 server-side;
+                surface the misuse as a typed error here.
         """
         if tool_choice.mode == ToolChoiceMode.AUTO:
             return "auto"
@@ -682,9 +713,13 @@ class LLMProviderBase(ABC):
             return "none"
         if tool_choice.mode == ToolChoiceMode.REQUIRED:
             return "required"
+        function_name = tool_choice.function_name
+        if not function_name:
+            msg = "ToolChoiceMode.SPECIFIC requires a non-empty function_name"
+            raise ProviderError(msg)
         return {
             "type": "function",
-            "function": {"name": tool_choice.function_name or ""},
+            "function": {"name": function_name},
         }
 
     @staticmethod

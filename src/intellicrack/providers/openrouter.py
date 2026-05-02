@@ -35,7 +35,6 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     ToolCallBufferManager,
     UsageInfo,
-    create_openai_tool_schema,
 )
 
 
@@ -651,11 +650,7 @@ class OpenRouterProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in OpenRouter's format.
         """
-        openrouter_tools: list[dict[str, object]] = []
-        for tool in tools:
-            tool_schemas = create_openai_tool_schema(tool)
-            openrouter_tools.extend(dict(schema) for schema in tool_schemas)
-        return openrouter_tools
+        return self._convert_tools_to_openai_format(tools)
 
     async def get_generation(self, generation_id: str) -> dict[str, object]:
         """Get details about a specific generation.

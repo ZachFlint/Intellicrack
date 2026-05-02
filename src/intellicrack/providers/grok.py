@@ -33,7 +33,6 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
-    create_openai_tool_schema,
 )
 
 
@@ -650,8 +649,4 @@ class GrokProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in Grok's format.
         """
-        grok_tools: list[dict[str, object]] = []
-        for tool in tools:
-            tool_schemas = create_openai_tool_schema(tool)
-            grok_tools.extend(dict(schema) for schema in tool_schemas)
-        return grok_tools
+        return self._convert_tools_to_openai_format(tools)

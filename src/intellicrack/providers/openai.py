@@ -33,7 +33,6 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
-    create_openai_tool_schema,
 )
 
 
@@ -588,8 +587,4 @@ class OpenAIProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in OpenAI's format.
         """
-        openai_tools: list[dict[str, object]] = []
-        for tool in tools:
-            tool_schemas = create_openai_tool_schema(tool)
-            openai_tools.extend(dict(schema) for schema in tool_schemas)
-        return openai_tools
+        return self._convert_tools_to_openai_format(tools)
