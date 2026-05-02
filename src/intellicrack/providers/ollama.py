@@ -1528,11 +1528,8 @@ class OllamaProvider(LLMProviderBase):
                 entry_func["name"] = name_val
             args_val: object = func_delta.get("arguments")
             current_args: object = entry_func.get("arguments", "")
-            if isinstance(args_val, str):
-                if args_val and isinstance(current_args, str):
-                    entry_func["arguments"] = current_args + args_val
-                elif args_val and not isinstance(current_args, str):
-                    continue
+            if isinstance(args_val, str) and args_val and isinstance(current_args, str):
+                entry_func["arguments"] = current_args + args_val
             elif isinstance(args_val, dict):
                 entry_func["arguments"] = cast("dict[str, object]", args_val)
 
