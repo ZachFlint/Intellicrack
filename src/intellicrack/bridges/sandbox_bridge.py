@@ -13,8 +13,8 @@ import asyncio
 import dataclasses
 import functools
 import importlib
-import types
-from datetime import datetime, timezone
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -38,6 +38,8 @@ from intellicrack.sandbox import (
 
 
 if TYPE_CHECKING:
+    import types
+
     from intellicrack.sandbox import ExecutionReport
 
 
@@ -95,7 +97,7 @@ _VALID_SANDBOX_TYPES: frozenset[str] = frozenset({"windows", "qemu"})
 _VALID_YARA_MODES: frozenset[str] = frozenset({"files", "memory"})
 
 
-def _json_safe(value: Any) -> Any:
+def json_safe(value: object) -> object:
     """Recursively convert a value to a JSON-serialisable form.
 
     Converts ``datetime`` instances to UTC ISO-8601 strings, ``Path``
@@ -106,26 +108,26 @@ def _json_safe(value: Any) -> Any:
         value: The value to convert.
 
     Returns:
-        Any: A JSON-serialisable representation of ``value``.
+        object: A JSON-serialisable representation of ``value``.
     """
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value.isoformat()
     if isinstance(value, Path):
         return value.as_posix()
     if isinstance(value, dict):
-        return {k: _json_safe(v) for k, v in value.items()}
+        return {k: json_safe(v) for k, v in value.items()}
     if isinstance(value, list):
-        return [_json_safe(item) for item in value]
+        return [json_safe(item) for item in value]
     return value
 
 
-def _dataclass_to_dict(obj: Any) -> dict[str, Any]:
+def dataclass_to_dict(obj: object) -> dict[str, Any]:
     """Convert a dataclass instance to a JSON-serialisable dictionary.
 
     Uses ``dataclasses.asdict`` for the conversion and then applies
-    :func:`_json_safe` to convert ``datetime`` and ``Path`` values to
+    :func:`json_safe` to convert ``datetime`` and ``Path`` values to
     strings.  A ``json.dumps`` round-trip is verified before returning.
 
     Args:
@@ -138,16 +140,14 @@ def _dataclass_to_dict(obj: Any) -> dict[str, Any]:
         ToolError: If the object is not a dataclass or the result is not
             JSON-serialisable.
     """
-    import json as _json
-
     if not dataclasses.is_dataclass(obj) or isinstance(obj, type):
         msg = f"Expected a dataclass instance, got {type(obj).__name__}"
         raise ToolError(msg)
 
     raw: dict[str, Any] = dataclasses.asdict(obj)
-    safe = _json_safe(raw)
+    safe = json_safe(raw)
     try:
-        _json.dumps(safe)
+        json.dumps(safe)
     except (TypeError, ValueError) as exc:
         msg = f"Dataclass result is not JSON-serialisable: {exc}"
         raise ToolError(msg) from exc
@@ -869,7 +869,7 @@ class SandboxBridge(ToolBridgeBase):
                 "instance_id": instance.id,
                 "type": instance.sandbox_type,
                 "status": instance.state.status,
-                "created_at": instance.created_at.astimezone(timezone.utc).isoformat(),
+                "created_at": instance.created_at.astimezone(UTC).isoformat(),
             }
 
         except SandboxError as e:
@@ -1180,8 +1180,8 @@ class SandboxBridge(ToolBridgeBase):
                 "id": inst.id,
                 "type": inst.sandbox_type,
                 "status": inst.state.status,
-                "created_at": inst.created_at.astimezone(timezone.utc).isoformat(),
-                "last_used": inst.last_used.astimezone(timezone.utc).isoformat(),
+                "created_at": inst.created_at.astimezone(UTC).isoformat(),
+                "last_used": inst.last_used.astimezone(UTC).isoformat(),
                 "binary": str(inst.binary_path) if inst.binary_path else None,
             }
             for inst in manager.instances
@@ -1460,10 +1460,7 @@ class SandboxBridge(ToolBridgeBase):
                 instance_id=instance_id,
                 count=len(messages),
             )
-            serialised = [
-                {"type": getattr(msg, "message_type", "unknown"), "data": getattr(msg, "data", {})}
-                for msg in messages
-            ]
+            serialised = [{"type": getattr(msg, "message_type", "unknown"), "data": getattr(msg, "data", {})} for msg in messages]
         except (SandboxError, AttributeError) as e:
             _logger.warning("pending_messages_failed", error=str(e))
             msg_err = f"{_ERR_MESSAGES_FAILED}: {e}"
