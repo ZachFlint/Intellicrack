@@ -10,10 +10,15 @@ This module provides a tool bridge that wraps the SandboxManager to expose sandb
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import functools
 import importlib
-import json
+import types
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+
+import yaml
 
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
 from intellicrack.core.logging import get_logger
@@ -33,16 +38,15 @@ from intellicrack.sandbox import (
 
 
 if TYPE_CHECKING:
-    import types
-
     from intellicrack.sandbox import ExecutionReport
 
 
 _logger = get_logger(__name__)
 
 
+@functools.lru_cache(maxsize=1)
 def _get_analysis_module() -> types.ModuleType:
-    """Lazily import the sandbox analysis module.
+    """Return the cached sandbox analysis module, importing it on first call.
 
     Returns:
         types.ModuleType: The ``intellicrack.sandbox.analysis`` module.
@@ -60,6 +64,7 @@ _ERR_SRC_NOT_FOUND = "Source file not found"
 _ERR_COPY_TO_FAILED = "Copy to sandbox failed"
 _ERR_COPY_FROM_FAILED = "Copy from sandbox failed"
 _ERR_QEMU_ONLY = "Snapshots only supported for QEMU sandboxes"
+_ERR_QEMU_REQUIRED = "Operation requires QEMU sandbox"
 _ERR_SNAPSHOT_CREATE_FAILED = "Snapshot creation failed"
 _ERR_SNAPSHOT_RESTORE_FAILED = "Snapshot restore failed"
 _ERR_SNAPSHOT_LIST_FAILED = "Snapshot listing failed"
@@ -73,6 +78,7 @@ _ERR_ANTI_EVASION_FAILED = "Failed to apply anti-evasion"
 _ERR_MEMORY_DUMP_FAILED = "Failed to dump guest memory"
 _ERR_EXTRACT_FILES_FAILED = "Failed to extract dropped files"
 _ERR_YARA_SCAN_FAILED = "Failed to run YARA scan"
+_ERR_YARA_INVALID_MODE = "Invalid scan_target; must be 'files' or 'memory'"
 _ERR_NO_REPORT = "No execution report available for this instance"
 _ERR_IOC_EXTRACT_FAILED = "Failed to extract IOCs"
 _ERR_TIMELINE_FAILED = "Failed to generate timeline"
@@ -80,8 +86,72 @@ _ERR_BEHAVIOR_FAILED = "Failed to detect behaviors"
 _ERR_C2_DETECT_FAILED = "Failed to detect C2 patterns"
 _ERR_DIFF_FAILED = "Failed to diff reports"
 _ERR_INVALID_SANDBOX_TYPE = "Invalid sandbox_type"
+_ERR_MANAGER_DESTROYED = "manager was shut down; call create() to recreate"
+_ERR_RULES_NOT_FOUND = "Custom rules file not found"
+_ERR_RULES_INVALID = "Custom rules file is not valid YAML or has wrong shape"
+_ERR_VNC_PORT_UNAVAILABLE = "VNC port is not allocated on this QEMU sandbox"
 
 _VALID_SANDBOX_TYPES: frozenset[str] = frozenset({"windows", "qemu"})
+_VALID_YARA_MODES: frozenset[str] = frozenset({"files", "memory"})
+
+
+def _json_safe(value: Any) -> Any:
+    """Recursively convert a value to a JSON-serialisable form.
+
+    Converts ``datetime`` instances to UTC ISO-8601 strings, ``Path``
+    instances to POSIX strings, and recurses into ``dict``/``list``.
+    All other types are returned unchanged.
+
+    Args:
+        value: The value to convert.
+
+    Returns:
+        Any: A JSON-serialisable representation of ``value``.
+    """
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def _dataclass_to_dict(obj: Any) -> dict[str, Any]:
+    """Convert a dataclass instance to a JSON-serialisable dictionary.
+
+    Uses ``dataclasses.asdict`` for the conversion and then applies
+    :func:`_json_safe` to convert ``datetime`` and ``Path`` values to
+    strings.  A ``json.dumps`` round-trip is verified before returning.
+
+    Args:
+        obj: A dataclass instance to convert.
+
+    Returns:
+        dict[str, Any]: JSON-safe dictionary representation of ``obj``.
+
+    Raises:
+        ToolError: If the object is not a dataclass or the result is not
+            JSON-serialisable.
+    """
+    import json as _json
+
+    if not dataclasses.is_dataclass(obj) or isinstance(obj, type):
+        msg = f"Expected a dataclass instance, got {type(obj).__name__}"
+        raise ToolError(msg)
+
+    raw: dict[str, Any] = dataclasses.asdict(obj)
+    safe = _json_safe(raw)
+    try:
+        _json.dumps(safe)
+    except (TypeError, ValueError) as exc:
+        msg = f"Dataclass result is not JSON-serialisable: {exc}"
+        raise ToolError(msg) from exc
+    return cast("dict[str, Any]", safe)
 
 
 class SandboxBridge(ToolBridgeBase):
@@ -98,6 +168,7 @@ class SandboxBridge(ToolBridgeBase):
         """Initialize the SandboxBridge instance."""
         super().__init__()
         self._manager: SandboxManager | None = None
+        self._manager_destroyed: bool = False
         self._capabilities = BridgeCapabilities(
             supports_dynamic_analysis=True,
             supports_patching=False,
@@ -200,8 +271,9 @@ class SandboxBridge(ToolBridgeBase):
                         ToolParameter(
                             name="args",
                             type="array",
-                            description="Command line arguments for the binary",
+                            description="Command line arguments for the binary (default: [])",
                             required=False,
+                            default=[],
                         ),
                         ToolParameter(
                             name="sandbox_type",
@@ -214,8 +286,9 @@ class SandboxBridge(ToolBridgeBase):
                         ToolParameter(
                             name="time_limit",
                             type="integer",
-                            description="Execution timeout in seconds",
+                            description="Execution timeout in seconds (default: sandbox config value)",
                             required=False,
+                            default=300,
                         ),
                         ToolParameter(
                             name="monitor",
@@ -246,8 +319,9 @@ class SandboxBridge(ToolBridgeBase):
                         ToolParameter(
                             name="time_limit",
                             type="integer",
-                            description="Command timeout in seconds",
+                            description="Command timeout in seconds (default: sandbox config value)",
                             required=False,
+                            default=60,
                         ),
                         ToolParameter(
                             name="working_directory",
@@ -418,12 +492,12 @@ class SandboxBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="sandbox.pcap_start",
-                    description="Start network packet capture on a sandbox instance.",
+                    description="Start network packet capture on a QEMU sandbox instance.",
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                     ],
@@ -448,39 +522,41 @@ class SandboxBridge(ToolBridgeBase):
                         ToolParameter(
                             name="output_path",
                             type="string",
-                            description="Optional local path to save the PCAP file",
+                            description="Optional local path to save the PCAP file (default: auto-generated temp path)",
                             required=False,
+                            default="",
                         ),
                     ],
                     returns="Dictionary with pcap file path",
                 ),
                 ToolFunction(
                     name="sandbox.screenshot",
-                    description="Capture a screenshot of the sandbox display.",
+                    description="Capture a screenshot of the QEMU sandbox display.",
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                         ToolParameter(
                             name="output_path",
                             type="string",
-                            description="Optional local path to save the screenshot",
+                            description="Optional local path to save the screenshot (default: auto-generated temp path)",
                             required=False,
+                            default="",
                         ),
                     ],
                     returns="Dictionary with screenshot file path",
                 ),
                 ToolFunction(
                     name="sandbox.anti_evasion",
-                    description="Apply anti-evasion hardening to make the sandbox less detectable by malware.",
+                    description="Apply anti-evasion hardening to make the QEMU sandbox less detectable by malware.",
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                         ToolParameter(
@@ -495,38 +571,40 @@ class SandboxBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="sandbox.memory_dump",
-                    description="Dump guest memory to a file for offline analysis.",
+                    description="Dump guest memory to a file for offline analysis (QEMU sandboxes only).",
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                         ToolParameter(
                             name="output_path",
                             type="string",
-                            description="Optional local path to save the memory dump",
+                            description="Optional local path to save the memory dump (default: auto-generated temp path)",
                             required=False,
+                            default="",
                         ),
                     ],
                     returns="Dictionary with memory dump file path",
                 ),
                 ToolFunction(
                     name="sandbox.extract_dropped_files",
-                    description="Extract files created by the binary during execution into a ZIP archive.",
+                    description="Extract files created by the binary during execution into a ZIP archive (QEMU sandboxes only).",
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                         ToolParameter(
                             name="output_path",
                             type="string",
-                            description="Optional local path to save the ZIP archive",
+                            description="Optional local path to save the ZIP archive (default: auto-generated temp path)",
                             required=False,
+                            default="",
                         ),
                     ],
                     returns="Dictionary with ZIP archive path",
@@ -584,15 +662,19 @@ class SandboxBridge(ToolBridgeBase):
                         ToolParameter(
                             name="categories",
                             type="array",
-                            description="Optional list of categories to include (e.g., 'file', 'registry', 'network')",
+                            description="Optional list of categories to include (e.g., 'file', 'registry', 'network'). Default: all categories.",
                             required=False,
+                            default=[],
                         ),
                     ],
                     returns="List of timeline events sorted by timestamp",
                 ),
                 ToolFunction(
                     name="sandbox.detect_behaviors",
-                    description="Match behavioral signatures against the last execution report using MITRE ATT&CK patterns.",
+                    description=(
+                        "Match behavioral signatures against the last execution report using MITRE ATT&CK patterns. "
+                        "Accepts an optional path to a custom YAML rules file."
+                    ),
                     parameters=[
                         ToolParameter(
                             name="instance_id",
@@ -644,19 +726,19 @@ class SandboxBridge(ToolBridgeBase):
                 ToolFunction(
                     name="sandbox.get_vnc_port",
                     description=(
-                        "Return the VNC TCP port the sandbox is exposing its framebuffer on, "
-                        "or null when no VNC display is configured. Use this to attach a VNC "
-                        "viewer to a running QEMU sandbox for interactive display inspection."
+                        "Return the VNC TCP port the QEMU sandbox is exposing its framebuffer on. "
+                        "Raises an error when the sandbox is not QEMU or VNC is not configured. "
+                        "Use this to attach a VNC viewer for interactive display inspection."
                     ),
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the sandbox instance",
+                            description="ID of the QEMU sandbox instance",
                             required=True,
                         ),
                     ],
-                    returns="VNC port number or null",
+                    returns="VNC port number (integer)",
                 ),
             ],
         )
@@ -670,6 +752,7 @@ class SandboxBridge(ToolBridgeBase):
         del tool_path
         if self._manager is None:
             self._manager = SandboxManager()
+            self._manager_destroyed = False
 
         self.state = BridgeState(
             connected=True,
@@ -688,6 +771,7 @@ class SandboxBridge(ToolBridgeBase):
         if self._manager is not None:
             await self._manager.destroy_all()
             self._manager = None
+            self._manager_destroyed = True
 
         self.state = BridgeState()
         _logger.info("sandbox_bridge_shutdown", bridge="sandbox")
@@ -698,20 +782,25 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             bool: True if at least one sandbox type is available.
         """
-        _logger.info("sandbox_is_available_started")
         if self._manager is None:
             self._manager = SandboxManager()
+            self._manager_destroyed = False
 
         available_types = await self._manager.get_available_types()
         return len(available_types) > 0
 
     def _ensure_manager(self) -> SandboxManager:
-        """Ensure manager is initialized.
+        """Ensure manager is initialized and has not been shut down.
 
         Returns:
             SandboxManager: The SandboxManager instance.
+
+        Raises:
+            ToolError: If the manager was previously shut down via ``shutdown()``.
         """
         if self._manager is None:
+            if self._manager_destroyed:
+                raise ToolError(_ERR_MANAGER_DESTROYED)
             self._manager = SandboxManager()
         return self._manager
 
@@ -766,15 +855,34 @@ class SandboxBridge(ToolBridgeBase):
 
             _logger.info("sandbox_created", instance_id=instance.id, type=sb_type)
 
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=None,
+            )
+
             return {
                 "instance_id": instance.id,
                 "type": instance.sandbox_type,
                 "status": instance.state.status,
-                "created_at": instance.created_at.isoformat(),
+                "created_at": instance.created_at.astimezone(timezone.utc).isoformat(),
             }
 
         except SandboxError as e:
             _logger.warning("sandbox_create_failed", error=str(e))
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=str(e),
+            )
             msg = f"{_ERR_CREATE_FAILED}: {e}"
             raise ToolError(msg) from e
 
@@ -797,6 +905,15 @@ class SandboxBridge(ToolBridgeBase):
             _logger.info("sandbox_destroyed", instance_id=instance_id)
         except SandboxError as e:
             _logger.warning("sandbox_destroy_failed", instance_id=instance_id, error=str(e))
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=self.state.binary_loaded,
+                process_attached=self.state.process_attached,
+                target_path=self.state.target_path,
+                target_pid=self.state.target_pid,
+                last_error=str(e),
+            )
             msg = f"{_ERR_DESTROY_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -857,8 +974,27 @@ class SandboxBridge(ToolBridgeBase):
             )
 
             _logger.info("binary_execution_completed", instance_id=instance.id, result=report.result, exit_code=report.exit_code)
+
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=True,
+                process_attached=False,
+                target_path=path,
+                target_pid=None,
+                last_error=None,
+            )
         except (SandboxError, OSError, RuntimeError) as e:
             _logger.warning("binary_execution_failed", error=str(e))
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=str(e),
+            )
             msg = f"{_ERR_EXECUTION_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -901,8 +1037,27 @@ class SandboxBridge(ToolBridgeBase):
 
             instance.touch()
             _logger.info("command_executed", instance_id=instance_id, exit_code=exit_code)
+
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=self.state.binary_loaded,
+                process_attached=self.state.process_attached,
+                target_path=self.state.target_path,
+                target_pid=self.state.target_pid,
+                last_error=None,
+            )
         except SandboxError as e:
             _logger.warning("command_execution_failed", instance_id=instance_id, error=str(e))
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=self.state.binary_loaded,
+                process_attached=self.state.process_attached,
+                target_path=self.state.target_path,
+                target_pid=self.state.target_pid,
+                last_error=str(e),
+            )
             msg = f"{_ERR_CMD_EXEC_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -1009,7 +1164,6 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Status dictionary with available types and instance info.
         """
-        _logger.info("sandbox_status_started")
         manager = self._ensure_manager()
         return dict(await manager.get_status())
 
@@ -1019,7 +1173,6 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of instance information dictionaries.
         """
-        _logger.info("sandbox_list_started")
         manager = self._ensure_manager()
 
         return [
@@ -1027,8 +1180,8 @@ class SandboxBridge(ToolBridgeBase):
                 "id": inst.id,
                 "type": inst.sandbox_type,
                 "status": inst.state.status,
-                "created_at": inst.created_at.isoformat(),
-                "last_used": inst.last_used.isoformat(),
+                "created_at": inst.created_at.astimezone(timezone.utc).isoformat(),
+                "last_used": inst.last_used.astimezone(timezone.utc).isoformat(),
                 "binary": str(inst.binary_path) if inst.binary_path else None,
             }
             for inst in manager.instances
@@ -1220,7 +1373,8 @@ class SandboxBridge(ToolBridgeBase):
             dict[str, Any]: Command response dictionary.
 
         Raises:
-            ToolError: If resume fails or not supported.
+            ToolError: If resume fails, QMP is not connected, or the
+                instance is not a QEMU sandbox.
         """
         manager = self._ensure_manager()
 
@@ -1232,25 +1386,32 @@ class SandboxBridge(ToolBridgeBase):
         if instance.sandbox_type != "qemu":
             raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            qmp = getattr(instance.sandbox, "_qmp", None)
-            if qmp is None:
-                msg = f"{_ERR_CONT_FAILED}: QMP client not connected"
-                raise ToolError(msg)
+        qmp = getattr(instance.sandbox, "qmp", None)
+        if qmp is None:
+            msg = f"{_ERR_CONT_FAILED}: QMP client not connected"
+            raise ToolError(msg)
 
+        try:
             response = await qmp.cont()
-            instance.touch()
-            _logger.info("vm_resumed", instance_id=instance_id)
-        except SandboxError as e:
+        except Exception as e:
             _logger.warning("vm_resume_failed", error=str(e))
             msg = f"{_ERR_CONT_FAILED}: {e}"
             raise ToolError(msg) from e
-        else:
-            return {
-                "success": response.success,
-                "instance_id": instance_id,
-                "data": response.data,
-            }
+
+        if not response.success:
+            err_detail = response.error or "QMP cont command failed"
+            _logger.warning("vm_resume_qmp_error", error=err_detail, instance_id=instance_id)
+            msg = f"{_ERR_CONT_FAILED}: {err_detail}"
+            raise ToolError(msg)
+
+        instance.touch()
+        _logger.info("vm_resumed", instance_id=instance_id)
+
+        return {
+            "success": response.success,
+            "instance_id": instance_id,
+            "data": response.data,
+        }
 
     async def get_pending_messages(
         self,
@@ -1287,7 +1448,7 @@ class SandboxBridge(ToolBridgeBase):
         if instance.sandbox_type != "qemu":
             raise ToolError(_ERR_QEMU_ONLY)
 
-        agent = getattr(instance.sandbox, "_agent", None)
+        agent = getattr(instance.sandbox, "agent", None)
         if agent is None:
             msg = f"{_ERR_MESSAGES_FAILED}: guest agent channel not connected"
             raise ToolError(msg)
@@ -1299,34 +1460,42 @@ class SandboxBridge(ToolBridgeBase):
                 instance_id=instance_id,
                 count=len(messages),
             )
-        except SandboxError as e:
+            serialised = [
+                {"type": getattr(msg, "message_type", "unknown"), "data": getattr(msg, "data", {})}
+                for msg in messages
+            ]
+        except (SandboxError, AttributeError) as e:
             _logger.warning("pending_messages_failed", error=str(e))
-            msg = f"{_ERR_MESSAGES_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "messages": [{"type": msg.msg_type, "data": msg.data} for msg in messages],
-                "count": len(messages),
-            }
+            msg_err = f"{_ERR_MESSAGES_FAILED}: {e}"
+            raise ToolError(msg_err) from e
+
+        return {
+            "instance_id": instance_id,
+            "messages": serialised,
+            "count": len(serialised),
+        }
 
     async def pcap_start(self, instance_id: str) -> dict[str, Any]:
-        """Start packet capture on a sandbox instance.
+        """Start packet capture on a QEMU sandbox instance.
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
 
         Returns:
             dict[str, Any]: Dictionary with capture_id.
 
         Raises:
-            ToolError: If capture cannot be started.
+            ToolError: If capture cannot be started or sandbox is not QEMU.
         """
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_PCAP_START_FAILED}: {_ERR_QEMU_REQUIRED}"
             raise ToolError(msg)
 
         try:
@@ -1391,23 +1560,27 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         output_path: str | None = None,
     ) -> dict[str, Any]:
-        """Capture a screenshot of the sandbox display.
+        """Capture a screenshot of the QEMU sandbox display.
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
             output_path: Optional local path to save the screenshot.
 
         Returns:
             dict[str, Any]: Dictionary with screenshot file path.
 
         Raises:
-            ToolError: If screenshot cannot be captured.
+            ToolError: If screenshot cannot be captured or sandbox is not QEMU.
         """
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_SCREENSHOT_FAILED}: {_ERR_QEMU_REQUIRED}"
             raise ToolError(msg)
 
         out = Path(output_path) if output_path else None
@@ -1431,23 +1604,27 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         profile: str = "default",
     ) -> dict[str, Any]:
-        """Apply anti-evasion hardening to a sandbox instance.
+        """Apply anti-evasion hardening to a QEMU sandbox instance.
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
             profile: Anti-evasion profile name.
 
         Returns:
             dict[str, Any]: Dictionary describing applied techniques.
 
         Raises:
-            ToolError: If anti-evasion cannot be applied.
+            ToolError: If anti-evasion cannot be applied or sandbox is not QEMU.
         """
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_ANTI_EVASION_FAILED}: {_ERR_QEMU_REQUIRED}"
             raise ToolError(msg)
 
         try:
@@ -1470,23 +1647,27 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         output_path: str | None = None,
     ) -> dict[str, Any]:
-        """Dump guest memory from a sandbox instance.
+        """Dump guest memory from a QEMU sandbox instance.
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
             output_path: Optional local path to save the memory dump.
 
         Returns:
             dict[str, Any]: Dictionary with memory dump file path.
 
         Raises:
-            ToolError: If memory dump fails.
+            ToolError: If memory dump fails or sandbox is not QEMU.
         """
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_QEMU_REQUIRED}"
             raise ToolError(msg)
 
         out = Path(output_path) if output_path else None
@@ -1510,23 +1691,27 @@ class SandboxBridge(ToolBridgeBase):
         instance_id: str,
         output_path: str | None = None,
     ) -> dict[str, Any]:
-        """Extract files created during sandbox execution.
+        """Extract files created during sandbox execution (QEMU only).
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
             output_path: Optional local path to save the ZIP archive.
 
         Returns:
             dict[str, Any]: Dictionary with ZIP archive path.
 
         Raises:
-            ToolError: If extraction fails.
+            ToolError: If extraction fails or sandbox is not QEMU.
         """
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_EXTRACT_FILES_FAILED}: {_ERR_QEMU_REQUIRED}"
             raise ToolError(msg)
 
         out = Path(output_path) if output_path else None
@@ -1562,8 +1747,12 @@ class SandboxBridge(ToolBridgeBase):
             dict[str, Any]: Dictionary with YARA match results.
 
         Raises:
-            ToolError: If scan fails.
+            ToolError: If scan_target is invalid or scan fails.
         """
+        if scan_target not in _VALID_YARA_MODES:
+            msg = f"{_ERR_YARA_INVALID_MODE}: {scan_target!r}"
+            raise ToolError(msg)
+
         manager = self._ensure_manager()
 
         instance = await manager.get(instance_id)
@@ -1618,6 +1807,10 @@ class SandboxBridge(ToolBridgeBase):
             _logger.warning("ioc_extraction_failed", error=str(e))
             msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
             raise ToolError(msg) from e
+        except Exception as e:
+            _logger.warning("ioc_extraction_unexpected_error", error=str(e))
+            msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
+            raise ToolError(msg) from e
         else:
             return {
                 "instance_id": instance_id,
@@ -1662,6 +1855,10 @@ class SandboxBridge(ToolBridgeBase):
             _logger.warning("timeline_generation_failed", error=str(e))
             msg = f"{_ERR_TIMELINE_FAILED}: {e}"
             raise ToolError(msg) from e
+        except Exception as e:
+            _logger.warning("timeline_unexpected_error", error=str(e))
+            msg = f"{_ERR_TIMELINE_FAILED}: {e}"
+            raise ToolError(msg) from e
         else:
             return {
                 "instance_id": instance_id,
@@ -1676,15 +1873,22 @@ class SandboxBridge(ToolBridgeBase):
     ) -> dict[str, Any]:
         """Match behavioral signatures against the last execution report.
 
+        If ``custom_rules_path`` is provided it must point to an existing
+        YAML file whose top-level value is a list of rule dictionaries.
+        A missing file or invalid YAML raises ``ToolError`` immediately;
+        the underlying ``match_behaviors`` call is not made.
+
         Args:
             instance_id: ID of the sandbox instance.
-            custom_rules_path: Optional path to custom rules file.
+            custom_rules_path: Optional path to custom YAML rules file.
 
         Returns:
             dict[str, Any]: Dictionary with list of behavior matches.
 
         Raises:
-            ToolError: If detection fails or no report available.
+            ToolError: If the rules path is given but not found, the file
+                is not valid YAML, the YAML top-level is not a list,
+                detection fails, or no report is available.
         """
         analysis = _get_analysis_module()
         behaviors_fn = analysis.match_behaviors
@@ -1702,17 +1906,32 @@ class SandboxBridge(ToolBridgeBase):
         custom_rules: list[dict[str, Any]] | None = None
         if custom_rules_path is not None:
             rules_file = Path(custom_rules_path)
-            if await asyncio.to_thread(rules_file.exists):
-                raw = await asyncio.to_thread(rules_file.read_text, encoding="utf-8")
-                loaded: Any = json.loads(raw)
-                if isinstance(loaded, list):
-                    custom_rules = cast("list[dict[str, Any]]", loaded)
+            if not await asyncio.to_thread(rules_file.exists):
+                msg = f"{_ERR_RULES_NOT_FOUND}: {custom_rules_path}"
+                raise ToolError(msg)
+
+            raw_text = await asyncio.to_thread(rules_file.read_text, encoding="utf-8")
+            try:
+                loaded: Any = yaml.safe_load(raw_text)
+            except yaml.YAMLError as e:
+                msg = f"{_ERR_RULES_INVALID}: {e}"
+                raise ToolError(msg) from e
+
+            if not isinstance(loaded, list):
+                msg = f"{_ERR_RULES_INVALID}: expected a list, got {type(loaded).__name__}"
+                raise ToolError(msg)
+
+            custom_rules = cast("list[dict[str, Any]]", loaded)
 
         try:
             raw_matches: list[dict[str, Any]] = behaviors_fn(instance.last_report, custom_rules)
             _logger.info("behaviors_detected", instance_id=instance_id, match_count=len(raw_matches))
         except (ValueError, KeyError, TypeError) as e:
             _logger.warning("behavior_detection_failed", error=str(e))
+            msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
+            raise ToolError(msg) from e
+        except Exception as e:
+            _logger.warning("behavior_detection_unexpected_error", error=str(e))
             msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -1752,6 +1971,10 @@ class SandboxBridge(ToolBridgeBase):
             _logger.info("c2_patterns_detected", instance_id=instance_id, pattern_count=len(patterns))
         except (ValueError, KeyError, TypeError) as e:
             _logger.warning("c2_detection_failed", error=str(e))
+            msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
+            raise ToolError(msg) from e
+        except Exception as e:
+            _logger.warning("c2_detection_unexpected_error", error=str(e))
             msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
@@ -1808,6 +2031,10 @@ class SandboxBridge(ToolBridgeBase):
             _logger.warning("diff_failed", error=str(e))
             msg = f"{_ERR_DIFF_FAILED}: {e}"
             raise ToolError(msg) from e
+        except Exception as e:
+            _logger.warning("diff_unexpected_error", error=str(e))
+            msg = f"{_ERR_DIFF_FAILED}: {e}"
+            raise ToolError(msg) from e
         else:
             return {
                 "instance_id_a": instance_id_a,
@@ -1815,24 +2042,25 @@ class SandboxBridge(ToolBridgeBase):
                 "diff": result,
             }
 
-    async def get_vnc_port(self, instance_id: str) -> int | None:
-        """Get the VNC port for a sandbox instance.
+    async def get_vnc_port(self, instance_id: str) -> int:
+        """Get the VNC port for a QEMU sandbox instance.
 
-        Queries the VM manager for the TCP port the sandbox's VNC
-        server is listening on. Returns ``None`` when the sandbox type
-        does not expose a VNC display (for example Windows Sandbox) or
-        when the VM has not yet allocated one.
+        Only QEMU sandboxes expose a VNC port. Calling this on a
+        non-QEMU instance raises ``ToolError``.  A QEMU instance whose
+        VNC port has not been allocated yet also raises ``ToolError``
+        rather than returning ``None``, since callers that query this
+        method are specifically trying to connect a viewer and a
+        ``None`` return is not actionable.
 
         Args:
-            instance_id: ID of the sandbox instance.
+            instance_id: ID of the QEMU sandbox instance.
 
         Returns:
-            int | None: The VNC port number, or ``None`` if not
-                available.
+            int: The VNC port number.
 
         Raises:
-            ToolError: If the instance is not registered with the
-                manager.
+            ToolError: If the instance is not registered, is not a QEMU
+                sandbox, or has no VNC port allocated.
         """
         manager = self._ensure_manager()
 
@@ -1841,8 +2069,16 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
             raise ToolError(msg)
 
-        port = instance.sandbox.vnc_port
-        _logger.info("vnc_port_queried", instance_id=instance_id, vnc_port=port)
+        if instance.sandbox_type != "qemu":
+            msg = f"{_ERR_VNC_PORT_UNAVAILABLE}: requires QEMU sandbox"
+            raise ToolError(msg)
+
+        port: int | None = getattr(instance.sandbox, "vnc_port", None)
+        if port is None:
+            msg = f"{_ERR_VNC_PORT_UNAVAILABLE}: VNC display not configured on this QEMU instance"
+            raise ToolError(msg)
+
+        _logger.debug("vnc_port_queried", instance_id=instance_id, vnc_port=port)
         return port
 
     @staticmethod

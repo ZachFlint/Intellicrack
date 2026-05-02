@@ -845,6 +845,24 @@ class QEMUSandbox(SandboxBase):
         """
         return self._vnc_port
 
+    @property
+    def qmp(self) -> QMPClient | None:
+        """Get the QMP client, or None if not connected.
+
+        Returns:
+            QMPClient | None: Active QMP client, or None if the VM is not running.
+        """
+        return self._qmp
+
+    @property
+    def agent(self) -> GuestAgentClient | None:
+        """Get the guest agent client, or None if not connected.
+
+        Returns:
+            GuestAgentClient | None: Active guest agent client, or None if the agent is not connected.
+        """
+        return self._agent
+
     def enable_vnc_display(self) -> None:
         """Switch display mode to VNC for GUI embedding.
 
