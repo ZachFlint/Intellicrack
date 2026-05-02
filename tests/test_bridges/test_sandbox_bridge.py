@@ -45,7 +45,7 @@ class TestF0001ContBroadException:
         type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -66,7 +66,7 @@ class TestF0001ContBroadException:
         type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -90,7 +90,7 @@ class TestF0001ContBroadException:
         type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -115,7 +115,7 @@ class TestF0001ContBroadException:
         type(mock_instance.sandbox).qmp = property(lambda _self: mock_qmp)
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -143,7 +143,7 @@ class TestF0002NarrowExceptionHandling:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -166,7 +166,7 @@ class TestF0002NarrowExceptionHandling:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -190,7 +190,7 @@ class TestF0002NarrowExceptionHandling:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -213,7 +213,7 @@ class TestF0002NarrowExceptionHandling:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -236,7 +236,7 @@ class TestF0002NarrowExceptionHandling:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -259,7 +259,7 @@ class TestF0003DetectBehaviorsYAML:
         missing = str(tmp_path / "no_such_file.yaml")
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -280,7 +280,7 @@ class TestF0003DetectBehaviorsYAML:
         mock_instance.last_report = mock_report
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -301,7 +301,7 @@ class TestF0003DetectBehaviorsYAML:
         mock_instance.last_report = mock_report
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -338,7 +338,7 @@ class TestF0003DetectBehaviorsYAML:
             mock_mod.return_value = analysis
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -371,7 +371,7 @@ class TestF0004YaraScanModeValidation:
         mock_instance.sandbox.yara_scan = AsyncMock(return_value=[])
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -388,7 +388,7 @@ class TestF0004YaraScanModeValidation:
         mock_instance.sandbox.yara_scan = AsyncMock(return_value=[])
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -401,39 +401,39 @@ class TestF0004YaraScanModeValidation:
 class TestF0005PublicQMPAgentAccessors:
     """F-0005: Uses public qmp/agent accessors instead of private _qmp/_agent."""
 
-    def test_cont_uses_public_qmp_property(self) -> None:
-        """cont() accesses qmp via getattr (public API), not _qmp."""
+    def test_qemu_sandbox_qmp_returns_none_when_not_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """QEMUSandbox.qmp returns None when no QMP client has been attached."""
         qemu = pytest.importorskip("intellicrack.sandbox.qemu")
         qemu_sandbox_cls = qemu.QEMUSandbox
 
         sandbox = qemu_sandbox_cls.__new__(qemu_sandbox_cls)
-        setattr(sandbox, "_qmp", None)
-        setattr(sandbox, "_agent", None)
+        monkeypatch.setattr(sandbox, "_qmp", None, raising=False)
+        monkeypatch.setattr(sandbox, "_agent", None, raising=False)
 
         assert sandbox.qmp is None
         assert sandbox.agent is None
 
-    def test_qemu_sandbox_has_public_qmp_property(self) -> None:
-        """QEMUSandbox exposes qmp as a public property."""
+    def test_qemu_sandbox_has_public_qmp_property(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """QEMUSandbox exposes qmp as a public property returning the QMP client."""
         qemu = pytest.importorskip("intellicrack.sandbox.qemu")
         qemu_sandbox_cls = qemu.QEMUSandbox
         qmp_client_cls = qemu.QMPClient
 
         sandbox = qemu_sandbox_cls.__new__(qemu_sandbox_cls)
         mock_client = MagicMock(spec=qmp_client_cls)
-        setattr(sandbox, "_qmp", mock_client)
+        monkeypatch.setattr(sandbox, "_qmp", mock_client, raising=False)
 
         assert sandbox.qmp is mock_client
 
-    def test_qemu_sandbox_has_public_agent_property(self) -> None:
-        """QEMUSandbox exposes agent as a public property."""
+    def test_qemu_sandbox_has_public_agent_property(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """QEMUSandbox exposes agent as a public property returning the GuestAgentClient."""
         qemu = pytest.importorskip("intellicrack.sandbox.qemu")
         qemu_sandbox_cls = qemu.QEMUSandbox
         guest_agent_cls = qemu.GuestAgentClient
 
         sandbox = qemu_sandbox_cls.__new__(qemu_sandbox_cls)
         mock_agent = MagicMock(spec=guest_agent_cls)
-        setattr(sandbox, "_agent", mock_agent)
+        monkeypatch.setattr(sandbox, "_agent", mock_agent, raising=False)
 
         assert sandbox.agent is mock_agent
 
@@ -450,7 +450,7 @@ class TestF0005PublicQMPAgentAccessors:
         type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -463,12 +463,12 @@ class TestF0005PublicQMPAgentAccessors:
 class TestF0006NoHotPathInfoLogs:
     """F-0006: No *_started info logs in hot paths (is_available, status, list)."""
 
-    def test_is_available_no_info_log(self) -> None:
+    def test_is_available_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """is_available() does not emit an info-level 'started' log."""
         bridge = SandboxBridge()
         mock_manager = MagicMock()
         mock_manager.get_available_types = AsyncMock(return_value=["windows"])
-        bridge._manager = mock_manager
+        monkeypatch.setattr(bridge, "_manager", mock_manager)
 
         records: list[logging.LogRecord] = []
 
@@ -488,12 +488,12 @@ class TestF0006NoHotPathInfoLogs:
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
-    def test_status_no_info_log(self) -> None:
+    def test_status_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """status() does not emit an info-level 'started' log."""
         bridge = SandboxBridge()
         mock_manager = MagicMock()
         mock_manager.get_status = AsyncMock(return_value={"instances": []})
-        bridge._manager = mock_manager
+        monkeypatch.setattr(bridge, "_manager", mock_manager)
 
         records: list[logging.LogRecord] = []
 
@@ -513,12 +513,12 @@ class TestF0006NoHotPathInfoLogs:
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
-    def test_list_no_info_log(self) -> None:
+    def test_list_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """list() does not emit an info-level 'started' log."""
         bridge = SandboxBridge()
         mock_manager = MagicMock()
         mock_manager.instances = []
-        bridge._manager = mock_manager
+        monkeypatch.setattr(bridge, "_manager", mock_manager)
 
         records: list[logging.LogRecord] = []
 
@@ -550,7 +550,7 @@ class TestF0007GetVNCPort:
         mock_instance.sandbox_type = "windows"
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -568,7 +568,7 @@ class TestF0007GetVNCPort:
         type(mock_instance.sandbox).vnc_port = property(lambda _self: None)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -586,7 +586,7 @@ class TestF0007GetVNCPort:
         type(mock_instance.sandbox).vnc_port = property(lambda _self: 5900)
 
         async def run() -> int:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -600,7 +600,7 @@ class TestF0007GetVNCPort:
         bridge = SandboxBridge()
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=None)
                 mock_mgr.return_value = manager
@@ -631,7 +631,7 @@ class TestF0008QEMUGatedMethods:
         mock_instance.sandbox_type = "windows"
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -643,39 +643,43 @@ class TestF0008QEMUGatedMethods:
 
 
 class TestF0009EnsureManagerDestroyed:
-    """F-0009: _ensure_manager raises ToolError when manager was shut down."""
+    """F-0009: ensure_manager raises ToolError when manager was shut down."""
 
-    def test_raises_after_shutdown(self) -> None:
-        """_ensure_manager raises ToolError when called after shutdown()."""
+    def test_raises_after_shutdown(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """ensure_manager raises ToolError when called after shutdown()."""
         bridge = SandboxBridge()
 
         async def run() -> None:
             mock_manager = MagicMock()
             mock_manager.destroy_all = AsyncMock()
-            bridge._manager = mock_manager
+            monkeypatch.setattr(bridge, "_manager", mock_manager)
             await bridge.shutdown()
+            assert bridge.manager is None
+            assert bridge.manager_destroyed is True
             with pytest.raises(ToolError, match="manager was shut down"):
-                bridge._ensure_manager()
+                bridge.ensure_manager()
 
         asyncio.run(run())
 
     def test_succeeds_before_shutdown(self) -> None:
-        """_ensure_manager creates a new manager when never initialized."""
+        """ensure_manager creates a new manager when never initialized."""
         bridge = SandboxBridge()
 
         with patch("intellicrack.bridges.sandbox_bridge.SandboxManager") as mock_cls:
             mock_cls.return_value = MagicMock()
-            mgr = bridge._ensure_manager()
+            mgr = bridge.ensure_manager()
             assert mgr is not None
+            assert bridge.manager is mgr
 
-    def test_returns_existing_manager(self) -> None:
-        """_ensure_manager returns existing manager without creating a new one."""
+    def test_returns_existing_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """ensure_manager returns existing manager without creating a new one."""
         bridge = SandboxBridge()
         mock_mgr = MagicMock()
-        setattr(bridge, "_manager", mock_mgr)
+        monkeypatch.setattr(bridge, "_manager", mock_mgr)
 
-        result = bridge._ensure_manager()
+        result = bridge.ensure_manager()
         assert result is mock_mgr
+        assert bridge.manager is mock_mgr
 
 
 class TestF0010BridgeStateUpdates:
@@ -693,7 +697,7 @@ class TestF0010BridgeStateUpdates:
         mock_instance.created_at = now
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.create = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -707,7 +711,7 @@ class TestF0010BridgeStateUpdates:
         bridge = SandboxBridge()
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.create = AsyncMock(side_effect=SandboxError("creation failed"))
                 mock_mgr.return_value = manager
@@ -749,7 +753,7 @@ class TestF0010BridgeStateUpdates:
             setattr(mock_report, attr, [])
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.run_binary = AsyncMock(return_value=(mock_instance, mock_report))
                 mock_mgr.return_value = manager
@@ -766,7 +770,7 @@ class TestF0010BridgeStateUpdates:
         binary.write_bytes(b"MZ" + b"\x00" * 62)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.run_binary = AsyncMock(side_effect=SandboxError("exec failed"))
                 mock_mgr.return_value = manager
@@ -867,7 +871,7 @@ class TestF0012AnalysisModuleCache:
             mock_cached.side_effect = counting_import
 
             async def run() -> None:
-                with patch.object(bridge, "_ensure_manager") as mock_mgr:
+                with patch.object(bridge, "ensure_manager") as mock_mgr:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
@@ -926,7 +930,7 @@ class TestF0013ContQMPFailureHandling:
         bridge_logger.addHandler(handler)
 
         async def run() -> None:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -959,7 +963,7 @@ class TestF0014GetPendingMessagesAttributeSafety:
         type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -985,7 +989,7 @@ class TestF0014GetPendingMessagesAttributeSafety:
         type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
 
         async def run() -> dict[str, Any]:
-            with patch.object(bridge, "_ensure_manager") as mock_mgr:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
@@ -1107,7 +1111,7 @@ class TestF0016UTCTimestamps:
         assert isinstance(result[0], str)
         assert result[1] == "foo"
 
-    def test_list_method_emits_utc_timestamps(self) -> None:
+    def test_list_method_emits_utc_timestamps(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """list() emits UTC ISO-8601 timestamps for created_at and last_used."""
         bridge = SandboxBridge()
         now = datetime.now(UTC)
@@ -1122,7 +1126,7 @@ class TestF0016UTCTimestamps:
 
         mock_manager = MagicMock()
         mock_manager.instances = [mock_instance]
-        bridge._manager = mock_manager
+        monkeypatch.setattr(bridge, "_manager", mock_manager)
 
         result = asyncio.run(bridge.list())
         assert len(result) == 1

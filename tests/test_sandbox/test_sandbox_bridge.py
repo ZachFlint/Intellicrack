@@ -181,22 +181,20 @@ class TestInitializeShutdown:
 
     @pytest.mark.asyncio()
     async def test_ensure_manager_creates(self) -> None:
-        """_ensure_manager creates manager if None."""
+        """ensure_manager creates manager if None."""
         bridge = SandboxBridge()
-        ensure = getattr(bridge, "_ensure_manager")
-        mgr = ensure()
+        mgr = bridge.ensure_manager()
         assert mgr is not None
 
     @pytest.mark.asyncio()
     async def test_ensure_manager_idempotent(self, sandbox_bridge: SandboxBridge) -> None:
-        """_ensure_manager returns existing manager.
+        """ensure_manager returns existing manager.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        ensure = getattr(sandbox_bridge, "_ensure_manager")
-        mgr1 = ensure()
-        mgr2 = ensure()
+        mgr1 = sandbox_bridge.ensure_manager()
+        mgr2 = sandbox_bridge.ensure_manager()
         assert mgr1 is mgr2
 
 

@@ -180,6 +180,26 @@ class SandboxBridge(ToolBridgeBase):
         )
 
     @property
+    def manager(self) -> SandboxManager | None:
+        """Return the underlying ``SandboxManager`` instance, if initialized.
+
+        Returns:
+            SandboxManager | None: Active manager, or ``None`` if the bridge
+            has not yet allocated one (or has been shut down).
+        """
+        return self._manager
+
+    @property
+    def manager_destroyed(self) -> bool:
+        """Return whether the manager has been shut down.
+
+        Returns:
+            bool: ``True`` if :meth:`shutdown` has been called and the manager
+            has not been recreated, ``False`` otherwise.
+        """
+        return self._manager_destroyed
+
+    @property
     def name(self) -> ToolName:
         """Get the tool's name.
 
@@ -792,7 +812,7 @@ class SandboxBridge(ToolBridgeBase):
         available_types = await self._manager.get_available_types()
         return len(available_types) > 0
 
-    def _ensure_manager(self) -> SandboxManager:
+    def ensure_manager(self) -> SandboxManager:
         """Ensure manager is initialized and has not been shut down.
 
         Returns:
@@ -840,7 +860,7 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_INVALID_SANDBOX_TYPE}: {sandbox_type!r}"
             raise ToolError(msg)
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         config = SandboxConfig(
             timeout_seconds=timeout_seconds,
@@ -901,7 +921,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If destruction fails.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         try:
             await manager.destroy(instance_id)
@@ -959,7 +979,7 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_INVALID_SANDBOX_TYPE}: {sandbox_type!r}"
             raise ToolError(msg)
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         path = Path(binary_path)
         if not await asyncio.to_thread(path.exists):
@@ -1024,7 +1044,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If execution fails.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1089,7 +1109,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1136,7 +1156,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1167,7 +1187,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Status dictionary with available types and instance info.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
         return dict(await manager.get_status())
 
     async def list(self) -> list[dict[str, Any]]:
@@ -1176,7 +1196,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of instance information dictionaries.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         return [
             {
@@ -1207,7 +1227,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If snapshot fails or not supported.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1249,7 +1269,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If restore fails or not supported.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1289,7 +1309,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If listing fails or not supported.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1334,7 +1354,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If deletion fails or not supported.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1379,7 +1399,7 @@ class SandboxBridge(ToolBridgeBase):
             ToolError: If resume fails, QMP is not connected, or the
                 instance is not a QEMU sandbox.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1441,7 +1461,7 @@ class SandboxBridge(ToolBridgeBase):
                 sandbox, has no connected guest agent, or the retrieval
                 call itself fails.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1487,7 +1507,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be started or sandbox is not QEMU.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1531,7 +1551,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be stopped.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1572,7 +1592,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If screenshot cannot be captured or sandbox is not QEMU.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1616,7 +1636,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If anti-evasion cannot be applied or sandbox is not QEMU.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1659,7 +1679,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If memory dump fails or sandbox is not QEMU.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1703,7 +1723,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If extraction fails or sandbox is not QEMU.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1753,7 +1773,7 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_YARA_INVALID_MODE}: {scan_target!r}"
             raise ToolError(msg)
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1790,7 +1810,7 @@ class SandboxBridge(ToolBridgeBase):
         analysis = _get_analysis_module()
         extract_fn = analysis.extract_iocs
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1838,7 +1858,7 @@ class SandboxBridge(ToolBridgeBase):
         analysis = _get_analysis_module()
         timeline_fn = analysis.generate_timeline
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1893,7 +1913,7 @@ class SandboxBridge(ToolBridgeBase):
         analysis = _get_analysis_module()
         behaviors_fn = analysis.match_behaviors
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -1956,7 +1976,7 @@ class SandboxBridge(ToolBridgeBase):
         analysis = _get_analysis_module()
         c2_fn = analysis.detect_c2_patterns
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
@@ -2004,7 +2024,7 @@ class SandboxBridge(ToolBridgeBase):
         analysis = _get_analysis_module()
         diff_fn = analysis.diff_reports
 
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance_a = await manager.get(instance_id_a)
         if instance_a is None:
@@ -2062,7 +2082,7 @@ class SandboxBridge(ToolBridgeBase):
             ToolError: If the instance is not registered, is not a QEMU
                 sandbox, or has no VNC port allocated.
         """
-        manager = self._ensure_manager()
+        manager = self.ensure_manager()
 
         instance = await manager.get(instance_id)
         if instance is None:
