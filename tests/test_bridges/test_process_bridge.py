@@ -18,19 +18,12 @@ import sys
 import threading
 import time
 from ctypes import wintypes
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, cast
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 
-from intellicrack.bridges._win32_types import (
-    INVALID_HANDLE_VALUE,
-    PAGE_EXECUTE,
-    PAGE_EXECUTE_READ,
-    PAGE_EXECUTE_READWRITE,
-    PAGE_READONLY,
-    PAGE_READWRITE,
-)
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.types import ToolError, ToolName
 
@@ -47,7 +40,14 @@ _MEM_MAPPED = 0x40000
 _MEM_IMAGE = 0x1000000
 _PAGE_NOACCESS = 0x01
 
-_T = TypeVar("_T")
+_TH32CS_SNAPPROCESS: int = 0x00000002
+_INVALID_HANDLE_VALUE: int = (2 ** (ctypes.sizeof(ctypes.c_void_p) * 8)) - 1
+
+_PAGE_READONLY: int = 0x02
+_PAGE_READWRITE: int = 0x04
+_PAGE_EXECUTE: int = 0x10
+_PAGE_EXECUTE_READ: int = 0x20
+_PAGE_EXECUTE_READWRITE: int = 0x40
 
 _ATTR_KERNEL32 = "_kernel32"
 _ATTR_NTDLL = "_ntdll"
@@ -123,7 +123,7 @@ def _get_section_views(bridge: ProcessBridge) -> dict[int, int]:
     return cast("dict[int, int]", raw)
 
 
-def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> _T | None:
+def _get_attr_optional[TAttr](bridge: ProcessBridge, name: str, expected: type[TAttr]) -> TAttr | None:
     """Return a protected optional attribute from bridge, narrowed to expected type.
 
     Used to bypass reportPrivateUsage when tests need to inspect internal
@@ -135,7 +135,7 @@ def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> 
         expected: Expected runtime type of the non-None value.
 
     Returns:
-        _T | None: The attribute value typed as ``expected | None``.
+        TAttr | None: The attribute value typed as ``expected | None``.
 
     Raises:
         TypeError: If the attribute is neither None nor an instance of expected.
@@ -144,9 +144,8 @@ def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> 
     if value is None:
         return None
     if not isinstance(value, expected):
-        raise TypeError(
-            f"ProcessBridge.{name} expected {expected.__name__} or None, got {type(value).__name__}",
-        )
+        msg = f"ProcessBridge.{name} expected {expected.__name__} or None, got {type(value).__name__}"
+        raise TypeError(msg)
     return value
 
 
@@ -164,9 +163,8 @@ def _get_debug_privilege_enabled(bridge: ProcessBridge) -> bool:
     """
     flag: object = getattr(bridge, _ATTR_DEBUG_PRIV)
     if not isinstance(flag, bool):
-        raise TypeError(
-            f"ProcessBridge.{_ATTR_DEBUG_PRIV} expected bool, got {type(flag).__name__}",
-        )
+        msg = f"ProcessBridge.{_ATTR_DEBUG_PRIV} expected bool, got {type(flag).__name__}"
+        raise TypeError(msg)
     return flag
 
 
@@ -184,17 +182,17 @@ def _invoke_prot_from_string(protection: str) -> int:
     """
     fn: object = getattr(ProcessBridge, _ATTR_PROT_FROM_STRING)
     if not callable(fn):
-        raise TypeError(f"ProcessBridge.{_ATTR_PROT_FROM_STRING} is not callable")
+        msg = f"ProcessBridge.{_ATTR_PROT_FROM_STRING} is not callable"
+        raise TypeError(msg)
     result: object = fn(protection)
     if not isinstance(result, int):
-        raise TypeError(
-            f"ProcessBridge.{_ATTR_PROT_FROM_STRING} expected int return, got {type(result).__name__}",
-        )
+        msg = f"ProcessBridge.{_ATTR_PROT_FROM_STRING} expected int return, got {type(result).__name__}"
+        raise TypeError(msg)
     return result
 
 
 def _invoke_parse_registry_path(key_path: str) -> tuple[int, str]:
-    """Invoke ProcessBridge._parse_registry_path via getattr, bypassing reportPrivateUsage.
+    r"""Invoke ProcessBridge._parse_registry_path via getattr, bypassing reportPrivateUsage.
 
     Args:
         key_path: Registry path such as ``r"HKLM\\SOFTWARE\\Test"``.
@@ -208,23 +206,21 @@ def _invoke_parse_registry_path(key_path: str) -> tuple[int, str]:
     """
     fn: object = getattr(ProcessBridge, _ATTR_PARSE_REGISTRY_PATH)
     if not callable(fn):
-        raise TypeError(f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} is not callable")
+        msg = f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} is not callable"
+        raise TypeError(msg)
     result: object = fn(key_path)
     if not isinstance(result, tuple):
-        raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got {type(result).__name__}",
-        )
+        msg = f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got {type(result).__name__}"
+        raise TypeError(msg)
     typed_result = cast("tuple[object, ...]", result)
     if len(typed_result) != 2:
-        raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got tuple of length {len(typed_result)}",
-        )
+        msg = f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected 2-tuple, got tuple of length {len(typed_result)}"
+        raise TypeError(msg)
     root_obj: object = typed_result[0]
     sub_obj: object = typed_result[1]
     if not isinstance(root_obj, int) or not isinstance(sub_obj, str):
-        raise TypeError(
-            f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected (int, str), got ({type(root_obj).__name__}, {type(sub_obj).__name__})",
-        )
+        msg = f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected (int, str), got ({type(root_obj).__name__}, {type(sub_obj).__name__})"
+        raise TypeError(msg)
     return root_obj, sub_obj
 
 
@@ -234,8 +230,6 @@ def _configure_kernel32_signatures(k32: ctypes.WinDLL) -> None:
     Args:
         k32: Loaded kernel32 DLL handle.
     """
-    from ctypes import wintypes
-
     k32.VirtualAllocEx.restype = ctypes.c_void_p
     k32.VirtualAllocEx.argtypes = [
         wintypes.HANDLE,
@@ -1106,7 +1100,7 @@ class TestRegistry:
         assert len(str(result["data"])) > 0
 
     async def test_reg_enum_keys_microsoft(self, process_bridge: ProcessBridge) -> None:
-        """Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list.
+        r"""Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
@@ -1221,27 +1215,27 @@ class TestStaticHelpers:
 
     def test_prot_from_string_rwx(self) -> None:
         """Verify 'rwx' maps to PAGE_EXECUTE_READWRITE."""
-        assert _invoke_prot_from_string("rwx") == PAGE_EXECUTE_READWRITE
+        assert _invoke_prot_from_string("rwx") == _PAGE_EXECUTE_READWRITE
 
     def test_prot_from_string_rw(self) -> None:
         """Verify 'rw' maps to PAGE_READWRITE."""
-        assert _invoke_prot_from_string("rw") == PAGE_READWRITE
+        assert _invoke_prot_from_string("rw") == _PAGE_READWRITE
 
     def test_prot_from_string_rx(self) -> None:
         """Verify 'rx' maps to PAGE_EXECUTE_READ."""
-        assert _invoke_prot_from_string("rx") == PAGE_EXECUTE_READ
+        assert _invoke_prot_from_string("rx") == _PAGE_EXECUTE_READ
 
     def test_prot_from_string_r(self) -> None:
         """Verify 'r' maps to PAGE_READONLY."""
-        assert _invoke_prot_from_string("r") == PAGE_READONLY
+        assert _invoke_prot_from_string("r") == _PAGE_READONLY
 
     def test_prot_from_string_x(self) -> None:
         """Verify 'x' maps to PAGE_EXECUTE."""
-        assert _invoke_prot_from_string("x") == PAGE_EXECUTE
+        assert _invoke_prot_from_string("x") == _PAGE_EXECUTE
 
     def test_prot_from_string_unknown_defaults(self) -> None:
         """Verify unknown string defaults to PAGE_EXECUTE_READWRITE."""
-        assert _invoke_prot_from_string("???") == PAGE_EXECUTE_READWRITE
+        assert _invoke_prot_from_string("???") == _PAGE_EXECUTE_READWRITE
 
     def test_parse_registry_path_hklm(self) -> None:
         """Verify HKLM prefix resolves correctly."""
@@ -1489,6 +1483,8 @@ class TestF0026NoFakeSuccess:
                 await process_bridge.device_close(0xDEAD)
         finally:
             setattr(process_bridge, _ATTR_KERNEL32, original_k32)
+
+
 class TestF0006MemConstants:
     """Verify get_memory_map filters MEM_MAPPED/MEM_IMAGE via named constants."""
 
@@ -1836,7 +1832,7 @@ def _open_phys_drive_or_skip() -> int:
         0,
         None,
     )
-    if test_h in {INVALID_HANDLE_VALUE, 0}:
+    if test_h in {_INVALID_HANDLE_VALUE, 0}:
         pytest.skip(f"{_PHYS_DRIVE} requires elevated privileges")
     return test_h
 
@@ -2057,3 +2053,182 @@ class TestF0037DeviceIoctlOutputHex:
             pass
         finally:
             k32.CloseHandle(test_h)
+
+
+class TestF0002SnapshotHandleType:
+    """F-0002: CreateToolhelp32Snapshot.restype must be wintypes.HANDLE."""
+
+    async def test_list_returns_current_process(self, process_bridge: ProcessBridge) -> None:
+        """list() must include the current Python process.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        procs = await process_bridge.list()
+        pids = [p.pid for p in procs]
+        assert os.getpid() in pids
+
+    async def test_snapshot_handle_not_truncated_negative(self, process_bridge: ProcessBridge) -> None:
+        """On 64-bit Python the snapshot handle must not be a truncated negative int.
+
+        Ensures that restype=wintypes.HANDLE preserves the full 64-bit value,
+        preventing sign-extension that would produce -1 for valid handles.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        del process_bridge
+        if ctypes.sizeof(ctypes.c_void_p) < 8:
+            pytest.skip("32-bit Python - handle truncation concern only applies to 64-bit")
+
+        k32 = ctypes.windll.kernel32
+        k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = k32.CreateToolhelp32Snapshot(_TH32CS_SNAPPROCESS, 0)
+        try:
+            assert snapshot != _INVALID_HANDLE_VALUE, "snapshot creation must not fail"
+            assert snapshot >= 0, f"snapshot handle must not be negative (was {snapshot:#x})"
+        finally:
+            if snapshot != _INVALID_HANDLE_VALUE:
+                k32.CloseHandle(snapshot)
+
+
+class TestF0003Process32FirstFailure:
+    """F-0003: Process32First failure must raise ToolError with error code."""
+
+    async def test_list_processes_succeeds_normally(self, process_bridge: ProcessBridge) -> None:
+        """Baseline: list_processes returns at least the current process.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        procs = await process_bridge.list_processes()
+        assert any(p.pid == os.getpid() for p in procs)
+
+    async def test_forced_snapshot_failure_raises_tool_error(self) -> None:
+        """Force CreateToolhelp32Snapshot to return INVALID_HANDLE_VALUE.
+
+        Injects a stub via unittest.mock.patch that returns INVALID_HANDLE_VALUE
+        for every call. The bridge must detect this and raise ToolError.
+        """
+        bridge = ProcessBridge()
+        await bridge.initialize()
+
+        k32 = getattr(bridge, "_kernel32", None)
+        if k32 is None:
+            await bridge.shutdown()
+            pytest.skip("kernel32 not available")
+
+        def _bad_snapshot(flags: int, pid: int) -> int:
+            del flags, pid
+            return _INVALID_HANDLE_VALUE
+
+        try:
+            with pytest.raises(ToolError), patch.object(k32, "CreateToolhelp32Snapshot", side_effect=_bad_snapshot):
+                await bridge.list_processes()
+        finally:
+            await bridge.shutdown()
+
+
+class TestF0019HandleTypeNames:
+    """F-0019: enum_handles must return type_name strings, never ints."""
+
+    async def test_enum_handles_returns_string_type_names(self, process_bridge: ProcessBridge) -> None:
+        """enum_handles for the current PID returns entries with string type_name.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        handles = await process_bridge.enum_handles(os.getpid())
+        assert isinstance(handles, list)
+        assert len(handles) > 0, "current process must have open handles"
+        for entry in handles:
+            type_name = entry.get("type_name")
+            assert isinstance(type_name, str), "type_name must be str, got " + type(type_name).__name__
+            assert type_name, "type_name must not be empty"
+
+    async def test_enum_handles_includes_known_types(self, process_bridge: ProcessBridge) -> None:
+        """enum_handles for the current PID includes Process, Thread, or Event entries.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        handles = await process_bridge.enum_handles(os.getpid())
+        type_names = {str(h.get("type_name", "")) for h in handles}
+        known_types = {"Process", "Thread", "Event", "File", "Section", "Directory"}
+        found = type_names & known_types
+        assert found, "no known type names found; got: " + str(sorted(type_names)[:20])
+
+    async def test_enum_handles_type_name_never_int(self, process_bridge: ProcessBridge) -> None:
+        """type_name field in enum_handles output must never be a bare integer.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        handles = await process_bridge.enum_handles(os.getpid())
+        for entry in handles:
+            type_name = entry.get("type_name")
+            assert not isinstance(type_name, int), "type_name should not be int, got " + repr(type_name)
+
+    async def test_enum_handles_no_pid_returns_multiple_pids(self, process_bridge: ProcessBridge) -> None:
+        """enum_handles without a pid filter returns handles from multiple PIDs.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        handles = await process_bridge.enum_handles(None)
+        pids = {h.get("pid") for h in handles}
+        assert len(pids) > 1, "system-wide handle scan must return handles from multiple processes"
+        assert os.getpid() in pids
+
+
+class TestF0040HandleBufferBounds:
+    """F-0040: Buffer bounds must be validated before iterating handles."""
+
+    async def test_buffer_bounds_validated_on_overflow(self) -> None:
+        """NtQuerySystemInformation returning a buffer with 1M handles in 4 KiB must raise ToolError.
+
+        Constructs a fake buffer header claiming 1_000_000 handles in 4096 bytes
+        and injects it via mock. The bridge must detect the overflow and raise
+        ToolError before iterating.
+        """
+        bridge = ProcessBridge()
+        await bridge.initialize()
+
+        ntdll = getattr(bridge, "_ntdll", None)
+        if ntdll is None:
+            await bridge.shutdown()
+            pytest.skip("ntdll not available")
+
+        ptr_size = ctypes.sizeof(ctypes.c_void_p)
+        fake_buf_size = 4096
+        fake_num_handles = 1_000_000
+        fmt = "<Q" if ptr_size == 8 else "<I"
+
+        fake_buffer = ctypes.create_string_buffer(fake_buf_size)
+        struct.pack_into(fmt, fake_buffer, 0, fake_num_handles)
+
+        def _mock_ntquery(
+            info_class: int,
+            buf: ctypes.Array[ctypes.c_char],
+            buf_len: int,
+            ret_len: ctypes.Array[ctypes.c_char],
+        ) -> int:
+            del info_class, buf_len, ret_len
+            size = min(fake_buf_size, getattr(buf, "_length_", fake_buf_size))
+            ctypes.memmove(buf, fake_buffer, size)
+            return 0
+
+        try:
+            with pytest.raises(ToolError), patch.object(ntdll, "NtQuerySystemInformation", side_effect=_mock_ntquery):
+                await bridge.get_handles(os.getpid())
+        finally:
+            await bridge.shutdown()
+
+    async def test_valid_buffer_does_not_raise(self, process_bridge: ProcessBridge) -> None:
+        """A real NtQuerySystemInformation call must not raise a buffer overflow error.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        handles = await process_bridge.get_handles(os.getpid())
+        assert isinstance(handles, list)
