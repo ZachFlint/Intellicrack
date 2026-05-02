@@ -12,14 +12,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import builtins as _builtins_mod
 import hashlib
+import html
 import inspect as _inspect_mod
-import io
 import json
 import math
+import mmap
 import operator
 import os
+import re
 import struct
 import tempfile
 import threading
@@ -4105,15 +4106,53 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("highlight_rules_listed", count=len(rules))
         return rules
 
+    _VALID_DISPLAY_MODES: frozenset[str] = frozenset({
+        "hex8",
+        "hex16_le",
+        "hex16_be",
+        "hex32_le",
+        "hex32_be",
+        "hex64_le",
+        "hex64_be",
+        "dec_u8",
+        "dec_u16",
+        "dec_u32",
+        "dec_s8",
+        "dec_s16",
+        "dec_s32",
+        "float32",
+        "float64",
+        "rgba8",
+        "hexii",
+        "binary",
+    })
+
     async def set_display_mode(self, mode: str) -> bool:
         """Set the hex display mode.
 
         Args:
-            mode: Display mode string (e.g. "hex8", "hex16_le", "float32").
+            mode: Display mode string. Must be one of the values
+                advertised in the ``hex_editor.set_display_mode`` tool
+                definition: ``hex8``, ``hex16_le``, ``hex16_be``,
+                ``hex32_le``, ``hex32_be``, ``hex64_le``, ``hex64_be``,
+                ``dec_u8``, ``dec_u16``, ``dec_u32``, ``dec_s8``,
+                ``dec_s16``, ``dec_s32``, ``float32``, ``float64``,
+                ``rgba8``, ``hexii``, or ``binary``.
 
         Returns:
-            bool: True always.
+            bool: True if the mode was accepted.
+
+        Raises:
+            ValueError: If ``mode`` is not in the documented enum.
         """
+        if mode not in self._VALID_DISPLAY_MODES:
+            _logger.error(
+                "set_display_mode_failed_invalid",
+                mode=mode,
+                valid=sorted(self._VALID_DISPLAY_MODES),
+            )
+            msg = f"unknown display mode {mode!r}; supported: {sorted(self._VALID_DISPLAY_MODES)}"
+            raise ValueError(msg)
         self._display_mode = mode
         _logger.debug("display_mode_set", mode=mode)
         if self.state_holder is not None:
@@ -4137,11 +4176,20 @@ class HexEditorBridge(ToolBridgeBase):
             pid: Process ID to inspect.
 
         Returns:
-            list[dict[str, int]]: List of dicts with base_address, size, protection, state.
+            list[dict[str, int]]: List of dicts with base_address, size,
+            protection, state.
 
         Raises:
-            RuntimeError: If hexcore native module is not available.
+            RuntimeError: If hexcore native module is not available, or
+                if the host is not Windows. The underlying region
+                enumeration uses the Windows-only ``VirtualQueryEx`` API
+                via the Rust ``HexDocument::list_process_memory_regions``
+                binding.
         """
+        if os.name != "nt":
+            _logger.error("list_process_regions_failed_non_windows", pid=pid, os_name=os.name)
+            msg = "list_process_regions is Windows-only; the underlying API uses VirtualQueryEx"
+            raise RuntimeError(msg)
         if not _hexcore_available or _hexcore_mod is None:
             _logger.error("list_process_regions_failed_hexcore_unavailable", pid=pid)
             msg = "hexcore native module not available"
@@ -4154,6 +4202,12 @@ class HexEditorBridge(ToolBridgeBase):
     async def open_process_memory(self, pid: int, address: int, size: int) -> dict[str, Any]:
         """Open a process memory region as a hex document (Windows only).
 
+        Any previously-open document is closed first so the prior
+        memory map (or process handle) is released before a new one is
+        attached. Without this step the bridge accumulates references
+        to memory-mapped files / process handles every time the caller
+        switches targets.
+
         Args:
             pid: Process ID to read from.
             address: Base address of the memory region.
@@ -4163,12 +4217,27 @@ class HexEditorBridge(ToolBridgeBase):
             dict[str, Any]: Dict with pid, address, size, and document_length.
 
         Raises:
-            RuntimeError: If hexcore native module is not available.
+            RuntimeError: If hexcore native module is not available, or
+                the host is not Windows.
         """
+        if os.name != "nt":
+            _logger.error("open_process_memory_failed_non_windows", pid=pid, os_name=os.name)
+            msg = "open_process_memory is Windows-only"
+            raise RuntimeError(msg)
         if not _hexcore_available or _hexcore_mod is None:
             _logger.error("open_process_memory_failed_hexcore_unavailable", pid=pid, address=hex(address), size=size)
             msg = "hexcore native module not available"
             raise RuntimeError(msg)
+
+        if self.document is not None:
+            _logger.info("process_memory_replacing_existing_document")
+            self.document = None
+            self._cursor_offset = 0
+            self._selection = None
+            self._state.binary_loaded = False
+            self._state.target_path = None
+            if self.state_holder is not None:
+                self.state_holder.set_document(None, None, source="bridge")
 
         self.document = _hexcore_mod.HexDocument.from_process_memory(pid, address, size)
         self._cursor_offset = 0
@@ -4490,15 +4559,19 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             ToolError: If ``operation`` is not recognized.
         """
+        if operation in {"xor", "and", "or"} and not key:
+            _logger.error("apply_arithmetic_fallback_missing_key", operation=operation)
+            msg = f"{operation!r} requires a non-empty key; pass it as ``key_hex`` so the operation is applied"
+            raise ToolError(msg)
         result = bytearray(len(data))
         byte_mask = 0xFF
         bits_per_byte = 8
         for i, b in enumerate(data):
-            if operation == "xor" and key:
+            if operation == "xor":
                 result[i] = b ^ key[i % len(key)]
-            elif operation == "and" and key:
+            elif operation == "and":
                 result[i] = b & key[i % len(key)]
-            elif operation == "or" and key:
+            elif operation == "or":
                 result[i] = b | key[i % len(key)]
             elif operation == "not":
                 result[i] = (~b) & byte_mask
@@ -4512,8 +4585,6 @@ class HexEditorBridge(ToolBridgeBase):
             elif operation == "ror":
                 shift = count % bits_per_byte
                 result[i] = ((b >> shift) | (b << (bits_per_byte - shift))) & byte_mask
-            elif operation in {"xor", "and", "or"}:
-                result[i] = b
             else:
                 _logger.error("apply_arithmetic_fallback_unknown_operation", operation=operation)
                 msg = f"{_ERR_UNKNOWN_TRANSFORM}: {operation!r} has no pure-Python fallback implementation"
@@ -4615,6 +4686,8 @@ class HexEditorBridge(ToolBridgeBase):
 
         if hasattr(self.document, "toggle_bit"):
             result: bool = self.document.toggle_bit(offset, bit_index)
+            _logger.info("file_written", path="document", offset=hex(offset), size=1, op="toggle_bit")
+            _logger.info("bit_toggled", offset=hex(offset), bit=bit_index)
             if self.state_holder is not None:
                 self.state_holder.notify_data_modified(offset, 1, source="bridge")
             return result
@@ -4645,15 +4718,25 @@ class HexEditorBridge(ToolBridgeBase):
             bool: True if the mapping was added.
 
         Raises:
-            RuntimeError: If no document is open.
+            RuntimeError: If no document is open or the active backend
+                does not expose ``add_va_mapping``.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if hasattr(self.document, "add_va_mapping"):
-            self.document.add_va_mapping(file_offset, virtual_address, length)
+        if not hasattr(self.document, "add_va_mapping"):
+            _logger.error(
+                "set_va_base_failed_backend_unsupported",
+                file_offset=hex(file_offset),
+                va=hex(virtual_address),
+                length=length,
+            )
+            msg = "VA mapping is not supported by the active hex document backend"
+            raise RuntimeError(msg)
+
+        self.document.add_va_mapping(file_offset, virtual_address, length)
         _logger.debug(
             "va_mapping_added",
             file_offset=hex(file_offset),
@@ -4661,9 +4744,7 @@ class HexEditorBridge(ToolBridgeBase):
             length=length,
         )
         if self.state_holder is not None:
-            mapping_count = (
-                len(self.document.list_va_mappings()) if self.document is not None and hasattr(self.document, "list_va_mappings") else 0
-            )
+            mapping_count = len(self.document.list_va_mappings()) if hasattr(self.document, "list_va_mappings") else 0
             self.state_holder.notify_va_mapping_changed(mapping_count, source="bridge")
         return True
 
@@ -4708,7 +4789,7 @@ class HexEditorBridge(ToolBridgeBase):
         return []
 
     async def auto_detect_va_mappings(self) -> list[dict[str, int]]:
-        """Auto-detect VA mappings from PE or ELF headers.
+        """Auto-detect VA mappings from PE, ELF, or Mach-O headers.
 
         Returns:
             list[dict[str, int]]: List of detected mappings.
@@ -4731,7 +4812,153 @@ class HexEditorBridge(ToolBridgeBase):
             return await self._detect_pe_va_mappings()
         if magic[:_MIN_HEADER_SIZE] == b"\x7fELF":
             return await self._detect_elf_va_mappings()
+        if self._is_macho_magic(magic):
+            return await self._detect_macho_va_mappings(magic)
         return []
+
+    @staticmethod
+    def _is_macho_magic(magic: bytes) -> bool:
+        """Return True if the four-byte magic is a Mach-O header magic.
+
+        Args:
+            magic: First four bytes of the file.
+
+        Returns:
+            bool: True for any of MH_MAGIC, MH_CIGAM, MH_MAGIC_64,
+                MH_CIGAM_64, FAT_MAGIC, or FAT_MAGIC_64.
+        """
+        return magic in {
+            b"\xfe\xed\xfa\xce",
+            b"\xce\xfa\xed\xfe",
+            b"\xfe\xed\xfa\xcf",
+            b"\xcf\xfa\xed\xfe",
+            b"\xca\xfe\xba\xbe",
+            b"\xbe\xba\xfe\xca",
+            b"\xca\xfe\xba\xbf",
+            b"\xbf\xba\xfe\xca",
+        }
+
+    _MACHO_FAT_MAGICS: frozenset[bytes] = frozenset({
+        b"\xca\xfe\xba\xbe",
+        b"\xbe\xba\xfe\xca",
+        b"\xca\xfe\xba\xbf",
+        b"\xbf\xba\xfe\xca",
+    })
+    _MACHO_64BIT_MAGICS: frozenset[bytes] = frozenset({b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe"})
+    _MACHO_LE_MAGICS: frozenset[bytes] = frozenset({b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf"})
+    _MACHO_HEADER_SIZE_64: int = 32
+    _MACHO_HEADER_SIZE_32: int = 28
+    _MACHO_LC_HDR_SIZE: int = 8
+    _MACHO_LC_SEGMENT: int = 0x01
+    _MACHO_LC_SEGMENT_64: int = 0x19
+    _MACHO_SEG64_BYTES: int = 72
+    _MACHO_SEG32_BYTES: int = 56
+
+    async def _detect_macho_va_mappings(self, magic: bytes) -> list[dict[str, int]]:
+        """Detect VA mappings from Mach-O ``LC_SEGMENT`` load commands.
+
+        Handles both 32-bit (``MH_MAGIC``) and 64-bit (``MH_MAGIC_64``)
+        Mach-O images, in either endianness. Universal (FAT) binaries
+        have no single VA layout to advertise; for those the function
+        returns an empty list and logs a warning so callers know to pick
+        a slice.
+
+        Args:
+            magic: The first four bytes of the document, already read
+                during dispatch.
+
+        Returns:
+            list[dict[str, int]]: One mapping per ``LC_SEGMENT`` /
+            ``LC_SEGMENT_64`` load command.
+        """
+        if self.document is None:
+            return []
+        if magic in self._MACHO_FAT_MAGICS:
+            _logger.warning("macho_va_detection_fat_binary_skipped")
+            return []
+
+        try:
+            mappings = self._collect_macho_segment_mappings(magic)
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning("macho_va_detection_failed", error=str(exc))
+            return []
+
+        _logger.info("macho_va_mappings_detected", count=len(mappings))
+        if self.state_holder is not None:
+            self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+        return mappings
+
+    def _collect_macho_segment_mappings(self, magic: bytes) -> list[dict[str, int]]:
+        """Walk the Mach-O load command table and collect segment mappings.
+
+        Args:
+            magic: First four bytes of the document.
+
+        Returns:
+            list[dict[str, int]]: One mapping per ``LC_SEGMENT`` /
+            ``LC_SEGMENT_64`` command, registered with the backend if it
+            implements ``add_va_mapping``.
+        """
+        endian = "<" if magic in self._MACHO_LE_MAGICS else ">"
+        is_64 = magic in self._MACHO_64BIT_MAGICS
+        header_size = self._MACHO_HEADER_SIZE_64 if is_64 else self._MACHO_HEADER_SIZE_32
+        header = self._read_doc_bytes(0, header_size)
+        ncmds = struct.unpack_from(f"{endian}I", header, 16)[0]
+        sizeofcmds = struct.unpack_from(f"{endian}I", header, 20)[0]
+
+        mappings: list[dict[str, int]] = []
+        cmd_offset = header_size
+        cmd_end = cmd_offset + sizeofcmds
+        for _ in range(ncmds):
+            if cmd_offset + self._MACHO_LC_HDR_SIZE > cmd_end:
+                break
+            cmd_hdr = self._read_doc_bytes(cmd_offset, self._MACHO_LC_HDR_SIZE)
+            cmd_type, cmd_size = struct.unpack(f"{endian}II", cmd_hdr)
+            if cmd_size < self._MACHO_LC_HDR_SIZE or cmd_offset + cmd_size > cmd_end:
+                _logger.warning("macho_va_detection_truncated_cmd", cmd_offset=cmd_offset, cmd_size=cmd_size)
+                break
+            entry = self._unpack_macho_segment_entry(cmd_offset, cmd_size, cmd_type, endian)
+            if entry is not None:
+                mappings.append(entry)
+                if hasattr(self.document, "add_va_mapping"):
+                    self.document.add_va_mapping(entry["file_offset"], entry["virtual_address"], entry["length"])
+            cmd_offset += cmd_size
+        return mappings
+
+    def _unpack_macho_segment_entry(
+        self,
+        cmd_offset: int,
+        cmd_size: int,
+        cmd_type: int,
+        endian: str,
+    ) -> dict[str, int] | None:
+        """Decode a single Mach-O ``LC_SEGMENT[_64]`` load command body.
+
+        Args:
+            cmd_offset: File offset of the load command header.
+            cmd_size: Reported byte length of the command.
+            cmd_type: Load command type tag.
+            endian: ``"<"`` or ``">"`` for little- or big-endian.
+
+        Returns:
+            dict[str, int] | None: Mapping dict for segment commands; ``None``
+            for any other command type.
+        """
+        if cmd_type == self._MACHO_LC_SEGMENT_64:
+            seg = self._read_doc_bytes(cmd_offset, min(cmd_size, self._MACHO_SEG64_BYTES))
+            return {
+                "file_offset": struct.unpack_from(f"{endian}Q", seg, 40)[0],
+                "virtual_address": struct.unpack_from(f"{endian}Q", seg, 24)[0],
+                "length": struct.unpack_from(f"{endian}Q", seg, 48)[0],
+            }
+        if cmd_type == self._MACHO_LC_SEGMENT:
+            seg = self._read_doc_bytes(cmd_offset, min(cmd_size, self._MACHO_SEG32_BYTES))
+            return {
+                "file_offset": struct.unpack_from(f"{endian}I", seg, 32)[0],
+                "virtual_address": struct.unpack_from(f"{endian}I", seg, 24)[0],
+                "length": struct.unpack_from(f"{endian}I", seg, 36)[0],
+            }
+        return None
 
     async def _detect_pe_va_mappings(self) -> list[dict[str, int]]:
         """Detect VA mappings from PE headers.
@@ -5048,33 +5275,80 @@ class HexEditorBridge(ToolBridgeBase):
                     })
 
         if include_utf16 and len(results) < max_results:
-            run_start_u16 = -1
-            i = 0
-            while i + 1 < len(data):
-                code_unit = data[i] | (data[i + 1] << 8)
-                if printable_min <= code_unit <= printable_max or code_unit in _WHITESPACE_BYTES:
-                    if run_start_u16 < 0:
-                        run_start_u16 = i
-                elif run_start_u16 >= 0:
-                    char_count = (i - run_start_u16) // 2
-                    if char_count >= min_length:
-                        content = data[run_start_u16:i].decode("utf-16le", errors="replace")
-                        results.append({
-                            "offset": run_start_u16,
-                            "length": i - run_start_u16,
-                            "encoding": "utf-16le",
-                            "content": content,
-                        })
-                        if len(results) >= max_results:
-                            return results
-                    run_start_u16 = -1
-                i += 2
+            HexEditorBridge._scan_utf16le_runs(data, results, min_length, max_results, even=True)
+        if include_utf16 and len(results) < max_results:
+            HexEditorBridge._scan_utf16le_runs(data, results, min_length, max_results, even=False)
 
         results.sort(key=operator.itemgetter("offset"))
         return results[:max_results]
 
+    @staticmethod
+    def _scan_utf16le_runs(
+        data: bytes,
+        results: list[dict[str, Any]],
+        min_length: int,
+        max_results: int,
+        *,
+        even: bool,
+    ) -> None:
+        """Scan ``data`` for UTF-16LE printable runs from a start parity.
+
+        Splits the search into even-aligned and odd-aligned passes so
+        UTF-16LE strings that begin on a byte that is not 16-bit aligned
+        within the surrounding container are still detected. Each
+        16-bit code unit is decoded with :func:`chr` and tested with
+        :meth:`str.isprintable` plus an explicit allow-list of common
+        whitespace, so non-ASCII printable characters such as
+        ``U+00E9 (é)`` are recognised while non-printable code points
+        such as the BOM, controls, and surrogate halves are not.
+
+        Args:
+            data: Bytes to scan.
+            results: Output list to append match dicts to.
+            min_length: Minimum number of code units in a run.
+            max_results: Maximum total ``results`` length.
+            even: If True, start at offset 0 with stride 2; if False
+                start at offset 1 with stride 2.
+        """
+        run_start = -1
+        i = 0 if even else 1
+        end_limit = len(data) - 1
+        while i < end_limit:
+            code_unit = data[i] | (data[i + 1] << 8)
+            try:
+                ch = chr(code_unit)
+            except ValueError:
+                ch = ""
+            if (ch and ch.isprintable()) or code_unit in _WHITESPACE_BYTES:
+                if run_start < 0:
+                    run_start = i
+            elif run_start >= 0:
+                char_count = (i - run_start) // 2
+                if char_count >= min_length:
+                    content = data[run_start:i].decode("utf-16le", errors="replace")
+                    results.append({
+                        "offset": run_start,
+                        "length": i - run_start,
+                        "encoding": "utf-16le",
+                        "content": content,
+                    })
+                    if len(results) >= max_results:
+                        return
+                run_start = -1
+            i += 2
+        if run_start >= 0:
+            char_count = (i - run_start) // 2
+            if char_count >= min_length and len(results) < max_results:
+                content = data[run_start:i].decode("utf-16le", errors="replace")
+                results.append({
+                    "offset": run_start,
+                    "length": i - run_start,
+                    "encoding": "utf-16le",
+                    "content": content,
+                })
+
     async def generate_structure_bookmarks(self) -> list[dict[str, Any]]:
-        """Auto-detect PE/ELF structure and create colored bookmarks.
+        """Auto-detect PE/ELF/Mach-O structure and create colored bookmarks.
 
         Returns:
             list[dict[str, Any]]: List of bookmark dicts that were created.
@@ -5096,10 +5370,109 @@ class HexEditorBridge(ToolBridgeBase):
             return self._bookmark_pe_structure()
         if magic[:4] == b"\x7fELF":
             return self._bookmark_elf_structure()
+        if self._is_macho_magic(magic):
+            return self._bookmark_macho_structure(magic)
         return []
+
+    def _bookmark_macho_structure(self, magic: bytes) -> list[dict[str, Any]]:
+        """Create colored bookmarks for Mach-O structure headers.
+
+        Bookmarks the Mach-O header itself plus each ``LC_SEGMENT`` /
+        ``LC_SEGMENT_64`` load command region. Other load command kinds
+        are bookmarked with a generic label.
+
+        Args:
+            magic: First four bytes of the document.
+
+        Returns:
+            list[dict[str, Any]]: Bookmarks that were added.
+        """
+        if self.document is None:
+            return []
+
+        if magic in self._MACHO_FAT_MAGICS:
+            bookmarks_fat: list[dict[str, Any]] = []
+            fat_indices: list[int] = []
+            self._add_bm(bookmarks_fat, fat_indices, 0, _MIN_HEADER_SIZE, "Mach-O FAT magic", "#FF6B6B")
+            _logger.info("macho_fat_structure_bookmarked")
+            return bookmarks_fat
+
+        bookmarks: list[dict[str, Any]] = []
+        added_indices: list[int] = []
+        try:
+            self._bookmark_macho_load_commands(magic, bookmarks, added_indices)
+            _logger.info("macho_structure_bookmarked", bookmark_count=len(bookmarks))
+        except (struct.error, RuntimeError, OSError) as exc:
+            _logger.warning(
+                "macho_structure_bookmark_failed",
+                error=str(exc),
+                rolled_back=len(added_indices),
+            )
+            self._rollback_bookmark_indices(added_indices)
+            return []
+        return bookmarks
+
+    def _bookmark_macho_load_commands(
+        self,
+        magic: bytes,
+        bookmarks: list[dict[str, Any]],
+        added_indices: list[int],
+    ) -> None:
+        """Walk the Mach-O load commands and add a bookmark per entry.
+
+        Args:
+            magic: First four bytes of the document.
+            bookmarks: List to append bookmark dicts to.
+            added_indices: Mutable list of recorded bookmark indices for
+                transactional rollback by the caller.
+        """
+        colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
+        is_64 = magic in self._MACHO_64BIT_MAGICS
+        endian = "<" if magic in self._MACHO_LE_MAGICS else ">"
+        header_size = self._MACHO_HEADER_SIZE_64 if is_64 else self._MACHO_HEADER_SIZE_32
+        header = self._read_doc_bytes(0, header_size)
+        ncmds = struct.unpack_from(f"{endian}I", header, 16)[0]
+        sizeofcmds = struct.unpack_from(f"{endian}I", header, 20)[0]
+
+        self._add_bm(bookmarks, added_indices, 0, header_size, "Mach-O Header", colors[0])
+
+        cmd_offset = header_size
+        cmd_end = cmd_offset + sizeofcmds
+        for cmd_index in range(min(ncmds, _MAX_BOOKMARK_ENTRIES)):
+            if cmd_offset + self._MACHO_LC_HDR_SIZE > cmd_end:
+                break
+            cmd_hdr = self._read_doc_bytes(cmd_offset, self._MACHO_LC_HDR_SIZE)
+            cmd_type, cmd_size = struct.unpack(f"{endian}II", cmd_hdr)
+            if cmd_size < self._MACHO_LC_HDR_SIZE or cmd_offset + cmd_size > cmd_end:
+                break
+            label, color_idx = self._macho_load_command_label(cmd_type, cmd_index)
+            self._add_bm(bookmarks, added_indices, cmd_offset, cmd_size, label, colors[color_idx])
+            cmd_offset += cmd_size
+
+    def _macho_load_command_label(self, cmd_type: int, cmd_index: int) -> tuple[str, int]:
+        """Return label and palette index for a Mach-O load command.
+
+        Args:
+            cmd_type: Load command type tag from the LC header.
+            cmd_index: Sequential index of the command in the table.
+
+        Returns:
+            tuple[str, int]: Display label and an index into the bookmark
+            colour palette.
+        """
+        if cmd_type == self._MACHO_LC_SEGMENT_64:
+            return f"LC_SEGMENT_64 #{cmd_index}", 1
+        if cmd_type == self._MACHO_LC_SEGMENT:
+            return f"LC_SEGMENT #{cmd_index}", 1
+        return f"LC_0x{cmd_type:X} #{cmd_index}", 2
 
     def _bookmark_pe_structure(self) -> list[dict[str, Any]]:
         """Create colored bookmarks for PE structure headers.
+
+        Bookmarks are added transactionally: if any read or struct
+        unpack fails partway through, every bookmark inserted into the
+        document during this call is rolled back so the document is not
+        left half-annotated.
 
         Returns:
             list[dict[str, Any]]: Created bookmark dicts.
@@ -5108,42 +5481,79 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         bookmarks: list[dict[str, Any]] = []
+        added_indices: list[int] = []
         colors = ("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4")
 
         try:
             e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
-            self._add_bm(bookmarks, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
-            self._add_bm(bookmarks, e_lfanew, 4, "PE Signature", colors[1])
+            self._add_bm(bookmarks, added_indices, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
+            self._add_bm(bookmarks, added_indices, e_lfanew, 4, "PE Signature", colors[1])
 
             coff_offset = e_lfanew + 4
-            self._add_bm(bookmarks, coff_offset, _PE_COFF_HEADER_SIZE, "COFF Header", colors[1])
+            self._add_bm(bookmarks, added_indices, coff_offset, _PE_COFF_HEADER_SIZE, "COFF Header", colors[1])
 
             coff_header = self._read_doc_bytes(coff_offset, _PE_COFF_HEADER_SIZE)
             num_sections = struct.unpack_from("<H", coff_header, 2)[0]
             opt_size = struct.unpack_from("<H", coff_header, 16)[0]
             opt_offset = coff_offset + _PE_COFF_HEADER_SIZE
             if opt_size > 0:
-                self._add_bm(bookmarks, opt_offset, opt_size, "Optional Header", colors[2])
+                self._add_bm(bookmarks, added_indices, opt_offset, opt_size, "Optional Header", colors[2])
 
-            self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, colors[3])
+            self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, added_indices, colors[3])
 
             _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
         except (struct.error, RuntimeError, OSError) as exc:
-            _logger.warning("pe_structure_bookmark_failed", error=str(exc))
+            _logger.warning(
+                "pe_structure_bookmark_failed",
+                error=str(exc),
+                rolled_back=len(added_indices),
+            )
+            self._rollback_bookmark_indices(added_indices)
+            return []
         return bookmarks
 
-    def _add_bm(self, bookmarks: list[dict[str, Any]], offset: int, length: int, label: str, color: str) -> None:
-        """Add a bookmark to the document and tracking list.
+    def _rollback_bookmark_indices(self, added_indices: list[int]) -> None:
+        """Remove bookmarks that were inserted during a failed transaction.
+
+        Indices are removed in reverse insertion order so that earlier
+        indices remain valid as later ones disappear. Failures during
+        rollback are logged but do not propagate.
+
+        Args:
+            added_indices: Bookmark indices to remove.
+        """
+        if self.document is None or not added_indices:
+            return
+        for idx in reversed(added_indices):
+            try:
+                self.document.remove_bookmark(idx)
+            except (RuntimeError, OSError, ValueError, IndexError) as exc:
+                _logger.warning("bookmark_rollback_failed", index=idx, error=str(exc))
+
+    def _add_bm(
+        self,
+        bookmarks: list[dict[str, Any]],
+        added_indices: list[int],
+        offset: int,
+        length: int,
+        label: str,
+        color: str,
+    ) -> None:
+        """Add a bookmark to the document and tracking lists.
 
         Args:
             bookmarks: List to append the bookmark dict to.
+            added_indices: Mutable list of bookmark indices recorded for
+                transactional rollback. The newly assigned index is
+                appended.
             offset: Byte offset.
             length: Length in bytes.
             label: Bookmark label.
             color: Color hex string.
         """
         if self.document is not None:
-            self.document.add_bookmark(offset, length, label, color)
+            idx: int = self.document.add_bookmark(offset, length, label, color)
+            added_indices.append(idx)
         bookmarks.append({"offset": offset, "length": length, "label": label, "color": color})
 
     def _bookmark_pe_sections(
@@ -5151,6 +5561,7 @@ class HexEditorBridge(ToolBridgeBase):
         section_table_offset: int,
         num_sections: int,
         bookmarks: list[dict[str, Any]],
+        added_indices: list[int],
         color: str,
     ) -> None:
         """Bookmark PE section headers.
@@ -5159,15 +5570,28 @@ class HexEditorBridge(ToolBridgeBase):
             section_table_offset: File offset of the first section header.
             num_sections: Number of section headers.
             bookmarks: List to append bookmarks to.
+            added_indices: Mutable list of bookmark indices recorded for
+                transactional rollback by the caller.
             color: Color hex string.
         """
         for i in range(min(num_sections, _MAX_BOOKMARK_ENTRIES)):
             sec_off = section_table_offset + i * _PE_SECTION_ENTRY_SIZE
             sec_name = self._read_doc_bytes(sec_off, 8).rstrip(b"\x00").decode("ascii", errors="replace")
-            self._add_bm(bookmarks, sec_off, _PE_SECTION_ENTRY_SIZE, f"Section: {sec_name}", color)
+            self._add_bm(
+                bookmarks,
+                added_indices,
+                sec_off,
+                _PE_SECTION_ENTRY_SIZE,
+                f"Section: {sec_name}",
+                color,
+            )
 
     def _bookmark_elf_structure(self) -> list[dict[str, Any]]:
         """Create colored bookmarks for ELF structure headers.
+
+        Bookmarks are added transactionally: any failure during parse
+        rolls back every bookmark inserted into the document during
+        this call so the document is not left half-annotated.
 
         Returns:
             list[dict[str, Any]]: Created bookmark dicts.
@@ -5176,6 +5600,7 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         bookmarks: list[dict[str, Any]] = []
+        added_indices: list[int] = []
         colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
 
         try:
@@ -5184,15 +5609,35 @@ class HexEditorBridge(ToolBridgeBase):
             endian = "<" if ident[5] == _ELF_DATA_LE else ">"
             ehdr_size, ph_info, sh_info = self._parse_elf_bookmark_info(endian, is_64=is_64)
 
-            self._add_bm(bookmarks, 0, ehdr_size, "ELF Header", colors[0])
+            self._add_bm(bookmarks, added_indices, 0, ehdr_size, "ELF Header", colors[0])
             for i in range(min(ph_info[2], _MAX_BOOKMARK_ENTRIES)):
-                self._add_bm(bookmarks, ph_info[0] + i * ph_info[1], ph_info[1], f"Program Header {i}", colors[1])
+                self._add_bm(
+                    bookmarks,
+                    added_indices,
+                    ph_info[0] + i * ph_info[1],
+                    ph_info[1],
+                    f"Program Header {i}",
+                    colors[1],
+                )
             for i in range(min(sh_info[2], _MAX_BOOKMARK_ENTRIES)):
-                self._add_bm(bookmarks, sh_info[0] + i * sh_info[1], sh_info[1], f"Section Header {i}", colors[2])
+                self._add_bm(
+                    bookmarks,
+                    added_indices,
+                    sh_info[0] + i * sh_info[1],
+                    sh_info[1],
+                    f"Section Header {i}",
+                    colors[2],
+                )
 
             _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
         except (struct.error, RuntimeError, OSError) as exc:
-            _logger.warning("elf_structure_bookmark_failed", error=str(exc))
+            _logger.warning(
+                "elf_structure_bookmark_failed",
+                error=str(exc),
+                rolled_back=len(added_indices),
+            )
+            self._rollback_bookmark_indices(added_indices)
+            return []
         return bookmarks
 
     def _parse_elf_bookmark_info(
@@ -5241,6 +5686,8 @@ class HexEditorBridge(ToolBridgeBase):
             ),
         )
 
+    _SAFE_COLOR_RE: re.Pattern[str] = re.compile(r"^#[0-9A-Fa-f]{6,8}$")
+
     async def export_annotated_html(
         self,
         start: int = 0,
@@ -5248,6 +5695,14 @@ class HexEditorBridge(ToolBridgeBase):
         bytes_per_row: int = 16,
     ) -> str:
         """Export hex view as annotated HTML with bookmarks and highlights.
+
+        Bookmark labels and colours originate in untrusted document
+        metadata. Labels are HTML-escaped via :func:`html.escape` for
+        both element text and attribute values; colours are validated
+        against ``#RRGGBB`` / ``#RRGGBBAA`` and any violator is replaced
+        with the neutral fallback ``#888888``. Combined this prevents
+        the trivial XSS available previously through a crafted
+        bookmark colour or label.
 
         Args:
             start: Start offset.
@@ -5270,7 +5725,15 @@ class HexEditorBridge(ToolBridgeBase):
         start = max(0, start)
 
         data = self._read_doc_bytes(start, end - start)
-        bookmarks = [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in self.document.list_bookmarks()]
+        bookmarks = [
+            {
+                "offset": b[0],
+                "length": b[1],
+                "label": str(b[2]),
+                "color": self._sanitize_html_color(str(b[3])),
+            }
+            for b in self.document.list_bookmarks()
+        ]
         bookmark_map = self._build_bookmark_map(bookmarks, start, end)
 
         lines = self._html_header()
@@ -5284,15 +5747,33 @@ class HexEditorBridge(ToolBridgeBase):
                 label = bm["label"]
                 if label not in seen_labels:
                     seen_labels.add(label)
+                    safe_label = html.escape(str(label), quote=True)
+                    safe_color = self._sanitize_html_color(str(bm["color"]))
                     lines.append(
-                        f"<span class='legend-item' style='background:{bm['color']}40;color:{bm['color']}'>"
-                        f"{label} (0x{bm['offset']:X})</span>",
+                        f"<span class='legend-item' style='background:{safe_color}40;color:{safe_color}'>"
+                        f"{safe_label} (0x{int(bm['offset']):X})</span>",
                     )
             lines.append("</div>")
 
         lines.append("</body></html>")
         _logger.debug("annotated_html_exported", start=start, end=end)
         return "\n".join(lines)
+
+    @staticmethod
+    def _sanitize_html_color(color: str) -> str:
+        """Validate a bookmark colour for safe injection into HTML.
+
+        Args:
+            color: Caller-supplied colour string.
+
+        Returns:
+            str: ``color`` itself if it matches ``#RRGGBB`` or
+            ``#RRGGBBAA``; otherwise the neutral fallback ``#888888``.
+        """
+        if HexEditorBridge._SAFE_COLOR_RE.fullmatch(color) is not None:
+            return color
+        _logger.warning("html_export_bad_color_replaced", color=color)
+        return "#888888"
 
     async def export_annotated_pdf(
         self,
@@ -5417,13 +5898,14 @@ class HexEditorBridge(ToolBridgeBase):
                 bm = bookmark_map.get(abs_offset + j)
                 hex_str = f"{b:02X}"
                 if bm is not None:
-                    hex_cells.append(f"<span class='bm' style='background:{bm['color']}40;color:{bm['color']}'>{hex_str}</span>")
+                    safe_color = HexEditorBridge._sanitize_html_color(str(bm["color"]))
+                    hex_cells.append(
+                        f"<span class='bm' style='background:{safe_color}40;color:{safe_color}'>{hex_str}</span>",
+                    )
                 else:
                     hex_cells.append(f"<span class='hex'>{hex_str}</span>")
                 ch = chr(b) if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX else "."
-                if ch in {"&", "<", ">"}:
-                    ch = f"&#{ord(ch)};"
-                ascii_cells.append(ch)
+                ascii_cells.append(html.escape(ch, quote=True))
             lines.append(
                 f"<tr><td class='offset'>{abs_offset:08X}</td>"
                 f"<td>{' '.join(hex_cells)}</td>"
@@ -5433,15 +5915,28 @@ class HexEditorBridge(ToolBridgeBase):
     async def snap_to_alignment(self, alignment_size: int = 512) -> int:
         """Snap the cursor to the nearest alignment boundary.
 
+        The boundary closer to the current cursor position is selected.
+        Ties (cursor exactly between two boundaries) snap upward, which
+        matches the rounding convention used by Python's
+        :func:`round` for half-integer .5 values when the bias is
+        positive.
+
         Args:
             alignment_size: Alignment boundary in bytes.
 
         Returns:
             int: New cursor offset after snapping.
+
+        Raises:
+            ValueError: If ``alignment_size`` is not positive.
         """
         if alignment_size <= 0:
-            alignment_size = 512
-        new_offset = (self._cursor_offset // alignment_size) * alignment_size
+            _logger.error("snap_to_alignment_invalid_size", alignment_size=alignment_size)
+            msg = f"alignment_size must be positive, got {alignment_size}"
+            raise ValueError(msg)
+        floor_offset = (self._cursor_offset // alignment_size) * alignment_size
+        ceil_offset = floor_offset + alignment_size
+        new_offset = ceil_offset if (self._cursor_offset - floor_offset) * 2 >= alignment_size else floor_offset
         self._cursor_offset = new_offset
         _logger.debug("cursor_snapped", offset=hex(new_offset), alignment=alignment_size)
         if self.state_holder is not None:
@@ -5488,13 +5983,13 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "not a PE file"
             raise RuntimeError(msg)
 
-        e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
+        e_lfanew = struct.unpack_from("<I", data, _PE_LFANEW_OFFSET)[0]
         if data[e_lfanew : e_lfanew + 4] != b"PE\x00\x00":
             _logger.error("verify_pe_checksum_failed_invalid_pe_sig", e_lfanew=hex(e_lfanew))
             msg = "invalid PE signature"
             raise RuntimeError(msg)
 
-        checksum_offset = e_lfanew + 4 + 20 + 64
+        checksum_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + _PE_CHECKSUM_RELATIVE
         if checksum_offset + 4 > len(data):
             _logger.error("verify_pe_checksum_failed_header_too_short", checksum_offset=hex(checksum_offset))
             msg = "PE header too short for checksum field"
@@ -5591,38 +6086,65 @@ class HexEditorBridge(ToolBridgeBase):
         checksum += checksum >> 16
         return (checksum & 0xFFFF) + len(data)
 
+    _VALID_BASE_HINTS: frozenset[str] = frozenset({"auto", "decimal", "hex", "binary", "octal"})
+
     @staticmethod
     async def base_convert(value: str, from_base: str = "auto") -> dict[str, str]:
         """Convert a numeric value between bases and show all representations.
 
         Args:
             value: Value string (decimal, 0xHex, 0bBinary, 0oOctal).
-            from_base: Source base hint (auto, decimal, hex, binary, octal).
+            from_base: Source base hint - one of ``auto``, ``decimal``,
+                ``hex``, ``binary``, ``octal``.
 
         Returns:
             dict[str, str]: Dict with decimal, hex, octal, binary, and
-                integer width representations.
-        """
-        value = value.strip()
-        parsed: int
+            integer width representations.
 
-        if from_base == "auto":
-            if value.startswith(("0x", "0X")):
-                parsed = int(value, 16)
-            elif value.startswith(("0b", "0B")):
-                parsed = int(value, 2)
-            elif value.startswith(("0o", "0O")):
-                parsed = int(value, 8)
+        Raises:
+            ValueError: If ``from_base`` is not a recognised hint or
+                ``value`` cannot be parsed as an integer in the
+                requested (or auto-detected) base. The message is
+                shaped for direct surfacing to LLM callers.
+        """
+        if from_base not in HexEditorBridge._VALID_BASE_HINTS:
+            _logger.error(
+                "base_convert_invalid_base_hint",
+                from_base=from_base,
+                supported=sorted(HexEditorBridge._VALID_BASE_HINTS),
+            )
+            msg = f"unknown from_base {from_base!r}; expected one of {sorted(HexEditorBridge._VALID_BASE_HINTS)}"
+            raise ValueError(msg)
+
+        value = value.strip()
+        if not value:
+            _logger.error("base_convert_empty_value")
+            msg = "value must not be empty"
+            raise ValueError(msg)
+
+        parsed: int
+        try:
+            if from_base == "auto":
+                if value.startswith(("0x", "0X")):
+                    parsed = int(value, 16)
+                elif value.startswith(("0b", "0B")):
+                    parsed = int(value, 2)
+                elif value.startswith(("0o", "0O")):
+                    parsed = int(value, 8)
+                else:
+                    parsed = int(value)
+            elif from_base == "hex":
+                parsed = int(value.removeprefix("0x").removeprefix("0X"), 16)
+            elif from_base == "binary":
+                parsed = int(value.removeprefix("0b").removeprefix("0B"), 2)
+            elif from_base == "octal":
+                parsed = int(value.removeprefix("0o").removeprefix("0O"), 8)
             else:
                 parsed = int(value)
-        elif from_base == "hex":
-            parsed = int(value.removeprefix("0x").removeprefix("0X"), 16)
-        elif from_base == "binary":
-            parsed = int(value.removeprefix("0b").removeprefix("0B"), 2)
-        elif from_base == "octal":
-            parsed = int(value.removeprefix("0o").removeprefix("0O"), 8)
-        else:
-            parsed = int(value)
+        except ValueError as exc:
+            _logger.warning("base_convert_parse_failed", value=value, from_base=from_base, error=str(exc))
+            msg = f"failed to parse {value!r} as {from_base}: {exc}"
+            raise ValueError(msg) from exc
 
         result: dict[str, str] = {
             "decimal": str(parsed),
@@ -5664,212 +6186,45 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("base_convert", input_value=value)
         return result
 
-    async def run_python_script(self, source: str) -> dict[str, Any]:
-        """Execute a Python script with access to the hex document API.
+    @staticmethod
+    async def run_python_script(source: str) -> dict[str, Any]:
+        """Reject Python script execution; the in-process sandbox was unsafe.
+
+        The previous implementation attempted to execute arbitrary Python
+        source in the host process behind a hand-rolled denylist of
+        builtins. That denylist did not block ``object``, ``type``,
+        ``getattr``, ``vars``, ``setattr``, ``__build_class__`` or
+        ``globals``, so any caller could escape via
+        ``().__class__.__base__.__subclasses__()`` and reach
+        :class:`subprocess.Popen` / :func:`os.system`. Because this
+        method is registered as an LLM-callable tool, that was a remote
+        code execution path on the host. The feature has been disabled
+        outright; callers receive a typed :class:`ToolError` and the
+        host process is never invited to compile or execute their input.
+        The method binding is preserved so downstream tool dispatch
+        still resolves cleanly to a hard, explicit failure.
 
         Args:
-            source: Python source code.
+            source: Python source the caller wishes to execute. Ignored
+                except for length, which is logged for audit purposes.
 
         Returns:
-            dict[str, Any]: Dict with output, error, and variables keys.
+            dict[str, Any]: Never returned. The method always raises.
 
         Raises:
-            RuntimeError: If no document is open.
+            ToolError: Always; the feature is permanently disabled.
         """
-        if self.document is None:
-            _logger.error("operation_failed_no_document_open")
-            msg = "no document open"
-            raise RuntimeError(msg)
-
-        stdout_capture = io.StringIO()
-        doc = self.document
-
-        class _DocAPI:
-            """Restricted document API for user scripts."""
-
-            @staticmethod
-            def read(offset: int, length: int) -> list[int]:
-                """Read bytes from the document as a list of integers.
-
-                Args:
-                    offset: Absolute offset to start reading from.
-                    length: Number of bytes to read.
-
-                Returns:
-                    list[int]: Byte values read from the document.
-                """
-                raw: object = doc.read(offset, length)
-                if isinstance(raw, (bytes, bytearray)):
-                    return list(raw)
-                if isinstance(raw, list):
-                    return cast("list[int]", raw)
-                return list(cast("bytearray", raw))
-
-            @staticmethod
-            def write(offset: int, data: bytes | list[int]) -> None:
-                """Overwrite bytes at ``offset`` with ``data``.
-
-                Args:
-                    offset: Absolute offset where the write starts.
-                    data: Replacement bytes, either as ``bytes`` or a list
-                        of byte-valued integers.
-                """
-                if isinstance(data, list):
-                    data = bytes(data)
-                _logger.info("file_written", path="document", offset=hex(offset), size=len(data), op="script_doc_write")
-                doc.write_bytes(offset, data)
-
-            @staticmethod
-            def insert(offset: int, data: bytes | list[int]) -> None:
-                """Insert ``data`` at ``offset`` without overwriting.
-
-                Args:
-                    offset: Absolute offset where the insertion occurs.
-                    data: Bytes to insert, either as ``bytes`` or a list
-                        of byte-valued integers.
-                """
-                if isinstance(data, list):
-                    data = bytes(data)
-                doc.insert_bytes(offset, data)
-
-            @staticmethod
-            def delete(offset: int, length: int) -> None:
-                """Delete ``length`` bytes starting at ``offset``.
-
-                Args:
-                    offset: Absolute offset where deletion starts.
-                    length: Number of bytes to remove.
-                """
-                doc.delete_bytes(offset, length)
-
-            @staticmethod
-            def length() -> int:
-                """Return the current byte length of the document.
-
-                Returns:
-                    int: Number of bytes in the document.
-                """
-                result: int = doc.length()
-                return result
-
-            @staticmethod
-            def search_hex(pattern: str) -> list[tuple[int, int]]:
-                """Search the document for a hex pattern.
-
-                Args:
-                    pattern: Hex pattern expressed as a string (whitespace
-                        and wildcard tokens are passed straight through to
-                        the underlying hexcore search).
-
-                Returns:
-                    list[tuple[int, int]]: ``(offset, length)`` matches,
-                    capped at 1000.
-                """
-                results: list[tuple[int, int]] = doc.search_hex(pattern, 1000)
-                return results
-
-            @staticmethod
-            def search_text(text: str) -> list[tuple[int, int]]:
-                """Search the document for a UTF-8 text literal.
-
-                Args:
-                    text: Text to search for; matching is case-sensitive.
-
-                Returns:
-                    list[tuple[int, int]]: ``(offset, length)`` matches,
-                    capped at 1000.
-                """
-                case_sensitive = True
-                results: list[tuple[int, int]] = doc.search_text(text, "utf-8", case_sensitive, 1000)
-                return results
-
-            @staticmethod
-            def add_bookmark(offset: int, length: int = 1, label: str = "Bookmark", color: str = "#FFFF00") -> int:
-                """Add a bookmark spanning ``length`` bytes at ``offset``.
-
-                Args:
-                    offset: Absolute offset of the bookmark.
-                    length: Length in bytes that the bookmark covers.
-                    label: Human-readable bookmark label.
-                    color: Bookmark highlight colour as ``#RRGGBB``.
-
-                Returns:
-                    int: Identifier of the newly created bookmark.
-                """
-                idx: int = doc.add_bookmark(offset, length, label, color)
-                return idx
-
-        forbidden_builtins = {"__import__", "eval", "exec", "open", "compile", "breakpoint"}
-        safe_builtins: dict[str, Any] = {k: v for k, v in vars(_builtins_mod).items() if k not in forbidden_builtins}
-
-        def safe_print(*args: object, **kwargs: object) -> None:
-            """Capture script ``print`` output into the sandboxed buffer.
-
-            Replaces the built-in ``print`` inside the restricted script
-            environment so that anything the user script prints ends up in
-            ``stdout_capture`` rather than the host process stdout.
-
-            Args:
-                *args: Positional values that would normally be printed.
-                **kwargs: Recognised keyword arguments ``sep`` and ``end``
-                    mirroring the built-in ``print`` semantics.
-            """
-            sep = str(kwargs.get("sep", " "))
-            end_val = str(kwargs.get("end", "\n"))
-            stdout_capture.write(sep.join(str(a) for a in args) + end_val)
-
-        namespace: dict[str, Any] = {
-            "__builtins__": safe_builtins,
-            "doc": _DocAPI(),
-            "print": safe_print,
-        }
-
-        error_str: str = ""
-        try:
-            compiled = compile(source, "<script>", "exec")
-            exec(compiled, namespace)  # noqa: S102
-        except SyntaxError as exc:
-            _logger.warning("python_script_syntax_error", error_lineno=exc.lineno, error_message=exc.msg)
-            error_str = f"SyntaxError at line {exc.lineno}: {exc.msg}"
-        except (
-            NameError,
-            TypeError,
-            ValueError,
-            AttributeError,
-            KeyError,
-            IndexError,
-            RuntimeError,
-            OSError,
-            ArithmeticError,
-            ImportError,
-            StopIteration,
-            AssertionError,
-            MemoryError,
-            RecursionError,
-            UnicodeError,
-            EOFError,
-            BufferError,
-            LookupError,
-        ) as exc:
-            _logger.warning("python_script_runtime_error", error_type=type(exc).__name__, error=str(exc))
-            error_str = f"{type(exc).__name__}: {exc}"
-
-        output = stdout_capture.getvalue()
-        user_vars: dict[str, str] = {}
-        skip_keys = {"__builtins__", "doc", "print"}
-        for k, v in namespace.items():
-            if k not in skip_keys and not k.startswith("_"):
-                try:
-                    user_vars[k] = repr(v)
-                except (RuntimeError, TypeError, ValueError):
-                    _logger.debug("python_script_var_unrepresentable", var_name=k, exc_info=True)
-                    user_vars[k] = "<unrepresentable>"
-
-        _logger.info("python_script_executed", output_len=len(output), has_error=bool(error_str))
-        if self.state_holder is not None:
-            doc_len_val: int = self.document.length() if self.document is not None else 0
-            self.state_holder.notify_data_modified(0, doc_len_val, source="bridge")
-        return {"output": output, "error": error_str, "variables": user_vars}
+        _logger.warning(
+            "run_python_script_rejected",
+            source_len=len(source),
+            reason="in_process_sandbox_disabled",
+        )
+        msg = (
+            "hex_editor.run_python_script is disabled: in-process Python "
+            "execution cannot be safely sandboxed in this bridge. Use a "
+            "host-side scripting environment to operate on exported data."
+        )
+        raise ToolError(msg)
 
     async def set_chunk_size(self, size_bytes: int) -> bool:
         """Set the chunk size hint for large file I/O.
@@ -5878,10 +6233,26 @@ class HexEditorBridge(ToolBridgeBase):
             size_bytes: Chunk size in bytes.
 
         Returns:
-            bool: True always.
+            bool: True if the backend accepted the hint.
+
+        Raises:
+            RuntimeError: If no document is open or the active backend
+                does not expose ``set_chunk_size_hint``.
+            ValueError: If ``size_bytes`` is not a positive integer.
         """
-        if self.document is not None and hasattr(self.document, "set_chunk_size_hint"):
-            self.document.set_chunk_size_hint(size_bytes)
+        if size_bytes <= 0:
+            _logger.error("set_chunk_size_failed_non_positive", size=size_bytes)
+            msg = f"chunk size must be a positive integer, got {size_bytes}"
+            raise ValueError(msg)
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if not hasattr(self.document, "set_chunk_size_hint"):
+            _logger.error("set_chunk_size_failed_backend_unsupported", size=size_bytes)
+            msg = "active hex document backend does not support chunk size hints"
+            raise RuntimeError(msg)
+        self.document.set_chunk_size_hint(size_bytes)
         _logger.debug("chunk_size_set", size=size_bytes)
         return True
 
@@ -5911,22 +6282,52 @@ class HexEditorBridge(ToolBridgeBase):
             budget_bytes: Memory budget in bytes.
 
         Returns:
-            bool: True always.
+            bool: True if the backend accepted the hint.
+
+        Raises:
+            RuntimeError: If no document is open or the active backend
+                does not expose ``set_memory_budget_hint``.
+            ValueError: If ``budget_bytes`` is not a positive integer.
         """
-        if self.document is not None and hasattr(self.document, "set_memory_budget_hint"):
-            self.document.set_memory_budget_hint(budget_bytes)
+        if budget_bytes <= 0:
+            _logger.error("set_memory_budget_failed_non_positive", budget=budget_bytes)
+            msg = f"memory budget must be a positive integer, got {budget_bytes}"
+            raise ValueError(msg)
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if not hasattr(self.document, "set_memory_budget_hint"):
+            _logger.error("set_memory_budget_failed_backend_unsupported", budget=budget_bytes)
+            msg = "active hex document backend does not support memory budget hints"
+            raise RuntimeError(msg)
+        self.document.set_memory_budget_hint(budget_bytes)
         _logger.debug("memory_budget_set", budget=budget_bytes)
         return True
+
+    _VALID_COLOR_MODES: frozenset[str] = frozenset({"none", "entropy", "byte_value", "template", "content_type"})
 
     async def set_color_mode(self, mode: str) -> bool:
         """Set the byte color-mapping mode.
 
         Args:
-            mode: One of "none", "entropy", "byte_value", "template", "content_type".
+            mode: One of ``none``, ``entropy``, ``byte_value``,
+                ``template``, ``content_type``.
 
         Returns:
-            bool: True always.
+            bool: True if the mode was accepted.
+
+        Raises:
+            ValueError: If ``mode`` is not in the documented enum.
         """
+        if mode not in self._VALID_COLOR_MODES:
+            _logger.error(
+                "set_color_mode_failed_invalid",
+                mode=mode,
+                valid=sorted(self._VALID_COLOR_MODES),
+            )
+            msg = f"unknown color mode {mode!r}; supported: {sorted(self._VALID_COLOR_MODES)}"
+            raise ValueError(msg)
         self._color_mode = mode
         _logger.debug("color_mode_set", mode=mode)
         if self.state_holder is not None:
@@ -5945,28 +6346,87 @@ class HexEditorBridge(ToolBridgeBase):
     async def scan_die_signatures(self, db_path: str) -> list[dict[str, Any]]:
         """Scan document against a DIE-style JSON signature database.
 
+        This is *not* a Detect-It-Easy script-engine implementation. It
+        accepts a flat JSON array of signature entries with the simple
+        ``{"name": str, "type": str, "version": str, "patterns": [...]}``
+        schema described in the project signature library; each pattern
+        is matched as a literal hex run at the entry point, anywhere in
+        the file, or at a fixed offset. Real DIE script bytecode and
+        ``.sg`` databases are not interpreted - those require the DIE
+        engine itself and are explicitly rejected here so the caller is
+        not silently given a degenerate scan result.
+
         Args:
-            db_path: Path to the DIE JSON database file.
+            db_path: Path to a JSON signature database matching the
+                schema above.
 
         Returns:
-            list[dict[str, Any]]: List of match dicts with name, type, version, offset, details.
+            list[dict[str, Any]]: Match dicts with name, type, version,
+            offset, details.
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If the database file is in DIE's native script
+                format or if the JSON itself is malformed.
+            TypeError: If the JSON parses but does not have the expected
+                ``list[dict]`` shape.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
+        suffix = Path(db_path).suffix.lower()
+        if suffix in {".sg", ".db", ".diedb"}:
+            _logger.error("scan_die_native_format_unsupported", suffix=suffix, path=db_path)
+            msg = (
+                f"DIE native signature format {suffix!r} is not supported by this scanner; "
+                "it requires the Detect-It-Easy script engine. Provide a JSON signature "
+                "list with `name`, `type`, `version`, and `patterns` fields instead."
+            )
+            raise ValueError(msg)
+
         db_text = await asyncio.to_thread(Path(db_path).read_text, encoding="utf-8")
-        db_entries: list[dict[str, Any]] = json.loads(db_text)
+        try:
+            raw_db: object = json.loads(db_text)
+        except json.JSONDecodeError as exc:
+            _logger.exception("scan_die_db_invalid_json", path=db_path)
+            msg = f"DIE database {db_path!r} is not valid JSON: {exc}"
+            raise ValueError(msg) from exc
+        if not isinstance(raw_db, list):
+            _logger.error("scan_die_db_not_array", path=db_path, db_type=type(raw_db).__name__)
+            msg = f"DIE database {db_path!r} must be a JSON array of signature objects, got {type(raw_db).__name__}"
+            raise TypeError(msg)
+
+        db_entries: list[dict[str, Any]] = []
+        for idx, entry in enumerate(raw_db):
+            if not isinstance(entry, dict):
+                _logger.error("scan_die_entry_not_dict", path=db_path, index=idx, entry_type=type(entry).__name__)
+                msg = (
+                    f"DIE database {db_path!r} entry #{idx} is not a JSON object "
+                    f"(got {type(entry).__name__}); expected fields name, type, version, patterns"
+                )
+                raise TypeError(msg)
+            db_entries.append(cast("dict[str, Any]", entry))
+
         ep_bytes = self._read_doc_bytes(0, min(_MAX_EP_BYTES, self.document.length()))
         results: list[dict[str, Any]] = []
 
         for entry in db_entries:
-            sig_info = (str(entry.get("name", "unknown")), str(entry.get("type", "unknown")), str(entry.get("version", "")))
-            for pattern_info in list(entry.get("patterns", [])):
+            sig_info = (
+                str(entry.get("name", "unknown")),
+                str(entry.get("type", "unknown")),
+                str(entry.get("version", "")),
+            )
+            patterns_field = entry.get("patterns", [])
+            if not isinstance(patterns_field, list):
+                _logger.warning(
+                    "scan_die_entry_patterns_not_list",
+                    name=sig_info[0],
+                    patterns_type=type(patterns_field).__name__,
+                )
+                continue
+            for pattern_info in cast("list[Any]", list(patterns_field)):
                 self._match_die_pattern(pattern_info, sig_info, ep_bytes, results)
 
         _logger.info("die_scan_completed", matches=len(results))
@@ -6041,17 +6501,66 @@ class HexEditorBridge(ToolBridgeBase):
                         "details": f"Fixed offset match at 0x{fixed_offset:X}",
                     })
 
-    async def scan_clamav_signatures(self, db_path: str) -> list[dict[str, Any]]:
-        """Scan document against ClamAV .ndb or .hdb signature files.
+    _DOC_HASH_CHUNK_BYTES: int = 1 << 20
+
+    def _compute_doc_md5_streaming(self, chunk_size: int | None = None) -> str:
+        """Compute MD5 of the open document via chunked reads.
+
+        Reads the document in fixed-size chunks rather than loading the
+        full backing file into memory, so the memory-mapped Rust backend
+        continues to provide its bounded-memory contract for large
+        files.
 
         Args:
-            db_path: Path to the .ndb or .hdb file.
+            chunk_size: Number of bytes to hash per read call. ``None``
+                (the default) selects :attr:`_DOC_HASH_CHUNK_BYTES`.
+
+        Returns:
+            str: Lowercase MD5 hex digest of the entire document.
+
+        Raises:
+            RuntimeError: If no document is open.
+            ValueError: If ``chunk_size`` is not positive.
+        """
+        effective_chunk = self._DOC_HASH_CHUNK_BYTES if chunk_size is None else chunk_size
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = "no document open"
+            raise RuntimeError(msg)
+        if effective_chunk <= 0:
+            _logger.error("compute_doc_md5_invalid_chunk_size", chunk_size=effective_chunk)
+            msg = f"chunk_size must be positive, got {effective_chunk}"
+            raise ValueError(msg)
+        hasher = hashlib.md5()  # noqa: S324
+        doc_len: int = self.document.length()
+        offset = 0
+        while offset < doc_len:
+            read_len = min(effective_chunk, doc_len - offset)
+            hasher.update(self._read_doc_bytes(offset, read_len))
+            offset += read_len
+        return hasher.hexdigest()
+
+    async def scan_clamav_signatures(self, db_path: str) -> list[dict[str, Any]]:
+        """Scan document against a ClamAV signature database.
+
+        Args:
+            db_path: Path to the ClamAV signature database. Recognised
+                suffixes: ``.hdb`` / ``.hsb`` (file hash), ``.ndb``
+                (extended pattern), and ``.fp`` (false-positive hash
+                list, applied as ``.hdb``).
 
         Returns:
             list[dict[str, Any]]: List of match dicts.
 
         Raises:
             RuntimeError: If no document is open.
+            ValueError: If ``db_path`` ends in an unsupported suffix. The
+                ClamAV ecosystem includes formats this scanner does not
+                implement (``.ldb`` logical signatures, ``.mdb`` /
+                ``.msb`` section hashes, ``.cdb`` container metadata,
+                ``.idb`` icon hashes, ``.cvd`` / ``.cld`` archives) and
+                silently treating them as ``.ndb`` would mis-scan them;
+                callers must dispatch those formats explicitly.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -6063,22 +6572,41 @@ class HexEditorBridge(ToolBridgeBase):
         lines_text = await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         lines = lines_text.splitlines()
 
-        if suffix == ".hdb":
+        hdb_suffixes = {".hdb", ".hsb", ".fp"}
+        ndb_suffixes = {".ndb"}
+        unsupported = {".ldb", ".mdb", ".msb", ".cdb", ".idb", ".cvd", ".cld", ".pdb", ".wdb"}
+        supported = sorted(hdb_suffixes | ndb_suffixes)
+
+        if suffix in hdb_suffixes:
             return self._scan_clamav_hdb(lines)
-        return self._scan_clamav_ndb(lines)
+        if suffix in ndb_suffixes:
+            return self._scan_clamav_ndb(lines)
+        if suffix in unsupported:
+            _logger.error("scan_clamav_unsupported_format", suffix=suffix, path=str(path))
+            msg = f"ClamAV signature format {suffix!r} is not supported by this scanner; supported: {supported}"
+            raise ValueError(msg)
+        _logger.error("scan_clamav_unknown_format", suffix=suffix, path=str(path))
+        msg = f"unrecognised ClamAV database suffix {suffix!r}; expected one of {supported}"
+        raise ValueError(msg)
 
     def _scan_clamav_hdb(self, lines: list[str]) -> list[dict[str, Any]]:
-        """Scan ClamAV hash-based (.hdb) signatures.
+        """Scan ClamAV hash-based (.hdb / .hsb / .fp) signatures.
 
         Args:
-            lines: Lines from the .hdb file.
+            lines: Lines from the database file.
 
         Returns:
             list[dict[str, Any]]: Match results.
+
+        Raises:
+            RuntimeError: If no document is open.
         """
-        data = self._read_all_doc_bytes()
-        file_md5 = hashlib.md5(data).hexdigest()  # noqa: S324
-        file_size = len(data)
+        if self.document is None:
+            _logger.error("operation_failed_no_document_open")
+            msg = "no document open"
+            raise RuntimeError(msg)
+        file_size = self.document.length()
+        file_md5 = self._compute_doc_md5_streaming()
         results: list[dict[str, Any]] = []
         hdb_fields = 3
 
@@ -6108,6 +6636,13 @@ class HexEditorBridge(ToolBridgeBase):
     def _scan_clamav_ndb(self, lines: list[str]) -> list[dict[str, Any]]:
         """Scan ClamAV pattern-based (.ndb) signatures.
 
+        Implements the wildcard semantics of the ClamAV NDB hex grammar:
+        ``??`` matches any single byte, and ``*`` matches a
+        variable-length gap of zero or more bytes between two anchored
+        sub-patterns. Patterns are translated into a compiled byte
+        :class:`re.Pattern` so wildcard semantics survive end-to-end
+        rather than being silently stripped.
+
         Args:
             lines: Lines from the .ndb file.
 
@@ -6125,41 +6660,42 @@ class HexEditorBridge(ToolBridgeBase):
             sig_name = parts[0]
             sig_offset_spec = parts[2]
             sig_hex = parts[3]
-            try:
-                clean_hex = sig_hex.replace("*", "").replace("?", "")
-                if not clean_hex:
-                    continue
-                pattern_bytes = bytes.fromhex(clean_hex)
-            except ValueError:
-                _logger.debug("clamav_ndb_invalid_hex", sig_hex=sig_hex, exc_info=True)
+
+            compiled = self._compile_clamav_ndb_pattern(sig_hex)
+            if compiled is None:
                 continue
+            regex, min_len = compiled
 
             if sig_offset_spec == "*":
-                idx = data.find(pattern_bytes)
-                if idx >= 0:
+                match = regex.search(data)
+                if match is not None:
                     results.append({
                         "name": sig_name,
                         "type": "ndb",
                         "version": "",
-                        "offset": idx,
-                        "details": f"Pattern match at 0x{idx:X}",
+                        "offset": match.start(),
+                        "details": f"Pattern match at 0x{match.start():X}",
                     })
-            elif sig_offset_spec.startswith("EP") and data[: len(pattern_bytes)] == pattern_bytes:
-                results.append({
-                    "name": sig_name,
-                    "type": "ndb",
-                    "version": "",
-                    "offset": 0,
-                    "details": "Entry point match",
-                })
+            elif sig_offset_spec.startswith("EP"):
+                match = regex.match(data)
+                if match is not None:
+                    results.append({
+                        "name": sig_name,
+                        "type": "ndb",
+                        "version": "",
+                        "offset": 0,
+                        "details": "Entry point match",
+                    })
             else:
                 try:
                     offset_val = int(sig_offset_spec, 0)
                 except ValueError:
                     _logger.debug("clamav_ndb_invalid_offset", sig_offset_spec=sig_offset_spec, exc_info=True)
                     continue
-                end_pos = offset_val + len(pattern_bytes)
-                if end_pos <= len(data) and data[offset_val:end_pos] == pattern_bytes:
+                if offset_val + min_len > len(data):
+                    continue
+                match = regex.match(data, offset_val)
+                if match is not None:
                     results.append({
                         "name": sig_name,
                         "type": "ndb",
@@ -6170,6 +6706,65 @@ class HexEditorBridge(ToolBridgeBase):
 
         _logger.info("clamav_ndb_scan_completed", matches=len(results))
         return results
+
+    @staticmethod
+    def _compile_clamav_ndb_pattern(sig_hex: str) -> tuple[re.Pattern[bytes], int] | None:
+        """Compile a ClamAV NDB hex pattern into a byte-regex.
+
+        The NDB hex grammar admits three token kinds:
+            * Two hex digits: a literal byte.
+            * ``??``: any single byte (regex ``.`` over bytes with
+              :data:`re.DOTALL`).
+            * ``*``: any number (including zero) of intervening bytes
+              between two anchored sub-patterns. Implemented as a
+              non-greedy gap so the leftmost match wins.
+
+        Whitespace is permitted and ignored. Any other character causes
+        :func:`re.compile` to fail and the pattern is rejected.
+
+        Args:
+            sig_hex: Raw NDB pattern field as it appears in the database.
+
+        Returns:
+            tuple[re.Pattern[bytes], int] | None: Compiled regex and the
+            minimum number of literal/wildcard bytes the pattern can
+            match, or ``None`` if the pattern is malformed.
+        """
+        cleaned = sig_hex.strip().replace(" ", "")
+        if not cleaned:
+            return None
+        regex_parts: list[bytes] = []
+        min_len = 0
+        i = 0
+        n = len(cleaned)
+        while i < n:
+            ch = cleaned[i]
+            if ch == "*":
+                regex_parts.append(b".*?")
+                i += 1
+                continue
+            if i + 1 >= n:
+                _logger.debug("clamav_ndb_pattern_truncated", sig_hex=sig_hex)
+                return None
+            pair = cleaned[i : i + 2]
+            if pair == "??":
+                regex_parts.append(b".")
+                min_len += 1
+            else:
+                try:
+                    byte_val = int(pair, 16)
+                except ValueError:
+                    _logger.debug("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
+                    return None
+                regex_parts.append(re.escape(bytes([byte_val])))
+                min_len += 1
+            i += 2
+        try:
+            compiled = re.compile(b"".join(regex_parts), re.DOTALL)
+        except re.error:
+            _logger.debug("clamav_ndb_pattern_regex_error", sig_hex=sig_hex, exc_info=True)
+            return None
+        return compiled, min_len
 
     async def scan_custom_signatures(self, sig_file: str) -> list[dict[str, Any]]:
         """Scan document against a custom JSON signature database.
@@ -6248,6 +6843,15 @@ class HexEditorBridge(ToolBridgeBase):
     async def export_patches_bps(self, original_path: str) -> str:
         """Export a BPS patch comparing the current document against the original.
 
+        When the underlying Rust backend implements
+        ``export_patches_bps`` the source file is memory-mapped via
+        :class:`mmap.mmap` and handed to the backend without first
+        materialising the whole file in Python; the target is read
+        through the existing memory-mapped document and never copied
+        into a duplicate Python ``bytes`` buffer. The pure-Python
+        fallback continues to require both files in memory because the
+        BPS encoder makes random-access lookups on both buffers.
+
         Args:
             original_path: Path to the original unmodified file.
 
@@ -6262,16 +6866,61 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
-        target_data = self._read_all_doc_bytes()
-
         if hasattr(self.document, "export_patches_bps"):
-            raw: bytes = self.document.export_patches_bps(source_data)
+            raw: bytes = await asyncio.to_thread(self._export_patches_bps_via_backend, original_path)
         else:
-            raw = self._build_bps_patch(source_data, target_data)
+            raw = await asyncio.to_thread(self._export_patches_bps_pyfallback, original_path)
 
         _logger.info("bps_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
+
+    def _export_patches_bps_via_backend(self, original_path: str) -> bytes:
+        """Invoke the Rust backend's BPS exporter with an mmap'd source.
+
+        Args:
+            original_path: Path to the unmodified original file.
+
+        Returns:
+            bytes: Raw BPS patch bytes returned by the backend.
+
+        Raises:
+            RuntimeError: If the document was closed in the interim.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                return self.document.export_patches_bps(b"")
+            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                source_view = bytes(mm)
+        return self.document.export_patches_bps(source_view)
+
+    def _export_patches_bps_pyfallback(self, original_path: str) -> bytes:
+        """Build a BPS patch in pure Python with mmap-backed source.
+
+        Args:
+            original_path: Path to the unmodified original file.
+
+        Returns:
+            bytes: Raw BPS patch bytes.
+
+        Raises:
+            RuntimeError: If the document was closed in the interim.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                source_data: bytes = b""
+            else:
+                with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                    source_data = bytes(mm)
+        target_data = self._read_all_doc_bytes()
+        return self._build_bps_patch(source_data, target_data)
 
     async def import_patches_bps(self, patch_b64: str, original_path: str) -> dict[str, int]:
         """Import and apply a BPS patch.
@@ -6310,6 +6959,11 @@ class HexEditorBridge(ToolBridgeBase):
     async def export_patches_ups(self, original_path: str) -> str:
         """Export a UPS patch comparing the current document against the original.
 
+        Mirrors :meth:`export_patches_bps`: the source file is opened
+        via :class:`mmap.mmap` so two full copies of the input data do
+        not coexist in Python memory while the target document is
+        already available through the memory-mapped Rust backend.
+
         Args:
             original_path: Path to the original unmodified file.
 
@@ -6324,16 +6978,61 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        source_data = await asyncio.to_thread(Path(original_path).read_bytes)
-        target_data = self._read_all_doc_bytes()
-
         if hasattr(self.document, "export_patches_ups"):
-            raw: bytes = self.document.export_patches_ups(source_data)
+            raw: bytes = await asyncio.to_thread(self._export_patches_ups_via_backend, original_path)
         else:
-            raw = self._build_ups_patch(source_data, target_data)
+            raw = await asyncio.to_thread(self._export_patches_ups_pyfallback, original_path)
 
         _logger.info("ups_patch_exported", size=len(raw))
         return base64.b64encode(raw).decode("ascii")
+
+    def _export_patches_ups_via_backend(self, original_path: str) -> bytes:
+        """Invoke the Rust backend's UPS exporter with an mmap'd source.
+
+        Args:
+            original_path: Path to the unmodified original file.
+
+        Returns:
+            bytes: Raw UPS patch bytes returned by the backend.
+
+        Raises:
+            RuntimeError: If the document was closed in the interim.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                return self.document.export_patches_ups(b"")
+            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                source_view = bytes(mm)
+        return self.document.export_patches_ups(source_view)
+
+    def _export_patches_ups_pyfallback(self, original_path: str) -> bytes:
+        """Build a UPS patch in pure Python with mmap-backed source.
+
+        Args:
+            original_path: Path to the unmodified original file.
+
+        Returns:
+            bytes: Raw UPS patch bytes.
+
+        Raises:
+            RuntimeError: If the document was closed in the interim.
+        """
+        if self.document is None:
+            msg = "no document open"
+            raise RuntimeError(msg)
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                source_data: bytes = b""
+            else:
+                with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                    source_data = bytes(mm)
+        target_data = self._read_all_doc_bytes()
+        return self._build_ups_patch(source_data, target_data)
 
     async def import_patches_ups(self, patch_b64: str, original_path: str) -> dict[str, int]:
         """Import and apply a UPS patch.
@@ -6425,8 +7124,21 @@ class HexEditorBridge(ToolBridgeBase):
         """
         return zlib.crc32(data) & _CRC32_MASK
 
+    _BPS_MIN_LZ_MATCH: int = 4
+    _BPS_HASH_WORD: int = 4
+
     def _build_bps_patch(self, source: bytes, target: bytes) -> bytes:
         """Build a BPS patch from source and target data.
+
+        Emits the full BPS opcode set: ``SourceRead`` when source and
+        target agree at the current output position, ``SourceCopy`` for
+        runs that appear at any source offset, ``TargetCopy`` for runs
+        that repeat earlier in the target (RLE-style and self-similar
+        regions), and ``TargetRead`` for genuinely novel bytes. Source
+        and target offset hash tables index the longest match starting
+        at each ``_BPS_HASH_WORD``-byte word, so the encoder finds
+        non-trivial repeats in ``O(target_len * _BPS_HASH_WORD)`` time
+        rather than the previous best-effort sequential scan.
 
         Args:
             source: Original file data.
@@ -6440,47 +7152,7 @@ class HexEditorBridge(ToolBridgeBase):
         patch.extend(self._encode_bps_var_int(len(target)))
         patch.extend(self._encode_bps_var_int(0))
 
-        src_pos = 0
-        tgt_pos = 0
-
-        while tgt_pos < len(target):
-            match_len = 0
-            while (
-                src_pos + match_len < len(source)
-                and tgt_pos + match_len < len(target)
-                and source[src_pos + match_len] == target[tgt_pos + match_len]
-            ):
-                match_len += 1
-
-            if match_len > 0:
-                patch.extend(self._encode_bps_var_int((match_len - 1) << 2))
-                src_pos += match_len
-                tgt_pos += match_len
-
-            if tgt_pos >= len(target):
-                break
-
-            diff_len = 0
-            max_diff = 256
-            while tgt_pos + diff_len < len(target) and diff_len < max_diff:
-                if src_pos + diff_len < len(source) and source[src_pos + diff_len] == target[tgt_pos + diff_len]:
-                    ahead = 0
-                    while (
-                        src_pos + diff_len + ahead < len(source)
-                        and tgt_pos + diff_len + ahead < len(target)
-                        and source[src_pos + diff_len + ahead] == target[tgt_pos + diff_len + ahead]
-                    ):
-                        ahead += 1
-                    min_ahead_match = 4
-                    if ahead >= min_ahead_match:
-                        break
-                diff_len += 1
-
-            if diff_len > 0:
-                patch.extend(self._encode_bps_var_int(((diff_len - 1) << 2) | 1))
-                patch.extend(target[tgt_pos : tgt_pos + diff_len])
-                src_pos += diff_len
-                tgt_pos += diff_len
+        self._encode_bps_body(patch, source, target)
 
         source_crc = self._crc32_compute(source)
         target_crc = self._crc32_compute(target)
@@ -6490,6 +7162,242 @@ class HexEditorBridge(ToolBridgeBase):
         patch_crc = self._crc32_compute(bytes(patch))
         patch.extend(struct.pack("<I", patch_crc))
         return bytes(patch)
+
+    def _encode_bps_body(self, patch: bytearray, source: bytes, target: bytes) -> None:
+        """Emit the actions section of a BPS patch into ``patch``.
+
+        Args:
+            patch: Mutable patch buffer to append actions to.
+            source: Original file data.
+            target: Modified file data.
+        """
+        source_index = self._build_bps_word_index(source)
+        target_index: dict[bytes, list[int]] = {}
+        state: dict[str, int] = {"out_pos": 0, "src_rel": 0, "tgt_rel": 0}
+        pending = bytearray()
+
+        target_len = len(target)
+        while state["out_pos"] < target_len:
+            consumed = self._emit_bps_source_read(patch, pending, source, target, state)
+            if consumed > 0:
+                continue
+            consumed = self._emit_bps_copy_action(patch, pending, source, target, source_index, target_index, state)
+            if consumed > 0:
+                continue
+            self._emit_bps_target_read_byte(pending, target, target_index, state)
+        self._flush_bps_target_read(patch, pending)
+
+    def _emit_bps_source_read(
+        self,
+        patch: bytearray,
+        pending: bytearray,
+        source: bytes,
+        target: bytes,
+        state: dict[str, int],
+    ) -> int:
+        """Emit a SourceRead command if source/target run agrees.
+
+        Args:
+            patch: Mutable patch buffer to append actions to.
+            pending: Buffered TargetRead bytes; flushed before action.
+            source: Source bytes.
+            target: Target bytes.
+            state: Encoder state dict (``out_pos``, ``src_rel``,
+                ``tgt_rel``); ``out_pos`` advances by the run length.
+
+        Returns:
+            int: Number of target bytes consumed by the action; ``0``
+            when no SourceRead met the minimum match length.
+        """
+        out_pos = state["out_pos"]
+        run = 0
+        target_len = len(target)
+        source_len = len(source)
+        while out_pos + run < target_len and out_pos + run < source_len and source[out_pos + run] == target[out_pos + run]:
+            run += 1
+        if run < self._BPS_MIN_LZ_MATCH:
+            return 0
+        self._flush_bps_target_read(patch, pending)
+        patch.extend(self._encode_bps_var_int(((run - 1) << 2) | _BPS_CMD_SOURCE_READ))
+        state["out_pos"] = out_pos + run
+        return run
+
+    def _emit_bps_copy_action(
+        self,
+        patch: bytearray,
+        pending: bytearray,
+        source: bytes,
+        target: bytes,
+        source_index: dict[bytes, list[int]],
+        target_index: dict[bytes, list[int]],
+        state: dict[str, int],
+    ) -> int:
+        """Emit the best of SourceCopy/TargetCopy, if either qualifies.
+
+        Args:
+            patch: Mutable patch buffer to append actions to.
+            pending: Buffered TargetRead bytes; flushed before action.
+            source: Source bytes.
+            target: Target bytes.
+            source_index: Word -> source offsets index.
+            target_index: Word -> target offsets index, populated as
+                bytes are emitted.
+            state: Encoder state dict.
+
+        Returns:
+            int: Number of target bytes consumed by the action; ``0``
+            when no copy met the minimum match length.
+        """
+        out_pos = state["out_pos"]
+        word_len = self._BPS_HASH_WORD
+        target_len = len(target)
+        if out_pos + word_len > target_len:
+            return 0
+        key = bytes(target[out_pos : out_pos + word_len])
+        best_len = 0
+        best_action = _BPS_CMD_SOURCE_COPY
+        best_offset = 0
+        src_match_len, src_match_off = self._find_best_bps_match(source, target, out_pos, source_index.get(key))
+        if src_match_len > best_len:
+            best_len = src_match_len
+            best_action = _BPS_CMD_SOURCE_COPY
+            best_offset = src_match_off
+        tgt_match_len, tgt_match_off = self._find_best_bps_match(target, target, out_pos, target_index.get(key), out_pos)
+        if tgt_match_len > best_len:
+            best_len = tgt_match_len
+            best_action = _BPS_CMD_TARGET_COPY
+            best_offset = tgt_match_off
+        if best_len < self._BPS_MIN_LZ_MATCH:
+            return 0
+
+        self._flush_bps_target_read(patch, pending)
+        patch.extend(self._encode_bps_var_int(((best_len - 1) << 2) | best_action))
+        rel_key = "src_rel" if best_action == _BPS_CMD_SOURCE_COPY else "tgt_rel"
+        delta = best_offset - state[rel_key]
+        encoded = (abs(delta) << 1) | (1 if delta < 0 else 0)
+        patch.extend(self._encode_bps_var_int(encoded))
+        state[rel_key] = best_offset + best_len
+        self._index_target_window(target_index, target, out_pos, out_pos + best_len, word_len)
+        state["out_pos"] = out_pos + best_len
+        return best_len
+
+    def _emit_bps_target_read_byte(
+        self,
+        pending: bytearray,
+        target: bytes,
+        target_index: dict[bytes, list[int]],
+        state: dict[str, int],
+    ) -> None:
+        """Buffer one target byte for a future TargetRead emission.
+
+        Args:
+            pending: Buffer to append the byte to.
+            target: Target bytes.
+            target_index: Word -> target offsets index, updated to
+                include the new byte.
+            state: Encoder state dict; ``out_pos`` is advanced by one.
+        """
+        out_pos = state["out_pos"]
+        pending.append(target[out_pos])
+        self._index_target_window(target_index, target, out_pos, out_pos + 1, self._BPS_HASH_WORD)
+        state["out_pos"] = out_pos + 1
+
+    def _flush_bps_target_read(self, patch: bytearray, pending: bytearray) -> None:
+        """Emit any buffered ``TargetRead`` payload.
+
+        Args:
+            patch: Mutable patch buffer to append the action to.
+            pending: Buffered bytes; cleared after emission.
+        """
+        if not pending:
+            return
+        patch.extend(self._encode_bps_var_int(((len(pending) - 1) << 2) | _BPS_CMD_TARGET_READ))
+        patch.extend(bytes(pending))
+        pending.clear()
+
+    def _build_bps_word_index(self, data: bytes) -> dict[bytes, list[int]]:
+        """Build a word -> sorted-offset index for BPS encoding.
+
+        Args:
+            data: Buffer to index.
+
+        Returns:
+            dict[bytes, list[int]]: Map from each ``_BPS_HASH_WORD``-byte
+            word to the sorted list of offsets where that word starts.
+        """
+        word_len = self._BPS_HASH_WORD
+        index: dict[bytes, list[int]] = {}
+        for i in range(len(data) - word_len + 1):
+            key = bytes(data[i : i + word_len])
+            index.setdefault(key, []).append(i)
+        return index
+
+    @staticmethod
+    def _index_target_window(
+        index: dict[bytes, list[int]],
+        target: bytes,
+        start: int,
+        end: int,
+        word_len: int,
+    ) -> None:
+        """Append target offsets to the running TargetCopy index.
+
+        Args:
+            index: Index to mutate.
+            target: Target buffer.
+            start: First offset in the new window (inclusive).
+            end: One past the last offset to index.
+            word_len: Number of bytes per index key.
+        """
+        for i in range(start, min(end, len(target) - word_len + 1)):
+            key = bytes(target[i : i + word_len])
+            index.setdefault(key, []).append(i)
+
+    @staticmethod
+    def _find_best_bps_match(
+        haystack: bytes,
+        needle: bytes,
+        needle_pos: int,
+        candidate_offsets: list[int] | None,
+        cap: int | None = None,
+    ) -> tuple[int, int]:
+        """Return the longest match for ``needle[needle_pos:]`` in haystack.
+
+        Args:
+            haystack: Buffer to search within.
+            needle: Buffer whose tail to match.
+            needle_pos: Position in ``needle`` whose run we are
+                extending.
+            candidate_offsets: Offsets in ``haystack`` whose first
+                ``_BPS_HASH_WORD`` bytes match
+                ``needle[needle_pos:needle_pos+_BPS_HASH_WORD]``. May be
+                ``None`` if no such offsets exist.
+            cap: When matching target-against-target the haystack offset
+                must be strictly less than ``cap`` so the encoder only
+                references already-emitted bytes. ``None`` disables the
+                check (used when the haystack and needle are different
+                buffers).
+
+        Returns:
+            tuple[int, int]: ``(match_length, haystack_offset)``. Length
+            is zero when no match is found.
+        """
+        if not candidate_offsets:
+            return 0, 0
+        haystack_len = len(haystack)
+        needle_len = len(needle)
+        best_len = 0
+        best_off = 0
+        for off in candidate_offsets:
+            if cap is not None and off >= cap:
+                break
+            run = 0
+            while off + run < haystack_len and needle_pos + run < needle_len and haystack[off + run] == needle[needle_pos + run]:
+                run += 1
+            if run > best_len:
+                best_len = run
+                best_off = off
+        return best_len, best_off
 
     def _apply_bps_patch(self, patch: bytes, source: bytes) -> bytes:
         """Apply a BPS patch to produce the target data.
@@ -6752,10 +7660,24 @@ def _generate_pdf(
 
     Returns:
         str: The written file path.
+
+    Raises:
+        ToolError: If the optional ``fpdf2`` dependency is not
+            installed; PDF export cannot proceed without it and the
+            caller needs an actionable diagnostic.
     """
     import importlib  # noqa: PLC0415
 
-    fpdf_mod = importlib.import_module("fpdf")
+    try:
+        fpdf_mod = importlib.import_module("fpdf")
+    except ImportError as exc:
+        _logger.exception("export_annotated_pdf_fpdf_missing")
+        msg = (
+            "PDF export requires the optional fpdf2 package, which is not "
+            "installed in this environment; install fpdf2 (e.g. via "
+            "`pip install fpdf2`) before calling export_annotated_pdf."
+        )
+        raise ToolError(msg) from exc
     fpdf_cls = cast("type[_FPDFProtocol]", fpdf_mod.FPDF)
     pdf: _FPDFProtocol = fpdf_cls(orientation="L", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=10)
