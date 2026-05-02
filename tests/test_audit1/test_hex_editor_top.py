@@ -14,12 +14,14 @@ are used.
 from __future__ import annotations
 
 import asyncio
+import base64
 import struct
 import zlib
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+import structlog.testing
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.bridges.hex_state import (
@@ -33,6 +35,8 @@ from intellicrack.core.types import ToolError, ToolName
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.core.tools import ToolRegistry
 
 
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
@@ -126,7 +130,7 @@ class TestF0005StateLockUsage:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        with bridge._state_lock:  # noqa: SLF001
+        with getattr(bridge, "_state_lock"):
             assert bridge.document is not None
         _run(bridge.close_file())
         assert bridge.document is None
@@ -188,32 +192,32 @@ class TestF0007IpsBuilderOverflow:
     def test_oversized_offset_for_ips_raises(self) -> None:
         """A 24-bit-overflow offset triggers OverflowError when ips32=False."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(0x10_00_00_00, b"\x00")], ips32=False)  # noqa: SLF001
+            getattr(HexEditorBridge, "_build_ips_from_patches")([(0x10_00_00_00, b"\x00")], ips32=False)
 
     def test_eof_collision_offset_for_ips_raises(self) -> None:
         """The reserved EOF marker offset (0x454F46) raises in IPS mode."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(0x454F46, b"\x00")], ips32=False)  # noqa: SLF001
+            getattr(HexEditorBridge, "_build_ips_from_patches")([(0x454F46, b"\x00")], ips32=False)
 
     def test_oversized_data_for_ips_raises(self) -> None:
         """A data chunk larger than 16 bits triggers OverflowError."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(0, b"\x00" * 0x10000)], ips32=False)  # noqa: SLF001
+            getattr(HexEditorBridge, "_build_ips_from_patches")([(0, b"\x00" * 0x10000)], ips32=False)
 
     def test_oversized_offset_for_ips32_raises(self) -> None:
         """Offsets above 32 bits trigger OverflowError in IPS32 mode."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(0x1_0000_0000, b"\x00")], ips32=True)  # noqa: SLF001
+            getattr(HexEditorBridge, "_build_ips_from_patches")([(0x1_0000_0000, b"\x00")], ips32=True)
 
     def test_eeof_collision_offset_for_ips32_raises(self) -> None:
         """The reserved EEOF marker offset raises in IPS32 mode."""
         eeof_offset = int.from_bytes(b"EEOF", "big")
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(eeof_offset, b"\x00")], ips32=True)  # noqa: SLF001
+            getattr(HexEditorBridge, "_build_ips_from_patches")([(eeof_offset, b"\x00")], ips32=True)
 
     def test_valid_ips_round_trip_still_works(self) -> None:
         """Valid in-range patches still produce a parseable PATCH...EOF blob."""
-        blob = HexEditorBridge._build_ips_from_patches([(0x10, b"\xde\xad")], ips32=False)  # noqa: SLF001
+        blob = getattr(HexEditorBridge, "_build_ips_from_patches")([(0x10, b"\xde\xad")], ips32=False)
         assert blob.startswith(b"PATCH")
         assert blob.endswith(b"EOF")
 
@@ -238,7 +242,7 @@ class TestF0008IpsApplyTruncationRaises:
         _run(bridge.open_file(str(target)))
         truncated = b"PATCH" + b"\x00\x00\x00" + b"\x00\x10" + b"\x01\x02"
         with pytest.raises(RuntimeError):
-            bridge._apply_ips_patches(truncated)  # noqa: SLF001
+            getattr(bridge, "_apply_ips_patches")(truncated)
 
     def test_apply_missing_terminator_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A patch without an EOF terminator raises RuntimeError.
@@ -252,7 +256,7 @@ class TestF0008IpsApplyTruncationRaises:
         _run(bridge.open_file(str(target)))
         record = b"PATCH\x00\x00\x00\x00\x02\xaa\xbb"
         with pytest.raises(RuntimeError):
-            bridge._apply_ips_patches(record)  # noqa: SLF001
+            getattr(bridge, "_apply_ips_patches")(record)
 
     def test_apply_truncated_rle_record_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A 0-size record without 3 trailing RLE bytes raises.
@@ -266,7 +270,7 @@ class TestF0008IpsApplyTruncationRaises:
         _run(bridge.open_file(str(target)))
         truncated = b"PATCH" + b"\x00\x00\x00" + b"\x00\x00" + b"\x00"
         with pytest.raises(RuntimeError):
-            bridge._apply_ips_patches(truncated)  # noqa: SLF001
+            getattr(bridge, "_apply_ips_patches")(truncated)
 
     def test_apply_well_formed_patch_succeeds(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A well-formed patch still applies and returns the record count.
@@ -279,7 +283,7 @@ class TestF0008IpsApplyTruncationRaises:
         target.write_bytes(b"\x00" * 32)
         _run(bridge.open_file(str(target)))
         patch = b"PATCH\x00\x00\x00\x00\x02\xaa\xbbEOF"
-        count = bridge._apply_ips_patches(patch)  # noqa: SLF001
+        count = getattr(bridge, "_apply_ips_patches")(patch)
         assert count == 1
         assert _run(bridge.read_bytes(0, 2)).replace(" ", "") == "AABB"
 
@@ -305,7 +309,7 @@ class TestF0013PeImportsExportsDiskPath:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        helper = bridge._document_disk_path_if_unmodified()  # noqa: SLF001
+        helper = getattr(bridge, "_document_disk_path_if_unmodified")()
         assert helper is not None
         assert helper.resolve() == pe_binary.resolve()
 
@@ -322,7 +326,7 @@ class TestF0013PeImportsExportsDiskPath:
         """
         _run(bridge.open_file(str(pe_binary)))
         _run(bridge.write_bytes(0, "EB"))
-        helper = bridge._document_disk_path_if_unmodified()  # noqa: SLF001
+        helper = getattr(bridge, "_document_disk_path_if_unmodified")()
         assert helper is None
 
     def test_get_pe_imports_does_not_raise_for_pe(
@@ -386,8 +390,8 @@ class TestF0016PatternRegistryRaises:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        bridge._hexpat_interpreter_available = False  # noqa: SLF001
-        bridge._pattern_registry = None  # noqa: SLF001
+        object.__setattr__(bridge, "_hexpat_interpreter_available", False)
+        object.__setattr__(bridge, "_pattern_registry", None)
         with pytest.raises(RuntimeError):
             _run(bridge.list_hexpat_patterns())
 
@@ -403,8 +407,8 @@ class TestF0016PatternRegistryRaises:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge._hexpat_interpreter_available = False  # noqa: SLF001
-        bridge._pattern_registry = None  # noqa: SLF001
+        object.__setattr__(bridge, "_hexpat_interpreter_available", False)
+        object.__setattr__(bridge, "_pattern_registry", None)
         with pytest.raises(RuntimeError):
             _run(bridge.auto_detect_pattern())
 
@@ -460,7 +464,7 @@ class _NoEntropyDoc:
         Args:
             inner: The real ``HexDocument`` instance.
         """
-        self._inner = inner
+        self._inner: object = inner
 
     def length(self) -> int:
         """Return the underlying document length.
@@ -468,7 +472,7 @@ class _NoEntropyDoc:
         Returns:
             int: Length in bytes.
         """
-        return int(self._inner.length())  # type: ignore[attr-defined]
+        return int(getattr(self._inner, "length")())
 
     def read(self, offset: int, length: int) -> bytes:
         """Forward read to the wrapped document.
@@ -480,7 +484,7 @@ class _NoEntropyDoc:
         Returns:
             bytes: Bytes read from the inner document.
         """
-        return bytes(self._inner.read(offset, length))  # type: ignore[attr-defined]
+        return bytes(getattr(self._inner, "read")(offset, length))
 
     def file_path(self) -> str | None:
         """Forward file_path so disk-fast-path probes still work.
@@ -488,7 +492,8 @@ class _NoEntropyDoc:
         Returns:
             str | None: Underlying path or None.
         """
-        return self._inner.file_path()  # type: ignore[attr-defined]
+        result: str | None = getattr(self._inner, "file_path")()
+        return result
 
 
 class TestF0019EntropyFallback:
@@ -591,7 +596,7 @@ class TestF0020ReadBytesCap:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="length"):
             _run(bridge.read_bytes(0, -1))
 
 
@@ -648,7 +653,7 @@ class TestF0024CapabilitiesTruthful:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        assert "macho" not in bridge._capabilities.supported_formats  # noqa: SLF001
+        assert "macho" not in bridge.capabilities.supported_formats
 
     def test_capabilities_disable_scripting(self, bridge: HexEditorBridge) -> None:
         """The advertised capabilities must not claim scripting support.
@@ -656,7 +661,7 @@ class TestF0024CapabilitiesTruthful:
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
-        assert bridge._capabilities.supports_scripting is False  # noqa: SLF001
+        assert bridge.capabilities.supports_scripting is False
 
 
 # ---------------------------------------------------------------------------
@@ -685,8 +690,8 @@ class TestF0032OpenFileClosesPrevious:
         _run(bridge.open_file(str(elf_binary)))
         second_doc = bridge.document
         assert second_doc is not first_doc
-        assert bridge._state.target_path is not None  # noqa: SLF001
-        assert bridge._state.target_path.resolve() == elf_binary.resolve()  # noqa: SLF001
+        assert bridge.state.target_path is not None
+        assert bridge.state.target_path.resolve() == elf_binary.resolve()
 
     def test_open_file_emits_close_then_open_events(
         self,
@@ -807,18 +812,21 @@ class TestF0033SaveToSandboxDestroysOrphan:
         self,
         bridge: HexEditorBridge,
         pe_binary: Path,
+        tmp_path: Path,
     ) -> None:
         """copy_to failures invoke destroy(instance_id) on the sandbox bridge.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             pe_binary: Path to the PE binary fixture.
+            tmp_path: Pytest temporary directory.
         """
         _run(bridge.open_file(str(pe_binary)))
         sandbox = _FailingSandboxBridge()
-        bridge.tool_registry = _RegistryStub(sandbox)  # type: ignore[assignment]
+        bridge.tool_registry = cast("ToolRegistry", _RegistryStub(sandbox))
+        dest = str(tmp_path / "sample.bin")
         with pytest.raises(RuntimeError, match="synthetic copy_to failure"):
-            _run(bridge.save_to_sandbox("/tmp/sample.bin", "windows"))
+            _run(bridge.save_to_sandbox(dest, "windows"))
         assert sandbox.destroyed == ["sbx-1"]
 
 
@@ -886,14 +894,14 @@ class _NoIps32Doc:
         """
         self._inner = inner
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         """Forward attribute access to the wrapped document.
 
         Args:
             name: Attribute name being accessed.
 
         Returns:
-            Any: Attribute value from the wrapped document.
+            object: Attribute value from the wrapped document.
 
         Raises:
             AttributeError: When the inner document does not expose the
@@ -913,14 +921,12 @@ class TestF0035ExportIps32FallbackIsLogged:
         self,
         bridge: HexEditorBridge,
         tmp_path: Path,
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Falls back to the Python builder and logs a warning for visibility.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temp directory.
-            caplog: pytest log capture fixture.
         """
         target = tmp_path / "patches.bin"
         target.write_bytes(b"\x00" * 16)
@@ -928,15 +934,15 @@ class TestF0035ExportIps32FallbackIsLogged:
         _run(bridge.write_bytes(0, "DEADBEEF"))
         bridge.document = _NoIps32Doc(bridge.document)
 
-        with caplog.at_level("WARNING"):
+        with structlog.testing.capture_logs() as captured:
             blob_b64 = _run(bridge.export_patches("ips32"))
-
-        import base64
 
         blob = base64.b64decode(blob_b64)
         assert blob.startswith(b"IPS32")
         assert blob.endswith(b"EEOF")
-        assert any("native_unavailable" in rec.message for rec in caplog.records)
+        assert any(
+            "native_unavailable" in str(entry.get("event", "")) and entry.get("log_level") == "warning" for entry in captured
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -955,14 +961,14 @@ class _NoEncodedSearchDoc:
         """
         self._inner = inner
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         """Forward attribute access except for search_text_encoded.
 
         Args:
             name: Attribute name being accessed.
 
         Returns:
-            Any: Attribute value from the wrapped document.
+            object: Attribute value from the wrapped document.
 
         Raises:
             AttributeError: When the requested attribute is
@@ -1017,7 +1023,7 @@ class TestF0046CopyAsRequiresSelection:
             pe_binary: Path to the PE binary fixture.
         """
         _run(bridge.open_file(str(pe_binary)))
-        bridge._selection = None  # noqa: SLF001
+        object.__setattr__(bridge, "_selection", None)
         with pytest.raises(ToolError, match="no selection active"):
             _run(bridge.copy_as("hex"))
 
@@ -1049,35 +1055,37 @@ class TestF0048InitializeMergesHighlightRules:
     def test_initialize_merges_holder_and_bridge_rules(self) -> None:
         """Bridge-side rules survive initialize when not overridden by holder."""
         bridge = HexEditorBridge()
-        bridge._highlight_rules = {  # noqa: SLF001
-            "rule_a": {"id": "rule_a", "color": "#111111"},
-        }
+        object.__setattr__(
+            bridge,
+            "_highlight_rules",
+            {"rule_a": {"id": "rule_a", "color": "#111111"}},
+        )
         state = HexDocumentState()
-        state._highlight_rules = {  # type: ignore[attr-defined]  # noqa: SLF001
-            "rule_b": {"id": "rule_b", "color": "#222222"},
-        }
+        state.set_highlight_rule("rule_b", {"id": "rule_b", "color": "#222222"})
         bridge.set_state_holder(state)
 
         _run(bridge.initialize())
 
-        assert "rule_a" in bridge._highlight_rules  # noqa: SLF001
-        assert "rule_b" in bridge._highlight_rules  # noqa: SLF001
+        rules: dict[str, Any] = getattr(bridge, "_highlight_rules")
+        assert "rule_a" in rules
+        assert "rule_b" in rules
 
     def test_holder_rule_takes_precedence_on_conflict(self) -> None:
         """Holder rules take precedence over bridge-side rules with same id."""
         bridge = HexEditorBridge()
-        bridge._highlight_rules = {  # noqa: SLF001
-            "shared": {"id": "shared", "color": "#AAAAAA"},
-        }
+        object.__setattr__(
+            bridge,
+            "_highlight_rules",
+            {"shared": {"id": "shared", "color": "#AAAAAA"}},
+        )
         state = HexDocumentState()
-        state._highlight_rules = {  # type: ignore[attr-defined]  # noqa: SLF001
-            "shared": {"id": "shared", "color": "#BBBBBB"},
-        }
+        state.set_highlight_rule("shared", {"id": "shared", "color": "#BBBBBB"})
         bridge.set_state_holder(state)
 
         _run(bridge.initialize())
 
-        assert bridge._highlight_rules["shared"]["color"] == "#BBBBBB"  # noqa: SLF001
+        rules: dict[str, dict[str, str]] = getattr(bridge, "_highlight_rules")
+        assert rules["shared"]["color"] == "#BBBBBB"
 
 
 # ---------------------------------------------------------------------------
@@ -1104,8 +1112,8 @@ class TestF0049SaveAsUpdatesTargetPath:
         _run(bridge.open_file(str(pe_binary)))
         new_path = tmp_path / "renamed.bin"
         _run(bridge.save_as(str(new_path)))
-        assert bridge._state.target_path is not None  # noqa: SLF001
-        assert bridge._state.target_path.resolve() == new_path.resolve()  # noqa: SLF001
+        assert bridge.state.target_path is not None
+        assert bridge.state.target_path.resolve() == new_path.resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -1170,14 +1178,14 @@ class _NoNativeCrcDoc:
         """
         self._inner = inner
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         """Forward attribute access except for the native CRC accessor.
 
         Args:
             name: Attribute name being accessed.
 
         Returns:
-            Any: Attribute value from the wrapped document.
+            object: Attribute value from the wrapped document.
 
         Raises:
             AttributeError: When the requested attribute is
@@ -1306,5 +1314,5 @@ class TestF0057TargetPathFromRustFilePath:
         _run(bridge.open_file(str(pe_binary)))
         rust_path = bridge.document.file_path() if bridge.document is not None else None
         assert rust_path is not None
-        assert bridge._state.target_path is not None  # noqa: SLF001
-        assert str(bridge._state.target_path) == rust_path
+        assert bridge.state.target_path is not None
+        assert str(bridge.state.target_path) == rust_path

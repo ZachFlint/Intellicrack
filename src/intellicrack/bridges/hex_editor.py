@@ -242,6 +242,9 @@ except ImportError as _exc:
 _JAVA_SIGNED_BYTE_THRESHOLD = 0x7F
 _PRINTABLE_MIN = 0x20
 _PRINTABLE_MAX = 0x7E
+_PRINTABLE_HIGH = 0x7F
+_HIGH_BIT_MIN = 0x80
+_DIGRAM_MIN_DOC_LEN = 2
 _MIN_HEADER_SIZE = 4
 _BYTE_MASK = 0xFF
 _U16_MASK = 0xFFFF
@@ -285,6 +288,7 @@ _ERR_INVALID_IPS: Final[str] = "invalid IPS patch header"
 
 _READ_BYTES_MAX_LENGTH: Final[int] = 1 << 20
 _AI_CONTEXT_BOOKMARK_LIMIT: Final[int] = 64
+_SEARCH_RESULTS_UNLIMITED: Final[int] = (1 << 31) - 1
 
 _COPY_AS_FORMATS: Final[frozenset[str]] = frozenset(
     {
@@ -312,6 +316,79 @@ _IPS32_MAGIC: Final[bytes] = b"IPS32"
 _BPS_MAGIC: Final[bytes] = b"BPS1"
 _UPS_MAGIC: Final[bytes] = b"UPS1"
 _IPS_MAGIC_LEN: Final[int] = 5
+
+_CRC32_WIDTH: Final[int] = 32
+_CRC32_POLY: Final[int] = 0x04C11DB7
+_CRC32_INIT: Final[int] = 0xFFFFFFFF
+_CRC32_XOROUT: Final[int] = 0xFFFFFFFF
+
+
+def _collect_import_entries(entry: object) -> list[dict[str, Any]]:
+    """Flatten a single ``DIRECTORY_ENTRY_IMPORT`` row into a list of import dicts.
+
+    Args:
+        entry: A pefile import directory entry exposing ``dll`` and
+            ``imports`` attributes.
+
+    Returns:
+        list[dict[str, Any]]: One entry per imported symbol with keys
+        ``dll``, ``function``, ``address``, and ``ordinal``.
+    """
+    rows: list[dict[str, Any]] = []
+    dll_bytes: Any = getattr(entry, "dll", None)
+    dll_name = dll_bytes.decode("utf-8", errors="replace") if dll_bytes else "unknown"
+    raw_imports: Any = getattr(entry, "imports", None)
+    imports_list: list[Any] = list(raw_imports) if raw_imports is not None else []
+    for imp in imports_list:
+        name_bytes: Any = getattr(imp, "name", None)
+        ordinal_val: int = int(getattr(imp, "ordinal", 0) or 0)
+        function_name = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
+        address_val: int = int(getattr(imp, "address", 0) or 0)
+        rows.append(
+            {
+                "dll": dll_name,
+                "function": function_name,
+                "address": address_val,
+                "ordinal": ordinal_val,
+            },
+        )
+    return rows
+
+
+def _is_standard_crc32(
+    width: int,
+    poly: int,
+    init: int,
+    *,
+    refin: bool,
+    refout: bool,
+    xorout: int,
+) -> bool:
+    """Return whether the CRC parameters match the standard ``CRC-32/ISO-HDLC`` algorithm.
+
+    The match enables dispatch to :func:`zlib.crc32` instead of the
+    bit-by-bit Python fallback for the common case used by ZIP, gzip,
+    and PNG.
+
+    Args:
+        width: CRC width in bits.
+        poly: Polynomial.
+        init: Initial CRC value.
+        refin: Whether to reflect input bytes.
+        refout: Whether to reflect the output CRC.
+        xorout: XOR value applied after reflection.
+
+    Returns:
+        bool: True when the parameters match standard CRC-32.
+    """
+    return (
+        width == _CRC32_WIDTH
+        and poly == _CRC32_POLY
+        and init == _CRC32_INIT
+        and refin
+        and refout
+        and xorout == _CRC32_XOROUT
+    )
 
 
 class HexEditorBridge(ToolBridgeBase):
@@ -2017,15 +2094,13 @@ class HexEditorBridge(ToolBridgeBase):
 
         pattern_bytes = bytes.fromhex(pattern_hex.replace(" ", ""))
         replacement_bytes = bytes.fromhex(replacement_hex.replace(" ", ""))
-        pattern_list = list(pattern_bytes)
-        replacement_list = list(replacement_bytes)
 
         pre_match_offsets: list[int] = []
         if pattern_bytes and hasattr(self.document, "search_bytes"):
-            search_results = self.document.search_bytes(pattern_bytes, 0)
-            pre_match_offsets = [int(r[0]) for r in search_results]
+            search_results = self.document.search_bytes(pattern_bytes, _SEARCH_RESULTS_UNLIMITED)
+            pre_match_offsets = [int(r) if isinstance(r, int) else int(r[0]) for r in search_results]
 
-        count: int = self.document.replace_bytes(pattern_list, replacement_list)
+        count: int = self.document.replace_bytes(pattern_bytes, replacement_bytes)
         _logger.debug("bytes_replaced", pattern_length=len(pattern_bytes), replacements=count)
 
         if count > 0 and self.state_holder is not None:
@@ -2841,50 +2916,91 @@ class HexEditorBridge(ToolBridgeBase):
 
         if self.document is not None:
             cursor = self._cursor_offset
-            half = include_bytes // 2
-            doc_len: int = self.document.length()
-            read_start = max(0, cursor - half)
-            read_len = min(include_bytes, doc_len - read_start)
-            if read_len > 0:
-                raw = self.document.read(read_start, read_len)
-                context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
-                context["bytes_offset"] = read_start
-            else:
-                context["bytes_at_cursor"] = ""
-                context["bytes_offset"] = 0
-
-            try:
-                inspection = self.document.inspect_at(cursor)
-                if isinstance(inspection, dict):
-                    context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
-            except (RuntimeError, OSError, ValueError) as exc:
-                _logger.warning("inspect_at_failed", offset=cursor, exc_info=True)
-                context["inspection"] = {"error": str(exc)}
-
-            if self._selection is not None:
-                sel_start, sel_end = self._selection
-                sel_start, sel_end = min(sel_start, sel_end), max(sel_start, sel_end)
-                sel_len = sel_end - sel_start + 1
-                capped = min(sel_len, include_bytes)
-                sel_raw = self.document.read(sel_start, capped)
-                context["selected_bytes"] = " ".join(f"{b:02X}" for b in sel_raw)
-                context["selection_range"] = [sel_start, sel_end]
-
-            all_bookmarks = self.document.list_bookmarks()
-            sorted_bookmarks = sorted(all_bookmarks, key=lambda b: int(b[0]))
-            truncated = len(sorted_bookmarks) > bookmark_limit
-            visible = sorted_bookmarks[:bookmark_limit]
-            context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in visible]
-            context["bookmark_count_total"] = len(all_bookmarks)
-            context["bookmark_truncated"] = truncated
-            if truncated:
-                _logger.info(
-                    "ai_context_bookmarks_truncated",
-                    total=len(all_bookmarks),
-                    limit=bookmark_limit,
-                )
+            self._populate_ai_cursor_window(context, cursor, include_bytes)
+            self._populate_ai_inspection(context, cursor)
+            self._populate_ai_selection(context, include_bytes)
+            self._populate_ai_bookmarks(context, bookmark_limit)
 
         return context
+
+    def _populate_ai_cursor_window(self, context: dict[str, Any], cursor: int, include_bytes: int) -> None:
+        """Populate the cursor-window slice of the AI context dict.
+
+        Args:
+            context: Context dict to mutate.
+            cursor: Current cursor offset.
+            include_bytes: Number of bytes around the cursor to include.
+        """
+        if self.document is None:
+            return
+        half = include_bytes // 2
+        doc_len: int = self.document.length()
+        read_start = max(0, cursor - half)
+        read_len = min(include_bytes, doc_len - read_start)
+        if read_len > 0:
+            raw = self.document.read(read_start, read_len)
+            context["bytes_at_cursor"] = " ".join(f"{b:02X}" for b in raw)
+            context["bytes_offset"] = read_start
+        else:
+            context["bytes_at_cursor"] = ""
+            context["bytes_offset"] = 0
+
+    def _populate_ai_inspection(self, context: dict[str, Any], cursor: int) -> None:
+        """Populate the inspect_at slice of the AI context dict.
+
+        Args:
+            context: Context dict to mutate.
+            cursor: Cursor offset to inspect.
+        """
+        if self.document is None:
+            return
+        try:
+            inspection = self.document.inspect_at(cursor)
+            if isinstance(inspection, dict):
+                context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning("inspect_at_failed", offset=cursor, exc_info=True)
+            context["inspection"] = {"error": str(exc)}
+
+    def _populate_ai_selection(self, context: dict[str, Any], include_bytes: int) -> None:
+        """Populate the active-selection slice of the AI context dict.
+
+        Args:
+            context: Context dict to mutate.
+            include_bytes: Maximum bytes to read from the selection.
+        """
+        if self.document is None or self._selection is None:
+            return
+        sel_start, sel_end = self._selection
+        sel_start, sel_end = min(sel_start, sel_end), max(sel_start, sel_end)
+        sel_len = sel_end - sel_start + 1
+        capped = min(sel_len, include_bytes)
+        sel_raw = self.document.read(sel_start, capped)
+        context["selected_bytes"] = " ".join(f"{b:02X}" for b in sel_raw)
+        context["selection_range"] = [sel_start, sel_end]
+
+    def _populate_ai_bookmarks(self, context: dict[str, Any], bookmark_limit: int) -> None:
+        """Populate the bookmark slice of the AI context dict, capped to ``bookmark_limit``.
+
+        Args:
+            context: Context dict to mutate.
+            bookmark_limit: Maximum number of bookmark entries.
+        """
+        if self.document is None:
+            return
+        all_bookmarks = self.document.list_bookmarks()
+        sorted_bookmarks = sorted(all_bookmarks, key=lambda b: int(b[0]))
+        truncated = len(sorted_bookmarks) > bookmark_limit
+        visible = sorted_bookmarks[:bookmark_limit]
+        context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in visible]
+        context["bookmark_count_total"] = len(all_bookmarks)
+        context["bookmark_truncated"] = truncated
+        if truncated:
+            _logger.info(
+                "ai_context_bookmarks_truncated",
+                total=len(all_bookmarks),
+                limit=bookmark_limit,
+            )
 
     async def save_to_sandbox(
         self,
@@ -3264,9 +3380,9 @@ class HexEditorBridge(ToolBridgeBase):
             for byte in chunk:
                 if byte == 0:
                     null_count += 1
-                elif byte >= 0x80:
+                elif byte >= _HIGH_BIT_MIN:
                     high_count += 1
-                elif 0x20 <= byte < 0x7F or byte in (0x09, 0x0A, 0x0D):
+                elif _PRINTABLE_MIN <= byte < _PRINTABLE_HIGH or byte in _WHITESPACE_BYTES:
                     printable_count += 1
                 else:
                     control_count += 1
@@ -3336,7 +3452,7 @@ class HexEditorBridge(ToolBridgeBase):
         }
         if top_k > 0:
             indexed = [(i, c) for i, c in enumerate(raw_matrix) if c > 0]
-            indexed.sort(key=lambda pair: pair[1], reverse=True)
+            indexed.sort(key=operator.itemgetter(1), reverse=True)
             result["top_pairs"] = [{"a": idx >> 8, "b": idx & 0xFF, "count": count} for idx, count in indexed[:top_k]]
         else:
             result["matrix"] = raw_matrix
@@ -3368,7 +3484,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
         counts = [0] * 65536
         doc_len: int = self.document.length()
-        if doc_len < 2:
+        if doc_len < _DIGRAM_MIN_DOC_LEN:
             return counts
         chunk_size = 65536
         prev_byte: int | None = None
@@ -3732,23 +3848,7 @@ class HexEditorBridge(ToolBridgeBase):
             import_dir: Any = getattr(pe, "DIRECTORY_ENTRY_IMPORT", None)
             if import_dir is not None:
                 for entry in import_dir:
-                    dll_bytes: Any = getattr(entry, "dll", None)
-                    dll_name = dll_bytes.decode("utf-8", errors="replace") if dll_bytes else "unknown"
-                    raw_imports: Any = getattr(entry, "imports", None)
-                    imports_list: list[Any] = list(raw_imports) if raw_imports is not None else []
-                    for imp in imports_list:
-                        name_bytes: Any = getattr(imp, "name", None)
-                        ordinal_val: int = int(getattr(imp, "ordinal", 0) or 0)
-                        function_name = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
-                        address_val: int = int(getattr(imp, "address", 0) or 0)
-                        results.append(
-                            {
-                                "dll": dll_name,
-                                "function": function_name,
-                                "address": address_val,
-                                "ordinal": ordinal_val,
-                            },
-                        )
+                    results.extend(_collect_import_entries(entry))
         except (AttributeError, ValueError) as exc:
             _logger.warning("get_pe_imports_failed_walk", error=str(exc))
             results = []
@@ -4169,7 +4269,7 @@ class HexEditorBridge(ToolBridgeBase):
         mask = (1 << width) - 1
         hex_width = width // 4
 
-        if width == 32 and poly == 0x04C11DB7 and init == 0xFFFFFFFF and refin and refout and xorout == 0xFFFFFFFF:
+        if _is_standard_crc32(width, poly, init, refin=refin, refout=refout, xorout=xorout):
             crc = zlib.crc32(data) & mask
             _logger.debug("custom_crc_computed_zlib", width=width, result=hex(crc))
             return f"{crc:0{hex_width}X}"
