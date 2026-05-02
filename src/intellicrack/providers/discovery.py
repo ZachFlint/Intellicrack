@@ -16,7 +16,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ModelInfo, ProviderName
@@ -64,7 +64,8 @@ class DiscoveryFilter:
         requires_vision: Filter for vision support capability.
         requires_streaming: Filter for streaming support capability.
         providers: List of providers to include (None = all).
-        model_id_pattern: Regex pattern for model ID matching.
+        model_id_pattern: Regex pattern matched against model IDs using
+            :func:`re.search` (substring semantics, not anchored).
     """
 
     min_context_window: int | None = None
@@ -88,7 +89,12 @@ class _CacheEntry:
 class DiscoveryCache:
     """TTL-based cache for discovered models.
 
-    Provides thread-safe caching of model lists per provider with configurable TTL and optional disk persistence.
+    Provides per-provider caching of model lists with configurable TTL and
+    optional disk persistence. Disk and asynchronous helpers serialize access
+    through an internal :class:`asyncio.Lock`; the synchronous helpers
+    (:meth:`get`, :meth:`set`, :meth:`invalidate`, :meth:`is_expired`,
+    :meth:`get_all_cached`) are intended to be called from a single asyncio
+    task at a time and are not protected by the lock.
     """
 
     def __init__(self, ttl_seconds: int = 3600) -> None:
@@ -99,9 +105,21 @@ class DiscoveryCache:
         """
         self._ttl_seconds = ttl_seconds
         self._cache: dict[ProviderName, _CacheEntry] = {}
-        self._lock = asyncio.Lock()
+        self._cache_lock = asyncio.Lock()
         self._logger = get_logger(__name__).bind(component="discovery_cache")
         self._logger.info("discovery_cache_initialized", ttl_seconds=ttl_seconds)
+
+    async def aget(self, provider: ProviderName) -> list[ModelInfo] | None:
+        """Asynchronously get cached models for a provider.
+
+        Args:
+            provider: The provider to get cached models for.
+
+        Returns:
+            list[ModelInfo] | None: Cached models, or None if missing/expired.
+        """
+        async with self._cache_lock:
+            return self._get_locked(provider)
 
     def get(self, provider: ProviderName) -> list[ModelInfo] | None:
         """Get cached models for a provider.
@@ -111,6 +129,17 @@ class DiscoveryCache:
 
         Returns:
             list[ModelInfo] | None: List of cached models, or None if not cached or expired.
+        """
+        return self._get_locked(provider)
+
+    def _get_locked(self, provider: ProviderName) -> list[ModelInfo] | None:
+        """Return cached models or None when missing/expired.
+
+        Args:
+            provider: The provider to look up.
+
+        Returns:
+            list[ModelInfo] | None: Cached entries or None if missing/expired.
         """
         entry = self._cache.get(provider)
         if entry is None:
@@ -122,13 +151,45 @@ class DiscoveryCache:
 
         return entry.models
 
-    def set(self, provider: ProviderName, models: list[ModelInfo]) -> None:
-        """Cache models for a provider.
+    async def aset(self, provider: ProviderName, models: list[ModelInfo]) -> None:
+        """Asynchronously cache a non-empty model list.
+
+        Empty lists are rejected (the call is logged and any existing entry
+        is invalidated) because an empty discovery result is indistinguishable
+        from a discovery failure for cache purposes.
 
         Args:
             provider: The provider to cache models for.
-            models: List of models to cache.
+            models: Models to cache.
         """
+        async with self._cache_lock:
+            self._set_locked(provider, models)
+
+    def set(self, provider: ProviderName, models: list[ModelInfo]) -> None:
+        """Cache models for a provider.
+
+        Empty model lists are not cached: callers should treat an empty
+        discovery as a failure so that a stale entry from a previous run is
+        not returned. If a stale entry exists for the provider it is removed.
+
+        Args:
+            provider: The provider to cache models for.
+            models: List of models to cache. Must be non-empty.
+        """
+        self._set_locked(provider, models)
+
+    def _set_locked(self, provider: ProviderName, models: list[ModelInfo]) -> None:
+        """Insert/update a cache entry, dropping empty lists.
+
+        Args:
+            provider: The provider to cache models for.
+            models: Models to cache.
+        """
+        if not models:
+            self._logger.debug("cache_set_skipped_empty", provider=provider.value)
+            if provider in self._cache:
+                del self._cache[provider]
+            return
         now = time.time()
         entry = _CacheEntry(
             models=models,
@@ -143,8 +204,25 @@ class DiscoveryCache:
             ttl_seconds=self._ttl_seconds,
         )
 
+    async def ainvalidate(self, provider: ProviderName | None = None) -> None:
+        """Asynchronously invalidate cache entries.
+
+        Args:
+            provider: Specific provider to invalidate, or None for all.
+        """
+        async with self._cache_lock:
+            self._invalidate_locked(provider)
+
     def invalidate(self, provider: ProviderName | None = None) -> None:
         """Invalidate cache entries.
+
+        Args:
+            provider: Specific provider to invalidate, or None for all.
+        """
+        self._invalidate_locked(provider)
+
+    def _invalidate_locked(self, provider: ProviderName | None) -> None:
+        """Drop a cache entry or all of them.
 
         Args:
             provider: Specific provider to invalidate, or None for all.
@@ -183,22 +261,27 @@ class DiscoveryCache:
     async def save_to_disk(self, path: Path) -> None:
         """Persist cache to disk as JSON.
 
+        ``time.time()`` is sampled once at the start of the operation and
+        reused as both the saved-at marker and the per-entry expiration
+        check, avoiding TOCTOU drift between the two reads.
+
         Args:
             path: File path to save cache to.
         """
         self._logger.info("cache_save_starting", cache_path=str(path))
-        async with self._lock:
+        async with self._cache_lock:
             try:
+                snapshot_now = time.time()
                 data: dict[str, object] = {
                     "version": 1,
                     "ttl_seconds": self._ttl_seconds,
-                    "saved_at": time.time(),
+                    "saved_at": snapshot_now,
                     "entries": {},
                 }
 
                 entries_dict: dict[str, object] = {}
                 for provider, entry in self._cache.items():
-                    if time.time() <= entry.expires_at:
+                    if snapshot_now <= entry.expires_at:
                         model_dicts = [
                             {
                                 "id": m.id,
@@ -228,14 +311,88 @@ class DiscoveryCache:
             except (OSError, ValueError, TypeError) as exc:
                 self._logger.warning("cache_save_failed", cache_path=str(path), error=str(exc))
 
+    @staticmethod
+    def _parse_cache_entries(
+        entries: dict[str, Any],
+        now: float,
+    ) -> dict[ProviderName, _CacheEntry]:
+        """Validate and parse a deserialized entries mapping.
+
+        Args:
+            entries: Mapping of provider-name strings to entry payloads.
+            now: Current time used to drop expired entries.
+
+        Returns:
+            dict[ProviderName, _CacheEntry]: Fully validated cache entries.
+
+        Raises:
+            TypeError: If any entry payload or model list is not the expected
+                container type. The implementation also propagates ValueError
+                (raised by ``ProviderName(...)`` for unknown enum values) and
+                KeyError (raised when a model entry is missing required keys);
+                the caller catches all three so that any malformed input
+                aborts the load atomically.
+        """
+        staged: dict[ProviderName, _CacheEntry] = {}
+        for provider_str, entry_data in entries.items():
+            if not isinstance(entry_data, dict):
+                msg = f"entry for {provider_str} is not a mapping"
+                raise TypeError(msg)
+            entry_dict: dict[str, Any] = cast("dict[str, Any]", entry_data)
+            provider = ProviderName(provider_str)
+            expires_at_raw = entry_dict.get("expires_at", 0)
+            expires_at = float(expires_at_raw) if expires_at_raw is not None else 0.0
+
+            if now > expires_at:
+                continue
+
+            raw_models = entry_dict.get("models", [])
+            if not isinstance(raw_models, list):
+                msg = f"models for {provider_str} is not a list"
+                raise TypeError(msg)
+            raw_models_list: list[Any] = cast("list[Any]", raw_models)
+
+            models: list[ModelInfo] = []
+            for m_raw in raw_models_list:
+                if not isinstance(m_raw, dict):
+                    msg = f"model entry for {provider_str} is not a mapping"
+                    raise TypeError(msg)
+                m: dict[str, Any] = cast("dict[str, Any]", m_raw)
+                models.append(
+                    ModelInfo(
+                        id=str(m["id"]),
+                        name=str(m["name"]),
+                        provider=ProviderName(str(m["provider"])),
+                        context_window=int(m["context_window"]),
+                        supports_tools=bool(m["supports_tools"]),
+                        supports_vision=bool(m["supports_vision"]),
+                        supports_streaming=bool(m["supports_streaming"]),
+                        input_cost_per_1m_tokens=m.get("input_cost_per_1m_tokens"),
+                        output_cost_per_1m_tokens=m.get("output_cost_per_1m_tokens"),
+                    ),
+                )
+
+            timestamp_raw = entry_dict.get("timestamp", now)
+            staged[provider] = _CacheEntry(
+                models=models,
+                timestamp=float(timestamp_raw) if timestamp_raw is not None else now,
+                expires_at=expires_at,
+            )
+        return staged
+
     async def load_from_disk(self, path: Path) -> None:
-        """Load cache from disk.
+        """Load cache from disk atomically.
+
+        The on-disk file is parsed and validated into a temporary dictionary.
+        The in-memory cache is only replaced when the entire structure has
+        been consumed without errors. Any failure (missing/invalid JSON,
+        unknown version, malformed entry) leaves ``self._cache`` untouched.
 
         Args:
             path: File path to load cache from.
         """
         self._logger.info("cache_load_starting", cache_path=str(path))
-        async with self._lock:
+        async with self._cache_lock:
             exists = await asyncio.to_thread(path.exists)
             if not exists:
                 self._logger.debug("cache_file_not_found", path=str(path))
@@ -243,53 +400,43 @@ class DiscoveryCache:
 
             try:
                 content = await asyncio.to_thread(path.read_text, "utf-8")
-                data = json.loads(content)
-
-                if data.get("version") != 1:
-                    self._logger.warning("unknown_cache_version", version=data.get("version"))
-                    return
-
-                entries = data.get("entries", {})
-                now = time.time()
-
-                for provider_str, entry_data in entries.items():
-                    try:
-                        provider = ProviderName(provider_str)
-                        expires_at = entry_data.get("expires_at", 0)
-
-                        if now > expires_at:
-                            continue
-
-                        models = [
-                            ModelInfo(
-                                id=m["id"],
-                                name=m["name"],
-                                provider=ProviderName(m["provider"]),
-                                context_window=m["context_window"],
-                                supports_tools=m["supports_tools"],
-                                supports_vision=m["supports_vision"],
-                                supports_streaming=m["supports_streaming"],
-                                input_cost_per_1m_tokens=m.get("input_cost_per_1m_tokens"),
-                                output_cost_per_1m_tokens=m.get("output_cost_per_1m_tokens"),
-                            )
-                            for m in entry_data.get("models", [])
-                        ]
-
-                        self._cache[provider] = _CacheEntry(
-                            models=models,
-                            timestamp=entry_data.get("timestamp", now),
-                            expires_at=expires_at,
-                        )
-
-                    except (ValueError, KeyError) as e:
-                        self._logger.warning("cache_entry_load_failed", provider=provider_str, error=str(e))
-
-                self._logger.info("cache_loaded", provider_count=len(self._cache), path=str(path))
-
+                raw_data = json.loads(content)
             except json.JSONDecodeError:
                 self._logger.exception("cache_parse_failed", cache_path=str(path))
+                return
             except (OSError, ValueError, TypeError) as exc:
                 self._logger.warning("cache_load_failed", cache_path=str(path), error=str(exc))
+                return
+
+            if not isinstance(raw_data, dict):
+                self._logger.warning("cache_payload_not_mapping", cache_path=str(path))
+                return
+            data: dict[str, Any] = cast("dict[str, Any]", raw_data)
+
+            if data.get("version") != 1:
+                self._logger.warning("unknown_cache_version", version=data.get("version"))
+                return
+
+            entries = data.get("entries", {})
+            if not isinstance(entries, dict):
+                self._logger.warning("cache_entries_not_mapping", cache_path=str(path))
+                return
+
+            entries_dict: dict[str, Any] = cast("dict[str, Any]", entries)
+
+            now = time.time()
+            try:
+                staged = self._parse_cache_entries(entries_dict, now)
+            except (ValueError, KeyError, TypeError) as exc:
+                self._logger.warning(
+                    "cache_load_aborted_existing_preserved",
+                    cache_path=str(path),
+                    error=str(exc),
+                )
+                return
+
+            self._cache = staged
+            self._logger.info("cache_loaded", provider_count=len(self._cache), path=str(path))
 
 
 class ModelDiscovery:
@@ -315,7 +462,6 @@ class ModelDiscovery:
         self._cache = DiscoveryCache(ttl_seconds=cache_ttl)
         self._timeout = timeout_per_provider
         self._events: list[DiscoveryEvent] = []
-        self._lock = asyncio.Lock()
         self._logger = get_logger(__name__)
         self._logger.info(
             "model_discovery_initialized",
@@ -332,6 +478,61 @@ class ModelDiscovery:
         """
         return self._cache
 
+    @staticmethod
+    def _diff_model_ids(
+        old_models: list[ModelInfo],
+        new_models: list[ModelInfo],
+    ) -> tuple[list[str], list[str]]:
+        """Compute new and removed model IDs between two model lists.
+
+        Args:
+            old_models: Previously known models for the provider.
+            new_models: Freshly discovered models for the provider.
+
+        Returns:
+            tuple[list[str], list[str]]: ``(new_ids, removed_ids)`` - IDs
+            that appeared in ``new_models`` but not ``old_models``, and vice
+            versa.
+        """
+        old_ids = {m.id for m in old_models}
+        new_ids = {m.id for m in new_models}
+        return list(new_ids - old_ids), list(old_ids - new_ids)
+
+    async def _record_discovery(
+        self,
+        provider: ProviderName,
+        models: list[ModelInfo],
+        duration_ms: float,
+        *,
+        write_cache: bool,
+    ) -> DiscoveryEvent:
+        """Build a discovery event and optionally update the shared cache.
+
+        Args:
+            provider: Provider that produced the models.
+            models: Newly discovered models.
+            duration_ms: Discovery duration in milliseconds.
+            write_cache: Whether to persist the result in the shared cache.
+
+        Returns:
+            DiscoveryEvent: Event capturing model count, diff, and timing.
+        """
+        old_models = await self._cache.aget(provider) or []
+        new_ids, removed_ids = self._diff_model_ids(old_models, models)
+
+        if write_cache:
+            await self._cache.aset(provider, models)
+
+        return DiscoveryEvent(
+            provider=provider,
+            timestamp=datetime.now(tz=UTC),
+            model_count=len(models),
+            success=True,
+            new_models=new_ids,
+            removed_models=removed_ids,
+            duration_ms=duration_ms,
+        )
+
     async def discover_all(
         self,
         *,
@@ -339,6 +540,11 @@ class ModelDiscovery:
         force_refresh: bool = False,
     ) -> dict[ProviderName, list[ModelInfo]]:
         """Discover models from all registered providers.
+
+        When ``use_cache`` is False the shared cache is neither read nor
+        written for this call; per-provider results are returned directly to
+        the caller and the existing cache is left untouched. ``force_refresh``
+        is the explicit opt-in for invalidating and rewriting the cache.
 
         Args:
             use_cache: Whether to use cached results when available.
@@ -356,7 +562,9 @@ class ModelDiscovery:
             return results
 
         if force_refresh:
-            self._cache.invalidate()
+            await self._cache.ainvalidate()
+
+        write_cache = use_cache or force_refresh
 
         async def discover_one(
             provider_name: ProviderName,
@@ -374,7 +582,7 @@ class ModelDiscovery:
             start_time = time.time()
 
             if use_cache and not force_refresh:
-                cached = self._cache.get(provider_name)
+                cached = await self._cache.aget(provider_name)
                 if cached is not None:
                     return (
                         provider_name,
@@ -391,6 +599,8 @@ class ModelDiscovery:
 
             provider = self._registry.get(provider_name)
             if provider is None or not provider.is_connected:
+                if write_cache:
+                    await self._cache.ainvalidate(provider_name)
                 return (
                     provider_name,
                     [],
@@ -409,34 +619,15 @@ class ModelDiscovery:
                     provider.list_models(),
                     timeout=self._timeout,
                 )
-                duration_ms = (time.time() - start_time) * 1000
-
-                old_models = self._cache.get(provider_name) or []
-                old_ids = {m.id for m in old_models}
-                new_ids = {m.id for m in models}
-
-                new_model_ids = list(new_ids - old_ids)
-                removed_model_ids = list(old_ids - new_ids)
-
-                self._cache.set(provider_name, models)
-
-                return (
-                    provider_name,
-                    models,
-                    DiscoveryEvent(
-                        provider=provider_name,
-                        timestamp=datetime.now(tz=UTC),
-                        model_count=len(models),
-                        success=True,
-                        new_models=new_model_ids,
-                        removed_models=removed_model_ids,
-                        duration_ms=duration_ms,
-                    ),
-                )
-
             except TimeoutError:
-                self._logger.warning("discovery_timeout", provider=provider_name.value, timeout=self._timeout)
+                self._logger.warning(
+                    "discovery_timeout",
+                    provider=provider_name.value,
+                    timeout=self._timeout,
+                )
                 duration_ms = (time.time() - start_time) * 1000
+                if write_cache:
+                    await self._cache.ainvalidate(provider_name)
                 return (
                     provider_name,
                     [],
@@ -449,10 +640,15 @@ class ModelDiscovery:
                         duration_ms=duration_ms,
                     ),
                 )
-
-            except (ConnectionError, OSError, RuntimeError, ValueError) as e:
+            except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
                 duration_ms = (time.time() - start_time) * 1000
-                self._logger.warning("discovery_failed", provider=provider_name.value, error=str(e))
+                self._logger.warning(
+                    "discovery_failed",
+                    provider=provider_name.value,
+                    error=str(exc),
+                )
+                if write_cache:
+                    await self._cache.ainvalidate(provider_name)
                 return (
                     provider_name,
                     [],
@@ -461,10 +657,36 @@ class ModelDiscovery:
                         timestamp=datetime.now(tz=UTC),
                         model_count=0,
                         success=False,
-                        error_message=str(e),
+                        error_message=str(exc),
                         duration_ms=duration_ms,
                     ),
                 )
+
+            duration_ms = (time.time() - start_time) * 1000
+
+            if not models:
+                if write_cache:
+                    await self._cache.ainvalidate(provider_name)
+                return (
+                    provider_name,
+                    [],
+                    DiscoveryEvent(
+                        provider=provider_name,
+                        timestamp=datetime.now(tz=UTC),
+                        model_count=0,
+                        success=False,
+                        error_message="Provider returned no models",
+                        duration_ms=duration_ms,
+                    ),
+                )
+
+            event = await self._record_discovery(
+                provider_name,
+                models,
+                duration_ms,
+                write_cache=write_cache,
+            )
+            return provider_name, models, event
 
         tasks = [discover_one(name) for name in registered]
         completed = await asyncio.gather(*tasks, return_exceptions=True)
@@ -501,17 +723,19 @@ class ModelDiscovery:
             list[ModelInfo]: List of available models from the provider.
         """
         if use_cache:
-            cached = self._cache.get(provider)
+            cached = await self._cache.aget(provider)
             if cached is not None:
                 return cached
 
         provider_instance = self._registry.get(provider)
         if provider_instance is None:
             self._logger.warning("provider_not_registered", provider=provider.value)
+            await self._cache.ainvalidate(provider)
             return []
 
         if not provider_instance.is_connected:
             self._logger.warning("provider_not_connected", provider=provider.value)
+            await self._cache.ainvalidate(provider)
             return []
 
         start_time = time.time()
@@ -527,31 +751,28 @@ class ModelDiscovery:
                 provider=provider.value,
                 timeout_seconds=self._timeout,
             )
+            await self._cache.ainvalidate(provider)
             return []
         except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
             self._logger.warning("discovery_failed", provider=provider.value, error=str(exc))
+            await self._cache.ainvalidate(provider)
             return []
-        else:
-            duration_ms = (time.time() - start_time) * 1000
 
-            old_models = self._cache.get(provider) or []
-            old_ids = {m.id for m in old_models}
-            new_ids = {m.id for m in models}
+        duration_ms = (time.time() - start_time) * 1000
 
-            self._cache.set(provider, models)
+        if not models:
+            self._logger.warning("discovery_empty", provider=provider.value)
+            await self._cache.ainvalidate(provider)
+            return []
 
-            event = DiscoveryEvent(
-                provider=provider,
-                timestamp=datetime.now(tz=UTC),
-                model_count=len(models),
-                success=True,
-                new_models=list(new_ids - old_ids),
-                removed_models=list(old_ids - new_ids),
-                duration_ms=duration_ms,
-            )
-            self._events.append(event)
-
-            return models
+        event = await self._record_discovery(
+            provider,
+            models,
+            duration_ms,
+            write_cache=use_cache,
+        )
+        self._events.append(event)
+        return models
 
     def search(
         self,
@@ -589,6 +810,9 @@ class ModelDiscovery:
 
         Returns:
             list[ModelInfo]: List of models matching all criteria.
+
+        Raises:
+            ValueError: If ``criteria.model_id_pattern`` is not a valid regex.
         """
         all_models = self._cache.get_all_cached()
         results: list[ModelInfo] = []
@@ -597,8 +821,14 @@ class ModelDiscovery:
         if criteria.model_id_pattern:
             try:
                 pattern = re.compile(criteria.model_id_pattern, re.IGNORECASE)
-            except re.error as e:
-                self._logger.warning("invalid_regex_pattern", error=str(e))
+            except re.error as exc:
+                self._logger.warning(
+                    "invalid_regex_pattern",
+                    pattern=criteria.model_id_pattern,
+                    error=str(exc),
+                )
+                msg = f"invalid regex in DiscoveryFilter: {criteria.model_id_pattern!r}: {exc}"
+                raise ValueError(msg) from exc
 
         for provider, models in all_models.items():
             if criteria.providers is not None and provider not in criteria.providers:
@@ -624,7 +854,7 @@ class ModelDiscovery:
                 if criteria.requires_streaming is not None and model.supports_streaming != criteria.requires_streaming:
                     continue
 
-                if pattern is not None and not pattern.match(model.id):
+                if pattern is not None and not pattern.search(model.id):
                     continue
 
                 results.append(model)
@@ -697,15 +927,30 @@ class ModelDiscovery:
         - "generation": Prefers fast, streaming models
         - "chat": Balanced recommendation
 
+        If no provider has any cached models, this awaits a fresh discovery
+        pass via :meth:`discover_all` so that recommendations are not made
+        from a stale empty cache.
+
         Args:
             task_type: Type of task ("analysis", "generation", "chat").
 
         Returns:
             ModelInfo | None: Recommended ModelInfo or None if no suitable model found.
-        """
-        all_models = self._cache.get_all_cached()
-        candidates: list[ModelInfo] = []
 
+        Raises:
+            ValueError: If ``task_type`` is not one of the supported values.
+        """
+        valid_task_types = {"analysis", "generation", "chat"}
+        if task_type not in valid_task_types:
+            msg = f"unknown task_type {task_type!r}; expected one of {sorted(valid_task_types)}"
+            raise ValueError(msg)
+
+        all_models = self._cache.get_all_cached()
+        if not all_models:
+            await self.discover_all()
+            all_models = self._cache.get_all_cached()
+
+        candidates: list[ModelInfo] = []
         for models in all_models.values():
             candidates.extend(models)
 
@@ -745,10 +990,7 @@ class ModelDiscovery:
                 chat_candidates.sort(key=lambda m: m.context_window, reverse=True)
                 return chat_candidates[0]
 
-        if candidates:
-            return candidates[0]
-
-        return None
+        return candidates[0] if candidates else None
 
     def get_provider_model_count(self) -> dict[ProviderName, int]:
         """Get model count per provider from cache.
