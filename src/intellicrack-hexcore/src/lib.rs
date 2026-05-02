@@ -847,15 +847,21 @@ impl HexDocument {
                 "block exceeds document size",
             ));
         }
+        if (src_offset < dst_offset + length) && (dst_offset < src_offset + length) {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "source and destination blocks overlap",
+            ));
+        }
         let data = self.inner.read(src_offset, length);
         let old_dst = self.inner.read(dst_offset, length);
         let zeros = vec![0u8; length];
         self.inner.overwrite(src_offset, &zeros);
         self.inner.overwrite(dst_offset, &data);
-        self.undo_mgr.record(undo::Operation::Overwrite {
-            offset: dst_offset,
-            old_data: old_dst,
-            new_data: data,
+        self.undo_mgr.record(undo::Operation::MoveBlock {
+            src_offset,
+            dst_offset,
+            moved_data: data,
+            old_dst_data: old_dst,
         });
         Ok(())
     }
@@ -867,6 +873,11 @@ impl HexDocument {
         offset_b: usize,
         len_b: usize,
     ) -> PyResult<()> {
+        if len_a != len_b {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "swap_blocks requires equal-length blocks; got len_a={len_a}, len_b={len_b}"
+            )));
+        }
         let doc_len = self.inner.document_size();
         if offset_a + len_a > doc_len || offset_b + len_b > doc_len {
             return Err(pyo3::exceptions::PyValueError::new_err(
@@ -878,21 +889,17 @@ impl HexDocument {
         }
         let data_a = self.inner.read(offset_a, len_a);
         let data_b = self.inner.read(offset_b, len_b);
-        let mut write_a: Vec<u8> = data_b.clone();
-        write_a.resize(len_a, 0);
-        let mut write_b: Vec<u8> = data_a.clone();
-        write_b.resize(len_b, 0);
-        self.inner.overwrite(offset_a, &write_a);
-        self.inner.overwrite(offset_b, &write_b);
+        self.inner.overwrite(offset_a, &data_b);
+        self.inner.overwrite(offset_b, &data_a);
         self.undo_mgr.record(undo::Operation::Overwrite {
             offset: offset_a,
-            old_data: data_a,
-            new_data: write_a,
+            old_data: data_a.clone(),
+            new_data: data_b.clone(),
         });
         self.undo_mgr.record(undo::Operation::Overwrite {
             offset: offset_b,
             old_data: data_b,
-            new_data: write_b,
+            new_data: data_a,
         });
         Ok(())
     }

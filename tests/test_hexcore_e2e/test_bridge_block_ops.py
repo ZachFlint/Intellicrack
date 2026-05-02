@@ -178,7 +178,12 @@ class TestSwapBlocks:
         assert bytes.fromhex(block_b.replace(" ", "")) == b"AAAA"
 
     def test_swap_blocks_different_lengths(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify swapping blocks of different lengths writes correctly.
+        """Verify that swapping blocks of unequal lengths raises ValueError.
+
+        Audit-1 F-0002: the previous Rust implementation silently
+        zero-padded the shorter block, corrupting both buffers. The bridge
+        now rejects the call up front so callers must explicitly handle
+        size differences.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -189,11 +194,12 @@ class TestSwapBlocks:
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "AA BB CC DD"))
         _run(bridge.write_bytes(32, "11 22 33 44 55 66 77 88"))
-        _run(bridge.swap_blocks(0, 4, 32, 8))
-        at_0 = _run(bridge.read_bytes(0, 8))
-        at_32 = _run(bridge.read_bytes(32, 4))
-        assert at_0.replace(" ", "").lower() == "1122334455667788"
-        assert at_32.replace(" ", "").lower() == "aabbccdd"
+        with pytest.raises(ValueError, match="equal-length"):
+            _run(bridge.swap_blocks(0, 4, 32, 8))
+        at_0 = _run(bridge.read_bytes(0, 4))
+        at_32 = _run(bridge.read_bytes(32, 8))
+        assert at_0.replace(" ", "").lower() == "aabbccdd"
+        assert at_32.replace(" ", "").lower() == "1122334455667788"
 
     def test_swap_blocks_overlapping_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that overlapping block ranges raise ValueError.

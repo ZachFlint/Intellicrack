@@ -4335,6 +4335,10 @@ class HexEditorBridge(ToolBridgeBase):
     ) -> bool:
         """Swap two non-overlapping blocks of bytes.
 
+        Both blocks must have the same length. Mismatched lengths cannot be
+        swapped without zero-padding or truncating one side, which silently
+        corrupts data; the bridge rejects the call with ``ValueError`` instead.
+
         Args:
             offset_a: Start of block A.
             len_a: Length of block A.
@@ -4346,12 +4350,23 @@ class HexEditorBridge(ToolBridgeBase):
 
         Raises:
             RuntimeError: If no document is open.
-            ValueError: If blocks overlap.
+            ValueError: If blocks overlap or have unequal lengths.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
+
+        if len_a != len_b:
+            _logger.error(
+                "swap_blocks_failed_unequal_lengths",
+                offset_a=hex(offset_a),
+                offset_b=hex(offset_b),
+                len_a=len_a,
+                len_b=len_b,
+            )
+            msg = f"swap_blocks requires equal-length blocks; got len_a={len_a}, len_b={len_b}"
+            raise ValueError(msg)
 
         end_a = offset_a + len_a
         end_b = offset_b + len_b
