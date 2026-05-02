@@ -218,6 +218,8 @@ _ERR_INVALID_REG_ROOT = "invalid registry root: "
 _ERR_SECTION_CREATE = "section creation failed"
 _ERR_SECTION_MAP = "section mapping failed"
 
+_THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
+
 ProcessAccessRights = Literal[
     "all",
     "query",
@@ -1463,18 +1465,19 @@ class ProcessBridge(ToolBridgeBase):
             handle = self._process_handle
             close_handle = False
 
-        try:
-            result = self._kernel32.TerminateProcess(handle, 1)
-            if not result:
-                raise ToolError(_ERR_TERMINATE_FAILED)
-
-            _logger.info("process_terminated", pid=pid or self._attached_pid)
-            return True
-        finally:
+        result = self._kernel32.TerminateProcess(handle, 1)
+        if not result:
             if close_handle:
                 self._kernel32.CloseHandle(handle)
-            else:
-                await self.close()
+            _logger.warning("process_terminate_failed", pid=pid or self._attached_pid)
+            raise ToolError(_ERR_TERMINATE_FAILED)
+
+        _logger.info("process_terminated", pid=pid or self._attached_pid)
+        if close_handle:
+            self._kernel32.CloseHandle(handle)
+        else:
+            await self.close()
+        return True
 
     async def suspend(self, pid: int | None = None) -> bool:
         """Suspend all threads of a process.
@@ -1497,11 +1500,22 @@ class ProcessBridge(ToolBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        failed_tids: list[int] = []
         for thread in threads:
             inherit_handle = False
-            if handle := self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid):
-                self._kernel32.SuspendThread(handle)
-                self._kernel32.CloseHandle(handle)
+            th_handle: int = self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid)
+            if not th_handle:
+                failed_tids.append(thread.tid)
+                continue
+            suspend_result: int = self._kernel32.SuspendThread(th_handle)
+            if suspend_result == _THREAD_OP_FAILURE_SENTINEL:
+                failed_tids.append(thread.tid)
+            self._kernel32.CloseHandle(th_handle)
+
+        if failed_tids:
+            _logger.warning("process_suspend_partial_failure", pid=target_pid, failed_tids=failed_tids)
+            msg = f"suspend failed for thread IDs: {failed_tids}"
+            raise ToolError(msg)
 
         _logger.info("process_suspended", pid=target_pid, thread_count=len(threads))
         return True
@@ -1527,11 +1541,22 @@ class ProcessBridge(ToolBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        failed_tids: list[int] = []
         for thread in threads:
             inherit_handle = False
-            if handle := self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid):
-                self._kernel32.ResumeThread(handle)
-                self._kernel32.CloseHandle(handle)
+            th_handle: int = self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid)
+            if not th_handle:
+                failed_tids.append(thread.tid)
+                continue
+            resume_result: int = self._kernel32.ResumeThread(th_handle)
+            if resume_result == _THREAD_OP_FAILURE_SENTINEL:
+                failed_tids.append(thread.tid)
+            self._kernel32.CloseHandle(th_handle)
+
+        if failed_tids:
+            _logger.warning("process_resume_partial_failure", pid=target_pid, failed_tids=failed_tids)
+            msg = f"resume failed for thread IDs: {failed_tids}"
+            raise ToolError(msg)
 
         _logger.info("process_resumed", pid=target_pid, thread_count=len(threads))
         return True
@@ -2709,22 +2734,31 @@ class ProcessBridge(ToolBridgeBase):
         ptr_size = ctypes.sizeof(ctypes.c_void_p)
         struct_size = ptr_size * 2 + entry_size
 
+        buf_len = len(buffer)
         for i in range(count):
             offset = i * struct_size
-            name_ptr = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(ctypes.c_wchar_p)).contents
-            display_ptr = ctypes.cast(ctypes.byref(buffer, offset + ptr_size), ctypes.POINTER(ctypes.c_wchar_p)).contents
+            if offset + struct_size > buf_len:
+                _logger.warning("service_entry_out_of_bounds", index=i, offset=offset, buf_len=buf_len)
+                break
+            name_cwchar = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(ctypes.c_wchar_p)).contents
+            display_cwchar = ctypes.cast(ctypes.byref(buffer, offset + ptr_size), ctypes.POINTER(ctypes.c_wchar_p)).contents
             ssp = ctypes.cast(
                 ctypes.byref(buffer, offset + ptr_size * 2),
                 ctypes.POINTER(SERVICE_STATUS_PROCESS),
             ).contents
+
+            name_val: str | None = name_cwchar.value
+            display_val: str | None = display_cwchar.value
+            svc_name: str = str(name_val) if name_val is not None else ""
+            svc_display: str = str(display_val) if display_val is not None else ""
 
             svc_pid = ssp.dwProcessId
             if filter_pid is not None and svc_pid != filter_pid:
                 continue
 
             services.append({
-                "name": name_ptr or "",
-                "display_name": display_ptr or "",
+                "name": svc_name,
+                "display_name": svc_display,
                 "state": state_map.get(ssp.dwCurrentState, "unknown"),
                 "pid": svc_pid,
                 "service_type": ssp.dwServiceType,
@@ -4041,10 +4075,14 @@ class ProcessBridge(ToolBridgeBase):
 
         Returns:
             bool: True if closed.
+
+        Raises:
+            ToolError: If kernel32 is unavailable.
         """
         _logger.info("process_pipe_close_started", handle=handle)
-        if self._kernel32 is not None:
-            self._kernel32.CloseHandle(handle)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        self._kernel32.CloseHandle(handle)
         return True
 
     # ------------------------------------------------------------------
@@ -4352,10 +4390,14 @@ class ProcessBridge(ToolBridgeBase):
 
         Returns:
             bool: True if closed.
+
+        Raises:
+            ToolError: If kernel32 is unavailable.
         """
         _logger.info("process_device_close_started", handle=handle)
-        if self._kernel32 is not None:
-            self._kernel32.CloseHandle(handle)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        self._kernel32.CloseHandle(handle)
         return True
 
     # ------------------------------------------------------------------

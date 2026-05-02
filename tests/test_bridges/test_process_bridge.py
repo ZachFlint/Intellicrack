@@ -1242,3 +1242,177 @@ class TestErrorConditions:
         await process_bridge.close()
         with pytest.raises(ToolError, match="no process"):
             await process_bridge.get_modules()
+
+
+class TestF0004TerminateFailure:
+    """Verify F-0004: terminate() leaves _process_handle intact on TerminateProcess failure."""
+
+    async def test_handle_preserved_after_terminate_access_denied(self, process_bridge: ProcessBridge) -> None:
+        """Verify _process_handle is not cleared when TerminateProcess fails.
+
+        Open the current process with query-only rights (PROCESS_QUERY_INFORMATION),
+        which lacks PROCESS_TERMINATE.  TerminateProcess will return 0 (ERROR_ACCESS_DENIED).
+        Before the fix, the finally-block called self.close() which wiped the handle;
+        after the fix the handle must still be present.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = _get_attr_optional(process_bridge, _ATTR_KERNEL32, ctypes.WinDLL)
+        if k32 is None:
+            pytest.skip("kernel32 unavailable")
+
+        process_query_information = 0x0400
+        inherit_handle = False
+        handle: int = k32.OpenProcess(process_query_information, inherit_handle, os.getpid())
+        if not handle:
+            pytest.skip("Could not open own process with query-only rights")
+
+        setattr(process_bridge, _ATTR_PROCESS_HANDLE, handle)
+        setattr(process_bridge, _ATTR_ATTACHED_PID, os.getpid())
+
+        try:
+            with pytest.raises(ToolError, match="terminate failed"):
+                await process_bridge.terminate()
+
+            remaining_handle: object = getattr(process_bridge, _ATTR_PROCESS_HANDLE)
+            assert remaining_handle is not None, "_process_handle was cleared despite TerminateProcess failure"
+            assert remaining_handle == handle
+        finally:
+            k32.CloseHandle(handle)
+            setattr(process_bridge, _ATTR_PROCESS_HANDLE, None)
+            setattr(process_bridge, _ATTR_ATTACHED_PID, None)
+
+
+class TestF0005SuspendResumeReportsFailure:
+    """Verify F-0005: suspend/resume raise ToolError with failed TIDs on thread API failures."""
+
+    async def test_suspend_raises_for_protected_process_threads(self, process_bridge: ProcessBridge) -> None:
+        """Verify suspend raises ToolError when OpenThread fails due to insufficient rights.
+
+        The Windows System process (PID 4) has threads that normal user-mode code
+        cannot open with THREAD_SUSPEND_RESUME.  suspend() must collect all the
+        failing TIDs and raise ToolError rather than silently returning True.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = _get_attr_optional(process_bridge, _ATTR_KERNEL32, ctypes.WinDLL)
+        if k32 is None:
+            pytest.skip("kernel32 unavailable")
+
+        system_pid = 4
+        threads = await process_bridge.get_threads(system_pid)
+        if not threads:
+            pytest.skip("No threads found for System process (PID 4) — cannot exercise failure path")
+
+        thread_suspend_resume = 0x0002
+        inherit_flag = False
+        any_protected = any(not k32.OpenThread(thread_suspend_resume, inherit_flag, t.tid) for t in threads)
+        if not any_protected:
+            pytest.skip("All System threads opened successfully — insufficient privilege restrictions in this environment")
+
+        with pytest.raises(ToolError):
+            await process_bridge.suspend(system_pid)
+
+    async def test_resume_raises_for_protected_process_threads(self, process_bridge: ProcessBridge) -> None:
+        """Verify resume raises ToolError when OpenThread fails due to insufficient rights.
+
+        The Windows System process (PID 4) has threads that normal user-mode code
+        cannot open with THREAD_SUSPEND_RESUME.  resume() must collect all the
+        failing TIDs and raise ToolError rather than silently returning True.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = _get_attr_optional(process_bridge, _ATTR_KERNEL32, ctypes.WinDLL)
+        if k32 is None:
+            pytest.skip("kernel32 unavailable")
+
+        system_pid = 4
+        threads = await process_bridge.get_threads(system_pid)
+        if not threads:
+            pytest.skip("No threads found for System process (PID 4) — cannot exercise failure path")
+
+        thread_suspend_resume = 0x0002
+        inherit_flag = False
+        any_protected = any(not k32.OpenThread(thread_suspend_resume, inherit_flag, t.tid) for t in threads)
+        if not any_protected:
+            pytest.skip("All System threads opened successfully — insufficient privilege restrictions in this environment")
+
+        with pytest.raises(ToolError):
+            await process_bridge.resume(system_pid)
+
+
+class TestF0023ServiceParseUnicode:
+    """Verify F-0023: list_services() returns entries with str name and display_name fields."""
+
+    async def test_service_name_fields_are_str(self, process_bridge: ProcessBridge) -> None:
+        """Verify that each service entry contains str-typed name and display_name values.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        services = await process_bridge.list_services()
+        assert len(services) > 0, "No services returned; cannot validate types"
+        for svc in services:
+            assert isinstance(svc, dict)
+            name_val: object = svc.get("name", None)
+            display_val: object = svc.get("display_name", None)
+            assert isinstance(name_val, str), f"service 'name' is {type(name_val).__name__}, expected str"
+            assert isinstance(display_val, str), f"service 'display_name' is {type(display_val).__name__}, expected str"
+
+    async def test_service_entries_contain_required_keys(self, process_bridge: ProcessBridge) -> None:
+        """Verify every service entry has name, display_name, state, pid, and service_type keys.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        services = await process_bridge.list_services()
+        assert len(services) > 0
+        for svc in services:
+            assert isinstance(svc, dict)
+            for key in ("name", "display_name", "state", "pid", "service_type"):
+                assert key in svc, f"Missing key '{key}' in service entry"
+
+    async def test_service_name_non_empty_for_at_least_one(self, process_bridge: ProcessBridge) -> None:
+        """Verify at least one service has a non-empty unicode name.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        services = await process_bridge.list_services()
+        non_empty = [s for s in services if isinstance(s.get("name"), str) and s.get("name")]
+        assert len(non_empty) > 0, "All service names are empty"
+
+
+class TestF0026NoFakeSuccess:
+    """Verify F-0026: pipe_close and device_close return False/raise on internal failure."""
+
+    async def test_pipe_close_raises_without_kernel32(self, process_bridge: ProcessBridge) -> None:
+        """Verify pipe_close raises ToolError when kernel32 is None.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        original_k32: object = getattr(process_bridge, _ATTR_KERNEL32)
+        setattr(process_bridge, _ATTR_KERNEL32, None)
+        try:
+            with pytest.raises(ToolError, match="kernel32 not available"):
+                await process_bridge.pipe_close(0xDEAD)
+        finally:
+            setattr(process_bridge, _ATTR_KERNEL32, original_k32)
+
+    async def test_device_close_raises_without_kernel32(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_close raises ToolError when kernel32 is None.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        original_k32: object = getattr(process_bridge, _ATTR_KERNEL32)
+        setattr(process_bridge, _ATTR_KERNEL32, None)
+        try:
+            with pytest.raises(ToolError, match="kernel32 not available"):
+                await process_bridge.device_close(0xDEAD)
+        finally:
+            setattr(process_bridge, _ATTR_KERNEL32, original_k32)
