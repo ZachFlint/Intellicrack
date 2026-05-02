@@ -122,6 +122,7 @@ from intellicrack.bridges._win32_types import (
     get_dbghelp,
     get_ntdll,
     get_user32,
+    decode_protection,
     mem_type_to_string,
     protection_to_string,
     state_to_string,
@@ -1704,8 +1705,20 @@ class ProcessBridge(ToolBridgeBase):
         if not result:
             raise ToolError(_ERR_PROTECT_FAILED)
 
+        old_flags = decode_protection(old_prot.value)
         old_prot_str = protection_to_string(old_prot.value)
-        _logger.info("memory_protection_changed", address=hex(address), old_protection=old_prot_str, new_protection=protection)
+        _logger.info(
+            "memory_protection_changed",
+            address=hex(address),
+            old_protection=old_prot_str,
+            old_read=old_flags["read"],
+            old_write=old_flags["write"],
+            old_execute=old_flags["execute"],
+            old_copy_on_write=old_flags["copy_on_write"],
+            old_guard=old_flags["guard"],
+            old_raw=hex(old_flags["raw"]),
+            new_protection=protection,
+        )
         return old_prot_str
 
     async def get_memory_map(self, *, resolve_names: bool = False) -> list[MemoryRegion]:

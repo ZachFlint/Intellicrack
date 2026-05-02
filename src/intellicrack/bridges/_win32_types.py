@@ -13,8 +13,12 @@ from __future__ import annotations
 import ctypes
 import sys
 from ctypes import wintypes
-from typing import ClassVar, Final
+from typing import ClassVar, Final, TypedDict
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 _IS_WINDOWS: Final[bool] = sys.platform == "win32"
 
@@ -946,27 +950,98 @@ def get_psapi() -> ctypes.WinDLL:
     return _psapi_cache
 
 
+class MemoryProtectionFlags(TypedDict):
+    """Decoded Win32 page protection flags.
+
+    Captures the structured access bits behind a ``PAGE_*`` constant so
+    callers can reason about each capability without parsing a string.
+
+    Attributes:
+        read: True when the region is readable.
+        write: True when the region is writable.
+        execute: True when the region is executable.
+        copy_on_write: True when ``PAGE_WRITECOPY`` semantics apply.
+        guard: True when ``PAGE_GUARD`` is set.
+        raw: The original ``PAGE_*`` value for round-tripping.
+    """
+
+    read: bool
+    write: bool
+    execute: bool
+    copy_on_write: bool
+    guard: bool
+    raw: int
+
+
+_PROT_FLAG_TABLE: Final[dict[int, tuple[bool, bool, bool, bool]]] = {
+    PAGE_NOACCESS: (False, False, False, False),
+    PAGE_READONLY: (True, False, False, False),
+    PAGE_READWRITE: (True, True, False, False),
+    PAGE_WRITECOPY: (True, True, False, True),
+    PAGE_EXECUTE: (False, False, True, False),
+    PAGE_EXECUTE_READ: (True, False, True, False),
+    PAGE_EXECUTE_READWRITE: (True, True, True, False),
+    PAGE_EXECUTE_WRITECOPY: (True, True, True, True),
+}
+
+
+def decode_protection(prot: int) -> MemoryProtectionFlags:
+    """Decode a Win32 memory protection constant into structured flags.
+
+    Splits the raw ``PAGE_*`` value into its individual access bits so
+    bridges can preserve the semantics of WriteCopy, Guard, and the
+    underlying R/W/X capabilities without dropping information through
+    a string round-trip.
+
+    Args:
+        prot: Win32 ``PAGE_*`` protection value (may include modifier
+            bits like ``PAGE_GUARD``).
+
+    Returns:
+        MemoryProtectionFlags: Decoded flags including the original
+        raw value. Unknown base protections leave every access flag
+        cleared and emit a debug log entry.
+    """
+    base_prot = prot & 0xFF
+    if base_prot in _PROT_FLAG_TABLE:
+        read, write, execute, cow = _PROT_FLAG_TABLE[base_prot]
+    else:
+        read = write = execute = cow = False
+        _logger.debug("unknown_memory_protection", prot=hex(prot), base=hex(base_prot))
+    return MemoryProtectionFlags(
+        read=read,
+        write=write,
+        execute=execute,
+        copy_on_write=cow,
+        guard=bool(prot & PAGE_GUARD),
+        raw=prot,
+    )
+
+
 def protection_to_string(prot: int) -> str:
     """Convert a Win32 memory protection constant to a human-readable string.
 
+    Thin formatter built on top of :func:`decode_protection`; preserves
+    the legacy ``rwx``/``rw-c``/``+G`` rendering used by ``MemoryRegion``
+    and the audit log fields. Use :func:`decode_protection` directly
+    when you need to branch on individual access bits.
+
     Args:
-        prot: Win32 PAGE_* protection value.
+        prot: Win32 ``PAGE_*`` protection value.
 
     Returns:
-        str: Protection string like 'rwx', 'r--', etc.
+        str: Protection string like ``rwx``, ``r--``, ``rw-c``, ``+G``.
     """
-    prot_map: dict[int, str] = {
-        PAGE_NOACCESS: "---",
-        PAGE_READONLY: "r--",
-        PAGE_READWRITE: "rw-",
-        PAGE_WRITECOPY: "rw-c",
-        PAGE_EXECUTE: "--x",
-        PAGE_EXECUTE_READ: "r-x",
-        PAGE_EXECUTE_READWRITE: "rwx",
-        PAGE_EXECUTE_WRITECOPY: "rwxc",
-    }
     base_prot = prot & 0xFF
-    result = prot_map.get(base_prot, "???")
+    if base_prot not in _PROT_FLAG_TABLE:
+        result = "???"
+    else:
+        flags = decode_protection(prot)
+        read = "r" if flags["read"] else "-"
+        write = "w" if flags["write"] else "-"
+        execute = "x" if flags["execute"] else "-"
+        cow = "c" if flags["copy_on_write"] else ""
+        result = f"{read}{write}{execute}{cow}"
     if prot & PAGE_GUARD:
         result += "+G"
     return result
@@ -975,32 +1050,48 @@ def protection_to_string(prot: int) -> str:
 def state_to_string(state: int) -> str:
     """Convert a Win32 memory state constant to a human-readable string.
 
+    Recognised values render the canonical lowercase label. Unknown
+    values render ``"unknown(0x...)"`` and emit a debug log so the
+    offending state cannot vanish silently into a generic bucket.
+
     Args:
-        state: Win32 MEM_* state value.
+        state: Win32 ``MEM_*`` state value.
 
     Returns:
-        str: State string like 'committed', 'reserved', 'free'.
+        str: State label such as ``committed``, ``reserved``, ``free``,
+        or ``unknown(0x...)`` for unrecognised values.
     """
     state_map: dict[int, str] = {
         MEM_COMMIT: "committed",
         MEM_RESERVE: "reserved",
         MEM_FREE: "free",
     }
-    return state_map.get(state, "unknown")
+    if state in state_map:
+        return state_map[state]
+    _logger.debug("unknown_memory_state", state=hex(state))
+    return f"unknown(0x{state:x})"
 
 
 def mem_type_to_string(mem_type: int) -> str:
     """Convert a Win32 memory type constant to a human-readable string.
 
+    Recognised values render the canonical lowercase label. Unknown
+    values render ``"unknown(0x...)"`` and emit a debug log so the
+    offending type cannot vanish silently into a generic bucket.
+
     Args:
-        mem_type: Win32 MEM_* type value.
+        mem_type: Win32 ``MEM_*`` type value.
 
     Returns:
-        str: Type string like 'private', 'mapped', 'image'.
+        str: Type label such as ``private``, ``mapped``, ``image``, or
+        ``unknown(0x...)`` for unrecognised values.
     """
     type_map: dict[int, str] = {
         MEM_PRIVATE: "private",
         MEM_MAPPED: "mapped",
         MEM_IMAGE: "image",
     }
-    return type_map.get(mem_type, "unknown")
+    if mem_type in type_map:
+        return type_map[mem_type]
+    _logger.debug("unknown_memory_type", mem_type=hex(mem_type))
+    return f"unknown(0x{mem_type:x})"

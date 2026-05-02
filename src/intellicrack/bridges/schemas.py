@@ -65,8 +65,6 @@ PYTHON_TO_JSON_TYPES: dict[str, str] = {
     "bool": "boolean",
     "list": "array",
     "dict": "object",
-    "none": "null",
-    "nonetype": "null",
 }
 
 GOOGLE_TYPE_MAP: dict[str, str] = {
@@ -198,37 +196,35 @@ def is_recognized_type(param_type: str) -> bool:
     return param_type_lower in PYTHON_TO_JSON_TYPES or param_type_lower in VALID_JSON_SCHEMA_TYPES
 
 
-def normalize_type(param_type: str) -> tuple[str, bool]:
-    """Normalize a parameter type to a JSON Schema type.
+def normalize_type(param_type: str) -> str:
+    """Normalize a parameter type string to a JSON Schema type.
 
-    Recognised inputs (Python aliases such as ``int``/``str``/``list`` or
-    JSON Schema names such as ``integer``/``string``/``array``) are
-    returned as their JSON Schema equivalents with ``was_fallback=False``.
-    Unrecognised inputs are returned as ``"string"`` with
-    ``was_fallback=True`` and a ``schema_type_fallback`` warning is
-    emitted so callers can flag the malformed type and surface a
-    validation diagnostic instead of silently coercing.
+    Recognised inputs (Python aliases such as ``int``/``str``/``list``
+    or JSON Schema names such as ``integer``/``string``/``array``) are
+    returned as their JSON Schema equivalents. Unrecognised inputs fall
+    back to ``"string"`` and emit a ``schema_type_fallback`` warning so
+    the offending type cannot be silently downgraded without leaving an
+    audit trail. Callers that need to decide between
+    ``raise``/``warn``/``coerce`` should pre-check with
+    :func:`is_recognized_type`.
 
     Args:
         param_type: The type string to normalize.
 
     Returns:
-        tuple[str, bool]: ``(normalized_type, was_fallback)`` where
-        ``normalized_type`` is a member of
-        ``VALID_JSON_SCHEMA_TYPES`` and ``was_fallback`` is True when
-        ``param_type`` was not recognised.
+        str: A JSON Schema type drawn from ``VALID_JSON_SCHEMA_TYPES``.
     """
     param_type_lower = param_type.lower().strip()
     if param_type_lower in PYTHON_TO_JSON_TYPES:
-        return PYTHON_TO_JSON_TYPES[param_type_lower], False
+        return PYTHON_TO_JSON_TYPES[param_type_lower]
     if param_type_lower in VALID_JSON_SCHEMA_TYPES:
-        return param_type_lower, False
+        return param_type_lower
     _logger.warning(
         "schema_type_fallback",
         param_type=param_type,
         normalized="string",
     )
-    return "string", True
+    return "string"
 
 
 def build_schema_property(
@@ -245,7 +241,7 @@ def build_schema_property(
     Returns:
         JSONSchemaProperty | GoogleSchemaProperty: JSONSchemaProperty or GoogleSchemaProperty dict.
     """
-    param_type, _was_fallback = normalize_type(param.type)
+    param_type = normalize_type(param.type)
     if uppercase_types:
         param_type = GOOGLE_TYPE_MAP.get(param_type, param_type.upper())
 
@@ -305,7 +301,7 @@ def _build_google_schema_parameters(
     required: list[str] = []
 
     for param in params:
-        param_type, _was_fallback = normalize_type(param.type)
+        param_type = normalize_type(param.type)
         google_type = GOOGLE_TYPE_MAP.get(param_type, param_type.upper())
 
         prop: GoogleSchemaProperty = {
@@ -379,7 +375,7 @@ def validate_tool_parameter(
         )
 
     if not is_recognized_type(param.type):
-        normalized_type, _was_fallback = normalize_type(param.type)
+        normalized_type = normalize_type(param.type)
         errors.append(
             ValidationError(
                 f"Invalid type '{param.type}' (normalized to '{normalized_type}')",

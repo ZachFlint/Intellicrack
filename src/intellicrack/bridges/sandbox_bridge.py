@@ -689,7 +689,7 @@ class SandboxBridge(ToolBridgeBase):
             await self._manager.destroy_all()
             self._manager = None
 
-        self.state = BridgeState()
+        await super().shutdown()
         _logger.info("sandbox_bridge_shutdown", bridge="sandbox")
 
     async def is_available(self) -> bool:
