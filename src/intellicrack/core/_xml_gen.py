@@ -4,23 +4,22 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """XML generation utilities wrapper.
 
-Centralizes XML element construction to a single auditable location. Only generation functions are exported -- no parsing of untrusted
-input. Uses runtime string construction to avoid B405 bandit finding. Type information is provided by the companion .pyi type definition
-file.
+Centralizes XML element construction to a single auditable location. Only generation primitives are re-exported -- this module never parses
+untrusted XML input. Parsing of untrusted XML must use ``defusedxml`` instead. The stdlib element factories (``Element``, ``SubElement``)
+and serialization helpers (``tostring``, ``indent``) are safe for write-side construction because they emit bytes from in-memory trees
+built by trusted callers.
 """
 
 from __future__ import annotations
 
-import importlib
+from xml.etree import ElementTree as ET
 
 
-_et = importlib.import_module("xml.etree" + "." + "ElementTree")
-
-Element = _et.Element
-SubElement = _et.SubElement
-ElementTree = _et.ElementTree
-indent = _et.indent
-tostring = _et.tostring
+Element = ET.Element
+SubElement = ET.SubElement
+ElementTree = ET.ElementTree
+indent = ET.indent
+tostring = ET.tostring
 
 __all__: list[str] = [
     "Element",
