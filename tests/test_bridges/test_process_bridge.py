@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import ctypes
 import os
+import re
 import struct
 import sys
 import threading
 import time
+from ctypes import wintypes
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import pytest
@@ -40,6 +42,10 @@ pytestmark = [
     pytest.mark.asyncio,
 ]
 
+_MEM_MAPPED = 0x40000
+_MEM_IMAGE = 0x1000000
+_PAGE_NOACCESS = 0x01
+
 _T = TypeVar("_T")
 
 _ATTR_KERNEL32 = "_kernel32"
@@ -50,6 +56,70 @@ _ATTR_PROCESS_HANDLE = "_process_handle"
 _ATTR_ATTACHED_PID = "_attached_pid"
 _ATTR_PROT_FROM_STRING = "_prot_from_string"
 _ATTR_PARSE_REGISTRY_PATH = "_parse_registry_path"
+_ATTR_SECTION_HANDLES = "_section_handles"
+_ATTR_SECTION_VIEWS = "_section_views"
+
+
+class _SectionHandlesShapeError(TypeError):
+    """Raised when ``_section_handles`` is not a ``dict[int, str]``."""
+
+
+class _SectionViewsShapeError(TypeError):
+    """Raised when ``_section_views`` is not a ``dict[int, int]``."""
+
+
+def _get_section_handles(bridge: ProcessBridge) -> dict[int, str]:
+    """Return ``_section_handles`` as a typed ``dict[int, str]``.
+
+    Bypasses ``reportPrivateUsage`` so tests can verify the bridge's
+    handle-tracking lifecycle without weakening the public API.
+
+    Args:
+        bridge: ProcessBridge instance to read from.
+
+    Returns:
+        dict[int, str]: The bridge's section-handle tracking dict
+            (mutable; the test owns no copy).
+
+    Raises:
+        _SectionHandlesShapeError: If the underlying attribute is missing
+            or not a dict with ``int`` keys and ``str`` values.
+    """
+    raw: object = getattr(bridge, _ATTR_SECTION_HANDLES)
+    if not isinstance(raw, dict):
+        raise _SectionHandlesShapeError
+    typed: dict[object, object] = cast("dict[object, object]", raw)
+    for k, v in typed.items():
+        if not isinstance(k, int) or not isinstance(v, str):
+            raise _SectionHandlesShapeError
+    return cast("dict[int, str]", raw)
+
+
+def _get_section_views(bridge: ProcessBridge) -> dict[int, int]:
+    """Return ``_section_views`` as a typed ``dict[int, int]``.
+
+    Bypasses ``reportPrivateUsage`` so tests can verify the bridge's
+    view-tracking lifecycle without weakening the public API.
+
+    Args:
+        bridge: ProcessBridge instance to read from.
+
+    Returns:
+        dict[int, int]: The bridge's mapped-view tracking dict
+            (base address -> section handle).
+
+    Raises:
+        _SectionViewsShapeError: If the underlying attribute is missing
+            or not a dict with ``int`` keys and ``int`` values.
+    """
+    raw: object = getattr(bridge, _ATTR_SECTION_VIEWS)
+    if not isinstance(raw, dict):
+        raise _SectionViewsShapeError
+    typed: dict[object, object] = cast("dict[object, object]", raw)
+    for k, v in typed.items():
+        if not isinstance(k, int) or not isinstance(v, int):
+            raise _SectionViewsShapeError
+    return cast("dict[int, int]", raw)
 
 
 def _get_attr_optional(bridge: ProcessBridge, name: str, expected: type[_T]) -> _T | None:
@@ -295,7 +365,7 @@ class TestInitialization:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert process_bridge._kernel32 is not None
+        assert _get_attr_optional(process_bridge, _ATTR_KERNEL32, ctypes.WinDLL) is not None
 
     async def test_initialize_loads_ntdll(self, process_bridge: ProcessBridge) -> None:
         """Verify ntdll is loaded after initialization.
@@ -303,7 +373,7 @@ class TestInitialization:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert process_bridge._ntdll is not None
+        assert _get_attr_optional(process_bridge, _ATTR_NTDLL, ctypes.WinDLL) is not None
 
     async def test_initialize_loads_advapi32(self, process_bridge: ProcessBridge) -> None:
         """Verify advapi32 is loaded after initialization.
@@ -311,7 +381,7 @@ class TestInitialization:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert process_bridge._advapi32 is not None
+        assert _get_attr_optional(process_bridge, _ATTR_ADVAPI32, ctypes.WinDLL) is not None
 
     async def test_initialize_sets_connected(self, process_bridge: ProcessBridge) -> None:
         """Verify state shows connected and tool_running after init.
@@ -328,7 +398,7 @@ class TestInitialization:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert isinstance(process_bridge._debug_privilege_enabled, bool)
+        assert isinstance(_get_debug_privilege_enabled(process_bridge), bool)
 
     async def test_name_is_process(self, process_bridge: ProcessBridge) -> None:
         """Verify bridge name is ToolName.PROCESS.
@@ -515,7 +585,8 @@ class TestMemoryOperations:
         """
         addr, _buf, data = known_buffer
         result = await attached_bridge.read_memory(addr, len(data))
-        assert result[: len(data)] == data
+        assert isinstance(result, str)
+        assert bytes.fromhex(result)[: len(data)] == data
 
     async def test_read_memory_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
         """Verify reading without attachment raises ToolError.
@@ -539,7 +610,7 @@ class TestMemoryOperations:
             written = await attached_bridge.write_memory(addr, test_data)
             assert written == len(test_data)
             readback = await attached_bridge.read_memory(addr, len(test_data))
-            assert readback == test_data
+            assert bytes.fromhex(readback) == test_data
         finally:
             await attached_bridge.free(addr)
 
@@ -1075,6 +1146,7 @@ class TestSectionMapping:
             assert handle > 0
         finally:
             ctypes.windll.kernel32.CloseHandle(handle)
+            _get_section_handles(process_bridge).pop(handle, None)
 
     async def test_map_section_returns_address(self, process_bridge: ProcessBridge) -> None:
         """Verify mapping a section returns a positive address.
@@ -1082,17 +1154,17 @@ class TestSectionMapping:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        k32 = ctypes.windll.kernel32
-        k32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
         handle = await process_bridge.create_section(4096)
         try:
-            addr = await process_bridge.map_section(handle, 4096)
-            try:
-                assert addr > 0
-            finally:
-                k32.UnmapViewOfFile(addr)
+            addr: int = await process_bridge.map_section(handle, 4096)
+            assert addr > 0
+            ok: bool = await process_bridge.unmap_section(addr)
+            assert ok is True
         finally:
-            k32.CloseHandle(handle)
+            section_handles = _get_section_handles(process_bridge)
+            if handle in section_handles:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                section_handles.pop(handle, None)
 
 
 class TestNtQuerySystemInformation:
@@ -1416,3 +1488,300 @@ class TestF0026NoFakeSuccess:
                 await process_bridge.device_close(0xDEAD)
         finally:
             setattr(process_bridge, _ATTR_KERNEL32, original_k32)
+class TestF0006MemConstants:
+    """Verify get_memory_map filters MEM_MAPPED/MEM_IMAGE via named constants."""
+
+    def test_mem_mapped_constant_value(self) -> None:
+        """Sanity check ``_MEM_MAPPED`` matches the documented Win32 value."""
+        assert _MEM_MAPPED == 0x40000
+
+    def test_mem_image_constant_value(self) -> None:
+        """Sanity check ``_MEM_IMAGE`` matches the documented Win32 value."""
+        assert _MEM_IMAGE == 0x1000000
+
+    async def test_get_memory_map_resolves_image_or_mapped_names(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify resolve_names populates module_name only for MEM_IMAGE/MEM_MAPPED.
+
+        The current Python interpreter always has its own image mapped,
+        so at least one MEM_IMAGE region with a non-empty module_name
+        must appear when resolve_names=True. Any region carrying a
+        module_name must therefore have type "image" or "mapped"
+        (the human-readable names produced by ``mem_type_to_string`` for
+        ``MEM_IMAGE`` and ``MEM_MAPPED`` respectively).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        regions = await attached_bridge.get_memory_map(resolve_names=True)
+        named_regions = [r for r in regions if r.module_name]
+        assert named_regions, "expected at least one MEM_IMAGE/MEM_MAPPED region with module name"
+        for region in named_regions:
+            assert region.type in {"image", "mapped"}, (
+                f"region with module_name must be image or mapped, got type={region.type}"
+            )
+
+    async def test_get_memory_map_no_resolve_skips_names(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify resolve_names=False never populates module_name.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        regions = await attached_bridge.get_memory_map(resolve_names=False)
+        for region in regions:
+            assert region.module_name is None
+
+
+class TestF0007PatternScanContinues:
+    """Verify pattern scan continues past per-chunk read failures."""
+
+    async def test_pattern_scan_finds_match_after_unreadable_chunk(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Pattern matches in a region survive an unreadable preceding chunk.
+
+        ``_SEARCH_CHUNK_SIZE`` is 1 MiB (``0x100000``). Allocates a
+        2 MiB committed region, writes a unique 16-byte pattern at the
+        start of the *second* chunk, then flips the first 1 MiB to
+        ``PAGE_NOACCESS`` (via a direct ``VirtualProtectEx`` call so we
+        do not need to extend the bridge's ``_prot_from_string`` map for
+        a test-only protection mode) so the kernel's
+        ``ReadProcessMemory`` will return an error for that chunk.
+        Pre-fix, the region scanner broke out of the region on the
+        first ``ToolError`` and the pattern in the readable second
+        chunk was never reached. Post-fix, the scanner logs the chunk
+        failure, observes the surrounding region is still committed
+        via ``VirtualQueryEx``, and continues to the next chunk so the
+        match is found.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        unique_pattern = b"\xde\xad\xbe\xef\xca\xfe\xba\xbe\x13\x37\x42\x42\x99\x88\x77\x66"
+        chunk_size = 0x100000
+        region_size = chunk_size * 2
+        addr = await attached_bridge.allocate(region_size, "rw")
+        try:
+            second_chunk_offset = chunk_size
+            await attached_bridge.write_memory(addr + second_chunk_offset, unique_pattern)
+            handle = _get_attr_optional(attached_bridge, _ATTR_PROCESS_HANDLE, int)
+            assert handle is not None
+            k32 = ctypes.windll.kernel32
+            old_prot = wintypes.DWORD()
+            ok = k32.VirtualProtectEx(
+                wintypes.HANDLE(handle),
+                ctypes.c_void_p(addr),
+                ctypes.c_size_t(chunk_size),
+                wintypes.DWORD(_PAGE_NOACCESS),
+                ctypes.byref(old_prot),
+            )
+            assert ok, "VirtualProtectEx PAGE_NOACCESS failed"
+
+            pattern_str = " ".join(f"{b:02X}" for b in unique_pattern)
+            matches = await attached_bridge.search_pattern(
+                pattern_str,
+                start_address=addr,
+                end_address=addr + region_size,
+            )
+            assert addr + second_chunk_offset in matches, (
+                f"pattern not found in second chunk at "
+                f"{hex(addr + second_chunk_offset)}; matches={[hex(m) for m in matches[:8]]}"
+            )
+
+            restore_prot = wintypes.DWORD()
+            k32.VirtualProtectEx(
+                wintypes.HANDLE(handle),
+                ctypes.c_void_p(addr),
+                ctypes.c_size_t(chunk_size),
+                old_prot,
+                ctypes.byref(restore_prot),
+            )
+        finally:
+            await attached_bridge.free(addr)
+
+    async def test_pattern_scan_aborts_when_region_freed(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify scan terminates cleanly when a region is no longer committed.
+
+        Allocates a region with a unique pattern, writes the pattern,
+        frees the region, then runs a pattern search bounded to that
+        address range. The scan must not raise. The freed address must
+        not appear in the matches because the region is no longer
+        committed (``get_memory_map`` filters MEM_COMMIT only).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        unique_pattern = b"\x11\x22\x33\x44\x55\x66\x77\x88\xaa\xbb\xcc\xdd\xee\xff\x00\x99"
+        addr = await attached_bridge.allocate(0x4000, "rw")
+        await attached_bridge.write_memory(addr, unique_pattern)
+        await attached_bridge.free(addr)
+        pattern_str = " ".join(f"{b:02X}" for b in unique_pattern)
+        matches = await attached_bridge.search_pattern(
+            pattern_str,
+            start_address=addr,
+            end_address=addr + 0x4000,
+        )
+        assert isinstance(matches, list)
+        assert addr not in matches
+
+
+class TestF0037ReadMemoryHex:
+    """Verify read_memory returns a JSON-serialisable hex string."""
+
+    async def test_read_memory_returns_hex_string(
+        self,
+        attached_bridge: ProcessBridge,
+        known_buffer: tuple[int, ctypes.Array[ctypes.c_char], bytes],
+    ) -> None:
+        """Verify return value type, length, and charset.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+            known_buffer: Triple of (address, backing buffer, expected
+                bytes) for a buffer with known content.
+        """
+        addr, _buf, _data = known_buffer
+        result = await attached_bridge.read_memory(addr, 16)
+        assert isinstance(result, str)
+        assert len(result) == 32
+        assert re.fullmatch(r"[0-9a-f]+", result) is not None
+
+    async def test_read_memory_hex_round_trips_to_bytes(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify the hex string round-trips through bytes.fromhex.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        addr = await attached_bridge.allocate(64, "rw")
+        try:
+            payload = b"hex_round_trip_data!"
+            await attached_bridge.write_memory(addr, payload)
+            result = await attached_bridge.read_memory(addr, len(payload))
+            assert bytes.fromhex(result) == payload
+        finally:
+            await attached_bridge.free(addr)
+
+
+class TestF0038SectionCollision:
+    """Verify create_section detects duplicate names."""
+
+    async def test_named_section_collision_raises(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Second create_section with same name raises with collision code.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has
+                already been initialized.
+        """
+        section_name = f"IntellicrackProcessBridgeTest_F0038_{os.getpid()}"
+        first = await process_bridge.create_section(4096, section_name=section_name)
+        try:
+            assert first > 0
+            with pytest.raises(ToolError) as excinfo:
+                await process_bridge.create_section(4096, section_name=section_name)
+            err = excinfo.value
+            details = err.details or {}
+            assert details.get("code") == "SECTION_NAME_COLLISION"
+            assert err.error_code == 183
+        finally:
+            ctypes.windll.kernel32.CloseHandle(first)
+            _get_section_handles(process_bridge).pop(first, None)
+
+    async def test_anonymous_sections_do_not_collide(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Anonymous sections never raise the collision error.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has
+                already been initialized.
+        """
+        first = await process_bridge.create_section(4096)
+        second = await process_bridge.create_section(4096)
+        try:
+            assert first > 0
+            assert second > 0
+            assert first != second
+        finally:
+            ctypes.windll.kernel32.CloseHandle(first)
+            ctypes.windll.kernel32.CloseHandle(second)
+            section_handles = _get_section_handles(process_bridge)
+            section_handles.pop(first, None)
+            section_handles.pop(second, None)
+
+
+class TestF0039UnmapSection:
+    """Verify unmap_section unmaps the view and tracks state."""
+
+    async def test_unmap_section_clears_tracking_and_unmaps(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """unmap_section removes the base from the views dict and unmaps it.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has
+                already been initialized.
+        """
+        handle = await process_bridge.create_section(4096)
+        addr: int = await process_bridge.map_section(handle, 4096)
+        assert addr in _get_section_views(process_bridge)
+
+        ok: bool = await process_bridge.unmap_section(addr)
+        assert ok is True
+
+        assert addr not in _get_section_views(process_bridge)
+        assert handle not in _get_section_handles(process_bridge)
+
+    async def test_unmap_section_then_read_attached_fails(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """After unmap, a read at the base address raises ToolError.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the
+                current Python process.
+        """
+        handle = await attached_bridge.create_section(4096)
+        addr = await attached_bridge.map_section(handle, 4096)
+        await attached_bridge.unmap_section(addr)
+
+        with pytest.raises(ToolError):
+            await attached_bridge.read_memory(addr, 16)
+
+    async def test_unmap_section_unknown_base_raises(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Unmapping an untracked address raises with NOT_MAPPED code.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has
+                already been initialized.
+        """
+        with pytest.raises(ToolError) as excinfo:
+            await process_bridge.unmap_section(0xDEADBEEF)
+        details = excinfo.value.details or {}
+        assert details.get("code") == "SECTION_NOT_MAPPED"
