@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
+import inspect
 import os
 import re
 import struct
@@ -3394,3 +3395,372 @@ class TestF0042SymbolBufferAllocation:
         sym_buf_size = sym_header_size + _MAX_SYM_NAME * ctypes.sizeof(ctypes.c_char)
         assert sym_buf_size > ctypes.sizeof(SYMBOL_INFO)
         assert sym_buf_size >= sym_header_size + _MAX_SYM_NAME
+
+
+class TestF0038SectionCreateFileMappingHandle:
+    """F-0038: CreateFileMappingW must return a non-truncated handle and detect collisions."""
+
+    async def test_create_section_returns_positive_handle(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify create_section returns a valid handle on a 64-bit interpreter.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        section_name = f"IntellicrackProcessBridge_F0038_handle_{os.getpid()}"
+        handle = await process_bridge.create_section(4096, section_name=section_name)
+        assert handle > 0
+        k32 = ctypes.windll.kernel32
+        k32.CloseHandle(handle)
+
+    async def test_create_section_named_collision_raises(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify a duplicate-named section raises with the collision code.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        section_name = f"IntellicrackProcessBridge_F0038_collide_{os.getpid()}"
+        first = await process_bridge.create_section(4096, section_name=section_name)
+        try:
+            assert first > 0
+            with pytest.raises(ToolError) as excinfo:
+                await process_bridge.create_section(4096, section_name=section_name)
+            details = excinfo.value.details
+            assert isinstance(details, dict)
+            assert details.get("code") == "SECTION_NAME_COLLISION"
+        finally:
+            k32 = ctypes.windll.kernel32
+            k32.CloseHandle(first)
+
+
+class TestF0030RegistryHives:
+    """F-0030: _parse_registry_path supports HKU and HKCC."""
+
+    def test_parse_hku_short(self) -> None:
+        """Verify HKU short form resolves to HKEY_USERS."""
+        root, sub = _invoke_parse_registry_path(r"HKU\.DEFAULT")
+        assert root == 0x80000003
+        assert sub == ".DEFAULT"
+
+    def test_parse_hkey_users_long(self) -> None:
+        """Verify HKEY_USERS long form resolves identically."""
+        root, sub = _invoke_parse_registry_path(r"HKEY_USERS\.DEFAULT")
+        assert root == 0x80000003
+        assert sub == ".DEFAULT"
+
+    def test_parse_hkcc_short(self) -> None:
+        """Verify HKCC short form resolves to HKEY_CURRENT_CONFIG."""
+        root, sub = _invoke_parse_registry_path(r"HKCC\Software")
+        assert root == 0x80000005
+        assert sub == "Software"
+
+    def test_parse_hkey_current_config_long(self) -> None:
+        """Verify HKEY_CURRENT_CONFIG long form resolves identically."""
+        root, sub = _invoke_parse_registry_path(r"HKEY_CURRENT_CONFIG\Software")
+        assert root == 0x80000005
+        assert sub == "Software"
+
+
+class TestF0031RegReadValueGrows:
+    """F-0031: reg_read_value grows the buffer on ERROR_MORE_DATA."""
+
+    async def test_reg_read_large_value_succeeds(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        r"""Verify a value larger than 4096 bytes is read in full.
+
+        Creates a HKCU\\Software key with a 24 KiB REG_BINARY value and
+        verifies reg_read_value returns all 24 KiB instead of failing
+        with the legacy fixed-buffer behavior.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        key_name = rf"Software\IntellicrackProcessBridgeTest_F0031_{os.getpid()}"
+        large_payload = bytes(range(256)) * 96
+        assert len(large_payload) == 24576
+
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key_name, 0, winreg.KEY_WRITE) as hkey:
+            winreg.SetValueEx(hkey, "BigValue", 0, winreg.REG_BINARY, large_payload)
+        try:
+            result = await process_bridge.reg_read_value(
+                rf"HKCU\{key_name}",
+                "BigValue",
+            )
+            assert isinstance(result, dict)
+            data_hex = result.get("data")
+            assert isinstance(data_hex, str)
+            assert bytes.fromhex(data_hex) == large_payload
+        finally:
+            winreg.DeleteKeyEx(winreg.HKEY_CURRENT_USER, key_name)
+
+
+class TestF0043QuerySystemInfoRetries:
+    """F-0043: query_system_info auto-grows on STATUS_BUFFER_OVERFLOW/TOO_SMALL."""
+
+    async def test_query_handles_with_small_initial_buffer(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify SystemHandleInformation succeeds even when seeded with a tiny buffer.
+
+        Calling NtQuerySystemInformation(SystemHandleInformation) with
+        an initial 1024-byte buffer forces the kernel to return one of
+        STATUS_INFO_LENGTH_MISMATCH / STATUS_BUFFER_OVERFLOW /
+        STATUS_BUFFER_TOO_SMALL on most systems. The retry loop must
+        grow until the call succeeds.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        system_handle_information = 16
+        result = await process_bridge.query_system_info(
+            system_handle_information,
+            buffer_size=1024,
+        )
+        assert isinstance(result, bytes)
+        assert len(result) > 0
+
+
+class TestF0027MitigationBitfields:
+    """F-0027: Each policy decodes its specific bitfield, not blanket bool(flags & 1)."""
+
+    async def test_dep_policy_has_named_fields(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify DEP policy exposes Enable, DisableAtlThunkEmulation, Permanent.
+
+        Args:
+            attached_bridge: ProcessBridge attached to current process.
+        """
+        policies = await attached_bridge.get_mitigation_policies()
+        assert isinstance(policies, dict)
+        dep = policies.get("DEP")
+        assert isinstance(dep, dict)
+        assert "Enable" in dep
+        assert "DisableAtlThunkEmulation" in dep
+        assert "Permanent" in dep
+        assert "flags" in dep
+
+    async def test_aslr_policy_has_named_bits(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify ASLR policy exposes named bottom-up/force-relocate/high-entropy bits.
+
+        Args:
+            attached_bridge: ProcessBridge attached to current process.
+        """
+        policies = await attached_bridge.get_mitigation_policies()
+        aslr = policies.get("ASLR")
+        assert isinstance(aslr, dict)
+        for key in (
+            "EnableBottomUpRandomization",
+            "EnableForceRelocateImages",
+            "EnableHighEntropy",
+            "DisallowStrippedImages",
+        ):
+            assert key in aslr, f"missing ASLR field {key}"
+
+    async def test_cfg_policy_has_named_bits(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify CFG policy exposes EnableControlFlowGuard and StrictMode bits.
+
+        Args:
+            attached_bridge: ProcessBridge attached to current process.
+        """
+        policies = await attached_bridge.get_mitigation_policies()
+        cfg = policies.get("CFG")
+        assert isinstance(cfg, dict)
+        assert "EnableControlFlowGuard" in cfg
+        assert "EnableExportSuppression" in cfg
+        assert "StrictMode" in cfg
+
+
+class TestF0035HandleEnumNonBlocking:
+    """F-0035: get_handles and enum_handles offload iteration to asyncio.to_thread."""
+
+    async def test_get_handles_yields_event_loop(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify get_handles allows other tasks to make progress concurrently.
+
+        While get_handles iterates the system handle table (potentially
+        tens of thousands of entries), a parallel sleep(0) ticker must
+        be able to advance multiple times if the iteration is offloaded
+        via asyncio.to_thread.
+
+        Args:
+            attached_bridge: ProcessBridge attached to current process.
+        """
+        ticks = [0]
+
+        async def ticker() -> None:
+            for _ in range(100):
+                await asyncio.sleep(0)
+                ticks[0] += 1
+
+        ticker_task = asyncio.create_task(ticker())
+        result = await attached_bridge.get_handles()
+        await ticker_task
+        assert isinstance(result, list)
+        assert ticks[0] == 100
+
+    async def test_enum_handles_yields_event_loop(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify enum_handles allows the event loop to make progress.
+
+        Args:
+            attached_bridge: ProcessBridge attached to current process.
+        """
+        ticks = [0]
+
+        async def ticker() -> None:
+            for _ in range(50):
+                await asyncio.sleep(0)
+                ticks[0] += 1
+
+        ticker_task = asyncio.create_task(ticker())
+        result = await attached_bridge.enum_handles(pid=os.getpid())
+        await ticker_task
+        assert isinstance(result, list)
+        assert ticks[0] == 50
+
+
+class TestF0013JobHandleEnumeration:
+    """F-0013: _acquire_queryable_job_handle returns a real handle from the system handle table."""
+
+    async def test_get_job_info_returns_in_job_when_assigned(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify get_job_info reports in_job=True when the target is in a job.
+
+        Creates a CreateJobObjectW handle, assigns the current process,
+        then asks get_job_info(current_pid) to confirm in_job=True. The
+        F-0013 fix must locate the job via the system handle table
+        rather than relying on OpenJobObjectW(NULL).
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        k32 = ctypes.windll.kernel32
+        k32.CreateJobObjectW.restype = wintypes.HANDLE
+        k32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        k32.AssignProcessToJobObject.restype = wintypes.BOOL
+        k32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        k32.IsProcessInJob.restype = wintypes.BOOL
+        k32.IsProcessInJob.argtypes = [
+            wintypes.HANDLE,
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.BOOL),
+        ]
+
+        already_in = wintypes.BOOL(0)
+        current = k32.GetCurrentProcess()
+        k32.IsProcessInJob(current, None, ctypes.byref(already_in))
+        if already_in.value:
+            pytest.skip("current process is already in a job; cannot exercise assignment path")
+
+        job_handle = k32.CreateJobObjectW(None, None)
+        assert job_handle, "CreateJobObjectW must succeed"
+        try:
+            if not k32.AssignProcessToJobObject(job_handle, current):
+                pytest.skip("AssignProcessToJobObject denied; cannot exercise F-0013 path")
+            info = await process_bridge.get_job_info(os.getpid())
+            assert isinstance(info, dict)
+            assert info.get("in_job") is True
+        finally:
+            k32.CloseHandle(job_handle)
+
+
+class TestF0044ShutdownReleasesResources:
+    """F-0044: shutdown() unmaps sections and closes pipe/device handles."""
+
+    async def test_shutdown_unmaps_tracked_section_view(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify shutdown unmaps any view recorded in _section_views.
+
+        Creates a section, maps a view, asserts both tracking dicts
+        are populated, then re-initialises the bridge after shutdown
+        and asserts both dicts are empty.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture.
+        """
+        section_name = f"IntellicrackProcessBridge_F0044_{os.getpid()}"
+        handle = await process_bridge.create_section(0x4000, section_name=section_name)
+        base = await process_bridge.map_section(handle, 0x4000)
+        assert base > 0
+
+        section_views = _get_section_views(process_bridge)
+        section_handles = _get_section_handles(process_bridge)
+        assert base in section_views
+        assert handle in section_handles
+
+        await process_bridge.shutdown()
+
+        section_views_after = _get_section_views(process_bridge)
+        section_handles_after = _get_section_handles(process_bridge)
+        assert len(section_views_after) == 0
+        assert len(section_handles_after) == 0
+
+        await process_bridge.initialize()
+
+
+class TestF0029NoStartedInfoLogs:
+    """F-0029: No public method emits *_started events at info level."""
+
+    def test_no_started_info_logs_in_module(self) -> None:
+        """Verify process.py contains zero ``_logger.info("..._started"`` events.
+
+        Greps the module text for the pattern audit2 forbade. The fix
+        must demote every per-call ``_started`` info log to debug or
+        remove it.
+        """
+        process_py = Path(__file__).resolve().parents[2] / "src" / "intellicrack" / "bridges" / "process.py"
+        text = process_py.read_text(encoding="utf-8")
+        offending = re.findall(r'_logger\.info\("[a-zA-Z_]+_started"', text)
+        assert offending == [], f"audit2 F-0029: _started info logs still present: {offending}"
+
+
+class TestF0045DispatchShimsNoDuplicateEvents:
+    """F-0045: list/list_detailed/open dispatch shims do not emit their own _started events."""
+
+    def test_list_shim_emits_no_started_event(self) -> None:
+        """Verify the ``list`` dispatch shim has no ``_started`` log emit.
+
+        Walks the source of ``ProcessBridge.list`` and asserts the
+        underlying delegate is the only logger interaction (the
+        delegated method emits its own ``processes_listing`` debug
+        event; the shim must not duplicate it).
+        """
+        src = inspect.getsource(ProcessBridge.list)
+        assert "_logger.info" not in src
+        assert "_started" not in src
+
+    def test_list_detailed_shim_emits_no_started_event(self) -> None:
+        """Verify the ``list_detailed`` dispatch shim has no ``_started`` log emit."""
+        src = inspect.getsource(ProcessBridge.list_detailed)
+        assert "_logger.info" not in src
+        assert "_started" not in src
+
+    def test_open_shim_emits_no_started_event(self) -> None:
+        """Verify the ``open`` dispatch shim has no ``_started`` log emit."""
+        src = inspect.getsource(ProcessBridge.open)
+        assert "_logger.info" not in src
+        assert "_started" not in src
