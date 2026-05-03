@@ -229,18 +229,23 @@ class TemplateManager:
             return False
 
         try:
-            _logger.info(
-                "builtin_template_file_written",
-                template_name=name,
-                path=str(target_path),
-                size=len(raw_json),
-            )
             target_path.write_text(raw_json, encoding="utf-8")
         except OSError as exc:
-            _logger.warning("builtin_export_write_failed", template_name=name, error=str(exc))
+            _logger.error(
+                "builtin_template_write_failed",
+                template_name=name,
+                path=str(target_path),
+                error=str(exc),
+            )
             self.failed_templates.append((target_path, str(exc)))
             return False
 
+        _logger.info(
+            "builtin_template_file_written",
+            template_name=name,
+            path=str(target_path),
+            size=len(raw_json),
+        )
         return True
 
     def list_all_templates(self) -> list[TemplateInfo]:
@@ -294,6 +299,14 @@ class TemplateManager:
     ) -> Path:
         """Save a user-defined template.
 
+        Writes the JSON template (and the optional DSL source) to disk
+        and only emits ``user_template_file_written`` /
+        ``user_template_dsl_file_written`` after the corresponding
+        ``Path.write_text`` call returns successfully. Failures are
+        logged at ``error`` as ``user_template_write_failed`` /
+        ``user_template_dsl_write_failed`` and re-raised so callers can
+        react.
+
         Args:
             name: Template name.
             json_str: JSON template content.
@@ -304,6 +317,7 @@ class TemplateManager:
 
         Raises:
             ValueError: If the name is empty or produces an empty filename.
+            OSError: If writing the JSON or DSL file fails.
         """
         if not name.strip():
             msg = "template name must not be empty"
@@ -312,24 +326,42 @@ class TemplateManager:
         self.ensure_directories()
         safe_name = self._sanitize_name(name)
         json_path = self._user_dir / f"{safe_name}.json"
+        try:
+            json_path.write_text(json_str, encoding="utf-8")
+        except OSError as exc:
+            _logger.error(
+                "user_template_write_failed",
+                template_name=name,
+                path=str(json_path),
+                error=str(exc),
+            )
+            raise
         _logger.info(
             "user_template_file_written",
             template_name=name,
             path=str(json_path),
             size=len(json_str),
         )
-        json_path.write_text(json_str, encoding="utf-8")
         _logger.info("user_template_saved", template_name=name, path=str(json_path))
 
         if dsl_source is not None:
             dsl_path = self._user_dir / f"{safe_name}.hexpat"
+            try:
+                dsl_path.write_text(dsl_source, encoding="utf-8")
+            except OSError as exc:
+                _logger.error(
+                    "user_template_dsl_write_failed",
+                    template_name=name,
+                    path=str(dsl_path),
+                    error=str(exc),
+                )
+                raise
             _logger.info(
                 "user_template_dsl_file_written",
                 template_name=name,
                 path=str(dsl_path),
                 size=len(dsl_source),
             )
-            dsl_path.write_text(dsl_source, encoding="utf-8")
 
         return json_path
 
