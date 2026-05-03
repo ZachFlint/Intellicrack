@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit3 remediation test package."""
+"""Audit3 regression tests, organised by remediation work unit."""
