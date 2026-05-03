@@ -50,6 +50,8 @@ from intellicrack.bridges._win32_types import (
     LUID,
     LUID_AND_ATTRIBUTES,
     MEM_COMMIT,
+    MEM_IMAGE,
+    MEM_MAPPED,
     MEM_RELEASE,
     MEM_RESERVE,
     MEMORY_BASIC_INFORMATION,
@@ -217,6 +219,15 @@ _ERR_REG_VALUE_READ = "registry value read failed: "
 _ERR_INVALID_REG_ROOT = "invalid registry root: "
 _ERR_SECTION_CREATE = "section creation failed"
 _ERR_SECTION_MAP = "section mapping failed"
+_ERR_SECTION_NAME_COLLISION = "section name already in use"
+_ERR_SECTION_UNMAP = "section unmap failed"
+_ERR_SECTION_NOT_MAPPED = "section base address not tracked"
+
+_ERROR_ALREADY_EXISTS = 183
+_CODE_SECTION_NAME_COLLISION = "SECTION_NAME_COLLISION"
+_CODE_SECTION_CREATE_FAILED = "SECTION_CREATE_FAILED"
+_CODE_SECTION_UNMAP_FAILED = "SECTION_UNMAP_FAILED"
+_CODE_SECTION_NOT_MAPPED = "SECTION_NOT_MAPPED"
 
 _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
 
@@ -673,6 +684,14 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="Mapped base address",
     ),
     ToolFunction(
+        name="process.unmap_section",
+        description="Unmap a previously mapped section view from the current process and close the section handle if it was created via process.create_section",
+        parameters=[
+            ToolParameter(name="base_address", type="integer", description="Mapped base address returned by process.map_section", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="process.get_tls_values",
         description="Read TLS slot values for a thread",
         parameters=[
@@ -764,7 +783,17 @@ class ProcessBridge(ToolBridgeBase):
     PAGE_EXECUTE_READWRITE = PAGE_EXECUTE_READWRITE
 
     def __init__(self) -> None:
-        """Initialize the ProcessBridge instance."""
+        """Initialize the ProcessBridge instance.
+
+        Allocates tracking dictionaries used by section/view lifecycle:
+
+        * ``_section_handles`` maps section handle -> section name (or
+          empty string for anonymous sections) for create/cleanup.
+        * ``_section_views`` maps mapped base address -> section handle
+          so :meth:`unmap_section` can find the owning handle and so
+          :meth:`shutdown` can release any unmapped views the caller
+          forgot.
+        """
         super().__init__()
         self._attached_pid: int | None = None
         self._process_handle: int | None = None
@@ -775,6 +804,8 @@ class ProcessBridge(ToolBridgeBase):
         self._user32: ctypes.WinDLL | None = None
         self._dbghelp: ctypes.WinDLL | None = None
         self._debug_privilege_enabled: bool = False
+        self._section_handles: dict[int, str] = {}
+        self._section_views: dict[int, int] = {}
         self._capabilities = BridgeCapabilities(
             supports_memory_access=True,
             supports_debugging=False,
@@ -1565,37 +1596,28 @@ class ProcessBridge(ToolBridgeBase):
     # Memory operations
     # ------------------------------------------------------------------
 
-    async def read_memory(self, address: int, size: int) -> bytes:
-        """Read memory from process.
+    async def read_memory(self, address: int, size: int) -> str:
+        """Read memory from process and return it as a hex string.
+
+        The hex-string return type matches the tool definition advertised
+        to LLM consumers (``returns="Hex string of memory contents"``)
+        and keeps the value JSON-serialisable when the orchestrator
+        forwards bridge results to model providers. Internal callers that
+        need raw bytes should call :meth:`_sync_read_memory` instead.
 
         Args:
             address: Memory address.
             size: Bytes to read.
 
         Returns:
-            bytes: Memory contents.
+            str: Hex-encoded memory contents (lowercase, no separators).
 
         Raises:
             ToolError: If read fails.
         """
         _logger.debug("memory_read_starting", address=hex(address), size=size)
-        if self._process_handle is None:
-            raise ToolError(_ERR_NOT_ATTACHED)
-        if self._kernel32 is None:
-            raise ToolError(_ERR_KERNEL32_NA)
-
-        buffer = ctypes.create_string_buffer(size)
-        bytes_read = ctypes.c_size_t()
-
-        if self._kernel32.ReadProcessMemory(
-            self._process_handle,
-            ctypes.c_void_p(address),
-            buffer,
-            size,
-            ctypes.byref(bytes_read),
-        ):
-            return buffer.raw[: bytes_read.value]
-        raise ToolError(_ERR_READ_FAILED)
+        data = self._sync_read_memory(address, size)
+        return data.hex()
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write memory to process.
@@ -1768,7 +1790,7 @@ class ProcessBridge(ToolBridgeBase):
 
             if mbi.State == MEM_COMMIT:
                 module_name: str | None = None
-                if resolve_names and self._psapi is not None and mbi.Type in {0x40000, 0x1000000}:
+                if resolve_names and self._psapi is not None and mbi.Type in {MEM_MAPPED, MEM_IMAGE}:
                     name_buf = ctypes.create_unicode_buffer(260)
                     name_len: int = self._psapi.GetMappedFileNameW(
                         self._process_handle,
@@ -1873,6 +1895,13 @@ class ProcessBridge(ToolBridgeBase):
     ) -> None:
         """Chunk-scan a single region for a pattern, preserving overlap.
 
+        On a chunk read failure the scan logs at debug level and continues
+        with the next chunk so a single transient failure (e.g., a guard
+        page or page-not-resident error) does not abort the entire region.
+        The scan only aborts early if a re-issued ``VirtualQueryEx``
+        observes the region is no longer committed (e.g., freed or
+        decommitted mid-scan).
+
         Args:
             region_base: Base virtual address of the region to scan.
             region_size: Size of the region in bytes.
@@ -1885,32 +1914,70 @@ class ProcessBridge(ToolBridgeBase):
         """
         pattern_len = len(pattern_bytes)
         offset = 0
+        step = max(1, _SEARCH_CHUNK_SIZE - overlap)
 
         while offset < region_size:
             chunk_size = min(_SEARCH_CHUNK_SIZE, region_size - offset)
             if chunk_size < pattern_len:
                 break
 
+            chunk_address = region_base + offset
             try:
-                data_bytes = self._sync_read_memory(region_base + offset, chunk_size)
-            except ToolError:
-                _logger.exception(
-                    "pattern_search_region_read_failed",
-                    address=hex(region_base + offset),
+                data_bytes = self._sync_read_memory(chunk_address, chunk_size)
+            except (ToolError, OSError) as exc:
+                _logger.debug(
+                    "pattern_search_chunk_read_failed",
+                    address=hex(chunk_address),
                     size=chunk_size,
+                    error=str(exc),
                 )
-                break
+                if not self._region_still_committed(chunk_address):
+                    _logger.debug(
+                        "pattern_search_region_freed",
+                        address=hex(chunk_address),
+                    )
+                    break
+                offset += step
+                continue
 
             limit = len(data_bytes) - pattern_len + 1
             for i in range(limit):
                 match = not any(pb is not None and data_bytes[i + j] != pb for j, pb in enumerate(pattern_bytes))
                 if match:
-                    matches.append(region_base + offset + i)
+                    matches.append(chunk_address + i)
 
             if chunk_size < _SEARCH_CHUNK_SIZE:
                 break
 
             offset += chunk_size - overlap
+
+    def _region_still_committed(self, address: int) -> bool:
+        """Re-query a virtual address to confirm it is still committed.
+
+        Used by chunked scanners to distinguish a transient per-chunk read
+        failure (which should not abort the scan) from a region that was
+        freed or decommitted mid-scan (which must abort the scan).
+
+        Args:
+            address: Virtual address inside the region of interest.
+
+        Returns:
+            bool: True if ``VirtualQueryEx`` succeeds and reports
+                ``State == MEM_COMMIT`` for ``address``; False if the
+                query fails or the region is no longer committed.
+        """
+        if self._kernel32 is None or self._process_handle is None:
+            return False
+        mbi = MEMORY_BASIC_INFORMATION()
+        result = self._kernel32.VirtualQueryEx(
+            self._process_handle,
+            ctypes.c_void_p(address),
+            ctypes.byref(mbi),
+            ctypes.sizeof(mbi),
+        )
+        if result == 0:
+            return False
+        return mbi.State == MEM_COMMIT
 
     def _sync_read_memory(self, address: int, size: int) -> bytes:
         """Read process memory synchronously via ``ReadProcessMemory``.
@@ -3764,7 +3831,7 @@ class ProcessBridge(ToolBridgeBase):
                 break
 
             try:
-                record_data = await self.read_memory(current, ptr_size * 2)
+                record_data = self._sync_read_memory(current, ptr_size * 2)
             except ToolError:
                 _logger.warning("seh_chain_read_failed", address=hex(current))
                 break
@@ -4925,15 +4992,30 @@ class ProcessBridge(ToolBridgeBase):
     async def create_section(self, size: int, section_name: str | None = None) -> int:
         """Create a named section (file mapping) object.
 
+        Wraps ``CreateFileMappingW`` and inspects ``GetLastError`` so the
+        caller can distinguish a name collision from other failures. When
+        a named section is requested and the kernel reports
+        ``ERROR_ALREADY_EXISTS``, the duplicate handle returned by the
+        API is closed and a ``ToolError`` carrying
+        ``details["code"] == "SECTION_NAME_COLLISION"`` is raised so the
+        caller can react (e.g., generate a fresh name) rather than
+        silently sharing an existing backing object. Successfully
+        created handles are tracked in ``self._section_handles`` so they
+        can be released on :meth:`shutdown`.
+
         Args:
             size: Section size in bytes.
-            section_name: Optional section name.
+            section_name: Optional section name. Anonymous sections (name
+                ``None``) cannot collide and never raise the collision
+                variant.
 
         Returns:
             int: Section handle value.
 
         Raises:
-            ToolError: If creation fails.
+            ToolError: If creation fails. ``details["code"]`` is
+                ``"SECTION_NAME_COLLISION"`` when the failure was a
+                duplicate name, otherwise ``"SECTION_CREATE_FAILED"``.
         """
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
@@ -4941,6 +5023,7 @@ class ProcessBridge(ToolBridgeBase):
         high = (size >> 32) & 0xFFFFFFFF
         low = size & 0xFFFFFFFF
 
+        ctypes.set_last_error(0)
         handle: int = self._kernel32.CreateFileMappingW(
             -1,
             None,
@@ -4949,15 +5032,45 @@ class ProcessBridge(ToolBridgeBase):
             low,
             section_name,
         )
+        last_error = ctypes.get_last_error()
 
         if not handle:
-            raise ToolError(_ERR_SECTION_CREATE)
+            _logger.error(
+                "section_create_failed",
+                size=size,
+                section_name=section_name,
+                last_error=last_error,
+            )
+            raise ToolError(
+                _ERR_SECTION_CREATE,
+                error_code=last_error or None,
+                details={"code": _CODE_SECTION_CREATE_FAILED, "last_error": last_error},
+            )
 
+        if last_error == _ERROR_ALREADY_EXISTS and section_name is not None:
+            self._kernel32.CloseHandle(handle)
+            _logger.warning(
+                "section_name_collision",
+                section_name=section_name,
+                size=size,
+            )
+            raise ToolError(
+                _ERR_SECTION_NAME_COLLISION,
+                error_code=_ERROR_ALREADY_EXISTS,
+                details={"code": _CODE_SECTION_NAME_COLLISION, "section_name": section_name},
+            )
+
+        self._section_handles[handle] = section_name or ""
         _logger.info("section_created", handle=handle, size=size, section_name=section_name)
         return handle
 
     async def map_section(self, handle: int, size: int) -> int:
         """Map a section into the current process address space.
+
+        Mapped views are tracked in ``self._section_views`` keyed by
+        their base address so :meth:`unmap_section` can find the owning
+        section handle and so :meth:`shutdown` can release any views the
+        caller forgot.
 
         Args:
             handle: Section handle.
@@ -4989,7 +5102,82 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("section_map_failed", handle=handle, size=size)
             raise ToolError(_ERR_SECTION_MAP)
 
+        self._section_views[address] = handle
         return address
+
+    async def unmap_section(self, base_address: int) -> bool:
+        """Unmap a previously mapped section view from the current process.
+
+        Releases the view and, if the originating section handle is
+        tracked in ``self._section_handles`` (i.e., the section was
+        created via :meth:`create_section` rather than imported from
+        outside), closes the section handle as well so a single
+        ``unmap_section`` call leaves no kernel objects leaked. Prefers
+        ``UnmapViewOfFile2`` from kernel32 when available (Windows 10
+        1709+); falls back to ``UnmapViewOfFile`` otherwise.
+
+        Args:
+            base_address: Mapped base address returned from
+                :meth:`map_section`.
+
+        Returns:
+            bool: True on successful unmap.
+
+        Raises:
+            ToolError: If kernel32 is unavailable, the address is not a
+                tracked mapping, or the underlying unmap call fails.
+                ``details["code"]`` is ``"SECTION_NOT_MAPPED"`` for
+                tracking misses and ``"SECTION_UNMAP_FAILED"`` for API
+                failures.
+        """
+        _logger.info("process_unmap_section_started", base_address=hex(base_address))
+        if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="unmap_section")
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        section_handle = self._section_views.get(base_address)
+        if section_handle is None:
+            _logger.warning(
+                "section_unmap_unknown_base",
+                base_address=hex(base_address),
+            )
+            raise ToolError(
+                _ERR_SECTION_NOT_MAPPED,
+                details={"code": _CODE_SECTION_NOT_MAPPED, "base_address": base_address},
+            )
+
+        ctypes.set_last_error(0)
+        unmap_view_of_file2 = getattr(self._kernel32, "UnmapViewOfFile2", None)
+        if unmap_view_of_file2 is not None:
+            current_process = self._kernel32.GetCurrentProcess()
+            result = unmap_view_of_file2(current_process, ctypes.c_void_p(base_address), 0)
+        else:
+            result = self._kernel32.UnmapViewOfFile(ctypes.c_void_p(base_address))
+        last_error = ctypes.get_last_error()
+
+        if not result:
+            _logger.error(
+                "section_unmap_failed",
+                base_address=hex(base_address),
+                last_error=last_error,
+            )
+            raise ToolError(
+                _ERR_SECTION_UNMAP,
+                error_code=last_error or None,
+                details={"code": _CODE_SECTION_UNMAP_FAILED, "last_error": last_error},
+            )
+
+        del self._section_views[base_address]
+        if section_handle in self._section_handles:
+            self._kernel32.CloseHandle(section_handle)
+            del self._section_handles[section_handle]
+
+        _logger.info(
+            "section_unmapped",
+            base_address=hex(base_address),
+            section_handle=section_handle,
+        )
+        return True
 
     # ------------------------------------------------------------------
     # TLS slot access
@@ -5022,7 +5210,7 @@ class ProcessBridge(ToolBridgeBase):
         read_size = min(max_slots, 1088) * ptr_size
 
         try:
-            data = await self.read_memory(tls_addr, read_size)
+            data = self._sync_read_memory(tls_addr, read_size)
         except ToolError:
             _logger.warning("tls_slots_read_failed", tid=tid, address=hex(tls_addr), size=read_size)
             return []
