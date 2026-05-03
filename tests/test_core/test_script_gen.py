@@ -458,13 +458,14 @@ def test_validator_validate_method_python() -> None:
 
 
 def test_validator_validate_method_unsupported_language() -> None:
-    """Verify validate() marks unsupported languages as verified."""
+    """Verify validate() rejects unsupported languages instead of faking success."""
     validator = ScriptValidator()
     script = _make_script(language=ScriptLanguage.R2_COMMANDS, content="aaa")
     is_valid, error = validator.validate(script)
-    assert is_valid is True
-    assert error is None
-    assert script.verified is True
+    assert is_valid is False
+    assert error is not None
+    assert "r2_commands" in error
+    assert script.verified is False
 
 
 def test_validator_validate_method_invalid_python() -> None:
