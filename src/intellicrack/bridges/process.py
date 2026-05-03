@@ -182,8 +182,12 @@ _ERR_FREE_FAILED = "memory free failed"
 _ERR_PROTECT_FAILED = "memory protection change failed"
 _ERR_DLL_NOT_FOUND = "DLL not found"
 _ERR_KERNEL32_HANDLE = "kernel32 handle failed"
-_ERR_LOADLIB_ADDR = "LoadLibraryA address failed"
+_ERR_LOADLIB_ADDR = "LoadLibraryW address failed"
 _ERR_REMOTE_THREAD = "remote thread creation failed"
+_ERR_INJECT_WAIT_FAILED = "WaitForSingleObject failed on remote thread"
+_ERR_INJECT_TIMEOUT = "remote thread timed out"
+_ERR_INJECT_LOADLIB_FAILED = "LoadLibraryW failed in target"
+_ERR_INJECT_GETEXITCODE_FAILED = "GetExitCodeThread failed"
 _ERR_NTDLL_NA = "ntdll not available"
 _ERR_ADVAPI32_NA = "advapi32 not available"
 _ERR_USER32_NA = "user32 not available"
@@ -885,6 +889,16 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="Hex string of raw output buffer",
     ),
 ]
+
+
+class _MODULEINFO(ctypes.Structure):
+    """PSAPI MODULEINFO structure returned by GetModuleInformation."""
+
+    _fields_: ClassVar = [
+        ("lpBaseOfDll", ctypes.c_void_p),
+        ("SizeOfImage", wintypes.DWORD),
+        ("EntryPoint", ctypes.c_void_p),
+    ]
 
 
 class ProcessBridge(ToolBridgeBase):
@@ -2253,23 +2267,37 @@ class ProcessBridge(ToolBridgeBase):
         entry = MODULEENTRY32()
         entry.dwSize = ctypes.sizeof(MODULEENTRY32)
 
+        proc_handle: int | None = None
+        if self._psapi is not None:
+            inherit_handle = False
+            proc_handle = self._kernel32.OpenProcess(
+                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                inherit_handle,
+                target_pid,
+            )
+            if not proc_handle:
+                proc_handle = None
+
         try:
             if self._kernel32.Module32First(snapshot, ctypes.byref(entry)):
                 while True:
                     base_addr = ctypes.cast(entry.modBaseAddr, ctypes.c_void_p).value or 0
+                    ep = self._query_module_entry_point(proc_handle, entry.hModule) if proc_handle else 0
                     modules.append(
                         ModuleInfo(
                             name=entry.szModule.decode("utf-8", errors="ignore"),
                             path=Path(entry.szExePath.decode("utf-8", errors="ignore")),
                             base_address=base_addr,
                             size=entry.modBaseSize,
-                            entry_point=0,
+                            entry_point=ep,
                         ),
                     )
                     if not self._kernel32.Module32Next(snapshot, ctypes.byref(entry)):
                         break
         finally:
             self._kernel32.CloseHandle(snapshot)
+            if proc_handle:
+                self._kernel32.CloseHandle(proc_handle)
 
         return modules
 
@@ -2315,13 +2343,14 @@ class ProcessBridge(ToolBridgeBase):
                     if entry.th32OwnerProcessID == target_pid:
                         tid = entry.th32ThreadID
                         start_addr = self._query_thread_start_address(tid)
+                        current_pc = self._query_thread_current_pc(tid, owner_pid=target_pid)
                         state = self._query_thread_state(tid)
 
                         threads.append(
                             ThreadInfo(
                                 tid=tid,
                                 start_address=start_addr,
-                                current_pc=0,
+                                current_pc=current_pc,
                                 state=state,
                             ),
                         )
@@ -2410,6 +2439,9 @@ class ProcessBridge(ToolBridgeBase):
         if self._ntdll is None or self._kernel32 is None:
             return "unknown"
 
+        if tid == self._kernel32.GetCurrentThreadId():
+            return "running"
+
         inherit_handle = False
         handle = self._kernel32.OpenThread(
             THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME,
@@ -2435,16 +2467,197 @@ class ProcessBridge(ToolBridgeBase):
                 raw_count: int = self._kernel32.SuspendThread(handle)
                 signed_count = ctypes.c_long(raw_count).value
                 if signed_count >= 0:
-                    self._kernel32.ResumeThread(handle)
-                    if signed_count > 0:
-                        return "suspended"
-                    return "running"
+                    try:
+                        result = "suspended" if signed_count > 0 else "running"
+                    finally:
+                        self._kernel32.ResumeThread(handle)
+                    return result
         except (OSError, ctypes.ArgumentError):
             pass
         finally:
             self._kernel32.CloseHandle(handle)
 
         return "unknown"
+
+    def _query_thread_pc_and_state(self, tid: int) -> tuple[int, str]:
+        """Query both current_pc and state in a single suspend/resume cycle.
+
+        Opens the thread with the union of rights needed for both
+        GetThreadContext and the state probe, performs exactly one
+        SuspendThread / ResumeThread pair, reads the instruction pointer
+        (Rip on x64, Eip on WOW64/x86) and determines the running-vs-
+        suspended state from the prior suspend count.  ResumeThread is
+        called in a finally block so the thread is never left suspended.
+
+        Args:
+            tid: Thread ID.
+
+        Returns:
+            tuple[int, str]: ``(current_pc, state)`` where ``current_pc``
+                is 0 when the context read fails and ``state`` is
+                ``'unknown'`` when the probe fails.
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return 0, "unknown"
+
+        current_tid: int = self._kernel32.GetCurrentThreadId()
+        if tid == current_tid:
+            return 0, "running"
+
+        access = THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT
+        inherit_handle = False
+        handle = self._kernel32.OpenThread(access, inherit_handle, tid)
+        if not handle:
+            return 0, "unknown"
+
+        result: tuple[int, str] = (0, "unknown")
+        try:
+            tbi = THREAD_BASIC_INFORMATION()
+            status: int = self._ntdll.NtQueryInformationThread(
+                handle,
+                ThreadBasicInformation,
+                ctypes.byref(tbi),
+                ctypes.sizeof(tbi),
+                None,
+            )
+            if status >= 0 and tbi.ExitStatus != _STILL_ACTIVE:
+                result = (0, "terminated")
+            else:
+                raw_count: int = self._kernel32.SuspendThread(handle)
+                signed_count = ctypes.c_long(raw_count).value
+                if signed_count >= 0:
+                    try:
+                        state = "suspended" if signed_count > 0 else "running"
+                        is_wow64 = self._target_is_wow64()
+                        pc: int = 0
+                        if is_wow64:
+                            wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+                            if wow64_get_ctx is not None:
+                                wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+                                wow64_get_ctx.restype = wintypes.BOOL
+                                ctx32 = WOW64_CONTEXT()
+                                ctx32.ContextFlags = CONTEXT_I386_ALL
+                                if wow64_get_ctx(handle, ctypes.byref(ctx32)):
+                                    pc = int(ctx32.Eip)
+                        else:
+                            ctx64 = CONTEXT64()
+                            ctx64.ContextFlags = CONTEXT_ALL
+                            if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
+                                pc = int(ctx64.Rip)
+                        result = (pc, state)
+                    finally:
+                        self._kernel32.ResumeThread(handle)
+        except (OSError, ctypes.ArgumentError):
+            pass
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+        return result
+
+    def _query_module_entry_point(self, proc_handle: int, module_handle: int) -> int:
+        """Query the entry point address of a module via GetModuleInformation.
+
+        Args:
+            proc_handle: Open process handle with PROCESS_QUERY_INFORMATION
+                and PROCESS_VM_READ access.
+            module_handle: HMODULE value from MODULEENTRY32.hModule.
+
+        Returns:
+            int: Entry point virtual address, or 0 if the query fails.
+        """
+        if self._psapi is None:
+            return 0
+        get_module_information = getattr(self._psapi, "GetModuleInformation", None)
+        if get_module_information is None:
+            return 0
+        get_module_information.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.POINTER(_MODULEINFO),
+            wintypes.DWORD,
+        ]
+        get_module_information.restype = wintypes.BOOL
+        modinfo = _MODULEINFO()
+        if get_module_information(
+            proc_handle,
+            ctypes.c_void_p(module_handle),
+            ctypes.byref(modinfo),
+            ctypes.sizeof(modinfo),
+        ):
+            return int(modinfo.EntryPoint) if modinfo.EntryPoint is not None else 0
+        return 0
+
+    def _query_thread_current_pc(self, tid: int, owner_pid: int | None = None) -> int:
+        """Query the current program counter of a thread via GetThreadContext.
+
+        Opens the thread with THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME,
+        suspends it, reads Rip (x64) or Eip (x86 / WOW64), then resumes
+        in a finally block so the thread is never left suspended on error.
+
+        WOW64 status is determined from ``owner_pid`` when supplied (so the
+        correct CONTEXT struct is selected when enumerating threads of a
+        process other than the attached one). When ``owner_pid`` is None,
+        falls back to the attached-process WOW64 detection.
+
+        Args:
+            tid: Thread ID.
+            owner_pid: PID that owns this thread. When provided, WOW64
+                status is queried for that PID directly (cross-arch safe).
+
+        Returns:
+            int: Current instruction pointer, or 0 if the query fails.
+        """
+        if self._kernel32 is None:
+            return 0
+
+        if tid == self._kernel32.GetCurrentThreadId():
+            return 0
+
+        inherit_handle = False
+        handle = self._kernel32.OpenThread(
+            THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME,
+            inherit_handle,
+            tid,
+        )
+        if not handle:
+            return 0
+
+        try:
+            raw_count: int = self._kernel32.SuspendThread(handle)
+            signed_count = ctypes.c_long(raw_count).value
+            if signed_count < 0:
+                return 0
+
+            try:
+                is_wow64 = self._pid_is_wow64(owner_pid) if owner_pid is not None else self._target_is_wow64()
+                if is_wow64:
+                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+                    if wow64_get_ctx is None:
+                        return 0
+                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+                    wow64_get_ctx.restype = wintypes.BOOL
+                    ctx32 = WOW64_CONTEXT()
+                    ctx32.ContextFlags = CONTEXT_I386_ALL
+                    if wow64_get_ctx(handle, ctypes.byref(ctx32)):
+                        return int(ctx32.Eip)
+                    return 0
+                ctx64 = CONTEXT64()
+                ctx64.ContextFlags = CONTEXT_ALL
+                if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
+                    return int(ctx64.Rip)
+                return 0
+            finally:
+                self._kernel32.ResumeThread(handle)
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.debug(
+                "thread_current_pc_query_exception",
+                tid=tid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            return 0
+        finally:
+            self._kernel32.CloseHandle(handle)
 
     # ------------------------------------------------------------------
     # DLL injection
@@ -2472,17 +2685,17 @@ class ProcessBridge(ToolBridgeBase):
         if not await asyncio.to_thread(dll_path_resolved.exists):
             raise ToolError(_ERR_DLL_NOT_FOUND)
 
-        dll_path_bytes = str(dll_path_resolved).encode("utf-8") + b"\x00"
-        remote_mem = await self.allocate(len(dll_path_bytes), "rw")
+        dll_path_utf16 = str(dll_path_resolved).encode("utf-16-le") + b"\x00\x00"
+        remote_mem = await self.allocate(len(dll_path_utf16), "rw")
 
         try:
-            await self.write_memory(remote_mem, dll_path_bytes)
+            await self.write_memory(remote_mem, dll_path_utf16)
 
             kernel32_handle = self._kernel32.GetModuleHandleW("kernel32.dll")
             if not kernel32_handle:
                 raise ToolError(_ERR_KERNEL32_HANDLE)
 
-            load_library_addr = self._kernel32.GetProcAddress(kernel32_handle, b"LoadLibraryA")
+            load_library_addr = self._kernel32.GetProcAddress(kernel32_handle, b"LoadLibraryW")
             if not load_library_addr:
                 raise ToolError(_ERR_LOADLIB_ADDR)
 
@@ -2499,8 +2712,29 @@ class ProcessBridge(ToolBridgeBase):
             if not thread_handle:
                 raise ToolError(_ERR_REMOTE_THREAD)
 
-            self._kernel32.WaitForSingleObject(thread_handle, 5000)
-            self._kernel32.CloseHandle(thread_handle)
+            try:
+                wait_result: int = self._kernel32.WaitForSingleObject(thread_handle, 5000)
+                if wait_result == WAIT_FAILED:
+                    raise ToolError(_ERR_INJECT_WAIT_FAILED)
+                if wait_result == WAIT_TIMEOUT:
+                    raise ToolError(_ERR_INJECT_TIMEOUT)
+                if wait_result != WAIT_OBJECT_0:
+                    raise ToolError(_ERR_INJECT_WAIT_FAILED)
+
+                self._kernel32.GetExitCodeThread.restype = wintypes.BOOL
+                self._kernel32.GetExitCodeThread.argtypes = [
+                    wintypes.HANDLE,
+                    ctypes.POINTER(wintypes.DWORD),
+                ]
+                exit_code = wintypes.DWORD(0)
+                if not self._kernel32.GetExitCodeThread(thread_handle, ctypes.byref(exit_code)):
+                    last_error: int = self._kernel32.GetLastError()
+                    err_msg = f"{_ERR_INJECT_GETEXITCODE_FAILED}: {last_error}"
+                    raise ToolError(err_msg)
+                if exit_code.value == 0:
+                    raise ToolError(_ERR_INJECT_LOADLIB_FAILED)
+            finally:
+                self._kernel32.CloseHandle(thread_handle)
 
             _logger.info("dll_injected", dll_path=dll_path)
             return True
@@ -4028,6 +4262,50 @@ class ProcessBridge(ToolBridgeBase):
             return bool(is_wow64.value)
 
         raise ToolError(_ERR_WOW64_UNAVAILABLE)
+
+    def _pid_is_wow64(self, target_pid: int) -> bool:
+        """Return True when the given PID runs under WOW64.
+
+        Opens a fresh ``OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)``
+        handle for ``target_pid``, queries ``IsWow64Process2`` (with the
+        legacy ``IsWow64Process`` fallback), then closes the handle. This
+        is the per-target-pid analogue of :meth:`_target_is_wow64` for
+        callers that operate on processes other than the attached one
+        (for example, ``get_threads(target_pid)`` enumerating threads of
+        a different PID).
+
+        Args:
+            target_pid: PID of the process to query.
+
+        Returns:
+            bool: ``True`` when the target process is a 32-bit x86 binary
+                on a 64-bit host; ``False`` if not, or if the query fails.
+        """
+        if self._kernel32 is None:
+            return False
+
+        inherit_handle = False
+        handle: int = self._kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION,
+            inherit_handle,
+            target_pid,
+        )
+        if not handle:
+            return False
+
+        try:
+            machines = self._call_iswow64process2(handle)
+            if machines is not None:
+                return machines[0] == IMAGE_FILE_MACHINE_I386
+
+            is_wow64 = wintypes.BOOL(0)
+            if hasattr(self._kernel32, "IsWow64Process"):
+                self._kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
+                return bool(is_wow64.value)
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+        return False
 
     def _walk_stack_native(self, thread_handle: int) -> list[dict[str, object]]:
         """Walk a native AMD64 thread stack via ``StackWalk64``.
