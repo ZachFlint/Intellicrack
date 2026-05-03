@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import re
 import struct
 from ctypes import wintypes
 from pathlib import Path
@@ -41,6 +42,7 @@ from intellicrack.bridges._win32_types import (
     IMAGE_FILE_MACHINE_ARM64,
     IMAGE_FILE_MACHINE_I386,
     IMAGE_FILE_MACHINE_UNKNOWN,
+    INVALID_HANDLE_VALUE,
     IO_COUNTERS,
     JOBOBJECT_BASIC_LIMIT_INFORMATION,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
@@ -173,6 +175,9 @@ _ERR_SCM_OPEN_FAILED = "service control manager open failed"
 _ERR_PIPE_CONNECT_FAILED = "pipe connect failed"
 _ERR_DEVICE_OPEN_FAILED = "device open failed"
 _ERR_IOCTL_FAILED = "DeviceIoControl failed"
+_ERR_PIPE_CLOSE_FAILED = "pipe close failed"
+_ERR_DEVICE_CLOSE_FAILED = "device close failed"
+_ERR_INVALID_HEX = "input_data is not a valid hex string"
 
 _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
@@ -4085,6 +4090,7 @@ class ProcessBridge(ToolBridgeBase):
 
         self._kernel32.WaitNamedPipeW(pipe_name, timeout_ms)
 
+        self._kernel32.CreateFileW.restype = wintypes.HANDLE
         handle: int = self._kernel32.CreateFileW(
             pipe_name,
             0xC0000000,
@@ -4095,14 +4101,14 @@ class ProcessBridge(ToolBridgeBase):
             None,
         )
 
-        if handle in {-1, 0}:
+        if handle in {INVALID_HANDLE_VALUE, 0}:
             _logger.error("pipe_connect_failed", pipe_name=pipe_name)
             raise ToolError(_ERR_PIPE_CONNECT_FAILED)
 
         _logger.info("pipe_connected", pipe_name=pipe_name, handle=handle)
         return handle
 
-    async def pipe_read(self, handle: int, size: int) -> bytes:
+    async def pipe_read(self, handle: int, size: int) -> str:
         """Read data from a named pipe handle.
 
         Args:
@@ -4110,7 +4116,7 @@ class ProcessBridge(ToolBridgeBase):
             size: Bytes to read.
 
         Returns:
-            bytes: Data read.
+            str: Hex string of data read.
 
         Raises:
             ToolError: If read fails.
@@ -4127,7 +4133,7 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("pipe_read_failed", handle=handle, size=size)
             raise ToolError(_ERR_READ_FAILED)
 
-        return buffer.raw[: bytes_read.value]
+        return buffer.raw[: bytes_read.value].hex()
 
     async def pipe_write(self, handle: int, data: bytes) -> int:
         """Write data to a named pipe handle.
@@ -4161,15 +4167,20 @@ class ProcessBridge(ToolBridgeBase):
             handle: Pipe handle.
 
         Returns:
-            bool: True if closed.
+            bool: True if closed successfully.
 
         Raises:
-            ToolError: If kernel32 is unavailable.
+            ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
         _logger.info("process_pipe_close_started", handle=handle)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="pipe_close")
             raise ToolError(_ERR_KERNEL32_NA)
-        self._kernel32.CloseHandle(handle)
+        self._kernel32.CloseHandle.restype = wintypes.BOOL
+        result: int = self._kernel32.CloseHandle(handle)
+        if not result:
+            _logger.error("pipe_close_failed", handle=handle)
+            raise ToolError(_ERR_PIPE_CLOSE_FAILED)
         return True
 
     # ------------------------------------------------------------------
@@ -4400,6 +4411,7 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("kernel32_unavailable", operation="device_open")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._kernel32.CreateFileW.restype = wintypes.HANDLE
         handle: int = self._kernel32.CreateFileW(
             device_path,
             0xC0000000,
@@ -4410,7 +4422,7 @@ class ProcessBridge(ToolBridgeBase):
             None,
         )
 
-        if handle in {-1, 0}:
+        if handle in {INVALID_HANDLE_VALUE, 0}:
             _logger.error("device_open_failed", device_path=device_path)
             raise ToolError(_ERR_DEVICE_OPEN_FAILED)
 
@@ -4421,22 +4433,24 @@ class ProcessBridge(ToolBridgeBase):
         self,
         handle: int,
         ioctl_code: int,
-        input_data: bytes | None = None,
+        input_data: str | None = None,
         output_size: int = 4096,
-    ) -> bytes:
+    ) -> str:
         """Send an IOCTL to an open device handle.
 
         Args:
             handle: Device handle.
             ioctl_code: IOCTL control code.
-            input_data: Input data buffer.
+            input_data: Hex string input data (e.g. ``"deadbeef"``), or
+                ``None`` for no input buffer.
             output_size: Expected output buffer size.
 
         Returns:
-            bytes: Output data.
+            str: Hex string of output data.
 
         Raises:
-            ToolError: If IOCTL fails.
+            ValueError: If input_data is not a valid hex string.
+            ToolError: If kernel32 is unavailable or IOCTL fails.
         """
         _logger.info(
             "process_device_ioctl_started",
@@ -4448,11 +4462,18 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("kernel32_unavailable", operation="device_ioctl")
             raise ToolError(_ERR_KERNEL32_NA)
 
+        input_bytes: bytes | None = None
+        if input_data is not None:
+            if not re.fullmatch(r"[0-9a-fA-F]*", input_data):
+                _logger.error("device_ioctl_invalid_hex", input_data=input_data)
+                raise ValueError(_ERR_INVALID_HEX)
+            input_bytes = bytes.fromhex(input_data)
+
         output_buffer = ctypes.create_string_buffer(output_size)
         bytes_returned = wintypes.DWORD(0)
 
-        input_buf = input_data or None
-        input_len = len(input_data) if input_data else 0
+        input_buf: bytes | None = input_bytes
+        input_len: int = len(input_bytes) if input_bytes is not None else 0
 
         if not self._kernel32.DeviceIoControl(
             handle,
@@ -4467,7 +4488,7 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("device_ioctl_failed", handle=handle, ioctl_code=hex(ioctl_code))
             raise ToolError(_ERR_IOCTL_FAILED)
 
-        return output_buffer.raw[: bytes_returned.value]
+        return output_buffer.raw[: bytes_returned.value].hex()
 
     async def device_close(self, handle: int) -> bool:
         """Close a device handle.
@@ -4476,15 +4497,20 @@ class ProcessBridge(ToolBridgeBase):
             handle: Device handle.
 
         Returns:
-            bool: True if closed.
+            bool: True if closed successfully.
 
         Raises:
-            ToolError: If kernel32 is unavailable.
+            ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
         _logger.info("process_device_close_started", handle=handle)
         if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="device_close")
             raise ToolError(_ERR_KERNEL32_NA)
-        self._kernel32.CloseHandle(handle)
+        self._kernel32.CloseHandle.restype = wintypes.BOOL
+        result: int = self._kernel32.CloseHandle(handle)
+        if not result:
+            _logger.error("device_close_failed", handle=handle)
+            raise ToolError(_ERR_DEVICE_CLOSE_FAILED)
         return True
 
     # ------------------------------------------------------------------
