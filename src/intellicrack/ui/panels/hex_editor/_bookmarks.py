@@ -6,10 +6,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QColorDialog, QInputDialog, QTreeWidget, QTreeWidgetItem, QWidget
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_state import HexDocumentState
 
 
 class BookmarksMixin:
@@ -19,6 +23,30 @@ class BookmarksMixin:
     document: Any | None
     _hex_widget: Any | None
     _bookmarks_tree: QTreeWidget | None
+    state_holder: HexDocumentState | None
+
+    def _notify_state_data_modified(self, offset: int, length: int, *, source: str) -> None:
+        """Forward a panel-side bookmark change extent to the shared HexDocumentState.
+
+        Bridge subscribers (AI tools, peer GUIs) only learn about document
+        state mutations through ``HexDocumentState.notify_data_modified``.
+        Panel-driven bookmark operations must publish the same event so those
+        consumers do not analyse stale annotated state after a GUI operation.
+
+        Args:
+            offset: Start byte offset of the affected range.
+            length: Number of bytes that were affected.
+            source: Caller identifier used by the loop-guard filter; must
+                be unique per bookmark op so subscribers registered with
+                a different source still receive the event.
+        """
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is None:
+            return
+        notify = getattr(state_holder, "notify_data_modified", None)
+        if not callable(notify):
+            return
+        notify(offset, length, source=source)
 
     def _on_add_bookmark(self) -> None:
         """Add a bookmark at the current cursor position with user-specified attributes."""
@@ -44,6 +72,7 @@ class BookmarksMixin:
             return
 
         self.document.add_bookmark(cursor_offset, 1, name, color.name())
+        self._notify_state_data_modified(cursor_offset, 1, source="hex-editor.bookmarks.add")
         self._refresh_bookmarks()
 
     def _on_remove_bookmark(self) -> None:
@@ -57,7 +86,15 @@ class BookmarksMixin:
 
         index = self._bookmarks_tree.indexOfTopLevelItem(current)
         if index >= 0:
+            bookmarks = self.document.list_bookmarks()
+            if index < len(bookmarks):
+                bm_offset: int = int(bookmarks[index][0])
+                bm_length: int = int(bookmarks[index][1])
+            else:
+                bm_offset = 0
+                bm_length = 1
             self.document.remove_bookmark(index)
+            self._notify_state_data_modified(bm_offset, bm_length, source="hex-editor.bookmarks.remove")
             self._refresh_bookmarks()
 
     def _refresh_bookmarks(self) -> None:
