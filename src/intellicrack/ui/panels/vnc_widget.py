@@ -16,7 +16,7 @@ import struct
 import zlib
 from importlib import import_module
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Final, TypedDict, Unpack, cast, override
+from typing import TYPE_CHECKING, Final, Protocol, TypedDict, Unpack, cast, override
 
 from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives.ciphers import Cipher
@@ -31,6 +31,40 @@ from PyQt6.QtWidgets import QWidget
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+class _ZlibDecompressor(Protocol):
+    """Protocol describing the incremental zlib decompressor surface used here.
+
+    Models the public methods of objects returned by :func:`zlib.decompressobj`
+    that the VNC widget actually consumes. Defined locally to avoid referencing
+    the private ``zlib._Decompress`` runtime alias from typeshed while keeping
+    full type fidelity for the methods used here.
+    """
+
+    def decompress(self, data: bytes, /) -> bytes:
+        """Decompress and return at least part of the data.
+
+        Args:
+            data: Bytes to feed to the decompressor.
+
+        Returns:
+            bytes: Decompressed output produced from ``data``.
+        """
+        _ = (self, data)
+        return b""
+
+    def flush(self, length: int = 0, /) -> bytes:
+        """Flush any pending decompressed output.
+
+        Args:
+            length: Optional initial size hint for the output buffer.
+
+        Returns:
+            bytes: Remaining decompressed output, if any.
+        """
+        _ = (self, length)
+        return b""
 
 
 _logger = get_logger(__name__)
@@ -195,8 +229,8 @@ class RFBClient:
         self.height = 0
         self.server_name = ""
         self.framebuffer = None
-        self._zrle_decompressor: zlib._Decompress | None = None
-        self._tight_zlib_streams: list[zlib._Decompress | None] = [None] * _TIGHT_ZLIB_STREAMS
+        self._zrle_decompressor: _ZlibDecompressor | None = None
+        self._tight_zlib_streams: list[_ZlibDecompressor | None] = [None] * _TIGHT_ZLIB_STREAMS
         _logger.debug("rfb_client_initialized")
 
     @property
@@ -1002,8 +1036,9 @@ class RFBClient:
             sy = src_y + row
             if sy < 0 or sy >= fb_height:
                 continue
+            line_length = fb_width * _PIXEL_BYTES
             scanline = self.framebuffer.scanLine(sy)
-            scanline.setsize(fb_width * _PIXEL_BYTES)
+            scanline.setsize(line_length)
             sx_start = max(src_x, 0)
             sx_end = min(src_x + w, fb_width)
             if sx_end <= sx_start:
@@ -1011,7 +1046,8 @@ class RFBClient:
             byte_offset = sx_start * _PIXEL_BYTES
             byte_length = (sx_end - sx_start) * _PIXEL_BYTES
             dst_offset = (row * w + (sx_start - src_x)) * _PIXEL_BYTES
-            buffer[dst_offset : dst_offset + byte_length] = bytes(scanline)[byte_offset : byte_offset + byte_length]
+            scanline_bytes = scanline.asstring(line_length)
+            buffer[dst_offset : dst_offset + byte_length] = scanline_bytes[byte_offset : byte_offset + byte_length]
         self.apply_raw_rect(dst_x, dst_y, w, h, bytes(buffer))
 
     def apply_rre_rect(
@@ -1255,13 +1291,7 @@ class RFBClient:
         for _ in range(palette_size):
             entry, cursor = self._zrle_read_cpixel(payload, cursor)
             palette.append(entry)
-        bits_per_index = (
-            1
-            if palette_size <= _TIGHT_PALETTE_BITMAP_THRESHOLD
-            else 2
-            if palette_size <= _ZRLE_PACKED_PALETTE_2BIT
-            else 4
-        )
+        bits_per_index = 1 if palette_size <= _TIGHT_PALETTE_BITMAP_THRESHOLD else 2 if palette_size <= _ZRLE_PACKED_PALETTE_2BIT else 4
         pixels_per_byte = 8 // bits_per_index
         mask = (1 << bits_per_index) - 1
         row_bytes = (tile_w + pixels_per_byte - 1) // pixels_per_byte
