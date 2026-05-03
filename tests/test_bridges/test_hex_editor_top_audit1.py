@@ -1093,9 +1093,7 @@ class TestF0035ExportIps32FallbackIsLogged:
         blob = base64.b64decode(blob_b64)
         assert blob.startswith(b"IPS32")
         assert blob.endswith(b"EEOF")
-        assert any(
-            "native_unavailable" in str(entry.get("event", "")) and entry.get("log_level") == "warning" for entry in captured
-        )
+        assert any("native_unavailable" in str(entry.get("event", "")) and entry.get("log_level") == "warning" for entry in captured)
 
 
 # ---------------------------------------------------------------------------

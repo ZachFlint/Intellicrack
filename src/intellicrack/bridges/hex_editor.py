@@ -386,14 +386,7 @@ def _is_standard_crc32(
     Returns:
         bool: True when the parameters match standard CRC-32.
     """
-    return (
-        width == _CRC32_WIDTH
-        and poly == _CRC32_POLY
-        and init == _CRC32_INIT
-        and refin
-        and refout
-        and xorout == _CRC32_XOROUT
-    )
+    return width == _CRC32_WIDTH and poly == _CRC32_POLY and init == _CRC32_INIT and refin and refout and xorout == _CRC32_XOROUT
 
 
 class HexEditorBridge(ToolBridgeBase):
@@ -7317,7 +7310,10 @@ class HexEditorBridge(ToolBridgeBase):
             except ValueError:
                 _logger.debug("die_pattern_invalid_offset", scan_offset=scan_offset, exc_info=True)
                 return
-            if fixed_offset + len(pattern_bytes) <= len(doc_bytes) and doc_bytes[fixed_offset : fixed_offset + len(pattern_bytes)] == pattern_bytes:
+            if (
+                fixed_offset + len(pattern_bytes) <= len(doc_bytes)
+                and doc_bytes[fixed_offset : fixed_offset + len(pattern_bytes)] == pattern_bytes
+            ):
                 results.append({
                     "name": sig_name,
                     "type": sig_type,

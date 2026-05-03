@@ -736,6 +736,4 @@ class TestF0036QueueClearedOnUnhandledException:
 
         state.set_selection(5, 10)
 
-        assert b_events == [HexDocumentEvent.SELECTION_CHANGED], (
-            f"Expected only SELECTION_CHANGED but got {b_events}"
-        )
+        assert b_events == [HexDocumentEvent.SELECTION_CHANGED], f"Expected only SELECTION_CHANGED but got {b_events}"

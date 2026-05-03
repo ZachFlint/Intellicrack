@@ -770,9 +770,7 @@ class GoogleProvider(LLMProviderBase):
             candidate = response.candidates[0]
             if hasattr(candidate, "content") and candidate.content and (parts := candidate.content.parts):
                 content = "".join(
-                    part.text
-                    for part in parts
-                    if hasattr(part, "text") and part.text and not getattr(part, "thought", False)
+                    part.text for part in parts if hasattr(part, "text") and part.text and not getattr(part, "thought", False)
                 )
 
         return content, tool_calls

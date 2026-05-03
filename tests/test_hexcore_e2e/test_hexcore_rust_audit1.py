@@ -145,14 +145,10 @@ class TestF0003DiffDataBlockRemoval:
         result: dict[str, Any] = hexcore_mod.diff_bytes(bytes(data_a), bytes(data_b))
         assert result["files_identical"] is False
 
-        non_match: list[dict[str, Any]] = [
-            r for r in result["regions"] if r["diff_type"] != "match" and r["length"] > 0
-        ]
+        non_match: list[dict[str, Any]] = [r for r in result["regions"] if r["diff_type"] != "match" and r["length"] > 0]
         assert non_match, "expected at least one non-match region"
         first = non_match[0]
-        assert first["length"] < 64, (
-            f"expected a sub-block-sized diff region, got length={first['length']}"
-        )
+        assert first["length"] < 64, f"expected a sub-block-sized diff region, got length={first['length']}"
 
     def test_identical_large_buffers_report_identical(self) -> None:
         """Verify the anchored path preserves the identical-files fast path."""
@@ -288,6 +284,4 @@ class TestF0005SizeofUnknownType:
         assert "anchor" in names
         assert "computed" in names
         computed = next(field for field in parsed if field["name"] == "computed")
-        assert "7" in computed["display_value"], (
-            f"expected computed display to include 7 (=2+5), got {computed['display_value']}"
-        )
+        assert "7" in computed["display_value"], f"expected computed display to include 7 (=2+5), got {computed['display_value']}"

@@ -824,9 +824,7 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
     assert "max_completion_tokens" in kwargs
     assert "max_tokens" not in kwargs
     actual_temperature = float(cast("float", kwargs["temperature"]))
-    assert abs(actual_temperature - 1.0) < 1e-9, (
-        "o-series MUST receive temperature=1.0 even without thinking"
-    )
+    assert abs(actual_temperature - 1.0) < 1e-9, "o-series MUST receive temperature=1.0 even without thinking"
 
 
 # ---------------------------------------------------------------------------
