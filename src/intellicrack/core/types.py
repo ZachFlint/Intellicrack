@@ -1424,7 +1424,7 @@ class ToolParameter:
     description: str
     required: bool = True
     enum: list[str] | None = None
-    default: str | int | float | bool | None = None
+    default: str | int | float | bool | list[str | int | float | bool] | None = None
 
 
 @dataclass
