@@ -15,6 +15,7 @@ import asyncio
 import ctypes
 import re
 import struct
+import time
 from ctypes import wintypes
 from pathlib import Path
 from typing import Literal, cast, override
@@ -34,6 +35,7 @@ from intellicrack.bridges._win32_types import (
     ERROR_NOT_ALL_ASSIGNED,
     GR_GDIOBJECTS,
     GR_USEROBJECTS,
+    HEAPENTRY32,
     HEAPLIST32,
     HKEY_CLASSES_ROOT,
     HKEY_CURRENT_USER,
@@ -52,6 +54,7 @@ from intellicrack.bridges._win32_types import (
     LUID,
     LUID_AND_ATTRIBUTES,
     MEM_COMMIT,
+    MEM_DECOMMIT,
     MEM_IMAGE,
     MEM_MAPPED,
     MEM_RELEASE,
@@ -86,6 +89,8 @@ from intellicrack.bridges._win32_types import (
     PROCESSENTRY32,
     SC_MANAGER_ENUMERATE_SERVICE,
     SE_PRIVILEGE_ENABLED,
+    SE_PRIVILEGE_REMOVED,
+    SERVICE_ACTIVE,
     SERVICE_STATE_ALL,
     SERVICE_WIN32,
     STACKFRAME64,
@@ -103,18 +108,26 @@ from intellicrack.bridges._win32_types import (
     THREAD_SUSPEND_RESUME,
     THREADENTRY32,
     TOKEN_ADJUST_PRIVILEGES,
+    TOKEN_ALL_ACCESS,
+    TOKEN_DUPLICATE,
     TOKEN_PRIVILEGES,
     TOKEN_QUERY,
+    WAIT_FAILED,
+    WAIT_OBJECT_0,
+    WAIT_TIMEOUT,
     WOW64_CONTEXT,
     JobObjectBasicLimitInformation,
     JobObjectExtendedLimitInformation,
     ProcessASLRPolicy,
     ProcessBasicInformation,
     ProcessControlFlowGuardPolicy,
+    ProcessDebugPort,
     ProcessDEPPolicy,
     ProcessDynamicCodePolicy,
+    ProcessExtensionPointDisablePolicy,
     ProcessFontDisablePolicy,
     ProcessImageLoadPolicy,
+    ProcessMitigationOptionsMask,
     ProcessSignaturePolicy,
     ProcessStrictHandleCheckPolicy,
     ProcessSystemCallDisablePolicy,
@@ -182,6 +195,24 @@ _ERR_INVALID_HEX = "input_data is not a valid hex string"
 _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
 
+_ERROR_NO_MORE_FILES: int = 18
+_OBJECT_ALL_TYPES_INFORMATION: int = 3
+_UNICODE_STRING_HEADER_SIZE: int = 4
+
+_REG_TYPE_NAMES: dict[int, str] = {
+    1: "REG_SZ",
+    2: "REG_EXPAND_SZ",
+    3: "REG_BINARY",
+    4: "REG_DWORD",
+    5: "REG_DWORD_BIG_ENDIAN",
+    6: "REG_LINK",
+    7: "REG_MULTI_SZ",
+    8: "REG_RESOURCE_LIST",
+    9: "REG_FULL_RESOURCE_DESCRIPTOR",
+    10: "REG_RESOURCE_REQUIREMENTS_LIST",
+    11: "REG_QWORD",
+}
+
 _BITS_PER_BYTE = 8
 _POINTER_BITS_64 = 64
 
@@ -202,6 +233,8 @@ _REG_TYPE_EXPAND_SZ = 2
 
 _SEARCH_CHUNK_SIZE = 0x100000
 _PE_SIGNATURE_SIZE = 4
+_MAX_TYPE_NAME_BYTES = 512
+_OBJECT_TYPE_INFO_HEADER_SIZE = 104
 
 _JOB_QUERY_INFORMATION = 0x0004
 
@@ -811,6 +844,7 @@ class ProcessBridge(ToolBridgeBase):
         self._debug_privilege_enabled: bool = False
         self._section_handles: dict[int, str] = {}
         self._section_views: dict[int, int] = {}
+        self._handle_type_cache: dict[int, str] = {}
         self._capabilities = BridgeCapabilities(
             supports_memory_access=True,
             supports_debugging=False,
@@ -1049,8 +1083,9 @@ class ProcessBridge(ToolBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
-        snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-        if snapshot == -1:
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot == INVALID_HANDLE_VALUE:
             raise ToolError(_ERR_SNAPSHOT_FAILED)
 
         processes: list[ProcessInfo] = []
@@ -1058,23 +1093,28 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
         try:
-            if self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-                while True:
-                    name = entry.szExeFile.decode("utf-8", errors="ignore")
-                    if filter_name is None or filter_name.lower() in name.lower():
-                        processes.append(
-                            ProcessInfo(
-                                pid=entry.th32ProcessID,
-                                name=name,
-                                path=None,
-                                command_line=None,
-                                parent_pid=entry.th32ParentProcessID,
-                                threads=[],
-                                modules=[],
-                            ),
-                        )
-                    if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
-                        break
+            if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
+                error_code: int = ctypes.get_last_error()
+                if error_code != _ERROR_NO_MORE_FILES:
+                    msg = _ERR_SNAPSHOT_FAILED + f" (Process32First: {error_code})"
+                    raise ToolError(msg)
+                return processes
+            while True:
+                name = entry.szExeFile.decode("utf-8", errors="ignore")
+                if filter_name is None or filter_name.lower() in name.lower():
+                    processes.append(
+                        ProcessInfo(
+                            pid=entry.th32ProcessID,
+                            name=name,
+                            path=None,
+                            command_line=None,
+                            parent_pid=entry.th32ParentProcessID,
+                            threads=[],
+                            modules=[],
+                        ),
+                    )
+                if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                    break
         finally:
             self._kernel32.CloseHandle(snapshot)
 
@@ -1102,8 +1142,9 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("kernel32_unavailable", operation="list_processes_detailed")
             raise ToolError(_ERR_KERNEL32_NA)
 
-        snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-        if snapshot == -1:
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot == INVALID_HANDLE_VALUE:
             raise ToolError(_ERR_SNAPSHOT_FAILED)
 
         results: list[dict[str, int | str | float]] = []
@@ -2056,13 +2097,14 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("no_process_specified", operation="get_modules")
             raise ToolError(_ERR_NO_PROCESS)
 
-        snapshot = self._kernel32.CreateToolhelp32Snapshot(
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(
             TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
             target_pid,
         )
 
-        if snapshot == -1:
-            error_code = ctypes.get_last_error()
+        if snapshot == INVALID_HANDLE_VALUE:
+            error_code: int = ctypes.get_last_error()
             _logger.warning("module_snapshot_failed", pid=target_pid, error_code=error_code)
             return []
 
@@ -2115,9 +2157,10 @@ class ProcessBridge(ToolBridgeBase):
         if target_pid is None:
             raise ToolError(_ERR_NO_PROCESS)
 
-        snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
-        if snapshot == -1:
-            error_code = ctypes.get_last_error()
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0)
+        if snapshot == INVALID_HANDLE_VALUE:
+            error_code: int = ctypes.get_last_error()
             _logger.warning("thread_snapshot_failed", error_code=error_code)
             return []
 
@@ -2567,27 +2610,22 @@ class ProcessBridge(ToolBridgeBase):
     # Handle enumeration
     # ------------------------------------------------------------------
 
-    async def get_handles(self, pid: int | None = None) -> list[dict[str, object]]:
-        """Enumerate open handles for a process using NtQuerySystemInformation.
+    def _query_extended_handles_buffer(self) -> tuple[ctypes.Array[ctypes.c_char], int, int]:
+        """Query NtQuerySystemInformation for SystemExtendedHandleInformation.
 
-        Args:
-            pid: Process ID (uses current if not specified).
+        Returns the validated raw buffer, the number of handles, and the
+        per-entry size. Raises on NTSTATUS failure or buffer overflow.
 
         Returns:
-            list[dict[str, object]]: List of handle dicts.
+            tuple[ctypes.Array[ctypes.c_char], int, int]: Tuple of
+                ``(buffer, num_handles, entry_size)``.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If ntdll is unavailable, the query fails, or the
+                buffer is too small for the claimed handle count.
         """
-        _logger.info("process_get_handles_started", pid=pid)
         if self._ntdll is None:
-            _logger.error("ntdll_unavailable", operation="get_handles")
             raise ToolError(_ERR_NTDLL_NA)
-
-        target_pid = pid or self._attached_pid
-        if target_pid is None:
-            _logger.error("no_process_specified", operation="get_handles")
-            raise ToolError(_ERR_NO_PROCESS)
 
         buf_size = 0x100000
         while buf_size <= _NTQUERY_BUF_MAX:
@@ -2611,14 +2649,41 @@ class ProcessBridge(ToolBridgeBase):
 
         num_handles_ptr = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_void_p))
         num_handles = num_handles_ptr.contents.value or 0
-
-        handles: list[dict[str, object]] = []
         entry_size = ctypes.sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX)
-        base_offset = ctypes.sizeof(ctypes.c_void_p) * 2
+        header_size = ctypes.sizeof(ctypes.c_void_p) * 2
+        required_size = header_size + num_handles * entry_size
 
-        for i in range(min(num_handles, 100000)):
+        if required_size > buf_size:
+            msg = f"handle buffer overflow: claimed {num_handles} handles requires {required_size} bytes but buffer is {buf_size}"
+            raise ToolError(msg)
+
+        return buffer, num_handles, entry_size
+
+    async def get_handles(self, pid: int | None = None) -> list[dict[str, object]]:
+        """Enumerate open handles for a process using NtQuerySystemInformation.
+
+        Args:
+            pid: Process ID (uses current if not specified).
+
+        Returns:
+            list[dict[str, object]]: List of handle dicts.
+
+        Raises:
+            ToolError: If operation fails.
+        """
+        _logger.info("process_get_handles_started", pid=pid)
+        target_pid = pid or self._attached_pid
+        if target_pid is None:
+            _logger.error("no_process_specified", operation="get_handles")
+            raise ToolError(_ERR_NO_PROCESS)
+
+        buffer, num_handles, entry_size = self._query_extended_handles_buffer()
+        header_size = ctypes.sizeof(ctypes.c_void_p) * 2
+        handles: list[dict[str, object]] = []
+
+        for i in range(num_handles):
             entry_ptr = ctypes.cast(
-                ctypes.byref(buffer, base_offset + i * entry_size),
+                ctypes.byref(buffer, header_size + i * entry_size),
                 ctypes.POINTER(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX),
             )
             entry = entry_ptr.contents
@@ -2631,6 +2696,183 @@ class ProcessBridge(ToolBridgeBase):
                     "granted_access": entry.GrantedAccess,
                     "object_address": entry.Object or 0,
                 })
+
+        return handles
+
+    @staticmethod
+    def _read_object_type_name(buffer: ctypes.Array[ctypes.c_char], offset: int, ptr_size: int) -> str:
+        """Read a UNICODE_STRING type name from an OBJECT_TYPE_INFORMATION entry.
+
+        The string data is stored at a fixed offset of ``_OBJECT_TYPE_INFO_HEADER_SIZE``
+        bytes from the start of each entry, immediately after the full
+        ``OBJECT_TYPE_INFORMATION`` structure. The UNICODE_STRING header resides
+        at ``offset`` and provides the ``Length`` and ``MaximumLength`` values
+        used for bounds checking.
+
+        Args:
+            buffer: Raw buffer from NtQueryObject.
+            offset: Byte offset of the entry (and its UNICODE_STRING header) within buffer.
+            ptr_size: Platform pointer size in bytes.
+
+        Returns:
+            str: Decoded type name, or empty string on failure.
+        """
+        del ptr_size
+        try:
+            length_ptr = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(wintypes.USHORT))
+            max_length_ptr = ctypes.cast(ctypes.byref(buffer, offset + 2), ctypes.POINTER(wintypes.USHORT))
+            length = length_ptr.contents.value
+            max_length = max_length_ptr.contents.value
+            if length == 0 or length > max_length or length > _MAX_TYPE_NAME_BYTES:
+                return ""
+            buf_len = getattr(buffer, "_length_", 0)
+            str_offset = offset + _OBJECT_TYPE_INFO_HEADER_SIZE
+            if str_offset + length > buf_len:
+                return ""
+            raw = bytes(buffer[str_offset : str_offset + length])
+            return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
+        except (ValueError, OSError, ctypes.ArgumentError):
+            return ""
+
+    def _parse_type_info_buffer(
+        self,
+        buffer: ctypes.Array[ctypes.c_char],
+        buf_size: int,
+    ) -> dict[int, str]:
+        """Parse the NtQueryObject ObjectAllTypesInformation buffer.
+
+        Windows assigns object type indices starting from 2, incrementing by 1
+        for each type in the order returned by NtQueryObject. Each entry
+        starts with a UNICODE_STRING header (Length + MaximumLength + padding +
+        Buffer pointer), followed by the inline string data and the rest of
+        the OBJECT_TYPE_INFORMATION fields.
+
+        Args:
+            buffer: Raw buffer returned by NtQueryObject.
+            buf_size: Usable length of the buffer in bytes.
+
+        Returns:
+            dict[int, str]: Mapping of type index to type name string.
+        """
+        ptr_size = ctypes.sizeof(ctypes.c_void_p)
+        num_types_ptr = ctypes.cast(buffer, ctypes.POINTER(wintypes.ULONG))
+        num_types = num_types_ptr.contents.value
+        offset = ptr_size
+
+        type_map: dict[int, str] = {}
+        for entry_idx in range(num_types):
+            if offset + _OBJECT_TYPE_INFO_HEADER_SIZE > buf_size:
+                break
+
+            name = self._read_object_type_name(buffer, offset, ptr_size)
+            max_length_ptr = ctypes.cast(ctypes.byref(buffer, offset + 2), ctypes.POINTER(wintypes.USHORT))
+            max_length = max_length_ptr.contents.value
+
+            type_index = entry_idx + 2
+            if name:
+                type_map[type_index] = name
+
+            entry_size = _OBJECT_TYPE_INFO_HEADER_SIZE + (max_length if max_length > 0 else 2)
+            entry_size = (entry_size + ptr_size - 1) & ~(ptr_size - 1)
+            offset += entry_size
+
+        return type_map
+
+    def _build_handle_type_map(self) -> dict[int, str]:
+        """Build an index-to-name map for Windows object types via NtQueryObject.
+
+        Calls ``NtQueryObject`` with ``ObjectAllTypesInformation`` (class 3)
+        to retrieve the kernel's live object type registry. The resulting map
+        is stored in :attr:`_handle_type_cache` and returned.
+
+        Returns:
+            dict[int, str]: Mapping of object type index to type name string.
+                Falls back to the cached value on any failure.
+        """
+        if self._ntdll is None:
+            return self._handle_type_cache
+
+        buf_size = 0x10000
+        buffer = ctypes.create_string_buffer(buf_size)
+        for _ in range(8):
+            return_length = wintypes.ULONG(0)
+            status: int = self._ntdll.NtQueryObject(
+                None,
+                _OBJECT_ALL_TYPES_INFORMATION,
+                buffer,
+                buf_size,
+                ctypes.byref(return_length),
+            )
+            if status == _STATUS_INFO_LENGTH_MISMATCH:
+                buf_size = max(buf_size * 2, return_length.value + 4096)
+                buffer = ctypes.create_string_buffer(buf_size)
+                continue
+            if status < 0:
+                _logger.warning("ntquery_object_types_failed", status=f"{status & 0xFFFFFFFF:08X}")
+                return self._handle_type_cache
+            break
+        else:
+            return self._handle_type_cache
+
+        type_map = self._parse_type_info_buffer(buffer, buf_size)
+        if type_map:
+            self._handle_type_cache = type_map
+        return self._handle_type_cache
+
+    async def enum_handles(self, pid: int | None = None) -> list[dict[str, object]]:
+        """Enumerate open handles for a process, resolving type indices to names.
+
+        Calls ``NtQuerySystemInformation`` with ``SystemExtendedHandleInformation``
+        and resolves each handle's numeric ``ObjectTypeIndex`` to a human-readable
+        type name string (e.g. ``"Process"``, ``"File"``, ``"Event"``) via
+        ``NtQueryObject(ObjectAllTypesInformation)``. The type-name map is built
+        once and cached in :attr:`_handle_type_cache`.
+
+        Args:
+            pid: Process ID to filter on. Returns handles for all processes
+                when ``None``.
+
+        Returns:
+            list[dict[str, object]]: List of handle dicts with keys:
+                ``pid``, ``handle_value``, ``type_name``, ``granted_access``,
+                ``object_address``.
+
+        Raises:
+            ToolError: If ntdll is unavailable or the system query fails.
+        """
+        _logger.info("process_enum_handles_started", pid=pid)
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
+        if not self._handle_type_cache:
+            self._build_handle_type_map()
+
+        buffer, num_handles, entry_size = self._query_extended_handles_buffer()
+        header_size = ctypes.sizeof(ctypes.c_void_p) * 2
+        handles: list[dict[str, object]] = []
+        type_map = self._handle_type_cache
+        for i in range(num_handles):
+            entry_ptr = ctypes.cast(
+                ctypes.byref(buffer, header_size + i * entry_size),
+                ctypes.POINTER(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX),
+            )
+            entry = entry_ptr.contents
+
+            entry_pid = entry.UniqueProcessId
+            if not isinstance(entry_pid, int):
+                continue
+            if pid is not None and entry_pid != pid:
+                continue
+
+            type_index = entry.ObjectTypeIndex
+            type_name: str = type_map.get(type_index, f"type_{type_index}")
+
+            handles.append({
+                "pid": entry_pid,
+                "handle_value": entry.HandleValue or 0,
+                "type_name": type_name,
+                "granted_access": entry.GrantedAccess,
+                "object_address": entry.Object or 0,
+            })
 
         return handles
 
@@ -3280,8 +3522,9 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("no_process_specified", operation="get_heaps")
             raise ToolError(_ERR_NO_PROCESS)
 
-        snapshot = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPHEAPLIST, target_pid)
-        if snapshot == -1:
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPHEAPLIST, target_pid)
+        if snapshot == INVALID_HANDLE_VALUE:
             _logger.error("snapshot_failed", operation="get_heaps", target_pid=target_pid)
             raise ToolError(_ERR_SNAPSHOT_FAILED)
 
@@ -3926,6 +4169,683 @@ class ProcessBridge(ToolBridgeBase):
                     policies[name] = {"enabled": False, "error": "not supported"}
 
             return policies
+        finally:
+            if close_handle and proc_handle:
+                self._kernel32.CloseHandle(proc_handle)
+
+    # ------------------------------------------------------------------
+    # High-level enumeration helpers (named-API aliases)
+    # ------------------------------------------------------------------
+
+    async def enumerate_system_processes(self) -> list[dict[str, object]]:
+        """Enumerate all running processes and return dict-formatted records.
+
+        Returns:
+            list[dict[str, object]]: List of dicts with ``pid``, ``name``,
+                ``parent_pid``, and ``thread_count`` fields.
+
+        Raises:
+            ToolError: If enumeration fails.
+        """
+        _logger.info("enumerate_system_processes_started")
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot == INVALID_HANDLE_VALUE:
+            raise ToolError(_ERR_SNAPSHOT_FAILED)
+
+        results: list[dict[str, object]] = []
+        entry = PROCESSENTRY32()
+        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
+
+        try:
+            if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
+                error_code: int = ctypes.get_last_error()
+                if error_code != _ERROR_NO_MORE_FILES:
+                    msg = _ERR_SNAPSHOT_FAILED + f" (Process32First: {error_code})"
+                    raise ToolError(msg)
+                return results
+            while True:
+                results.append({
+                    "pid": entry.th32ProcessID,
+                    "name": entry.szExeFile.decode("utf-8", errors="ignore"),
+                    "parent_pid": entry.th32ParentProcessID,
+                    "thread_count": entry.cntThreads,
+                })
+                if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                    break
+        finally:
+            self._kernel32.CloseHandle(snapshot)
+
+        return results
+
+    async def enumerate_handles(self, pid: int | None = None) -> list[dict[str, object]]:
+        """Enumerate open handles for a process.
+
+        Uses ``NtQuerySystemInformation`` with ``SystemExtendedHandleInformation``.
+        Each entry exposes the raw ``object_type_index`` numeric field.
+
+        Args:
+            pid: Process ID to filter on. Returns all handles when ``None``.
+
+        Returns:
+            list[dict[str, object]]: List of handle dicts with keys
+                ``pid``, ``handle_value``, ``object_type_index``,
+                ``granted_access``, ``object_address``.
+
+        Raises:
+            ToolError: If ntdll is unavailable or the query fails.
+        """
+        _logger.info("enumerate_handles_started", pid=pid)
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
+        buffer, num_handles, entry_size = self._query_extended_handles_buffer()
+        header_size = ctypes.sizeof(ctypes.c_void_p) * 2
+        handles: list[dict[str, object]] = []
+        for i in range(num_handles):
+            entry_ptr = ctypes.cast(
+                ctypes.byref(buffer, header_size + i * entry_size),
+                ctypes.POINTER(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX),
+            )
+            entry = entry_ptr.contents
+
+            entry_pid = entry.UniqueProcessId
+            if not isinstance(entry_pid, int):
+                continue
+            if pid is not None and entry_pid != pid:
+                continue
+
+            handles.append({
+                "pid": entry_pid,
+                "handle_value": entry.HandleValue or 0,
+                "object_type_index": entry.ObjectTypeIndex,
+                "granted_access": entry.GrantedAccess,
+                "object_address": entry.Object or 0,
+            })
+
+        return handles
+
+    async def enumerate_heaps(self, pid: int | None = None) -> list[dict[str, object]]:
+        """Enumerate process heaps with per-heap block details.
+
+        Uses ``Toolhelp32Snapshot`` to walk the heap list and each heap's
+        blocks via ``Heap32First`` / ``Heap32Next``.
+
+        Args:
+            pid: Process ID (uses current if not specified).
+
+        Returns:
+            list[dict[str, object]]: List of heap dicts with ``id``, ``flags``,
+                and ``blocks`` (list of block dicts with ``address``, ``size``,
+                ``flags``).
+
+        Raises:
+            ToolError: If operation fails.
+        """
+        _logger.info("enumerate_heaps_started", pid=pid)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        target_pid = pid or self._attached_pid
+        if target_pid is None:
+            raise ToolError(_ERR_NO_PROCESS)
+
+        self._kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        snapshot: int = self._kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPHEAPLIST, target_pid)
+        if snapshot == INVALID_HANDLE_VALUE:
+            _logger.warning("heap_snapshot_failed", pid=target_pid, error_code=ctypes.get_last_error())
+            return []
+
+        heaps: list[dict[str, object]] = []
+        hl = HEAPLIST32()
+        hl.dwSize = ctypes.sizeof(HEAPLIST32)
+
+        heap32first = getattr(self._kernel32, "Heap32First", None)
+        heap32next = getattr(self._kernel32, "Heap32Next", None)
+
+        try:
+            if self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(hl)):
+                while True:
+                    blocks: list[dict[str, object]] = []
+                    if heap32first is not None and heap32next is not None:
+                        he = HEAPENTRY32()
+                        he.dwSize = ctypes.sizeof(HEAPENTRY32)
+                        if heap32first(ctypes.byref(he), target_pid, ctypes.c_size_t(hl.th32HeapID)):
+                            while True:
+                                blocks.append({
+                                    "address": he.dwAddress,
+                                    "size": he.dwBlockSize,
+                                    "flags": he.dwFlags,
+                                })
+                                he.dwSize = ctypes.sizeof(HEAPENTRY32)
+                                if not heap32next(ctypes.byref(he)):
+                                    break
+
+                    heaps.append({
+                        "id": hl.th32HeapID,
+                        "flags": hl.dwFlags,
+                        "blocks": blocks,
+                    })
+                    hl.dwSize = ctypes.sizeof(HEAPLIST32)
+                    if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(hl)):
+                        break
+        finally:
+            self._kernel32.CloseHandle(snapshot)
+
+        return heaps
+
+    async def enumerate_services(self, *, active: bool = False) -> list[dict[str, object]]:
+        """Enumerate Windows services.
+
+        Args:
+            active: When ``True`` limit results to services that are
+                currently running.
+
+        Returns:
+            list[dict[str, object]]: List of service information dicts.
+
+        Raises:
+            ToolError: If the SCM cannot be opened.
+        """
+        _logger.info("enumerate_services_started", active=active)
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        scm = self._advapi32.OpenSCManagerW(None, None, SC_MANAGER_ENUMERATE_SERVICE)
+        if not scm:
+            raise ToolError(_ERR_SCM_OPEN_FAILED)
+
+        state_filter = SERVICE_ACTIVE if active else SERVICE_STATE_ALL
+
+        try:
+            bytes_needed = wintypes.DWORD(0)
+            services_returned = wintypes.DWORD(0)
+            resume_handle = wintypes.DWORD(0)
+
+            self._advapi32.EnumServicesStatusExW(
+                scm,
+                0,
+                SERVICE_WIN32,
+                state_filter,
+                None,
+                0,
+                ctypes.byref(bytes_needed),
+                ctypes.byref(services_returned),
+                ctypes.byref(resume_handle),
+                None,
+            )
+
+            buf_size = bytes_needed.value
+            if buf_size == 0:
+                return []
+
+            buffer = ctypes.create_string_buffer(buf_size)
+            if not self._advapi32.EnumServicesStatusExW(
+                scm,
+                0,
+                SERVICE_WIN32,
+                state_filter,
+                buffer,
+                buf_size,
+                ctypes.byref(bytes_needed),
+                ctypes.byref(services_returned),
+                ctypes.byref(resume_handle),
+                None,
+            ):
+                raise ToolError(_ERR_ENUM_SVC)
+
+            return self._parse_service_entries(buffer, services_returned.value, None)
+        finally:
+            self._advapi32.CloseServiceHandle(scm)
+
+    async def time_thread_wait(self, tid: int, timeout_ms: int = 0) -> dict[str, object]:
+        """Wait on a thread handle and measure elapsed time.
+
+        Opens the thread with ``OpenThread``, calls ``WaitForSingleObject``
+        with the given timeout, records elapsed microseconds, and returns a
+        structured result.
+
+        Args:
+            tid: Thread ID to wait on.
+            timeout_ms: Wait timeout in milliseconds (0 = return immediately).
+
+        Returns:
+            dict[str, object]: Dict with keys ``result`` (``"signaled"``,
+                ``"timeout"``, ``"failed"``, or ``"other_<code>"``),
+                and ``elapsed_us`` (int microseconds).
+
+        Raises:
+            ToolError: If the thread cannot be opened.
+        """
+        _logger.info("time_thread_wait_started", tid=tid, timeout_ms=timeout_ms)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        inherit_handle = False
+        handle: int = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
+        if not handle:
+            error_code: int = ctypes.get_last_error()
+            msg = _ERR_THREAD_OPEN_FAILED + f" (tid={tid}, error={error_code})"
+            raise ToolError(msg)
+
+        try:
+            start = time.perf_counter()
+            wait_result: int = self._kernel32.WaitForSingleObject(handle, timeout_ms)
+            elapsed_us = int((time.perf_counter() - start) * 1_000_000)
+
+            if wait_result == WAIT_OBJECT_0:
+                result_str = "signaled"
+            elif wait_result == WAIT_TIMEOUT:
+                result_str = "timeout"
+            elif wait_result == WAIT_FAILED:
+                result_str = "failed"
+            else:
+                result_str = f"other_{wait_result}"
+
+            return {"result": result_str, "elapsed_us": elapsed_us}
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+    async def duplicate_token(self, pid: int) -> int:
+        """Duplicate the primary token of a process.
+
+        Opens the process, opens its token, and calls
+        ``DuplicateTokenEx`` to produce a new primary token. The caller
+        is responsible for closing the returned handle via
+        ``kernel32.CloseHandle``.
+
+        Args:
+            pid: Process ID whose token to duplicate.
+
+        Returns:
+            int: Handle value of the duplicated token.
+
+        Raises:
+            ToolError: If the process or token cannot be opened, or
+                duplication fails.
+        """
+        _logger.info("duplicate_token_started", pid=pid)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        inherit_handle = False
+        proc_handle: int = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid)
+        if not proc_handle:
+            raise ToolError(_ERR_OPEN_FAILED)
+
+        try:
+            token_handle = wintypes.HANDLE()
+            if not self._advapi32.OpenProcessToken(
+                proc_handle,
+                TOKEN_DUPLICATE | TOKEN_QUERY,
+                ctypes.byref(token_handle),
+            ):
+                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+            try:
+                dup_handle = wintypes.HANDLE()
+                security_impersonation = 2
+                token_primary = 1
+                if not self._advapi32.DuplicateTokenEx(
+                    token_handle,
+                    TOKEN_ALL_ACCESS,
+                    None,
+                    security_impersonation,
+                    token_primary,
+                    ctypes.byref(dup_handle),
+                ):
+                    msg = "DuplicateTokenEx failed"
+                    raise ToolError(msg)
+
+                dup_value = dup_handle.value
+                if dup_value is None:
+                    msg = "DuplicateTokenEx returned null handle"
+                    raise ToolError(msg)
+                return dup_value
+            finally:
+                self._kernel32.CloseHandle(token_handle)
+        finally:
+            self._kernel32.CloseHandle(proc_handle)
+
+    async def remove_privilege(self, pid: int, privilege_name: str) -> bool:
+        """Remove a privilege from the primary token of a process.
+
+        Args:
+            pid: Process ID.
+            privilege_name: Name of the privilege to remove (e.g.
+                ``"SeShutdownPrivilege"``).
+
+        Returns:
+            bool: ``True`` if the privilege was successfully removed,
+                ``False`` if it was not present or the operation was not
+                applicable.
+
+        Raises:
+            ToolError: If the process or token cannot be opened.
+        """
+        _logger.info("remove_privilege_started", pid=pid, privilege_name=privilege_name)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        inherit_handle = False
+        proc_handle: int = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid)
+        if not proc_handle:
+            raise ToolError(_ERR_OPEN_FAILED)
+
+        try:
+            token_handle = wintypes.HANDLE()
+            if not self._advapi32.OpenProcessToken(
+                proc_handle,
+                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                ctypes.byref(token_handle),
+            ):
+                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+            try:
+                luid = LUID()
+                if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
+                    return False
+
+                tp = TOKEN_PRIVILEGES()
+                tp.PrivilegeCount = 1
+                tp.Privileges[0].Luid = luid
+                tp.Privileges[0].Attributes = SE_PRIVILEGE_REMOVED
+
+                disable_all = wintypes.BOOL(0)
+                self._advapi32.AdjustTokenPrivileges(
+                    token_handle,
+                    disable_all,
+                    ctypes.byref(tp),
+                    ctypes.sizeof(TOKEN_PRIVILEGES),
+                    None,
+                    None,
+                )
+
+                last_error: int = ctypes.get_last_error()
+                return last_error != ERROR_NOT_ALL_ASSIGNED
+            finally:
+                self._kernel32.CloseHandle(token_handle)
+        finally:
+            self._kernel32.CloseHandle(proc_handle)
+
+    async def decommit_memory(self, pid: int, address: int, size: int) -> bool:
+        """Decommit a region of committed memory in a process.
+
+        Calls ``VirtualFreeEx`` with ``MEM_DECOMMIT`` to release physical
+        storage for the region without releasing the virtual address range.
+
+        Args:
+            pid: Process ID.
+            address: Base address of the region to decommit.
+            size: Size of the region in bytes.
+
+        Returns:
+            bool: ``True`` if decommit succeeded.
+
+        Raises:
+            ToolError: If kernel32 is unavailable or the process cannot
+                be opened.
+        """
+        _logger.info("decommit_memory_started", pid=pid, address=address, size=size)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        close_handle = False
+        proc_handle: int | None = None
+
+        if pid == self._attached_pid and self._process_handle is not None:
+            proc_handle = self._process_handle
+        else:
+            inherit_handle = False
+            proc_handle = self._kernel32.OpenProcess(PROCESS_VM_OPERATION, inherit_handle, pid)
+            close_handle = True
+
+        if not proc_handle:
+            raise ToolError(_ERR_OPEN_FAILED)
+
+        try:
+            result: bool = bool(self._kernel32.VirtualFreeEx(proc_handle, address, size, MEM_DECOMMIT))
+            if not result:
+                _logger.warning("decommit_memory_failed", pid=pid, address=address, error_code=ctypes.get_last_error())
+            return result
+        finally:
+            if close_handle and proc_handle:
+                self._kernel32.CloseHandle(proc_handle)
+
+    async def read_registry(self, hive: str, key_path: str, value_name: str) -> dict[str, object]:
+        r"""Read a registry value using explicit hive, key path, and value name.
+
+        Returns standard Windows registry type names (e.g. ``"REG_SZ"``,
+        ``"REG_DWORD"``) in the ``"type"`` field, unlike the lower-level
+        :meth:`reg_read_value` which uses abbreviated names.
+
+        Args:
+            hive: Registry hive abbreviation (``"HKLM"``, ``"HKCU"``,
+                ``"HKCR"``).
+            key_path: Subkey path within the hive (e.g.
+                ``r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"``).
+            value_name: Name of the registry value to read.
+
+        Returns:
+            dict[str, object]: Dict with ``"type"`` (Windows REG_* name string)
+                and ``"data"`` fields.
+
+        Raises:
+            ToolError: If the hive is unknown, the key cannot be opened,
+                or the value cannot be read.
+        """
+        _logger.info("read_registry_started", hive=hive, key_path=key_path, value_name=value_name)
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        full_path = f"{hive}\\{key_path}"
+        root_key, subpath = self._parse_registry_path(full_path)
+        hkey = wintypes.HKEY()
+
+        if self._advapi32.RegOpenKeyExW(root_key, subpath, 0, KEY_QUERY_VALUE, ctypes.byref(hkey)) != 0:
+            msg = _ERR_REG_KEY_OPEN + full_path
+            raise ToolError(msg)
+
+        try:
+            data_buf = ctypes.create_string_buffer(4096)
+            data_size = wintypes.DWORD(4096)
+            val_type = wintypes.DWORD(0)
+
+            if (
+                self._advapi32.RegQueryValueExW(
+                    hkey,
+                    value_name,
+                    None,
+                    ctypes.byref(val_type),
+                    data_buf,
+                    ctypes.byref(data_size),
+                )
+                != 0
+            ):
+                msg = _ERR_REG_VALUE_READ + value_name
+                raise ToolError(msg)
+
+            raw = data_buf.raw[: data_size.value]
+            vtype = val_type.value
+            type_name = _REG_TYPE_NAMES.get(vtype, f"REG_UNKNOWN_{vtype}")
+
+            if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
+                decoded = raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
+                return {"type": type_name, "data": decoded}
+            if vtype == _REG_TYPE_DWORD:
+                return {"type": type_name, "data": struct.unpack_from("<I", raw)[0]}
+            if vtype == _REG_TYPE_QWORD:
+                return {"type": type_name, "data": struct.unpack_from("<Q", raw)[0]}
+            return {"type": type_name, "data": raw.hex()}
+        finally:
+            self._advapi32.RegCloseKey(hkey)
+
+    async def detect_kernel_debugger(self, pid: int) -> bool:
+        """Detect whether a kernel debugger port is attached to a process.
+
+        Queries ``NtQueryInformationProcess`` with ``ProcessDebugPort``
+        (class 7). A non-zero port value indicates a debugger.
+
+        Args:
+            pid: Process ID to query.
+
+        Returns:
+            bool: ``True`` if a kernel debugger port is detected.
+
+        Raises:
+            ToolError: If the process cannot be opened or the query fails.
+        """
+        _logger.info("detect_kernel_debugger_started", pid=pid)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
+
+        inherit_handle = False
+        proc_handle: int = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid)
+        if not proc_handle:
+            error_code: int = ctypes.get_last_error()
+            msg = _ERR_OPEN_FAILED + f" (pid={pid}, error={error_code})"
+            raise ToolError(msg)
+
+        try:
+            debug_port = ctypes.c_void_p(0)
+            return_length = wintypes.ULONG(0)
+            status: int = self._ntdll.NtQueryInformationProcess(
+                proc_handle,
+                ProcessDebugPort,
+                ctypes.byref(debug_port),
+                ctypes.sizeof(debug_port),
+                ctypes.byref(return_length),
+            )
+            if status < 0:
+                msg = _ERR_NTQUERY_PROC + f"{status & 0xFFFFFFFF:08X}"
+                raise ToolError(msg)
+            return bool(debug_port.value)
+        finally:
+            self._kernel32.CloseHandle(proc_handle)
+
+    async def get_mitigation_policy(self, pid: int | None = None) -> dict[str, object]:
+        """Query process mitigation policies with a simplified key schema.
+
+        Returns a flat dict suitable for structured analysis consumers.
+        Delegates to the full policy query and remaps the result.
+
+        Args:
+            pid: Process ID (uses current if not specified).
+
+        Returns:
+            dict[str, object]: Dict with at least the keys ``dep``, ``aslr``,
+                ``cfg``, and ``sehop_via_options_mask``.
+
+        Raises:
+            ToolError: If operation fails.
+        """
+        _logger.info("get_mitigation_policy_started", pid=pid)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        full = await self.get_mitigation_policies(pid)
+        empty_policy: dict[str, object] = {}
+
+        dep_flags: dict[str, object] = cast("dict[str, object]", full.get("DEP")) if isinstance(full.get("DEP"), dict) else empty_policy
+        aslr_flags: dict[str, object] = cast("dict[str, object]", full.get("ASLR")) if isinstance(full.get("ASLR"), dict) else empty_policy
+        cfg_flags: dict[str, object] = cast("dict[str, object]", full.get("CFG")) if isinstance(full.get("CFG"), dict) else empty_policy
+
+        target_pid = pid or self._attached_pid
+        close_handle = False
+        proc_handle: int | None = None
+
+        no_inherit: int = 0
+        if target_pid is not None and target_pid != self._attached_pid:
+            proc_handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, no_inherit, target_pid)
+            close_handle = True
+        elif self._process_handle is not None:
+            proc_handle = self._process_handle
+        else:
+            proc_handle = self._kernel32.GetCurrentProcess()
+
+        sehop_mask: int = 0
+        if proc_handle:
+            try:
+                mask_buf = (ctypes.c_ulonglong * 2)()
+                get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
+                if get_policy is not None and get_policy(
+                    proc_handle,
+                    ProcessMitigationOptionsMask,
+                    ctypes.byref(mask_buf),
+                    ctypes.sizeof(mask_buf),
+                ):
+                    sehop_mask = mask_buf[0]
+            except (OSError, ctypes.ArgumentError):
+                sehop_mask = 0
+            finally:
+                if close_handle and proc_handle:
+                    self._kernel32.CloseHandle(proc_handle)
+        elif close_handle and proc_handle:
+            self._kernel32.CloseHandle(proc_handle)
+
+        return {
+            "dep": dep_flags.get("enabled", False),
+            "aslr": aslr_flags.get("enabled", False),
+            "cfg": cfg_flags.get("enabled", False),
+            "sehop_via_options_mask": sehop_mask,
+        }
+
+    async def get_extension_policy(self, pid: int | None = None) -> dict[str, object]:
+        """Query the extension-point disable mitigation policy for a process.
+
+        Args:
+            pid: Process ID (uses current if not specified).
+
+        Returns:
+            dict[str, object]: Dict with ``disable_extension_points`` bool.
+
+        Raises:
+            ToolError: If operation fails.
+        """
+        _logger.info("get_extension_policy_started", pid=pid)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        target_pid = pid or self._attached_pid
+        close_handle = False
+        proc_handle: int | None = None
+
+        if target_pid is not None and target_pid != self._attached_pid:
+            inherit_handle = False
+            proc_handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, target_pid)
+            close_handle = True
+        elif self._process_handle is not None:
+            proc_handle = self._process_handle
+        else:
+            proc_handle = self._kernel32.GetCurrentProcess()
+
+        if not proc_handle:
+            raise ToolError(_ERR_OPEN_FAILED)
+
+        try:
+            policy_buf = ctypes.c_ulong(0)
+            get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
+            disabled = False
+            if get_policy is not None:
+                try:
+                    if get_policy(
+                        proc_handle,
+                        ProcessExtensionPointDisablePolicy,
+                        ctypes.byref(policy_buf),
+                        ctypes.sizeof(policy_buf),
+                    ):
+                        disabled = bool(policy_buf.value & 1)
+                except (OSError, ctypes.ArgumentError):
+                    disabled = False
+            return {"disable_extension_points": disabled}
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
