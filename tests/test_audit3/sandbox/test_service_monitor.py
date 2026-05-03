@@ -36,7 +36,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Final
+from typing import Final, cast
 
 import pytest
 
@@ -224,11 +224,14 @@ def _read_jsonl(path: Path) -> list[dict[str, object]]:
         if not line.startswith("{"):
             continue
         try:
-            obj = json.loads(line)
+            obj: object = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(obj, dict):
-            records.append(obj)
+        if not isinstance(obj, dict):
+            continue
+        raw_items = cast("dict[object, object]", obj).items()
+        record: dict[str, object] = {str(k): v for k, v in raw_items}
+        records.append(record)
     return records
 
 
