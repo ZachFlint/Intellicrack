@@ -222,19 +222,19 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._decompiled_view = QPlainTextEdit()
         self._decompiled_view.setFont(fm.get_code_font(10))
-        self._decompiled_view.setReadOnly(ro=True)
+        self._decompiled_view.setReadOnly(True)
         set_max_block_count(self._decompiled_view, 50000)
         tabs.addTab(self._decompiled_view, self.tr("Decompiled"))
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(ro=True)
+        self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
         self._pcode_view = QPlainTextEdit()
         self._pcode_view.setFont(fm.get_code_font(10))
-        self._pcode_view.setReadOnly(ro=True)
+        self._pcode_view.setReadOnly(True)
         set_max_block_count(self._pcode_view, 50000)
         tabs.addTab(self._pcode_view, self.tr("PCode"))
 
@@ -243,7 +243,7 @@ class GhidraPanel(AnalysisPanelBase):
         else:
             cfg_fallback = QPlainTextEdit()
             cfg_fallback.setFont(fm.get_code_font(10))
-            cfg_fallback.setReadOnly(ro=True)
+            cfg_fallback.setReadOnly(True)
             self._cfg_view = cfg_fallback
         tabs.addTab(self._cfg_view, self.tr("CFG"))
 
@@ -479,7 +479,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(read_row)
 
         self._hex_dump_view = QPlainTextEdit()
-        self._hex_dump_view.setReadOnly(ro=True)
+        self._hex_dump_view.setReadOnly(True)
         self._hex_dump_view.setFixedHeight(100)
         layout.addWidget(self._hex_dump_view)
 
@@ -849,7 +849,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addWidget(output_label)
 
         self._script_output = QPlainTextEdit()
-        self._script_output.setReadOnly(ro=True)
+        self._script_output.setReadOnly(True)
         self._script_output.setFixedHeight(100)
         layout.addWidget(self._script_output)
 
@@ -929,7 +929,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(get_row)
 
         self._dt_result_view = QPlainTextEdit()
-        self._dt_result_view.setReadOnly(ro=True)
+        self._dt_result_view.setReadOnly(True)
         self._dt_result_view.setFont(fm.get_code_font(10))
         self._dt_result_view.setFixedHeight(120)
         layout.addWidget(self._dt_result_view)
@@ -2262,13 +2262,23 @@ class GhidraPanel(AnalysisPanelBase):
         )
 
     def _on_refresh_labels(self) -> None:
-        """Refresh the labels table from bridge."""
+        """Refresh the labels table from bridge.
+
+        Requires a valid address in the label address input. If the input is empty
+        or unparsable, surfaces a UI error and short-circuits without invoking the
+        bridge so the user's intent is never silently changed to address 0.
+        """
         bridge = self._require_connected()
         if bridge is None:
             return
-        addr = self._parse_address(self._label_addr_input.text())
+        raw = self._label_addr_input.text().strip()
+        if not raw:
+            self._set_status("Refresh labels requires an address (e.g. 0x401000)")
+            return
+        addr = self._parse_address(raw)
         if addr is None:
-            addr = 0
+            self._set_status(f"Refresh labels: invalid address '{raw}'")
+            return
         self._run_async(
             bridge.get_labels(addr),
             on_success=self._apply_labels,
