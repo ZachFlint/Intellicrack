@@ -39,11 +39,15 @@ import inspect
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 from unittest import mock
 
 import pytest
 from structlog.testing import capture_logs
+
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 from intellicrack.core.script_gen import (
     Script,
@@ -52,18 +56,18 @@ from intellicrack.core.script_gen import (
     ScriptLanguage,
     ScriptManager,
     ScriptValidator,
-    _strip_java_strings_and_comments,
+    strip_java_strings_and_comments,
 )
 
 
 _PYTHON_CONTENT: Final[str] = "print('hello from intellicrack audit3 unit8')\n"
 
 
-def _event_names(records: list[dict[str, Any]]) -> list[str]:
+def _event_names(records: Sequence[Mapping[str, Any]]) -> list[str]:
     """Return the ordered list of structlog event names from a record list.
 
     Args:
-        records: List of structlog event dicts captured via
+        records: Sequence of structlog event mappings captured via
             :func:`structlog.testing.capture_logs`.
 
     Returns:
@@ -189,9 +193,9 @@ def test_validator_returns_false_for_unsupported(language: ScriptLanguage) -> No
 
 
 def test_strip_java_strings_and_comments_removes_string_braces() -> None:
-    """_strip_java_strings_and_comments masks string-literal braces."""
+    """strip_java_strings_and_comments masks string-literal braces."""
     src = 'String s = "{}";'
-    scrubbed = _strip_java_strings_and_comments(src)
+    scrubbed = strip_java_strings_and_comments(src)
     assert "{" not in scrubbed
     assert "}" not in scrubbed
 
@@ -199,7 +203,7 @@ def test_strip_java_strings_and_comments_removes_string_braces() -> None:
 def test_strip_java_strings_and_comments_preserves_line_count() -> None:
     """Stripping preserves the line count of the original source."""
     src = "line1 // comment\nline2\n/* block\nspan */line3\n"
-    scrubbed = _strip_java_strings_and_comments(src)
+    scrubbed = strip_java_strings_and_comments(src)
     assert scrubbed.count("\n") == src.count("\n")
 
 
@@ -476,7 +480,7 @@ def test_script_manager_execute_command_for_javascript(tmp_path: Path) -> None:
         saved_path=tmp_path / "hook.js",
     )
     (tmp_path / "hook.js").write_text(script.content, encoding="utf-8")
-    cmd = mgr._build_execute_command(script, None)
+    cmd = mgr.build_execute_command(script, None)
     assert cmd[0] == "node"
     assert cmd[1] == str(tmp_path / "hook.js")
 
@@ -497,7 +501,7 @@ def test_script_manager_execute_command_for_java(tmp_path: Path) -> None:
         saved_path=tmp_path / "ghi.java",
     )
     (tmp_path / "ghi.java").write_text(script.content, encoding="utf-8")
-    cmd = mgr._build_execute_command(script, None)
+    cmd = mgr.build_execute_command(script, None)
     assert cmd[0] == "analyzeHeadless"
     assert "-postScript" in cmd
     assert "ghi.java" in cmd
@@ -519,7 +523,7 @@ def test_script_manager_execute_command_for_x64dbg(tmp_path: Path) -> None:
         saved_path=tmp_path / "dbg.txt",
     )
     (tmp_path / "dbg.txt").write_text(script.content, encoding="utf-8")
-    cmd = mgr._build_execute_command(script, None)
+    cmd = mgr.build_execute_command(script, None)
     assert cmd[0] in {"x64dbg", "x32dbg"}
     assert "-script" in cmd
     assert str(tmp_path / "dbg.txt") in cmd
@@ -543,7 +547,7 @@ def test_script_manager_execute_command_for_python_uses_active_interpreter(
         saved_path=tmp_path / "py.py",
     )
     (tmp_path / "py.py").write_text(script.content, encoding="utf-8")
-    cmd = mgr._build_execute_command(script, None)
+    cmd = mgr.build_execute_command(script, None)
     assert cmd[0] == sys.executable
 
 

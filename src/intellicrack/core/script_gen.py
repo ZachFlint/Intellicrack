@@ -110,7 +110,7 @@ def _utc_now() -> datetime:
     return datetime.now(tz=UTC)
 
 
-def _strip_java_strings_and_comments(content: str) -> str:
+def strip_java_strings_and_comments(content: str) -> str:
     """Strip Java string literals, char literals, and comments from source.
 
     Replaces every string literal, character literal, line comment, and
@@ -278,6 +278,10 @@ class ScriptContext:
         string_references: Relevant string references found.
         magic_constants: Magic constants used in validation.
         additional_context: Any additional context from analysis.
+        LANGUAGE_API_MAP: Class-level mapping from
+            :class:`ScriptLanguage` to the API-reference key
+            (``"frida"``, ``"ghidra"``, ``"cutter"``, ``"x64dbg"``)
+            used to look up the per-language reference dict.
     """
 
     binary_name: str
@@ -592,7 +596,7 @@ class ScriptValidator:
         """
         _logger.debug("validate_java_start", content_length=len(content))
 
-        scrubbed = _strip_java_strings_and_comments(content)
+        scrubbed = strip_java_strings_and_comments(content)
 
         if _JAVA_IMPORT_KEYWORD_RE.search(scrubbed) is None:
             _logger.debug("validate_java_missing_element", element="import")
@@ -948,7 +952,7 @@ class ScriptManager:
             _logger.warning("script_execute_not_found", script=name)
             raise KeyError(name)
 
-        cmd = self._build_execute_command(script, args)
+        cmd = self.build_execute_command(script, args)
 
         runner_binary = cmd[0]
         if runner_binary != sys.executable and shutil.which(runner_binary) is None:
@@ -957,12 +961,16 @@ class ScriptManager:
 
         process_manager = ProcessManager.get_instance()
         _logger.debug("script_execute_start", script=name, command=cmd, timeout=timeout)
-        result = process_manager.run_tracked(
-            cmd,
-            name=f"script-execute-{name}",
-            timeout=timeout,
-            cwd=str(cwd) if cwd is not None else None,
-        )
+        try:
+            result = process_manager.run_tracked(
+                cmd,
+                name=f"script-execute-{name}",
+                timeout=timeout,
+                cwd=str(cwd) if cwd is not None else None,
+            )
+        except TimeoutExpired:
+            _logger.warning("script_execute_timeout", script=name, timeout=timeout)
+            raise
         _logger.info(
             "script_execute_completed",
             script=name,
@@ -983,7 +991,7 @@ class ScriptManager:
         )
         return result
 
-    def _build_execute_command(self, script: Script, args: list[str] | None) -> list[str]:
+    def build_execute_command(self, script: Script, args: list[str] | None) -> list[str]:
         """Build the runner command line for a script.
 
         Materialises ``script`` to disk via :attr:`Script.saved_path` if
