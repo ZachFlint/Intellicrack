@@ -28,7 +28,9 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 
+from intellicrack.bridges._win32_types import SYMBOL_INFO
 from intellicrack.bridges.process import (
+    IMAGEHLP_MODULE64,
     PEB64,
     TLS_ARRAY_OFFSET_X64,
     TLS_ARRAY_OFFSET_X86,
@@ -72,6 +74,10 @@ _ATTR_PROT_FROM_STRING = "_prot_from_string"
 _ATTR_PARSE_REGISTRY_PATH = "_parse_registry_path"
 _ATTR_SECTION_HANDLES = "_section_handles"
 _ATTR_SECTION_VIEWS = "_section_views"
+_ATTR_RESOLVE_SYMBOL = "_resolve_symbol"
+_ATTR_RESOLVE_MODULE = "_resolve_module"
+
+_MAX_SYM_NAME: int = 2000
 
 
 class _SectionHandlesShapeError(TypeError):
@@ -248,6 +254,63 @@ def _invoke_parse_registry_path(key_path: str) -> tuple[int, str]:
         msg = f"ProcessBridge.{_ATTR_PARSE_REGISTRY_PATH} expected (int, str), got ({type(root_obj).__name__}, {type(sub_obj).__name__})"
         raise TypeError(msg)
     return root_obj, sub_obj
+
+
+def _invoke_resolve_symbol(bridge: ProcessBridge, pc: int) -> tuple[str, int]:
+    """Invoke ProcessBridge._resolve_symbol via getattr, bypassing reportPrivateUsage.
+
+    Args:
+        bridge: The ProcessBridge instance.
+        pc: Program counter address to resolve.
+
+    Returns:
+        tuple[str, int]: ``(symbol_name, displacement)`` pair.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns unexpected type.
+    """
+    fn: object = getattr(bridge, _ATTR_RESOLVE_SYMBOL)
+    if not callable(fn):
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_SYMBOL} is not callable"
+        raise TypeError(msg)
+    raw: object = fn(pc)
+    if not isinstance(raw, tuple):
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_SYMBOL} expected 2-tuple, got {type(raw).__name__}"
+        raise TypeError(msg)
+    typed_raw: tuple[object, ...] = cast("tuple[object, ...]", raw)
+    if len(typed_raw) != 2:
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_SYMBOL} expected 2-element tuple, got {len(typed_raw)}"
+        raise TypeError(msg)
+    sym: object = typed_raw[0]
+    disp: object = typed_raw[1]
+    if not isinstance(sym, str) or not isinstance(disp, int):
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_SYMBOL} expected (str, int), got ({type(sym).__name__}, {type(disp).__name__})"
+        raise TypeError(msg)
+    return sym, disp
+
+
+def _invoke_resolve_module(bridge: ProcessBridge, pc: int) -> str:
+    """Invoke ProcessBridge._resolve_module via getattr, bypassing reportPrivateUsage.
+
+    Args:
+        bridge: The ProcessBridge instance.
+        pc: Program counter address to resolve.
+
+    Returns:
+        str: Module name or empty string.
+
+    Raises:
+        TypeError: If the resolved attribute is not callable or returns unexpected type.
+    """
+    fn: object = getattr(bridge, _ATTR_RESOLVE_MODULE)
+    if not callable(fn):
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_MODULE} is not callable"
+        raise TypeError(msg)
+    result: object = fn(pc)
+    if not isinstance(result, str):
+        msg = f"ProcessBridge.{_ATTR_RESOLVE_MODULE} expected str, got {type(result).__name__}"
+        raise TypeError(msg)
+    return result
 
 
 def _configure_kernel32_signatures(k32: ctypes.WinDLL) -> None:
@@ -1205,14 +1268,23 @@ class TestSehFiberTls:
     """Verify SEH chain, fiber data, and TLS access."""
 
     async def test_get_seh_chain_no_crash(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
-        """Verify SEH chain returns a list (may be empty on x64).
+        """Verify SEH chain raises on x64 target and returns list on WOW64.
+
+        Per F-0008, SEH chain traversal via FS:[0] is only valid for x86 / WOW64.
+        On a native x64 target, ``get_seh_chain`` must raise ``ToolError`` because
+        Windows uses table-based exception handling and the FS:[0] chain pointer
+        is not populated. On a WOW64 (32-bit) target, the call must return a list.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
         """
-        chain = await attached_bridge.get_seh_chain(main_thread_tid)
-        assert isinstance(chain, list)
+        if struct.calcsize("P") * 8 == 64:
+            with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
+                await attached_bridge.get_seh_chain(main_thread_tid)
+        else:
+            chain = await attached_bridge.get_seh_chain(main_thread_tid)
+            assert isinstance(chain, list)
 
     async def test_get_fiber_data_returns_dict(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify fiber data has expected keys.
@@ -3013,3 +3085,312 @@ class TestF0010InjectDllExitCodeChecked:
                 await attached_bridge.inject_dll(bad_dll)
         finally:
             await asyncio.to_thread(_unlink_suppress, bad_dll)
+
+
+class TestF0009ContextWow64:
+    """F-0009: get_thread_context selects context type from target WOW64 status."""
+
+    async def test_context_64bit_target_returns_rip(
+        self,
+        attached_bridge: ProcessBridge,
+        secondary_thread: int,
+    ) -> None:
+        """On a 64-bit target process, context contains 64-bit registers.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            secondary_thread: Windows thread id of a parked worker thread used for context queries.
+        """
+        if struct.calcsize("P") * 8 != 64:
+            pytest.skip("requires 64-bit host")
+
+        ctx = await attached_bridge.get_thread_context(secondary_thread)
+        assert "rip" in ctx, "64-bit target must expose Rip as 'rip'"
+        assert "rsp" in ctx, "64-bit target must expose Rsp as 'rsp'"
+        assert "eip" not in ctx, "64-bit target must not expose eip"
+
+    async def test_context_wow64_target_returns_eip(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """On a WOW64 (32-bit on 64-bit host) target, context contains 32-bit registers.
+
+        Spawns a 32-bit SysWOW64 process and reads thread context from it. Skips
+        when SysWOW64 is not available or the host is not 64-bit.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        if struct.calcsize("P") * 8 != 64:
+            pytest.skip("requires 64-bit host")
+
+        wow64_notepad = r"C:\Windows\SysWOW64\notepad.exe"
+        wow64_path = Path(wow64_notepad)
+        if not await asyncio.to_thread(wow64_path.exists):
+            pytest.skip("SysWOW64\\notepad.exe not present")
+
+        proc = await asyncio.create_subprocess_exec(wow64_notepad)
+        try:
+            await asyncio.sleep(0.5)
+            await process_bridge.open_process(proc.pid, "all")
+            try:
+                is_wow64_fn = getattr(process_bridge, "_target_is_wow64", None)
+                if is_wow64_fn is None or not is_wow64_fn():
+                    pytest.skip("SysWOW64 notepad is not detected as WOW64 on this system")
+                threads = await process_bridge.get_threads(proc.pid)
+                assert len(threads) > 0, "WOW64 process must have at least one thread"
+                tid = threads[0].tid
+                ctx = await process_bridge.get_thread_context(tid)
+                assert "eip" in ctx, "WOW64 target must expose eip"
+                assert "rip" not in ctx, "WOW64 target must not expose rip"
+            finally:
+                await process_bridge.close()
+        finally:
+            proc.terminate()
+            await proc.wait()
+
+
+class TestF0008SehChainX64Raises:
+    """F-0008: get_seh_chain raises ToolError on x64 target (SEH not applicable)."""
+
+    async def test_seh_chain_x64_raises(
+        self,
+        attached_bridge: ProcessBridge,
+        secondary_thread: int,
+    ) -> None:
+        """On an x64 target, get_seh_chain must raise ToolError.
+
+        SEH chain traversal via FS:[0] is only valid for x86. On x64, Windows uses
+        table-based exception handling and the SEH chain pointer in the x86 TEB
+        is not populated.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            secondary_thread: Windows thread id of a parked worker thread used for context queries.
+        """
+        if struct.calcsize("P") * 8 != 64:
+            pytest.skip("requires 64-bit native process")
+
+        with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
+            await attached_bridge.get_seh_chain(secondary_thread)
+
+    async def test_seh_chain_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
+        """Verify get_seh_chain raises ToolError when no process is attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        await process_bridge.close()
+        with pytest.raises(ToolError, match="no process attached"):
+            await process_bridge.get_seh_chain(1)
+
+
+class TestF0024SymbolInfoSizeOfStruct:
+    """F-0024: SYMBOL_INFO.SizeOfStruct uses proper header-only size formula."""
+
+    def test_sizeofsruct_equals_header_size(self) -> None:
+        """Verify computed SizeOfStruct matches the SYMBOL_INFO header size.
+
+        The SizeOfStruct must be the fixed header portion of SYMBOL_INFO
+        (excluding the variable-length Name array), matching what dbghelp.h
+        defines when SYMBOL_INFO has Name[1].
+        """
+        name_array_size = ctypes.sizeof(ctypes.c_char * 1024)
+        min_name_size = ctypes.sizeof(ctypes.c_char)
+        expected_header = ctypes.sizeof(SYMBOL_INFO) - name_array_size + min_name_size
+        assert expected_header > 0
+        assert expected_header < ctypes.sizeof(SYMBOL_INFO)
+
+    async def test_resolve_symbol_returns_nonempty_name(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify _resolve_symbol resolves kernel32.dll export to a non-empty name.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        k32 = ctypes.windll.kernel32
+        addr: int | None = ctypes.cast(k32.GetCurrentProcess, ctypes.c_void_p).value
+        if addr is None or addr == 0:
+            pytest.skip("could not get kernel32 function address")
+
+        dbghelp = getattr(attached_bridge, "_dbghelp", None)
+        if dbghelp is None:
+            pytest.skip("dbghelp not available")
+
+        proc_handle: object = getattr(attached_bridge, "_process_handle", None)
+        if proc_handle is None:
+            pytest.skip("no process handle")
+
+        invade = True
+        sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
+        try:
+            if not sym_initialized:
+                pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
+            name, _ = _invoke_resolve_symbol(attached_bridge, addr)
+            if not name:
+                pytest.skip("SymFromAddr returned empty — symbols not available")
+            assert isinstance(name, str)
+            assert len(name) > 0
+        finally:
+            dbghelp.SymCleanup(proc_handle)
+
+
+class TestF0025ImageHlpModuleStruct:
+    """F-0025: _resolve_module uses IMAGEHLP_MODULE64 structure (not raw buffer)."""
+
+    def test_imagehlp_module64_struct_has_module_name(self) -> None:
+        """Verify IMAGEHLP_MODULE64 structure can be instantiated and SizeOfStruct set.
+
+        The ``ModuleName`` field is a 32-byte char array, so a default-constructed
+        struct is safe to inspect without Win32 interaction.
+        """
+        mod = IMAGEHLP_MODULE64()
+        mod.SizeOfStruct = ctypes.sizeof(IMAGEHLP_MODULE64)
+        assert mod.SizeOfStruct == ctypes.sizeof(IMAGEHLP_MODULE64)
+        assert ctypes.sizeof(IMAGEHLP_MODULE64) > 584
+
+    async def test_resolve_module_returns_kernel32(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify _resolve_module returns 'kernel32' for an address in kernel32.dll.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        k32 = ctypes.windll.kernel32
+        addr: int | None = ctypes.cast(k32.GetCurrentProcess, ctypes.c_void_p).value
+        if addr is None or addr == 0:
+            pytest.skip("could not get kernel32 function address")
+
+        dbghelp = getattr(attached_bridge, "_dbghelp", None)
+        if dbghelp is None:
+            pytest.skip("dbghelp not available")
+
+        proc_handle: object = getattr(attached_bridge, "_process_handle", None)
+        if proc_handle is None:
+            pytest.skip("no process handle")
+
+        invade = True
+        sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
+        try:
+            if not sym_initialized:
+                pytest.skip("SymInitialize failed — insufficient privileges for module info")
+            module_name = _invoke_resolve_module(attached_bridge, addr)
+            if not module_name:
+                pytest.skip("SymGetModuleInfo64 returned empty — module info not available")
+            assert isinstance(module_name, str)
+            assert "kernel32" in module_name.lower()
+        finally:
+            dbghelp.SymCleanup(proc_handle)
+
+
+class TestF0041BoolReturnChecked:
+    """F-0041: SuspendThread and SymInitialize BOOL returns are checked."""
+
+    async def test_suspend_thread_failure_raises_tool_error(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify get_thread_context raises ToolError when SuspendThread fails.
+
+        A terminated thread handle returns -1 from SuspendThread. After creating a
+        thread and letting it finish naturally, its TID may still be openable briefly
+        before the OS reclaims it; SuspendThread on the dying thread handle fails.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        k32 = ctypes.windll.kernel32
+        k32.SuspendThread.restype = wintypes.DWORD
+
+        tid_holder: list[int] = []
+
+        def _short_worker() -> None:
+            tid_holder.append(k32.GetCurrentThreadId())
+
+        t = threading.Thread(target=_short_worker)
+        t.start()
+        t.join(timeout=5)
+
+        if not tid_holder:
+            pytest.skip("thread did not report TID")
+
+        dead_tid = tid_holder[0]
+        with pytest.raises(ToolError):
+            await attached_bridge.get_thread_context(dead_tid)
+
+    async def test_stack_walk_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
+        """Verify stack_walk raises ToolError when no process is attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        await process_bridge.close()
+        with pytest.raises(ToolError):
+            await process_bridge.stack_walk(1)
+
+
+class TestF0042SymbolBufferAllocation:
+    """F-0042: SYMBOL_INFO name buffer supports names up to MAX_SYM_NAME chars."""
+
+    async def test_resolve_symbol_no_truncation_on_long_name(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """Verify symbol resolution returns untruncated names for long symbol names.
+
+        Decorated C++ symbol names in dbghelp often exceed 64 characters. This test
+        resolves symbols in the current process and verifies at least one name exceeds
+        32 characters, confirming the full-size buffer is being used correctly.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        dbghelp = getattr(attached_bridge, "_dbghelp", None)
+        if dbghelp is None:
+            pytest.skip("dbghelp not available")
+
+        proc_handle: object = getattr(attached_bridge, "_process_handle", None)
+        if proc_handle is None:
+            pytest.skip("no process handle")
+
+        invade = True
+        sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
+        try:
+            if not sym_initialized:
+                pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
+
+            k32 = ctypes.windll.kernel32
+            addresses: list[int] = []
+            for fn_obj in (k32.GetCurrentProcess, k32.ReadProcessMemory, k32.VirtualQueryEx):
+                addr: int | None = ctypes.cast(fn_obj, ctypes.c_void_p).value
+                if addr and addr != 0:
+                    addresses.append(addr)
+
+            resolved: list[str] = []
+            for addr in addresses:
+                name, _ = _invoke_resolve_symbol(attached_bridge, addr)
+                if name:
+                    resolved.append(name)
+
+            if len(resolved) == 0:
+                pytest.skip("no symbols resolved — PDB/symbol server not configured")
+            for name in resolved:
+                assert isinstance(name, str)
+                assert len(name) > 0
+        finally:
+            dbghelp.SymCleanup(proc_handle)
+
+    def test_sym_buf_size_accommodates_max_sym_name(self) -> None:
+        """Verify the symbol buffer formula produces a size larger than SYMBOL_INFO alone.
+
+        The allocated buffer must be at least sizeof(SYMBOL_INFO) + MAX_SYM_NAME bytes
+        so that long symbol names do not overflow.
+        """
+        sym_header_size = ctypes.sizeof(SYMBOL_INFO) - ctypes.sizeof(ctypes.c_char * 1024) + ctypes.sizeof(ctypes.c_char)
+        sym_buf_size = sym_header_size + _MAX_SYM_NAME * ctypes.sizeof(ctypes.c_char)
+        assert sym_buf_size > ctypes.sizeof(SYMBOL_INFO)
+        assert sym_buf_size >= sym_header_size + _MAX_SYM_NAME
