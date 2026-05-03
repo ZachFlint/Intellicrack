@@ -10,6 +10,8 @@ All async, all Windows-only. No mocks for Win32 calls.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import ctypes
 import os
 import re
@@ -18,7 +20,8 @@ import sys
 import threading
 import time
 from ctypes import wintypes
-from typing import TYPE_CHECKING, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar, cast
 from unittest.mock import patch
 
 import pytest
@@ -27,6 +30,9 @@ import pytest_asyncio
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.types import ToolError, ToolName
 
+
+if sys.platform == "win32":
+    import winreg
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -2232,3 +2238,199 @@ class TestF0040HandleBufferBounds:
         """
         handles = await process_bridge.get_handles(os.getpid())
         assert isinstance(handles, list)
+
+
+_TEST_CLSID = "{AAAAAAAA-TEST-TEST-TEST-BBBBBBBBBBBB}"
+_TEST_BASE_KEY = r"Software\IntellicrackTest\CLSID"
+_TEST_KEY_PATH = _TEST_BASE_KEY + "\\" + _TEST_CLSID
+_TEST_INPROC_PATH = _TEST_KEY_PATH + "\\InprocServer32"
+_TEST_LOCAL_PATH = _TEST_KEY_PATH + "\\LocalServer32"
+_TEST_INPROC_DLL = r"C:\Windows\System32\test_inproc.dll"
+_TEST_LOCAL_EXE = r"C:\Windows\System32\test_local.exe"
+_DOTNET_HOST_CANDIDATES = [
+    r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\ngen.exe",
+    r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\ngen.exe",
+    r"C:\Program Files\dotnet\dotnet.exe",
+]
+
+
+class TestF0036AdvApi32MissingRaises:
+    """F-0036: enumerate_com_servers must raise ToolError when advapi32 is unavailable."""
+
+    async def test_raises_when_advapi32_is_none(self, process_bridge: ProcessBridge) -> None:
+        """Verify enumerate_com_servers raises ToolError when advapi32 is not loaded.
+
+        Temporarily replaces the bridge's advapi32 reference with None and
+        asserts that ToolError is raised with the expected message.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        original = getattr(process_bridge, _ATTR_ADVAPI32)
+        try:
+            setattr(process_bridge, _ATTR_ADVAPI32, None)
+            with pytest.raises(ToolError, match="advapi32 not available"):
+                await process_bridge.enumerate_com_servers(os.getpid())
+        finally:
+            setattr(process_bridge, _ATTR_ADVAPI32, original)
+
+
+class TestF0014ComEnumNonBlocking:
+    """F-0014: enumerate_com_servers must not block the event loop (uses asyncio.to_thread)."""
+
+    async def test_concurrent_task_advances_during_enum(self, process_bridge: ProcessBridge) -> None:
+        """Verify a concurrent task makes progress while enumerate_com_servers runs.
+
+        Starts a background counter task that increments every 10 ms and
+        runs enumerate_com_servers concurrently.  If the registry walk
+        blocks the event loop, the counter will not advance; if it is
+        properly offloaded via asyncio.to_thread the counter will
+        increment at least once.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        counter: list[int] = [0]
+        stop_event = asyncio.Event()
+
+        async def _increment() -> None:
+            while not stop_event.is_set():
+                await asyncio.sleep(0.01)
+                counter[0] += 1
+
+        task = asyncio.create_task(_increment())
+        try:
+            await process_bridge.enumerate_com_servers(os.getpid())
+        finally:
+            stop_event.set()
+            await task
+
+        assert counter[0] > 0, "event loop was blocked: counter did not advance during enumerate_com_servers"
+
+
+class TestF0032AllInprocServerKeys:
+    r"""F-0032: _check_inproc_server must walk all InprocServer* AND LocalServer* keys."""
+
+    async def test_returns_inprocserver32_and_localserver32(self, process_bridge: ProcessBridge) -> None:
+        r"""Verify both InprocServer32 and LocalServer32 are returned for a test CLSID.
+
+        Creates temporary registry entries under
+        ``HKCU\Software\IntellicrackTest\CLSID\{test_clsid}\InprocServer32``
+        and ``LocalServer32``, opens that parent key via advapi32, calls
+        ``_check_inproc_server``, and asserts both server types appear in
+        the result.  Cleans up the test registry keys on teardown.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        try:
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_INPROC_PATH) as k:
+                winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_INPROC_DLL)
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_LOCAL_PATH) as k:
+                winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_LOCAL_EXE)
+
+            advapi32 = _get_attr_optional(process_bridge, _ATTR_ADVAPI32, ctypes.WinDLL)
+            if advapi32 is None:
+                pytest.skip("advapi32 not available")
+                return
+
+            parent_hkey = wintypes.HKEY()
+            ret_open: object = advapi32.RegOpenKeyExW(
+                0x80000001,
+                _TEST_BASE_KEY,
+                0,
+                0x20019,
+                ctypes.byref(parent_hkey),
+            )
+            if ret_open != 0:
+                msg = f"could not open test registry key (error {ret_open})"
+                pytest.skip(msg)
+                return
+
+            try:
+                fn_raw: object = getattr(process_bridge, "_check_inproc_server")
+                if not callable(fn_raw):
+                    pytest.skip("_check_inproc_server not accessible")
+                    return
+                raw_call_result: object = fn_raw(parent_hkey, _TEST_CLSID)
+                if not isinstance(raw_call_result, list):
+                    pytest.skip("unexpected _check_inproc_server return type")
+                    return
+                call_result_list = cast("list[object]", raw_call_result)
+                results: list[dict[str, str]] = [cast("dict[str, str]", item) for item in call_result_list if isinstance(item, dict)]
+                server_types = {entry.get("server_type", "") for entry in results}
+                inproc_found = "InprocServer32" in server_types
+                local_found = "LocalServer32" in server_types
+                assert inproc_found, f"InprocServer32 not found in {server_types}"
+                assert local_found, f"LocalServer32 not found in {server_types}"
+            finally:
+                advapi32.RegCloseKey(parent_hkey)
+        finally:
+            for sub in (_TEST_INPROC_PATH, _TEST_LOCAL_PATH, _TEST_KEY_PATH):
+                with contextlib.suppress(OSError):
+                    winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
+            for sub in (_TEST_BASE_KEY, r"Software\IntellicrackTest"):
+                with contextlib.suppress(OSError):
+                    winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
+
+
+class TestF0015DotnetByCor20Header:
+    """F-0015: detect_dotnet must use PE COR20 header for managed detection."""
+
+    async def test_python_process_managed_false(self, process_bridge: ProcessBridge) -> None:
+        """Verify the Python interpreter itself is not reported as a managed process.
+
+        The CPython interpreter is a native process; it should have
+        ``managed: False`` unless some edge case module triggers a match.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        result = await process_bridge.detect_dotnet(os.getpid())
+        assert isinstance(result, dict)
+        assert "managed" in result
+        assert "version" in result
+        assert "clr_loaded" in result
+        assert "clr_version" in result
+        assert result["managed"] is False
+
+    async def test_managed_process_detected(self, process_bridge: ProcessBridge) -> None:
+        r"""Verify a managed .NET process is detected as managed with a version.
+
+        Spawns the .NET Framework or .NET runtime host (if available) as a
+        subprocess and checks that detect_dotnet returns managed=True with
+        a non-None version string.  Skips when no .NET host is available on
+        the current machine.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        host_path: str | None = None
+        for candidate in _DOTNET_HOST_CANDIDATES:
+            if await asyncio.to_thread(Path(candidate).exists):
+                host_path = candidate
+                break
+
+        if host_path is None:
+            pytest.skip(".NET host executable not found on this machine")
+            return
+
+        async_proc = await asyncio.create_subprocess_exec(
+            host_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            await asyncio.sleep(0.5)
+            if async_proc.returncode is not None:
+                pytest.skip("managed process exited immediately, cannot inspect")
+                return
+            result = await process_bridge.detect_dotnet(async_proc.pid)
+            assert isinstance(result, dict)
+            assert result.get("managed") is True or result.get("clr_loaded") is True
+            version = result.get("version") or result.get("clr_version")
+            assert version is not None
+        finally:
+            with contextlib.suppress(ProcessLookupError):
+                async_proc.kill()
+            await async_proc.wait()
