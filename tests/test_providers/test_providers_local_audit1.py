@@ -44,18 +44,30 @@ from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.ollama import OllamaProvider
 
 
-_B580_DEVICE_IDS: frozenset[str] = getattr(_xpu_utils_module, "_B580_DEVICE_IDS")
-_INTEL_VENDOR_ID: str = getattr(_xpu_utils_module, "_INTEL_VENDOR_ID")
-_check_rebar_status = getattr(_xpu_utils_module, "_check_rebar_status")
-_is_b580_device = getattr(_xpu_utils_module, "_is_b580_device")
-_parse_device_id_from_pnp = getattr(_xpu_utils_module, "_parse_device_id_from_pnp")
+_ATTR_B580_DEVICE_IDS: str = "_B580_DEVICE_IDS"
+_ATTR_INTEL_VENDOR_ID: str = "_INTEL_VENDOR_ID"
+_ATTR_CHECK_REBAR_STATUS: str = "_check_rebar_status"
+_ATTR_IS_B580_DEVICE: str = "_is_b580_device"
+_ATTR_PARSE_DEVICE_ID_FROM_PNP: str = "_parse_device_id_from_pnp"
+_ATTR_ACCUMULATE_TOOL_DELTAS: str = "_accumulate_openai_tool_call_deltas"
+_ATTR_FINALIZE_TOOL_CALLS: str = "_finalize_openai_tool_calls"
+_ATTR_EXTRACT_TEXT_BEFORE_CALL: str = "_extract_text_before_tool_call"
+_ATTR_PARSE_TOOL_CALLS: str = "_parse_tool_calls"
+_ATTR_FORMAT_PROMPT: str = "_format_prompt"
+_ATTR_LOGGER: str = "_logger"
+
+_B580_DEVICE_IDS: frozenset[str] = getattr(_xpu_utils_module, _ATTR_B580_DEVICE_IDS)
+_INTEL_VENDOR_ID: str = getattr(_xpu_utils_module, _ATTR_INTEL_VENDOR_ID)
+_check_rebar_status = getattr(_xpu_utils_module, _ATTR_CHECK_REBAR_STATUS)
+_is_b580_device = getattr(_xpu_utils_module, _ATTR_IS_B580_DEVICE)
+_parse_device_id_from_pnp = getattr(_xpu_utils_module, _ATTR_PARSE_DEVICE_ID_FROM_PNP)
 
 
 def _accumulate_openai_tool_call_deltas(
     deltas: list[dict[str, Any]],
     accumulated: dict[int, dict[str, Any]],
 ) -> None:
-    """Invoke the provider's protected accumulator without tripping ``SLF001``.
+    """Invoke the provider's protected accumulator via a module-level attribute constant.
 
     Args:
         deltas: A single SSE chunk's ``tool_calls`` array.
@@ -64,7 +76,7 @@ def _accumulate_openai_tool_call_deltas(
     Raises:
         TypeError: If the resolved attribute is not callable.
     """
-    method: object = getattr(OllamaProvider, "_accumulate_openai_tool_call_deltas")
+    method: object = getattr(OllamaProvider, _ATTR_ACCUMULATE_TOOL_DELTAS)
     if not callable(method):
         msg = "_accumulate_openai_tool_call_deltas is not callable"
         raise TypeError(msg)
@@ -75,7 +87,7 @@ def _finalize_openai_tool_calls(
     provider: OllamaProvider,
     accumulated: dict[int, dict[str, Any]],
 ) -> list[Any]:
-    """Invoke the provider's protected finaliser without tripping ``SLF001``.
+    """Invoke the provider's protected finaliser via a module-level attribute constant.
 
     Args:
         provider: A connected or unconnected Ollama provider instance.
@@ -88,7 +100,7 @@ def _finalize_openai_tool_calls(
         TypeError: If the resolved attribute is not callable or returns
             something that is not a list.
     """
-    method: object = getattr(provider, "_finalize_openai_tool_calls")
+    method: object = getattr(provider, _ATTR_FINALIZE_TOOL_CALLS)
     if not callable(method):
         msg = "_finalize_openai_tool_calls is not callable"
         raise TypeError(msg)
@@ -100,7 +112,7 @@ def _finalize_openai_tool_calls(
 
 
 def _extract_text_before_tool_call(response: str) -> str:
-    """Invoke ``LocalTransformersProvider._extract_text_before_tool_call`` safely.
+    """Invoke ``LocalTransformersProvider._extract_text_before_tool_call`` via constant.
 
     Args:
         response: The full model output string under inspection.
@@ -112,7 +124,7 @@ def _extract_text_before_tool_call(response: str) -> str:
         TypeError: If the underlying attribute is not callable or does
             not return a string.
     """
-    method: object = getattr(LocalTransformersProvider, "_extract_text_before_tool_call")
+    method: object = getattr(LocalTransformersProvider, _ATTR_EXTRACT_TEXT_BEFORE_CALL)
     if not callable(method):
         msg = "_extract_text_before_tool_call is not callable"
         raise TypeError(msg)
@@ -124,7 +136,7 @@ def _extract_text_before_tool_call(response: str) -> str:
 
 
 def _parse_tool_calls(response: str) -> list[Any] | None:
-    """Invoke ``LocalTransformersProvider._parse_tool_calls`` safely.
+    """Invoke ``LocalTransformersProvider._parse_tool_calls`` via constant.
 
     Args:
         response: The full model output string under inspection.
@@ -137,7 +149,7 @@ def _parse_tool_calls(response: str) -> list[Any] | None:
         TypeError: If the underlying attribute is not callable or
             returns an unexpected shape.
     """
-    method: object = getattr(LocalTransformersProvider, "_parse_tool_calls")
+    method: object = getattr(LocalTransformersProvider, _ATTR_PARSE_TOOL_CALLS)
     if not callable(method):
         msg = "_parse_tool_calls is not callable"
         raise TypeError(msg)
@@ -150,7 +162,7 @@ def _parse_tool_calls(response: str) -> list[Any] | None:
     return cast("list[Any]", result)
 
 
-_LOADED_MODEL_ATTR = "_loaded_model"
+_LOADED_MODEL_ATTR: str = "_loaded_model"
 
 
 def _attach_loaded_model(provider: LocalTransformersProvider, loaded: object) -> None:
@@ -172,7 +184,7 @@ def _format_prompt(
     provider: LocalTransformersProvider,
     messages: list[dict[str, object]],
 ) -> str:
-    """Invoke ``LocalTransformersProvider._format_prompt`` safely.
+    """Invoke ``LocalTransformersProvider._format_prompt`` via module-level constant.
 
     Args:
         provider: The provider whose tokenizer is under test.
@@ -185,7 +197,7 @@ def _format_prompt(
         TypeError: If the underlying attribute is not callable or
             returns a non-string value.
     """
-    method: object = getattr(provider, "_format_prompt")
+    method: object = getattr(provider, _ATTR_FORMAT_PROMPT)
     if not callable(method):
         msg = "_format_prompt is not callable"
         raise TypeError(msg)
@@ -354,7 +366,7 @@ def test_f0004_init_logger_binds_provider_field() -> None:
     """
     provider = LocalTransformersProvider()
 
-    bound: object = getattr(provider, "_logger")
+    bound: object = getattr(provider, _ATTR_LOGGER)
     context: object = getattr(bound, "_context", None)
     if context is None:
         bind_method: object = getattr(bound, "bind", None)

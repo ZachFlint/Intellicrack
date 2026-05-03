@@ -473,7 +473,8 @@ class OpenAIProvider(LLMProviderBase):
         Args:
             model: Model identifier.
             messages: Formatted messages for the API.
-            temperature: Sampling temperature (overridden to 1.0 for o-series).
+            temperature: Sampling temperature (overridden to 1.0 when
+                targeting an o-series model).
             max_tokens: Maximum response tokens.
             tools: Formatted tools, or ``None``.
             tool_choice: Tool selection mode, or ``None``.
@@ -491,7 +492,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
         stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
-        effective_temperature = _O_SERIES_TEMPERATURE if reasoning_effort is not None else temperature
+        effective_temperature = _O_SERIES_TEMPERATURE if use_max_completion_tokens else temperature
         if tools is not None and tool_choice is not None:
             if use_max_completion_tokens:
                 if reasoning_effort is not None:
@@ -640,7 +641,8 @@ class OpenAIProvider(LLMProviderBase):
         Args:
             model: Model ID to use.
             messages: Formatted messages for the API.
-            temperature: Sampling temperature (overridden to 1.0 for o-series).
+            temperature: Sampling temperature (overridden to 1.0 when
+                targeting an o-series model).
             max_tokens: Maximum tokens in response.
             tools: Formatted tools for the API, or None.
             tool_choice: How the model should select tools.
@@ -657,7 +659,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
-        effective_temperature = _O_SERIES_TEMPERATURE if reasoning_effort is not None else temperature
+        effective_temperature = _O_SERIES_TEMPERATURE if use_max_completion_tokens else temperature
 
         self._logger.debug(
             "openai_api_call_starting",

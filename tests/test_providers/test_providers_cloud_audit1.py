@@ -409,7 +409,7 @@ async def test_f0002_openai_o_series_uses_max_completion_tokens_and_temp_1() -> 
     assert "max_completion_tokens" in kwargs, "o-series must use max_completion_tokens"
     assert "max_tokens" not in kwargs, "o-series must NOT use max_tokens"
     assert kwargs["max_completion_tokens"] == 1024
-    assert kwargs["temperature"] == pytest.approx(1.0), "o-series must use temperature=1.0"
+    assert abs(float(cast("float", kwargs["temperature"])) - 1.0) < 1e-9, "o-series must use temperature=1.0"
 
 
 def test_f0002_openrouter_thinking_maps_to_reasoning_effort() -> None:
@@ -776,6 +776,57 @@ async def test_f0006_google_chat_stream_reraises_on_cancel_and_error() -> None:
 
     with pytest.raises(ProviderError):
         await _consume()
+
+
+# ---------------------------------------------------------------------------
+# F-0002 follow-up — o-series temperature pinned without thinking
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None:
+    """O-series chat without thinking still forces temperature=1.0.
+
+    The o-series API constraint on temperature applies to the model itself,
+    not to the reasoning_effort parameter.  A request without thinking but
+    targeting o4-mini must still pin temperature to 1.0 or the API returns
+    HTTP 400.
+    """
+    provider = OpenAIProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    provider.client = fake_client
+    captured_kwargs: list[dict[str, object]] = []
+
+    async def _capture(**kwargs: object) -> object:
+        await asyncio.sleep(0)
+        captured_kwargs.append(dict(kwargs))
+        completion = MagicMock()
+        completion.choices = [MagicMock()]
+        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
+        completion.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+        return completion
+
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = _capture
+
+    await provider.chat(
+        messages=_user_messages("hello"),
+        model="o4-mini",
+        temperature=0.7,
+        max_tokens=1024,
+        thinking=None,
+    )
+
+    assert captured_kwargs, "No API call was captured"
+    kwargs = captured_kwargs[0]
+    assert "max_completion_tokens" in kwargs
+    assert "max_tokens" not in kwargs
+    actual_temperature = float(cast("float", kwargs["temperature"]))
+    assert abs(actual_temperature - 1.0) < 1e-9, (
+        "o-series MUST receive temperature=1.0 even without thinking"
+    )
 
 
 # ---------------------------------------------------------------------------
