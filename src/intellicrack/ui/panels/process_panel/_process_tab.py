@@ -47,6 +47,7 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 _SEARCH_MAX_WIDTH: Final[int] = 250
 _SPLIT_LEFT: Final[int] = 500
 _SPLIT_RIGHT: Final[int] = 300
+_FILTER_DEBOUNCE_MS: Final[int] = 200
 
 _PROC_COLUMNS: Final[list[str]] = ["PID", "Name", "Parent PID", "Architecture", "Memory (MB)", "Threads"]
 _COL_PID: Final[int] = 0
@@ -89,11 +90,17 @@ class ProcessTab(QWidget):
         super().__init__(parent)
         self._bridge: ProcessBridge | None = None
         self._selected_pid: int | None = None
+        self._attached_pid: int | None = None
         self._tracked_worker: TrackedRefreshWorker | None = None
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.timeout.connect(self._on_refresh)
         self._tracked_timer = QTimer(self)
         self._tracked_timer.timeout.connect(self._refresh_tracked)
+        self._filter_debounce_timer = QTimer(self)
+        self._filter_debounce_timer.setSingleShot(True)
+        self._filter_debounce_timer.timeout.connect(self._on_refresh)
+        self._filter_refresh_pending: bool = False
+        self._filter_refresh_in_flight: bool = False
         self._setup_ui()
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
@@ -319,21 +326,31 @@ class ProcessTab(QWidget):
         if self._bridge is None:
             return
 
+        self._filter_refresh_in_flight = True
+        self._filter_refresh_pending = False
         self._refresh_btn.setEnabled(False)
         self._refresh_btn.setText("Refreshing...")
         current_filter = self._search_input.text().strip() or None
 
         def _on_success(result: object) -> None:
+            self._filter_refresh_in_flight = False
             self._refresh_btn.setEnabled(True)
             self._refresh_btn.setText("Refresh")
             if not isinstance(result, list):
+                if self._filter_refresh_pending:
+                    self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
                 return
             self._populate_process_table(cast("list[object]", result))
+            if self._filter_refresh_pending:
+                self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
 
         def _on_error(exc: object) -> None:
+            self._filter_refresh_in_flight = False
             self._refresh_btn.setEnabled(True)
             self._refresh_btn.setText("Refresh")
             _logger.warning("process_refresh_failed", error=str(exc))
+            if self._filter_refresh_pending:
+                self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
 
         run_bridge_coroutine_async(
             self._bridge.list_processes_detailed(current_filter),
@@ -393,12 +410,20 @@ class ProcessTab(QWidget):
         self._proc_count_label.setText(f"{len(processes)} processes")
 
     def _on_filter_changed(self, _text: str) -> None:
-        """Handle search filter changes.
+        """Handle search filter changes with trailing-edge debounce.
+
+        Cancels any pending debounce timer and re-arms it. If a bridge refresh
+        is already in flight, marks the pending flag so the new filter fires
+        immediately after the in-flight refresh completes.
 
         Args:
             _text: New filter text.
         """
-        self._on_refresh()
+        if self._filter_refresh_in_flight:
+            self._filter_refresh_pending = True
+            return
+        self._filter_debounce_timer.stop()
+        self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
 
     def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
         """Toggle automatic process list refresh.
@@ -438,12 +463,20 @@ class ProcessTab(QWidget):
 
         pid = self._selected_pid
 
-        def _on_success(_result: object) -> None:
-            _logger.info("process_attached", pid=pid)
+        def _on_success(result: object) -> None:
+            name: str = ""
+            if isinstance(result, dict):
+                name_val = cast("dict[str, object]", result).get("name", "")
+                name = str(name_val) if name_val else ""
+            self._attached_pid = pid
+            label = f"Attached to PID {pid}" + (f" ({name})" if name else "")
+            _logger.info("process_attached", pid=pid, process_name=name)
+            QMessageBox.information(self, "Attached", label)
             self.process_attached.emit(pid)
 
         def _on_error(exc: object) -> None:
             _logger.warning("process_attach_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Attach Failed", f"Failed to attach to PID {pid}:\n{exc}")
 
         run_bridge_coroutine_async(
             self._bridge.open_process(pid),
@@ -458,21 +491,38 @@ class ProcessTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            self._attached_pid = None
             self.process_detached.emit()
 
-        run_bridge_coroutine_async(self._bridge.close(), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_detach_failed", error=str(exc))
+            QMessageBox.warning(self, "Detach Failed", f"Failed to detach:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.close(), _on_success, _on_error, self)
 
     def _on_suspend(self) -> None:
         """Suspend the selected process."""
         if self._selected_pid is None or self._bridge is None:
             return
-        run_bridge_coroutine_async(self._bridge.suspend(self._selected_pid), None, None, self)
+        pid = self._selected_pid
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_suspend_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Suspend Failed", f"Failed to suspend PID {pid}:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.suspend(pid), None, _on_error, self)
 
     def _on_resume(self) -> None:
         """Resume the selected process."""
         if self._selected_pid is None or self._bridge is None:
             return
-        run_bridge_coroutine_async(self._bridge.resume(self._selected_pid), None, None, self)
+        pid = self._selected_pid
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_resume_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Resume Failed", f"Failed to resume PID {pid}:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.resume(pid), None, _on_error, self)
 
     def _on_terminate(self) -> None:
         """Terminate the selected process with confirmation."""
@@ -494,14 +544,32 @@ class ProcessTab(QWidget):
         def _on_success(_result: object) -> None:
             _logger.info("process_terminated", pid=pid)
             self._selected_pid = None
+            if self._attached_pid == pid:
+                self._attached_pid = None
+                self.process_detached.emit()
             QTimer.singleShot(500, self._on_refresh)
+            QTimer.singleShot(500, self._refresh_tracked)
 
-        run_bridge_coroutine_async(self._bridge.terminate(pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_terminate_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Terminate Failed", f"Failed to terminate PID {pid}:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.terminate(pid), _on_success, _on_error, self)
 
     def _on_inject_dll(self) -> None:
         """Inject a DLL into the attached process with file dialog."""
         if self._bridge is None:
             return
+
+        if self._attached_pid is None:
+            QMessageBox.warning(
+                self,
+                "Not Attached",
+                "No process is currently attached. Attach to a process before injecting a DLL.",
+            )
+            return
+
+        attached_pid = self._attached_pid
 
         path, _ = QFileDialog.getOpenFileName(self, "Select DLL", "", "DLL Files (*.dll)")
         if not path:
@@ -510,7 +578,7 @@ class ProcessTab(QWidget):
         reply = QMessageBox.warning(
             self,
             "DLL Injection",
-            f"Inject {path} into the attached process?",
+            f"Inject {path} into PID {attached_pid}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -518,9 +586,14 @@ class ProcessTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
-            _logger.info("dll_injected_from_panel", path=path)
+            _logger.info("dll_injected_from_panel", path=path, pid=attached_pid)
+            QMessageBox.information(self, "Injected", f"Injected {path} into PID {attached_pid}.")
 
-        run_bridge_coroutine_async(self._bridge.inject_dll(path), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            _logger.warning("dll_inject_failed", path=path, pid=attached_pid, error=str(exc))
+            QMessageBox.warning(self, "Inject Failed", f"Failed to inject {path} into PID {attached_pid}:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.inject_dll(path), _on_success, _on_error, self)
 
     def _load_process_info(self, pid: int) -> None:
         """Load detailed process info and environment into info tab.
@@ -546,7 +619,11 @@ class ProcessTab(QWidget):
             QTreeWidgetItem(self._info_tree, ["thread_count", str(len(threads_list))])
             QTreeWidgetItem(self._info_tree, ["module_count", str(len(modules_list))])
 
-        run_bridge_coroutine_async(self._bridge.get_process_info(pid), _on_info, None, self)
+        def _on_info_error(exc: object) -> None:
+            _logger.warning("process_info_load_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Info Load Failed", f"Failed to load info for PID {pid}:\n{exc}")
+
+        run_bridge_coroutine_async(self._bridge.get_process_info(pid), _on_info, _on_info_error, self)
 
         def _on_env(result: object) -> None:
             self._env_table.setRowCount(0)
@@ -559,7 +636,10 @@ class ProcessTab(QWidget):
                 self._env_table.setItem(row, 0, QTableWidgetItem(str(key)))
                 self._env_table.setItem(row, 1, QTableWidgetItem(str(val)))
 
-        run_bridge_coroutine_async(self._bridge.get_environment(pid), _on_env, None, self)
+        def _on_env_error(exc: object) -> None:
+            _logger.warning("process_env_load_failed", pid=pid, error=str(exc))
+
+        run_bridge_coroutine_async(self._bridge.get_environment(pid), _on_env, _on_env_error, self)
 
     def _on_tab_changed(self, index: int) -> None:
         """Handle sub-tab changes.
@@ -631,6 +711,7 @@ class ProcessTab(QWidget):
         """Stop timers and cancel pending workers."""
         self._auto_refresh_timer.stop()
         self._tracked_timer.stop()
+        self._filter_debounce_timer.stop()
         if self._tracked_worker is not None:
             if self._tracked_worker.isRunning():
                 self._tracked_worker.wait(2000)
