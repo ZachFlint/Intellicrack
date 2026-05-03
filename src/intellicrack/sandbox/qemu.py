@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import platform
 import secrets
 import shutil
 import socket
 import struct
+import subprocess
 import tempfile
 import time
 import zipfile
@@ -128,6 +130,13 @@ _ERR_MEMORY_DUMP_FAILED = "memory dump failed"
 _ERR_EXTRACT_FILES_FAILED = "dropped file extraction failed"
 _ERR_YARA_SCAN_FAILED = "YARA scan failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
+_ERR_GUEST_AGENT_NOT_CONNECTED = "Guest agent not connected"
+_ERR_GUEST_SCAN_FAILED = "guest YARA scan failed"
+_AGENT_CONNECT_TIMEOUT = 30.0
+_AGENT_CONNECT_RETRY_INTERVAL = 2.0
+_READINESS_POLL_INTERVAL = 0.5
+_READINESS_POLL_TIMEOUT = 60.0
+_RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
 _ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
@@ -820,6 +829,7 @@ class QEMUSandbox(SandboxBase):
         self._qemu_pid: int | None = None
         self._vnc_port: int | None = None
         self._active_captures: dict[str, Path] = {}
+        self._accelerator_cached: bool = False
         _logger.info(
             "qemu_sandbox_initialized",
             guest_os=self._qemu_config.guest_os.value,
@@ -885,10 +895,23 @@ class QEMUSandbox(SandboxBase):
         )
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
+    def invalidate_accelerator_cache(self) -> None:
+        """Invalidate the cached accelerator detection result.
+
+        Forces the next call to ``is_available`` to re-probe the host for
+        hardware virtualisation support. Useful after a system configuration
+        change (e.g. enabling Hyper-V Platform) without restarting the
+        application.
+        """
+        self._accelerator_cached = False
+        _logger.debug("accelerator_cache_invalidated")
+
     async def is_available(self) -> bool:
         """Check if QEMU is available.
 
         Checks for QEMU executable and determines available acceleration.
+        The accelerator detection result is cached after the first successful
+        probe; call :meth:`invalidate_accelerator_cache` to force re-detection.
 
         Returns:
             bool: True if QEMU can be used.
@@ -899,13 +922,21 @@ class QEMUSandbox(SandboxBase):
             return False
 
         self._qemu_path = qemu_path
-        self._accelerator = await self._detect_accelerator()
 
-        _logger.info(
-            "qemu_available",
-            path=str(qemu_path),
-            accelerator=self._accelerator.value,
-        )
+        if not self._accelerator_cached:
+            self._accelerator = await self._detect_accelerator()
+            self._accelerator_cached = True
+            _logger.info(
+                "qemu_available",
+                path=str(qemu_path),
+                accelerator=self._accelerator.value,
+            )
+        else:
+            _logger.debug(
+                "qemu_available_cached_accelerator",
+                path=str(qemu_path),
+                accelerator=self._accelerator.value,
+            )
         return True
 
     async def _find_qemu(self) -> Path | None:
@@ -940,8 +971,86 @@ class QEMUSandbox(SandboxBase):
 
         return await asyncio.to_thread(_find_existing)
 
+    @staticmethod
+    def _probe_whpx_host_prerequisites() -> bool:
+        """Verify that the host OS has Hyper-V Platform (WHPX) actually enabled.
+
+        QEMU reports ``whpx`` in ``-accel help`` output whenever the binary was
+        compiled with WHPX support, but the feature is useless unless the
+        Hyper-V hypervisor is *running*. This method performs two independent
+        checks that must both pass:
+
+        1. ``Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform``
+           must report ``Enabled``.
+        2. ``bcdedit /enum {current}`` must show
+           ``hypervisorlaunchtype    Auto`` (not ``Off`` and not absent).
+
+        Returns:
+            bool: ``True`` only when both signals confirm WHPX is usable.
+        """
+        if platform.system() != "Windows":
+            return False
+
+        pwsh = shutil.which("pwsh") or shutil.which("powershell")
+        if pwsh is None:
+            _logger.debug("whpx_probe_no_powershell")
+            return False
+
+        try:
+            ps_result = subprocess.run(
+                [
+                    pwsh,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction Stop).State",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=_ACCEL_DETECT_TIMEOUT,
+                check=False,
+            )
+            feature_state = ps_result.stdout.strip().lower()
+            if feature_state != "enabled":
+                _logger.debug("whpx_hypervisor_platform_not_enabled", state=feature_state)
+                return False
+        except (OSError, subprocess.TimeoutExpired) as e:
+            _logger.debug("whpx_feature_probe_failed", error=str(e))
+            return False
+
+        try:
+            bcdedit_result = subprocess.run(
+                ["bcdedit.exe", "/enum", "{current}"],
+                capture_output=True,
+                text=True,
+                timeout=_ACCEL_DETECT_TIMEOUT,
+                check=False,
+            )
+            bcd_output = bcdedit_result.stdout.lower()
+            if "hypervisorlaunchtype" not in bcd_output:
+                _logger.debug("whpx_bcdedit_no_hypervisorlaunchtype")
+                return False
+            if "hypervisorlaunchtype    auto" not in bcd_output and "hypervisorlaunchtype  auto" not in bcd_output:
+                _logger.debug("whpx_bcdedit_hypervisorlaunchtype_not_auto", bcd_output=bcd_output)
+                return False
+        except (OSError, subprocess.TimeoutExpired) as e:
+            _logger.debug("whpx_bcdedit_probe_failed", error=str(e))
+            return False
+
+        _logger.debug("whpx_host_prerequisites_satisfied")
+        return True
+
     async def _detect_accelerator(self) -> AcceleratorType:
         """Detect available hardware acceleration.
+
+        On Windows hosts the WHPX path additionally requires that the
+        ``HypervisorPlatform`` optional feature is enabled and that
+        ``bcdedit /enum {current}`` reports ``hypervisorlaunchtype Auto``.
+        When either check fails the candidate is rejected and detection
+        falls through to KVM (Linux) or TCG.
 
         Returns:
             AcceleratorType: Best available accelerator type.
@@ -960,28 +1069,32 @@ class QEMUSandbox(SandboxBase):
             output = result.stdout + result.stderr
 
             if "whpx" in output.lower():
-                whpx_test = await process_manager.run_tracked_async(
-                    [
-                        str(self._qemu_path),
-                        "-accel",
-                        "whpx",
-                        "-machine",
-                        "q35",
-                        "-m",
-                        "64",
-                        "-display",
-                        "none",
-                        "-device",
-                        "?",
-                    ],
-                    name="qemu-whpx-test",
-                    text=False,
-                    process_timeout=_ACCEL_TEST_TIMEOUT,
-                )
-                stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
-                if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
-                    _logger.info("whpx_acceleration_available", accelerator="whpx")
-                    return AcceleratorType.WHPX
+                whpx_prereqs = await asyncio.to_thread(self._probe_whpx_host_prerequisites)
+                if whpx_prereqs:
+                    whpx_test = await process_manager.run_tracked_async(
+                        [
+                            str(self._qemu_path),
+                            "-accel",
+                            "whpx",
+                            "-machine",
+                            "q35",
+                            "-m",
+                            "64",
+                            "-display",
+                            "none",
+                            "-device",
+                            "?",
+                        ],
+                        name="qemu-whpx-test",
+                        text=False,
+                        process_timeout=_ACCEL_TEST_TIMEOUT,
+                    )
+                    stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
+                    if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
+                        _logger.info("whpx_acceleration_available", accelerator="whpx")
+                        return AcceleratorType.WHPX
+                else:
+                    _logger.info("whpx_skipped_host_prerequisites_not_met")
 
             if "kvm" in output.lower():
                 kvm_test = await process_manager.run_tracked_async(
@@ -1134,7 +1247,10 @@ class QEMUSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_NO_IMAGE)
 
-        cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+        if self._accelerator in (AcceleratorType.KVM, AcceleratorType.WHPX):
+            cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+        else:
+            cpu_arg = "max,hv-vendor-id=AuthenticAMD,hypervisor=off"
 
         cmd: list[str] = [
             str(self._qemu_path),
@@ -1175,7 +1291,10 @@ class QEMUSandbox(SandboxBase):
 
         if self._shared_folder is not None:
             if self._qemu_config.guest_os == GuestOS.WINDOWS:
-                netdev += f",smb={self._shared_folder}"
+                cmd.extend([
+                    "-drive",
+                    f"file=fat:rw:{self._shared_folder},format=raw,if=virtio,label=SHARED",
+                ])
             elif self._qemu_config.guest_os == GuestOS.LINUX:
                 cmd.extend([
                     "-fsdev",
@@ -1472,17 +1591,18 @@ $watcher = New-Object System.IO.FileSystemWatcher
 $watcher.Path = 'C:\'
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
-Register-ObjectEvent $watcher 'Created' -Action {
+$Global:_IC_FileLog = $fileLog
+Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {
     $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    "$ts|created|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+    "$ts|created|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $Event.MessageData -Encoding utf8
 } | Out-Null
-Register-ObjectEvent $watcher 'Changed' -Action {
+Register-ObjectEvent $watcher 'Changed' -MessageData $fileLog -Action {
     $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    "$ts|modified|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+    "$ts|modified|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $Event.MessageData -Encoding utf8
 } | Out-Null
-Register-ObjectEvent $watcher 'Deleted' -Action {
+Register-ObjectEvent $watcher 'Deleted' -MessageData $fileLog -Action {
     $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    "$ts|deleted|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $using:fileLog -Encoding utf8
+    "$ts|deleted|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $Event.MessageData -Encoding utf8
 } | Out-Null
 
 $allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
