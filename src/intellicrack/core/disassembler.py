@@ -19,6 +19,7 @@ from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from types import ModuleType
 
 _logger = get_logger(__name__)
@@ -43,6 +44,8 @@ _CAPSTONE_ARCH_MODE_MAP: dict[str, tuple[str, str]] = {
     "arm": ("arm", "arm"),
     "mips": ("mips", "32"),
     "mips64": ("mips", "64"),
+    "ppc": ("ppc", "32"),
+    "ppc64": ("ppc", "64"),
     "riscv": ("riscv", "32"),
     "riscv64": ("riscv", "64"),
     "riscv128": ("riscv", "64"),
@@ -55,13 +58,31 @@ to ``"64"`` because capstone has no separate 128-bit mode.
 """
 
 
-_CAPSTONE_DEFAULT_ARCH_MODE: tuple[str, str] = ("x86", "64")
-"""Fallback ``(arch, mode)`` returned by :meth:`HexDisassembler.auto_detect_arch` when the format is unrecognised."""
+class UnsupportedArchitectureError(ValueError):
+    """Raised when an architecture string cannot be mapped to capstone constants.
+
+    Subclass of :class:`ValueError` so callers that catch ``ValueError`` for
+    capstone resolution failures still see this case, while specific handlers
+    can match the narrower type. The offending architecture string is exposed
+    via the :attr:`arch` instance attribute set in :meth:`__init__`.
+    """
+
+    arch: str
+
+    def __init__(self, arch: str) -> None:
+        """Initialize the error with the offending architecture string.
+
+        Args:
+            arch: Unrecognised architecture identifier.
+        """
+        self.arch = arch
+        super().__init__(f"unsupported architecture: {arch!r}")
 
 
 __all__ = [
     "DisasmInstruction",
     "HexDisassembler",
+    "UnsupportedArchitectureError",
 ]
 
 
@@ -263,6 +284,7 @@ class HexDisassembler:
         arch: str = "x86",
         mode: str = "64",
         count: int = 100,
+        binary_path: Path | None = None,
     ) -> list[DisassemblyLine]:
         """Disassemble bytes and return bridge-compatible DisassemblyLine objects.
 
@@ -272,19 +294,24 @@ class HexDisassembler:
             arch: Target architecture string (see :meth:`disassemble`).
             mode: Architecture mode string (see :meth:`disassemble`).
             count: Maximum number of instructions to return.
+            binary_path: Optional on-disk path that backs ``data``. When
+                supplied the path is included in the structured log entry;
+                when ``None`` (raw buffer input) the field is omitted from
+                the log call entirely.
 
         Returns:
             list[DisassemblyLine]: Decoded instructions as bridge lines.
         """
-        _logger.debug(
-            "disassemble_to_lines_invoked",
-            binary_path="<bytes-buffer>",
-            data_size=len(data),
-            offset=base_addr,
-            arch=arch,
-            mode=mode,
-            count=count,
-        )
+        log_fields: dict[str, Any] = {
+            "data_size": len(data),
+            "offset": base_addr,
+            "arch": arch,
+            "mode": mode,
+            "count": count,
+        }
+        if binary_path is not None:
+            log_fields["binary_path"] = str(binary_path)
+        _logger.debug("disassemble_to_lines_invoked", **log_fields)
         raw = self.disassemble(data, base_addr, arch, mode, count)
         return [_to_disassembly_line(insn) for insn in raw]
 
@@ -303,8 +330,14 @@ class HexDisassembler:
 
         Returns:
             tuple[str, str]: ``(arch, mode)`` suitable for
-            :meth:`disassemble`.  Falls back to ``("x86", "64")`` when
-            the format is unrecognised.
+            :meth:`disassemble`.
+
+        Raises:
+            UnsupportedArchitectureError: If the format is unrecognised
+                or the architecture string returned by
+                :func:`detect_format_and_arch` does not have a capstone
+                mapping. Callers must handle this rather than receive a
+                silent x86-64 fallback.
         """
         fmt, arch, is_64bit = detect_format_and_arch(data)
         _logger.debug(
@@ -315,8 +348,13 @@ class HexDisassembler:
         )
         result = _CAPSTONE_ARCH_MODE_MAP.get(arch)
         if result is None:
-            _logger.debug("arch_detection_fallback", reason="unrecognised binary format")
-            return _CAPSTONE_DEFAULT_ARCH_MODE
+            _logger.warning(
+                "arch_detection_unsupported",
+                fmt=fmt,
+                arch=arch,
+                is_64bit=is_64bit,
+            )
+            raise UnsupportedArchitectureError(arch)
         return result
 
     def get_supported_architectures(self) -> list[dict[str, str]]:
