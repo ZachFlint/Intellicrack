@@ -18,7 +18,11 @@ import struct
 import time
 from ctypes import wintypes
 from pathlib import Path
-from typing import ClassVar, Literal, cast, override
+from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
@@ -45,8 +49,10 @@ from intellicrack.bridges._win32_types import (
     HEAPENTRY32,
     HEAPLIST32,
     HKEY_CLASSES_ROOT,
+    HKEY_CURRENT_CONFIG,
     HKEY_CURRENT_USER,
     HKEY_LOCAL_MACHINE,
+    HKEY_USERS,
     IMAGE_FILE_MACHINE_AMD64,
     IMAGE_FILE_MACHINE_ARM64,
     IMAGE_FILE_MACHINE_I386,
@@ -76,6 +82,7 @@ from intellicrack.bridges._win32_types import (
     PAGE_READWRITE,
     PROCESS_ALL_ACCESS,
     PROCESS_BASIC_INFORMATION,
+    PROCESS_DUP_HANDLE,
     PROCESS_MEMORY_COUNTERS,
     PROCESS_MITIGATION_ASLR_POLICY,
     PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY,
@@ -209,6 +216,15 @@ _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
 
 _ERROR_NO_MORE_FILES: int = 18
+_ERROR_MORE_DATA: int = 234
+_REG_INITIAL_BUF_SIZE: int = 4096
+_REG_MAX_BUF_SIZE: int = 16 * 1024 * 1024
+_REG_GROWTH_RETRY_LIMIT: int = 8
+
+_STATUS_BUFFER_OVERFLOW_RAW: int = 0x80000005
+_STATUS_BUFFER_TOO_SMALL_RAW: int = 0xC0000023
+_STATUS_BUFFER_OVERFLOW: int = -2147483643
+_STATUS_BUFFER_TOO_SMALL: int = -1073741789
 _OBJECT_ALL_TYPES_INFORMATION: int = 3
 _UNICODE_STRING_HEADER_SIZE: int = 4
 
@@ -232,7 +248,7 @@ _POINTER_BITS_64 = 64
 _MB_DIVISOR = 1024.0 * 1024.0
 
 _STILL_ACTIVE = 259
-_NTQUERY_BUF_MAX = 0x4000000
+_NTQUERY_BUF_MAX = 0x40000000
 _STATUS_INFO_LENGTH_MISMATCH = -1073741820
 _PTR_SIZE_64 = 8
 _SEH_TERMINAL_32 = 0xFFFFFFFF
@@ -258,6 +274,70 @@ _DOTNET_METADATA_MIN_SIZE = 20
 
 _MAX_SYM_NAME: int = 2000
 _MAX_PATH: int = 260
+
+_MITIGATION_FLAG_NAMES: dict[str, tuple[str, ...]] = {
+    "DEP": ("Enable", "DisableAtlThunkEmulation"),
+    "ASLR": (
+        "EnableBottomUpRandomization",
+        "EnableForceRelocateImages",
+        "EnableHighEntropy",
+        "DisallowStrippedImages",
+    ),
+    "DynamicCode": (
+        "ProhibitDynamicCode",
+        "AllowThreadOptOut",
+        "AllowRemoteDowngrade",
+        "AuditProhibitDynamicCode",
+    ),
+    "StrictHandleCheck": (
+        "RaiseExceptionOnInvalidHandleReference",
+        "HandleExceptionsPermanentlyEnabled",
+    ),
+    "SystemCallDisable": (
+        "DisallowWin32kSystemCalls",
+        "AuditDisallowWin32kSystemCalls",
+        "DisallowFsctlSystemCalls",
+        "AuditDisallowFsctlSystemCalls",
+    ),
+    "CFG": (
+        "EnableControlFlowGuard",
+        "EnableExportSuppression",
+        "StrictMode",
+        "EnableXfg",
+        "EnableXfgAuditMode",
+    ),
+    "BinarySignature": (
+        "MicrosoftSignedOnly",
+        "StoreSignedOnly",
+        "MitigationOptIn",
+        "AuditMicrosoftSignedOnly",
+        "AuditStoreSignedOnly",
+        "AuditMitigationOptIn",
+    ),
+    "FontDisable": (
+        "DisableNonSystemFonts",
+        "AuditNonSystemFontLoading",
+    ),
+    "ImageLoad": (
+        "NoRemoteImages",
+        "NoLowMandatoryLabelImages",
+        "PreferSystem32Images",
+        "AuditNoRemoteImages",
+        "AuditNoLowMandatoryLabelImages",
+    ),
+}
+
+_MITIGATION_PRIMARY_FLAG: dict[str, str] = {
+    "DEP": "Enable",
+    "ASLR": "EnableBottomUpRandomization",
+    "DynamicCode": "ProhibitDynamicCode",
+    "StrictHandleCheck": "RaiseExceptionOnInvalidHandleReference",
+    "SystemCallDisable": "DisallowWin32kSystemCalls",
+    "CFG": "EnableControlFlowGuard",
+    "BinarySignature": "MicrosoftSignedOnly",
+    "FontDisable": "DisableNonSystemFonts",
+    "ImageLoad": "NoRemoteImages",
+}
 
 _PEB32_MIN_PARSE_LENGTH = 0x18
 _PEB_BEING_DEBUGGED_OFFSET = 2
@@ -288,6 +368,7 @@ _ERR_PRIV_NOT_HELD = "privilege not held: "
 _ERR_ENUM_SVC = "EnumServicesStatusExW failed"
 _ERR_REG_KEY_OPEN = "registry key open failed: "
 _ERR_REG_VALUE_READ = "registry value read failed: "
+_ERR_REG_VALUE_TOO_LARGE = "registry value exceeds maximum supported size: "
 _ERR_INVALID_REG_ROOT = "invalid registry root: "
 _ERR_SECTION_CREATE = "section creation failed"
 _ERR_SECTION_MAP = "section mapping failed"
@@ -1329,7 +1410,47 @@ class ProcessBridge(ToolBridgeBase):
             _logger.exception("se_debug_privilege_elevation_failed")
 
     async def shutdown(self) -> None:
-        """Shutdown and cleanup resources."""
+        """Shutdown and cleanup resources.
+
+        Releases every Win32 handle the bridge tracked during the
+        session before dropping references to the loaded DLLs:
+
+        * Each mapped section view is unmapped through
+          :meth:`unmap_section`, which also releases the underlying
+          section handle.
+        * Any section handles that were created but never mapped (or
+          whose view-tracking entry was already cleared) are closed
+          directly via ``CloseHandle``.
+        * Pipe handles in :attr:`_pipe_handles` and device handles in
+          :attr:`_device_handles` are closed with ``CloseHandle`` and
+          purged from the tracking dicts.
+        * Finally, the attached process handle is released via
+          :meth:`close` and the cached DLL handles are cleared so the
+          bridge can be re-initialized cleanly.
+        """
+        for base_address in list(self._section_views):
+            try:
+                await self.unmap_section(base_address)
+            except ToolError:
+                _logger.debug("shutdown_unmap_section_failed", base_address=hex(base_address))
+
+        if self._kernel32 is not None:
+            close_handle = getattr(self._kernel32, "CloseHandle", None)
+            if close_handle is not None:
+                close_handle.argtypes = [wintypes.HANDLE]
+                close_handle.restype = wintypes.BOOL
+                for handle in list(self._section_handles):
+                    close_handle(handle)
+                for handle in list(self._pipe_handles):
+                    close_handle(handle)
+                for handle in list(self._device_handles):
+                    close_handle(handle)
+
+        self._section_handles.clear()
+        self._section_views.clear()
+        self._pipe_handles.clear()
+        self._device_handles.clear()
+
         await self.close()
         self._kernel32 = None
         self._psapi = None
@@ -1376,7 +1497,6 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[ProcessInfo]: List of processes.
         """
-        _logger.info("process_list_started", filter_name=filter_name)
         return await self.list_processes(filter_name)
 
     async def list_detailed(
@@ -1394,7 +1514,6 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[dict[str, int | str | float]]: Process detail dicts.
         """
-        _logger.info("process_list_detailed_started", filter_name=filter_name)
         return await self.list_processes_detailed(filter_name)
 
     async def open(
@@ -1414,7 +1533,6 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if successful.
         """
-        _logger.info("process_open_started", pid=pid, access=access)
         return await self.open_process(pid, access)
 
     async def list_processes(
@@ -1490,7 +1608,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If enumeration fails.
         """
-        _logger.info("process_list_processes_detailed_started", filter_name=filter_name)
+        _logger.debug("process_list_processes_detailed_started", filter_name=filter_name)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="list_processes_detailed")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -1536,7 +1654,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             float: Working set size in MB, or 0.0 on failure.
         """
-        _logger.info("process_get_memory_mb_started", pid=pid)
+        _logger.debug("process_get_memory_mb_started", pid=pid)
         if self._kernel32 is None or self._psapi is None:
             return 0.0
 
@@ -1582,7 +1700,7 @@ class ProcessBridge(ToolBridgeBase):
             str: Architecture string such as ``'x86_64'``, ``'x86'``,
                 ``'arm64'``, ``'arm'``, or ``'Unknown'``.
         """
-        _logger.info("process_detect_architecture_started", pid=pid)
+        _logger.debug("process_detect_architecture_started", pid=pid)
         if self._kernel32 is None:
             return "Unknown"
 
@@ -2455,7 +2573,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_modules_started", pid=pid)
+        _logger.debug("process_get_modules_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_modules")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -2530,7 +2648,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_threads_started", pid=pid)
+        _logger.debug("process_get_threads_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_threads")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -2994,7 +3112,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_token_privileges_started", pid=pid)
+        _logger.debug("process_get_token_privileges_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_token_privileges")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -3259,12 +3377,36 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_handles_started", pid=pid)
+        _logger.debug("process_get_handles_starting", pid=pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             _logger.error("no_process_specified", operation="get_handles")
             raise ToolError(_ERR_NO_PROCESS)
 
+        return await asyncio.to_thread(self._sync_iterate_handles_for_pid, target_pid)
+
+    def _sync_iterate_handles_for_pid(self, target_pid: int) -> list[dict[str, object]]:
+        """Synchronously iterate the system handle table for a specific PID.
+
+        Pulled out of :meth:`get_handles` so the potentially long
+        iteration over tens of thousands of handle entries can be
+        dispatched off the asyncio event loop via
+        :func:`asyncio.to_thread`. Performs the same per-entry
+        validation and dict construction as the inline loop did.
+
+        Args:
+            target_pid: PID to filter handle entries on.
+
+        Returns:
+            list[dict[str, object]]: List of handle dicts matching
+            ``target_pid``.
+
+        Raises:
+            ToolError: If ntdll is unavailable or
+                :meth:`_query_extended_handles_buffer` fails.
+        """
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         header_size = ctypes.sizeof(ctypes.c_void_p) * 2
         handles: list[dict[str, object]] = []
@@ -3391,7 +3533,11 @@ class ProcessBridge(ToolBridgeBase):
                 buf_size,
                 ctypes.byref(return_length),
             )
-            if status == _STATUS_INFO_LENGTH_MISMATCH:
+            if status in {
+                _STATUS_INFO_LENGTH_MISMATCH,
+                _STATUS_BUFFER_OVERFLOW,
+                _STATUS_BUFFER_TOO_SMALL,
+            }:
                 buf_size = max(buf_size * 2, return_length.value + 4096)
                 buffer = ctypes.create_string_buffer(buf_size)
                 continue
@@ -3428,12 +3574,37 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If ntdll is unavailable or the system query fails.
         """
-        _logger.info("process_enum_handles_started", pid=pid)
+        _logger.debug("process_enum_handles_starting", pid=pid)
         if self._ntdll is None:
             raise ToolError(_ERR_NTDLL_NA)
         if not self._handle_type_cache:
             self._build_handle_type_map()
 
+        return await asyncio.to_thread(self._sync_enum_handles, pid)
+
+    def _sync_enum_handles(self, pid: int | None) -> list[dict[str, object]]:
+        """Synchronously iterate the system handle table with type-name resolution.
+
+        Pulled out of :meth:`enum_handles` so the iteration over the
+        full system handle table (potentially tens of thousands of
+        entries) can be dispatched via :func:`asyncio.to_thread` and
+        not block the event loop.
+
+        Args:
+            pid: Optional PID filter. ``None`` returns handles for all
+                processes.
+
+        Returns:
+            list[dict[str, object]]: List of handle dicts with keys
+            ``pid``, ``handle_value``, ``type_name``, ``granted_access``,
+            ``object_address``.
+
+        Raises:
+            ToolError: If ntdll is unavailable or
+                :meth:`_query_extended_handles_buffer` fails.
+        """
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         header_size = ctypes.sizeof(ctypes.c_void_p) * 2
         handles: list[dict[str, object]] = []
@@ -3480,7 +3651,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_windows_started", pid=pid)
+        _logger.debug("process_get_windows_started", pid=pid)
         if self._user32 is None:
             _logger.error("user32_unavailable", operation="get_windows")
             raise ToolError(_ERR_USER32_NA)
@@ -3554,7 +3725,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_list_services_started", filter_pid=filter_pid)
+        _logger.debug("process_list_services_started", filter_pid=filter_pid)
         if self._advapi32 is None:
             _logger.error("advapi32_unavailable", operation="list_services")
             raise ToolError(_ERR_ADVAPI32_NA)
@@ -3717,7 +3888,7 @@ class ProcessBridge(ToolBridgeBase):
                 cannot be opened, the Nt query fails, or
                 ``ReadProcessMemory`` fails.
         """
-        _logger.info("process_read_peb_started", pid=pid)
+        _logger.debug("process_read_peb_started", pid=pid)
         if self._ntdll is None:
             _logger.error("ntdll_unavailable", operation="read_peb")
             raise ToolError(_ERR_NTDLL_NA)
@@ -4010,7 +4181,7 @@ class ProcessBridge(ToolBridgeBase):
                 owning process cannot be opened, or ``ReadProcessMemory``
                 fails.
         """
-        _logger.info("process_read_teb_started", tid=tid)
+        _logger.debug("process_read_teb_started", tid=tid)
         if self._ntdll is None:
             _logger.error("ntdll_unavailable", operation="read_teb")
             raise ToolError(_ERR_NTDLL_NA)
@@ -4140,7 +4311,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_heaps_started", pid=pid)
+        _logger.debug("process_get_heaps_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_heaps")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -4192,7 +4363,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_thread_context_started", tid=tid)
+        _logger.debug("process_get_thread_context_started", tid=tid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_thread_context")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -4421,7 +4592,7 @@ class ProcessBridge(ToolBridgeBase):
                 attached, the thread cannot be opened, or the
                 ``GetThreadContext`` call fails.
         """
-        _logger.info("process_stack_walk_started", tid=tid)
+        _logger.debug("process_stack_walk_started", tid=tid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="stack_walk")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -4777,7 +4948,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_seh_chain_started", tid=tid)
+        _logger.debug("process_get_seh_chain_started", tid=tid)
         if self._process_handle is None:
             _logger.error("process_not_attached", operation="get_seh_chain")
             raise ToolError(_ERR_NOT_ATTACHED)
@@ -4838,7 +5009,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_mitigation_policies_started", pid=pid)
+        _logger.debug("process_get_mitigation_policies_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_mitigation_policies")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -4881,11 +5052,8 @@ class ProcessBridge(ToolBridgeBase):
                 policy = struct_type()
                 try:
                     if get_policy(proc_handle, policy_class, ctypes.byref(policy), ctypes.sizeof(policy)):
-                        flags_val = getattr(policy, "Flags", 0)
-                        policies[name] = {
-                            "enabled": bool(flags_val & 1),
-                            "flags": flags_val,
-                        }
+                        flags_val = int(getattr(policy, "Flags", 0))
+                        policies[name] = self._decode_mitigation_flags(name, flags_val, policy)
                     else:
                         policies[name] = {"enabled": False, "error": "query failed"}
                 except (OSError, ctypes.ArgumentError):
@@ -4895,6 +5063,61 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    @staticmethod
+    def _decode_mitigation_flags(
+        policy_name: str,
+        flags_val: int,
+        policy_struct: ctypes.Structure,
+    ) -> dict[str, object]:
+        """Decode a mitigation policy's ``Flags`` DWORD into named bitfields.
+
+        Each Win32 mitigation policy has its own bit-position layout
+        (see :data:`_MITIGATION_FLAG_NAMES`). This helper expands
+        ``flags_val`` into the per-bit booleans Microsoft documents,
+        plus a top-level ``enabled`` field that reflects the *primary*
+        bit for that policy (e.g. ``Enable`` for DEP,
+        ``EnableControlFlowGuard`` for CFG). The full ``flags`` integer
+        and any reserved-bit residue are also surfaced so callers can
+        observe Microsoft additions that post-date this code.
+
+        Args:
+            policy_name: Logical policy key (e.g. ``"DEP"``, ``"ASLR"``).
+            flags_val: Raw ``Flags`` DWORD returned by
+                ``GetProcessMitigationPolicy``.
+            policy_struct: The populated policy structure. Used to read
+                policy-specific extra fields (e.g. DEP's ``Permanent``).
+
+        Returns:
+            dict[str, object]: Decoded policy fields. Always contains
+            ``enabled`` (bool), ``flags`` (raw int),
+            ``flags_hex`` (hex string), and one boolean per documented
+            bit. ``reserved`` carries any bits the layout does not name.
+        """
+        bit_names = _MITIGATION_FLAG_NAMES.get(policy_name, ())
+        decoded: dict[str, object] = {
+            "flags": flags_val,
+            "flags_hex": f"0x{flags_val:08X}",
+        }
+        consumed_mask = 0
+        for bit_index, field_name in enumerate(bit_names):
+            decoded[field_name] = bool(flags_val & (1 << bit_index))
+            consumed_mask |= 1 << bit_index
+
+        residue = flags_val & ~consumed_mask
+        if residue:
+            decoded["reserved"] = residue
+
+        primary_field = _MITIGATION_PRIMARY_FLAG.get(policy_name)
+        if primary_field is not None:
+            decoded["enabled"] = bool(decoded.get(primary_field))
+        else:
+            decoded["enabled"] = bool(flags_val)
+
+        if policy_name == "DEP":
+            decoded["Permanent"] = bool(getattr(policy_struct, "Permanent", 0))
+
+        return decoded
 
     # ------------------------------------------------------------------
     # High-level enumeration helpers (named-API aliases)
@@ -4910,7 +5133,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If enumeration fails.
         """
-        _logger.info("enumerate_system_processes_started")
+        _logger.debug("enumerate_system_processes_started")
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -4961,7 +5184,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If ntdll is unavailable or the query fails.
         """
-        _logger.info("enumerate_handles_started", pid=pid)
+        _logger.debug("enumerate_handles_started", pid=pid)
         if self._ntdll is None:
             raise ToolError(_ERR_NTDLL_NA)
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
@@ -5007,7 +5230,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("enumerate_heaps_started", pid=pid)
+        _logger.debug("enumerate_heaps_started", pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -5072,7 +5295,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If the SCM cannot be opened.
         """
-        _logger.info("enumerate_services_started", active=active)
+        _logger.debug("enumerate_services_started", active=active)
         if self._advapi32 is None:
             raise ToolError(_ERR_ADVAPI32_NA)
 
@@ -5142,7 +5365,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If the thread cannot be opened.
         """
-        _logger.info("time_thread_wait_started", tid=tid, timeout_ms=timeout_ms)
+        _logger.debug("time_thread_wait_started", tid=tid, timeout_ms=timeout_ms)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -5189,7 +5412,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If the process or token cannot be opened, or
                 duplication fails.
         """
-        _logger.info("duplicate_token_started", pid=pid)
+        _logger.debug("duplicate_token_started", pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -5250,7 +5473,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If the process or token cannot be opened.
         """
-        _logger.info("remove_privilege_started", pid=pid, privilege_name=privilege_name)
+        _logger.debug("remove_privilege_started", pid=pid, privilege_name=privilege_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -5315,7 +5538,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If kernel32 is unavailable or the process cannot
                 be opened.
         """
-        _logger.info("decommit_memory_started", pid=pid, address=address, size=size)
+        _logger.debug("decommit_memory_started", pid=pid, address=address, size=size)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -5350,7 +5573,8 @@ class ProcessBridge(ToolBridgeBase):
 
         Args:
             hive: Registry hive abbreviation (``"HKLM"``, ``"HKCU"``,
-                ``"HKCR"``).
+                ``"HKCR"``, ``"HKU"``, ``"HKCC"`` or the corresponding
+                ``HKEY_*`` long form).
             key_path: Subkey path within the hive (e.g.
                 ``r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"``).
             value_name: Name of the registry value to read.
@@ -5363,7 +5587,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If the hive is unknown, the key cannot be opened,
                 or the value cannot be read.
         """
-        _logger.info("read_registry_started", hive=hive, key_path=key_path, value_name=value_name)
+        _logger.debug("read_registry_started", hive=hive, key_path=key_path, value_name=value_name)
         if self._advapi32 is None:
             raise ToolError(_ERR_ADVAPI32_NA)
 
@@ -5376,26 +5600,7 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            data_buf = ctypes.create_string_buffer(4096)
-            data_size = wintypes.DWORD(4096)
-            val_type = wintypes.DWORD(0)
-
-            if (
-                self._advapi32.RegQueryValueExW(
-                    hkey,
-                    value_name,
-                    None,
-                    ctypes.byref(val_type),
-                    data_buf,
-                    ctypes.byref(data_size),
-                )
-                != 0
-            ):
-                msg = _ERR_REG_VALUE_READ + value_name
-                raise ToolError(msg)
-
-            raw = data_buf.raw[: data_size.value]
-            vtype = val_type.value
+            raw, vtype = self._reg_query_value_grow(hkey, value_name)
             type_name = _REG_TYPE_NAMES.get(vtype, f"REG_UNKNOWN_{vtype}")
 
             if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
@@ -5424,7 +5629,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If the process cannot be opened or the query fails.
         """
-        _logger.info("detect_kernel_debugger_started", pid=pid)
+        _logger.debug("detect_kernel_debugger_started", pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._ntdll is None:
@@ -5470,7 +5675,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("get_mitigation_policy_started", pid=pid)
+        _logger.debug("get_mitigation_policy_started", pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -5533,7 +5738,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("get_extension_policy_started", pid=pid)
+        _logger.debug("get_extension_policy_started", pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -5589,7 +5794,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_environment_started", pid=pid)
+        _logger.debug("process_get_environment_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_environment")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5646,7 +5851,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If kernel32 is not available or WOW64 detection
                 is unavailable.
         """
-        _logger.info("process_read_env_block_started", params_addr=hex(params_addr))
+        _logger.debug("process_read_env_block_started", params_addr=hex(params_addr))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="_read_env_block")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5744,7 +5949,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If connection fails.
         """
-        _logger.info("process_pipe_connect_started", pipe_name=pipe_name, timeout_ms=timeout_ms)
+        _logger.debug("process_pipe_connect_started", pipe_name=pipe_name, timeout_ms=timeout_ms)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_connect")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5782,7 +5987,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If read fails.
         """
-        _logger.info("process_pipe_read_started", handle=handle, size=size)
+        _logger.debug("process_pipe_read_started", handle=handle, size=size)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_read")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5809,7 +6014,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If write fails.
         """
-        _logger.info("process_pipe_write_started", handle=handle, data_size=len(data))
+        _logger.debug("process_pipe_write_started", handle=handle, data_size=len(data))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_write")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5833,7 +6038,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.info("process_pipe_close_started", handle=handle)
+        _logger.debug("process_pipe_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -5862,7 +6067,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If advapi32 is not available.
         """
-        _logger.info("process_enumerate_com_servers_started", pid=pid)
+        _logger.debug("process_enumerate_com_servers_started", pid=pid)
         if self._advapi32 is None:
             _logger.error("advapi32_unavailable", operation="enumerate_com_servers")
             raise ToolError(_ERR_ADVAPI32_NA)
@@ -6077,7 +6282,7 @@ class ProcessBridge(ToolBridgeBase):
             - ``runtime_dlls`` (``list[str]``): CLR runtime DLL basenames
               found in the module list.
         """
-        _logger.info("process_detect_dotnet_started", pid=pid)
+        _logger.debug("process_detect_dotnet_started", pid=pid)
         modules = await self.get_modules(pid)
 
         clr_dll_names = {
@@ -6331,7 +6536,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If open fails.
         """
-        _logger.info("process_device_open_started", device_path=device_path)
+        _logger.debug("process_device_open_started", device_path=device_path)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="device_open")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6427,7 +6632,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.info("process_device_close_started", handle=handle)
+        _logger.debug("process_device_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="device_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6467,7 +6672,7 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If kernel32 is not available or the target
                 process cannot be opened.
         """
-        _logger.info("process_get_job_info_started", pid=pid)
+        _logger.debug("process_get_job_info_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_job_info")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6538,35 +6743,205 @@ class ProcessBridge(ToolBridgeBase):
     def _acquire_queryable_job_handle(self, proc_handle: int) -> int | None:
         """Acquire a ``JOB_OBJECT_QUERY``-right handle to a process's job.
 
-        ``OpenJobObjectW`` requires the job's *name*, which anonymous
-        jobs (the overwhelmingly common case on modern Windows) do not
-        have. This best-effort path therefore returns ``None`` for
-        anonymous jobs so callers still surface ``in_job=True`` without
-        speculative fields. Named jobs with a well-known naming
-        convention can be supported in future by extending this helper
-        to take a name hint.
+        Anonymous jobs (the overwhelmingly common case on modern
+        Windows) cannot be re-opened via ``OpenJobObjectW`` because they
+        have no name. This implementation enumerates the system handle
+        table via ``NtQuerySystemInformation(SystemExtendedHandleInformation)``,
+        filters to entries owned by the *target* process whose
+        ``ObjectTypeIndex`` resolves to ``"Job"`` through the cached
+        type map, opens the source process with ``PROCESS_DUP_HANDLE``
+        rights, and uses ``DuplicateHandle`` with
+        ``JOB_OBJECT_QUERY`` to clone the job handle into the calling
+        process. The cloned handle is returned to the caller, who is
+        responsible for closing it.
 
         Args:
-            proc_handle: Open process handle for the target process.
+            proc_handle: Open handle to the target process. Used to
+                derive the target PID via ``GetProcessId``.
 
         Returns:
-            int | None: Job object handle on success, ``None`` otherwise.
+            int | None: Duplicated job object handle owned by the
+            calling process, or ``None`` if no queryable job handle
+            could be located (e.g. ntdll/kernel32 unavailable, target
+            owns no job handle, or duplication denied).
         """
-        del proc_handle
+        if self._kernel32 is None or self._ntdll is None:
+            return None
+
+        target_pid = self._get_target_pid_for_handle(proc_handle)
+        if target_pid == 0:
+            return None
+
+        job_indices = self._lookup_job_type_indices()
+        if not job_indices:
+            return None
+
+        return self._duplicate_job_handle_from_target(target_pid, job_indices)
+
+    def _get_target_pid_for_handle(self, proc_handle: int) -> int:
+        """Return the PID owning ``proc_handle`` via ``GetProcessId``.
+
+        Args:
+            proc_handle: Open process handle.
+
+        Returns:
+            int: PID, or 0 if ``GetProcessId`` is unavailable or fails.
+        """
+        if self._kernel32 is None:
+            return 0
+        get_pid = getattr(self._kernel32, "GetProcessId", None)
+        if get_pid is None:
+            return 0
+        get_pid.argtypes = [wintypes.HANDLE]
+        get_pid.restype = wintypes.DWORD
+        return int(get_pid(proc_handle) or 0)
+
+    def _lookup_job_type_indices(self) -> set[int]:
+        """Build/refresh the handle type cache and return job-type indices.
+
+        Returns:
+            set[int]: All ``ObjectTypeIndex`` values whose name is
+            ``"Job"`` in the system handle type map. Empty if the map
+            cannot be built.
+        """
+        if not self._handle_type_cache:
+            self._build_handle_type_map()
+        type_map = self._handle_type_cache
+        if not type_map:
+            return set()
+        return {idx for idx, name in type_map.items() if name.lower() == "job"}
+
+    def _duplicate_job_handle_from_target(
+        self,
+        target_pid: int,
+        job_indices: set[int],
+    ) -> int | None:
+        """Duplicate the first matching job handle from ``target_pid``.
+
+        Opens the target process with ``PROCESS_DUP_HANDLE`` rights,
+        scans the system handle table for an entry whose owning PID
+        matches and whose type index is in ``job_indices``, and uses
+        ``DuplicateHandle`` to clone the handle into the calling
+        process with ``JOB_OBJECT_QUERY`` rights.
+
+        Args:
+            target_pid: PID whose job handle to clone.
+            job_indices: Object-type index values that map to ``Job``.
+
+        Returns:
+            int | None: Duplicated handle on success, ``None`` if the
+            target process cannot be opened, the handle table cannot
+            be queried, or no matching entry could be duplicated.
+        """
         if self._kernel32 is None:
             return None
-
-        open_job = getattr(self._kernel32, "OpenJobObjectW", None)
-        if open_job is None:
+        open_process = getattr(self._kernel32, "OpenProcess", None)
+        duplicate_handle = getattr(self._kernel32, "DuplicateHandle", None)
+        close_handle = getattr(self._kernel32, "CloseHandle", None)
+        if open_process is None or duplicate_handle is None or close_handle is None:
             return None
 
-        open_job.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
-        open_job.restype = wintypes.HANDLE
+        try:
+            buffer, num_handles, entry_size = self._query_extended_handles_buffer()
+        except ToolError:
+            return None
 
-        inherit_handle = False
-        handle: int = open_job(_JOB_QUERY_INFORMATION, inherit_handle, None) or 0
-        if handle:
-            return handle
+        open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        open_process.restype = wintypes.HANDLE
+        duplicate_handle.argtypes = [
+            wintypes.HANDLE,
+            wintypes.HANDLE,
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.HANDLE),
+            wintypes.DWORD,
+            wintypes.BOOL,
+            wintypes.DWORD,
+        ]
+        duplicate_handle.restype = wintypes.BOOL
+        close_handle.argtypes = [wintypes.HANDLE]
+        close_handle.restype = wintypes.BOOL
+
+        inherit = wintypes.BOOL(0)
+        source_proc = open_process(PROCESS_DUP_HANDLE, inherit, target_pid)
+        if not source_proc:
+            return None
+
+        try:
+            return self._scan_handles_for_duplicate(
+                buffer,
+                num_handles,
+                entry_size,
+                target_pid,
+                job_indices,
+                source_proc,
+                duplicate_handle,
+            )
+        finally:
+            close_handle(source_proc)
+
+    def _scan_handles_for_duplicate(
+        self,
+        buffer: ctypes.Array[ctypes.c_char],
+        num_handles: int,
+        entry_size: int,
+        target_pid: int,
+        job_indices: set[int],
+        source_proc: int,
+        duplicate_handle: Callable[..., int],
+    ) -> int | None:
+        """Iterate handle entries and attempt one ``DuplicateHandle`` clone.
+
+        Args:
+            buffer: Raw handle-table buffer from
+                ``NtQuerySystemInformation``.
+            num_handles: Number of entries in the buffer.
+            entry_size: ``sizeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX)``.
+            target_pid: PID whose handles to consider.
+            job_indices: Type-index values that match ``Job``.
+            source_proc: Open ``PROCESS_DUP_HANDLE`` handle to the
+                target process.
+            duplicate_handle: ``kernel32.DuplicateHandle`` callable.
+
+        Returns:
+            int | None: Duplicated handle on success, ``None`` if no
+            entry could be cloned.
+        """
+        if self._kernel32 is None:
+            return None
+        header_size = ctypes.sizeof(ctypes.c_void_p) * 2
+        current_proc = self._kernel32.GetCurrentProcess()
+        for i in range(num_handles):
+            entry_ptr = ctypes.cast(
+                ctypes.byref(buffer, header_size + i * entry_size),
+                ctypes.POINTER(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX),
+            )
+            entry = entry_ptr.contents
+
+            entry_pid = entry.UniqueProcessId
+            if not isinstance(entry_pid, int) or entry_pid != target_pid:
+                continue
+            if entry.ObjectTypeIndex not in job_indices:
+                continue
+
+            source_handle_value = entry.HandleValue
+            if not isinstance(source_handle_value, int) or source_handle_value == 0:
+                continue
+
+            duplicated = wintypes.HANDLE(0)
+            inherit_handle = wintypes.BOOL(0)
+            options = wintypes.DWORD(0)
+            if duplicate_handle(
+                source_proc,
+                wintypes.HANDLE(source_handle_value),
+                current_proc,
+                ctypes.byref(duplicated),
+                _JOB_QUERY_INFORMATION,
+                inherit_handle,
+                options,
+            ):
+                handle_int = int(duplicated.value or 0)
+                if handle_int:
+                    return handle_int
         return None
 
     def _read_job_information(self, job_handle: int) -> dict[str, object]:
@@ -6704,7 +7079,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_get_gui_resources_started", pid=pid)
+        _logger.debug("process_get_gui_resources_started", pid=pid)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="get_gui_resources")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6764,6 +7139,10 @@ class ProcessBridge(ToolBridgeBase):
             "HKEY_CURRENT_USER": HKEY_CURRENT_USER,
             "HKCR": HKEY_CLASSES_ROOT,
             "HKEY_CLASSES_ROOT": HKEY_CLASSES_ROOT,
+            "HKU": HKEY_USERS,
+            "HKEY_USERS": HKEY_USERS,
+            "HKCC": HKEY_CURRENT_CONFIG,
+            "HKEY_CURRENT_CONFIG": HKEY_CURRENT_CONFIG,
         }
 
         parts = key_path.split("\\", 1)
@@ -6789,7 +7168,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_reg_read_value_started", key_path=key_path, value_name=value_name)
+        _logger.debug("process_reg_read_value_started", key_path=key_path, value_name=value_name)
         if self._advapi32 is None:
             _logger.error("advapi32_unavailable", operation="reg_read_value")
             raise ToolError(_ERR_ADVAPI32_NA)
@@ -6802,26 +7181,7 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            data_buf = ctypes.create_string_buffer(4096)
-            data_size = wintypes.DWORD(4096)
-            val_type = wintypes.DWORD(0)
-
-            if (
-                self._advapi32.RegQueryValueExW(
-                    hkey,
-                    value_name,
-                    None,
-                    ctypes.byref(val_type),
-                    data_buf,
-                    ctypes.byref(data_size),
-                )
-                != 0
-            ):
-                msg = _ERR_REG_VALUE_READ + value_name
-                raise ToolError(msg)
-
-            raw = data_buf.raw[: data_size.value]
-            vtype = val_type.value
+            raw, vtype = self._reg_query_value_grow(hkey, value_name)
 
             if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
                 decoded = raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
@@ -6846,7 +7206,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_reg_enum_keys_started", key_path=key_path)
+        _logger.debug("process_reg_enum_keys_started", key_path=key_path)
         if self._advapi32 is None:
             _logger.error("advapi32_unavailable", operation="reg_enum_keys")
             raise ToolError(_ERR_ADVAPI32_NA)
@@ -6897,7 +7257,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_reg_enum_values_started", key_path=key_path)
+        _logger.debug("process_reg_enum_values_started", key_path=key_path)
         if self._advapi32 is None:
             _logger.error("advapi32_unavailable", operation="reg_enum_values")
             raise ToolError(_ERR_ADVAPI32_NA)
@@ -6971,19 +7331,34 @@ class ProcessBridge(ToolBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._kernel32.CreateFileMappingW.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPCWSTR,
+        ]
+        self._kernel32.CreateFileMappingW.restype = wintypes.HANDLE
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
+        self._kernel32.SetLastError.argtypes = [wintypes.DWORD]
+        self._kernel32.SetLastError.restype = None
+
         high = (size >> 32) & 0xFFFFFFFF
         low = size & 0xFFFFFFFF
 
-        ctypes.set_last_error(0)
-        handle: int = self._kernel32.CreateFileMappingW(
-            -1,
+        self._kernel32.SetLastError(0)
+        handle_raw = self._kernel32.CreateFileMappingW(
+            wintypes.HANDLE(-1),
             None,
             PAGE_READWRITE,
             high,
             low,
             section_name,
         )
-        last_error = ctypes.get_last_error()
+        handle: int = int(handle_raw) if handle_raw else 0
+        last_error: int = int(self._kernel32.GetLastError())
 
         if not handle:
             _logger.error(
@@ -7033,7 +7408,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If mapping fails.
         """
-        _logger.info("process_map_section_started", handle=handle, size=size)
+        _logger.debug("process_map_section_started", handle=handle, size=size)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="map_section")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -7081,7 +7456,7 @@ class ProcessBridge(ToolBridgeBase):
                 tracking misses and ``"SECTION_UNMAP_FAILED"`` for API
                 failures.
         """
-        _logger.info("process_unmap_section_started", base_address=hex(base_address))
+        _logger.debug("process_unmap_section_started", base_address=hex(base_address))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="unmap_section")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -7150,7 +7525,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[dict[str, object]]: List of TLS slot dicts with index and value.
         """
-        _logger.info("process_get_tls_values_started", tid=tid, max_slots=max_slots)
+        _logger.debug("process_get_tls_values_started", tid=tid, max_slots=max_slots)
 
         teb = await self.read_teb(tid)
         tls_array_addr = teb.get("tls_array_base")
@@ -7233,7 +7608,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             dict[str, object]: Dict with fiber_data address.
         """
-        _logger.info("process_get_fiber_data_started", tid=tid)
+        _logger.debug("process_get_fiber_data_started", tid=tid)
         teb = await self.read_teb(tid)
         fiber_data = teb.get("fiber_data")
 
@@ -7259,12 +7634,17 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("process_query_system_info_started", info_class=info_class, buffer_size=buffer_size)
+        _logger.debug("process_query_system_info_started", info_class=info_class, buffer_size=buffer_size)
         if self._ntdll is None:
             _logger.error("ntdll_unavailable", operation="query_system_info")
             raise ToolError(_ERR_NTDLL_NA)
 
         current_size = buffer_size
+        grow_statuses = {
+            _STATUS_INFO_LENGTH_MISMATCH,
+            _STATUS_BUFFER_OVERFLOW,
+            _STATUS_BUFFER_TOO_SMALL,
+        }
 
         while current_size <= _NTQUERY_BUF_MAX:
             buffer = ctypes.create_string_buffer(current_size)
@@ -7277,8 +7657,12 @@ class ProcessBridge(ToolBridgeBase):
                 ctypes.byref(return_length),
             )
 
-            if status == _STATUS_INFO_LENGTH_MISMATCH:
-                current_size *= 2
+            if status in grow_statuses:
+                hint = return_length.value
+                next_size = max(current_size * 2, hint or 0)
+                if next_size <= current_size:
+                    next_size = current_size * 2
+                current_size = next_size
                 continue
 
             if status < 0:
@@ -7292,6 +7676,71 @@ class ProcessBridge(ToolBridgeBase):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _reg_query_value_grow(
+        self,
+        hkey: wintypes.HKEY,
+        value_name: str,
+    ) -> tuple[bytes, int]:
+        """Read a registry value, growing the buffer on ``ERROR_MORE_DATA``.
+
+        Loops until ``RegQueryValueExW`` either succeeds (return code 0)
+        or fails with a non-recoverable error. On ``ERROR_MORE_DATA``
+        the buffer is reallocated using the kernel-supplied required
+        size (or doubled, whichever is larger) and the call is retried.
+        Retries are bounded by :data:`_REG_GROWTH_RETRY_LIMIT` and the
+        absolute cap :data:`_REG_MAX_BUF_SIZE` so a malicious or
+        runaway value cannot exhaust memory.
+
+        Args:
+            hkey: Open registry key handle.
+            value_name: Name of the value to read.
+
+        Returns:
+            tuple[bytes, int]: ``(raw_value_bytes, value_type)`` where
+            ``raw_value_bytes`` is the populated portion of the buffer
+            and ``value_type`` is the Win32 ``REG_*`` integer.
+
+        Raises:
+            ToolError: If ``advapi32`` is unavailable, the value
+                exceeds :data:`_REG_MAX_BUF_SIZE`, the retry limit is
+                hit, or the kernel returns a non-``ERROR_MORE_DATA``
+                failure.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        buf_size = _REG_INITIAL_BUF_SIZE
+        data_buf = ctypes.create_string_buffer(buf_size)
+        data_size = wintypes.DWORD(buf_size)
+        val_type = wintypes.DWORD(0)
+        attempts = 0
+        while True:
+            data_size.value = buf_size
+            rc: int = self._advapi32.RegQueryValueExW(
+                hkey,
+                value_name,
+                None,
+                ctypes.byref(val_type),
+                data_buf,
+                ctypes.byref(data_size),
+            )
+            if rc == 0:
+                return data_buf.raw[: data_size.value], val_type.value
+            if rc == _ERROR_MORE_DATA:
+                required = data_size.value
+                if required <= buf_size:
+                    required = buf_size * 2
+                if required > _REG_MAX_BUF_SIZE:
+                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
+                attempts += 1
+                if attempts > _REG_GROWTH_RETRY_LIMIT:
+                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
+                buf_size = required
+                data_buf = ctypes.create_string_buffer(buf_size)
+                continue
+            msg = _ERR_REG_VALUE_READ + value_name + f" (rc={rc})"
+            raise ToolError(msg)
 
     @staticmethod
     def _prot_from_string(protection: str) -> int:
