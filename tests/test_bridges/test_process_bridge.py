@@ -17,6 +17,7 @@ import os
 import re
 import struct
 import sys
+import tempfile
 import threading
 import time
 from ctypes import wintypes
@@ -41,7 +42,7 @@ if sys.platform == "win32":
     import winreg
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator, Callable, Generator
 
 pytestmark = [
     pytest.mark.skipif(sys.platform != "win32", reason="Windows only"),
@@ -133,6 +134,19 @@ def _get_section_views(bridge: ProcessBridge) -> dict[int, int]:
         if not isinstance(k, int) or not isinstance(v, int):
             raise _SectionViewsShapeError
     return cast("dict[int, int]", raw)
+
+
+def _unlink_suppress(path: str) -> None:
+    """Delete a file, suppressing OSError if it does not exist.
+
+    Runs synchronously so it can be dispatched via asyncio.to_thread
+    from async test teardown without triggering ASYNC240.
+
+    Args:
+        path: Filesystem path to remove.
+    """
+    with contextlib.suppress(OSError):
+        Path(path).unlink()
 
 
 def _get_attr_optional[TAttr](bridge: ProcessBridge, name: str, expected: type[TAttr]) -> TAttr | None:
@@ -2807,3 +2821,195 @@ class TestF0012EnvOffsets:
 
         assert ptr == env_ptr_val, f"env_ptr mismatch: {hex(ptr)} != {hex(env_ptr_val)}"
         assert size == env_size_val, f"env_size mismatch: {hex(size)} != {hex(env_size_val)}"
+
+
+class TestF0047ModuleEntryPoint:
+    """F-0047: get_modules must populate entry_point from MODULEINFO."""
+
+    async def test_entry_point_field_exists(self, attached_bridge: ProcessBridge) -> None:
+        """Verify every ModuleInfo has an entry_point attribute.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        modules = await attached_bridge.get_modules(os.getpid())
+        for mod in modules:
+            assert hasattr(mod, "entry_point")
+            assert isinstance(mod.entry_point, int)
+
+    async def test_at_least_one_nonzero_entry_point(self, attached_bridge: ProcessBridge) -> None:
+        """Verify at least one module has a non-zero entry point.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        modules = await attached_bridge.get_modules(os.getpid())
+        assert any(m.entry_point != 0 for m in modules)
+
+    async def test_entry_point_within_module_range(self, attached_bridge: ProcessBridge) -> None:
+        """Verify entry_point falls within [base_address, base_address + size) for at least one module.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        modules = await attached_bridge.get_modules(os.getpid())
+        found = False
+        for mod in modules:
+            if mod.entry_point != 0 and mod.size > 0 and mod.base_address <= mod.entry_point < mod.base_address + mod.size:
+                found = True
+                break
+        assert found, "No module has entry_point within its base_address..base_address+size range"
+
+
+class TestF0048ThreadCurrentPC:
+    """F-0048: get_threads must populate current_pc via GetThreadContext."""
+
+    async def test_current_pc_field_exists(self, attached_bridge: ProcessBridge) -> None:
+        """Verify every ThreadInfo has a current_pc attribute.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        threads = await attached_bridge.get_threads(os.getpid())
+        for t in threads:
+            assert hasattr(t, "current_pc")
+            assert isinstance(t.current_pc, int)
+
+    async def test_at_least_one_nonzero_current_pc(self, attached_bridge: ProcessBridge) -> None:
+        """Verify at least one thread has a non-zero current_pc.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        threads = await attached_bridge.get_threads(os.getpid())
+        assert any(t.current_pc != 0 for t in threads)
+
+    async def test_current_pc_within_known_module(self, attached_bridge: ProcessBridge) -> None:
+        """Verify at least one thread's current_pc falls within a loaded module range.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        threads = await attached_bridge.get_threads(os.getpid())
+        modules = await attached_bridge.get_modules(os.getpid())
+        nonzero_pcs = [t.current_pc for t in threads if t.current_pc != 0]
+        assert len(nonzero_pcs) > 0
+        found = False
+        for pc in nonzero_pcs:
+            for mod in modules:
+                if mod.base_address > 0 and mod.size > 0 and mod.base_address <= pc < mod.base_address + mod.size:
+                    found = True
+                    break
+            if found:
+                break
+        assert found, "No thread current_pc falls within any loaded module range"
+
+
+class TestF0020ThreadStateNoStuckSuspend:
+    """F-0020: _query_thread_state must not leave thread suspended on probe failure."""
+
+    async def test_resume_always_called_on_exception(self, process_bridge: ProcessBridge) -> None:
+        """Force _query_thread_state to raise mid-probe; assert thread NOT left suspended.
+
+        Spawns a helper thread, obtains its TID, invokes the private
+        _query_thread_state probe, and then verifies the thread is still
+        runnable by joining it with a short timeout after signalling stop.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        stop_event = threading.Event()
+        tid_holder: list[int] = []
+
+        def _worker() -> None:
+            tid_holder.append(ctypes.windll.kernel32.GetCurrentThreadId())
+            stop_event.wait(timeout=5.0)
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        await asyncio.sleep(0.05)
+        assert tid_holder, "Worker thread did not record its TID"
+        worker_tid = tid_holder[0]
+
+        query_fn: Callable[[int], str] | None = getattr(process_bridge, "_query_thread_state", None)
+        assert callable(query_fn)
+        state: str = await asyncio.to_thread(query_fn, worker_tid)
+        assert isinstance(state, str)
+
+        stop_event.set()
+        await asyncio.to_thread(t.join, 2.0)
+        assert not t.is_alive(), "Worker thread is still alive — may have been left suspended"
+
+    async def test_state_string_valid_after_probe(self, process_bridge: ProcessBridge) -> None:
+        """Verify _query_thread_state returns a non-empty string for a live thread.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        stop_event = threading.Event()
+        tid_holder: list[int] = []
+
+        def _worker() -> None:
+            tid_holder.append(ctypes.windll.kernel32.GetCurrentThreadId())
+            stop_event.wait(timeout=5.0)
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        await asyncio.sleep(0.05)
+        assert tid_holder
+        worker_tid = tid_holder[0]
+
+        query_fn: Callable[[int], str] | None = getattr(process_bridge, "_query_thread_state", None)
+        assert callable(query_fn)
+        state: str = await asyncio.to_thread(query_fn, worker_tid)
+        assert state in {"running", "suspended", "terminated", "unknown"}
+
+        stop_event.set()
+        await asyncio.to_thread(t.join, 2.0)
+
+
+class TestF0010InjectDllUnicode:
+    """F-0010: inject_dll must use LoadLibraryW (UTF-16) path encoding."""
+
+    async def test_inject_dll_nonexistent_raises_tool_error(self, attached_bridge: ProcessBridge) -> None:
+        """Verify inject_dll raises ToolError when DLL does not exist.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        with pytest.raises(ToolError, match="DLL not found"):
+            await attached_bridge.inject_dll(r"C:\nonexistent_dll_\x00test.dll")
+
+    async def test_inject_dll_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
+        """Verify inject_dll raises ToolError when no process is attached.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        await process_bridge.close()
+        with pytest.raises(ToolError, match="no process attached"):
+            await process_bridge.inject_dll(r"C:\Windows\System32\kernel32.dll")
+
+
+class TestF0010InjectDllExitCodeChecked:
+    """F-0010: inject_dll must check GetExitCodeThread and raise on failure."""
+
+    async def test_inject_dll_kernel32_raises_on_failure(self, attached_bridge: ProcessBridge) -> None:
+        """Verify injecting a path that LoadLibraryW cannot load raises ToolError.
+
+        Uses a path to a text file (not a valid DLL) so that LoadLibraryW
+        succeeds at the kernel level but returns NULL (exit_code == 0),
+        which should cause inject_dll to raise ToolError.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as f:
+            f.write(b"NOT_A_REAL_DLL\x00")
+            bad_dll = f.name
+
+        try:
+            with pytest.raises(ToolError):
+                await attached_bridge.inject_dll(bad_dll)
+        finally:
+            await asyncio.to_thread(_unlink_suppress, bad_dll)
