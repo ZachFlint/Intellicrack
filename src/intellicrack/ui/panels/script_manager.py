@@ -170,16 +170,17 @@ pdf
             "template": """// x64dbg script for license bypass
 // Target: {target}
 
-// Set breakpoint at validation function
+// Set an unconditional breakpoint at the validation function entry
 bp {address}
 
-// When hit, modify return value
-bpcnd {address}, "eax=1"
+// Log a line each time the breakpoint is hit
+SetBreakpointLog {address}, "License check hit at {address}"
 
-// Log when breakpoint is hit
-log "License check bypassed at {address}"
+// On hit: force the function's return register to 1 and resume.
+// This runs AFTER the breakpoint fires, so eax has a defined value.
+SetBreakpointCommand {address}, "eax=1; run"
 
-// Continue execution
+// Begin execution; the breakpoint command above performs the bypass on hit
 run
 """,
         },
