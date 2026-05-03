@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 import pytest
 
@@ -619,9 +619,10 @@ class TestF0013DisconnectAllAggregates:
         reg.register(ok_provider)
         with pytest.raises(ProviderError) as info:
             await reg.disconnect_all()
-        details = info.value.details or {}
-        errors = details.get("errors", [])
-        assert isinstance(errors, list)
+        details: dict[str, Any] = info.value.details or {}
+        raw_errors: object = details.get("errors", [])
+        assert isinstance(raw_errors, list)
+        errors: list[dict[str, str]] = cast("list[dict[str, str]]", raw_errors)
         assert any(entry.get("provider") == ProviderName.ANTHROPIC.value for entry in errors)
         assert ok_provider.disconnect_called is True
 

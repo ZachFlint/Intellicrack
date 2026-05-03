@@ -200,30 +200,45 @@ def _reraise(err: BaseException) -> None:
     raise err
 
 
-def _model(provider: ProviderName, mid: str, **overrides: object) -> ModelInfo:
+def _model(
+    provider: ProviderName,
+    mid: str,
+    *,
+    name: str | None = None,
+    context_window: int = 128000,
+    supports_tools: bool = True,
+    supports_vision: bool = False,
+    supports_streaming: bool = True,
+    input_cost_per_1m_tokens: float | None = 1.0,
+    output_cost_per_1m_tokens: float | None = 2.0,
+) -> ModelInfo:
     """Build a ModelInfo with sensible defaults.
 
     Args:
         provider: Provider that owns the model.
-        mid: Model identifier.
-        **overrides: Optional field overrides.
+        mid: Model identifier (also used for the display name when ``name`` is None).
+        name: Optional display name override; defaults to ``mid``.
+        context_window: Context window size in tokens.
+        supports_tools: Whether the model supports function calling.
+        supports_vision: Whether the model supports image input.
+        supports_streaming: Whether the model supports streaming.
+        input_cost_per_1m_tokens: Cost per 1M input tokens; None to omit.
+        output_cost_per_1m_tokens: Cost per 1M output tokens; None to omit.
 
     Returns:
         ModelInfo: The constructed model.
     """
-    base: dict[str, object] = {
-        "id": mid,
-        "name": mid,
-        "provider": provider,
-        "context_window": 128000,
-        "supports_tools": True,
-        "supports_vision": False,
-        "supports_streaming": True,
-        "input_cost_per_1m_tokens": 1.0,
-        "output_cost_per_1m_tokens": 2.0,
-    }
-    base.update(overrides)
-    return ModelInfo(**base)  # type: ignore[arg-type]
+    return ModelInfo(
+        id=mid,
+        name=name if name is not None else mid,
+        provider=provider,
+        context_window=context_window,
+        supports_tools=supports_tools,
+        supports_vision=supports_vision,
+        supports_streaming=supports_streaming,
+        input_cost_per_1m_tokens=input_cost_per_1m_tokens,
+        output_cost_per_1m_tokens=output_cost_per_1m_tokens,
+    )
 
 
 class TestF0006F0007AsyncCacheLockHonoured:
