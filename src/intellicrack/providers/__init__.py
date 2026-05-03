@@ -12,14 +12,8 @@ from __future__ import annotations
 
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.base import (
-    AnthropicToolSchema,
-    GoogleFunctionDeclaration,
-    JSONSchemaParameters,
-    JSONSchemaProperty,
     LLMProvider,
     LLMProviderBase,
-    OpenAIFunctionSchema,
-    OpenAIToolSchema,
     ToolCallBufferManager,
     create_anthropic_tool_schema,
     create_google_tool_schema,
@@ -45,7 +39,12 @@ from intellicrack.providers.model_loader import (
 from intellicrack.providers.ollama import OllamaProvider
 from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.openrouter import OpenRouterProvider
-from intellicrack.providers.registry import ProviderRegistry
+from intellicrack.providers.registry import (
+    CredentialLoaderProtocol,
+    ProviderRegistry,
+    get_provider_registry,
+    reset_provider_registry,
+)
 from intellicrack.providers.xpu_utils import (
     XPUDeviceInfo,
     check_windows_requirements,
@@ -62,17 +61,14 @@ from intellicrack.providers.xpu_utils import (
 
 __all__: list[str] = [
     "AnthropicProvider",
-    "AnthropicToolSchema",
+    "CredentialLoaderProtocol",
     "DiscoveryCache",
     "DiscoveryEvent",
     "DiscoveryFilter",
     "DtypeOption",
-    "GoogleFunctionDeclaration",
     "GoogleProvider",
     "GrokProvider",
     "HuggingFaceProvider",
-    "JSONSchemaParameters",
-    "JSONSchemaProperty",
     "LLMProvider",
     "LLMProviderBase",
     "LoadedModel",
@@ -81,9 +77,7 @@ __all__: list[str] = [
     "ModelConfig",
     "ModelDiscovery",
     "OllamaProvider",
-    "OpenAIFunctionSchema",
     "OpenAIProvider",
-    "OpenAIToolSchema",
     "OpenRouterProvider",
     "ProviderRegistry",
     "ToolCallBufferManager",
@@ -97,6 +91,7 @@ __all__: list[str] = [
     "estimate_model_memory",
     "get_global_model_cache",
     "get_optimal_dtype_for_xpu",
+    "get_provider_registry",
     "get_xpu_device_count",
     "get_xpu_device_info",
     "get_xpu_memory_info",
@@ -105,5 +100,6 @@ __all__: list[str] = [
     "is_xpu_available",
     "load_model_for_cpu",
     "load_model_for_xpu",
+    "reset_provider_registry",
     "set_global_cache_size",
 ]
