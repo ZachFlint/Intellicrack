@@ -91,6 +91,7 @@ _logger = get_logger(__name__)
 
 _MSG_NOT_CONNECTED = "Provider not connected"
 _MSG_NO_MODEL_LOADED = "No model loaded"
+_ERR_EMPTY_MODEL = "model is required and cannot be empty"
 _MSG_TORCH_REQUIRED = "torch is required for local model inference"
 _MSG_TRANSFORMERS_REQUIRED = "transformers is required for local model inference"
 _ERR_LOAD_BOTH_FAILED = "Failed to load model on all attempted devices: %s"
@@ -99,7 +100,6 @@ _ERR_INFERENCE_FAILED = "Local inference failed: %s"
 _ERR_STREAMING_FAILED = "Local streaming failed: %s"
 _ERR_CUDA_NOT_AVAILABLE = "CUDA is not available on this system"
 
-_DEFAULT_MODEL = "microsoft/Phi-3-mini-4k-instruct"
 _DEFAULT_MAX_NEW_TOKENS = 2048
 _DEFAULT_TEMPERATURE = 0.7
 
@@ -196,7 +196,7 @@ class LocalTransformersProvider(LLMProviderBase):
         self._xpu_available = False
         self._is_arc_b580 = False
         self._windows_warnings: list[str] = []
-        self._logger = _logger
+        self._logger = get_logger(__name__).bind(provider="local_transformers")
         self._logger.info("local_transformers_provider_initialized", prefer_xpu=prefer_xpu)
 
     @property
@@ -529,6 +529,9 @@ class LocalTransformersProvider(LLMProviderBase):
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
+        if not model:
+            raise ProviderError(_ERR_EMPTY_MODEL)
+
         self._cancel_requested = False
         if tool_choice is not None:
             self._logger.debug("local_transformers_tool_choice_ignored", mode=tool_choice.mode.value)
@@ -537,7 +540,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("local_transformers_cache_ignored")
 
-        model_id = model or _DEFAULT_MODEL
+        model_id = model
 
         await self._ensure_model_loaded(model_id)
 
@@ -629,6 +632,9 @@ class LocalTransformersProvider(LLMProviderBase):
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
+        if not model:
+            raise ProviderError(_ERR_EMPTY_MODEL)
+
         self._cancel_requested = False
         if tool_choice is not None:
             self._logger.debug("local_stream_tool_choice_ignored", mode=tool_choice.mode.value)
@@ -637,7 +643,7 @@ class LocalTransformersProvider(LLMProviderBase):
         if enable_cache:
             self._logger.debug("local_stream_cache_ignored")
 
-        model_id = model or _DEFAULT_MODEL
+        model_id = model
 
         await self._ensure_model_loaded(model_id)
 
@@ -1180,7 +1186,8 @@ class LocalTransformersProvider(LLMProviderBase):
 
         if self._loaded_model is not None:
             tokenizer = self._loaded_model.tokenizer
-            if hasattr(tokenizer, "apply_chat_template") and tokenizer.chat_template is not None:
+            chat_template = getattr(tokenizer, "chat_template", None)
+            if hasattr(tokenizer, "apply_chat_template") and chat_template is not None:
                 try:
                     result: str | list[int] = tokenizer.apply_chat_template(
                         chat_messages,
@@ -1275,6 +1282,26 @@ class LocalTransformersProvider(LLMProviderBase):
         parts.append("<|im_start|>assistant\n")
         return "".join(parts)
 
+    _TOOL_CALL_RE: re.Pattern[str] = re.compile(r'\{\s*"tool_call"\s*:')
+
+    @staticmethod
+    def _find_tool_call_start(response: str) -> int:
+        """Locate the starting index of a ``{"tool_call": ...}`` JSON object.
+
+        Allows whitespace after the opening brace and around the colon so
+        instruction-tuned models that pretty-print their JSON output are
+        recognised. Returns ``-1`` when no tool-call object is present.
+
+        Args:
+            response: Full response text emitted by the local model.
+
+        Returns:
+            int: Zero-based index of the opening ``{`` brace, or ``-1``
+            when the response does not contain a tool-call object.
+        """
+        match = LocalTransformersProvider._TOOL_CALL_RE.search(response)
+        return -1 if match is None else match.start()
+
     @staticmethod
     def _parse_tool_calls(response: str) -> list[ToolCall] | None:
         """Parse tool calls from response.
@@ -1285,7 +1312,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Returns:
             list[ToolCall] | None: List of ToolCall objects or None.
         """
-        start_idx = response.find('{"tool_call":')
+        start_idx = LocalTransformersProvider._find_tool_call_start(response)
         if start_idx == -1:
             return None
 
@@ -1350,9 +1377,10 @@ class LocalTransformersProvider(LLMProviderBase):
         Returns:
             str: Text before the tool call JSON.
         """
-        if match := re.search(r'\{"tool_call":', response):
-            return response[: match.start()].strip()
-        return response
+        start_idx = LocalTransformersProvider._find_tool_call_start(response)
+        if start_idx == -1:
+            return response
+        return response[:start_idx].strip()
 
     def get_device_info(self) -> dict[str, object]:
         """Get information about the current device.

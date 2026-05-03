@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
-from intellicrack.ui._dialogs import show_error, show_info, show_warning  # noqa: PLC2701
+from intellicrack.ui._dialogs import show_error, show_info, show_warning
 
 
 if TYPE_CHECKING:

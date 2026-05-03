@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{
     field_size, format_field_value, read_numeric_value, ConditionOp, Endianness, FieldDefinition,
-    FieldType, FieldValidation, ParsedField, TemplateError, TemplateRegistry,
+    FieldType, FieldValidation, ParsedField, StructTemplate, TemplateError, TemplateRegistry,
 };
 
 const MAX_DEPTH: usize = 16;
@@ -378,7 +378,7 @@ impl<'a> TemplateEvaluator<'a> {
                 self.current_offset = saved_offset;
                 self.default_endian = saved_endian;
                 self.base_offset = saved_base;
-                result.unwrap_or_default()
+                result?
             } else {
                 Vec::new()
             }
@@ -569,7 +569,12 @@ impl<'a> TemplateEvaluator<'a> {
         display_type: &FieldType,
         field: &FieldDefinition,
     ) -> Result<Vec<ParsedField>, TemplateError> {
-        let value = evaluate_expression(expression, &self.parsed_values, self.current_offset)?;
+        let value = evaluate_expression(
+            expression,
+            &self.parsed_values,
+            self.current_offset,
+            self.registry,
+        )?;
         self.parsed_values.insert(name.to_string(), value);
 
         let value_hex = u64::from_ne_bytes(value.to_ne_bytes());
@@ -665,11 +670,75 @@ fn evaluate_expression(
     expr: &str,
     values: &HashMap<String, i64>,
     current_offset: usize,
+    registry: &TemplateRegistry,
 ) -> Result<i64, TemplateError> {
     let tokens = tokenize_expr(expr)?;
     let mut pos = 0;
-    let result = parse_additive(&tokens, &mut pos, values, current_offset)?;
+    let result = parse_additive(&tokens, &mut pos, values, current_offset, registry)?;
     Ok(result)
+}
+
+/// Resolve `sizeof(<type_name>)` to a concrete byte count.
+///
+/// Tries the built-in primitive table first (matching the names already
+/// accepted by template field types). Falls back to the supplied
+/// `TemplateRegistry`, summing the size of each field of a registered
+/// struct template. Errors with [`TemplateError::UnknownType`] when the
+/// name matches neither — replacing the previous silent zero return that
+/// allowed typos like `sizeof(uint128)` to collapse expressions to 0.
+fn resolve_sizeof(type_name: &str, registry: &TemplateRegistry) -> Result<usize, TemplateError> {
+    let primitive = match type_name {
+        "u8" | "uint8" | "int8" | "s8" | "bool" | "char" => Some(1usize),
+        "u16" | "uint16" | "int16" | "s16" => Some(2),
+        "u32" | "uint32" | "int32" | "s32" | "float" | "float32" => Some(4),
+        "u64" | "uint64" | "int64" | "s64" | "double" | "float64" => Some(8),
+        _ => None,
+    };
+    if let Some(size) = primitive {
+        return Ok(size);
+    }
+    if let Some(template) = registry.get(type_name) {
+        return struct_template_size(type_name, template);
+    }
+    Err(TemplateError::UnknownType(type_name.to_string()))
+}
+
+/// Compute the byte size of a registered struct template by summing the
+/// fixed-size cost of each field.
+///
+/// Returns `Err(TemplateError::UnknownType)` if the template contains a
+/// field whose size depends on runtime data (dynamic arrays, unions,
+/// conditionals, struct refs, computed, endianness switch). Those cases
+/// have no statically computable size and `sizeof()` cannot meaningfully
+/// stand in for them inside an arithmetic expression.
+fn struct_template_size(
+    template_name: &str,
+    template: &StructTemplate,
+) -> Result<usize, TemplateError> {
+    let mut total: usize = 0;
+    for field in &template.fields {
+        let size = field_size(&field.field_type);
+        if size == 0 && !is_zero_size_type(&field.field_type) {
+            return Err(TemplateError::UnknownType(format!(
+                "{template_name} (field '{}' has runtime-dependent size)",
+                field.name
+            )));
+        }
+        total = total
+            .checked_add(size)
+            .ok_or_else(|| TemplateError::UnknownType(template_name.to_string()))?;
+    }
+    Ok(total)
+}
+
+/// Return `true` for `FieldType` variants that are legitimately zero
+/// bytes (e.g. zero-length padding) so a `field_size` of zero is not
+/// confused with a runtime-dependent type.
+fn is_zero_size_type(ft: &FieldType) -> bool {
+    matches!(
+        ft,
+        FieldType::Bytes(0) | FieldType::FixedString(0) | FieldType::Padding(0),
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -782,18 +851,19 @@ fn parse_additive(
     pos: &mut usize,
     values: &HashMap<String, i64>,
     current_offset: usize,
+    registry: &TemplateRegistry,
 ) -> Result<i64, TemplateError> {
-    let mut left = parse_multiplicative(tokens, pos, values, current_offset)?;
+    let mut left = parse_multiplicative(tokens, pos, values, current_offset, registry)?;
     while *pos < tokens.len() {
         match &tokens[*pos] {
             ExprToken::Plus => {
                 *pos += 1;
-                let right = parse_multiplicative(tokens, pos, values, current_offset)?;
+                let right = parse_multiplicative(tokens, pos, values, current_offset, registry)?;
                 left = left.wrapping_add(right);
             }
             ExprToken::Minus => {
                 *pos += 1;
-                let right = parse_multiplicative(tokens, pos, values, current_offset)?;
+                let right = parse_multiplicative(tokens, pos, values, current_offset, registry)?;
                 left = left.wrapping_sub(right);
             }
             _ => break,
@@ -807,18 +877,19 @@ fn parse_multiplicative(
     pos: &mut usize,
     values: &HashMap<String, i64>,
     current_offset: usize,
+    registry: &TemplateRegistry,
 ) -> Result<i64, TemplateError> {
-    let mut left = parse_unary(tokens, pos, values, current_offset)?;
+    let mut left = parse_unary(tokens, pos, values, current_offset, registry)?;
     while *pos < tokens.len() {
         match &tokens[*pos] {
             ExprToken::Star => {
                 *pos += 1;
-                let right = parse_unary(tokens, pos, values, current_offset)?;
+                let right = parse_unary(tokens, pos, values, current_offset, registry)?;
                 left = left.wrapping_mul(right);
             }
             ExprToken::Slash => {
                 *pos += 1;
-                let right = parse_unary(tokens, pos, values, current_offset)?;
+                let right = parse_unary(tokens, pos, values, current_offset, registry)?;
                 if right == 0 {
                     return Err(TemplateError::ExpressionError(
                         "division by zero".to_string(),
@@ -828,7 +899,7 @@ fn parse_multiplicative(
             }
             ExprToken::Percent => {
                 *pos += 1;
-                let right = parse_unary(tokens, pos, values, current_offset)?;
+                let right = parse_unary(tokens, pos, values, current_offset, registry)?;
                 if right == 0 {
                     return Err(TemplateError::ExpressionError("modulo by zero".to_string()));
                 }
@@ -845,15 +916,16 @@ fn parse_unary(
     pos: &mut usize,
     values: &HashMap<String, i64>,
     current_offset: usize,
+    registry: &TemplateRegistry,
 ) -> Result<i64, TemplateError> {
     if *pos < tokens.len() {
         if let ExprToken::Minus = &tokens[*pos] {
             *pos += 1;
-            let val = parse_primary(tokens, pos, values, current_offset)?;
+            let val = parse_primary(tokens, pos, values, current_offset, registry)?;
             return Ok(-val);
         }
     }
-    parse_primary(tokens, pos, values, current_offset)
+    parse_primary(tokens, pos, values, current_offset, registry)
 }
 
 fn parse_primary(
@@ -861,6 +933,7 @@ fn parse_primary(
     pos: &mut usize,
     values: &HashMap<String, i64>,
     current_offset: usize,
+    registry: &TemplateRegistry,
 ) -> Result<i64, TemplateError> {
     if *pos >= tokens.len() {
         return Err(TemplateError::ExpressionError(
@@ -902,14 +975,11 @@ fn parse_primary(
                                     *pos += 1;
                                 }
                             }
-                            let size = match type_name.as_str() {
-                                "u8" | "uint8" | "int8" | "s8" | "bool" | "char" => 1,
-                                "u16" | "uint16" | "int16" | "s16" => 2,
-                                "u32" | "uint32" | "int32" | "s32" | "float" | "float32" => 4,
-                                "u64" | "uint64" | "int64" | "s64" | "double" | "float64" => 8,
-                                _ => 0,
-                            };
-                            return Ok(size);
+                            let size = resolve_sizeof(&type_name, registry)?;
+                            let size_i64 = i64::try_from(size).map_err(|e| {
+                                TemplateError::ExpressionError(format!("sizeof overflow: {e}"))
+                            })?;
+                            return Ok(size_i64);
                         }
                     }
                 }
@@ -920,7 +990,7 @@ fn parse_primary(
         }
         ExprToken::LParen => {
             *pos += 1;
-            let val = parse_additive(tokens, pos, values, current_offset)?;
+            let val = parse_additive(tokens, pos, values, current_offset, registry)?;
             if *pos < tokens.len() {
                 if let ExprToken::RParen = &tokens[*pos] {
                     *pos += 1;
@@ -1082,7 +1152,10 @@ mod tests {
         assert_eq!(result.len(), 1);
     }
 
-    fn make_bitmask_fields(condition_op: ConditionOp, condition_value: i64) -> Vec<FieldDefinition> {
+    fn make_bitmask_fields(
+        condition_op: ConditionOp,
+        condition_value: i64,
+    ) -> Vec<FieldDefinition> {
         vec![
             FieldDefinition {
                 name: "flags".to_string(),
@@ -1227,14 +1300,21 @@ mod tests {
 
     #[test]
     fn test_expression_eval() {
+        let reg = make_registry();
         let mut values = HashMap::new();
         values.insert("a".to_string(), 10);
         values.insert("b".to_string(), 3);
-        assert_eq!(evaluate_expression("a + b", &values, 0).unwrap(), 13);
-        assert_eq!(evaluate_expression("a * b", &values, 0).unwrap(), 30);
-        assert_eq!(evaluate_expression("a - b", &values, 0).unwrap(), 7);
-        assert_eq!(evaluate_expression("(a + b) * 2", &values, 0).unwrap(), 26);
-        assert_eq!(evaluate_expression("$", &values, 0x100).unwrap(), 0x100);
+        assert_eq!(evaluate_expression("a + b", &values, 0, &reg).unwrap(), 13);
+        assert_eq!(evaluate_expression("a * b", &values, 0, &reg).unwrap(), 30);
+        assert_eq!(evaluate_expression("a - b", &values, 0, &reg).unwrap(), 7);
+        assert_eq!(
+            evaluate_expression("(a + b) * 2", &values, 0, &reg).unwrap(),
+            26
+        );
+        assert_eq!(
+            evaluate_expression("$", &values, 0x100, &reg).unwrap(),
+            0x100
+        );
     }
 
     #[test]
@@ -1272,5 +1352,149 @@ mod tests {
         assert_eq!(result[0].display_value, "true");
         assert!(result[1].display_value.contains("'A'"));
         assert!(result[2].display_value.contains("padding"));
+    }
+
+    /// Audit-1 F-0005 regression: `sizeof(<unknown>)` must produce a
+    /// `TemplateError::UnknownType` rather than silently returning 0.
+    #[test]
+    fn test_sizeof_unknown_type_errors() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(uint128)", &values, 0, &reg)
+            .expect_err("sizeof of unknown type must fail");
+        match err {
+            TemplateError::UnknownType(name) => assert_eq!(name, "uint128"),
+            other => panic!("expected UnknownType, got {other:?}"),
+        }
+    }
+
+    /// Audit-1 F-0005 regression: `sizeof(<typo struct ref>)` must
+    /// produce `UnknownType` because the typo'd name is not registered.
+    #[test]
+    fn test_sizeof_typo_struct_ref_errors() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        let err = evaluate_expression("sizeof(SomeStruct)", &values, 0, &reg)
+            .expect_err("sizeof of unregistered struct must fail");
+        assert!(matches!(err, TemplateError::UnknownType(_)));
+    }
+
+    /// Audit-1 F-0005 happy-path: primitive type names continue to
+    /// resolve without registry lookup.
+    #[test]
+    fn test_sizeof_primitives_still_resolve() {
+        let reg = make_registry();
+        let values = HashMap::new();
+        assert_eq!(
+            evaluate_expression("sizeof(u8)", &values, 0, &reg).unwrap(),
+            1
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(uint16)", &values, 0, &reg).unwrap(),
+            2
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(u32)", &values, 0, &reg).unwrap(),
+            4
+        );
+        assert_eq!(
+            evaluate_expression("sizeof(double)", &values, 0, &reg).unwrap(),
+            8
+        );
+    }
+
+    /// Audit-1 F-0005 happy-path: registered fixed-size struct templates
+    /// resolve via `TemplateRegistry`.
+    #[test]
+    fn test_sizeof_registered_struct_resolves() {
+        let mut reg = make_registry();
+        let template = StructTemplate {
+            name: "Header".to_string(),
+            description: String::new(),
+            fields: vec![
+                FieldDefinition {
+                    name: "magic".to_string(),
+                    field_type: FieldType::UInt32,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "version".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "pad".to_string(),
+                    field_type: FieldType::Padding(2),
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        };
+        reg.register(template);
+        let values = HashMap::new();
+        assert_eq!(
+            evaluate_expression("sizeof(Header)", &values, 0, &reg).unwrap(),
+            8,
+        );
+    }
+
+    /// Audit-1 F-0004 regression: a `Pointer` field whose target template
+    /// errors during recursive evaluation must propagate the error rather
+    /// than swallow it via `unwrap_or_default()`.
+    #[test]
+    fn test_eval_pointer_propagates_recursive_error() {
+        let mut reg = TemplateRegistry::new();
+        let target = StructTemplate {
+            name: "Bad".to_string(),
+            description: String::new(),
+            fields: vec![FieldDefinition {
+                name: "ref_to_missing".to_string(),
+                field_type: FieldType::Computed {
+                    expression: "missing_field + 1".to_string(),
+                    display_type: Box::new(FieldType::UInt32),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            }],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        };
+        reg.register(target);
+        let outer = vec![FieldDefinition {
+            name: "ptr".to_string(),
+            field_type: FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt32),
+                target_template: "Bad".to_string(),
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+        let mut data = vec![0u8; 32];
+        data[..4].copy_from_slice(&8u32.to_le_bytes());
+        let mut evaluator = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let err = evaluator
+            .evaluate_fields(&outer)
+            .expect_err("pointer must propagate recursive evaluation errors");
+        assert!(matches!(err, TemplateError::InvalidFieldReference(_)));
     }
 }
