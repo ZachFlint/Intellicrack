@@ -18,7 +18,7 @@ import struct
 import time
 from ctypes import wintypes
 from pathlib import Path
-from typing import Literal, cast, override
+from typing import ClassVar, Literal, cast, override
 
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
@@ -233,8 +233,6 @@ _STATUS_INFO_LENGTH_MISMATCH = -1073741820
 _PTR_SIZE_64 = 8
 _SEH_TERMINAL_32 = 0xFFFFFFFF
 _SEH_TERMINAL_64 = 0xFFFFFFFFFFFFFFFF
-_ENV_SIZE_CHECK_OFFSET_64 = 0xF2
-_ENV_SIZE_CHECK_OFFSET_32 = 0x92
 _REG_TYPE_DWORD = 4
 _REG_TYPE_QWORD = 11
 _REG_TYPE_SZ = 1
@@ -257,9 +255,22 @@ _DOTNET_METADATA_MIN_SIZE = 20
 _PEB32_MIN_PARSE_LENGTH = 0x18
 _PEB_BEING_DEBUGGED_OFFSET = 2
 
+TLS_ARRAY_OFFSET_X64 = 0x1480
+_TLS_EXPANSION_OFFSET_X64 = 0x1780
+TLS_ARRAY_OFFSET_X86 = 0xE10
+TLS_STATIC_SLOT_COUNT = 64
+_ENV_POINTER_OFFSET_X64 = 0x80
+_ENV_SIZE_OFFSET_X64 = 0x3F0
+_ENV_POINTER_OFFSET_X86 = 0x48
+_ENV_SIZE_OFFSET_X86 = 0x290
+_PARAMS_READ_SIZE_X64 = 0x400
+_PARAMS_READ_SIZE_X86 = 0x2A0
+
+_ERR_WOW64_UNAVAILABLE = "WOW64 detection unavailable"
 _ERR_ACCESS_HANDLE_OPEN = "token open failed"
 _ERR_PRIV_QUERY_FAILED = "GetTokenInformation failed"
 _ERR_PEB_READ = "PEB read failed"
+_ERR_TEB_READ = "TEB read failed"
 _ERR_NTQUERY_PROC = "NtQueryInformationProcess failed: 0x"
 _ERR_NTQUERY_THREAD = "NtQueryInformationThread failed: 0x"
 _ERR_NTQUERY_SYS = "NtQuerySystemInformation failed: 0x"
@@ -284,6 +295,108 @@ _CODE_SECTION_UNMAP_FAILED = "SECTION_UNMAP_FAILED"
 _CODE_SECTION_NOT_MAPPED = "SECTION_NOT_MAPPED"
 
 _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
+
+
+class PEB64(ctypes.Structure):
+    """64-bit Process Environment Block layout through ProcessParameters.
+
+    MS-documented offsets for ntdll!_PEB on amd64/arm64 targets.
+    Fields beyond ProcessParameters are not accessed and are omitted.
+    """
+
+    _fields_: ClassVar = [
+        ("InheritedAddressSpace", ctypes.c_byte),
+        ("ReadImageFileExecOptions", ctypes.c_byte),
+        ("BeingDebugged", ctypes.c_byte),
+        ("BitField", ctypes.c_byte),
+        ("_Padding0", ctypes.c_byte * 4),
+        ("Mutant", ctypes.c_uint64),
+        ("ImageBaseAddress", ctypes.c_uint64),
+        ("Ldr", ctypes.c_uint64),
+        ("ProcessParameters", ctypes.c_uint64),
+    ]
+
+
+class PEB32(ctypes.Structure):
+    """32-bit Process Environment Block layout through ProcessParameters.
+
+    MS-documented offsets for ntdll!_PEB on i386 targets and WOW64.
+    Fields beyond ProcessParameters are not accessed and are omitted.
+    """
+
+    _fields_: ClassVar = [
+        ("InheritedAddressSpace", ctypes.c_byte),
+        ("ReadImageFileExecOptions", ctypes.c_byte),
+        ("BeingDebugged", ctypes.c_byte),
+        ("BitField", ctypes.c_byte),
+        ("Mutant", ctypes.c_uint32),
+        ("ImageBaseAddress", ctypes.c_uint32),
+        ("Ldr", ctypes.c_uint32),
+        ("ProcessParameters", ctypes.c_uint32),
+    ]
+
+
+class TEB64(ctypes.Structure):
+    """64-bit Thread Environment Block layout through TlsExpansionSlots.
+
+    MS-documented offsets for ntdll!_TEB on amd64/arm64 targets.
+    Gaps between named fields are filled with reserved byte arrays so
+    that ctypes.sizeof(TEB64) equals the true in-memory size and buffer
+    allocation covers TlsSlots[64] at +0x1480 and TlsExpansionSlots at
+    +0x1780.
+    """
+
+    _fields_: ClassVar = [
+        ("ExceptionList", ctypes.c_uint64),
+        ("StackBase", ctypes.c_uint64),
+        ("StackLimit", ctypes.c_uint64),
+        ("SubSystemTib", ctypes.c_uint64),
+        ("FiberData", ctypes.c_uint64),
+        ("ArbitraryUserPointer", ctypes.c_uint64),
+        ("Self", ctypes.c_uint64),
+        ("EnvironmentPointer", ctypes.c_uint64),
+        ("ClientId_UniqueProcess", ctypes.c_uint64),
+        ("ClientId_UniqueThread", ctypes.c_uint64),
+        ("ActiveRpcHandle", ctypes.c_uint64),
+        ("ThreadLocalStoragePointer", ctypes.c_uint64),
+        ("ProcessEnvironmentBlock", ctypes.c_uint64),
+        ("LastErrorValue", ctypes.c_uint32),
+        ("_Reserved06c", ctypes.c_byte * (TLS_ARRAY_OFFSET_X64 - 0x06C)),
+        ("TlsSlots", ctypes.c_uint64 * 64),
+        ("TlsLinks", ctypes.c_uint64 * 2),
+        ("_Reserved1690", ctypes.c_byte * (_TLS_EXPANSION_OFFSET_X64 - 0x1690)),
+        ("TlsExpansionSlots", ctypes.c_uint64),
+    ]
+
+
+class TEB32(ctypes.Structure):
+    """32-bit Thread Environment Block layout through TlsSlots[64].
+
+    MS-documented offsets for ntdll!_TEB on i386 targets and WOW64.
+    Gaps between named fields are filled with reserved byte arrays so
+    that ctypes.sizeof(TEB32) equals the true in-memory size and buffer
+    allocation covers TlsSlots[64] at +0xE10.
+    """
+
+    _fields_: ClassVar = [
+        ("ExceptionList", ctypes.c_uint32),
+        ("StackBase", ctypes.c_uint32),
+        ("StackLimit", ctypes.c_uint32),
+        ("SubSystemTib", ctypes.c_uint32),
+        ("FiberData", ctypes.c_uint32),
+        ("ArbitraryUserPointer", ctypes.c_uint32),
+        ("Self", ctypes.c_uint32),
+        ("EnvironmentPointer", ctypes.c_uint32),
+        ("ClientId_UniqueProcess", ctypes.c_uint32),
+        ("ClientId_UniqueThread", ctypes.c_uint32),
+        ("ActiveRpcHandle", ctypes.c_uint32),
+        ("ThreadLocalStoragePointer", ctypes.c_uint32),
+        ("ProcessEnvironmentBlock", ctypes.c_uint32),
+        ("LastErrorValue", ctypes.c_uint32),
+        ("_Reserved038", ctypes.c_byte * (TLS_ARRAY_OFFSET_X86 - 0x038)),
+        ("TlsSlots", ctypes.c_uint32 * 64),
+    ]
+
 
 ProcessAccessRights = Literal[
     "all",
@@ -3186,55 +3299,74 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            pbi = PROCESS_BASIC_INFORMATION()
-            return_length = wintypes.ULONG(0)
-            status: int = self._ntdll.NtQueryInformationProcess(
-                proc_handle,
-                ProcessBasicInformation,
-                ctypes.byref(pbi),
-                ctypes.sizeof(pbi),
-                ctypes.byref(return_length),
-            )
-
-            if status < 0:
-                msg = _ERR_NTQUERY_PROC + f"{status & 0xFFFFFFFF:08X}"
-                raise ToolError(msg)
-
-            peb_address = pbi.PebBaseAddress or 0
-
-            peb_data = ctypes.create_string_buffer(0x100)
-            bytes_read = ctypes.c_size_t()
-            if not self._kernel32.ReadProcessMemory(
-                proc_handle,
-                ctypes.c_void_p(peb_address),
-                peb_data,
-                0x100,
-                ctypes.byref(bytes_read),
-            ):
-                raise ToolError(_ERR_PEB_READ)
-
-            target_is_64bit = self._target_is_64bit(proc_handle)
-            result = self._parse_peb_fields(
-                peb_data.raw,
-                peb_address,
-                target_is_64bit=target_is_64bit,
-            )
-            wow64_info = self._read_wow64_peb(proc_handle)
-            if wow64_info is not None:
-                result["wow64_peb_address"] = wow64_info[0]
-                result["wow64_peb"] = wow64_info[1]
-            return result
+            return self._read_peb_from_handle(proc_handle)
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
 
+    def _read_peb_from_handle(self, proc_handle: int) -> dict[str, object]:
+        """Read and parse PEB from an already-opened process handle.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` access.
+
+        Returns:
+            dict[str, object]: Parsed PEB fields including ``raw`` bytes.
+
+        Raises:
+            ToolError: If NtQueryInformationProcess fails, WOW64
+                detection is unavailable, or ReadProcessMemory fails.
+        """
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        pbi = PROCESS_BASIC_INFORMATION()
+        return_length = wintypes.ULONG(0)
+        status: int = self._ntdll.NtQueryInformationProcess(
+            proc_handle,
+            ProcessBasicInformation,
+            ctypes.byref(pbi),
+            ctypes.sizeof(pbi),
+            ctypes.byref(return_length),
+        )
+        if status < 0:
+            msg = _ERR_NTQUERY_PROC + f"{status & 0xFFFFFFFF:08X}"
+            raise ToolError(msg)
+
+        peb_address = pbi.PebBaseAddress or 0
+        target_is_64bit = self._target_is_64bit(proc_handle)
+        peb_read_size = ctypes.sizeof(PEB64) if target_is_64bit else ctypes.sizeof(PEB32)
+        peb_data = ctypes.create_string_buffer(peb_read_size)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            proc_handle,
+            ctypes.c_void_p(peb_address),
+            peb_data,
+            peb_read_size,
+            ctypes.byref(bytes_read),
+        ):
+            raise ToolError(_ERR_PEB_READ)
+
+        raw_bytes = peb_data.raw[: bytes_read.value]
+        result = self._parse_peb_fields(raw_bytes, peb_address, target_is_64bit=target_is_64bit)
+        result["raw"] = raw_bytes
+        wow64_info = self._read_wow64_peb(proc_handle)
+        if wow64_info is not None:
+            result["wow64_peb_address"] = wow64_info[0]
+            result["wow64_peb"] = wow64_info[1]
+        return result
+
     def _target_is_64bit(self, proc_handle: int) -> bool:
         """Determine whether the process bound to ``proc_handle`` is 64-bit.
 
-        Uses ``IsWow64Process2`` when available to distinguish
-        native-64-bit from WOW64-hosted-32-bit on modern Windows. Falls
-        back to the legacy ``IsWow64Process`` + host pointer-size
-        heuristic when the newer API is missing.
+        Uses ``IsWow64Process2`` when available (Win10+) to distinguish
+        native-64-bit from WOW64-hosted-32-bit. Falls back to the legacy
+        ``IsWow64Process`` when the newer API is absent. Raises if both
+        APIs are unavailable so callers never silently use the host
+        pointer size as a proxy for the target's bitness.
 
         Args:
             proc_handle: Open process handle with at least
@@ -3244,9 +3376,14 @@ class ProcessBridge(ToolBridgeBase):
             bool: ``True`` if the target process address space is
                 64-bit; ``False`` if the target is 32-bit (WOW64 or
                 native i386).
+
+        Raises:
+            ToolError: If kernel32 is unavailable or both
+                ``IsWow64Process2`` and ``IsWow64Process`` are absent,
+                making bitness detection impossible.
         """
         if self._kernel32 is None:
-            return struct.calcsize("P") == _PTR_SIZE_64
+            raise ToolError(_ERR_WOW64_UNAVAILABLE)
 
         native_64bit_machines = {IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM64}
         machines = self._call_iswow64process2(proc_handle)
@@ -3268,7 +3405,7 @@ class ProcessBridge(ToolBridgeBase):
                 return False
             return struct.calcsize("P") == _PTR_SIZE_64
 
-        return struct.calcsize("P") == _PTR_SIZE_64
+        raise ToolError(_ERR_WOW64_UNAVAILABLE)
 
     def _read_wow64_peb(
         self,
@@ -3310,13 +3447,14 @@ class ProcessBridge(ToolBridgeBase):
         if wow64_peb_address == 0:
             return None
 
-        peb32 = ctypes.create_string_buffer(0x100)
+        peb32_size = ctypes.sizeof(PEB32)
+        peb32 = ctypes.create_string_buffer(peb32_size)
         bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
             proc_handle,
             ctypes.c_void_p(wow64_peb_address),
             peb32,
-            0x100,
+            peb32_size,
             ctypes.byref(bytes_read),
         ):
             _logger.debug(
@@ -3406,12 +3544,12 @@ class ProcessBridge(ToolBridgeBase):
     async def read_teb(self, tid: int) -> dict[str, object]:
         """Read Thread Environment Block fields for a thread.
 
-        Raises ``ToolError`` when ``ReadProcessMemory`` fails rather than
-        returning a partially populated dictionary: downstream tooling
-        relies on a consistent success / error contract (the analogous
-        pattern A63/A64 use elsewhere in this bridge) and silent partial
-        results previously masked real access-rights or broken-target
-        failures.
+        Opens a dedicated thread handle with ``THREAD_QUERY_INFORMATION``
+        and calls ``NtQueryInformationThread(ThreadBasicInformation)`` to
+        obtain the thread's TEB base address. A separate process handle is
+        opened from the thread's owning PID (``ClientId.UniqueProcess``)
+        for ``ReadProcessMemory`` so the caller is not required to have an
+        active ``open_process`` session. Both handles are closed on return.
 
         Args:
             tid: Thread ID.
@@ -3421,8 +3559,9 @@ class ProcessBridge(ToolBridgeBase):
 
         Raises:
             ToolError: If the bridge is not initialised, the thread
-                cannot be opened, ``NtQueryInformationThread`` fails, no
-                process is attached, or ``ReadProcessMemory`` fails.
+                cannot be opened, ``NtQueryInformationThread`` fails, the
+                owning process cannot be opened, or ``ReadProcessMemory``
+                fails.
         """
         _logger.info("process_read_teb_started", tid=tid)
         if self._ntdll is None:
@@ -3437,6 +3576,7 @@ class ProcessBridge(ToolBridgeBase):
         if not thread_handle:
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
+        proc_handle: int | None = None
         try:
             tbi = THREAD_BASIC_INFORMATION()
             status: int = self._ntdll.NtQueryInformationThread(
@@ -3452,22 +3592,30 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(msg)
 
             teb_address = tbi.TebBaseAddress or 0
+            owner_pid = tbi.ClientId_UniqueProcess or 0
 
-            if self._process_handle is None:
-                raise ToolError(_ERR_NOT_ATTACHED)
+            inherit_handle = False
+            proc_handle = self._kernel32.OpenProcess(
+                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                inherit_handle,
+                owner_pid,
+            )
+            if not proc_handle:
+                raise ToolError(_ERR_OPEN_FAILED)
 
-            teb_data = ctypes.create_string_buffer(0x100)
+            target_is_64bit = self._target_is_64bit(proc_handle)
+            teb_read_size = ctypes.sizeof(TEB64) if target_is_64bit else ctypes.sizeof(TEB32)
+            teb_data = ctypes.create_string_buffer(teb_read_size)
             bytes_read = ctypes.c_size_t()
             if not self._kernel32.ReadProcessMemory(
-                self._process_handle,
+                proc_handle,
                 ctypes.c_void_p(teb_address),
                 teb_data,
-                0x100,
+                teb_read_size,
                 ctypes.byref(bytes_read),
             ):
-                raise ToolError(_ERR_READ_FAILED)
+                raise ToolError(_ERR_TEB_READ)
 
-            target_is_64bit = self._target_is_64bit(self._process_handle)
             result = self._parse_teb_fields(
                 teb_data.raw,
                 teb_address,
@@ -3477,6 +3625,8 @@ class ProcessBridge(ToolBridgeBase):
             return result
         finally:
             self._kernel32.CloseHandle(thread_handle)
+            if proc_handle:
+                self._kernel32.CloseHandle(proc_handle)
 
     @staticmethod
     def _parse_teb_fields(
@@ -3501,17 +3651,19 @@ class ProcessBridge(ToolBridgeBase):
             stack_base = struct.unpack_from("<Q", raw, 0x08)[0]
             stack_limit = struct.unpack_from("<Q", raw, 0x10)[0]
             fiber_data = struct.unpack_from("<Q", raw, 0x20)[0]
+            thread_local_storage_pointer = struct.unpack_from("<Q", raw, 0x58)[0]
             peb_ptr = struct.unpack_from("<Q", raw, 0x60)[0]
             last_error = struct.unpack_from("<I", raw, 0x68)[0]
-            tls_pointer = struct.unpack_from("<Q", raw, 0x58)[0]
+            tls_array_base = teb_address + TLS_ARRAY_OFFSET_X64
         else:
             seh_frame = struct.unpack_from("<I", raw, 0x00)[0]
             stack_base = struct.unpack_from("<I", raw, 0x04)[0]
             stack_limit = struct.unpack_from("<I", raw, 0x08)[0]
             fiber_data = struct.unpack_from("<I", raw, 0x10)[0]
+            thread_local_storage_pointer = struct.unpack_from("<I", raw, 0x2C)[0]
             peb_ptr = struct.unpack_from("<I", raw, 0x30)[0]
             last_error = struct.unpack_from("<I", raw, 0x34)[0]
-            tls_pointer = struct.unpack_from("<I", raw, 0x2C)[0]
+            tls_array_base = teb_address + TLS_ARRAY_OFFSET_X86
 
         return {
             "teb_address": teb_address,
@@ -3519,9 +3671,10 @@ class ProcessBridge(ToolBridgeBase):
             "stack_base": stack_base,
             "stack_limit": stack_limit,
             "fiber_data": fiber_data,
+            "thread_local_storage_pointer": thread_local_storage_pointer,
             "peb_address": peb_ptr,
             "last_error_value": last_error,
-            "tls_expansion_slots": tls_pointer,
+            "tls_array_base": tls_array_base,
         }
 
     # ------------------------------------------------------------------
@@ -3849,14 +4002,21 @@ class ProcessBridge(ToolBridgeBase):
 
         Uses ``IsWow64Process2`` when available so the decision works on
         both x64-hosted and arm64-hosted Windows. Falls back to the
-        legacy ``IsWow64Process`` when the newer API is missing.
+        legacy ``IsWow64Process`` when the newer API is absent. Raises
+        if both APIs are unavailable so callers never silently assume
+        non-WOW64 when detection is impossible.
 
         Returns:
             bool: ``True`` when the attached process is a 32-bit x86
                 binary on a 64-bit host; ``False`` otherwise.
+
+        Raises:
+            ToolError: If kernel32 is unavailable, no process is
+                attached, or both ``IsWow64Process2`` and
+                ``IsWow64Process`` are absent.
         """
         if self._kernel32 is None or self._process_handle is None:
-            return False
+            raise ToolError(_ERR_WOW64_UNAVAILABLE)
 
         machines = self._call_iswow64process2(self._process_handle)
         if machines is not None:
@@ -3867,7 +4027,7 @@ class ProcessBridge(ToolBridgeBase):
             self._kernel32.IsWow64Process(self._process_handle, ctypes.byref(is_wow64))
             return bool(is_wow64.value)
 
-        return False
+        raise ToolError(_ERR_WOW64_UNAVAILABLE)
 
     def _walk_stack_native(self, thread_handle: int) -> list[dict[str, object]]:
         """Walk a native AMD64 thread stack via ``StackWalk64``.
@@ -4936,6 +5096,10 @@ class ProcessBridge(ToolBridgeBase):
     def _read_env_block(self, proc_handle: int, params_addr: int) -> dict[str, str]:
         """Read and parse the environment block from process parameters.
 
+        Reads the full ``RTL_USER_PROCESS_PARAMETERS`` header to obtain
+        both the ``Environment`` pointer and ``EnvironmentSize`` field,
+        then reads the entire environment block without capping at 64 KiB.
+
         Args:
             proc_handle: Open process handle with VM_READ access.
             params_addr: Address of RTL_USER_PROCESS_PARAMETERS.
@@ -4944,31 +5108,33 @@ class ProcessBridge(ToolBridgeBase):
             dict[str, str]: Parsed environment variables.
 
         Raises:
-            ToolError: If kernel32 is not available.
+            ToolError: If kernel32 is not available or WOW64 detection
+                is unavailable.
         """
         _logger.info("process_read_env_block_started", params_addr=hex(params_addr))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="_read_env_block")
             raise ToolError(_ERR_KERNEL32_NA)
 
-        params_data = ctypes.create_string_buffer(0x100)
+        target_is_64bit = self._target_is_64bit(proc_handle)
+        params_read_size = _PARAMS_READ_SIZE_X64 if target_is_64bit else _PARAMS_READ_SIZE_X86
+        params_data = ctypes.create_string_buffer(params_read_size)
         bytes_read = ctypes.c_size_t()
         if not self._kernel32.ReadProcessMemory(
             proc_handle,
             ctypes.c_void_p(params_addr),
             params_data,
-            0x100,
+            params_read_size,
             ctypes.byref(bytes_read),
         ):
             return {}
 
-        raw = params_data.raw
-        target_is_64bit = self._target_is_64bit(proc_handle)
+        raw = params_data.raw[: bytes_read.value]
         env_ptr, env_size = self._extract_env_pointer(raw, target_is_64bit=target_is_64bit)
         if env_ptr == 0:
             return {}
 
-        read_size = min(env_size if env_size > 0 else 0x8000, 0x10000)
+        read_size = env_size if env_size > 0 else 0x8000
         env_buffer = ctypes.create_string_buffer(read_size)
         if not self._kernel32.ReadProcessMemory(
             proc_handle,
@@ -4996,21 +5162,33 @@ class ProcessBridge(ToolBridgeBase):
     ) -> tuple[int, int]:
         """Extract environment pointer and size from process parameters.
 
+        Reads ``RTL_USER_PROCESS_PARAMETERS.Environment`` and
+        ``RTL_USER_PROCESS_PARAMETERS.EnvironmentSize`` at their
+        architecture-correct offsets. EnvironmentSize is a ``SIZE_T``
+        (uint64 on x64, uint32 on x86).
+
         Args:
-            raw: Raw RTL_USER_PROCESS_PARAMETERS bytes.
+            raw: Raw RTL_USER_PROCESS_PARAMETERS bytes (must span at
+                least through EnvironmentSize: 0x3F8 bytes on x64,
+                0x294 bytes on x86).
             target_is_64bit: ``True`` when the inspected structure
                 belongs to a 64-bit process; ``False`` for i386 /
                 WOW64 32-bit processes.
 
         Returns:
-            tuple[int, int]: Environment block pointer and size.
+            tuple[int, int]: ``(env_ptr, env_size)`` where ``env_ptr``
+                is the virtual address of the environment block and
+                ``env_size`` is its byte length (zero when the field
+                could not be read).
         """
         if target_is_64bit:
-            env_size = struct.unpack_from("<H", raw, 0x03F0 - 0x300)[0] if len(raw) > _ENV_SIZE_CHECK_OFFSET_64 else 0
-            env_ptr = struct.unpack_from("<Q", raw, 0x80)[0]
+            env_ptr = struct.unpack_from("<Q", raw, _ENV_POINTER_OFFSET_X64)[0] if len(raw) >= _ENV_POINTER_OFFSET_X64 + 8 else 0
+            env_size_end = _ENV_SIZE_OFFSET_X64 + 8
+            env_size = struct.unpack_from("<Q", raw, _ENV_SIZE_OFFSET_X64)[0] if len(raw) >= env_size_end else 0
         else:
-            env_size = struct.unpack_from("<H", raw, 0x0290 - 0x200)[0] if len(raw) > _ENV_SIZE_CHECK_OFFSET_32 else 0
-            env_ptr = struct.unpack_from("<I", raw, 0x48)[0]
+            env_ptr = struct.unpack_from("<I", raw, _ENV_POINTER_OFFSET_X86)[0] if len(raw) >= _ENV_POINTER_OFFSET_X86 + 4 else 0
+            env_size_end = _ENV_SIZE_OFFSET_X86 + 4
+            env_size = struct.unpack_from("<I", raw, _ENV_SIZE_OFFSET_X86)[0] if len(raw) >= env_size_end else 0
 
         return env_ptr, env_size
 
@@ -6422,7 +6600,13 @@ class ProcessBridge(ToolBridgeBase):
     # ------------------------------------------------------------------
 
     async def get_tls_values(self, tid: int, max_slots: int = 64) -> list[dict[str, object]]:
-        """Read TLS slot values for a thread.
+        """Read static TLS slot values for a thread.
+
+        Reads the static TLS array directly from the TEB: TEB+0x1480 on
+        x64 (64 slots of 8 bytes each) or TEB+0xE10 on x86 (64 slots of
+        4 bytes each). When ``max_slots`` exceeds
+        ``TLS_STATIC_SLOT_COUNT``, also reads expansion slots via the
+        TlsExpansionSlots pointer at TEB+0x1780 (x64 only).
 
         Args:
             tid: Thread ID.
@@ -6430,39 +6614,76 @@ class ProcessBridge(ToolBridgeBase):
 
         Returns:
             list[dict[str, object]]: List of TLS slot dicts with index and value.
-
-        Raises:
-            ToolError: If operation fails.
         """
         _logger.info("process_get_tls_values_started", tid=tid, max_slots=max_slots)
-        if self._process_handle is None:
-            _logger.error("process_not_attached", operation="get_tls_values")
-            raise ToolError(_ERR_NOT_ATTACHED)
 
         teb = await self.read_teb(tid)
-        tls_addr = teb.get("tls_expansion_slots")
-        if not isinstance(tls_addr, int) or tls_addr == 0:
+        tls_array_addr = teb.get("tls_array_base")
+        if not isinstance(tls_array_addr, int) or tls_array_addr == 0:
             return []
 
-        ptr_size = struct.calcsize("P")
-        read_size = min(max_slots, 1088) * ptr_size
+        is_x64 = (tls_array_addr & ~0xFFFFFFFF) != 0 or struct.calcsize("P") == _PTR_SIZE_64
+        ptr_size = 8 if is_x64 else 4
+        fmt = "<Q" if is_x64 else "<I"
+        static_count = min(max_slots, TLS_STATIC_SLOT_COUNT)
+        static_read_size = static_count * ptr_size
 
         try:
-            data = self._sync_read_memory(tls_addr, read_size)
+            static_data = self._sync_read_memory(tls_array_addr, static_read_size)
         except ToolError:
-            _logger.warning("tls_slots_read_failed", tid=tid, address=hex(tls_addr), size=read_size)
+            _logger.warning("tls_static_read_failed", tid=tid, address=hex(tls_array_addr), size=static_read_size)
             return []
 
         slots: list[dict[str, object]] = []
-        fmt = "<Q" if ptr_size == _PTR_SIZE_64 else "<I"
-        for i in range(min(max_slots, len(data) // ptr_size)):
-            offset = i * ptr_size
-            value = struct.unpack_from(fmt, data, offset)[0]
-
+        for i in range(min(static_count, len(static_data) // ptr_size)):
+            value = struct.unpack_from(fmt, static_data, i * ptr_size)[0]
             if value != 0:
                 slots.append({"index": i, "value": value})
 
+        if max_slots > TLS_STATIC_SLOT_COUNT and is_x64:
+            teb_addr = teb.get("teb_address")
+            if isinstance(teb_addr, int) and teb_addr != 0:
+                await self._append_tls_expansion_slots(slots, teb_addr, max_slots, tid, fmt, ptr_size)
+
         return slots
+
+    async def _append_tls_expansion_slots(
+        self,
+        slots: list[dict[str, object]],
+        teb_addr: int,
+        max_slots: int,
+        tid: int,
+        fmt: str,
+        ptr_size: int,
+    ) -> None:
+        """Read TLS expansion slots and append non-zero entries to ``slots``.
+
+        Args:
+            slots: Accumulator list to extend in-place.
+            teb_addr: Base address of the TEB for this thread.
+            max_slots: Upper bound on total slots (including static 64).
+            tid: Thread ID (for warning log context only).
+            fmt: ``struct`` format string (``"<Q"`` or ``"<I"``).
+            ptr_size: Pointer size in bytes (8 or 4).
+        """
+        exp_ptr_addr = teb_addr + _TLS_EXPANSION_OFFSET_X64
+        try:
+            exp_ptr_data = self._sync_read_memory(exp_ptr_addr, 8)
+            exp_ptr = struct.unpack_from("<Q", exp_ptr_data, 0)[0]
+            if exp_ptr == 0:
+                return
+            expansion_count = min(max_slots - TLS_STATIC_SLOT_COUNT, 1024)
+            expansion_read_size = expansion_count * ptr_size
+            try:
+                exp_data = self._sync_read_memory(exp_ptr, expansion_read_size)
+                for j in range(min(expansion_count, len(exp_data) // ptr_size)):
+                    value = struct.unpack_from(fmt, exp_data, j * ptr_size)[0]
+                    if value != 0:
+                        slots.append({"index": TLS_STATIC_SLOT_COUNT + j, "value": value})
+            except ToolError:
+                _logger.warning("tls_expansion_read_failed", tid=tid, address=hex(exp_ptr))
+        except ToolError:
+            _logger.warning("tls_expansion_ptr_read_failed", tid=tid, address=hex(exp_ptr_addr))
 
     # ------------------------------------------------------------------
     # Fiber enumeration
