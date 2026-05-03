@@ -24,6 +24,7 @@ import pytest
 import pytest_asyncio
 
 from intellicrack.bridges._win32_types import (
+    INVALID_HANDLE_VALUE,
     PAGE_EXECUTE,
     PAGE_EXECUTE_READ,
     PAGE_EXECUTE_READWRITE,
@@ -1785,3 +1786,274 @@ class TestF0039UnmapSection:
             await process_bridge.unmap_section(0xDEADBEEF)
         details = excinfo.value.details or {}
         assert details.get("code") == "SECTION_NOT_MAPPED"
+
+
+_PIPE_NAME_AUDIT2 = r"\\.\pipe\intellicrack_audit2_test"
+_PIPE_BUF_SIZE = 64
+_PHYS_DRIVE = r"\\.\PhysicalDrive0"
+_PHYS_DRIVE_ACCESS = 0x80000000
+_PHYS_DRIVE_SHARE = 0x00000001 | 0x00000002
+
+
+def _create_named_pipe_server(pipe_name: str) -> int:
+    """Create a named pipe server using CreateNamedPipeW.
+
+    Args:
+        pipe_name: The fully-qualified named pipe path.
+
+    Returns:
+        int: Server pipe handle, or -1 on failure.
+    """
+    k32 = ctypes.windll.kernel32
+    k32.CreateNamedPipeW.restype = wintypes.HANDLE
+    server_handle: int = k32.CreateNamedPipeW(
+        pipe_name,
+        0x00000003,
+        0x00000000,
+        1,
+        _PIPE_BUF_SIZE,
+        _PIPE_BUF_SIZE,
+        0,
+        None,
+    )
+    return int(server_handle)
+
+
+def _open_phys_drive_or_skip() -> int:
+    """Open PhysicalDrive0 for read sharing, skipping if access is denied.
+
+    Returns:
+        int: Valid device handle.
+    """
+    k32 = ctypes.windll.kernel32
+    k32.CreateFileW.restype = wintypes.HANDLE
+    test_h: int = k32.CreateFileW(
+        _PHYS_DRIVE,
+        _PHYS_DRIVE_ACCESS,
+        _PHYS_DRIVE_SHARE,
+        None,
+        3,
+        0,
+        None,
+    )
+    if test_h in {INVALID_HANDLE_VALUE, 0}:
+        pytest.skip(f"{_PHYS_DRIVE} requires elevated privileges")
+    return test_h
+
+
+class TestF0017PipeHandleType:
+    """Verify CreateFileW restype=HANDLE so pipe_connect returns a non-truncated positive int."""
+
+    async def test_pipe_connect_returns_positive_handle(self, process_bridge: ProcessBridge) -> None:
+        """Verify pipe_connect returns a positive int handle, not a sign-extended negative.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = ctypes.windll.kernel32
+        server_handle = _create_named_pipe_server(_PIPE_NAME_AUDIT2)
+        assert server_handle != -1, "failed to create named pipe server"
+
+        connected = threading.Event()
+        connect_error: list[bool] = [False]
+
+        def _server_thread() -> None:
+            k32.ConnectNamedPipe.restype = wintypes.BOOL
+            result = k32.ConnectNamedPipe(server_handle, None)
+            if not result:
+                connect_error[0] = True
+            connected.set()
+
+        t = threading.Thread(target=_server_thread, daemon=True)
+        t.start()
+
+        try:
+            handle = await process_bridge.pipe_connect(_PIPE_NAME_AUDIT2, 5000)
+            connected.wait(timeout=5.0)
+            assert handle > 0, f"handle should be a positive int, got {handle}"
+            assert handle not in {0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF}, "handle must not be INVALID_HANDLE_VALUE"
+            k32.CloseHandle(handle)
+        finally:
+            k32.DisconnectNamedPipe(server_handle)
+            k32.CloseHandle(server_handle)
+            t.join(timeout=2.0)
+
+
+class TestF0017DeviceHandleType:
+    """Verify device_open returns a valid positive handle for accessible devices."""
+
+    async def test_device_open_known_device_positive_handle(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_open returns a positive int handle for an accessible device.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = ctypes.windll.kernel32
+        test_h = _open_phys_drive_or_skip()
+        k32.CloseHandle(test_h)
+
+        handle = await process_bridge.device_open(_PHYS_DRIVE)
+        try:
+            assert handle > 0, f"device handle should be positive, got {handle}"
+            assert handle not in {0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF}, "handle must not be INVALID_HANDLE_VALUE"
+        finally:
+            k32.CloseHandle(handle)
+
+
+class TestF0016PipeCloseResult:
+    """Verify pipe_close returns True on success and raises on invalid handle."""
+
+    async def test_pipe_close_valid_handle_returns_true(self, process_bridge: ProcessBridge) -> None:
+        """Verify pipe_close returns True when CloseHandle succeeds.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = ctypes.windll.kernel32
+        server_handle = _create_named_pipe_server(_PIPE_NAME_AUDIT2 + "_close")
+        assert server_handle != -1
+
+        connected = threading.Event()
+
+        def _srv() -> None:
+            k32.ConnectNamedPipe.restype = wintypes.BOOL
+            k32.ConnectNamedPipe(server_handle, None)
+            connected.set()
+
+        t = threading.Thread(target=_srv, daemon=True)
+        t.start()
+
+        client_handle = await process_bridge.pipe_connect(_PIPE_NAME_AUDIT2 + "_close", 5000)
+        connected.wait(timeout=5.0)
+        result = await process_bridge.pipe_close(client_handle)
+        assert result is True
+
+        k32.DisconnectNamedPipe(server_handle)
+        k32.CloseHandle(server_handle)
+        t.join(timeout=2.0)
+
+    async def test_pipe_close_invalid_handle_raises(self, process_bridge: ProcessBridge) -> None:
+        """Verify pipe_close raises ToolError when given an invalid handle.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        with pytest.raises(ToolError):
+            await process_bridge.pipe_close(0xDEAD0000)
+
+
+class TestF0016DeviceCloseResult:
+    """Verify device_close returns True on success and raises on invalid handle."""
+
+    async def test_device_close_invalid_handle_raises(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_close raises ToolError when given an invalid handle.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        with pytest.raises(ToolError):
+            await process_bridge.device_close(0xDEAD0001)
+
+    async def test_device_close_valid_handle_returns_true(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_close returns True when CloseHandle succeeds on an accessible device.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        _open_phys_drive_or_skip()
+
+        handle = await process_bridge.device_open(_PHYS_DRIVE)
+        result = await process_bridge.device_close(handle)
+        assert result is True
+
+
+class TestF0018DeviceIoctlHexInput:
+    """Verify device_ioctl validates hex string input and raises on invalid input."""
+
+    async def test_device_ioctl_invalid_hex_raises_value_error(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_ioctl raises ValueError for non-hex input_data.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        with pytest.raises(ValueError, match="hex"):
+            await process_bridge.device_ioctl(1, 0x00000001, "not-hex")
+
+    async def test_device_ioctl_valid_hex_accepted(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_ioctl accepts a valid hex string without raising on parse.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        test_h = _open_phys_drive_or_skip()
+        k32 = ctypes.windll.kernel32
+        try:
+            result = await process_bridge.device_ioctl(test_h, 0x70000, "")
+            assert isinstance(result, str)
+            assert all(c in "0123456789abcdef" for c in result)
+        except ToolError:
+            pass
+        finally:
+            k32.CloseHandle(test_h)
+
+
+class TestF0037PipeReadHex:
+    """Verify pipe_read returns a lowercase hex string."""
+
+    async def test_pipe_read_returns_hex_string(self, process_bridge: ProcessBridge) -> None:
+        """Verify pipe_read returns a hex string of the correct length.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        k32 = ctypes.windll.kernel32
+        server_handle = _create_named_pipe_server(_PIPE_NAME_AUDIT2 + "_read")
+        assert server_handle != -1
+
+        known_bytes = b"\xde\xad\xbe\xef"
+        write_done = threading.Event()
+
+        def _srv() -> None:
+            k32.ConnectNamedPipe.restype = wintypes.BOOL
+            k32.ConnectNamedPipe(server_handle, None)
+            bw = wintypes.DWORD(0)
+            k32.WriteFile(server_handle, known_bytes, len(known_bytes), ctypes.byref(bw), None)
+            write_done.set()
+
+        t = threading.Thread(target=_srv, daemon=True)
+        t.start()
+
+        client_handle = await process_bridge.pipe_connect(_PIPE_NAME_AUDIT2 + "_read", 5000)
+        write_done.wait(timeout=5.0)
+
+        try:
+            result = await process_bridge.pipe_read(client_handle, len(known_bytes))
+            assert isinstance(result, str), f"pipe_read should return str, got {type(result)}"
+            assert result == known_bytes.hex(), f"expected {known_bytes.hex()!r}, got {result!r}"
+            assert result == "deadbeef"
+        finally:
+            k32.CloseHandle(client_handle)
+            k32.DisconnectNamedPipe(server_handle)
+            k32.CloseHandle(server_handle)
+            t.join(timeout=2.0)
+
+
+class TestF0037DeviceIoctlOutputHex:
+    """Verify device_ioctl returns output as a hex string."""
+
+    async def test_device_ioctl_output_is_hex_string(self, process_bridge: ProcessBridge) -> None:
+        """Verify device_ioctl output is a lowercase hex string.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        test_h = _open_phys_drive_or_skip()
+        k32 = ctypes.windll.kernel32
+        try:
+            result = await process_bridge.device_ioctl(test_h, 0x70000, None, 512)
+            assert isinstance(result, str), f"device_ioctl should return str, got {type(result)}"
+            assert re.fullmatch(r"[0-9a-f]*", result) is not None, f"not a valid hex string: {result!r}"
+        except ToolError:
+            pass
+        finally:
+            k32.CloseHandle(test_h)
