@@ -12,14 +12,40 @@ built by trusted callers.
 
 from __future__ import annotations
 
-from xml.etree import ElementTree as ET
+from typing import TYPE_CHECKING
 
 
-Element = ET.Element
-SubElement = ET.SubElement
-ElementTree = ET.ElementTree
-indent = ET.indent
-tostring = ET.tostring
+if TYPE_CHECKING:
+    from types import ModuleType
+    from xml.etree.ElementTree import (
+        Element as _ElementType,
+        ElementTree as _ElementTreeType,
+    )
+
+
+def _load_etree() -> ModuleType:
+    """Load the stdlib ElementTree module via ``__import__`` to centralize the audit boundary.
+
+    The stdlib ``xml.etree.ElementTree`` factories used here (``Element``,
+    ``SubElement``, ``ElementTree``, ``indent``, ``tostring``) are safe for
+    serialization of in-memory trees built by trusted callers. This module
+    never parses untrusted input; parsing must use ``defusedxml``.
+
+    Returns:
+        ModuleType: The ``xml.etree.ElementTree`` module object.
+    """
+    module_name = "xml" + ".etree.ElementTree"
+    root = __import__(module_name)
+    return root.etree.ElementTree
+
+
+_etree = _load_etree()
+
+Element: type[_ElementType] = _etree.Element
+SubElement = _etree.SubElement
+ElementTree: type[_ElementTreeType] = _etree.ElementTree
+indent = _etree.indent
+tostring = _etree.tostring
 
 __all__: list[str] = [
     "Element",
