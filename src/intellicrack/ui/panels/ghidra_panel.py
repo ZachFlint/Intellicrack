@@ -322,6 +322,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         lbl_form = QHBoxLayout()
         self._label_addr_input = QLineEdit()
+        self._label_addr_input.setObjectName("label_addr_input")
         getattr(self._label_addr_input, "set" + "Place" + "holderText")("Address (hex)")
         self._label_name_input = QLineEdit()
         getattr(self._label_name_input, "set" + "Place" + "holderText")("Label name")
@@ -336,6 +337,7 @@ class GhidraPanel(AnalysisPanelBase):
         labels_layout.addWidget(self._labels_table)
 
         lbl_refresh = QPushButton(self.tr("Refresh Labels"))
+        lbl_refresh.setObjectName("refresh_labels_btn")
         lbl_refresh.clicked.connect(self._on_refresh_labels)
         labels_layout.addWidget(lbl_refresh)
         splitter.addWidget(labels_widget)

@@ -15,18 +15,17 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
+from PyQt6.QtWidgets import QApplication
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
-    from PyQt6.QtWidgets import QApplication
+    from collections.abc import Iterator
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 @pytest.fixture(scope="session")
-def qapp() -> Generator[QApplication]:
+def qapp() -> Iterator[QApplication]:
     """Provide a QApplication instance for the test session.
 
     Qt requires exactly one QApplication instance per process. This fixture
@@ -36,8 +35,6 @@ def qapp() -> Generator[QApplication]:
     Yields:
         QApplication: A live QApplication for widget construction.
     """
-    from PyQt6.QtWidgets import QApplication
-
     existing = QApplication.instance()
     if isinstance(existing, QApplication):
         yield existing

@@ -15,28 +15,28 @@ import asyncio
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from PyQt6.QtWidgets import QLineEdit, QPushButton
 
 from intellicrack.bridges.base import BridgeState
-from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
 
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
 
+    from intellicrack.bridges.ghidra import GhidraBridge
+
 
 class _RecordingBridge:
-    """Recording stub that captures get_labels invocations.
+    """Recording stub that captures get_labels invocations."""
 
-    Attributes:
-        calls: Ordered list of address arguments passed to get_labels.
-        state: Bridge readiness state mirroring the real BridgeState contract.
-    """
+    calls: list[int]
+    state: BridgeState
 
     def __init__(self) -> None:
         """Initialise an empty call log and a ready BridgeState."""
-        self.calls: list[int] = []
-        self.state: BridgeState = BridgeState(connected=True, tool_running=True)
+        self.calls = []
+        self.state = BridgeState(connected=True, tool_running=True)
 
     async def get_labels(self, address: int, radius: int = 0x100) -> list[dict[str, Any]]:
         """Record an invocation and return an empty label list.
@@ -101,7 +101,32 @@ def _install_sync_run_async(panel: GhidraPanel, captured: list[Coroutine[Any, An
         finally:
             loop.close()
 
-    panel._run_async = _capture
+    setattr(panel, "_run_async", _capture)
+
+
+def _get_label_addr_input(panel: GhidraPanel) -> QLineEdit:
+    """Locate the labels-tab address input widget by objectName.
+
+    Args:
+        panel: The GhidraPanel under test.
+
+    Returns:
+        QLineEdit: The address-input QLineEdit named ``label_addr_input``.
+    """
+    widget = panel.findChild(QLineEdit, "label_addr_input")
+    assert widget is not None, "GhidraPanel must expose a QLineEdit named 'label_addr_input'"
+    return widget
+
+
+def _click_refresh_labels(panel: GhidraPanel) -> None:
+    """Trigger the Refresh Labels button via its connected signal.
+
+    Args:
+        panel: The GhidraPanel under test.
+    """
+    button = panel.findChild(QPushButton, "refresh_labels_btn")
+    assert button is not None, "GhidraPanel must expose a QPushButton named 'refresh_labels_btn'"
+    button.click()
 
 
 @pytest.mark.usefixtures("qapp")
@@ -117,8 +142,8 @@ class TestGhidraPanelRefreshLabels:
         captured: list[Coroutine[Any, Any, Any]] = []
         _install_sync_run_async(panel, captured)
 
-        panel._label_addr_input.setText("")
-        panel._on_refresh_labels()
+        _get_label_addr_input(panel).setText("")
+        _click_refresh_labels(panel)
 
         assert bridge.calls == []
         assert captured == []
@@ -132,8 +157,8 @@ class TestGhidraPanelRefreshLabels:
         captured: list[Coroutine[Any, Any, Any]] = []
         _install_sync_run_async(panel, captured)
 
-        panel._label_addr_input.setText("   ")
-        panel._on_refresh_labels()
+        _get_label_addr_input(panel).setText("   ")
+        _click_refresh_labels(panel)
 
         assert panel.status_label is not None
         text = panel.status_label.text()
@@ -150,8 +175,8 @@ class TestGhidraPanelRefreshLabels:
         captured: list[Coroutine[Any, Any, Any]] = []
         _install_sync_run_async(panel, captured)
 
-        panel._label_addr_input.setText("not-a-hex-address")
-        panel._on_refresh_labels()
+        _get_label_addr_input(panel).setText("not-a-hex-address")
+        _click_refresh_labels(panel)
 
         assert bridge.calls == []
         assert captured == []
@@ -167,8 +192,8 @@ class TestGhidraPanelRefreshLabels:
         captured: list[Coroutine[Any, Any, Any]] = []
         _install_sync_run_async(panel, captured)
 
-        panel._label_addr_input.setText("0x401000")
-        panel._on_refresh_labels()
+        _get_label_addr_input(panel).setText("0x401000")
+        _click_refresh_labels(panel)
 
         assert bridge.calls == [0x401000]
         assert len(captured) == 1
@@ -182,8 +207,8 @@ class TestGhidraPanelRefreshLabels:
         captured: list[Coroutine[Any, Any, Any]] = []
         _install_sync_run_async(panel, captured)
 
-        panel._label_addr_input.setText("4198400")
-        panel._on_refresh_labels()
+        _get_label_addr_input(panel).setText("4198400")
+        _click_refresh_labels(panel)
 
         assert bridge.calls == [4198400]
         assert len(captured) == 1
