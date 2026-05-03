@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import ast
 import re
+import shutil
+import sys
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -42,7 +44,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar, Final, Literal
 
-from ._subprocess import TimeoutExpired
+from ._subprocess import CompletedProcess, TimeoutExpired
 from .logging import get_logger
 from .process_manager import ProcessManager
 
@@ -54,6 +56,13 @@ ScriptType = Literal["frida", "ghidra", "cutter", "python", "x64dbg"]
 _ApiRefGetter = Callable[[], dict[str, str]]
 
 _JAVA_CLASS_DECLARATION_RE: Final[re.Pattern[str]] = re.compile(r"\bclass\s+[A-Za-z_][A-Za-z0-9_]*")
+_JAVA_IMPORT_KEYWORD_RE: Final[re.Pattern[str]] = re.compile(r"\bimport\b")
+_JAVA_PUBLIC_KEYWORD_RE: Final[re.Pattern[str]] = re.compile(r"\bpublic\b")
+_JAVA_RUN_ENTRYPOINT_RE: Final[re.Pattern[str]] = re.compile(r"\bvoid\s+run\s*\(")
+
+_DEFAULT_SCRIPTS_DIRNAME: Final[str] = "scripts"
+
+_EXEC_TIMEOUT_DEFAULT: Final[float] = 30.0
 
 
 def _empty_str_list() -> list[str]:
@@ -90,6 +99,101 @@ def _empty_str_any_dict() -> dict[str, Any]:
         dict[str, Any]: An empty string-keyed dictionary.
     """
     return {}
+
+
+def _utc_now() -> datetime:
+    """Return the current UTC timestamp as a tz-aware datetime.
+
+    Returns:
+        datetime: The current time in UTC, with ``tzinfo`` populated.
+    """
+    return datetime.now(tz=UTC)
+
+
+def strip_java_strings_and_comments(content: str) -> str:
+    """Strip Java string literals, char literals, and comments from source.
+
+    Replaces every string literal, character literal, line comment, and
+    block comment with whitespace of the same length. Preserves newline
+    characters so line numbers remain stable for downstream analysis.
+
+    Args:
+        content: Java source text to scrub.
+
+    Returns:
+        str: Sanitised source where only true Java tokens are visible to
+        keyword/brace counting routines.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(content)
+    while i < n:
+        ch = content[i]
+        nxt = content[i + 1] if i + 1 < n else ""
+
+        if ch == "/" and nxt == "/":
+            j = content.find("\n", i + 2)
+            if j == -1:
+                out.append(" " * (n - i))
+                i = n
+            else:
+                out.append(" " * (j - i))
+                i = j
+            continue
+
+        if ch == "/" and nxt == "*":
+            j = content.find("*/", i + 2)
+            if j == -1:
+                segment = content[i:]
+                out.append("".join(c if c == "\n" else " " for c in segment))
+                i = n
+            else:
+                end = j + 2
+                segment = content[i:end]
+                out.append("".join(c if c == "\n" else " " for c in segment))
+                i = end
+            continue
+
+        if ch == '"':
+            j = i + 1
+            while j < n:
+                cj = content[j]
+                if cj == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if cj == '"':
+                    j += 1
+                    break
+                if cj == "\n":
+                    break
+                j += 1
+            segment = content[i:j]
+            out.append("".join(c if c == "\n" else " " for c in segment))
+            i = j
+            continue
+
+        if ch == "'":
+            j = i + 1
+            while j < n:
+                cj = content[j]
+                if cj == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if cj == "'":
+                    j += 1
+                    break
+                if cj == "\n":
+                    break
+                j += 1
+            segment = content[i:j]
+            out.append("".join(c if c == "\n" else " " for c in segment))
+            i = j
+            continue
+
+        out.append(ch)
+        i += 1
+
+    return "".join(out)
 
 
 class ScriptLanguage(Enum):
@@ -174,6 +278,10 @@ class ScriptContext:
         string_references: Relevant string references found.
         magic_constants: Magic constants used in validation.
         additional_context: Any additional context from analysis.
+        LANGUAGE_API_MAP: Class-level mapping from
+            :class:`ScriptLanguage` to the API-reference key
+            (``"frida"``, ``"ghidra"``, ``"cutter"``, ``"x64dbg"``)
+            used to look up the per-language reference dict.
     """
 
     binary_name: str
@@ -188,7 +296,7 @@ class ScriptContext:
     magic_constants: list[int] = field(default_factory=_empty_int_list)
     additional_context: dict[str, Any] = field(default_factory=_empty_str_any_dict)
 
-    _LANGUAGE_API_MAP: ClassVar[dict[ScriptLanguage, str]] = {
+    LANGUAGE_API_MAP: ClassVar[dict[ScriptLanguage, str]] = {
         ScriptLanguage.JAVASCRIPT: "frida",
         ScriptLanguage.JAVA: "ghidra",
         ScriptLanguage.R2_COMMANDS: "cutter",
@@ -273,7 +381,7 @@ class ScriptContext:
             language: The script language to get API reference for.
             lines: List of output lines to append to.
         """
-        api_ref_key = self._LANGUAGE_API_MAP.get(language)
+        api_ref_key = self.LANGUAGE_API_MAP.get(language)
         if api_ref_key is None:
             return
 
@@ -302,11 +410,12 @@ class Script:
         language: Programming language of the script.
         content: Script source code content.
         description: Human-readable description of the script.
-        created_at: Generation timestamp.
+        created_at: Generation timestamp (tz-aware UTC).
         context: Context used to generate the script.
         target_functions: Target functions the script operates on.
         verified: Whether the script has been syntax-verified.
         execution_results: Results from script execution (if run).
+        saved_path: On-disk path of the most recent successful save.
     """
 
     name: str
@@ -314,11 +423,12 @@ class Script:
     language: ScriptLanguage
     content: str
     description: str
-    created_at: datetime = field(default_factory=datetime.now)
+    created_at: datetime = field(default_factory=_utc_now)
     context: ScriptContext | None = None
     target_functions: list[str] = field(default_factory=_empty_str_list)
     verified: bool = False
     execution_results: dict[str, Any] = field(default_factory=_empty_str_any_dict)
+    saved_path: Path | None = None
 
     def add_execution_result(self, tool_name: str, result: object) -> None:
         """Add or update an execution result record.
@@ -328,19 +438,39 @@ class Script:
             result: The result object or data.
         """
         self.execution_results[tool_name] = result
-        self.execution_results["last_run"] = datetime.now(tz=UTC).isoformat()
+        self.execution_results["last_run"] = _utc_now().isoformat()
 
     def save(self, path: Path) -> None:
         """Save script to file.
 
+        Writes the script's ``content`` to ``path`` after ensuring the parent
+        directory exists. The success log record is emitted only after the
+        write returns successfully; if the write raises an :class:`OSError`,
+        the failure is logged with the exception detail and re-raised so
+        callers can react.
+
         Args:
             path: File path to save to.
+
+        Raises:
+            OSError: If the parent directory cannot be created or the
+                write_text call fails for any I/O reason.
         """
         path.parent.mkdir(parents=True, exist_ok=True)
         _logger.debug("directory_ensured", directory=str(path.parent))
+        try:
+            path.write_text(self.content, encoding="utf-8")
+        except OSError as exc:
+            _logger.warning(
+                "script_file_write_failed",
+                path=str(path),
+                size=len(self.content),
+                error=str(exc),
+            )
+            raise
         _logger.info("script_file_written", path=str(path), size=len(self.content))
-        path.write_text(self.content, encoding="utf-8")
         _logger.info("script_saved", path=str(path), size=len(self.content))
+        self.saved_path = path
 
     def get_extension(self) -> str:
         """Get the appropriate file extension for this script type.
@@ -436,48 +566,55 @@ class ScriptValidator:
             stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
             return False, stderr_text
         finally:
-            _logger.info("temp_file_unlink", path=temp_path)
-            Path(temp_path).unlink(missing_ok=True)
-            _logger.info("temp_file_cleaned", path=temp_path)
+            _logger.debug("temp_file_unlink_attempt", path=temp_path)
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except OSError as exc:
+                _logger.warning("temp_file_unlink_failed", path=temp_path, error=str(exc))
+            else:
+                _logger.debug("temp_file_cleaned", path=temp_path)
 
     @staticmethod
     def validate_java(content: str) -> tuple[bool, str | None]:
         r"""Validate Java/Ghidra script structure.
 
-        Performs a lightweight structural check on a Ghidra Java script. An
-        explicit class declaration is detected with a regular expression
-        (``\bclass\s+<identifier>``) rather than a naive substring match so
-        that the word ``class`` appearing in strings or comments does not
-        produce false positives.
+        Performs a structural check on a Ghidra Java script. String literals,
+        character literals, line comments, and block comments are stripped
+        from the source before any keyword or brace check runs, so tokens
+        appearing inside strings or comments cannot satisfy the structural
+        requirements and braces inside string literals do not contribute to
+        the brace-balance count.
 
         Args:
             content: Java script content.
 
         Returns:
-            tuple[bool, str | None]: ``(True, None)`` when the script contains
-            the required ``import`` statement, ``public`` modifier, an
-            explicit class declaration, and a ``void run(`` entry point with
-            balanced braces. ``(False, <reason>)`` otherwise.
+            tuple[bool, str | None]: ``(True, None)`` when the sanitised
+            script contains an ``import`` statement, a ``public`` modifier,
+            an explicit class declaration, and a ``void run(`` entry point
+            with balanced braces. ``(False, <reason>)`` otherwise.
         """
         _logger.debug("validate_java_start", content_length=len(content))
 
-        if "import" not in content:
+        scrubbed = strip_java_strings_and_comments(content)
+
+        if _JAVA_IMPORT_KEYWORD_RE.search(scrubbed) is None:
             _logger.debug("validate_java_missing_element", element="import")
             return False, "Missing required element: import"
 
-        if "public" not in content:
+        if _JAVA_PUBLIC_KEYWORD_RE.search(scrubbed) is None:
             _logger.debug("validate_java_missing_element", element="public")
             return False, "Missing required element: public"
 
-        if _JAVA_CLASS_DECLARATION_RE.search(content) is None:
+        if _JAVA_CLASS_DECLARATION_RE.search(scrubbed) is None:
             _logger.debug("validate_java_missing_element", element="class")
             return False, "Missing required element: class declaration"
 
-        if "void run(" not in content:
+        if _JAVA_RUN_ENTRYPOINT_RE.search(scrubbed) is None:
             _logger.debug("validate_java_missing_element", element="void run(")
             return False, "Missing required element: void run("
 
-        brace_count = content.count("{") - content.count("}")
+        brace_count = scrubbed.count("{") - scrubbed.count("}")
         if brace_count != 0:
             _logger.debug("validate_java_unbalanced_braces", brace_count=brace_count)
             return False, f"Unbalanced braces: {brace_count:+d}"
@@ -487,11 +624,21 @@ class ScriptValidator:
     def validate(self, script: Script) -> tuple[bool, str | None]:
         """Validate a script based on its language.
 
+        Languages without a real validator (currently ``R2_COMMANDS`` and
+        ``X64DBG_SCRIPT``) return ``(False, <reason>)`` and leave
+        :attr:`Script.verified` unchanged. The previous behaviour of
+        silently returning success is removed because callers used the
+        ``verified`` flag to gate execution and would otherwise treat
+        unvalidated scripts as trusted.
+
         Args:
             script: Script to validate.
 
         Returns:
-            tuple[bool, str | None]: Tuple of (is_valid, error_message).
+            tuple[bool, str | None]: ``(True, None)`` when the language has
+            a validator and the script passes. ``(False, <reason>)`` when
+            the script fails validation or no validator exists for the
+            language.
         """
         validators = {
             ScriptLanguage.PYTHON: self.validate_python,
@@ -499,20 +646,24 @@ class ScriptValidator:
             ScriptLanguage.JAVA: self.validate_java,
         }
 
-        if validator := validators.get(script.language):
-            _logger.debug("script_validation_start", script=script.name, language=script.language.value)
-            is_valid, error = validator(script.content)
-            script.verified = is_valid
-            _logger.debug("script_validation_result", script=script.name, valid=is_valid, error=error)
-            return is_valid, error
+        validator = validators.get(script.language)
+        if validator is None:
+            _logger.debug(
+                "script_validation_unsupported",
+                script=script.name,
+                language=script.language.value,
+            )
+            return False, f"no validator for language {script.language.value}"
 
-        _logger.debug("script_validation_skipped", script=script.name, language=script.language.value)
-        script.verified = True
-        return True, None
+        _logger.debug("script_validation_start", script=script.name, language=script.language.value)
+        is_valid, error = validator(script.content)
+        script.verified = is_valid
+        _logger.debug("script_validation_result", script=script.name, valid=is_valid, error=error)
+        return is_valid, error
 
 
 class ScriptManager:
-    """Manages script storage and retrieval.
+    """Manages script storage, retrieval, and execution.
 
     Attributes:
         scripts_dir: Directory for storing scripts.
@@ -522,13 +673,16 @@ class ScriptManager:
     scripts_dir: Path
     scripts: dict[str, Script]
 
-    def __init__(self, scripts_dir: Path) -> None:
+    def __init__(self, scripts_dir: Path | None = None) -> None:
         """Initialize the ScriptManager with a storage directory.
 
         Args:
-            scripts_dir: Directory for storing scripts.
+            scripts_dir: Directory for storing scripts. When omitted, a
+                ``scripts`` directory beneath the current working directory
+                is used. The directory is not created on the filesystem
+                until a script is actually written.
         """
-        self.scripts_dir = scripts_dir
+        self.scripts_dir = scripts_dir if scripts_dir is not None else Path.cwd() / _DEFAULT_SCRIPTS_DIRNAME
         self.scripts = {}
         self._validator = ScriptValidator()
 
@@ -661,6 +815,7 @@ class ScriptManager:
             language=language,
             content=content,
             description=f"Loaded from {path}",
+            saved_path=path,
         )
 
         self.scripts[script.name] = script
@@ -679,7 +834,13 @@ class ScriptManager:
         return self.save_script(name) is not None if name in self.scripts else False
 
     def reload_script(self, name: str) -> bool:
-        """Reload a script from disk (if it exists).
+        """Reload a script from disk.
+
+        When :meth:`save_script` was previously called for ``name``, the
+        recorded :attr:`Script.saved_path` is used directly so reloads
+        survive subdirectory writes. When no save path is recorded the
+        manager falls back to the canonical ``scripts_dir / <name><ext>``
+        location.
 
         Args:
             name: Script name.
@@ -687,18 +848,16 @@ class ScriptManager:
         Returns:
             bool: True if reloaded successfully.
         """
-        # First try to find where it might be saved
-        # This is a bit tricky since save_script logic handles paths
-        # We assume standard location in scripts_dir
         _logger.debug("script_reload_start", script=name)
         script = self.scripts.get(name)
-        if not script:
+        if script is None:
             _logger.debug("script_reload_not_in_cache", script=name)
             return False
 
-        ext = script.get_extension()
-        filename = f"{name}{ext}"
-        path = self.scripts_dir / filename
+        path = script.saved_path
+        if path is None:
+            ext = script.get_extension()
+            path = self.scripts_dir / f"{name}{ext}"
 
         if not path.exists():
             _logger.debug("script_reload_file_missing", script=name, path=str(path))
@@ -738,6 +897,206 @@ class ScriptManager:
             tool_name=tool_name,
         )
         return True
+
+    def execute(
+        self,
+        name: str,
+        *,
+        args: list[str] | None = None,
+        timeout: float | None = _EXEC_TIMEOUT_DEFAULT,
+        cwd: Path | None = None,
+    ) -> CompletedProcess[str]:
+        """Execute a script via the language-appropriate runner.
+
+        Dispatches the script's content to the right interpreter based on
+        :attr:`Script.language`. Every supported language has a real
+        runner wired up so the integration is end-to-end:
+
+        * ``PYTHON`` is run with the active interpreter (``sys.executable``).
+        * ``JAVASCRIPT`` is run with ``node``.
+        * ``R2_COMMANDS`` are piped to ``r2`` via ``-q -i``.
+        * ``JAVA`` (Ghidra script) is launched with Ghidra's
+          ``analyzeHeadless`` driver and ``-postScript``.
+        * ``X64DBG_SCRIPT`` is run with the platform-appropriate x64dbg
+          binary using its ``-script`` switch.
+
+        Scripts that have not yet been saved are written to a fresh
+        temporary file before invocation so the runner sees a real path.
+        The execution is tracked through :class:`ProcessManager`, the exit
+        code and captured stdout/stderr are recorded on the script via
+        :meth:`record_execution`, and the underlying
+        :class:`subprocess.CompletedProcess` is returned to the caller so
+        no diagnostic information is lost.
+
+        Args:
+            name: Name of the script to execute.
+            args: Optional argument list to forward to the runner after
+                the script path.
+            timeout: Maximum seconds to wait for the runner to exit. Pass
+                ``None`` to disable the timeout.
+            cwd: Optional working directory to use for the runner.
+
+        Returns:
+            CompletedProcess[str]: The completed subprocess with text
+            stdout/stderr and exit code.
+
+        Raises:
+            KeyError: If no script with ``name`` is registered.
+            FileNotFoundError: If the runner binary required by the
+                script's language cannot be located on ``PATH``.
+            TimeoutExpired: If the runner does not exit within ``timeout``
+                seconds.
+        """
+        script = self.scripts.get(name)
+        if script is None:
+            _logger.warning("script_execute_not_found", script=name)
+            raise KeyError(name)
+
+        cmd = self.build_execute_command(script, args)
+
+        runner_binary = cmd[0]
+        if runner_binary != sys.executable and shutil.which(runner_binary) is None:
+            _logger.warning("script_execute_runner_missing", script=name, runner=runner_binary)
+            raise FileNotFoundError(runner_binary)
+
+        process_manager = ProcessManager.get_instance()
+        _logger.debug("script_execute_start", script=name, command=cmd, timeout=timeout)
+        try:
+            result = process_manager.run_tracked(
+                cmd,
+                name=f"script-execute-{name}",
+                timeout=timeout,
+                cwd=str(cwd) if cwd is not None else None,
+            )
+        except TimeoutExpired:
+            _logger.warning("script_execute_timeout", script=name, timeout=timeout)
+            raise
+        _logger.info(
+            "script_execute_completed",
+            script=name,
+            returncode=result.returncode,
+            stdout_len=len(result.stdout or ""),
+            stderr_len=len(result.stderr or ""),
+        )
+
+        self.record_execution(
+            name,
+            "script_manager.execute",
+            {
+                "returncode": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "command": cmd,
+            },
+        )
+        return result
+
+    def build_execute_command(self, script: Script, args: list[str] | None) -> list[str]:
+        """Build the runner command line for a script.
+
+        Materialises ``script`` to disk via :attr:`Script.saved_path` if
+        already persisted, otherwise writes the content to a temporary
+        file with the right extension. Returns the runner argv for the
+        script's language.
+
+        Args:
+            script: Script to execute.
+            args: Optional argument list to append after the script path.
+
+        Returns:
+            list[str]: Runner command line ready to pass to
+            :meth:`ProcessManager.run_tracked`.
+        """
+        path = self._materialise_script_path(script)
+        path_str = str(path)
+        extra = list(args) if args else []
+
+        if script.language == ScriptLanguage.PYTHON:
+            return [sys.executable, path_str, *extra]
+        if script.language == ScriptLanguage.JAVASCRIPT:
+            return ["node", path_str, *extra]
+        if script.language == ScriptLanguage.R2_COMMANDS:
+            return ["r2", "-q", "-i", path_str, *extra]
+        if script.language == ScriptLanguage.JAVA:
+            return self._build_ghidra_command(path, extra)
+        return self._build_x64dbg_command(path, extra)
+
+    @staticmethod
+    def _build_ghidra_command(script_path: Path, extra: list[str]) -> list[str]:
+        """Construct a Ghidra ``analyzeHeadless`` invocation for a Java script.
+
+        Args:
+            script_path: On-disk path to the Ghidra Java script.
+            extra: Additional arguments to forward after the script
+                directory and script name.
+
+        Returns:
+            list[str]: ``analyzeHeadless`` argv that runs the script in a
+            transient project rooted at the script's parent directory.
+        """
+        project_dir = str(script_path.parent)
+        project_name = f"intellicrack_exec_{script_path.stem}"
+        return [
+            "analyzeHeadless",
+            project_dir,
+            project_name,
+            "-scriptPath",
+            project_dir,
+            "-postScript",
+            script_path.name,
+            "-deleteProject",
+            "-noanalysis",
+            *extra,
+        ]
+
+    @staticmethod
+    def _build_x64dbg_command(script_path: Path, extra: list[str]) -> list[str]:
+        """Construct an x64dbg invocation for a debugger script.
+
+        Args:
+            script_path: On-disk path to the x64dbg script file.
+            extra: Additional arguments to forward to the x64dbg binary
+                after the ``-script`` switch and script path.
+
+        Returns:
+            list[str]: x64dbg argv. The 64-bit binary (``x64dbg``) is
+            preferred; on platforms without it the 32-bit binary
+            (``x32dbg``) is used as a fall back. ``ProcessManager`` is
+            responsible for surfacing missing binaries via
+            :class:`FileNotFoundError`.
+        """
+        runner = "x64dbg" if shutil.which("x64dbg") is not None else "x32dbg"
+        return [runner, "-script", str(script_path), *extra]
+
+    @staticmethod
+    def _materialise_script_path(script: Script) -> Path:
+        """Return an on-disk path for ``script``, writing if necessary.
+
+        When the script already has a recorded :attr:`Script.saved_path`
+        that exists, that path is returned unchanged. Otherwise the
+        content is written to a fresh temporary file with the script's
+        canonical extension and that path is returned.
+
+        Args:
+            script: Script whose content needs to be on disk.
+
+        Returns:
+            Path: Filesystem path containing the script's current content.
+        """
+        if script.saved_path is not None and script.saved_path.exists():
+            return script.saved_path
+
+        suffix = script.get_extension()
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=suffix,
+            delete=False,
+            encoding="utf-8",
+        ) as fh:
+            fh.write(script.content)
+            tmp_path = Path(fh.name)
+        _logger.debug("script_execute_temp_materialised", script=script.name, path=str(tmp_path))
+        return tmp_path
 
 
 def get_frida_api_reference() -> dict[str, str]:
@@ -802,49 +1161,39 @@ def get_x64dbg_reference() -> dict[str, str]:
     }
 
 
-class ScriptGenerator:
-    """Stable public entry point for building AI prompts that generate scripts.
+_DEFAULT_API_REFERENCE_GETTERS: Final[dict[str, _ApiRefGetter]] = {
+    "frida": get_frida_api_reference,
+    "ghidra": get_ghidra_api_reference,
+    "cutter": get_cutter_reference,
+    "x64dbg": get_x64dbg_reference,
+}
 
-    ``ScriptGenerator`` is the API surface consumed by the Intellicrack
-    application shell (``main.py``) and by tool/AI bridges that need to turn
-    a :class:`ScriptContext` into a prompt string ready for a language model.
-    The class is intentionally thin: it owns no mutable state and every
-    ``generate_*`` helper dispatches to :meth:`prepare_ai_prompt` with a
-    fixed :class:`ScriptLanguage`. The separation keeps the language-specific
-    plumbing in one place while giving callers strongly typed, discoverable
-    method names.
 
-    The instance is designed to live for the lifetime of the application
-    shell; holding a reference avoids the "instance discarded immediately
-    after construction" anti-pattern and lets future refactors attach shared
-    dependencies (for example, API reference caches) without changing the
-    public surface.
+def _build_ai_prompt(
+    context: ScriptContext,
+    language: ScriptLanguage,
+    api_reference: dict[str, str],
+) -> str:
+    """Compose the full AI prompt from a context and an API reference dict.
+
+    Args:
+        context: Analysis context describing the target binary and any
+            artifacts upstream tools have surfaced.
+        language: Target script language; used for the prompt label.
+        api_reference: Pre-resolved language-specific API reference
+            dictionary. Pass ``{}`` to skip the reference block.
+
+    Returns:
+        str: Fully formatted prompt text, stripped of leading and
+        trailing whitespace.
     """
+    context_str = context.to_prompt_context(language)
+    if api_reference and "API Reference:" not in context_str:
+        ref_lines = [f"\n{language.value.upper()} API Reference:"]
+        ref_lines.extend(f"  {category}: {usage}" for category, usage in api_reference.items())
+        context_str = f"{context_str}\n" + "\n".join(ref_lines)
 
-    def __init__(self) -> None:
-        """Initialize the ScriptGenerator instance."""
-
-    @staticmethod
-    def prepare_ai_prompt(context: ScriptContext, language: ScriptLanguage) -> str:
-        """Prepare a detailed prompt for AI script generation.
-
-        Args:
-            context: Analysis context describing the target binary and any
-                protections, strings, functions, or other artifacts discovered
-                by upstream analysis tools.
-            language: Target script language. Used to select both the textual
-                label embedded in the prompt and the API reference section
-                injected by :meth:`ScriptContext.to_prompt_context`.
-
-        Returns:
-            str: Full prompt string including analysis context, language
-            directive, and any language-specific API reference. The returned
-            text is stripped of leading and trailing whitespace so it can be
-            concatenated directly with other prompt fragments.
-        """
-        context_str = context.to_prompt_context(language)
-
-        prompt = f"""
+    prompt = f"""
 You are an expert reverse engineering script generator.
 Target: {context.binary_name} ({context.architecture}/{context.platform})
 Language: {language.value}
@@ -857,7 +1206,213 @@ Write a standalone, error-free {language.value} script to bypass the protections
 The script must be production-ready and handle errors gracefully.
 Implement full logic based on the provided addresses and strategies.
 """
-        return prompt.strip()
+    return prompt.strip()
+
+
+def _resolve_api_reference(language: ScriptLanguage) -> dict[str, str]:
+    """Return the API reference dict for a language without any caching.
+
+    Args:
+        language: Script language whose reference to fetch.
+
+    Returns:
+        dict[str, str]: Reference categories mapped to usage examples,
+        or an empty dict when no reference is registered for the
+        language.
+    """
+    api_ref_key = ScriptContext.LANGUAGE_API_MAP.get(language)
+    if api_ref_key is None:
+        return {}
+    getter = _DEFAULT_API_REFERENCE_GETTERS.get(api_ref_key)
+    return getter() if getter is not None else {}
+
+
+class _PrepareAIPromptDescriptor:
+    """Descriptor that lets ``prepare_ai_prompt`` work as both bound and unbound.
+
+    Bound to an instance, it forwards the call to the per-instance
+    implementation so the cached API reference is reused. Accessed
+    through the class (``ScriptGenerator.prepare_ai_prompt(...)``), it
+    resolves the API reference fresh for the call so legacy callers
+    that treat the method as a free function still get a complete
+    prompt without leaving a cache entry behind.
+    """
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        """Capture the attribute name the descriptor is bound to.
+
+        Args:
+            owner: The class the descriptor is being attached to.
+            name: The attribute name used to reach the descriptor.
+        """
+        self._attr_name = name
+
+    def __get__(
+        self,
+        instance: ScriptGenerator | None,
+        owner: type[ScriptGenerator],
+    ) -> Callable[[ScriptContext, ScriptLanguage], str]:
+        """Return either the bound or unbound prompt builder.
+
+        Args:
+            instance: The ``ScriptGenerator`` instance the attribute is
+                accessed through, or ``None`` for class-level access.
+            owner: The owning class.
+
+        Returns:
+            Callable[[ScriptContext, ScriptLanguage], str]: A callable
+            that produces the full prompt string. When ``instance`` is
+            not ``None`` the callable closes over the existing instance
+            so the per-instance API-reference cache is honored;
+            otherwise the callable resolves the reference fresh on
+            each invocation.
+        """
+        if instance is None:
+
+            def _unbound(context: ScriptContext, language: ScriptLanguage) -> str:
+                """Build the prompt via a fresh API reference lookup.
+
+                Args:
+                    context: Analysis context to embed in the prompt.
+                    language: Target script language.
+
+                Returns:
+                    str: Fully formatted prompt text.
+                """
+                return _build_ai_prompt(context, language, _resolve_api_reference(language))
+
+            return _unbound
+
+        bound_instance = instance
+
+        def _bound(context: ScriptContext, language: ScriptLanguage) -> str:
+            """Build the prompt against ``instance``'s cache.
+
+            Args:
+                context: Analysis context to embed in the prompt.
+                language: Target script language.
+
+            Returns:
+                str: Fully formatted prompt text.
+            """
+            return _build_ai_prompt(context, language, bound_instance.api_reference(language))
+
+        return _bound
+
+
+class ScriptGenerator:
+    """Stateful entry point for building AI prompts that generate scripts.
+
+    ``ScriptGenerator`` is the API surface consumed by the Intellicrack
+    application shell (``main.py``) and by tool/AI bridges that need to
+    turn a :class:`ScriptContext` into a prompt string ready for a
+    language model.
+
+    The instance owns three pieces of state that are referenced by the
+    public ``generate_*`` helpers:
+
+    * ``validator`` - a :class:`ScriptValidator` instance used to
+      pre-flight script content before it is shipped to an external
+      execution bridge.
+    * ``output_dir`` - the directory under which generated scripts and
+      drafts are persisted. Defaults to ``Path.cwd() / "generated_scripts"``
+      and is created lazily by :meth:`prepare_output_path`.
+    * An API-reference cache populated lazily by :meth:`api_reference`
+      so the language-specific reference dicts are computed at most once
+      per (language, generator) pair.
+
+    All constructor parameters are optional so existing call sites
+    (``main.py``, ``ui/app.py``, ``ui/tools.py``,
+    ``ui/panels/script_manager.py``, ``core/orchestrator.py``) keep
+    compiling with ``ScriptGenerator()``.
+    """
+
+    DEFAULT_OUTPUT_DIRNAME: ClassVar[str] = "generated_scripts"
+
+    def __init__(
+        self,
+        validator: ScriptValidator | None = None,
+        output_dir: Path | None = None,
+    ) -> None:
+        """Initialize the ScriptGenerator with stateful dependencies.
+
+        Args:
+            validator: Optional :class:`ScriptValidator` instance to reuse
+                for pre-flight validation. A fresh instance is created
+                when not supplied.
+            output_dir: Optional directory under which generated scripts
+                and drafts will be persisted. Defaults to
+                ``Path.cwd() / "generated_scripts"``. The directory is
+                materialised on the filesystem only when
+                :meth:`prepare_output_path` is invoked.
+        """
+        self.validator: ScriptValidator = validator if validator is not None else ScriptValidator()
+        self.output_dir: Path = output_dir if output_dir is not None else Path.cwd() / self.DEFAULT_OUTPUT_DIRNAME
+        self._api_reference_cache: dict[ScriptLanguage, dict[str, str]] = {}
+        _logger.debug(
+            "script_generator_initialized",
+            output_dir=str(self.output_dir),
+            validator_id=id(self.validator),
+        )
+
+    def api_reference(self, language: ScriptLanguage) -> dict[str, str]:
+        """Return the cached API reference for ``language``.
+
+        Looks up the language-specific reference dict, populating the
+        per-instance cache on first request. Languages without a known
+        reference (currently ``PYTHON``) return an empty dict.
+
+        Args:
+            language: Script language whose reference to fetch.
+
+        Returns:
+            dict[str, str]: Reference categories mapped to usage examples,
+            or an empty dict when no reference is registered for the
+            language.
+        """
+        if (cached := self._api_reference_cache.get(language)) is not None:
+            return cached
+
+        ref = _resolve_api_reference(language)
+        self._api_reference_cache[language] = ref
+        return ref
+
+    def prepare_output_path(self, name: str, language: ScriptLanguage) -> Path:
+        """Resolve and ensure the output path for a generated script.
+
+        Materialises :attr:`output_dir` on the filesystem (creating any
+        missing parents) and returns the canonical path that
+        ``name``/``language`` should be written to. The file itself is
+        not created here; only the directory is ensured.
+
+        Args:
+            name: Script base name without extension.
+            language: Target script language; controls the file extension.
+
+        Returns:
+            Path: Absolute path the caller can pass to
+            :meth:`Script.save` or :meth:`ScriptManager.save_script`.
+        """
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        extensions = {
+            ScriptLanguage.JAVASCRIPT: ".js",
+            ScriptLanguage.JAVA: ".java",
+            ScriptLanguage.PYTHON: ".py",
+            ScriptLanguage.R2_COMMANDS: ".r2",
+            ScriptLanguage.X64DBG_SCRIPT: ".txt",
+        }
+        return self.output_dir / f"{name}{extensions.get(language, '.txt')}"
+
+    prepare_ai_prompt: ClassVar[_PrepareAIPromptDescriptor] = _PrepareAIPromptDescriptor()
+    """Build the AI prompt, dispatching as bound or unbound automatically.
+
+    Calling ``generator.prepare_ai_prompt(context, language)`` consults
+    the instance's API-reference cache. Calling
+    ``ScriptGenerator.prepare_ai_prompt(context, language)`` keeps
+    legacy free-function-style call sites working by resolving the API
+    reference fresh on each invocation. The signature in both cases is
+    ``(context: ScriptContext, language: ScriptLanguage) -> str``.
+    """
 
     def generate_frida(self, context: ScriptContext) -> str:
         """Build an AI prompt targeted at Frida (JavaScript) script generation.
