@@ -1,10 +1,61 @@
-$ErrorActionPreference = 'SilentlyContinue'
+[CmdletBinding()]
+param(
+    [Parameter()][string]$LogDir = (Join-Path -Path $env:USERPROFILE -ChildPath 'Desktop\Shared\logs')
+)
 
-$logDir = 'C:\sandbox_shared\logs'
-if (-not (Test-Path $logDir)) {
-    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+$ErrorActionPreference = 'Stop'
+
+if (-not (Test-Path -LiteralPath $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
-$logPath = Join-Path $logDir 'clipboard_monitor.log'
+
+$script:LogPath = Join-Path -Path $LogDir -ChildPath 'clipboard_monitor.log'
+$script:FallbackPollSeconds = 2
+
+function Write-LogEntry {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Line
+    )
+    Add-Content -LiteralPath $script:LogPath -Value $Line -Encoding utf8
+}
+
+function Write-StructuredError {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Event,
+        [Parameter(Mandatory = $true)][object]$ErrorRecord,
+        [Parameter()][hashtable]$Extra
+    )
+
+    $payload = [ordered]@{
+        timestamp = (Get-Date).ToString('o')
+        event     = $Event
+        error     = ([string]$ErrorRecord)
+    }
+    if ($PSBoundParameters.ContainsKey('Extra') -and $null -ne $Extra) {
+        foreach ($key in $Extra.Keys) {
+            $payload[$key] = $Extra[$key]
+        }
+    }
+
+    $json = $payload | ConvertTo-Json -Compress -Depth 4
+    try {
+        Add-Content -LiteralPath $script:LogPath -Value $json -Encoding utf8
+    } catch {
+        Write-Error -Message $json -ErrorAction Continue
+    }
+}
+
+function Format-PreviewField {
+    [CmdletBinding()]
+    param(
+        [Parameter()][string]$Value
+    )
+    if ([string]::IsNullOrEmpty($Value)) { return '' }
+    $trimmed = $Value.Substring(0, [Math]::Min(100, $Value.Length))
+    return ($trimmed -replace '\|', '_' -replace '[\r\n]+', ' ')
+}
 
 $clipSource = @'
 using System;
@@ -68,64 +119,121 @@ public class ClipboardChangedEventArgs : EventArgs {
 }
 '@
 
-try {
-    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies System.Windows.Forms, System.Drawing -Language CSharp
-} catch {
+function Invoke-FallbackPolling {
+    [CmdletBinding()]
+    param()
+
+    $lastSeen = $null
     while ($true) {
-        $ts = Get-Date -Format 'o'
-        $clipText = Get-Clipboard -Raw
-        if ($clipText) {
-            $preview = $clipText.Substring(0, [Math]::Min(100, $clipText.Length)) -replace '\|', '_'
-            $sizeBytes = [System.Text.Encoding]::UTF8.GetByteCount($clipText)
-            "$ts|changed|Text|$preview|$sizeBytes|0|unknown" | Out-File -Append -FilePath $logPath -Encoding utf8
+        $ts = (Get-Date).ToString('o')
+        $clipText = $null
+        try {
+            $clipText = Get-Clipboard -Raw
+        } catch {
+            Write-StructuredError -Event 'fallback.read_failed' -ErrorRecord $_
         }
-        Start-Sleep -Seconds 2
+
+        if ($clipText -and $clipText -ne $lastSeen) {
+            $preview = Format-PreviewField -Value $clipText
+            $sizeBytes = [System.Text.Encoding]::UTF8.GetByteCount($clipText)
+            $line = "$ts|changed|Text|$preview|$sizeBytes|0|unknown"
+            try {
+                Write-LogEntry -Line $line
+                $lastSeen = $clipText
+            } catch {
+                Write-StructuredError -Event 'fallback.write_failed' -ErrorRecord $_ -Extra @{ size = $sizeBytes }
+            }
+        }
+
+        Start-Sleep -Seconds $script:FallbackPollSeconds
     }
-    exit
 }
 
-$lastContent = ''
+function Invoke-EventDrivenMonitor {
+    [CmdletBinding()]
+    param()
 
-$listener = New-Object ClipboardListener
-$listener.Add_ClipboardChanged({
-    param($sender, $eventArgs)
-    $ts = Get-Date -Format 'o'
-    $pid = [int]$eventArgs.OwnerPid
-    $procName = 'unknown'
-    if ($pid -gt 0) {
-        $proc = Get-Process -Id $pid
-        if ($proc) { $procName = $proc.Name }
-    }
-
-    $format = 'unknown'
-    $preview = ''
-    $sizeBytes = 0
-
-    $clipText = [System.Windows.Forms.Clipboard]::GetText()
-    if ($clipText) {
-        $format = 'Text'
-        $preview = $clipText.Substring(0, [Math]::Min(100, $clipText.Length)) -replace '\|', '_'
-        $sizeBytes = [System.Text.Encoding]::UTF8.GetByteCount($clipText)
-    } elseif ([System.Windows.Forms.Clipboard]::ContainsImage()) {
-        $format = 'Image'
-        $img = [System.Windows.Forms.Clipboard]::GetImage()
-        if ($img) {
-            $preview = "Image $($img.Width)x$($img.Height)"
-            $sizeBytes = $img.Width * $img.Height * 4
+    $listener = New-Object ClipboardListener
+    $eventHandler = {
+        param($source, $clipboardArgs)
+        $null = $source
+        $ts = (Get-Date).ToString('o')
+        $ownerPid = 0
+        try {
+            $ownerPid = [int]$clipboardArgs.OwnerPid
+        } catch {
+            Write-StructuredError -Event 'event.pid_cast_failed' -ErrorRecord $_
         }
-    } elseif ([System.Windows.Forms.Clipboard]::ContainsFileDropList()) {
-        $format = 'FileDrop'
-        $files = [System.Windows.Forms.Clipboard]::GetFileDropList()
-        $preview = ($files | Select-Object -First 3) -join '; '
-        $preview = $preview -replace '\|', '_'
-        $sizeBytes = $files.Count
+
+        $procName = 'unknown'
+        if ($ownerPid -gt 0) {
+            try {
+                $proc = Get-Process -Id $ownerPid -ErrorAction Stop
+                if ($proc) { $procName = $proc.Name }
+            } catch {
+                Write-StructuredError -Event 'event.process_lookup_failed' -ErrorRecord $_ -Extra @{ owner_pid = $ownerPid }
+            }
+        }
+
+        $format = 'unknown'
+        $preview = ''
+        $sizeBytes = 0
+
+        try {
+            $clipText = [System.Windows.Forms.Clipboard]::GetText()
+            if ($clipText) {
+                $format = 'Text'
+                $preview = Format-PreviewField -Value $clipText
+                $sizeBytes = [System.Text.Encoding]::UTF8.GetByteCount($clipText)
+            } elseif ([System.Windows.Forms.Clipboard]::ContainsImage()) {
+                $format = 'Image'
+                $img = [System.Windows.Forms.Clipboard]::GetImage()
+                if ($img) {
+                    $preview = "Image $($img.Width)x$($img.Height)"
+                    $sizeBytes = $img.Width * $img.Height * 4
+                }
+            } elseif ([System.Windows.Forms.Clipboard]::ContainsFileDropList()) {
+                $format = 'FileDrop'
+                $files = [System.Windows.Forms.Clipboard]::GetFileDropList()
+                $preview = Format-PreviewField -Value (($files | Select-Object -First 3) -join '; ')
+                $sizeBytes = $files.Count
+            }
+        } catch {
+            Write-StructuredError -Event 'event.clipboard_read_failed' -ErrorRecord $_ -Extra @{ owner_pid = $ownerPid }
+            return
+        }
+
+        if ($format -ne 'unknown') {
+            $line = "$ts|changed|$format|$preview|$sizeBytes|$ownerPid|$procName"
+            try {
+                Write-LogEntry -Line $line
+            } catch {
+                Write-StructuredError -Event 'event.write_failed' -ErrorRecord $_ -Extra @{ owner_pid = $ownerPid; format = $format }
+            }
+        }
     }
 
-    if ($format -ne 'unknown') {
-        "$ts|changed|$format|$preview|$sizeBytes|$pid|$procName" | Out-File -Append -FilePath $logPath -Encoding utf8
-    }
-})
+    $listener.Add_ClipboardChanged($eventHandler)
+    $listener.Show()
+    $listener.Hide()
+    [System.Windows.Forms.Application]::Run($listener)
+}
 
-$listener.Show()
-$listener.Hide()
-[System.Windows.Forms.Application]::Run($listener)
+$useEventDriven = $false
+try {
+    Add-Type -TypeDefinition $clipSource -ReferencedAssemblies System.Windows.Forms, System.Drawing -Language CSharp
+    $useEventDriven = $true
+} catch {
+    Write-StructuredError -Event 'init.add_type_failed' -ErrorRecord $_ -Extra @{ fallback = 'polling' }
+}
+
+if ($useEventDriven) {
+    try {
+        Invoke-EventDrivenMonitor
+    } catch {
+        Write-StructuredError -Event 'event.monitor_failed' -ErrorRecord $_ -Extra @{ fallback = 'polling' }
+        Invoke-FallbackPolling
+    }
+} else {
+    Invoke-FallbackPolling
+}
