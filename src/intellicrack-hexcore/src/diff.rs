@@ -27,7 +27,6 @@ pub struct DiffResult {
 const BYTE_LEVEL_THRESHOLD: usize = 1_048_576;
 const ANCHOR_WINDOW: usize = 1024;
 const ANCHOR_MASK: u32 = (1 << 10) - 1;
-const BLOCK_SIZE: usize = 64;
 const ADLER_MOD: u32 = 65_521;
 
 #[must_use]
@@ -35,7 +34,7 @@ pub fn diff_data(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     if data_a.len() <= BYTE_LEVEL_THRESHOLD && data_b.len() <= BYTE_LEVEL_THRESHOLD {
         diff_data_byte_level(data_a, data_b)
     } else {
-        diff_data_block(data_a, data_b)
+        diff_data_anchored(data_a, data_b)
     }
 }
 
@@ -331,105 +330,6 @@ fn diff_data_anchored(data_a: &[u8], data_b: &[u8]) -> DiffResult {
     }
 }
 
-fn byte_span(blocks: &[&[u8]], start: usize, count: usize) -> usize {
-    blocks[start..start + count].iter().map(|b| b.len()).sum()
-}
-
-fn diff_data_block(data_a: &[u8], data_b: &[u8]) -> DiffResult {
-    if data_a == data_b {
-        return identical_result(data_a.len());
-    }
-
-    let anchored = diff_data_anchored(data_a, data_b);
-    if !anchored.regions.is_empty() {
-        return anchored;
-    }
-
-    let blocks_a: Vec<&[u8]> = data_a.chunks(BLOCK_SIZE).collect();
-    let blocks_b: Vec<&[u8]> = data_b.chunks(BLOCK_SIZE).collect();
-    let ops = capture_diff_slices(Algorithm::Myers, &blocks_a, &blocks_b);
-
-    let mut regions: Vec<DiffRegion> = Vec::new();
-    let mut total_diffs: usize = 0;
-
-    for op in &ops {
-        let (region, diff_count) = match *op {
-            DiffOp::Equal {
-                old_index,
-                new_index,
-                len,
-            } => (
-                DiffRegion {
-                    offset_a: old_index * BLOCK_SIZE,
-                    offset_b: new_index * BLOCK_SIZE,
-                    length: byte_span(&blocks_a, old_index, len),
-                    diff_type: DiffType::Match,
-                },
-                0,
-            ),
-            DiffOp::Delete {
-                old_index,
-                old_len,
-                new_index,
-            } => {
-                let length = byte_span(&blocks_a, old_index, old_len);
-                (
-                    DiffRegion {
-                        offset_a: old_index * BLOCK_SIZE,
-                        offset_b: new_index * BLOCK_SIZE,
-                        length,
-                        diff_type: DiffType::InsertedA,
-                    },
-                    length,
-                )
-            }
-            DiffOp::Insert {
-                old_index,
-                new_index,
-                new_len,
-            } => {
-                let length = byte_span(&blocks_b, new_index, new_len);
-                (
-                    DiffRegion {
-                        offset_a: old_index * BLOCK_SIZE,
-                        offset_b: new_index * BLOCK_SIZE,
-                        length,
-                        diff_type: DiffType::InsertedB,
-                    },
-                    length,
-                )
-            }
-            DiffOp::Replace {
-                old_index,
-                old_len,
-                new_index,
-                new_len,
-            } => {
-                let length_a = byte_span(&blocks_a, old_index, old_len);
-                let length_b = byte_span(&blocks_b, new_index, new_len);
-                let length = length_a.max(length_b);
-                (
-                    DiffRegion {
-                        offset_a: old_index * BLOCK_SIZE,
-                        offset_b: new_index * BLOCK_SIZE,
-                        length,
-                        diff_type: DiffType::Modified,
-                    },
-                    length,
-                )
-            }
-        };
-        total_diffs += diff_count;
-        regions.push(region);
-    }
-
-    DiffResult {
-        regions,
-        total_differences: total_diffs,
-        files_identical: false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -703,5 +603,42 @@ mod tests {
             a.len()
         );
         assert_eq!(result.total_differences, 1);
+    }
+
+    /// Audit-1 F-0003 regression: large-file diff dispatch must take the
+    /// anchored path directly rather than the deleted block-level Myers
+    /// fallback. Confirms that for buffers above `BYTE_LEVEL_THRESHOLD`
+    /// the anchored algorithm produces region offsets at byte granularity
+    /// (not block-aligned multiples of 64) and emits a real edit script.
+    #[test]
+    fn test_large_file_dispatch_uses_anchored_byte_offsets() {
+        let size = BYTE_LEVEL_THRESHOLD + 1024;
+        let mut data_a = vec![0u8; size];
+        for (idx, byte) in data_a.iter_mut().enumerate() {
+            *byte = ((idx * 17 + 3) & 0xFF) as u8;
+        }
+        let mut data_b = data_a.clone();
+        let change_offset = size / 3 + 5;
+        data_b[change_offset] ^= 0xFF;
+
+        let result = diff_data(&data_a, &data_b);
+        assert!(!result.files_identical);
+
+        let mismatch_region = result
+            .regions
+            .iter()
+            .find(|r| r.diff_type != DiffType::Match && r.length > 0)
+            .expect("anchored diff must surface the modified region");
+        assert!(
+            mismatch_region.offset_a % 64 != 0 || mismatch_region.length % 64 != 0,
+            "anchored diff should yield byte-precise offsets, not 64-byte block-aligned ones; got offset_a={} length={}",
+            mismatch_region.offset_a,
+            mismatch_region.length,
+        );
+        assert!(
+            mismatch_region.length < 64,
+            "single-byte change should not be reported as a 64-byte block (got length={})",
+            mismatch_region.length,
+        );
     }
 }

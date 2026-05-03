@@ -9,6 +9,7 @@ This module provides integration with Anthropic's Claude models for chat complet
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import TYPE_CHECKING, Any, cast, override
 
@@ -46,7 +47,6 @@ from intellicrack.providers.base import (
 
 
 if TYPE_CHECKING:
-    from asyncio import Task
     from collections.abc import AsyncIterator
 
 _MSG_API_KEY_REQUIRED = "API key required"
@@ -72,7 +72,7 @@ class AnthropicProvider(LLMProviderBase):
         """Initialize the AnthropicProvider instance."""
         super().__init__()
         self._client: anthropic.AsyncAnthropic | None = None
-        self._current_task: Task[Any] | None = None
+        self._current_task: asyncio.Task[Any] | None = None
         self._logger = get_logger(__name__).bind(provider="anthropic")
         self._logger.info("anthropic_provider_initialized")
 
@@ -156,8 +156,15 @@ class AnthropicProvider(LLMProviderBase):
             self._logger.info("anthropic_models_listed", count=len(models))
             return models
 
-    async def _fetch_all_models(self) -> list[ModelInfo]:
+    async def _fetch_all_models(self, *, limit: int | None = None) -> list[ModelInfo]:
         """Paginate through the models endpoint and collect all results.
+
+        Args:
+            limit: Optional per-page size to forward to the Anthropic
+                ``client.models.list`` call.  ``None`` (the default)
+                lets the SDK pick its server-side default.  Passing an
+                explicit value lets callers (e.g. ``connect``) match
+                the request shape used during their probe.
 
         Returns:
             list[ModelInfo]: Complete list of ModelInfo objects from all pages.
@@ -171,14 +178,26 @@ class AnthropicProvider(LLMProviderBase):
         page_count = 0
 
         while True:
-            page = await client.models.list(after_id=after_id) if after_id else await client.models.list()
+            if limit is not None and after_id is not None:
+                page = await client.models.list(limit=limit, after_id=after_id)
+            elif limit is not None:
+                page = await client.models.list(limit=limit)
+            elif after_id is not None:
+                page = await client.models.list(after_id=after_id)
+            else:
+                page = await client.models.list()
             models.extend(self._build_model_info(m.id, getattr(m, "display_name", m.id)) for m in page.data)
             page_count += 1
             if not page.has_more:
                 break
             after_id = page.last_id
 
-        self._logger.debug("anthropic_models_fetched", page_count=page_count, model_count=len(models))
+        self._logger.debug(
+            "anthropic_models_fetched",
+            page_count=page_count,
+            model_count=len(models),
+            limit=limit,
+        )
         return models
 
     @staticmethod
@@ -265,7 +284,36 @@ class AnthropicProvider(LLMProviderBase):
             kwargs["temperature"] = 1.0
             kwargs["max_tokens"] = max(kwargs["max_tokens"], thinking.budget_tokens + 1024)
 
-        if enable_cache and system_prompt is not None:
+        if enable_cache:
+            AnthropicProvider._apply_cache_breakpoints(kwargs, system_prompt=system_prompt)
+        return kwargs
+
+    @staticmethod
+    def _apply_cache_breakpoints(
+        kwargs: dict[str, Any],
+        *,
+        system_prompt: str | None,
+    ) -> None:
+        """Insert ``cache_control`` breakpoints across system, tools, and messages.
+
+        Anthropic accepts at most four ``cache_control`` breakpoints
+        per request and renders ``tools`` -> ``system`` -> ``messages``
+        as the cache prefix.  This helper places ephemeral breakpoints
+        on (1) the last/only system block, (2) the last tool entry,
+        and (3) the final content block of the last message turn so
+        callers get the full cross-prefix benefit promised by
+        ``enable_cache``.
+
+        Args:
+            kwargs: Mutable request kwargs dict for ``messages.create``
+                or ``messages.stream``.  Updated in place.
+            system_prompt: System prompt text used to construct the
+                request, or ``None`` when no system instruction is set.
+                Required because the helper rewrites ``kwargs["system"]``
+                from a plain string to the structured-block form when a
+                breakpoint is added.
+        """
+        if system_prompt is not None:
             kwargs["system"] = [
                 {
                     "type": "text",
@@ -273,7 +321,56 @@ class AnthropicProvider(LLMProviderBase):
                     "cache_control": {"type": "ephemeral"},
                 },
             ]
-        return kwargs
+
+        tools_obj = kwargs.get("tools")
+        if isinstance(tools_obj, list) and tools_obj:
+            tools_list = cast("list[dict[str, Any]]", tools_obj)
+            cached_tools: list[dict[str, Any]] = [dict(tool) for tool in tools_list]
+            cached_tools[-1] = {
+                **cached_tools[-1],
+                "cache_control": {"type": "ephemeral"},
+            }
+            kwargs["tools"] = cast("list[ToolParam]", cached_tools)
+
+        messages_obj = kwargs.get("messages")
+        if isinstance(messages_obj, list) and messages_obj:
+            messages_list = cast("list[dict[str, Any]]", messages_obj)
+            AnthropicProvider._cache_last_message_block(messages_list)
+            kwargs["messages"] = cast("list[MessageParam]", messages_list)
+
+    @staticmethod
+    def _cache_last_message_block(messages: list[dict[str, Any]]) -> None:
+        """Tag the last content block of the final user/assistant turn for caching.
+
+        Walks ``messages`` from the end and converts the most recent
+        message's content into the structured block form (a list of
+        block dicts) when needed, then attaches
+        ``cache_control: {"type": "ephemeral"}`` to the final block.
+        Mutates ``messages`` in place.
+
+        Args:
+            messages: List of message dicts in Anthropic's wire format.
+                Each entry has a ``role`` and a ``content`` value that
+                is either a string or a list of content-block dicts.
+        """
+        last_msg = messages[-1]
+        content = last_msg.get("content")
+        if isinstance(content, str):
+            content_blocks: list[dict[str, Any]] = [
+                {
+                    "type": "text",
+                    "text": content,
+                    "cache_control": {"type": "ephemeral"},
+                },
+            ]
+            last_msg["content"] = content_blocks
+            return
+        if isinstance(content, list) and content:
+            blocks_list = cast("list[dict[str, Any]]", content)
+            blocks_list[-1] = {
+                **blocks_list[-1],
+                "cache_control": {"type": "ephemeral"},
+            }
 
     @staticmethod
     def _build_usage_from_message(response: AnthropicMessage) -> UsageInfo | None:
@@ -438,8 +535,15 @@ class AnthropicProvider(LLMProviderBase):
             enable_cache=enable_cache,
         )
 
+        api_task: asyncio.Task[AnthropicMessage] = asyncio.create_task(
+            self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs)),
+        )
+        self._current_task = cast("asyncio.Task[Any]", api_task)
         try:
-            response = await self._retry_with_backoff(lambda: self._make_anthropic_api_call(api_kwargs))
+            try:
+                response = await api_task
+            finally:
+                self._current_task = None
             duration_ms = (time.perf_counter() - start_time) * 1000
             content, tool_calls, thinking_text = self._parse_response_blocks(response)
             self._pending_usage = self._build_usage_from_message(response)
@@ -576,17 +680,20 @@ class AnthropicProvider(LLMProviderBase):
                     error=str(e),
                 )
                 raise RateLimitError(_MSG_STREAM_FAILED) from e
-            if not self._cancel_requested:
-                self._logger.warning(
-                    "anthropic_stream_status_error",
-                    status_code=status_code,
-                    error=str(e),
-                )
-                raise ProviderError(_MSG_STREAM_FAILED) from e
+            self._logger.warning(
+                "anthropic_stream_status_error",
+                status_code=status_code,
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_MSG_STREAM_FAILED) from e
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
-            if not self._cancel_requested:
-                self._logger.warning("anthropic_stream_failed", error=str(e))
-                raise ProviderError(_MSG_STREAM_FAILED) from e
+            self._logger.warning(
+                "anthropic_stream_failed",
+                error=str(e),
+                cancel_requested=self._cancel_requested,
+            )
+            raise ProviderError(_MSG_STREAM_FAILED) from e
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""

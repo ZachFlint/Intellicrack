@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import enum
 import threading
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,16 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger(__name__)
+
+
+NOTIFY_MAX_DEPTH: int = 64
+"""Maximum number of reentrant ``_notify`` events drained per outer dispatch.
+
+Re-entrant emissions triggered from inside a callback are queued and
+dispatched after the outer dispatch loop finishes (preserving causal
+ordering across observers).  The cap aborts genuinely runaway callback
+chains while still allowing legitimate downstream events to flow.
+"""
 
 
 class HexDocumentEvent(enum.Enum):
@@ -82,13 +93,28 @@ class _CallbackEntry:
     source_id: str
 
 
+@dataclass(slots=True)
+class _PendingEvent:
+    """Internal storage for a queued reentrant event.
+
+    Attributes:
+        event_type: The event type to dispatch.
+        data: Event-specific payload dictionary.
+        source: Identifier of the originating caller for loop-guard filtering.
+    """
+
+    event_type: HexDocumentEvent
+    data: dict[str, Any]
+    source: str
+
+
 class HexDocumentState:
     """Thread-safe shared state holder for a hex document.
 
     Maintains the canonical document instance, cursor offset, selection range, and file path. Registered callbacks are notified on state
     changes, enabling the bridge and GUI to stay in sync without direct coupling. Instances own the active document slot, the associated
-    file path, cursor offset, selection range, the callback registry, a threading lock and re-entrancy guard used during notification, plus
-    default highlight rules and display mode used by the GUI.
+    file path, cursor offset, selection range, the callback registry, a threading lock and per-thread re-entrancy state used during
+    notification, plus default highlight rules and display mode used by the GUI.
     """
 
     def __init__(self) -> None:
@@ -99,7 +125,7 @@ class HexDocumentState:
         self._selection: tuple[int, int] | None = None
         self._callbacks: list[_CallbackEntry] = []
         self._lock = threading.Lock()
-        self._notify_guard: bool = False
+        self._dispatch_state: threading.local = threading.local()
         self._highlight_rules: dict[str, dict[str, Any]] = {}
         self._display_mode: str = "hex8"
         _logger.info(
@@ -111,37 +137,53 @@ class HexDocumentState:
     def document(self) -> HexDocumentFull | None:
         """Get the active HexDocument instance.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             HexDocumentFull | None: Active HexDocument or None if no document is open.
         """
-        return self._document
+        with self._lock:
+            return self._document
 
     @property
     def file_path(self) -> Path | None:
         """Get the path to the currently loaded file.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             Path | None: File path or None if no file is loaded.
         """
-        return self._file_path
+        with self._lock:
+            return self._file_path
 
     @property
     def cursor_offset(self) -> int:
         """Get the current cursor offset.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        partially-updated value observed by this getter.
+
         Returns:
             int: Current byte offset of the cursor.
         """
-        return self._cursor_offset
+        with self._lock:
+            return self._cursor_offset
 
     @property
     def selection(self) -> tuple[int, int] | None:
         """Get the current selection range.
 
+        Acquires the internal lock so concurrent writers cannot publish a
+        torn reference observed by this getter.
+
         Returns:
             tuple[int, int] | None: Tuple of (start, end) offsets or None if no selection.
         """
-        return self._selection
+        with self._lock:
+            return self._selection
 
     def get_current_state(self) -> dict[str, Any]:
         """Get a consistent snapshot of all document state.
@@ -200,7 +242,9 @@ class HexDocumentState:
         The mutation of ``_document``, ``_file_path``, ``_cursor_offset``,
         and ``_selection`` is performed atomically under the internal
         lock so concurrent callers cannot observe partially-updated
-        state.
+        state.  The document length is read while the lock is held so
+        the recorded ``DOCUMENT_OPENED`` ``size`` payload always belongs
+        to the document that has just been published.
 
         Args:
             document: HexDocument instance, or None to close.
@@ -208,15 +252,15 @@ class HexDocumentState:
             source: Identifier of the caller for loop-guard filtering.
         """
         doc_len = 0
-        if document is not None:
-            length_fn = getattr(document, "length", None)
-            if callable(length_fn):
-                doc_len = length_fn()
         with self._lock:
             self._document = document
             self._file_path = file_path
             self._cursor_offset = 0
             self._selection = None
+            if document is not None:
+                length_fn = getattr(document, "length", None)
+                if callable(length_fn):
+                    doc_len = length_fn()
         if document is not None:
             self._notify(
                 HexDocumentEvent.DOCUMENT_OPENED,
@@ -281,22 +325,31 @@ class HexDocumentState:
         """Clear every document-related slot atomically.
 
         Used by bridge ``shutdown`` to fully reset state including the
-        document, file path, cursor, selection, and highlight rules. A
-        single ``DOCUMENT_CLOSED`` event is emitted once the mutations
-        complete, but only when a document was previously attached, so
-        observers can drop their caches without seeing spurious events
-        from an already-empty state.
+        document, file path, cursor, selection, and highlight rules.
+        Every previously stored highlight rule is announced via a
+        dedicated ``HIGHLIGHT_RULE_REMOVED`` event so observers tracking
+        the rule list can drop their entries; a ``DOCUMENT_CLOSED`` is
+        then emitted only when a document was previously attached.  Both
+        observations are required so a sidebar list does not silently
+        retain stale rules after a reset.
 
         Args:
             source: Identifier of the caller for loop-guard filtering.
         """
         with self._lock:
             had_document = self._document is not None
+            removed_rule_ids = list(self._highlight_rules.keys())
             self._document = None
             self._file_path = None
             self._cursor_offset = 0
             self._selection = None
             self._highlight_rules.clear()
+        for rule_id in removed_rule_ids:
+            self._notify(
+                HexDocumentEvent.HIGHLIGHT_RULE_REMOVED,
+                {"rule_id": rule_id},
+                source=source,
+            )
         if had_document:
             self._notify(HexDocumentEvent.DOCUMENT_CLOSED, {}, source=source)
 
@@ -337,10 +390,15 @@ class HexDocumentState:
     def get_display_mode(self) -> str:
         """Get the stored display mode.
 
+        Acquires the internal lock so the returned value is the most
+        recently published display mode and never an intermediate
+        torn reference racing against ``set_display_mode_state``.
+
         Returns:
             str: Current display mode string.
         """
-        return self._display_mode
+        with self._lock:
+            return self._display_mode
 
     def set_display_mode_state(self, mode: str) -> None:
         """Store the display mode in state.
@@ -557,6 +615,65 @@ class HexDocumentState:
             source=source,
         )
 
+    def _get_thread_queue(self) -> deque[_PendingEvent]:
+        """Return this thread's pending-event queue, lazily initialising it.
+
+        Returns:
+            deque[_PendingEvent]: The current thread's reentrant-event queue.
+        """
+        queue: deque[_PendingEvent] | None = getattr(self._dispatch_state, "queue", None)
+        if queue is None:
+            queue = deque()
+            self._dispatch_state.queue = queue
+        return queue
+
+    def _is_dispatching(self) -> bool:
+        """Return whether the current thread is mid-dispatch.
+
+        Returns:
+            bool: True if a ``_notify`` invocation is active on this thread.
+        """
+        return bool(getattr(self._dispatch_state, "active", False))
+
+    def _set_dispatching(self, *, active: bool) -> None:
+        """Mark the current thread's dispatch state.
+
+        Args:
+            active: True when entering the outer dispatch loop, False when
+                leaving it.
+        """
+        self._dispatch_state.active = active
+
+    def _dispatch_one(
+        self,
+        event_type: HexDocumentEvent,
+        data: dict[str, Any],
+        source: str,
+    ) -> None:
+        """Deliver a single event to every registered callback.
+
+        Args:
+            event_type: The event type being emitted.
+            data: Event-specific payload dictionary.
+            source: Identifier of the originating caller used for the
+                loop-guard filter.
+        """
+        with self._lock:
+            callbacks = list(self._callbacks)
+        for entry in callbacks:
+            if entry.source_id and entry.source_id == source:
+                continue
+            try:
+                entry.fn(event_type, data)
+            except (RuntimeError, TypeError, ValueError, OSError):
+                _logger.warning(
+                    "callback_error",
+                    event_type_value=event_type.value,
+                    source_id=entry.source_id,
+                    callback_repr=repr(entry.fn),
+                    exc_info=True,
+                )
+
     def _notify(
         self,
         event_type: HexDocumentEvent,
@@ -566,34 +683,42 @@ class HexDocumentState:
     ) -> None:
         """Dispatch a state change notification to all registered callbacks.
 
-        Uses a reentrancy guard under the lock to prevent infinite
-        notification loops and TOCTOU races.  Callbacks whose source_id
-        matches the source are skipped.
+        Re-entrant calls on the same thread are queued and drained in
+        causal order after the outer dispatch finishes.  Concurrent
+        cross-thread emissions proceed independently because the
+        re-entrancy state is per-thread; the underlying callback list is
+        snapshot under the lock so registrations are race-free.  A
+        runaway callback chain is bounded by ``NOTIFY_MAX_DEPTH`` so an
+        observer that keeps re-emitting cannot loop forever, but
+        legitimate downstream events still flow.
 
         Args:
             event_type: The event type being emitted.
             data: Event-specific payload dictionary.
             source: Identifier of the originating caller.
         """
-        with self._lock:
-            if self._notify_guard:
-                return
-            self._notify_guard = True
-            callbacks = list(self._callbacks)
+        if self._is_dispatching():
+            queue = self._get_thread_queue()
+            queue.append(_PendingEvent(event_type=event_type, data=data, source=source))
+            return
+
+        queue = self._get_thread_queue()
+        self._set_dispatching(active=True)
+        truncated_count = 0
         try:
-            for entry in callbacks:
-                if entry.source_id and entry.source_id == source:
-                    continue
-                try:
-                    entry.fn(event_type, data)
-                except (RuntimeError, TypeError, ValueError, OSError):
-                    _logger.warning(
-                        "callback_error",
-                        event_type_value=event_type.value,
-                        source_id=entry.source_id,
-                        callback_repr=repr(entry.fn),
-                        exc_info=True,
-                    )
+            self._dispatch_one(event_type, data, source)
+            dispatched = 1
+            while queue and dispatched < NOTIFY_MAX_DEPTH:
+                pending = queue.popleft()
+                self._dispatch_one(pending.event_type, pending.data, pending.source)
+                dispatched += 1
+            truncated_count = len(queue)
         finally:
-            with self._lock:
-                self._notify_guard = False
+            if truncated_count:
+                _logger.warning(
+                    "notify_drain_truncated",
+                    pending=truncated_count,
+                    cap=NOTIFY_MAX_DEPTH,
+                )
+            queue.clear()
+            self._set_dispatching(active=False)

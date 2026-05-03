@@ -406,8 +406,28 @@ class ToolBridgeBase(ABC):
                       If None, will auto-detect or download.
         """
 
+    @abstractmethod
     async def shutdown(self) -> None:
-        """Shutdown the tool and cleanup resources."""
+        """Shutdown the tool and cleanup resources.
+
+        Each concrete bridge MUST override this method to release any
+        external handles (debugger sessions, RPC bridges, sandbox VMs,
+        etc.). Subclasses should call ``await super().shutdown()`` at
+        the end of their cleanup so the shared bookkeeping in
+        :meth:`_finalize_shutdown` runs after tool-specific teardown.
+        """
+        await self._finalize_shutdown()
+
+    async def _finalize_shutdown(self) -> None:
+        """Run the shared cleanup that every bridge needs at shutdown.
+
+        Logs the bridge-class transition and resets ``_state`` to a
+        fresh :class:`BridgeState` so observers see a clean idle state
+        even when the subclass cleanup raises early. Concrete bridges
+        invoke this through ``await super().shutdown()`` (which calls
+        the abstract method's body) -- callers should not invoke it
+        directly.
+        """
         self._logger.info("bridge_shutdown", bridge_class=self.__class__.__name__)
         self._state = BridgeState()
 

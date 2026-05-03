@@ -229,6 +229,44 @@ HTTP_SERVICE_UNAVAILABLE: int = 503
 
 _AUTH_STATUS_CODES: frozenset[int] = frozenset({HTTP_UNAUTHORIZED, HTTP_FORBIDDEN})
 
+REASONING_EFFORT_LOW_THRESHOLD: int = 4000
+REASONING_EFFORT_MEDIUM_THRESHOLD: int = 16000
+REASONING_EFFORT_HIGH_THRESHOLD: int = 32000
+
+
+def map_thinking_budget_to_effort(
+    budget_tokens: int,
+    *,
+    allow_xhigh: bool = False,
+) -> str:
+    """Map a :attr:`ThinkingConfig.budget_tokens` to a reasoning_effort level.
+
+    Shared mapping for OpenAI-compatible APIs (OpenAI o-series,
+    Grok-multi-agent, OpenRouter) that expose a discrete ``"low"`` /
+    ``"medium"`` / ``"high"`` knob rather than a token budget.  The
+    thresholds match OpenAI's documented effort tiers and are reused
+    verbatim across providers so a single ``ThinkingConfig`` propagates
+    consistently.
+
+    Args:
+        budget_tokens: Caller-supplied thinking budget in tokens.
+        allow_xhigh: When ``True``, budgets above
+            :data:`REASONING_EFFORT_HIGH_THRESHOLD` map to ``"xhigh"``
+            instead of ``"high"``.  Grok exposes ``"xhigh"``; OpenAI and
+            OpenRouter currently top out at ``"high"``.
+
+    Returns:
+        str: One of ``"low"``, ``"medium"``, ``"high"``, or
+        ``"xhigh"``.
+    """
+    if budget_tokens <= REASONING_EFFORT_LOW_THRESHOLD:
+        return "low"
+    if budget_tokens <= REASONING_EFFORT_MEDIUM_THRESHOLD:
+        return "medium"
+    if not allow_xhigh:
+        return "high"
+    return "high" if budget_tokens <= REASONING_EFFORT_HIGH_THRESHOLD else "xhigh"
+
 
 class LLMProviderBase(ABC):
     """Abstract base class for LLM providers.
@@ -527,6 +565,30 @@ class LLMProviderBase(ABC):
         """
         return self._convert_tools_to_provider_format(tools)
 
+    @staticmethod
+    def _convert_tools_to_openai_format(
+        tools: list[ToolDefinition],
+    ) -> list[dict[str, object]]:
+        """Build OpenAI-compatible tool dicts from internal tool definitions.
+
+        Shared conversion helper for providers that consume the OpenAI
+        function-calling tool schema (OpenAI, Grok, OpenRouter,
+        HuggingFace, Ollama).
+
+        Args:
+            tools: List of internal :class:`ToolDefinition` objects to
+                convert.
+
+        Returns:
+            list[dict[str, object]]: List of tool dicts in the OpenAI
+            ``{"type": "function", "function": {...}}`` format.
+        """
+        openai_tools: list[dict[str, object]] = []
+        for tool in tools:
+            tool_schemas = create_openai_tool_schema(tool)
+            openai_tools.extend(dict(schema) for schema in tool_schemas)
+        return openai_tools
+
     def convert_messages_to_provider_format(
         self,
         messages: list[Message],
@@ -675,6 +737,13 @@ class LLMProviderBase(ABC):
 
         Returns:
             str | dict[str, object]: A string or dict suitable for the ``tool_choice`` API parameter.
+
+        Raises:
+            ProviderError: When ``tool_choice.mode`` is
+                :data:`ToolChoiceMode.SPECIFIC` but ``function_name`` is
+                missing or empty.  Sending an empty function name to an
+                OpenAI-compatible endpoint produces a 400 server-side;
+                surface the misuse as a typed error here.
         """
         if tool_choice.mode == ToolChoiceMode.AUTO:
             return "auto"
@@ -682,9 +751,13 @@ class LLMProviderBase(ABC):
             return "none"
         if tool_choice.mode == ToolChoiceMode.REQUIRED:
             return "required"
+        function_name = tool_choice.function_name
+        if not function_name:
+            msg = "ToolChoiceMode.SPECIFIC requires a non-empty function_name"
+            raise ProviderError(msg)
         return {
             "type": "function",
-            "function": {"name": tool_choice.function_name or ""},
+            "function": {"name": function_name},
         }
 
     @staticmethod
