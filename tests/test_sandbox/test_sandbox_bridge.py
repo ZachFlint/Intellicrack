@@ -34,7 +34,7 @@ from intellicrack.core.types import ToolError, ToolName
 from intellicrack.sandbox.base import ExecutionReport
 
 
-_EXPECTED_FUNC_COUNT: Final[int] = 26
+_EXPECTED_FUNC_COUNT: Final[int] = 27
 _MIN_DESC_LEN: Final[int] = 5
 _WIN_INSTANCE: Final[str] = "win-test-001"
 _QEMU_INSTANCE: Final[str] = "qemu-test-001"
@@ -145,21 +145,21 @@ class TestToolDefinition:
 class TestInitializeShutdown:
     """Verify bridge initialization and shutdown."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_initialize_creates_manager(self) -> None:
         """Initialize creates a manager."""
         bridge = SandboxBridge()
         await bridge.initialize()
         assert getattr(bridge, "_manager") is not None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_initialize_sets_connected(self) -> None:
         """Initialize sets state to connected."""
         bridge = SandboxBridge()
         await bridge.initialize()
         assert bridge.state.connected is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_shutdown_clears_manager(self, sandbox_bridge: SandboxBridge) -> None:
         """Shutdown clears the manager.
 
@@ -169,7 +169,7 @@ class TestInitializeShutdown:
         await sandbox_bridge.shutdown()
         assert getattr(sandbox_bridge, "_manager") is None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_shutdown_resets_state(self, sandbox_bridge: SandboxBridge) -> None:
         """Shutdown resets state.
 
@@ -179,14 +179,14 @@ class TestInitializeShutdown:
         await sandbox_bridge.shutdown()
         assert sandbox_bridge.state.connected is False
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_ensure_manager_creates(self) -> None:
         """ensure_manager creates manager if None."""
         bridge = SandboxBridge()
         mgr = bridge.ensure_manager()
         assert mgr is not None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_ensure_manager_idempotent(self, sandbox_bridge: SandboxBridge) -> None:
         """ensure_manager returns existing manager.
 
@@ -201,7 +201,7 @@ class TestInitializeShutdown:
 class TestCreateDestroy:
     """Verify create and destroy sandbox operations."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_create_returns_dict(self, sandbox_bridge: SandboxBridge) -> None:
         """Create returns dict with instance_id, type, status, created_at.
 
@@ -214,7 +214,7 @@ class TestCreateDestroy:
         assert "status" in result
         assert "created_at" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_create_qemu(self, sandbox_bridge: SandboxBridge) -> None:
         """Create with qemu type succeeds.
 
@@ -224,7 +224,7 @@ class TestCreateDestroy:
         result = await sandbox_bridge.create(sandbox_type="qemu")
         assert result["type"] == "qemu"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_destroy_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Destroy existing instance returns success.
 
@@ -234,7 +234,7 @@ class TestCreateDestroy:
         result = await sandbox_bridge.destroy(_WIN_INSTANCE)
         assert result["success"] is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_destroy_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Destroy nonexistent instance raises ToolError.
 
@@ -244,7 +244,7 @@ class TestCreateDestroy:
         with pytest.raises(ToolError):
             await sandbox_bridge.destroy(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_create_failure_raises(self) -> None:
         """Create on bridge with no available types raises ToolError on real manager."""
         bridge = SandboxBridge()
@@ -256,7 +256,7 @@ class TestCreateDestroy:
 class TestExecuteCommand:
     """Verify command execution in sandbox."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_execute_returns_output(self, sandbox_bridge: SandboxBridge) -> None:
         """Execute returns dict with exit_code, stdout, stderr.
 
@@ -269,7 +269,7 @@ class TestExecuteCommand:
         assert "stderr" in result
         assert result["exit_code"] == 0
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_execute_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Execute on missing instance raises ToolError.
 
@@ -283,7 +283,7 @@ class TestExecuteCommand:
 class TestFileCopy:
     """Verify file copy operations."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_copy_to_missing_instance(self, sandbox_bridge: SandboxBridge) -> None:
         """Copy to missing instance raises ToolError.
 
@@ -293,7 +293,7 @@ class TestFileCopy:
         with pytest.raises(ToolError):
             await sandbox_bridge.copy_to(_MISSING_INSTANCE, "src.txt", "dest.txt")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_copy_to_missing_source(self, sandbox_bridge: SandboxBridge) -> None:
         """Copy with nonexistent source file raises ToolError.
 
@@ -303,7 +303,7 @@ class TestFileCopy:
         with pytest.raises(ToolError):
             await sandbox_bridge.copy_to(_WIN_INSTANCE, "/nonexistent/file.bin", "dest.txt")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_copy_from_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Copy from sandbox returns success dict.
 
@@ -313,7 +313,7 @@ class TestFileCopy:
         result = await sandbox_bridge.copy_from(_WIN_INSTANCE, "sandbox_file.txt", "local.txt")
         assert result["success"] is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_copy_from_missing_instance(self, sandbox_bridge: SandboxBridge) -> None:
         """Copy from missing instance raises ToolError.
 
@@ -327,7 +327,7 @@ class TestFileCopy:
 class TestStatusAndList:
     """Verify status and list operations."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_status_returns_dict(self, sandbox_bridge: SandboxBridge) -> None:
         """Status returns dict with expected keys.
 
@@ -339,7 +339,7 @@ class TestStatusAndList:
         assert "active_count" in result
         assert "instances" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_list_returns_instances(self, sandbox_bridge: SandboxBridge) -> None:
         """List returns instance dicts with expected keys.
 
@@ -356,7 +356,7 @@ class TestStatusAndList:
 class TestSnapshots:
     """Verify snapshot operations (QEMU only)."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_create_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot create on QEMU returns snapshot_id.
 
@@ -366,7 +366,7 @@ class TestSnapshots:
         result = await sandbox_bridge.snapshot_create(_QEMU_INSTANCE, "snap1")
         assert "snapshot_id" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_create_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot create on non-QEMU raises ToolError.
 
@@ -376,7 +376,7 @@ class TestSnapshots:
         with pytest.raises(ToolError, match="QEMU"):
             await sandbox_bridge.snapshot_create(_WIN_INSTANCE, "snap1")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_create_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot create on missing instance raises ToolError.
 
@@ -386,7 +386,7 @@ class TestSnapshots:
         with pytest.raises(ToolError):
             await sandbox_bridge.snapshot_create(_MISSING_INSTANCE, "snap1")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_restore_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot restore on QEMU succeeds after create.
 
@@ -400,7 +400,7 @@ class TestSnapshots:
         )
         assert result["success"] is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_restore_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot restore on non-QEMU raises ToolError.
 
@@ -410,7 +410,7 @@ class TestSnapshots:
         with pytest.raises(ToolError, match="QEMU"):
             await sandbox_bridge.snapshot_restore(_WIN_INSTANCE, "snap-001")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_list_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot list on QEMU returns snapshot list.
 
@@ -422,7 +422,7 @@ class TestSnapshots:
         assert "snapshots" in result
         assert len(result["snapshots"]) >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_list_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot list on non-QEMU raises ToolError.
 
@@ -432,7 +432,7 @@ class TestSnapshots:
         with pytest.raises(ToolError, match="QEMU"):
             await sandbox_bridge.snapshot_list(_WIN_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_delete_success(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot delete on QEMU succeeds.
 
@@ -443,7 +443,7 @@ class TestSnapshots:
         result = await sandbox_bridge.snapshot_delete(_QEMU_INSTANCE, "del_test")
         assert result["success"] is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_snapshot_delete_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """Snapshot delete on non-QEMU raises ToolError.
 
@@ -457,9 +457,9 @@ class TestSnapshots:
 class TestQEMUSpecificMethods:
     """Verify QEMU-specific methods (cont, pending messages)."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_cont_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """cont on QEMU with QMP returns success.
+        """Cont on QEMU with QMP returns success.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -467,9 +467,9 @@ class TestQEMUSpecificMethods:
         result = await sandbox_bridge.cont(_QEMU_INSTANCE)
         assert result["success"] is True
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_cont_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """cont on non-QEMU raises ToolError.
+        """Cont on non-QEMU raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -477,9 +477,9 @@ class TestQEMUSpecificMethods:
         with pytest.raises(ToolError, match="QEMU"):
             await sandbox_bridge.cont(_WIN_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_cont_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """cont on missing instance raises ToolError.
+        """Cont on missing instance raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -487,7 +487,7 @@ class TestQEMUSpecificMethods:
         with pytest.raises(ToolError):
             await sandbox_bridge.cont(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pending_messages_success(self, sandbox_bridge: SandboxBridge) -> None:
         """get_pending_messages returns messages from agent.
 
@@ -498,7 +498,7 @@ class TestQEMUSpecificMethods:
         assert "messages" in result
         assert result["count"] >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pending_messages_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """get_pending_messages on non-QEMU raises ToolError.
 
@@ -508,7 +508,7 @@ class TestQEMUSpecificMethods:
         with pytest.raises(ToolError, match="QEMU"):
             await sandbox_bridge.get_pending_messages(_WIN_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pending_messages_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """get_pending_messages on missing instance raises ToolError.
 
@@ -522,19 +522,19 @@ class TestQEMUSpecificMethods:
 class TestNewCapabilities:
     """Verify new sandbox capabilities (pcap, screenshot, etc.)."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pcap_start(self, sandbox_bridge: SandboxBridge) -> None:
-        """pcap_start returns capture_id.
+        """Pcap_start returns capture_id.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        result = await sandbox_bridge.pcap_start(_WIN_INSTANCE)
+        result = await sandbox_bridge.pcap_start(_QEMU_INSTANCE)
         assert "capture_id" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pcap_start_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """pcap_start on missing instance raises ToolError.
+        """Pcap_start on missing instance raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -542,30 +542,30 @@ class TestNewCapabilities:
         with pytest.raises(ToolError):
             await sandbox_bridge.pcap_start(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_pcap_stop(self, sandbox_bridge: SandboxBridge) -> None:
-        """pcap_stop returns pcap_path.
+        """Pcap_stop returns pcap_path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        start = await sandbox_bridge.pcap_start(_WIN_INSTANCE)
-        result = await sandbox_bridge.pcap_stop(_WIN_INSTANCE, start["capture_id"])
+        start = await sandbox_bridge.pcap_start(_QEMU_INSTANCE)
+        result = await sandbox_bridge.pcap_stop(_QEMU_INSTANCE, start["capture_id"])
         assert "pcap_path" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_screenshot(self, sandbox_bridge: SandboxBridge) -> None:
-        """screenshot returns screenshot_path.
+        """Screenshot returns screenshot_path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        result = await sandbox_bridge.screenshot(_WIN_INSTANCE)
+        result = await sandbox_bridge.screenshot(_QEMU_INSTANCE)
         assert "screenshot_path" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_screenshot_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """screenshot on missing instance raises ToolError.
+        """Screenshot on missing instance raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -573,37 +573,37 @@ class TestNewCapabilities:
         with pytest.raises(ToolError):
             await sandbox_bridge.screenshot(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_anti_evasion(self, sandbox_bridge: SandboxBridge) -> None:
-        """anti_evasion returns techniques dict.
+        """Anti_evasion returns techniques dict.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        result = await sandbox_bridge.anti_evasion(_WIN_INSTANCE)
+        result = await sandbox_bridge.anti_evasion(_QEMU_INSTANCE)
         assert "techniques" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_memory_dump(self, sandbox_bridge: SandboxBridge) -> None:
-        """memory_dump returns dump_path.
+        """Memory_dump returns dump_path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        result = await sandbox_bridge.memory_dump(_WIN_INSTANCE)
+        result = await sandbox_bridge.memory_dump(_QEMU_INSTANCE)
         assert "dump_path" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_extract_files(self, sandbox_bridge: SandboxBridge) -> None:
-        """extract_dropped_files returns zip_path.
+        """Extract_dropped_files returns zip_path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        result = await sandbox_bridge.extract_dropped_files(_WIN_INSTANCE)
+        result = await sandbox_bridge.extract_dropped_files(_QEMU_INSTANCE)
         assert "zip_path" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_yara_scan(self, sandbox_bridge: SandboxBridge) -> None:
         """yara_scan returns matches.
 
@@ -614,7 +614,7 @@ class TestNewCapabilities:
         assert "matches" in result
         assert result["match_count"] >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_yara_scan_with_rules(self, sandbox_bridge: SandboxBridge) -> None:
         """yara_scan with rules_path passes it through.
 
@@ -627,7 +627,7 @@ class TestNewCapabilities:
         )
         assert result["match_count"] >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_yara_scan_memory_target(self, sandbox_bridge: SandboxBridge) -> None:
         """yara_scan with scan_target='memory' succeeds.
 
@@ -640,7 +640,7 @@ class TestNewCapabilities:
         )
         assert "matches" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_yara_scan_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """yara_scan on missing instance raises ToolError.
 
@@ -654,7 +654,7 @@ class TestNewCapabilities:
 class TestAnalysisWrappers:
     """Verify analysis method wrappers on the bridge."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_extract_iocs_success(self, sandbox_bridge: SandboxBridge) -> None:
         """extract_iocs returns IOC list from report.
 
@@ -665,7 +665,7 @@ class TestAnalysisWrappers:
         assert "iocs" in result
         assert "count" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_extract_iocs_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
         """extract_iocs with no report raises ToolError.
 
@@ -675,7 +675,7 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError, match="No execution report"):
             await bridge_no_reports.extract_iocs(_WIN_NOREPORT)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_extract_iocs_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """extract_iocs on missing instance raises ToolError.
 
@@ -685,9 +685,9 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError):
             await sandbox_bridge.extract_iocs(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_timeline_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """timeline returns events list.
+        """Timeline returns events list.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -696,9 +696,9 @@ class TestAnalysisWrappers:
         assert "events" in result
         assert "count" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_timeline_with_categories(self, sandbox_bridge: SandboxBridge) -> None:
-        """timeline with categories filter works.
+        """Timeline with categories filter works.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -706,9 +706,9 @@ class TestAnalysisWrappers:
         result = await sandbox_bridge.timeline(_WIN_INSTANCE, categories=["file"])
         assert "events" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_timeline_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
-        """timeline with no report raises ToolError.
+        """Timeline with no report raises ToolError.
 
         Args:
             bridge_no_reports: SandboxBridge fixture whose instances have no execution reports.
@@ -716,7 +716,7 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError, match="No execution report"):
             await bridge_no_reports.timeline(_WIN_NOREPORT)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_detect_behaviors_success(self, sandbox_bridge: SandboxBridge) -> None:
         """detect_behaviors returns matches list.
 
@@ -727,7 +727,7 @@ class TestAnalysisWrappers:
         assert "matches" in result
         assert "count" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_detect_behaviors_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
         """detect_behaviors with no report raises ToolError.
 
@@ -737,7 +737,7 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError, match="No execution report"):
             await bridge_no_reports.detect_behaviors(_WIN_NOREPORT)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_detect_behaviors_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """detect_behaviors on missing instance raises ToolError.
 
@@ -747,7 +747,7 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError):
             await sandbox_bridge.detect_behaviors(_MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_detect_c2_success(self, sandbox_bridge: SandboxBridge) -> None:
         """detect_c2 returns pattern list.
 
@@ -758,7 +758,7 @@ class TestAnalysisWrappers:
         assert "patterns" in result
         assert "count" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_detect_c2_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
         """detect_c2 with no report raises ToolError.
 
@@ -768,9 +768,9 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError, match="No execution report"):
             await bridge_no_reports.detect_c2(_WIN_NOREPORT)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_diff_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """diff returns structured diff dict.
+        """Diff returns structured diff dict.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -780,9 +780,9 @@ class TestAnalysisWrappers:
         assert "instance_id_a" in result
         assert "instance_id_b" in result
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_diff_missing_a_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """diff with missing instance_a raises ToolError.
+        """Diff with missing instance_a raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -790,9 +790,9 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError):
             await sandbox_bridge.diff(_MISSING_INSTANCE, _QEMU_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_diff_missing_b_raises(self, sandbox_bridge: SandboxBridge) -> None:
-        """diff with missing instance_b raises ToolError.
+        """Diff with missing instance_b raises ToolError.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -800,9 +800,9 @@ class TestAnalysisWrappers:
         with pytest.raises(ToolError):
             await sandbox_bridge.diff(_WIN_INSTANCE, _MISSING_INSTANCE)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_diff_no_report_a_raises(self, bridge_no_reports: SandboxBridge) -> None:
-        """diff with no report on instance_a raises ToolError.
+        """Diff with no report on instance_a raises ToolError.
 
         Args:
             bridge_no_reports: SandboxBridge fixture whose instances have no execution reports.
@@ -814,17 +814,17 @@ class TestAnalysisWrappers:
 class TestGetVncPort:
     """Verify VNC port retrieval."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_returns_port(self, sandbox_bridge: SandboxBridge) -> None:
-        """get_vnc_port returns port number for instance with VNC.
+        """Get_vnc_port returns port number for instance with VNC.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
-        port = await sandbox_bridge.get_vnc_port(_WIN_INSTANCE)
+        port = await sandbox_bridge.get_vnc_port(_QEMU_INSTANCE)
         assert port == 5900
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
         """get_vnc_port on missing instance raises ToolError.
 

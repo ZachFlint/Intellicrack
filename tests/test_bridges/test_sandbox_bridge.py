@@ -13,7 +13,7 @@ import json
 import logging
 import textwrap
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -325,11 +325,15 @@ class TestF0003DetectBehaviorsYAML:
         mock_instance = MagicMock()
         mock_instance.last_report = mock_report
 
-        captured_rules: list[Any] = []
+        captured_rules: list[dict[str, Any]] = []
 
-        def capture_rules(_report: object, rules: object) -> list[Any]:
-            if isinstance(rules, list):
-                captured_rules.extend(rules)
+        def capture_rules(_report: object, rules: object) -> list[dict[str, Any]]:
+            if not isinstance(rules, list):
+                return []
+            typed_rules: list[dict[str, Any]] = [
+                cast("dict[str, Any]", raw) for raw in cast("list[object]", rules) if isinstance(raw, dict)
+            ]
+            captured_rules.extend(typed_rules)
             return []
 
         with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
