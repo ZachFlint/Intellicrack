@@ -22,9 +22,17 @@ from typing import Literal, cast, override
 
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
+    PE_OPTIONAL_HEADER_OFFSET,
     PE_SIGNATURE,
     detect_format,
+    get_data_directory_offset,
+    is_pe64_optional_header,
+    iterate_section_headers,
     pe_machine_to_arch,
+    read_data_directory_entry,
+    read_dos_e_lfanew,
+    rva_to_file_offset,
+    unpack_coff_header,
 )
 from intellicrack.bridges._win32_types import (
     CONTEXT32,
@@ -238,6 +246,13 @@ _MAX_TYPE_NAME_BYTES = 512
 _OBJECT_TYPE_INFO_HEADER_SIZE = 104
 
 _JOB_QUERY_INFORMATION = 0x0004
+
+_PE_DATA_DIR_COM_DESCRIPTOR = 14
+_DOTNET_METADATA_SIGNATURE = 0x424A5342
+_DOTNET_MIN_HEADER_READ = 0x400
+_DOTNET_METADATA_VERSION_MAX = 256
+_DOTNET_COR20_HEADER_SIZE = 72
+_DOTNET_METADATA_MIN_SIZE = 20
 
 _PEB32_MIN_PARSE_LENGTH = 0x18
 _PEB_BEING_DEBUGGED_OFFSET = 2
@@ -5130,13 +5145,36 @@ class ProcessBridge(ToolBridgeBase):
 
         Returns:
             list[dict[str, str]]: List of COM server dicts.
+
+        Raises:
+            ToolError: If advapi32 is not available.
         """
         _logger.info("process_enumerate_com_servers_started", pid=pid)
-        modules = await self.get_modules(pid)
         if self._advapi32 is None:
-            return []
-
+            _logger.error("advapi32_unavailable", operation="enumerate_com_servers")
+            raise ToolError(_ERR_ADVAPI32_NA)
+        modules = await self.get_modules(pid)
         dll_names = {m.name.lower(): str(m.path) for m in modules}
+        return await asyncio.to_thread(self._enumerate_com_servers_sync, dll_names)
+
+    def _enumerate_com_servers_sync(self, dll_names: dict[str, str]) -> list[dict[str, str]]:
+        r"""Perform the blocking HKCR\CLSID registry walk synchronously.
+
+        Intended to be called from :meth:`enumerate_com_servers` via
+        ``asyncio.to_thread`` to avoid blocking the event loop.
+
+        Args:
+            dll_names: Map of lowercase DLL basename to loaded path.
+
+        Returns:
+            list[dict[str, str]]: Matched COM server entries.
+
+        Raises:
+            ToolError: If advapi32 is not available.
+        """
+        if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="_enumerate_com_servers_sync")
+            raise ToolError(_ERR_ADVAPI32_NA)
 
         clsid_key = wintypes.HKEY()
         result: int = self._advapi32.RegOpenKeyExW(
@@ -5147,6 +5185,7 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(clsid_key),
         )
         if result != 0:
+            _logger.warning("clsid_key_open_failed", result=result)
             return []
 
         try:
@@ -5159,7 +5198,7 @@ class ProcessBridge(ToolBridgeBase):
         clsid_key: wintypes.HKEY,
         dll_names: dict[str, str],
     ) -> list[dict[str, str]]:
-        r"""Scan CLSID registry entries for InprocServer32 matches.
+        r"""Scan CLSID registry entries for server key matches.
 
         Args:
             clsid_key: Open HKCR\CLSID registry key handle.
@@ -5196,7 +5235,16 @@ class ProcessBridge(ToolBridgeBase):
                 break
 
             clsid_str = name_buf.value
-            self._check_inproc_server(clsid_key, clsid_str, dll_names, com_servers)
+            entries = self._check_inproc_server(clsid_key, clsid_str)
+            for entry in entries:
+                dll_basename = Path(entry["path"]).name.lower() if entry["path"] else ""
+                if dll_basename in dll_names:
+                    com_servers.append({
+                        "clsid": clsid_str,
+                        "server_type": entry["server_type"],
+                        "dll_path": entry["path"],
+                        "loaded_path": dll_names[dll_basename],
+                    })
             index += 1
 
         return com_servers
@@ -5205,16 +5253,22 @@ class ProcessBridge(ToolBridgeBase):
         self,
         clsid_key: wintypes.HKEY,
         clsid_str: str,
-        dll_names: dict[str, str],
-        com_servers: list[dict[str, str]],
-    ) -> None:
-        r"""Check a single CLSID for InprocServer32 match.
+    ) -> list[dict[str, str]]:
+        r"""Check a CLSID for all server registration keys.
+
+        Walks InprocServer, InprocServer32, Inproc, LocalServer, and
+        LocalServer32 sub-keys under the given CLSID and returns the
+        default value path for each key that exists and has a non-empty
+        default value.
 
         Args:
             clsid_key: Open HKCR\CLSID registry key handle.
-            clsid_str: CLSID string to check.
-            dll_names: Map of lowercase DLL basename to loaded path.
-            com_servers: List to append matches to.
+            clsid_str: CLSID string (e.g. ``{xxxxxxxx-...}``).
+
+        Returns:
+            list[dict[str, str]]: List of ``{server_type, path}`` dicts,
+            one per registered server sub-key that resolved to a non-empty
+            path.
 
         Raises:
             ToolError: If advapi32 is not available.
@@ -5223,45 +5277,52 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("advapi32_unavailable", operation="_check_inproc_server")
             raise ToolError(_ERR_ADVAPI32_NA)
 
-        server_key = wintypes.HKEY()
-        sub_path = f"{clsid_str}\\InprocServer32"
-        if (
-            self._advapi32.RegOpenKeyExW(
-                clsid_key,
-                sub_path,
-                0,
-                KEY_QUERY_VALUE,
-                ctypes.byref(server_key),
-            )
-            != 0
-        ):
-            return
+        server_key_names = (
+            "Inproc",
+            "InprocServer",
+            "InprocServer32",
+            "LocalServer",
+            "LocalServer32",
+        )
+        results: list[dict[str, str]] = []
 
-        val_buf = ctypes.create_unicode_buffer(520)
-        val_size = wintypes.DWORD(520 * 2)
-        val_type = wintypes.DWORD(0)
+        for key_name in server_key_names:
+            server_key = wintypes.HKEY()
+            sub_path = f"{clsid_str}\\{key_name}"
+            if (
+                self._advapi32.RegOpenKeyExW(
+                    clsid_key,
+                    sub_path,
+                    0,
+                    KEY_QUERY_VALUE,
+                    ctypes.byref(server_key),
+                )
+                != 0
+            ):
+                continue
 
-        if (
-            self._advapi32.RegQueryValueExW(
-                server_key,
-                None,
-                None,
-                ctypes.byref(val_type),
-                val_buf,
-                ctypes.byref(val_size),
-            )
-            == 0
-        ):
-            dll_path = val_buf.value
-            dll_basename = Path(dll_path).name.lower() if dll_path else ""
-            if dll_basename in dll_names:
-                com_servers.append({
-                    "clsid": clsid_str,
-                    "dll_path": dll_path,
-                    "loaded_path": dll_names[dll_basename],
-                })
+            val_buf = ctypes.create_unicode_buffer(520)
+            val_size = wintypes.DWORD(520 * 2)
+            val_type = wintypes.DWORD(0)
 
-        self._advapi32.RegCloseKey(server_key)
+            if (
+                self._advapi32.RegQueryValueExW(
+                    server_key,
+                    None,
+                    None,
+                    ctypes.byref(val_type),
+                    val_buf,
+                    ctypes.byref(val_size),
+                )
+                == 0
+            ):
+                path = val_buf.value
+                if path:
+                    results.append({"server_type": key_name, "path": path})
+
+            self._advapi32.RegCloseKey(server_key)
+
+        return results
 
     # ------------------------------------------------------------------
     # .NET CLR detection
@@ -5270,26 +5331,43 @@ class ProcessBridge(ToolBridgeBase):
     async def detect_dotnet(self, pid: int | None = None) -> dict[str, object]:
         """Detect .NET CLR presence and version in a process.
 
-        Scans loaded modules for the canonical CLR runtime DLL set used
-        by each major .NET flavour at load time (both x86 WOW64 and x64
-        native paths). ``coreclr.dll`` and
-        ``System.Private.CoreLib.dll`` distinguish .NET Core / 5+ hosts,
-        ``clr.dll`` identifies .NET Framework 4.x, ``mscorwks.dll``
-        identifies the legacy 2.x/3.x CLR, and ``mscoree.dll`` without
-        any of the above indicates an early-stage .NET process where
-        only the shim DLL has been mapped so far.
+        For each module loaded in the target process, reads the PE
+        IMAGE_COR20_HEADER (COM Descriptor) data directory entry
+        (index 14) from the module's image in process memory.  A
+        non-zero RVA in that directory indicates the module is a managed
+        assembly.  The ``#~`` / ``#-`` stream StorageHeader version
+        string is then read from the .NET MetaData root to obtain the
+        exact framework version (e.g. ``"v4.0.30319"``).
+
+        When process memory cannot be read (e.g. the bridge is not
+        attached and the process cannot be opened with VM-read rights),
+        the method falls back to CLR DLL name heuristics so that the
+        caller always receives a usable result.
 
         Args:
             pid: Process ID (uses current if not specified).
 
         Returns:
-            dict[str, object]: Dict with ``clr_loaded`` bool,
-                ``clr_version`` string or None, and ``runtime_dlls``
-                list of matched DLL basenames.
+            dict[str, object]: Dict containing:
+
+            - ``managed`` (``bool``): ``True`` if any loaded module
+              carries a non-zero COM Descriptor directory entry.
+            - ``version`` (``str | None``): Framework version string
+              from the MetaData StorageHeader (e.g. ``"v4.0.30319"``),
+              or a heuristic string derived from CLR DLL names when the
+              MetaData stream cannot be read, or ``None`` for native
+              processes.
+            - ``clr_loaded`` (``bool``): Alias for ``managed``; kept for
+              backward compatibility.
+            - ``clr_version`` (``str | None``): Alias for ``version``; kept
+              for backward compatibility.
+            - ``runtime_dlls`` (``list[str]``): CLR runtime DLL basenames
+              found in the module list.
         """
         _logger.info("process_detect_dotnet_started", pid=pid)
         modules = await self.get_modules(pid)
-        clr_dlls = {
+
+        clr_dll_names = {
             "mscoree.dll",
             "clr.dll",
             "coreclr.dll",
@@ -5302,26 +5380,227 @@ class ProcessBridge(ToolBridgeBase):
             "system.private.corelib.dll",
         }
 
-        found_dlls: list[str] = [mod.name.lower() for mod in modules if mod.name.lower() in clr_dlls]
+        found_dlls: list[str] = [mod.name.lower() for mod in modules if mod.name.lower() in clr_dll_names]
 
-        if not found_dlls:
-            return {"clr_loaded": False, "clr_version": None, "runtime_dlls": []}
+        proc_handle, owned_handle = self._open_process_for_vm_read(pid)
+        managed = False
+        metadata_version: str | None = None
 
-        version = "unknown"
-        if "coreclr.dll" in found_dlls or "system.private.corelib.dll" in found_dlls:
-            version = ".NET Core/5+"
-        elif "clr.dll" in found_dlls:
-            version = ".NET Framework 4.x"
-        elif "mscorwks.dll" in found_dlls:
-            version = ".NET Framework 2.x/3.x"
-        elif "mscoree.dll" in found_dlls:
-            version = ".NET Framework"
+        if proc_handle is not None:
+            try:
+                for mod in modules:
+                    result = self._read_cor20_version(proc_handle, mod.base_address)
+                    if result is not None:
+                        managed = True
+                        metadata_version = result
+                        break
+            finally:
+                if owned_handle and self._kernel32 is not None:
+                    self._kernel32.CloseHandle(proc_handle)
+
+        if not managed and found_dlls:
+            managed = True
+
+        if managed and metadata_version is None:
+            if "coreclr.dll" in found_dlls or "system.private.corelib.dll" in found_dlls:
+                metadata_version = ".NET Core/5+"
+            elif "clr.dll" in found_dlls:
+                metadata_version = ".NET Framework 4.x"
+            elif "mscorwks.dll" in found_dlls:
+                metadata_version = ".NET Framework 2.x/3.x"
+            elif "mscoree.dll" in found_dlls:
+                metadata_version = ".NET Framework"
 
         return {
-            "clr_loaded": True,
-            "clr_version": version,
+            "managed": managed,
+            "version": metadata_version,
+            "clr_loaded": managed,
+            "clr_version": metadata_version,
             "runtime_dlls": found_dlls,
         }
+
+    def _open_process_for_vm_read(self, pid: int | None) -> tuple[int | None, bool]:
+        """Open a process handle with VM-read rights.
+
+        Reuses the already-open handle when the target PID matches the
+        currently attached process.  Opens a new handle otherwise and
+        returns ``owned=True`` so the caller knows to close it.
+
+        Args:
+            pid: Process ID to open.  When ``None``, uses
+                ``_attached_pid``.
+
+        Returns:
+            tuple[int | None, bool]: ``(handle, owned)`` where ``handle``
+            is a process handle suitable for ``ReadProcessMemory`` (or
+            ``None`` when unavailable) and ``owned`` is ``True`` when
+            the caller is responsible for closing the handle.
+        """
+        if self._kernel32 is None:
+            return None, False
+        target_pid = pid or self._attached_pid
+        if target_pid is None:
+            return None, False
+        if target_pid == self._attached_pid and self._process_handle is not None:
+            return self._process_handle, False
+        handle: int = self._kernel32.OpenProcess(
+            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+            0,
+            target_pid,
+        )
+        if not handle:
+            _logger.warning("dotnet_process_open_failed", pid=target_pid)
+            return None, False
+        return handle, True
+
+    @staticmethod
+    def _parse_pe_com_descriptor(data: bytes) -> tuple[int, list[dict[str, int | str]]] | None:
+        """Parse PE headers from a raw byte buffer and return the COM descriptor RVA.
+
+        Args:
+            data: Raw bytes from the start of a PE image (at least
+                ``_DOTNET_MIN_HEADER_READ`` bytes).
+
+        Returns:
+            tuple[int, list[dict[str, int | str]]] | None: ``(com_rva,
+            sections)`` on success, or ``None`` when the image is not a
+            valid PE or has no COM Descriptor directory entry.
+        """
+        try:
+            nt_offset = read_dos_e_lfanew(data)
+            if nt_offset <= 0 or len(data) < nt_offset + 4:
+                return None
+            if data[nt_offset : nt_offset + 4] != PE_SIGNATURE:
+                return None
+            _, num_sections, size_of_optional_header, _ = unpack_coff_header(data, nt_offset + 4)
+            is_pe64 = is_pe64_optional_header(data, nt_offset + PE_OPTIONAL_HEADER_OFFSET)
+            dd_off = get_data_directory_offset(nt_offset, is_pe64=is_pe64, entry_index=_PE_DATA_DIR_COM_DESCRIPTOR)
+            if dd_off + 8 > len(data):
+                return None
+            com_rva, com_size = read_data_directory_entry(data, dd_off)
+            if com_rva == 0 or com_size == 0:
+                return None
+            sections_off = nt_offset + PE_OPTIONAL_HEADER_OFFSET + size_of_optional_header
+            sections = list(iterate_section_headers(data, sections_off, num_sections))
+        except struct.error:
+            return None
+        return com_rva, sections
+
+    def _read_cor20_version(self, proc_handle: int, base_address: int) -> str | None:
+        """Read the .NET MetaData version string from a module image.
+
+        Reads the module's PE headers from process memory, locates the
+        COM Descriptor (COR20) data directory entry (index 14), then
+        follows the MetaData RVA to read the StorageHeader version
+        string.
+
+        Args:
+            proc_handle: Open process handle with VM-read rights.
+            base_address: Module base address in the target process.
+
+        Returns:
+            str | None: MetaData StorageHeader version string (e.g.
+            ``"v4.0.30319"``), or ``None`` when the module is not
+            managed or the headers cannot be parsed.
+        """
+        if self._kernel32 is None:
+            return None
+        header_buf = ctypes.create_string_buffer(_DOTNET_MIN_HEADER_READ)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            proc_handle,
+            ctypes.c_void_p(base_address),
+            header_buf,
+            _DOTNET_MIN_HEADER_READ,
+            ctypes.byref(bytes_read),
+        ):
+            return None
+        data = header_buf.raw[: bytes_read.value]
+        if len(data) < PE_OPTIONAL_HEADER_OFFSET + 4:
+            return None
+        parsed = self._parse_pe_com_descriptor(data)
+        if parsed is None:
+            return None
+        com_rva, sections_list = parsed
+        cor20_buf = ctypes.create_string_buffer(_DOTNET_COR20_HEADER_SIZE)
+        cor20_read = ctypes.c_size_t()
+        if (
+            not self._kernel32.ReadProcessMemory(
+                proc_handle,
+                ctypes.c_void_p(base_address + com_rva),
+                cor20_buf,
+                _DOTNET_COR20_HEADER_SIZE,
+                ctypes.byref(cor20_read),
+            )
+            or cor20_read.value < _DOTNET_COR20_HEADER_SIZE
+        ):
+            return None
+        try:
+            meta_rva = int(struct.unpack_from("<I", cor20_buf.raw, 8)[0])
+        except struct.error:
+            return None
+        if meta_rva == 0:
+            return None
+        return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
+
+    def _read_metadata_version(
+        self,
+        proc_handle: int,
+        base_address: int,
+        meta_rva: int,
+        sections: list[dict[str, int | str]],
+    ) -> str | None:
+        """Read the version string from a .NET MetaData root.
+
+        Translates ``meta_rva`` to a virtual address via the section table
+        for on-disk-layout images; falls back to treating the RVA as a
+        direct virtual offset relative to ``base_address`` for
+        loader-mapped in-memory images where virtual address equals RVA.
+
+        Reads the ECMA-335 CLI MetaData root header and extracts the
+        null-terminated version string stored at offset 16.
+
+        Args:
+            proc_handle: Open process handle with VM-read rights.
+            base_address: Module base address in the target process.
+            meta_rva: Relative Virtual Address of the MetaData root.
+            sections: Section header dicts as returned by
+                :func:`~intellicrack.bridges._pe_format.iterate_section_headers`.
+
+        Returns:
+            str | None: Version string (e.g. ``"v4.0.30319"``), or
+            ``None`` when the signature is invalid or the read fails.
+        """
+        if self._kernel32 is None:
+            return None
+        file_off = rva_to_file_offset(sections, meta_rva)
+        meta_va = base_address + (file_off if file_off is not None else meta_rva)
+        meta_buf = ctypes.create_string_buffer(_DOTNET_METADATA_VERSION_MAX + 20)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            proc_handle,
+            ctypes.c_void_p(meta_va),
+            meta_buf,
+            _DOTNET_METADATA_VERSION_MAX + _DOTNET_METADATA_MIN_SIZE,
+            ctypes.byref(bytes_read),
+        ):
+            return None
+        meta_data = meta_buf.raw[: bytes_read.value]
+        if len(meta_data) < _DOTNET_METADATA_MIN_SIZE:
+            return None
+        try:
+            signature = int(struct.unpack_from("<I", meta_data, 0)[0])
+            if signature != _DOTNET_METADATA_SIGNATURE:
+                return None
+            version_length = int(struct.unpack_from("<I", meta_data, 12)[0])
+            if version_length == 0 or version_length > _DOTNET_METADATA_VERSION_MAX:
+                return None
+            version_bytes = meta_data[16 : 16 + version_length]
+            version_str = version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
+        except struct.error:
+            return None
+        else:
+            return version_str or None
 
     # ------------------------------------------------------------------
     # Driver communication
