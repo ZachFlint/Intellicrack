@@ -966,14 +966,16 @@ class ProcessBridge(ToolBridgeBase):
     def __init__(self) -> None:
         """Initialize the ProcessBridge instance.
 
-        Allocates tracking dictionaries used by section/view lifecycle:
+        Allocates tracking dictionaries used by section/view, pipe, and
+        device lifecycle so :meth:`shutdown` can release any handles the
+        caller forgot:
 
         * ``_section_handles`` maps section handle -> section name (or
           empty string for anonymous sections) for create/cleanup.
         * ``_section_views`` maps mapped base address -> section handle
-          so :meth:`unmap_section` can find the owning handle and so
-          :meth:`shutdown` can release any unmapped views the caller
-          forgot.
+          so :meth:`unmap_section` can find the owning handle.
+        * ``_pipe_handles`` maps open pipe handle -> pipe name.
+        * ``_device_handles`` maps open device handle -> device path.
         """
         super().__init__()
         self._attached_pid: int | None = None
@@ -987,6 +989,8 @@ class ProcessBridge(ToolBridgeBase):
         self._debug_privilege_enabled: bool = False
         self._section_handles: dict[int, str] = {}
         self._section_views: dict[int, int] = {}
+        self._pipe_handles: dict[int, str] = {}
+        self._device_handles: dict[int, str] = {}
         self._handle_type_cache: dict[int, str] = {}
         self._capabilities = BridgeCapabilities(
             supports_memory_access=True,
@@ -994,7 +998,7 @@ class ProcessBridge(ToolBridgeBase):
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe"],
         )
-        _logger.info("process_bridge_initialized")
+        _logger.debug("process_bridge_initialized")
 
     @property
     def name(self) -> ToolName:
@@ -1017,6 +1021,123 @@ class ProcessBridge(ToolBridgeBase):
             description="Windows process control - memory, threads, modules, tokens, handles, windows, services, PEB/TEB, heaps, context, stack walk, SEH, mitigations, pipes, COM, .NET, devices, registry, and more",
             functions=_PROCESS_FUNCTIONS,
         )
+
+    @property
+    def kernel32(self) -> ctypes.WinDLL | None:
+        """Read-only handle to kernel32.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: kernel32 DLL handle or None if not loaded.
+        """
+        return self._kernel32
+
+    @property
+    def psapi(self) -> ctypes.WinDLL | None:
+        """Read-only handle to psapi.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: psapi DLL handle or None if not loaded.
+        """
+        return self._psapi
+
+    @property
+    def ntdll(self) -> ctypes.WinDLL | None:
+        """Read-only handle to ntdll.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: ntdll DLL handle or None if not loaded.
+        """
+        return self._ntdll
+
+    @property
+    def advapi32(self) -> ctypes.WinDLL | None:
+        """Read-only handle to advapi32.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: advapi32 DLL handle or None if not loaded.
+        """
+        return self._advapi32
+
+    @property
+    def user32(self) -> ctypes.WinDLL | None:
+        """Read-only handle to user32.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: user32 DLL handle or None if not loaded.
+        """
+        return self._user32
+
+    @property
+    def dbghelp(self) -> ctypes.WinDLL | None:
+        """Read-only handle to dbghelp.dll loaded during initialization.
+
+        Returns:
+            ctypes.WinDLL | None: dbghelp DLL handle or None if not loaded.
+        """
+        return self._dbghelp
+
+    @property
+    def debug_privilege_enabled(self) -> bool:
+        """Read-only flag indicating whether SeDebugPrivilege has been elevated.
+
+        Returns:
+            bool: True if the privilege was successfully enabled at initialization.
+        """
+        return self._debug_privilege_enabled
+
+    @property
+    def attached_pid(self) -> int | None:
+        """Read-only currently attached process identifier.
+
+        Returns:
+            int | None: PID of the attached process or None if not attached.
+        """
+        return self._attached_pid
+
+    @property
+    def process_handle(self) -> int | None:
+        """Read-only handle to the currently attached process.
+
+        Returns:
+            int | None: Process handle value or None if not attached.
+        """
+        return self._process_handle
+
+    @property
+    def pipe_handles(self) -> dict[int, str]:
+        """Read-only view of tracked named-pipe handles.
+
+        Returns:
+            dict[int, str]: Mapping of open pipe handles to their pipe names.
+        """
+        return self._pipe_handles
+
+    @property
+    def device_handles(self) -> dict[int, str]:
+        """Read-only view of tracked device handles.
+
+        Returns:
+            dict[int, str]: Mapping of open device handles to their device paths.
+        """
+        return self._device_handles
+
+    @property
+    def section_views(self) -> dict[int, int]:
+        """Read-only view of tracked mapped section views.
+
+        Returns:
+            dict[int, int]: Mapping of mapped base addresses to section handles.
+        """
+        return self._section_views
+
+    @property
+    def section_handles(self) -> dict[int, str]:
+        """Read-only view of tracked section handles.
+
+        Returns:
+            dict[int, str]: Mapping of section handles to section names.
+        """
+        return self._section_handles
 
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the process bridge and load DLL references.
@@ -1048,7 +1169,10 @@ class ProcessBridge(ToolBridgeBase):
             except OSError:
                 _logger.exception("dbghelp_load_failed")
 
-            self._elevate_debug_privilege()
+            try:
+                self._elevate_debug_privilege()
+            except ToolError:
+                _logger.debug("se_debug_privilege_skipped")
 
             self.state = BridgeState(
                 connected=True,
@@ -1059,7 +1183,7 @@ class ProcessBridge(ToolBridgeBase):
                 target_pid=None,
                 last_error=None,
             )
-            _logger.info("process_bridge_initialized", bridge="process", debug_privilege=self._debug_privilege_enabled)
+            _logger.debug("process_bridge_initialized", bridge="process", debug_privilege=self._debug_privilege_enabled)
         except (AttributeError, OSError, RuntimeError) as e:
             _logger.exception("process_bridge_init_failed", bridge="process")
             self.state = BridgeState(
@@ -1073,14 +1197,49 @@ class ProcessBridge(ToolBridgeBase):
             )
 
     def _elevate_debug_privilege(self) -> None:
-        """Attempt to enable SeDebugPrivilege on the current process token."""
-        if self._advapi32 is None or self._kernel32 is None:
+        """Attempt to enable SeDebugPrivilege on the current process token.
+
+        Uses a ``use_last_error=True`` advapi32 handle so that
+        ``ctypes.get_last_error()`` faithfully reflects the Win32 last-error
+        set by ``AdjustTokenPrivileges``.  Logs and raises ``ToolError`` when
+        privilege adjustment fails.
+
+        Raises:
+            ToolError: If ``AdjustTokenPrivileges`` returns FALSE or sets
+                ``ERROR_NOT_ALL_ASSIGNED`` for the requested privilege.
+        """
+        if self._kernel32 is None:
             return
 
         try:
+            advapi32_le: ctypes.WinDLL = ctypes.WinDLL("advapi32", use_last_error=True)
+
+            advapi32_le.OpenProcessToken.restype = wintypes.BOOL
+            advapi32_le.OpenProcessToken.argtypes = [
+                wintypes.HANDLE,
+                wintypes.DWORD,
+                ctypes.POINTER(wintypes.HANDLE),
+            ]
+            advapi32_le.LookupPrivilegeValueW.restype = wintypes.BOOL
+            advapi32_le.LookupPrivilegeValueW.argtypes = [
+                wintypes.LPCWSTR,
+                wintypes.LPCWSTR,
+                ctypes.c_void_p,
+            ]
+            advapi32_le.AdjustTokenPrivileges.restype = wintypes.BOOL
+            advapi32_le.AdjustTokenPrivileges.argtypes = [
+                wintypes.HANDLE,
+                wintypes.BOOL,
+                ctypes.c_void_p,
+                wintypes.DWORD,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+            ]
+
+            self._kernel32.GetCurrentProcess.restype = wintypes.HANDLE
             token_handle = wintypes.HANDLE()
-            current_process = self._kernel32.GetCurrentProcess()
-            if not self._advapi32.OpenProcessToken(
+            current_process: wintypes.HANDLE = self._kernel32.GetCurrentProcess()
+            if not advapi32_le.OpenProcessToken(
                 current_process,
                 TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
                 ctypes.byref(token_handle),
@@ -1089,7 +1248,7 @@ class ProcessBridge(ToolBridgeBase):
 
             try:
                 luid = LUID()
-                if not self._advapi32.LookupPrivilegeValueW(
+                if not advapi32_le.LookupPrivilegeValueW(
                     None,
                     "SeDebugPrivilege",
                     ctypes.byref(luid),
@@ -1101,10 +1260,10 @@ class ProcessBridge(ToolBridgeBase):
                 tp.Privileges[0].Luid = luid
                 tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
 
-                disable_all = False
-                self._advapi32.AdjustTokenPrivileges(
+                disable_all_privileges = wintypes.BOOL(0)
+                adjust_result: int = advapi32_le.AdjustTokenPrivileges(
                     token_handle,
-                    disable_all,
+                    disable_all_privileges,
                     ctypes.byref(tp),
                     ctypes.sizeof(TOKEN_PRIVILEGES),
                     None,
@@ -1112,9 +1271,22 @@ class ProcessBridge(ToolBridgeBase):
                 )
 
                 last_error = ctypes.get_last_error()
-                self._debug_privilege_enabled = last_error != ERROR_NOT_ALL_ASSIGNED
+
+                if not adjust_result or last_error == ERROR_NOT_ALL_ASSIGNED:
+                    _logger.debug(
+                        "se_debug_privilege_not_granted",
+                        adjust_result=adjust_result,
+                        last_error=last_error,
+                    )
+                    msg = f"SeDebugPrivilege not granted: adjust_result={adjust_result} last_error={last_error}"
+                    raise ToolError(msg)
+
+                self._debug_privilege_enabled = True
+                _logger.debug("se_debug_privilege_enabled")
             finally:
                 self._kernel32.CloseHandle(token_handle)
+        except ToolError:
+            raise
         except (OSError, AttributeError, ctypes.ArgumentError):
             _logger.exception("se_debug_privilege_elevation_failed")
 
