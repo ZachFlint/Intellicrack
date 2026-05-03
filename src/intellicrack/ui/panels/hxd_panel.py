@@ -124,14 +124,25 @@ class HxDPanel(QWidget):
         self.current_file: Path | None = None
         self.process: QProcess | None = None
         self.embedded_container: QWidget | None = None
-        self.embed_info_label: QLabel = QLabel("HxD not launched")
+        self._embed_info_label: QLabel = QLabel("HxD not launched")
         self.status_label: QLabel = QLabel()
 
         self._embed_host = QWidget(self)
+        embed_host_layout = QVBoxLayout(self._embed_host)
+        embed_host_layout.setContentsMargins(0, 0, 0, 0)
         self._embed_timer: QTimer | None = None
 
         self._setup_ui()
         self._update_status_label()
+
+    @property
+    def embed_info_label(self) -> QLabel:
+        """Return the label that mirrors the embedded HxD process state.
+
+        Returns:
+            QLabel: The label widget shown above the embed host.
+        """
+        return self._embed_info_label
 
     def _setup_ui(self) -> None:
         """Set up the panel layout and toolbar."""
