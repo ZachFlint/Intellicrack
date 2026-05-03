@@ -231,11 +231,10 @@ class TemplateManager:
         try:
             target_path.write_text(raw_json, encoding="utf-8")
         except OSError as exc:
-            _logger.error(
+            _logger.exception(
                 "builtin_template_write_failed",
                 template_name=name,
                 path=str(target_path),
-                error=str(exc),
             )
             self.failed_templates.append((target_path, str(exc)))
             return False
@@ -329,7 +328,7 @@ class TemplateManager:
         try:
             json_path.write_text(json_str, encoding="utf-8")
         except OSError as exc:
-            _logger.error(
+            _logger.warning(
                 "user_template_write_failed",
                 template_name=name,
                 path=str(json_path),
@@ -349,7 +348,7 @@ class TemplateManager:
             try:
                 dsl_path.write_text(dsl_source, encoding="utf-8")
             except OSError as exc:
-                _logger.error(
+                _logger.warning(
                     "user_template_dsl_write_failed",
                     template_name=name,
                     path=str(dsl_path),
