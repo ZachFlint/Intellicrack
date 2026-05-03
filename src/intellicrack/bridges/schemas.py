@@ -86,7 +86,7 @@ class JSONSchemaProperty(TypedDict, total=False):
     type: str
     description: str
     enum: list[str]
-    default: str | int | float | bool | None
+    default: str | int | float | bool | list[str | int | float | bool] | None
 
 
 class JSONSchemaParameters(TypedDict):
@@ -103,7 +103,7 @@ class GoogleSchemaProperty(TypedDict, total=False):
     type: str
     description: str
     enum: list[str]
-    default: str | int | float | bool | None
+    default: str | int | float | bool | list[str | int | float | bool] | None
 
 
 class GoogleSchemaParameters(TypedDict):

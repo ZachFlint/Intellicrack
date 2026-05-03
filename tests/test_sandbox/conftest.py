@@ -415,8 +415,9 @@ class InMemorySandbox(SandboxBase):
 class InMemoryQEMUSandbox(InMemorySandbox):
     """In-memory sandbox with QEMU-specific stubs for bridge paths.
 
-    Adds ``_qmp`` and ``_agent`` attributes so bridge code that
-    accesses them via ``getattr()`` finds working stubs.
+    Exposes public ``qmp`` and ``agent`` attributes that match the public
+    property accessors on the real ``QEMUSandbox`` class so bridge code that
+    reads them via ``getattr()`` finds working stubs.
 
     Args:
         config: Optional sandbox configuration.
@@ -424,8 +425,8 @@ class InMemoryQEMUSandbox(InMemorySandbox):
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
         super().__init__(config)
-        self._qmp = StubQMP()
-        self._agent = StubAgent()
+        self.qmp = StubQMP()
+        self.agent = StubAgent()
 
 
 class StubInstance:
