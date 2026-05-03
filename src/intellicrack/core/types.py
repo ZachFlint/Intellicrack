@@ -657,6 +657,12 @@ class BridgeAnalysisSummary:
         architecture: Target architecture.
         source_bridges: Names of bridges that contributed data.
         analysis_notes: Notes and observations from the aggregation.
+        complete: True only when at least one real analysis bridge
+            contributed data to this summary. Consumers that treat the
+            summary as authoritative (for example AI report generation)
+            must check this flag and surface a clear "no bridges
+            contributed" condition when it is False rather than emitting
+            an empty authoritative report.
     """
 
     binary_name: str
@@ -669,6 +675,7 @@ class BridgeAnalysisSummary:
     architecture: str
     source_bridges: list[str]
     analysis_notes: list[str]
+    complete: bool = False
 
 
 @dataclass
