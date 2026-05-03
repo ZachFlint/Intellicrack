@@ -1,6 +1,8 @@
+[CmdletBinding()]
 param(
     [string]$LogDir = '.',
-    [int]$TargetPid = 0
+    [int]$TargetPid = 0,
+    [int]$DurationSeconds = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,6 +13,7 @@ if (-not (Test-Path -LiteralPath $LogDir)) {
 $logPath = Join-Path -Path $LogDir -ChildPath 'api_trace.log'
 
 function Write-TraceLine {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Line
     )
@@ -18,6 +21,8 @@ function Write-TraceLine {
 }
 
 function Format-TraceField {
+    [CmdletBinding()]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $false)][object]$Value
     )
@@ -25,18 +30,47 @@ function Format-TraceField {
     return ([string]$Value) -replace '\|', '_' -replace '[\r\n]+', ' '
 }
 
+function Write-TraceError {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Stage,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+    $ts = Get-Date -Format 'o'
+    $detail = Format-TraceField -Value $Message
+    Write-TraceLine -Line "$ts|tracer|0|ERROR|$Stage|$detail|-1"
+}
+
 function Find-TraceEventAssembly {
+    [CmdletBinding()]
+    param()
+
     $candidates = [System.Collections.Generic.List[string]]::new()
 
-    $nugetRoot = Join-Path -Path $env:USERPROFILE -ChildPath '.nuget\packages\microsoft.diagnostics.tracing.traceevent'
-    if (Test-Path -LiteralPath $nugetRoot) {
-        $versions = Get-ChildItem -LiteralPath $nugetRoot -Directory -ErrorAction SilentlyContinue |
-            Sort-Object -Property Name -Descending
-        foreach ($ver in $versions) {
-            $libRoot = Join-Path -Path $ver.FullName -ChildPath 'lib'
-            if (-not (Test-Path -LiteralPath $libRoot)) { continue }
-            $dlls = Get-ChildItem -LiteralPath $libRoot -Recurse -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' -ErrorAction SilentlyContinue
-            foreach ($dll in $dlls) { $candidates.Add($dll.FullName) }
+    if ($env:TRACE_EVENT_DLL) {
+        $candidates.Add($env:TRACE_EVENT_DLL)
+    }
+
+    $scriptDir = $PSScriptRoot
+    if (-not $scriptDir -and $PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+    }
+    if ($scriptDir -and (Test-Path -LiteralPath $scriptDir)) {
+        $localDll = Join-Path -Path $scriptDir -ChildPath 'Microsoft.Diagnostics.Tracing.TraceEvent.dll'
+        if (Test-Path -LiteralPath $localDll) { $candidates.Add($localDll) }
+    }
+
+    if ($env:USERPROFILE) {
+        $nugetRoot = Join-Path -Path $env:USERPROFILE -ChildPath '.nuget\packages\microsoft.diagnostics.tracing.traceevent'
+        if (Test-Path -LiteralPath $nugetRoot) {
+            $versions = Get-ChildItem -LiteralPath $nugetRoot -Directory -ErrorAction SilentlyContinue |
+                Sort-Object -Property Name -Descending
+            foreach ($ver in $versions) {
+                $libRoot = Join-Path -Path $ver.FullName -ChildPath 'lib'
+                if (-not (Test-Path -LiteralPath $libRoot)) { continue }
+                $dlls = Get-ChildItem -LiteralPath $libRoot -Recurse -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' -ErrorAction SilentlyContinue
+                foreach ($dll in $dlls) { $candidates.Add($dll.FullName) }
+            }
         }
     }
 
@@ -46,156 +80,225 @@ function Find-TraceEventAssembly {
         foreach ($dll in $dlls) { $candidates.Add($dll.FullName) }
     }
 
-    $scriptDir = Split-Path -Parent $PSCommandPath
-    if ($scriptDir -and (Test-Path -LiteralPath $scriptDir)) {
-        $localDll = Join-Path -Path $scriptDir -ChildPath 'Microsoft.Diagnostics.Tracing.TraceEvent.dll'
-        if (Test-Path -LiteralPath $localDll) { $candidates.Add($localDll) }
-    }
-
     foreach ($path in $candidates) {
-        if (Test-Path -LiteralPath $path) { return $path }
+        if ($path -and (Test-Path -LiteralPath $path)) { return $path }
     }
     return $null
 }
 
-$sessionName = 'IntApiTrace'
-$realtimeSessionName = 'IntApiTraceRT'
-$etlPath = Join-Path -Path $LogDir -ChildPath "$sessionName.etl"
-$auditApiProvider = '{E02A841C-75A3-4FA7-AFC8-AE09CF9B7F23}'
-
-$traceEventDll = Find-TraceEventAssembly
-if (-not $traceEventDll) {
-    $ts = Get-Date -Format 'o'
-    Write-TraceLine -Line "$ts|tracer|0|ERROR|unavailable|TraceEvent.dll not found|-1"
-    exit 0
+function Get-AuditApiName {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)][int]$EventId
+    )
+    # Microsoft-Windows-Kernel-Audit-API-Calls provider {E02A841C-75A3-4FA7-AFC8-AE09CF9B7F23}
+    # Event-id -> kernel API mapping per the provider manifest.
+    switch ($EventId) {
+        1 { return 'PsSetLoadImageNotifyRoutine' }
+        2 { return 'NtTerminateProcess' }
+        3 { return 'NtCreateSymbolicLinkObject' }
+        4 { return 'SePrivilegeCheck' }
+        5 { return 'NtOpenProcess' }
+        6 { return 'NtOpenThread' }
+        7 { return 'IoRegisterLastChanceShutdownNotification' }
+        8 { return 'IoRegisterShutdownNotification' }
+        default { return "AuditApi_EventId_$EventId" }
+    }
 }
 
-try {
-    Add-Type -LiteralPath $traceEventDll -ErrorAction Stop
-} catch {
-    $ts = Get-Date -Format 'o'
-    $detail = Format-TraceField -Value $_.Exception.Message
-    Write-TraceLine -Line "$ts|tracer|0|ERROR|unavailable|TraceEvent load failed: $detail|-1"
-    exit 0
+function Resolve-PayloadField {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]$Event,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+    try {
+        return $Event.PayloadByName($Name)
+    } catch {
+        return $null
+    }
 }
 
-& logman.exe stop $sessionName 2>&1 | Out-Null
-& logman.exe delete $sessionName 2>&1 | Out-Null
-& logman.exe stop $realtimeSessionName -ets 2>&1 | Out-Null
+$script:Session = $null
+$script:Timer = $null
+$script:ExitCode = 0
 
-$createArgs = @(
-    'create', 'trace', $sessionName,
-    '-p', $auditApiProvider, '0xFFFFFFFF', '5',
-    '-o', $etlPath
-)
-$createOutput = & logman.exe @createArgs 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $ts = Get-Date -Format 'o'
-    $detail = Format-TraceField -Value ($createOutput -join ' ')
-    Write-TraceLine -Line "$ts|tracer|0|ERROR|logman|logman create failed: $detail|$LASTEXITCODE"
-    exit 0
+function Write-TraceFatal {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][int]$Code,
+        [Parameter(Mandatory = $true)][string]$Stage,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+    Write-TraceError -Stage $Stage -Message $Message
+    $script:ExitCode = $Code
 }
 
-$startOutput = & logman.exe start $sessionName 2>&1
-if ($LASTEXITCODE -ne 0) {
-    $ts = Get-Date -Format 'o'
-    $detail = Format-TraceField -Value ($startOutput -join ' ')
-    Write-TraceLine -Line "$ts|tracer|0|ERROR|logman|logman start failed: $detail|$LASTEXITCODE"
-    & logman.exe delete $sessionName 2>&1 | Out-Null
-    exit 0
-}
+function Invoke-ApiTrace {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][int]$FilterPid,
+        [Parameter(Mandatory = $true)][int]$DurationSeconds
+    )
 
-$session = $null
-try {
-    $sessionType = [Microsoft.Diagnostics.Tracing.Session.TraceEventSession]
-    $session = $sessionType::new($realtimeSessionName, $null)
-    $session.StopOnDispose = $true
+    $sessionName = 'IntApiTrace'
+    $auditApiProviderGuid = [Guid]'E02A841C-75A3-4FA7-AFC8-AE09CF9B7F23'
 
-    $providerGuid = [Guid]$auditApiProvider
-    $session.EnableProvider($providerGuid, [Microsoft.Diagnostics.Tracing.TraceEventLevel]::Verbose, [uint64]::MaxValue) | Out-Null
+    $traceEventDll = Find-TraceEventAssembly
+    if (-not $traceEventDll) {
+        Write-TraceFatal -Code 2 -Stage 'unavailable' -Message 'Microsoft.Diagnostics.Tracing.TraceEvent.dll not found in $env:TRACE_EVENT_DLL, $PSScriptRoot, $env:USERPROFILE\.nuget\packages\microsoft.diagnostics.tracing.traceevent, or C:\Program Files\TraceEvent'
+        return
+    }
 
-    $source = $session.Source
-    $dynParser = [Microsoft.Diagnostics.Tracing.Parsers.DynamicTraceEventParser]::new($source)
+    try {
+        Add-Type -LiteralPath $traceEventDll -ErrorAction Stop
+    } catch {
+        Write-TraceFatal -Code 3 -Stage 'load_failed' -Message "TraceEvent assembly load failed: $($_.Exception.Message)"
+        return
+    }
 
-    $script:TargetPid = $TargetPid
+    $sessionType = [System.Type]::GetType(
+        'Microsoft.Diagnostics.Tracing.Session.TraceEventSession, Microsoft.Diagnostics.Tracing.TraceEvent',
+        $false
+    )
+    if ($null -eq $sessionType) {
+        Write-TraceFatal -Code 3 -Stage 'type_missing' -Message 'TraceEventSession type not exposed by loaded assembly'
+        return
+    }
+
+    try {
+        # Real-time only: passing $null as the file path keeps everything in-memory
+        # and lets the in-process callbacks consume each event. No ETL file is
+        # produced, so no out-of-band harvest is required.
+        $script:Session = $sessionType::new($sessionName, $null)
+        $script:Session.StopOnDispose = $true
+    } catch {
+        Write-TraceFatal -Code 4 -Stage 'session_create' -Message "TraceEventSession constructor failed: $($_.Exception.Message)"
+        return
+    }
+
+    try {
+        $verbose = [Microsoft.Diagnostics.Tracing.TraceEventLevel]::Verbose
+        $allKeywords = [uint64]::MaxValue
+        $script:Session.EnableProvider($auditApiProviderGuid, $verbose, $allKeywords) | Out-Null
+    } catch {
+        Write-TraceFatal -Code 4 -Stage 'enable_provider' -Message "EnableProvider failed: $($_.Exception.Message)"
+        return
+    }
+
+    $source = $script:Session.Source
+    $script:FilterPid = $FilterPid
 
     $handler = {
         param($evt)
         try {
-            if ($script:TargetPid -ne 0 -and [int]$evt.ProcessID -ne [int]$script:TargetPid) { return }
+            $procIdRaw = 0
+            try { $procIdRaw = [int]$evt.ProcessID } catch { $procIdRaw = 0 }
 
-            $ts = Get-Date -Format 'o'
-            $procId = [int]$evt.ProcessID
-            $procName = 'unknown'
-            try {
-                $p = Get-Process -Id $procId -ErrorAction SilentlyContinue
-                if ($p) { $procName = $p.Name }
-            } catch {
-                $procName = 'unknown'
+            $targetField = Resolve-PayloadField -Event $evt -Name 'TargetProcessId'
+            $targetPidVal = 0
+            if ($null -ne $targetField) {
+                try { $targetPidVal = [int]$targetField } catch { $targetPidVal = 0 }
             }
 
-            $apiName = Format-TraceField -Value $evt.OpcodeName
-            if (-not $apiName) { $apiName = Format-TraceField -Value $evt.EventName }
-            if (-not $apiName) { $apiName = "EventId_$($evt.ID)" }
+            if ($script:FilterPid -ne 0) {
+                if ($procIdRaw -ne $script:FilterPid -and $targetPidVal -ne $script:FilterPid) { return }
+            }
 
-            $module = Format-TraceField -Value $evt.ProviderName
+            $ts = Get-Date -Format 'o'
+            $procName = 'unknown'
+            if ($procIdRaw -gt 0) {
+                $p = Get-Process -Id $procIdRaw -ErrorAction SilentlyContinue
+                if ($p) { $procName = $p.Name }
+            }
+
+            $eventId = 0
+            try { $eventId = [int]$evt.ID } catch { $eventId = 0 }
+            $apiName = Get-AuditApiName -EventId $eventId
+            $module = 'ntoskrnl.exe'
 
             $argParts = [System.Collections.Generic.List[string]]::new()
-            try {
-                $payloadNames = $evt.PayloadNames
-                if ($payloadNames) {
-                    foreach ($name in $payloadNames) {
-                        $val = $evt.PayloadByName($name)
-                        $argParts.Add("$name=$(Format-TraceField -Value $val)")
-                    }
+            $payloadNames = $null
+            try { $payloadNames = $evt.PayloadNames } catch { $payloadNames = $null }
+            if ($payloadNames) {
+                foreach ($name in $payloadNames) {
+                    if ([string]::IsNullOrEmpty($name)) { continue }
+                    if ($name -eq 'ReturnCode') { continue }
+                    $val = Resolve-PayloadField -Event $evt -Name $name
+                    $safeName = Format-TraceField -Value $name
+                    $safeVal = Format-TraceField -Value $val
+                    $argParts.Add("$safeName=$safeVal")
                 }
-            } catch {
-                $argParts.Add("payload_error=$(Format-TraceField -Value $_.Exception.Message)")
             }
-            $arguments = Format-TraceField -Value ($argParts -join ';')
+            $arguments = ($argParts -join ';')
 
             $returnValue = ''
-            try {
-                $rv = $evt.PayloadByName('ReturnValue')
-                if ($null -ne $rv) { $returnValue = Format-TraceField -Value $rv }
-            } catch {
-                $returnValue = ''
+            $rc = Resolve-PayloadField -Event $evt -Name 'ReturnCode'
+            if ($null -ne $rc) {
+                try {
+                    $returnValue = '0x{0:X}' -f [uint32]$rc
+                } catch {
+                    $returnValue = Format-TraceField -Value $rc
+                }
             }
 
-            Write-TraceLine -Line "$ts|$procName|$procId|$apiName|$module|$arguments|$returnValue"
+            Write-TraceLine -Line "$ts|$procName|$procIdRaw|$apiName|$module|$arguments|$returnValue"
         } catch {
-            $ts = Get-Date -Format 'o'
-            $detail = Format-TraceField -Value $_.Exception.Message
-            Write-TraceLine -Line "$ts|tracer|0|ERROR|handler|$detail|-1"
+            Write-TraceError -Stage 'handler' -Message $_.Exception.Message
         }
     }
 
     $boundHandler = $handler.GetNewClosure()
-
-    $dynParser.add_All($boundHandler)
+    $source.Dynamic.add_All($boundHandler)
     $source.UnhandledEvents.add_All($boundHandler)
 
-    $ts = Get-Date -Format 'o'
-    Write-TraceLine -Line "$ts|tracer|0|START|$sessionName|provider=$auditApiProvider;etl=$etlPath;pid_filter=$TargetPid|0"
+    $tsStart = Get-Date -Format 'o'
+    Write-TraceLine -Line "$tsStart|tracer|0|START|$sessionName|provider=$auditApiProviderGuid;pid_filter=$FilterPid;duration=$DurationSeconds|0"
 
-    $source.Process() | Out-Null
+    if ($DurationSeconds -gt 0) {
+        $script:Timer = New-Object System.Timers.Timer
+        $script:Timer.Interval = [double]($DurationSeconds * 1000)
+        $script:Timer.AutoReset = $false
+        $stopAction = {
+            try {
+                if ($null -ne $script:Session -and $null -ne $script:Session.Source) {
+                    $script:Session.Source.StopProcessing()
+                }
+            } catch {
+                Write-TraceError -Stage 'timer_stop_processing' -Message $_.Exception.Message
+            }
+        }
+        Register-ObjectEvent -InputObject $script:Timer -EventName Elapsed -Action $stopAction | Out-Null
+        $script:Timer.Start()
+    }
+
+    try {
+        $source.Process() | Out-Null
+    } catch {
+        Write-TraceFatal -Code 5 -Stage 'process' -Message $_.Exception.Message
+    }
+}
+
+try {
+    Invoke-ApiTrace -FilterPid $TargetPid -DurationSeconds $DurationSeconds
 } catch {
-    $ts = Get-Date -Format 'o'
-    $detail = Format-TraceField -Value $_.Exception.Message
-    Write-TraceLine -Line "$ts|tracer|0|ERROR|session|$detail|-1"
+    Write-TraceFatal -Code 5 -Stage 'session' -Message $_.Exception.Message
 } finally {
-    if ($null -ne $session) {
+    if ($null -ne $script:Timer) {
+        try { $script:Timer.Stop() } catch { Write-TraceError -Stage 'timer_stop' -Message $_.Exception.Message }
+        try { $script:Timer.Dispose() } catch { Write-TraceError -Stage 'timer_dispose' -Message $_.Exception.Message }
+    }
+    if ($null -ne $script:Session) {
         try {
-            $session.Dispose()
+            $script:Session.Dispose()
         } catch {
-            $ts = Get-Date -Format 'o'
-            $detail = Format-TraceField -Value $_.Exception.Message
-            Write-TraceLine -Line "$ts|tracer|0|ERROR|dispose|$detail|-1"
+            Write-TraceError -Stage 'dispose' -Message $_.Exception.Message
+            if ($script:ExitCode -eq 0) { $script:ExitCode = 6 }
         }
     }
-    & logman.exe stop $sessionName 2>&1 | Out-Null
-    & logman.exe delete $sessionName 2>&1 | Out-Null
-    & logman.exe stop $realtimeSessionName -ets 2>&1 | Out-Null
-    $ts = Get-Date -Format 'o'
-    Write-TraceLine -Line "$ts|tracer|0|STOP|$sessionName||0"
+    $tsStop = Get-Date -Format 'o'
+    Write-TraceLine -Line "$tsStop|tracer|0|STOP|IntApiTrace||$($script:ExitCode)"
 }
+
+exit $script:ExitCode
