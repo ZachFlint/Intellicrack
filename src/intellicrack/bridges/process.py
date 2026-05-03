@@ -35,7 +35,6 @@ from intellicrack.bridges._pe_format import (
     unpack_coff_header,
 )
 from intellicrack.bridges._win32_types import (
-    CONTEXT32,
     CONTEXT64,
     CONTEXT_ALL,
     CONTEXT_I386_ALL,
@@ -204,6 +203,7 @@ _ERR_IOCTL_FAILED = "DeviceIoControl failed"
 _ERR_PIPE_CLOSE_FAILED = "pipe close failed"
 _ERR_DEVICE_CLOSE_FAILED = "device close failed"
 _ERR_INVALID_HEX = "input_data is not a valid hex string"
+_ERR_SEH_NOT_APPLICABLE_X64 = "SEH chain not applicable to x64 target"
 
 _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
@@ -255,6 +255,9 @@ _DOTNET_MIN_HEADER_READ = 0x400
 _DOTNET_METADATA_VERSION_MAX = 256
 _DOTNET_COR20_HEADER_SIZE = 72
 _DOTNET_METADATA_MIN_SIZE = 20
+
+_MAX_SYM_NAME: int = 2000
+_MAX_PATH: int = 260
 
 _PEB32_MIN_PARSE_LENGTH = 0x18
 _PEB_BEING_DEBUGGED_OFFSET = 2
@@ -399,6 +402,41 @@ class TEB32(ctypes.Structure):
         ("LastErrorValue", ctypes.c_uint32),
         ("_Reserved038", ctypes.c_byte * (TLS_ARRAY_OFFSET_X86 - 0x038)),
         ("TlsSlots", ctypes.c_uint32 * 64),
+    ]
+
+
+class IMAGEHLP_MODULE64(ctypes.Structure):
+    """DbgHelp IMAGEHLP_MODULE64 structure for module information via SymGetModuleInfo64.
+
+    Matches the layout from dbghelp.h. ``SizeOfStruct`` must be set to
+    ``ctypes.sizeof(IMAGEHLP_MODULE64)`` before passing to
+    ``SymGetModuleInfo64``.
+    """
+
+    _fields_: ClassVar = [
+        ("SizeOfStruct", wintypes.DWORD),
+        ("BaseOfImage", ctypes.c_ulonglong),
+        ("ImageSize", wintypes.DWORD),
+        ("TimeDateStamp", wintypes.DWORD),
+        ("CheckSum", wintypes.DWORD),
+        ("NumSyms", wintypes.DWORD),
+        ("SymType", wintypes.DWORD),
+        ("ModuleName", ctypes.c_char * 32),
+        ("ImageName", ctypes.c_char * 256),
+        ("LoadedImageName", ctypes.c_char * 256),
+        ("LoadedPdbName", ctypes.c_char * 256),
+        ("CVSig", wintypes.DWORD),
+        ("CVData", ctypes.c_wchar * (_MAX_PATH * 3)),
+        ("PdbSig", wintypes.DWORD),
+        ("PdbSig70", ctypes.c_byte * 16),
+        ("PdbAge", wintypes.DWORD),
+        ("PdbUnmatched", wintypes.BOOL),
+        ("DbgUnmatched", wintypes.BOOL),
+        ("LineNumbers", wintypes.BOOL),
+        ("GlobalSymbols", wintypes.BOOL),
+        ("TypeInfo", wintypes.BOOL),
+        ("SourceIndexed", wintypes.BOOL),
+        ("Publics", wintypes.BOOL),
     ]
 
 
@@ -1976,9 +2014,12 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If read fails.
         """
+        if self._process_handle is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
         _logger.debug("memory_read_starting", address=hex(address), size=size)
-        data = self._sync_read_memory(address, size)
-        return data.hex()
+        return self._sync_read_memory(address, size).hex()
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write memory to process.
@@ -4167,78 +4208,84 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
         try:
-            self._kernel32.SuspendThread(thread_handle)
+            suspend_count: int = self._kernel32.SuspendThread(thread_handle)
+            if ctypes.c_long(suspend_count).value < 0:
+                raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
             try:
-                is_64bit = struct.calcsize("P") * _BITS_PER_BYTE == _POINTER_BITS_64
+                is_wow64_target = self._target_is_wow64()
 
-                if is_64bit:
-                    ctx = CONTEXT64()
-                    ctx.ContextFlags = CONTEXT_ALL
-                    if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
+                if is_wow64_target:
+                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+                    if wow64_get_ctx is None:
                         raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
+                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+                    wow64_get_ctx.restype = wintypes.BOOL
+                    ctx32 = WOW64_CONTEXT()
+                    ctx32.ContextFlags = CONTEXT_I386_ALL
+                    if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
+                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
                     return {
-                        "rax": ctx.Rax,
-                        "rbx": ctx.Rbx,
-                        "rcx": ctx.Rcx,
-                        "rdx": ctx.Rdx,
-                        "rsi": ctx.Rsi,
-                        "rdi": ctx.Rdi,
-                        "rbp": ctx.Rbp,
-                        "rsp": ctx.Rsp,
-                        "r8": ctx.R8,
-                        "r9": ctx.R9,
-                        "r10": ctx.R10,
-                        "r11": ctx.R11,
-                        "r12": ctx.R12,
-                        "r13": ctx.R13,
-                        "r14": ctx.R14,
-                        "r15": ctx.R15,
-                        "rip": ctx.Rip,
-                        "eflags": ctx.EFlags,
-                        "cs": ctx.SegCs,
-                        "ds": ctx.SegDs,
-                        "es": ctx.SegEs,
-                        "fs": ctx.SegFs,
-                        "gs": ctx.SegGs,
-                        "ss": ctx.SegSs,
-                        "dr0": ctx.Dr0,
-                        "dr1": ctx.Dr1,
-                        "dr2": ctx.Dr2,
-                        "dr3": ctx.Dr3,
-                        "dr6": ctx.Dr6,
-                        "dr7": ctx.Dr7,
+                        "eax": ctx32.Eax,
+                        "ebx": ctx32.Ebx,
+                        "ecx": ctx32.Ecx,
+                        "edx": ctx32.Edx,
+                        "esi": ctx32.Esi,
+                        "edi": ctx32.Edi,
+                        "ebp": ctx32.Ebp,
+                        "esp": ctx32.Esp,
+                        "eip": ctx32.Eip,
+                        "eflags": ctx32.EFlags,
+                        "cs": ctx32.SegCs,
+                        "ds": ctx32.SegDs,
+                        "es": ctx32.SegEs,
+                        "fs": ctx32.SegFs,
+                        "gs": ctx32.SegGs,
+                        "ss": ctx32.SegSs,
+                        "dr0": ctx32.Dr0,
+                        "dr1": ctx32.Dr1,
+                        "dr2": ctx32.Dr2,
+                        "dr3": ctx32.Dr3,
+                        "dr6": ctx32.Dr6,
+                        "dr7": ctx32.Dr7,
                     }
 
-                ctx32 = CONTEXT32()
-                ctx32.ContextFlags = CONTEXT_I386_ALL
-                if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx32)):
+                ctx = CONTEXT64()
+                ctx.ContextFlags = CONTEXT_ALL
+                if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
                     raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
                 return {
-                    "eax": ctx32.Eax,
-                    "ebx": ctx32.Ebx,
-                    "ecx": ctx32.Ecx,
-                    "edx": ctx32.Edx,
-                    "esi": ctx32.Esi,
-                    "edi": ctx32.Edi,
-                    "ebp": ctx32.Ebp,
-                    "esp": ctx32.Esp,
-                    "eip": ctx32.Eip,
-                    "eflags": ctx32.EFlags,
-                    "cs": ctx32.SegCs,
-                    "ds": ctx32.SegDs,
-                    "es": ctx32.SegEs,
-                    "fs": ctx32.SegFs,
-                    "gs": ctx32.SegGs,
-                    "ss": ctx32.SegSs,
-                    "dr0": ctx32.Dr0,
-                    "dr1": ctx32.Dr1,
-                    "dr2": ctx32.Dr2,
-                    "dr3": ctx32.Dr3,
-                    "dr6": ctx32.Dr6,
-                    "dr7": ctx32.Dr7,
+                    "rax": ctx.Rax,
+                    "rbx": ctx.Rbx,
+                    "rcx": ctx.Rcx,
+                    "rdx": ctx.Rdx,
+                    "rsi": ctx.Rsi,
+                    "rdi": ctx.Rdi,
+                    "rbp": ctx.Rbp,
+                    "rsp": ctx.Rsp,
+                    "r8": ctx.R8,
+                    "r9": ctx.R9,
+                    "r10": ctx.R10,
+                    "r11": ctx.R11,
+                    "r12": ctx.R12,
+                    "r13": ctx.R13,
+                    "r14": ctx.R14,
+                    "r15": ctx.R15,
+                    "rip": ctx.Rip,
+                    "eflags": ctx.EFlags,
+                    "cs": ctx.SegCs,
+                    "ds": ctx.SegDs,
+                    "es": ctx.SegEs,
+                    "fs": ctx.SegFs,
+                    "gs": ctx.SegGs,
+                    "ss": ctx.SegSs,
+                    "dr0": ctx.Dr0,
+                    "dr1": ctx.Dr1,
+                    "dr2": ctx.Dr2,
+                    "dr3": ctx.Dr3,
+                    "dr6": ctx.Dr6,
+                    "dr7": ctx.Dr7,
                 }
             finally:
                 self._kernel32.ResumeThread(thread_handle)
@@ -4271,18 +4318,50 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
         try:
-            self._kernel32.SuspendThread(thread_handle)
+            suspend_count_set: int = self._kernel32.SuspendThread(thread_handle)
+            if ctypes.c_long(suspend_count_set).value < 0:
+                raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
             try:
-                is_64bit = struct.calcsize("P") * _BITS_PER_BYTE == _POINTER_BITS_64
+                is_wow64_target = self._target_is_wow64()
 
-                if is_64bit:
+                if is_wow64_target:
+                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+                    wow64_set_ctx = getattr(self._kernel32, "Wow64SetThreadContext", None)
+                    if wow64_get_ctx is None or wow64_set_ctx is None:
+                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
+                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+                    wow64_get_ctx.restype = wintypes.BOOL
+                    wow64_set_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+                    wow64_set_ctx.restype = wintypes.BOOL
+                    ctx32 = WOW64_CONTEXT()
+                    ctx32.ContextFlags = CONTEXT_I386_ALL
+                    if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
+                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
+                    reg_map_wow64: dict[str, str] = {
+                        "eax": "Eax",
+                        "ebx": "Ebx",
+                        "ecx": "Ecx",
+                        "edx": "Edx",
+                        "esi": "Esi",
+                        "edi": "Edi",
+                        "ebp": "Ebp",
+                        "esp": "Esp",
+                        "eip": "Eip",
+                    }
+                    for name, value in registers.items():
+                        attr = reg_map_wow64.get(name.lower())
+                        if attr is not None:
+                            setattr(ctx32, attr, value)
+                    if not wow64_set_ctx(thread_handle, ctypes.byref(ctx32)):
+                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
+                else:
                     ctx = CONTEXT64()
                     ctx.ContextFlags = CONTEXT_ALL
                     if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
                         raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
-                    reg_map = {
+                    reg_map: dict[str, str] = {
                         "rax": "Rax",
                         "rbx": "Rbx",
                         "rcx": "Rcx",
@@ -4307,30 +4386,6 @@ class ProcessBridge(ToolBridgeBase):
                             setattr(ctx, attr, value)
 
                     if not self._kernel32.SetThreadContext(thread_handle, ctypes.byref(ctx)):
-                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
-                else:
-                    ctx32 = CONTEXT32()
-                    ctx32.ContextFlags = CONTEXT_I386_ALL
-                    if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx32)):
-                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
-                    reg_map_32 = {
-                        "eax": "Eax",
-                        "ebx": "Ebx",
-                        "ecx": "Ecx",
-                        "edx": "Edx",
-                        "esi": "Esi",
-                        "edi": "Edi",
-                        "ebp": "Ebp",
-                        "esp": "Esp",
-                        "eip": "Eip",
-                    }
-                    for name, value in registers.items():
-                        attr = reg_map_32.get(name.lower())
-                        if attr is not None:
-                            setattr(ctx32, attr, value)
-
-                    if not self._kernel32.SetThreadContext(thread_handle, ctypes.byref(ctx32)):
                         raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
                 _logger.info("thread_context_set", tid=tid, registers=list(registers.keys()))
@@ -4386,11 +4441,14 @@ class ProcessBridge(ToolBridgeBase):
 
         frames: list[dict[str, object]] = []
         try:
-            self._kernel32.SuspendThread(thread_handle)
+            sw_suspend: int = self._kernel32.SuspendThread(thread_handle)
+            if ctypes.c_long(sw_suspend).value < 0:
+                raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
             try:
                 invade_process = True
-                self._dbghelp.SymInitialize(self._process_handle, None, invade_process)
+                if not self._dbghelp.SymInitialize(self._process_handle, None, invade_process):
+                    raise ToolError(_ERR_DBGHELP_NA)
                 try:
                     is_wow64_target = self._target_is_wow64()
                     frames = self._walk_stack_wow64(thread_handle) if is_wow64_target else self._walk_stack_native(thread_handle)
@@ -4640,18 +4698,32 @@ class ProcessBridge(ToolBridgeBase):
         if self._dbghelp is None or self._process_handle is None:
             return "", 0
 
-        displacement = ctypes.c_ulonglong(0)
-        sym = SYMBOL_INFO()
-        sym.SizeOfStruct = ctypes.sizeof(SYMBOL_INFO) - 1024 + 2
-        sym.MaxNameLen = 1024
+        sym_from_addr = self._dbghelp.SymFromAddr
+        sym_from_addr.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_ulonglong,
+            ctypes.POINTER(ctypes.c_ulonglong),
+            ctypes.c_void_p,
+        ]
+        sym_from_addr.restype = wintypes.BOOL
 
-        if self._dbghelp.SymFromAddr(
+        displacement = ctypes.c_ulonglong(0)
+        sym_header_size = ctypes.sizeof(SYMBOL_INFO) - ctypes.sizeof(ctypes.c_char * 1024) + ctypes.sizeof(ctypes.c_char)
+        sym_buf_size = sym_header_size + _MAX_SYM_NAME * ctypes.sizeof(ctypes.c_char)
+        sym_buf = (ctypes.c_char * sym_buf_size)()
+        sym_ptr = ctypes.cast(sym_buf, ctypes.POINTER(SYMBOL_INFO))
+        sym_ptr[0].SizeOfStruct = sym_header_size
+        sym_ptr[0].MaxNameLen = _MAX_SYM_NAME
+
+        if sym_from_addr(
             self._process_handle,
-            pc,
+            ctypes.c_ulonglong(pc),
             ctypes.byref(displacement),
-            ctypes.byref(sym),
+            sym_buf,
         ):
-            return sym.Name.decode("utf-8", errors="ignore"), displacement.value
+            name_len = min(sym_ptr[0].NameLen, _MAX_SYM_NAME)
+            raw_name: bytes = bytes(sym_buf[sym_header_size : sym_header_size + name_len])
+            return raw_name.rstrip(b"\x00").decode("utf-8", errors="ignore"), displacement.value
         return "", 0
 
     def _resolve_module(self, pc: int) -> str:
@@ -4666,15 +4738,23 @@ class ProcessBridge(ToolBridgeBase):
         if self._dbghelp is None or self._process_handle is None:
             return ""
 
-        mod_info = ctypes.create_string_buffer(584)
-        struct.pack_into("<I", mod_info, 0, 584)
-        if self._dbghelp.SymGetModuleInfo64(
+        sym_get_mod = self._dbghelp.SymGetModuleInfo64
+        sym_get_mod.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_ulonglong,
+            ctypes.POINTER(IMAGEHLP_MODULE64),
+        ]
+        sym_get_mod.restype = wintypes.BOOL
+
+        mod_info = IMAGEHLP_MODULE64()
+        mod_info.SizeOfStruct = ctypes.sizeof(IMAGEHLP_MODULE64)
+        if sym_get_mod(
             self._process_handle,
-            pc,
-            mod_info,
+            ctypes.c_ulonglong(pc),
+            ctypes.byref(mod_info),
         ):
-            mod_raw: bytes = mod_info.raw[4:260]
-            return mod_raw.split(b"\x00", 1)[0].decode("utf-8", errors="ignore")
+            raw_name: bytes = bytes(mod_info.ModuleName)
+            return raw_name.rstrip(b"\x00").decode("utf-8", errors="ignore")
         return ""
 
     # ------------------------------------------------------------------
@@ -4701,6 +4781,11 @@ class ProcessBridge(ToolBridgeBase):
         if self._process_handle is None:
             _logger.error("process_not_attached", operation="get_seh_chain")
             raise ToolError(_ERR_NOT_ATTACHED)
+
+        if not self._target_is_wow64() and self._kernel32 is not None:
+            target_is_64bit = self._target_is_64bit(self._process_handle)
+            if target_is_64bit:
+                raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
 
         teb = await self.read_teb(tid)
         seh_frame_addr = teb.get("seh_frame")
