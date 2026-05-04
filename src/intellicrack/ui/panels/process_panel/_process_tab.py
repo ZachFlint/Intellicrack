@@ -640,3 +640,30 @@ class ProcessTab(QWidget):
     def start_refresh(self) -> None:
         """Trigger an initial process list refresh."""
         self._on_refresh()
+
+    def set_action_buttons_enabled(
+        self,
+        *,
+        attach: bool,
+        detach: bool,
+        suspend: bool,
+        resume: bool,
+        terminate: bool,
+        inject: bool,
+    ) -> None:
+        """Enable or disable the process action toolbar buttons.
+
+        Args:
+            attach: Whether the Attach button is enabled.
+            detach: Whether the Detach button is enabled.
+            suspend: Whether the Suspend button is enabled.
+            resume: Whether the Resume button is enabled.
+            terminate: Whether the Terminate button is enabled.
+            inject: Whether the DLL Inject button is enabled.
+        """
+        self._attach_btn.setEnabled(attach)
+        self._detach_btn.setEnabled(detach)
+        self._suspend_btn.setEnabled(suspend)
+        self._resume_btn.setEnabled(resume)
+        self._terminate_btn.setEnabled(terminate)
+        self._inject_btn.setEnabled(inject)
