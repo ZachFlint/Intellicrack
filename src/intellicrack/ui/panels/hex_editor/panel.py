@@ -830,7 +830,9 @@ class HexEditorPanel(
                 return
             if event_type == evt.DOCUMENT_OPENED:
                 file_path_str = data.get("file_path")
-                if file_path_str and self.document is None:
+                if file_path_str:
+                    if self.document is not None:
+                        self.document = None
                     self.load_file(file_path_str)
             elif event_type == evt.CURSOR_MOVED:
                 offset = data.get("offset", 0)
@@ -866,7 +868,9 @@ class HexEditorPanel(
         """Handle selection range changes from the hex widget.
 
         Updates the data inspector, hash display, and stored selection
-        range for use by sub-panels.
+        range for use by sub-panels.  Propagates the new selection to
+        the shared state holder and bridge so AI tools and CLI callers
+        see the current GUI selection rather than stale data.
 
         Args:
             start: Selection start offset.
@@ -876,6 +880,16 @@ class HexEditorPanel(
         self._selection_end = end
         if start >= 0:
             self._update_data_inspector(start)
+        if start >= 0 and end >= 0:
+            if self.state_holder is not None:
+                self.state_holder.set_selection(start, end, source="panel")
+            if self._bridge is not None:
+                self._bridge.update_selection_from_gui(start, end)
+        else:
+            if self.state_holder is not None:
+                self.state_holder.clear_selection(source="panel")
+            if self._bridge is not None:
+                self._bridge.update_selection_from_gui(-1, -1)
 
     @staticmethod
     def _populate_toolbar_encoding_combo(combo: QComboBox) -> None:
@@ -1001,11 +1015,19 @@ class HexEditorPanel(
         if self._hex_widget is None:
             return
         copy_fn = getattr(self._hex_widget, "copy_as", None)
-        if callable(copy_fn):
-            result = str(copy_fn(fmt))
-            clipboard = QApplication.clipboard()
-            if clipboard is not None:
-                clipboard.setText(result)
+        if not callable(copy_fn):
+            return
+        result = str(copy_fn(fmt))
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            _logger.warning("copy_as_no_clipboard", fmt=fmt)
+            show_warning(self, "Clipboard Unavailable", "The system clipboard is not accessible. The selection could not be copied.")
+            return
+        try:
+            clipboard.setText(result)
+        except RuntimeError as exc:
+            _logger.warning("copy_as_clipboard_write_failed", fmt=fmt, exc_info=True)
+            show_warning(self, "Clipboard Write Failed", f"Could not write to the clipboard:\n{exc}")
 
     def _on_alignment_changed(self, text: str) -> None:
         """Handle alignment combo box changes.
