@@ -1489,6 +1489,7 @@ class QEMUSandbox(SandboxBase):
 
             await self._cleanup()
 
+            self._active_captures.clear()
             self.state.status = "stopped"
             self.state.pid = None
             self._vnc_port = None
@@ -2272,7 +2273,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                 command,
                 time_limit=effective_timeout,
             )
-            result = "success"
+            result = "success" if exit_code == 0 else "error"
         except SandboxTimeoutError as e:
             _logger.warning("sandbox_execution_timeout", extra={"binary": binary_path.name, "timeout": effective_timeout})
             result = "timeout"
@@ -2962,8 +2963,7 @@ rule PackedBinary {
 
                 scan_files = await asyncio.to_thread(_extract_zips)
             else:
-                input_dir = self._shared_folder / "input"
-                scan_files = await asyncio.to_thread(lambda: [f for f in input_dir.iterdir() if f.is_file()])
+                scan_files = []
 
             for scan_file in scan_files:
                 try:
