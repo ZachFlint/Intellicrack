@@ -12,7 +12,7 @@ import hashlib
 import io
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Protocol, cast, override
+from typing import IO, TYPE_CHECKING, Any, Final, Protocol, cast, override
 
 from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat, QTextDocument
 from PyQt6.QtWidgets import (
@@ -418,6 +418,7 @@ class _DocAPI:
         document: _HexDocumentProtocol,
         hex_widget: object,
         file_path: str | None,
+        encoding: str = "utf-8",
     ) -> None:
         """Initialize the _DocAPI with document and widget references.
 
@@ -425,10 +426,12 @@ class _DocAPI:
             document: The backing hex document object.
             hex_widget: The hex editor widget for cursor/selection access.
             file_path: Path of the currently loaded file.
+            encoding: Character encoding used for text search operations.
         """
         self._doc = document
         self._widget = hex_widget
         self._file_path = file_path
+        self._encoding = encoding
 
     @property
     def file_path(self) -> str | None:
@@ -569,7 +572,7 @@ class _DocAPI:
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
         """
-        raw = self._doc.search_text(text, "utf-8", case_sensitive=True, max_results=max_results)
+        raw = self._doc.search_text(text, self._encoding, case_sensitive=True, max_results=max_results)
         return [(int(r[0]), int(r[1])) for r in raw]
 
     def add_bookmark(
@@ -744,7 +747,7 @@ class _ReadOnlyDocAPI:
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
         """
-        return self._inner.search_text(text, max_results)
+        return self._inner.search_text(text, max_results=max_results)
 
     def add_bookmark(
         self,
@@ -956,19 +959,26 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         *values: object,
         sep: str | None = " ",
         end: str | None = "\n",
-        **kwargs: object,
+        file: IO[str] | None = None,
+        flush: bool = False,
     ) -> None:
         """Replacement for ``print`` that writes to the captured buffer.
+
+        All output is redirected to the script capture buffer regardless of
+        the ``file`` argument so that scripts calling ``print(..., file=x)``
+        still produce visible output in the panel log widget.
 
         Args:
             *values: Values to print.
             sep: Separator string between values.
             end: String appended after the last value.
-            **kwargs: Additional keyword arguments (only ``flush`` is honoured).
+            file: Ignored; output always goes to the capture buffer.
+            flush: When ``True`` the capture buffer is flushed after writing.
         """
+        _ = file
         text = (sep or " ").join(str(v) for v in values) + (end or "\n")
         stdout_capture.write(text)
-        if kwargs.get("flush"):
+        if flush:
             stdout_capture.flush()
 
     safe_builtins["print"] = _safe_print
@@ -1079,7 +1089,15 @@ class ScriptingMixin:
             return
 
         fp = str(self.file_path) if self.file_path else None
-        base_api = _DocAPI(self.document, self._hex_widget, fp)
+        encoding: str = "utf-8"
+        encoding_combo = getattr(self, "_encoding_combo", None)
+        if encoding_combo is not None:
+            current_text_fn = getattr(encoding_combo, "currentText", None)
+            if callable(current_text_fn):
+                enc_raw = current_text_fn()
+                if isinstance(enc_raw, str) and enc_raw:
+                    encoding = enc_raw.lower().replace("-", "")
+        base_api = _DocAPI(self.document, self._hex_widget, fp, encoding)
         doc_api: _DocAPI | _ReadOnlyDocAPI = _ReadOnlyDocAPI(base_api)
 
         if _script_uses_writes(source):
