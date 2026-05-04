@@ -32,9 +32,13 @@ class TrackedRefreshWorker(QThread):
 
     Attributes:
         refresh_finished: Signal emitted with tracked process data when collection completes.
+        refresh_error: Signal emitted with a user-facing error string when collection fails.
+            The string starts with the canonical ``"Refresh failed: "`` prefix so consumers
+            can route it directly to a status surface or detect it via prefix match.
     """
 
     refresh_finished: pyqtSignal = pyqtSignal(list)
+    refresh_error: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the TrackedRefreshWorker.
@@ -46,12 +50,12 @@ class TrackedRefreshWorker(QThread):
 
     def run(self) -> None:
         """Execute tracked process data collection in the background thread."""
-        result: list[dict[str, str | int | None]] = []
         try:
             manager = ProcessManager.get_instance()
             all_tracked: list[TrackedProcess] = manager.get_all_tracked()
             running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
 
+            result: list[dict[str, str | int | None]] = []
             for tracked in all_tracked:
                 pid = tracked.pid
                 status = "Running" if pid in running_pids else "Stopped"
@@ -63,7 +67,9 @@ class TrackedRefreshWorker(QThread):
                     "status": status,
                     "registered_at": registered_str,
                 })
-        except (RuntimeError, ValueError, KeyError) as e:
-            _logger.warning("tracked_refresh_failed", error=str(e))
+        except (RuntimeError, ValueError, KeyError) as exc:
+            _logger.warning("tracked_refresh_failed", error=str(exc))
+            self.refresh_error.emit(f"Refresh failed: {exc}")
+            return
 
         self.refresh_finished.emit(result)
