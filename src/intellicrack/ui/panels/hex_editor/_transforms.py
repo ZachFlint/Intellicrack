@@ -172,6 +172,7 @@ class TransformsMixin:
     _transform_pipeline: Any
     _transform_nodes_cache: list[TransformDescriptor]
     _bridge: Any | None
+    state_holder: Any | None
     _selection_start: int
     _selection_end: int
 
@@ -560,6 +561,9 @@ class TransformsMixin:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
                     update_fn()
+            state_holder = getattr(self, "state_holder", None)
+            if state_holder is not None:
+                state_holder.notify_data_modified(cursor_offset, write_len, source="hex-editor.transforms.apply")
             self._on_data_changed()
             _logger.info("transform_applied", offset=cursor_offset, length=write_len)
 
@@ -722,6 +726,9 @@ class TransformsMixin:
                 update_fn = getattr(self._hex_widget, "_update_viewport", None)
                 if callable(update_fn):
                     update_fn()
+            state_holder = getattr(self, "state_holder", None)
+            if state_holder is not None:
+                state_holder.notify_data_modified(cursor_offset, write_len, source="hex-editor.transforms.pipeline")
             self._on_data_changed()
             _logger.info("pipeline_executed", offset=cursor_offset, length=write_len)
 
@@ -742,6 +749,9 @@ class TransformsMixin:
         except (RuntimeError, OSError, ValueError, AttributeError):
             _logger.exception("block_fill_failed", offset=offset, length=length)
             return
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            state_holder.notify_data_modified(offset, length, source="hex-editor.transforms.fill")
         self._refresh_widget()
         _logger.info("block_fill_complete", offset=offset, length=length)
 
@@ -759,6 +769,9 @@ class TransformsMixin:
         except (RuntimeError, OSError, ValueError, AttributeError):
             _logger.exception("block_copy_failed", src=src, length=length, dst=dst)
             return
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            state_holder.notify_data_modified(dst, length, source="hex-editor.transforms.copy")
         self._refresh_widget()
 
     def _on_block_move(self) -> None:
@@ -775,6 +788,9 @@ class TransformsMixin:
         except (RuntimeError, OSError, ValueError, AttributeError):
             _logger.exception("block_move_failed", src=src, length=length, dst=dst)
             return
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            state_holder.notify_data_modified(0, length, source="hex-editor.transforms.move")
         self._refresh_widget()
 
     def _on_block_swap(self) -> None:
@@ -791,6 +807,10 @@ class TransformsMixin:
         except (RuntimeError, OSError, ValueError, AttributeError):
             _logger.exception("block_swap_failed", off_a=off_a, len_a=len_a, off_b=off_b, len_b=len_b)
             return
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            total_len = len_a + len_b
+            state_holder.notify_data_modified(min(off_a, off_b), total_len, source="hex-editor.transforms.swap")
         self._refresh_widget()
 
     def _on_apply_arithmetic(self) -> None:
