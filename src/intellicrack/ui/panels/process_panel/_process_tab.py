@@ -664,7 +664,18 @@ class ProcessTab(QWidget):
 
         self._tracked_worker = TrackedRefreshWorker(self)
         self._tracked_worker.refresh_finished.connect(self._on_tracked_finished)
+        self._tracked_worker.refresh_error.connect(self._on_tracked_error)
         self._tracked_worker.start()
+
+    def _on_tracked_error(self, message: str) -> None:
+        """Handle an error string emitted by the tracked-process refresh worker.
+
+        Args:
+            message: User-facing error string from ``TrackedRefreshWorker.refresh_error``.
+        """
+        self._tracked_refresh_btn.setEnabled(True)
+        self._tracked_refresh_btn.setText("Refresh")
+        _logger.warning("tracked_refresh_worker_error", error=message)
 
     def _on_tracked_finished(self, tracked_data: list[dict[str, str | int | None]]) -> None:
         """Handle tracked process data from worker.

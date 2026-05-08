@@ -100,7 +100,7 @@ class ThreadsTab(QWidget):
             threads: List of ThreadInfo from the bridge.
         """
         self._threads = threads
-        for combo in (self._reg_combo, self._stack_combo, self._seh_combo, self._fiber_combo):
+        for combo in (self._reg_combo, self._stack_combo, self._seh_combo, self._fiber_combo, self._tls_thread_combo):
             combo.clear()
             for t in threads:
                 combo.addItem(f"TID {t.tid}", t.tid)
@@ -206,6 +206,9 @@ class ThreadsTab(QWidget):
         rh = self._reg_table.horizontalHeader()
         if rh is not None:
             rh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self._reg_sync_active: bool = False
+        self._reg_last_edited_col: dict[int, int] = {}
+        _ = self._reg_table.cellChanged.connect(self._on_reg_cell_changed)
         tab_layout.addWidget(self._reg_table)
         return tab
 
@@ -294,26 +297,21 @@ class ThreadsTab(QWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
-        toolbar = QToolBar()
-        toolbar.setMovable(False)
-        toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+        fiber_toolbar = QToolBar()
+        fiber_toolbar.setMovable(False)
+        fiber_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
 
-        toolbar.addWidget(QLabel("Thread:"))
+        fiber_toolbar.addWidget(QLabel("Thread:"))
         self._fiber_combo = QComboBox()
         self._fiber_combo.setMinimumWidth(120)
-        toolbar.addWidget(self._fiber_combo)
+        fiber_toolbar.addWidget(self._fiber_combo)
 
         fiber_btn = QPushButton("Get Fiber Data")
         fiber_btn.setObjectName("tool_button")
         fiber_btn.clicked.connect(self._on_fiber)
-        toolbar.addWidget(fiber_btn)
+        fiber_toolbar.addWidget(fiber_btn)
 
-        tls_btn = QPushButton("Get TLS Values")
-        tls_btn.setObjectName("tool_button")
-        tls_btn.clicked.connect(self._on_tls)
-        toolbar.addWidget(tls_btn)
-
-        tab_layout.addWidget(toolbar)
+        tab_layout.addWidget(fiber_toolbar)
 
         self._fiber_table = QTableWidget(0, 2)
         self._fiber_table.setHorizontalHeaderLabels(["Field", "Value"])
@@ -322,7 +320,21 @@ class ThreadsTab(QWidget):
             fh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         tab_layout.addWidget(self._fiber_table)
 
-        tab_layout.addWidget(QLabel("TLS Slots"))
+        tls_toolbar = QToolBar()
+        tls_toolbar.setMovable(False)
+        tls_toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
+
+        tls_toolbar.addWidget(QLabel("Thread:"))
+        self._tls_thread_combo = QComboBox()
+        self._tls_thread_combo.setMinimumWidth(120)
+        tls_toolbar.addWidget(self._tls_thread_combo)
+
+        tls_btn = QPushButton("Get TLS Values")
+        tls_btn.setObjectName("tool_button")
+        tls_btn.clicked.connect(self._on_tls)
+        tls_toolbar.addWidget(tls_btn)
+
+        tab_layout.addWidget(tls_toolbar)
 
         self._tls_table = QTableWidget(0, 2)
         self._tls_table.setHorizontalHeaderLabels(["Index", "Value"])
@@ -417,6 +429,47 @@ class ThreadsTab(QWidget):
                 self._reg_table.setItem(row, 2, QTableWidgetItem(str(int_val)))
 
         run_bridge_coroutine_async(self._bridge.get_thread_context(tid), _on_success, None, self)
+
+    def _on_reg_cell_changed(self, row: int, col: int) -> None:
+        """Mirror register value edits between the Hex and Decimal columns.
+
+        When the user edits the Hex column (1) the Decimal column (2) is updated
+        to reflect the parsed integer value and vice versa. A re-entrancy guard
+        prevents the mirrored write from triggering a second sync cycle.
+
+        Args:
+            row: Table row index of the changed cell.
+            col: Table column index of the changed cell (1 = Hex, 2 = Decimal).
+        """
+        if self._reg_sync_active:
+            return
+        if col not in {1, 2}:
+            return
+        item = self._reg_table.item(row, col)
+        if item is None:
+            return
+        raw = item.text().strip()
+        try:
+            int_val = int(raw, 16) if col == 1 else int(raw)
+        except ValueError:
+            return
+        self._reg_last_edited_col[row] = col
+        self._reg_sync_active = True
+        try:
+            if col == 1:
+                dec_item = self._reg_table.item(row, 2)
+                if dec_item is None:
+                    dec_item = QTableWidgetItem()
+                    self._reg_table.setItem(row, 2, dec_item)
+                dec_item.setText(str(int_val))
+            else:
+                hex_item = self._reg_table.item(row, 1)
+                if hex_item is None:
+                    hex_item = QTableWidgetItem()
+                    self._reg_table.setItem(row, 1, hex_item)
+                hex_item.setText(f"0x{int_val:X}")
+        finally:
+            self._reg_sync_active = False
 
     def _on_write_registers(self) -> None:
         """Write modified registers back to the thread."""
@@ -545,7 +598,7 @@ class ThreadsTab(QWidget):
         """Get TLS slot values for the selected thread."""
         if self._bridge is None:
             return
-        tid = self._fiber_combo.currentData()
+        tid = self._tls_thread_combo.currentData()
         if not isinstance(tid, int):
             return
 
