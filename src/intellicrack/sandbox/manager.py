@@ -10,6 +10,7 @@ This module provides a manager for creating, tracking, and coordinating multiple
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, assert_never
 from uuid import uuid4
@@ -33,6 +34,33 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 SandboxType = Literal["windows", "qemu"]
+
+FAILURE_CACHE_TTL_SECONDS: float = 60.0
+
+
+@dataclass
+class AvailabilityCacheEntry:
+    """Single cached availability result for one sandbox type.
+
+    Attributes:
+        available: Whether the sandbox type is available.
+        probed_at: When the probe was executed.
+    """
+
+    available: bool
+    probed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def is_expired(self, ttl_seconds: float) -> bool:
+        """Return True if the entry has exceeded its TTL.
+
+        Args:
+            ttl_seconds: Maximum age in seconds before the entry is stale.
+
+        Returns:
+            bool: True if the entry age exceeds ttl_seconds.
+        """
+        age = (datetime.now(UTC) - self.probed_at).total_seconds()
+        return age > ttl_seconds
 
 
 class SandboxInstance:
@@ -107,6 +135,7 @@ class SandboxManager:
         self._default_config = default_config or SandboxConfig()
         self._max_instances = max_instances
         self._lock = asyncio.Lock()
+        self._availability_cache: dict[SandboxType, AvailabilityCacheEntry] = {}
         _logger.info("sandbox_manager_initialized", max_instances=max_instances)
 
     @property
@@ -127,23 +156,97 @@ class SandboxManager:
         """
         return sum(inst.state.status == "running" for inst in self._instances.values())
 
+    @property
+    def availability_cache(self) -> dict[SandboxType, AvailabilityCacheEntry]:
+        """Read-only view of the current availability cache.
+
+        Returns:
+            dict[SandboxType, AvailabilityCacheEntry]: Current cache entries keyed by sandbox type.
+        """
+        return self._availability_cache
+
+    async def _probe_type(self, sandbox_type: SandboxType) -> bool:
+        """Execute a live availability check for one sandbox type without touching the cache.
+
+        This method performs the actual subprocess or OS query to determine
+        whether a sandbox type is usable. It has no caching side-effects so that
+        callers (primarily :meth:`_get_type_available`) can control cache writes.
+
+        Args:
+            sandbox_type: The sandbox type to probe.
+
+        Returns:
+            bool: True if the sandbox type is currently available.
+        """
+        sandbox: SandboxBase
+        if sandbox_type == "windows":
+            sandbox = WindowsSandbox(self._default_config)
+        elif sandbox_type == "qemu":
+            sandbox = QEMUSandbox(self._default_config, None)
+        else:
+            assert_never(sandbox_type)
+
+        available = await sandbox.is_available()
+        _logger.debug(
+            "sandbox_availability_probed",
+            sandbox_type=sandbox_type,
+            available=available,
+        )
+        return available
+
+    async def _get_type_available(self, sandbox_type: SandboxType) -> bool:
+        """Return cached availability, re-probing only when the cached entry is stale.
+
+        Successful results are returned immediately regardless of age. Failed results
+        are re-probed after :data:`FAILURE_CACHE_TTL_SECONDS` seconds so transient
+        unavailability does not lock out a type permanently. The result of any
+        re-probe is written to the cache by this method.
+
+        Args:
+            sandbox_type: The sandbox type to check.
+
+        Returns:
+            bool: True if the sandbox type is available.
+        """
+        entry = self._availability_cache.get(sandbox_type)
+
+        if entry is not None:
+            if entry.available:
+                return True
+            if not entry.is_expired(FAILURE_CACHE_TTL_SECONDS):
+                return False
+
+        available = await self._probe_type(sandbox_type)
+        self._availability_cache[sandbox_type] = AvailabilityCacheEntry(available=available)
+        return available
+
     async def get_available_types(self) -> list[SandboxType]:
         """Get list of available sandbox types.
+
+        Results are cached per type: successes are retained until
+        :meth:`invalidate_availability_cache` is called; failures are
+        re-probed after :data:`FAILURE_CACHE_TTL_SECONDS` seconds (60 s by default)
+        so that transient errors do not permanently hide a recoverable type.
 
         Returns:
             list[SandboxType]: List of sandbox types that can be used.
         """
-        available: list[SandboxType] = []
+        all_types: list[SandboxType] = ["windows", "qemu"]
+        return [sandbox_type for sandbox_type in all_types if await self._get_type_available(sandbox_type)]
 
-        windows_sandbox = WindowsSandbox(self._default_config)
-        if await windows_sandbox.is_available():
-            available.append("windows")
+    def invalidate_availability_cache(self, sandbox_type: SandboxType | None = None) -> None:
+        """Invalidate the availability cache to force re-probing on the next call.
 
-        qemu_sandbox = QEMUSandbox(self._default_config, None)
-        if await qemu_sandbox.is_available():
-            available.append("qemu")
-
-        return available
+        Args:
+            sandbox_type: If given, only the entry for this type is removed.
+                If None, the entire cache is cleared.
+        """
+        if sandbox_type is None:
+            self._availability_cache.clear()
+            _logger.debug("sandbox_availability_cache_cleared")
+        else:
+            self._availability_cache.pop(sandbox_type, None)
+            _logger.debug("sandbox_availability_cache_invalidated", sandbox_type=sandbox_type)
 
     async def create(
         self,
