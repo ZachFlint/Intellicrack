@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import ast
 import builtins
+import codecs
 import hashlib
 import io
 import re
+import sys
+import tempfile
+import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Protocol, cast, override
+from typing import IO, TYPE_CHECKING, Any, Final, Protocol, cast, override
 
 from PyQt6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat, QTextDocument
 from PyQt6.QtWidgets import (
@@ -226,6 +230,8 @@ _BUILTIN_NAMES: Final[list[str]] = [
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
     class _HexDocumentProtocol(Protocol):
         """Protocol describing the minimal hex document interface used by scripting."""
@@ -418,6 +424,7 @@ class _DocAPI:
         document: _HexDocumentProtocol,
         hex_widget: object,
         file_path: str | None,
+        encoding_provider: Callable[[], str | None] | None = None,
     ) -> None:
         """Initialize the _DocAPI with document and widget references.
 
@@ -425,10 +432,16 @@ class _DocAPI:
             document: The backing hex document object.
             hex_widget: The hex editor widget for cursor/selection access.
             file_path: Path of the currently loaded file.
+            encoding_provider: Optional zero-argument callable returning the
+                panel's currently selected text encoding (for example
+                ``"utf-8"`` or ``"utf-16-le"``). Used by ``search_text`` when
+                the script does not pass an explicit ``encoding=`` keyword.
+                A ``None`` return value falls back to UTF-8.
         """
         self._doc = document
         self._widget = hex_widget
         self._file_path = file_path
+        self._encoding_provider = encoding_provider
 
     @property
     def file_path(self) -> str | None:
@@ -559,18 +572,73 @@ class _DocAPI:
         raw = self._doc.search_hex(pattern, max_results)
         return [(int(r[0]), int(r[1])) for r in raw]
 
-    def search_text(self, text: str, max_results: int = 100) -> list[tuple[int, int]]:
-        """Search for text in the document.
+    def search_text(
+        self,
+        text: str,
+        max_results: int = 100,
+        *,
+        encoding: str | None = None,
+    ) -> list[tuple[int, int]]:
+        """Search for text in the document using a configurable encoding.
+
+        Resolution order for the encoding used to convert ``text`` to bytes:
+
+        1. The explicit ``encoding`` keyword argument when provided.
+        2. The panel's current encoding-combo selection (passed in via the
+           ``encoding_provider`` callback at construction time).
+        3. ``"utf-8"`` as a final fallback.
+
+        The resolved encoding is validated through :func:`codecs.lookup` so a
+        misspelled codec surfaces as :class:`LookupError` rather than silently
+        falling back to UTF-8.
 
         Args:
             text: Text string to search for.
             max_results: Maximum number of results to return.
+            encoding: Optional explicit encoding override. When supplied this
+                wins over both the panel selection and the UTF-8 fallback.
 
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
+
+        Raises:
+            LookupError: If the resolved encoding is not a known Python codec.
         """
-        raw = self._doc.search_text(text, "utf-8", case_sensitive=True, max_results=max_results)
+        resolved = self._resolve_search_encoding(encoding)
+        try:
+            codecs.lookup(resolved)
+        except LookupError as exc:
+            msg = f"unknown encoding {resolved!r} for doc.search_text"
+            raise LookupError(msg) from exc
+        raw = self._doc.search_text(text, resolved, case_sensitive=True, max_results=max_results)
         return [(int(r[0]), int(r[1])) for r in raw]
+
+    def _resolve_search_encoding(self, explicit: str | None) -> str:
+        """Resolve the codec name used by :meth:`search_text`.
+
+        Selection order:
+
+        1. ``explicit`` when not ``None``.
+        2. The panel's current encoding-combo selection via
+           ``encoding_provider`` when set.
+        3. ``"utf-8"`` as a final fallback.
+
+        Args:
+            explicit: Encoding name passed via the script's ``encoding=``
+                keyword argument, or ``None`` when no override was supplied.
+
+        Returns:
+            str: The codec name to pass through to the document search call.
+        """
+        if explicit is not None:
+            return explicit
+
+        if self._encoding_provider is not None:
+            panel_encoding = self._encoding_provider()
+            if panel_encoding:
+                return panel_encoding
+
+        return "utf-8"
 
     def add_bookmark(
         self,
@@ -734,17 +802,35 @@ class _ReadOnlyDocAPI:
         """
         return self._inner.search_hex(pattern, max_results)
 
-    def search_text(self, text: str, max_results: int = 100) -> list[tuple[int, int]]:
-        """Search for text in the document.
+    def search_text(
+        self,
+        text: str,
+        max_results: int = 100,
+        *,
+        encoding: str | None = None,
+    ) -> list[tuple[int, int]]:
+        """Search for text in the document using a configurable encoding.
+
+        Forwards to :meth:`_DocAPI.search_text` after re-raising any
+        :class:`LookupError` produced when validating the explicit override
+        so the read-only proxy preserves the same surface contract as the
+        full API.
 
         Args:
             text: Text string to search for.
             max_results: Maximum number of results to return.
+            encoding: Optional explicit encoding override.
 
         Returns:
             list[tuple[int, int]]: List of (offset, length) matches.
+
+        Raises:
+            LookupError: If the resolved encoding is not a known Python codec.
         """
-        return self._inner.search_text(text, max_results)
+        try:
+            return self._inner.search_text(text, max_results, encoding=encoding)
+        except LookupError as exc:
+            raise LookupError(str(exc)) from exc
 
     def add_bookmark(
         self,
@@ -930,46 +1016,170 @@ def _safe_hasattr(target: object, name: object) -> bool:
     return hasattr(target, name)
 
 
+_SCRIPT_TEMPDIR_PREFIX: Final[str] = "intellicrack_hex_script_"
+
+
+def _resolve_user_print_path(
+    name: str,
+    sandbox_dir: Path,
+    opened: dict[str, IO[str]],
+) -> Path:
+    """Resolve a user-supplied filename into a sandboxed path under ``sandbox_dir``.
+
+    Rejects absolute paths, drive-qualified paths, and ``..`` traversal so
+    sandboxed scripts can only create files inside the per-execution
+    tempdir. Reuses an already-opened handle for repeat ``print(..., file=name)``
+    calls within the same script run.
+
+    Args:
+        name: User-supplied filename (relative path, no traversal segments).
+        sandbox_dir: Per-script tempdir that constrains output file creation.
+        opened: Mutable mapping of filename to open text handle, used to
+            reuse handles across multiple ``print`` calls.
+
+    Returns:
+        Path: Absolute path inside ``sandbox_dir`` corresponding to ``name``.
+
+    Raises:
+        _SandboxViolationError: If ``name`` is absolute, contains ``..``, or
+            otherwise escapes ``sandbox_dir``.
+    """
+    candidate = Path(name)
+    if candidate.is_absolute() or candidate.drive:
+        msg = f"print(..., file={name!r}) must be a relative filename inside the script tempdir"
+        raise _SandboxViolationError(msg)
+    if any(part in {"..", ""} for part in candidate.parts):
+        msg = f"print(..., file={name!r}) may not contain '..' segments"
+        raise _SandboxViolationError(msg)
+
+    resolved = (sandbox_dir / candidate).resolve()
+    sandbox_root = sandbox_dir.resolve()
+    try:
+        resolved.relative_to(sandbox_root)
+    except ValueError as exc:
+        msg = f"print(..., file={name!r}) escapes the script tempdir"
+        raise _SandboxViolationError(msg) from exc
+
+    if name not in opened:
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        opened[name] = resolved.open("w", encoding="utf-8")
+    return resolved
+
+
 def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str, Any]:
     """Run a user-supplied Python script in a sandboxed namespace.
 
     Validates the script via :func:`_validate_script_ast`, builds a safe
-    builtin set, captures stdout, executes the source, and returns the
-    captured output plus the names of any non-callable user variables.
+    builtin set, captures ``stdout`` and ``stderr`` into separate sinks,
+    executes the source, and returns the captured output plus the names of
+    any non-callable user variables.
+
+    The replacement ``print`` builtin honours the standard ``file=`` keyword:
+
+    * ``file=None`` (the default) writes to the captured stdout sink.
+    * ``file=sys.stderr`` writes to a separate stderr sink.
+    * Any object with a ``.write`` method is written to directly, allowing
+      scripts to redirect into their own ``io.StringIO`` instances.
+    * A bare string is treated as a filename relative to a per-script
+      tempdir; the file is opened inside the tempdir and its absolute path
+      is reported back through the result for the panel to surface.
+
+    Script-level exceptions are caught, formatted with
+    :func:`traceback.format_exception`, and returned via the ``traceback``
+    key so the panel can render them inline rather than swallowing them.
 
     Args:
         source: Python script source code to execute.
         doc_api: Document API providing safe hex document access.
 
     Returns:
-        dict[str, Any]: Dict with ``output``, ``error`` (always ``None``
-            on success), and ``variables`` (mapping of user-defined
-            non-callable variable names to their ``repr`` strings).
+        dict[str, Any]: Dict with the following keys:
+
+            * ``output``: Captured stdout text.
+            * ``stderr``: Captured stderr text.
+            * ``error``: Short ``"Type: message"`` string when the script
+              raised, else ``None``.
+            * ``traceback``: Full formatted traceback when the script
+              raised, else ``None``.
+            * ``variables``: Mapping of user-defined non-callable variable
+              names to their ``repr`` strings.
+            * ``output_files``: List of absolute paths created via
+              ``print(..., file="name")``.
     """
     _validate_script_ast(source)
 
     safe_builtins = _build_safe_builtins()
 
     stdout_capture = io.StringIO()
+    stderr_capture = io.StringIO()
+    sandbox_dir = Path(tempfile.mkdtemp(prefix=_SCRIPT_TEMPDIR_PREFIX))
+    user_opened_files: dict[str, IO[str]] = {}
+
+    def _write_to_target(target: IO[str], text: str, *, flush: bool) -> None:
+        """Write ``text`` to ``target`` and flush when requested.
+
+        Args:
+            target: Open text sink with ``write`` and (optionally) ``flush``.
+            text: Already-joined output string.
+            flush: Whether to call ``target.flush()`` after writing.
+        """
+        target.write(text)
+        if flush:
+            flush_fn = getattr(target, "flush", None)
+            if callable(flush_fn):
+                flush_fn()
 
     def _safe_print(
         *values: object,
         sep: str | None = " ",
         end: str | None = "\n",
-        **kwargs: object,
+        file: object = None,
+        flush: bool = False,
     ) -> None:
-        """Replacement for ``print`` that writes to the captured buffer.
+        """Replacement for ``print`` honouring ``file=`` redirection.
 
         Args:
             *values: Values to print.
             sep: Separator string between values.
             end: String appended after the last value.
-            **kwargs: Additional keyword arguments (only ``flush`` is honoured).
+            file: Optional output sink. ``None`` and :data:`sys.stdout` map
+                to the captured stdout buffer; :data:`sys.stderr` maps to the
+                captured stderr buffer; a string is treated as a filename
+                inside the per-script tempdir; any other object must expose a
+                ``write`` method and is written to directly.
+            flush: Whether to flush ``file`` after writing.
+
+        Raises:
+            _SandboxViolationError: If ``file`` is a string filename that
+                escapes the per-script tempdir.
+            TypeError: If ``file`` is not ``None``, a recognised stdio handle,
+                a string filename, or a writable file-like object.
         """
         text = (sep or " ").join(str(v) for v in values) + (end or "\n")
-        stdout_capture.write(text)
-        if kwargs.get("flush"):
-            stdout_capture.flush()
+
+        if file is None or file is sys.stdout:
+            _write_to_target(stdout_capture, text, flush=flush)
+            return
+        if file is sys.stderr:
+            _write_to_target(stderr_capture, text, flush=flush)
+            return
+        if isinstance(file, str):
+            try:
+                resolved = _resolve_user_print_path(file, sandbox_dir, user_opened_files)
+            except _SandboxViolationError as exc:
+                raise _SandboxViolationError(str(exc)) from exc
+            _write_to_target(user_opened_files[file], text, flush=flush)
+            del resolved
+            return
+        write_fn = getattr(file, "write", None)
+        if not callable(write_fn):
+            msg = f"print(..., file={file!r}) requires a writable file-like object"
+            raise TypeError(msg)
+        write_fn(text)
+        if flush:
+            flush_fn = getattr(file, "flush", None)
+            if callable(flush_fn):
+                flush_fn()
 
     safe_builtins["print"] = _safe_print
     safe_builtins["getattr"] = _safe_getattr
@@ -981,18 +1191,39 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         "doc": doc_api,
     }
 
-    compiled = compile(source, "<script>", "exec")
-    exec(compiled, namespace)  # noqa: S102
+    error_message: str | None = None
+    traceback_text: str | None = None
+    try:
+        compiled = compile(source, "<script>", "exec")
+        exec(compiled, namespace)  # noqa: S102
+    except BaseException as exc:
+        if isinstance(exc, (KeyboardInterrupt, SystemExit, MemoryError)):
+            for handle in user_opened_files.values():
+                handle.close()
+            raise
+        error_message = f"{type(exc).__name__}: {exc}"
+        traceback_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    finally:
+        for handle in user_opened_files.values():
+            handle.close()
 
     user_vars: dict[str, str] = {}
     for key, val in namespace.items():
         if not key.startswith("_") and key != "doc" and not callable(val):
             user_vars[key] = repr(val)
 
+    output_files: list[str] = []
+    for name in user_opened_files:
+        resolved = (sandbox_dir / name).resolve()
+        output_files.append(str(resolved))
+
     return {
         "output": stdout_capture.getvalue(),
-        "error": None,
+        "stderr": stderr_capture.getvalue(),
+        "error": error_message,
+        "traceback": traceback_text,
         "variables": user_vars,
+        "output_files": output_files,
     }
 
 
@@ -1007,6 +1238,7 @@ class ScriptingMixin:
     _script_output: QPlainTextEdit | None
     _script_worker: GenericCallableWorker | None
     _script_status: QLabel | None
+    _encoding_combo: object | None
 
     def _create_scripting_tab(self) -> QWidget:
         """Create the Python scripting side panel tab.
@@ -1079,7 +1311,8 @@ class ScriptingMixin:
             return
 
         fp = str(self.file_path) if self.file_path else None
-        base_api = _DocAPI(self.document, self._hex_widget, fp)
+        encoding_provider = self._build_panel_encoding_provider()
+        base_api = _DocAPI(self.document, self._hex_widget, fp, encoding_provider)
         doc_api: _DocAPI | _ReadOnlyDocAPI = _ReadOnlyDocAPI(base_api)
 
         if _script_uses_writes(source):
@@ -1110,6 +1343,44 @@ class ScriptingMixin:
         _ = worker.call_error.connect(self._on_script_error_obj)
         self._script_worker = worker
         worker.start()
+
+    def _build_panel_encoding_provider(self) -> Callable[[], str | None]:
+        """Construct an encoding-resolver callback bound to the panel's combo.
+
+        The returned callable reads the current encoding-combo selection on
+        each call so scripts always observe the user's latest pick rather
+        than a value snapshotted at construction time. Falls back to the
+        combo's display text when no item user-data is set, and to ``None``
+        when the combo has not been wired up.
+
+        Returns:
+            Callable[[], str | None]: Callback returning the codec name to
+                use for ``doc.search_text`` when the script does not pass an
+                explicit ``encoding=`` keyword argument.
+        """
+
+        def _provider() -> str | None:
+            """Return the panel's currently selected codec name, if any.
+
+            Returns:
+                str | None: Selected codec name, or ``None`` if unavailable.
+            """
+            combo = self._encoding_combo
+            if combo is None:
+                return None
+            current_data = getattr(combo, "currentData", None)
+            if callable(current_data):
+                data = current_data()
+                if isinstance(data, str) and data:
+                    return data
+            current_text = getattr(combo, "currentText", None)
+            if callable(current_text):
+                text = current_text()
+                if isinstance(text, str) and text:
+                    return text
+            return None
+
+        return _provider
 
     def _on_script_finished_obj(self, result: object) -> None:
         """Forward worker results to the typed script handler.
@@ -1181,11 +1452,22 @@ class ScriptingMixin:
     def _on_script_finished(self, result: dict[str, Any]) -> None:
         """Display script execution results in the output console.
 
+        Surfaces (in order) the captured stdout, captured stderr, any files
+        the script wrote via ``print(..., file="name")``, the user-defined
+        variables snapshot, and finally the formatted traceback when the
+        script raised. Updates the status label to ``"Error"`` whenever a
+        traceback is present so failed runs are visually distinguished.
+
         Args:
-            result: Dict with output, error, and variables keys.
+            result: Result dict produced by :func:`execute_script` containing
+                ``output``, ``stderr``, ``error``, ``traceback``, ``variables``,
+                and ``output_files`` keys.
         """
+        traceback_text = result.get("traceback")
+        has_error = bool(traceback_text)
+
         if self._script_status is not None:
-            self._script_status.setText("Done")
+            self._script_status.setText("Error" if has_error else "Done")
 
         if self._script_output is None:
             return
@@ -1195,12 +1477,28 @@ class ScriptingMixin:
         if output:
             lines.append(output)
 
+        stderr_text = result.get("stderr", "")
+        if stderr_text:
+            lines.extend(("--- stderr ---", stderr_text))
+
+        output_files = result.get("output_files", [])
+        if output_files:
+            lines.append("--- Files ---")
+            lines.extend(f"  {path}" for path in output_files)
+
         user_vars = result.get("variables", {})
         if user_vars:
             lines.append("--- Variables ---")
             lines.extend(f"  {name} = {val}" for name, val in user_vars.items())
 
+        if traceback_text:
+            lines.extend(("--- Traceback ---", traceback_text))
+
         self._script_output.setPlainText("\n".join(lines))
+
+        if has_error:
+            error_message = result.get("error", "")
+            _logger.warning("script_execution_error", error=str(error_message))
 
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)

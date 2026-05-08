@@ -32,14 +32,19 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.hex_editor._base import (
     BYTE_VALUES_COUNT,
     ENTROPY_HIGH_THRESHOLD,
     ENTROPY_LOW_THRESHOLD,
     ENTROPY_MAX,
-    compute_custom_crc,
+    compute_streaming_custom_crc,
 )
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+_logger = get_logger(__name__)
 
 
 def _get_widget_colors() -> dict[str, QColor]:
@@ -288,22 +293,102 @@ class ByteDistributionWidget(QWidget):
         self.update()
 
 
+def _stream_crc_from_source(
+    file_path: str | None,
+    document: object,
+    length: int,
+    width: int,
+    poly: int,
+    init: int,
+    *,
+    ref_in: bool,
+    ref_out: bool,
+    xor_out: int,
+) -> int:
+    """Worker entry point that delegates to the streaming CRC helper.
+
+    The dialog's ``GenericCallableWorker`` invokes this from a worker
+    thread; bridge work is delegated to :func:`compute_streaming_custom_crc`.
+
+    Args:
+        file_path: When non-``None`` and pointing at a readable file,
+            the helper mmaps the file instead of paging through
+            ``document.read``.
+        document: Fallback hexcore-style document used when
+            ``file_path`` is ``None``.
+        length: Total number of bytes to stream when paging via the
+            document API. Forwarded to the helper as a chunk-size hint.
+        width: CRC bit width.
+        poly: Generator polynomial.
+        init: Initial CRC value.
+        ref_in: Reflect each input byte before processing.
+        ref_out: Reflect the final CRC value before XOR-out.
+        xor_out: Value to XOR with the final CRC.
+
+    Returns:
+        int: Computed CRC value.
+    """
+    del length
+    return compute_streaming_custom_crc(
+        file_path,
+        document,
+        width,
+        poly,
+        init,
+        ref_in=ref_in,
+        ref_out=ref_out,
+        xor_out=xor_out,
+    )
+
+
 class CustomCrcDialog(QDialog):
     """Dialog for computing a custom parametric CRC.
 
-    Provides input fields for width, polynomial, initial value, reflection options, and XOR-out value, then computes the CRC over the
-    supplied data when the user clicks Calculate.
+    Provides input fields for width, polynomial, initial value,
+    reflection options, and XOR-out value, then computes the CRC over
+    the supplied source when the user clicks Calculate.
+
+    The CRC is always computed on a :class:`GenericCallableWorker`
+    background thread so the UI stays responsive even on
+    multi-hundred-megabyte files. The worker streams from an mmap'd
+    file when the document is file-backed and falls back to chunked
+    ``document.read`` calls otherwise; in both cases the UI thread
+    never holds more than one chunk of the document body.
     """
 
-    def __init__(self, data: bytes, parent: QWidget | None = None) -> None:
-        """Initialize the CustomCrcDialog with data to compute CRC over.
+    crc_computed = pyqtSignal("PyQt_PyObject")
+
+    def __init__(
+        self,
+        *,
+        file_path: str | None,
+        document: object,
+        length: int,
+        parent: QWidget | None = None,
+        worker_parent: QWidget | None = None,
+    ) -> None:
+        """Initialize the dialog with the source the worker will stream.
 
         Args:
-            data: The byte data to compute the CRC over.
-            parent: Parent widget.
+            file_path: Optional file path; when set and readable the
+                worker mmaps the file instead of going through the
+                document API. ``None`` means "go through the document".
+            document: Hexcore-style document exposing
+                ``read(offset, length)``. Used when ``file_path`` is
+                ``None`` or when the file becomes unreadable.
+            length: Number of bytes the document currently holds.
+            parent: Parent widget for the dialog.
+            worker_parent: Parent for the :class:`GenericCallableWorker`.
+                Defaults to the dialog itself; pass ``None`` explicitly
+                to keep the worker unparented (only useful in tests).
         """
         super().__init__(parent)
-        self._data = data
+        self._file_path: str | None = file_path
+        self._document: object = document
+        self._length: int = length
+        self._worker_parent: QWidget | None = worker_parent if worker_parent is not None else self
+        self._worker: GenericCallableWorker | None = None
+
         self.setWindowTitle("Custom CRC Calculator")
         self.setMinimumWidth(360)
 
@@ -346,8 +431,16 @@ class CustomCrcDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+    def worker(self) -> GenericCallableWorker | None:
+        """Return the in-flight CRC worker, or ``None`` if no calculation is running.
+
+        Returns:
+            GenericCallableWorker | None: The active worker thread.
+        """
+        return self._worker
+
     def _calculate(self) -> None:
-        """Compute the CRC with the current parameters and display the result."""
+        """Spawn a worker that streams the CRC computation off the UI thread."""
         try:
             width = self._width_spin.value()
             poly = int(self._poly_edit.text().strip(), 16)
@@ -355,20 +448,57 @@ class CustomCrcDialog(QDialog):
             ref_in = self._ref_in_check.isChecked()
             ref_out = self._ref_out_check.isChecked()
             xor_out = int(self._xor_out_edit.text().strip(), 16)
-            result = compute_custom_crc(
-                self._data,
-                width,
-                poly,
-                init,
-                ref_in=ref_in,
-                ref_out=ref_out,
-                xor_out=xor_out,
-            )
         except ValueError as exc:
             self._result_label.setText(f"Error: {exc}")
-        else:
-            hex_digits = (width + 3) // 4
-            self._result_label.setText(f"Result: 0x{result:0{hex_digits}X}")
+            return
+
+        if self._worker is not None and self._worker.isRunning():
+            return
+
+        self._result_label.setText("Computing\u2026")
+        worker = GenericCallableWorker(
+            _stream_crc_from_source,
+            self._file_path,
+            self._document,
+            self._length,
+            width,
+            poly,
+            init,
+            ref_in=ref_in,
+            ref_out=ref_out,
+            xor_out=xor_out,
+            parent=self._worker_parent,
+        )
+        _: object = worker.call_finished.connect(self._on_worker_finished)
+        _ = worker.call_error.connect(self._on_worker_error)
+        self._worker = worker
+        worker.start()
+
+    def _on_worker_finished(self, result: object) -> None:
+        """Display the computed CRC and emit ``crc_computed`` for observers.
+
+        Args:
+            result: Worker result object; expected to be an integer CRC value.
+        """
+        self._worker = None
+        if not isinstance(result, int):
+            self._result_label.setText("Error: worker returned non-integer result")
+            _logger.warning("custom_crc_unexpected_result_type", result_type=type(result).__name__)
+            return
+        width = self._width_spin.value()
+        hex_digits = (width + 3) // 4
+        self._result_label.setText(f"Result: 0x{result:0{hex_digits}X}")
+        self.crc_computed.emit(result)
+
+    def _on_worker_error(self, exc: object) -> None:
+        """Display the worker error and clear the in-flight worker handle.
+
+        Args:
+            exc: Exception object the worker raised.
+        """
+        self._worker = None
+        self._result_label.setText(f"Error: {exc}")
+        _logger.warning("custom_crc_worker_failed", error_type=type(exc).__name__, error=str(exc))
 
 
 _DIGRAM_SIZE: int = 256

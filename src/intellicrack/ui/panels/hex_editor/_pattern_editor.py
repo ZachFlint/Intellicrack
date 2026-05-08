@@ -269,12 +269,16 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText("Apply failed")
             _logger.exception("pattern_apply_failed")
         else:
-            if self._templates_tree is not None:
-                self._templates_tree.clear()
-                if isinstance(result, list):
-                    typed_fields = cast("list[dict[str, object]]", result)
+            field_count = 0
+            if isinstance(result, list):
+                typed_fields = cast("list[dict[str, object]]", result)
+                field_count = len(typed_fields)
+                if self._templates_tree is not None:
+                    self._templates_tree.clear()
                     self._populate_template_tree(typed_fields)
                     self._highlight_template_fields(typed_fields)
+            elif self._templates_tree is not None:
+                self._templates_tree.clear()
 
             self._populate_template_combo()
 
@@ -282,7 +286,16 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText(f"Applied '{name}' at offset {cursor_offset}")
 
             if self.state_holder is not None:
-                self.state_holder.notify_template_registered(name, source="panel")
+                register_fn = getattr(self.state_holder, "notify_template_registered", None)
+                if callable(register_fn):
+                    register_fn(name, source="hex-editor.pattern_editor.apply.register")
+                pattern_executed = getattr(self.state_holder, "notify_pattern_executed", None)
+                if callable(pattern_executed):
+                    pattern_executed(
+                        name,
+                        field_count,
+                        source="hex-editor.pattern_editor.apply.execute",
+                    )
 
             _logger.info("pattern_applied", template_name=name, offset=cursor_offset)
 
@@ -327,6 +340,15 @@ class PatternEditorMixin:
 
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText(f"Executed at offset {offset} ({len(fields)} fields)")
+
+            if self.state_holder is not None:
+                pattern_executed = getattr(self.state_holder, "notify_pattern_executed", None)
+                if callable(pattern_executed):
+                    pattern_executed(
+                        "<inline>",
+                        len(fields),
+                        source="hex-editor.pattern_editor.apply.interpreter",
+                    )
 
             _logger.info("pattern_executed_via_interpreter", field_count=len(fields))
 
