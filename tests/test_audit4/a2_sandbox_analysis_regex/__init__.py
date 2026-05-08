@@ -3,4 +3,4 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit4 regression tests, organised by remediation work unit."""
+"""Audit4 A2 regression tests for sandbox analysis hostname regex (F-0026)."""
