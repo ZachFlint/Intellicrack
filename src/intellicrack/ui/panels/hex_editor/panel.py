@@ -358,6 +358,7 @@ class HexEditorPanel(
         if self._search_mode_combo is not None:
             self._search_mode_combo.currentTextChanged.connect(self._on_search_mode_changed)
 
+        self._setup_search_signals()
         self._setup_shortcuts()
 
         return self._main_vsplit
