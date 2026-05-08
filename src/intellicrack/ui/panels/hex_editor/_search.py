@@ -223,7 +223,6 @@ def _numeric_search_fallback(
 class SearchMixin:
     """Mixin providing hex/text/regex/numeric search for the hex editor panel."""
 
-    _document: Any | None
     _hex_widget: Any | None
     _search_input: QLineEdit | None
     _search_mode_combo: QComboBox | None
@@ -244,7 +243,8 @@ class SearchMixin:
 
     def _on_search(self) -> None:
         """Execute a search based on current mode and input."""
-        if self._document is None or self._search_input is None or self._search_mode_combo is None:
+        document: Any = getattr(self, "document", None)
+        if document is None or self._search_input is None or self._search_mode_combo is None:
             return
 
         query = self._search_input.text().strip()
@@ -268,7 +268,7 @@ class SearchMixin:
 
         self._search_worker = GenericCallableWorker(
             execute_text_search,
-            self._document,
+            document,
             mode,
             query,
             encoding,
@@ -431,6 +431,40 @@ class SearchMixin:
         if self._numeric_max_input is not None:
             self._numeric_max_input.setVisible(checked)
 
+    def _reset_search_state(self) -> None:
+        """Clear search results, highlights, and status for a new search context."""
+        self._search_results = []
+        self._search_index = 0
+        if self._hex_widget is not None:
+            clear_fn = getattr(self._hex_widget, "clear_highlights", None)
+            if callable(clear_fn):
+                clear_fn("search")
+        if self._search_status_label is not None:
+            self._search_status_label.setText("")
+
+    def _setup_search_signals(self) -> None:
+        """Wire search-input text changes to reset stale results."""
+        if self._search_input is not None:
+            self._search_input.textChanged.connect(self._on_search_input_changed)
+        if self._search_mode_combo is not None:
+            self._search_mode_combo.currentIndexChanged.connect(self._on_search_mode_index_changed)
+
+    def _on_search_input_changed(self, _text: str) -> None:
+        """Reset search state when the search input text is modified.
+
+        Args:
+            _text: The new text in the search input (unused; triggers state reset).
+        """
+        self._reset_search_state()
+
+    def _on_search_mode_index_changed(self, _index: int) -> None:
+        """Reset search state when the mode combo selection changes.
+
+        Args:
+            _index: The new combo-box index (unused; triggers state reset).
+        """
+        self._reset_search_state()
+
     def _on_search_mode_changed(self, mode: str) -> None:
         """Show or hide the numeric search panel and apply input validators based on mode.
 
@@ -440,6 +474,7 @@ class SearchMixin:
         Args:
             mode: The newly selected search mode string.
         """
+        self._reset_search_state()
         show_numeric = mode == "Numeric"
         if self._numeric_search_frame is not None:
             self._numeric_search_frame.setVisible(show_numeric)
@@ -456,7 +491,8 @@ class SearchMixin:
 
     def _on_numeric_search(self) -> None:
         """Execute a numeric value search using the current panel settings."""
-        if self._document is None or self._numeric_value_input is None:
+        document: Any = getattr(self, "document", None)
+        if document is None or self._numeric_value_input is None:
             return
 
         if self._numeric_search_worker is not None and self._numeric_search_worker.isRunning():
@@ -511,13 +547,13 @@ class SearchMixin:
             QMessageBox.warning(parent, "Numeric Search", f"Invalid value: {exc}")
             return
 
-        use_native = hasattr(self._document, "search_numeric")
+        use_native = hasattr(document, "search_numeric")
 
         self._numeric_value_input.setEnabled(False)
 
         self._numeric_search_worker = GenericCallableWorker(
             execute_numeric_search,
-            self._document,
+            document,
             min_val,
             max_val,
             fmt,

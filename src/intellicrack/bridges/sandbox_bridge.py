@@ -30,8 +30,10 @@ from intellicrack.core.types import (
     ToolParameter,
 )
 from intellicrack.sandbox import (
+    SandboxBase,
     SandboxConfig,
     SandboxError,
+    SandboxInstance,
     SandboxManager,
     SandboxType,
 )
@@ -92,6 +94,7 @@ _ERR_MANAGER_DESTROYED = "manager was shut down; call create() to recreate"
 _ERR_RULES_NOT_FOUND = "Custom rules file not found"
 _ERR_RULES_INVALID = "Custom rules file is not valid YAML or has wrong shape"
 _ERR_VNC_PORT_UNAVAILABLE = "VNC port is not allocated on this QEMU sandbox"
+_ERR_STOP_PCAP_FAILED = "Failed to stop active PCAP capture during cleanup"
 
 _VALID_SANDBOX_TYPES: frozenset[str] = frozenset({"windows", "qemu"})
 _VALID_YARA_MODES: frozenset[str] = frozenset({"files", "memory"})
@@ -172,6 +175,8 @@ class SandboxBridge(ToolBridgeBase):
         super().__init__()
         self._manager: SandboxManager | None = None
         self._manager_destroyed: bool = False
+        self._vnc_passwords: dict[str, str] = {}
+        self._active_pcap_captures: dict[str, str] = {}
         self._capabilities = BridgeCapabilities(
             supports_dynamic_analysis=True,
             supports_patching=False,
@@ -198,6 +203,60 @@ class SandboxBridge(ToolBridgeBase):
             has not been recreated, ``False`` otherwise.
         """
         return self._manager_destroyed
+
+    def attach_manager(self, manager: SandboxManager) -> None:
+        """Install an externally constructed ``SandboxManager``.
+
+        Used by callers that need to wrap an existing
+        ``SandboxBase``/``SandboxManager`` instance behind the bridge
+        without spinning up a fresh manager via :meth:`ensure_manager`.
+        Re-arming a previously shut-down bridge is also supported and
+        clears the destroyed flag so subsequent operations succeed.
+
+        Args:
+            manager: Pre-existing manager to install on this bridge.
+        """
+        self._manager = manager
+        self._manager_destroyed = False
+        _logger.info(
+            "sandbox_manager_attached",
+            instance_count=len(manager.instances),
+        )
+
+    def register_existing_sandbox(
+        self,
+        sandbox: object,
+        sandbox_type: SandboxType,
+    ) -> str:
+        """Register an already-constructed sandbox with the bridge manager.
+
+        Wraps the supplied sandbox in a ``SandboxInstance`` (using the
+        manager's normal instance bookkeeping) and adds it to the
+        manager owned by this bridge. If no manager has been
+        constructed yet, a fresh one is created. Returns the new
+        instance ID so callers can drive subsequent bridge operations.
+
+        Args:
+            sandbox: Pre-constructed ``SandboxBase`` (or compatible
+                duck-typed object) to register.
+            sandbox_type: Type tag (``"windows"`` or ``"qemu"``) used
+                by bridge dispatch logic to gate type-specific
+                operations such as snapshots and screenshots.
+
+        Returns:
+            str: ID of the registered ``SandboxInstance``.
+        """
+        manager = self.ensure_manager()
+        sb = cast("SandboxBase", sandbox)
+        instance = SandboxInstance(sandbox=sb, sandbox_type=sandbox_type)
+        instances_map = cast("dict[str, SandboxInstance]", vars(manager)["_instances"])
+        instances_map[instance.id] = instance
+        _logger.info(
+            "sandbox_existing_registered",
+            instance_id=instance.id,
+            sandbox_type=sandbox_type,
+        )
+        return instance.id
 
     @property
     def name(self) -> ToolName:
@@ -940,6 +999,8 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_DESTROY_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
+            self._vnc_passwords.pop(instance_id, None)
+            self._active_pcap_captures.pop(instance_id, None)
             return {"success": True, "instance_id": instance_id}
 
     async def run_binary(
@@ -1527,6 +1588,7 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_PCAP_START_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
+            self._active_pcap_captures[instance_id] = capture_id
             return {
                 "instance_id": instance_id,
                 "capture_id": capture_id,
@@ -1569,11 +1631,97 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_PCAP_STOP_FAILED}: {e}"
             raise ToolError(msg) from e
         else:
+            tracked = self._active_pcap_captures.get(instance_id)
+            if tracked == capture_id:
+                del self._active_pcap_captures[instance_id]
             return {
                 "instance_id": instance_id,
                 "capture_id": capture_id,
                 "pcap_path": str(pcap_path),
             }
+
+    async def stop_pcap(self, instance_id: str) -> dict[str, Any]:
+        """Stop any active PCAP capture for the given sandbox instance.
+
+        Cleanup-friendly variant of :meth:`pcap_stop` used by UI teardown
+        paths that do not retain the original ``capture_id`` value. If no
+        capture is active for the instance, the call is a no-op and
+        returns ``stopped=False``.
+
+        Args:
+            instance_id: ID of the sandbox instance whose PCAP capture
+                should be stopped.
+
+        Returns:
+            dict[str, Any]: Dictionary describing the outcome. Contains
+            ``instance_id`` (str) and ``stopped`` (bool); when a capture
+            was active, also ``capture_id`` (str) and ``pcap_path`` (str)
+            of the saved file.
+
+        Raises:
+            ToolError: If a capture was active and stopping it failed.
+        """
+        capture_id = self._active_pcap_captures.get(instance_id)
+        if capture_id is None:
+            _logger.debug("stop_pcap_no_active_capture", instance_id=instance_id)
+            return {"instance_id": instance_id, "stopped": False}
+
+        try:
+            result = await self.pcap_stop(instance_id, capture_id)
+        except ToolError as e:
+            _logger.warning(
+                "stop_pcap_failed",
+                instance_id=instance_id,
+                capture_id=capture_id,
+                error=str(e),
+            )
+            self._active_pcap_captures.pop(instance_id, None)
+            msg = f"{_ERR_STOP_PCAP_FAILED}: {e}"
+            raise ToolError(msg) from e
+
+        return {
+            "instance_id": instance_id,
+            "stopped": True,
+            "capture_id": str(result.get("capture_id", capture_id)),
+            "pcap_path": str(result.get("pcap_path", "")),
+        }
+
+    def set_vnc_password(self, instance_id: str, password: str) -> None:
+        """Register the VNC password configured for a sandbox instance.
+
+        QEMU VNC passwords are negotiated at launch (via the QMP
+        ``change vnc password`` command) and are not persisted by the
+        underlying QEMU process in a way the bridge can recover later.
+        Callers that configure VNC authentication on a QEMU sandbox
+        MUST register the password through this method so that UI
+        consumers can retrieve it via :meth:`get_vnc_password` when
+        auto-connecting an embedded viewer.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+            password: Plaintext VNC password to associate with the
+                instance. Pass an empty string to indicate the VNC
+                display is configured without authentication.
+        """
+        self._vnc_passwords[instance_id] = password
+        _logger.debug(
+            "vnc_password_registered",
+            instance_id=instance_id,
+            has_password=bool(password),
+        )
+
+    def get_vnc_password(self, instance_id: str) -> str | None:
+        """Return the VNC password registered for a sandbox instance.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+
+        Returns:
+            str | None: The plaintext VNC password previously registered
+            via :meth:`set_vnc_password`, or ``None`` if no password has
+            been registered for this instance.
+        """
+        return self._vnc_passwords.get(instance_id)
 
     async def screenshot(
         self,

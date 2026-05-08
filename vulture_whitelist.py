@@ -207,6 +207,8 @@ intellicrack.ui.tools._cutter_bridge  # unused-attribute
 intellicrack.ui.tools._ghidra_bridge  # unused-attribute
 intellicrack.bridges.hex_editor.encode_text  # unused-method (tool_definitions dispatch)
 intellicrack.bridges.hex_editor.list_process_regions  # unused-method (tool_definitions dispatch)
+intellicrack.sandbox.windows._minidump_via_dbghelp  # unused-function (utility kept for external callers)
+intellicrack.sandbox.windows.WindowsSandbox._minidump_via_procdump  # unused-method (utility kept for external callers)
 intellicrack.bridges.hex_editor.test_in_sandbox  # unused-method (tool_definitions dispatch)
 intellicrack.bridges.hex_editor.open_process_memory  # unused-method (tool_definitions dispatch)
 intellicrack.bridges.hex_editor.set_state_holder  # unused-method (getattr dispatch)

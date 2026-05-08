@@ -60,6 +60,75 @@ class TemplatesMixin:
     _hex_widget: Any | None
     _template_combo: QComboBox | None
     _templates_tree: QTreeWidget | None
+    state_holder: Any | None
+
+    def _notify_state_template_registered(self, template_name: str, *, source: str) -> None:
+        """Forward template-registration to the shared state holder if attached.
+
+        Args:
+            template_name: Name of the registered template.
+            source: Loop-guard identifier so the caller is filtered out.
+        """
+        holder = self.state_holder
+        if holder is None:
+            return
+        notify = getattr(holder, "notify_template_registered", None)
+        if not callable(notify):
+            return
+        notify(template_name, source=source)
+
+    def _notify_state_template_removed(self, template_name: str, *, source: str) -> None:
+        """Forward template-removal to the shared state holder if attached.
+
+        Args:
+            template_name: Name of the removed template.
+            source: Loop-guard identifier so the caller is filtered out.
+        """
+        holder = self.state_holder
+        if holder is None:
+            return
+        notify = getattr(holder, "notify_template_removed", None)
+        if not callable(notify):
+            return
+        notify(template_name, source=source)
+
+    def _notify_state_data_modified(self, offset: int, length: int, *, source: str) -> None:
+        """Forward a byte-region mutation event to the shared state holder if attached.
+
+        Args:
+            offset: Start byte offset of the affected range.
+            length: Number of bytes affected.
+            source: Loop-guard identifier so the caller is filtered out.
+        """
+        holder = self.state_holder
+        if holder is None:
+            return
+        notify = getattr(holder, "notify_data_modified", None)
+        if not callable(notify):
+            return
+        notify(offset, length, source=source)
+
+    def _notify_state_pattern_executed(
+        self,
+        pattern_name: str,
+        field_count: int,
+        *,
+        source: str,
+    ) -> None:
+        """Forward a pattern-execution event to the shared state holder if attached.
+
+        Args:
+            pattern_name: Name of the executed pattern or template.
+            field_count: Number of top-level fields produced by the execution.
+            source: Loop-guard identifier so the caller is filtered out.
+        """
+        holder = self.state_holder
+        if holder is None:
+            return
+        notify = getattr(holder, "notify_pattern_executed", None)
+        if not callable(notify):
+            return
+        notify(pattern_name, field_count, source=source)
 
     def _on_apply_template(self) -> None:
         """Apply the selected struct template at the current cursor offset."""
@@ -81,10 +150,18 @@ class TemplatesMixin:
         else:
             self._templates_tree.clear()
 
+            field_count = 0
             if isinstance(result, list):
                 typed_fields = cast("list[dict[str, object]]", result)
+                field_count = len(typed_fields)
                 self._populate_template_tree(typed_fields)
                 self._highlight_template_fields(typed_fields)
+
+            self._notify_state_pattern_executed(
+                template_name,
+                field_count,
+                source="hex-editor.templates.apply",
+            )
 
             _logger.info("template_applied", template=template_name)
 
@@ -226,6 +303,7 @@ class TemplatesMixin:
         else:
             self._populate_template_combo()
             self._select_template(name)
+            self._notify_state_template_registered(name, source="hex-editor.templates.import")
             _logger.info("template_imported", template_name=name)
 
     def _on_export_template(self) -> None:
@@ -282,6 +360,7 @@ class TemplatesMixin:
             _logger.exception("template_remove_failed", template_name=name)
         else:
             self._populate_template_combo()
+            self._notify_state_template_removed(name, source="hex-editor.templates.remove")
             _logger.info("template_removed", template_name=name)
 
     def _on_auto_bookmark_structure(self) -> None:
@@ -337,6 +416,7 @@ class TemplatesMixin:
             return
 
         self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", "#FF6B6B")
+        self._notify_state_data_modified(0, PE_DOS_HEADER_SIZE, source="hex-editor.templates.auto-bookmark.pe")
 
         if len(dos_data) < PE_DOS_LFANEW_OFFSET + 4:
             return
@@ -359,10 +439,20 @@ class TemplatesMixin:
             return
 
         self.document.add_bookmark(e_lfanew, PE_OPTIONAL_HEADER_OFFSET, "PE File Header", "#4ECDC4")
+        self._notify_state_data_modified(
+            e_lfanew,
+            PE_OPTIONAL_HEADER_OFFSET,
+            source="hex-editor.templates.auto-bookmark.pe",
+        )
 
         _machine, num_sections, opt_size, _characteristics = unpack_coff_header(coff_data, 4)
         if opt_size > 0:
             self.document.add_bookmark(e_lfanew + PE_OPTIONAL_HEADER_OFFSET, opt_size, "Optional Header", "#4ECDC4")
+            self._notify_state_data_modified(
+                e_lfanew + PE_OPTIONAL_HEADER_OFFSET,
+                opt_size,
+                source="hex-editor.templates.auto-bookmark.pe",
+            )
 
         section_offset = e_lfanew + PE_OPTIONAL_HEADER_OFFSET + opt_size
 
@@ -396,6 +486,7 @@ class TemplatesMixin:
                 sec_name = f"Section {i}"
             color = section_colors[i % len(section_colors)]
             self.document.add_bookmark(sec_off, 40, sec_name, color)
+            self._notify_state_data_modified(sec_off, 40, source="hex-editor.templates.auto-bookmark.pe")
 
     def _bookmark_elf_structure(self) -> None:
         """Create colored bookmarks for ELF file structure regions."""
@@ -403,6 +494,7 @@ class TemplatesMixin:
             return
 
         self.document.add_bookmark(0, 64, "ELF Header", "#FF6B6B")
+        self._notify_state_data_modified(0, 64, source="hex-editor.templates.auto-bookmark.elf")
 
         try:
             ident_raw: object = self.document.read(4, 1)
@@ -472,21 +564,15 @@ class TemplatesMixin:
 
         if ph_offset > 0 and ph_count > 0:
             ph_entry_size = 56 if is_64 else 32
-            self.document.add_bookmark(
-                ph_offset,
-                ph_entry_size * ph_count,
-                "Program Headers",
-                "#4ECDC4",
-            )
+            ph_total = ph_entry_size * ph_count
+            self.document.add_bookmark(ph_offset, ph_total, "Program Headers", "#4ECDC4")
+            self._notify_state_data_modified(ph_offset, ph_total, source="hex-editor.templates.auto-bookmark.elf")
 
         if sh_offset > 0 and sh_count > 0:
             sh_entry_size = 64 if is_64 else 40
-            self.document.add_bookmark(
-                sh_offset,
-                sh_entry_size * sh_count,
-                "Section Headers",
-                "#45B7D1",
-            )
+            sh_total = sh_entry_size * sh_count
+            self.document.add_bookmark(sh_offset, sh_total, "Section Headers", "#45B7D1")
+            self._notify_state_data_modified(sh_offset, sh_total, source="hex-editor.templates.auto-bookmark.elf")
 
         self._refresh_bookmarks()
         _logger.info("elf_structure_bookmarked")

@@ -79,6 +79,10 @@ _RETURNCODE_FAILURE = -1
 _RETURNCODE_UNKNOWN = -2
 _MS_PER_SECOND = 1000
 
+_XCOPY_NO_FILES = 2
+_XCOPY_INIT_ERROR = 4
+_XCOPY_ACCESS_DENIED = 5
+
 _ERR_SANDBOX_NOT_RUNNING = "Sandbox is not running"
 _ERR_SHARED_FOLDER_NOT_INIT = "Shared folder not initialized"
 _ERR_SANDBOX_PATHS_NOT_INIT = "Sandbox paths not initialized"
@@ -145,7 +149,7 @@ class WindowsSandbox(SandboxBase):
         self._active_captures: dict[str, str] = {}
         _logger.info(
             "windows_sandbox_initialized",
-            time_limit=getattr(self._config, "time_limit", None),
+            timeout_seconds=self._config.timeout_seconds,
         )
 
     async def is_available(self) -> bool:
@@ -472,8 +476,9 @@ class WindowsSandbox(SandboxBase):
 
         Polls Win32 process info for the vmwp worker whose command line
         references a fresh disposable VM spawned during this start. The
-        worker is matched conservatively by elapsed start time to avoid
-        claiming an unrelated VM.
+        worker is matched by command-line GUID when available, falling back
+        to the most recently created vmwp started within the last two minutes
+        when no command-line match is possible.
 
         Returns:
             int | None: PID of the matched worker, or None if it could not be resolved.
@@ -485,16 +490,24 @@ class WindowsSandbox(SandboxBase):
         ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
         ps_script = (
             "$ErrorActionPreference='Stop';"
-            "$since=(Get-Date).AddMinutes(-5);"
+            "$since=(Get-Date).AddMinutes(-2);"
             "$rows=Get-CimInstance Win32_Process -Filter \"Name='vmwp.exe'\" |"
             " Where-Object { $_.CreationDate -and $_.CreationDate -ge $since } |"
             " Sort-Object CreationDate -Descending |"
-            " Select-Object -First 1 ProcessId,CreationDate,CommandLine;"
+            " Select-Object ProcessId,CreationDate,CommandLine;"
             "if ($rows) {"
-            " $o=[pscustomobject]@{pid=[int]$rows.ProcessId;"
-            " started=$rows.CreationDate.ToString('o');"
-            " cmdline=[string]$rows.CommandLine };"
-            " $o | ConvertTo-Json -Compress"
+            " $best=$null;"
+            " foreach ($r in @($rows)) {"
+            "  if ($r.CommandLine -match '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}') {"
+            "   $best=$r; break"
+            "  }"
+            " };"
+            " if (-not $best) { $best=$rows | Select-Object -First 1 };"
+            " if ($best) {"
+            "  [pscustomobject]@{pid=[int]$best.ProcessId;"
+            "   started=$best.CreationDate.ToString('o');"
+            "   cmdline=[string]$best.CommandLine} | ConvertTo-Json -Compress"
+            " }"
             "}"
         )
 
@@ -535,12 +548,18 @@ class WindowsSandbox(SandboxBase):
     async def _cleanup(self) -> None:
         """Clean up temporary files and folders."""
         if self._temp_dir is not None and await asyncio.to_thread(self._temp_dir.exists):
-            try:
-                await asyncio.to_thread(
-                    shutil.rmtree,
-                    self._temp_dir,
-                    ignore_errors=True,
+            temp_dir = self._temp_dir
+
+            def _rmtree_onerror(func: object, path: object, exc_info: object) -> None:
+                _logger.warning(
+                    "temp_dir_cleanup_entry_failed",
+                    func=getattr(func, "__name__", str(func)),
+                    path=str(path),
+                    error=str(exc_info),
                 )
+
+            try:
+                await asyncio.to_thread(shutil.rmtree, temp_dir, onerror=_rmtree_onerror)
             except OSError as e:
                 _logger.warning("temp_dir_cleanup_failed", error=str(e))
 
@@ -724,9 +743,12 @@ class WindowsSandbox(SandboxBase):
             "            $code = 0\n"
             "            if ($null -ne $proc) { $code = [int]$proc.ExitCode }\n"
             "            Set-Content -LiteralPath $res -Value ([string]$code) -Encoding utf8\n"
-            "            try { Remove-Item -LiteralPath $item.FullName -Force -ErrorAction SilentlyContinue } catch {}\n"
+            "            try { Remove-Item -LiteralPath $item.FullName -Force -ErrorAction SilentlyContinue } catch { $_ | Out-Null }\n"
             "        }\n"
             "    } catch {\n"
+            "        $errMsg = $_.Exception.Message\n"
+            "        $ts = (Get-Date).ToString('o')\n"
+            "        \"$ts|dispatcher_error|$errMsg\" | Out-File -Append -FilePath (Join-Path $outputDir 'dispatcher_errors.log') -Encoding utf8\n"
             "        Start-Sleep -Milliseconds 500\n"
             "    }\n"
             "    Start-Sleep -Milliseconds 250\n"
@@ -851,6 +873,19 @@ class WindowsSandbox(SandboxBase):
             "$logPath = Join-Path -Path $LogDir -ChildPath 'file_monitor.log'\n"
             "$roots = @('C:\\Users\\WDAGUtilityAccount', 'C:\\ProgramData', 'C:\\Windows\\Temp', 'C:\\Windows\\System32', 'C:\\Windows\\SysWOW64', 'C:\\Users\\Public')\n"
             "$watchers = @()\n"
+            "$action = {\n"
+            "    $lp = $Event.MessageData\n"
+            "    $ts = (Get-Date).ToString('o')\n"
+            "    $op = $Event.SourceEventArgs.ChangeType\n"
+            "    $p = ($Event.SourceEventArgs.FullPath -replace '\\|','_')\n"
+            "    $size = ''\n"
+            "    try { $size = (Get-Item -LiteralPath $Event.SourceEventArgs.FullPath -ErrorAction Stop).Length } catch {}\n"
+            "    $old = ''\n"
+            "    if ($Event.SourceEventArgs.GetType().Name -eq 'RenamedEventArgs') {\n"
+            "        $old = ($Event.SourceEventArgs.OldFullPath -replace '\\|','_')\n"
+            "    }\n"
+            '    "$ts|$op|$p|$old|$size" | Out-File -Append -FilePath $lp -Encoding utf8\n'
+            "}\n"
             "foreach ($root in $roots) {\n"
             "    if (-not (Test-Path -LiteralPath $root)) { continue }\n"
             "    $w = New-Object System.IO.FileSystemWatcher\n"
@@ -859,22 +894,10 @@ class WindowsSandbox(SandboxBase):
             "    $w.EnableRaisingEvents = $true\n"
             "    $w.NotifyFilter = [System.IO.NotifyFilters]'FileName, DirectoryName, LastWrite, Size'\n"
             "    $watchers += $w\n"
-            "    $action = {\n"
-            "        $ts = (Get-Date).ToString('o')\n"
-            "        $op = $Event.SourceEventArgs.ChangeType\n"
-            "        $p = ($Event.SourceEventArgs.FullPath -replace '\\|','_')\n"
-            "        $size = ''\n"
-            "        try { $size = (Get-Item -LiteralPath $Event.SourceEventArgs.FullPath -ErrorAction Stop).Length } catch {}\n"
-            "        $old = ''\n"
-            "        if ($Event.SourceEventArgs.GetType().Name -eq 'RenamedEventArgs') {\n"
-            "            $old = ($Event.SourceEventArgs.OldFullPath -replace '\\|','_')\n"
-            "        }\n"
-            '        "$ts|$op|$p|$old|$size" | Out-File -Append -FilePath $using:logPath -Encoding utf8\n'
-            "    }\n"
-            "    Register-ObjectEvent $w 'Created' -Action $action | Out-Null\n"
-            "    Register-ObjectEvent $w 'Changed' -Action $action | Out-Null\n"
-            "    Register-ObjectEvent $w 'Deleted' -Action $action | Out-Null\n"
-            "    Register-ObjectEvent $w 'Renamed' -Action $action | Out-Null\n"
+            "    Register-ObjectEvent $w 'Created' -Action $action -MessageData $logPath | Out-Null\n"
+            "    Register-ObjectEvent $w 'Changed' -Action $action -MessageData $logPath | Out-Null\n"
+            "    Register-ObjectEvent $w 'Deleted' -Action $action -MessageData $logPath | Out-Null\n"
+            "    Register-ObjectEvent $w 'Renamed' -Action $action -MessageData $logPath | Out-Null\n"
             "}\n"
             "while ($true) { Start-Sleep -Seconds 1 }\n"
         )
@@ -901,6 +924,14 @@ class WindowsSandbox(SandboxBase):
             "    'HKLM:\\SYSTEM\\CurrentControlSet\\Services'\n"
             ")\n"
             "$baseline = @{}\n"
+            "function Get-RegValueType {\n"
+            "    param([string]$RegPath, [string]$ValueName)\n"
+            "    try {\n"
+            "        $item = Get-Item -LiteralPath $RegPath -ErrorAction Stop\n"
+            "        $kind = $item.GetValueKind($ValueName)\n"
+            "        return [string]$kind\n"
+            "    } catch { return 'Unknown' }\n"
+            "}\n"
             "function Snapshot-Values {\n"
             "    param([string]$Root)\n"
             "    $snap = @{}\n"
@@ -911,7 +942,8 @@ class WindowsSandbox(SandboxBase):
             "            try { $props = Get-ItemProperty -LiteralPath $it.PSPath -ErrorAction Stop } catch { continue }\n"
             "            foreach ($p in $props.PSObject.Properties) {\n"
             "                if ($p.Name -match '^PS') { continue }\n"
-            "                $key = $it.PSPath + '::' + $p.Name\n"
+            "                $vtype = Get-RegValueType -RegPath $it.PSPath -ValueName $p.Name\n"
+            "                $key = $it.PSPath + '::' + $p.Name + '::' + $vtype\n"
             "                $snap[$key] = [string]$p.Value\n"
             "            }\n"
             "        }\n"
@@ -928,24 +960,26 @@ class WindowsSandbox(SandboxBase):
             "    foreach ($root in $watchedRoots) {\n"
             "        $current = Snapshot-Values -Root $root\n"
             "        foreach ($k in $current.Keys) {\n"
-            "            $full = $k -split '::', 2\n"
+            "            $full = $k -split '::', 3\n"
             "            $path = $full[0]\n"
             "            $name = if ($full.Count -gt 1) { $full[1] } else { '' }\n"
+            "            $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\n"
             "            $val = ($current[$k] -replace '\\|','_')\n"
             "            if (-not $baseline.ContainsKey($k)) {\n"
-            '                "$ts|created|$path|$name|REG_SZ|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
+            '                "$ts|created|$path|$name|$rtype|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
             "                $baseline[$k] = $current[$k]\n"
             "            } elseif ($baseline[$k] -ne $current[$k]) {\n"
-            '                "$ts|modified|$path|$name|REG_SZ|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
+            '                "$ts|modified|$path|$name|$rtype|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
             "                $baseline[$k] = $current[$k]\n"
             "            }\n"
             "        }\n"
             "        foreach ($k in @($baseline.Keys)) {\n"
             "            if ($k -like ($root + '*') -and -not $current.ContainsKey($k)) {\n"
-            "                $full = $k -split '::', 2\n"
+            "                $full = $k -split '::', 3\n"
             "                $path = $full[0]\n"
             "                $name = if ($full.Count -gt 1) { $full[1] } else { '' }\n"
-            '                "$ts|deleted|$path|$name|REG_SZ|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
+            "                $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\n"
+            '                "$ts|deleted|$path|$name|$rtype|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
             "                $baseline.Remove($k)\n"
             "            }\n"
             "        }\n"
@@ -972,34 +1006,33 @@ class WindowsSandbox(SandboxBase):
             "    $ts = (Get-Date).ToString('o')\n"
             "    $tcp = Get-NetTCPConnection -ErrorAction SilentlyContinue\n"
             "    foreach ($c in $tcp) {\n"
-            "        $pid = [int]$c.OwningProcess\n"
+            "        $ownerPid = [int]$c.OwningProcess\n"
             "        $name = 'unknown'\n"
-            "        try { $name = (Get-Process -Id $pid -ErrorAction Stop).Name } catch {}\n"
-            "        $stats = $null\n"
+            "        try { $name = (Get-Process -Id $ownerPid -ErrorAction Stop).Name } catch {}\n"
             "        $sent = 0\n"
             "        $recv = 0\n"
             '        $local = "$($c.LocalAddress):$($c.LocalPort)"\n'
             '        $remote = "$($c.RemoteAddress):$($c.RemotePort)"\n'
             "        $state = [string]$c.State\n"
             '        $op = if ($state -eq "Listen") { "listen" } else { "connection" }\n'
-            '        $key = "tcp|$local|$remote|$state|$pid"\n'
+            '        $key = "tcp|$local|$remote|$state|$ownerPid"\n'
             "        if ($seen.ContainsKey($key)) { continue }\n"
             "        $seen[$key] = $true\n"
-            '        "$ts|$op|$local|$remote|$state|tcp|$sent|$recv|$pid|$name" |\n'
+            '        "$ts|$op|$local|$remote|$state|tcp|$sent|$recv|$ownerPid|$name" |\n'
             "            Out-File -Append -FilePath $logPath -Encoding utf8\n"
             "    }\n"
             "    $udp = Get-NetUDPEndpoint -ErrorAction SilentlyContinue\n"
             "    foreach ($u in $udp) {\n"
-            "        $pid = [int]$u.OwningProcess\n"
+            "        $ownerPid = [int]$u.OwningProcess\n"
             "        $name = 'unknown'\n"
-            "        try { $name = (Get-Process -Id $pid -ErrorAction Stop).Name } catch {}\n"
+            "        try { $name = (Get-Process -Id $ownerPid -ErrorAction Stop).Name } catch {}\n"
             '        $local = "$($u.LocalAddress):$($u.LocalPort)"\n'
             "        $remote = '0.0.0.0:0'\n"
             "        $state = 'Bound'\n"
-            '        $key = "udp|$local|$pid"\n'
+            '        $key = "udp|$local|$ownerPid"\n'
             "        if ($seen.ContainsKey($key)) { continue }\n"
             "        $seen[$key] = $true\n"
-            '        "$ts|bind|$local|$remote|$state|udp|0|0|$pid|$name" |\n'
+            '        "$ts|bind|$local|$remote|$state|udp|0|0|$ownerPid|$name" |\n'
             "            Out-File -Append -FilePath $logPath -Encoding utf8\n"
             "    }\n"
             "    if ($seen.Count -gt 8192) { $seen.Clear() }\n"
@@ -1027,21 +1060,21 @@ class WindowsSandbox(SandboxBase):
             "    $procs = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue\n"
             "    $currentIds = @{}\n"
             "    foreach ($p in $procs) {\n"
-            "        $pid = [int]$p.ProcessId\n"
-            "        $currentIds[$pid] = $true\n"
-            "        if ($known.ContainsKey($pid)) { continue }\n"
+            "        $procId = [int]$p.ProcessId\n"
+            "        $currentIds[$procId] = $true\n"
+            "        if ($known.ContainsKey($procId)) { continue }\n"
             "        $name = ($p.Name -replace '\\|','_')\n"
             "        $path = ($p.ExecutablePath -replace '\\|','_')\n"
             "        $cmd = ($p.CommandLine -replace '\\|','_')\n"
             "        $ppid = [int]$p.ParentProcessId\n"
-            '        "$ts|created|$pid|$name|$path|$cmd|$ppid|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
-            "        $known[$pid] = @{ name = $name; ppid = $ppid }\n"
+            '        "$ts|created|$procId|$name|$path|$cmd|$ppid|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
+            "        $known[$procId] = @{ name = $name; ppid = $ppid }\n"
             "    }\n"
-            "    foreach ($pid in @($known.Keys)) {\n"
-            "        if (-not $currentIds.ContainsKey($pid)) {\n"
-            "            $entry = $known[$pid]\n"
-            '            "$ts|terminated|$pid|$($entry.name)|||$($entry.ppid)|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
-            "            $known.Remove($pid)\n"
+            "    foreach ($procId in @($known.Keys)) {\n"
+            "        if (-not $currentIds.ContainsKey($procId)) {\n"
+            "            $entry = $known[$procId]\n"
+            '            "$ts|terminated|$procId|$($entry.name)|||$($entry.ppid)|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
+            "            $known.Remove($procId)\n"
             "        }\n"
             "    }\n"
             "    Start-Sleep -Seconds 1\n"
@@ -1092,17 +1125,29 @@ class WindowsSandbox(SandboxBase):
         )
         await asyncio.to_thread(paths.trigger.write_text, exec_content, encoding="utf-8")
 
-        deadline = time.monotonic() + effective_timeout
-        while time.monotonic() < deadline:
-            self._check_sandbox_alive()
-            await asyncio.sleep(_RESULT_POLL_INTERVAL)
-            if not await asyncio.to_thread(paths.result.exists):
-                continue
-            completed = await _read_dispatcher_result(paths)
-            if completed is not None:
-                return completed
+        try:
+            deadline = time.monotonic() + effective_timeout
+            while time.monotonic() < deadline:
+                self._check_sandbox_alive()
+                await asyncio.sleep(_RESULT_POLL_INTERVAL)
+                if not await asyncio.to_thread(paths.result.exists):
+                    continue
+                completed = await _read_dispatcher_result(paths)
+                if completed is not None:
+                    return completed
 
-        raise SandboxTimeoutError(_ERR_CMD_TIMEOUT)
+            raise SandboxTimeoutError(_ERR_CMD_TIMEOUT)
+        finally:
+            for ticket_path in (paths.trigger, paths.out, paths.err, paths.result):
+                try:
+                    if await asyncio.to_thread(ticket_path.exists):
+                        await asyncio.to_thread(ticket_path.unlink, missing_ok=True)
+                except OSError as del_err:
+                    _logger.debug(
+                        "ticket_file_cleanup_failed",
+                        path=str(ticket_path),
+                        error=str(del_err),
+                    )
 
     async def run_binary(
         self,
@@ -1156,7 +1201,7 @@ class WindowsSandbox(SandboxBase):
                 command,
                 time_limit=effective_timeout,
             )
-            result = "success"
+            result = "success" if exit_code == _RETURNCODE_SUCCESS else "error"
         except SandboxTimeoutError as e:
             _logger.warning(
                 "sandbox_execution_timeout",
@@ -1189,7 +1234,7 @@ class WindowsSandbox(SandboxBase):
         )
 
         if monitor:
-            await asyncio.sleep(_MONITOR_WAIT_SECONDS)
+            await self._wait_for_monitor_quiescence()
             await self._attach_all_logs(report)
 
         return report
@@ -1211,6 +1256,32 @@ class WindowsSandbox(SandboxBase):
                     log=str(log_file),
                     error=str(err),
                 )
+
+    async def _wait_for_monitor_quiescence(self) -> None:
+        """Wait until monitor logs stop growing or the maximum wait elapses.
+
+        Polls the host-side logs folder at ``_RESULT_POLL_INTERVAL`` intervals.
+        Returns as soon as the aggregate log size has been stable for one full
+        poll cycle, or after ``_MONITOR_WAIT_SECONDS`` seconds have elapsed.
+        """
+        if self._shared_folder is None:
+            return
+
+        logs_folder = self._shared_folder / "logs"
+        deadline = time.monotonic() + _MONITOR_WAIT_SECONDS
+        prev_size = -1
+
+        while time.monotonic() < deadline:
+            await asyncio.sleep(_RESULT_POLL_INTERVAL)
+            try:
+                total = await asyncio.to_thread(
+                    lambda: sum(f.stat().st_size for f in logs_folder.glob("*.log") if f.is_file()),
+                )
+            except OSError:
+                break
+            if total == prev_size:
+                return
+            prev_size = total
 
     async def _attach_all_logs(self, report: ExecutionReport) -> None:
         """Populate every activity field on the report from guest log files.
@@ -1350,17 +1421,34 @@ class WindowsSandbox(SandboxBase):
             _logger.warning("pcap_stop_failed", capture_id=capture_id, stderr=stderr)
             raise SandboxError(_ERR_PCAP_STOP_FAILED)
 
-        pcap_filename = self._active_captures.pop(capture_id)
-        pcap_path = self._shared_folder / "output" / pcap_filename
+        etl_filename = self._active_captures.pop(capture_id)
+        etl_path = self._shared_folder / "output" / etl_filename
+        pcap_filename = etl_filename.replace(".etl", ".pcap")
+        sandbox_etl_path = rf"{self.SANDBOX_SHARED_PATH}\output\{etl_filename}"
+        sandbox_pcap_path = rf"{self.SANDBOX_SHARED_PATH}\output\{pcap_filename}"
+
+        conv_exit, _, conv_err = await self.run_command(
+            f'pktmon etl2pcap "{sandbox_etl_path}" --out "{sandbox_pcap_path}"',
+        )
+        if conv_exit == _RETURNCODE_SUCCESS:
+            result_path = self._shared_folder / "output" / pcap_filename
+            _logger.info("pcap_etl2pcap_converted", capture_id=capture_id, path=str(result_path))
+        else:
+            _logger.warning(
+                "pcap_etl2pcap_failed_returning_etl",
+                capture_id=capture_id,
+                stderr=conv_err,
+            )
+            result_path = etl_path
 
         if output_path is not None:
             await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
-            await asyncio.to_thread(shutil.copy2, pcap_path, output_path)
+            await asyncio.to_thread(shutil.copy2, result_path, output_path)
             _logger.info("pcap_saved", capture_id=capture_id, path=str(output_path))
             return output_path
 
-        _logger.info("pcap_capture_stopped", capture_id=capture_id, path=str(pcap_path))
-        return pcap_path
+        _logger.info("pcap_capture_stopped", capture_id=capture_id, path=str(result_path))
+        return result_path
 
     async def capture_screenshot(self, output_path: Path | None = None) -> Path:
         """Capture a screenshot of the sandbox display.
@@ -1445,6 +1533,9 @@ class WindowsSandbox(SandboxBase):
             manufacturer = "HP"
             product_name = "HP EliteDesk 800 G6"
 
+        hardware_id = (
+            f"{{{secrets.token_hex(4)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(6)}}}"
+        )
         registry_patches: list[tuple[str, str, str, str]] = [
             ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemManufacturer", "String", manufacturer),
             ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemProductName", "String", product_name),
@@ -1455,16 +1546,22 @@ class WindowsSandbox(SandboxBase):
                 "String",
                 f"A{secrets.randbelow(30) + 1}.{secrets.randbelow(10)}",
             ),
-            ("HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum", "0", "String", "WDC WD10EZEX-00BBHA0"),
+            ("HKLM:\\SYSTEM\\ControlSet001\\Services\\Disk\\Enum", "0", "String", "WDC WD10EZEX-00BBHA0"),
             (
-                "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SystemInformation",
+                "HKLM:\\SYSTEM\\ControlSet001\\Control\\SystemInformation",
                 "ComputerHardwareId",
                 "String",
-                f"{{{secrets.token_hex(4)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(6)}}}",
+                hardware_id,
             ),
         ]
 
         for reg_path, reg_name, reg_type, reg_value in registry_patches:
+            ensure_cmd = (
+                'powershell -Command "'
+                f"if (-not (Test-Path -LiteralPath '{reg_path}')) "
+                f"{{ New-Item -Path '{reg_path}' -Force -ErrorAction SilentlyContinue | Out-Null }}\""
+            )
+            await self.run_command(ensure_cmd)
             cmd = (
                 'powershell -Command "'
                 f"Set-ItemProperty -Path '{reg_path}' -Name '{reg_name}' "
@@ -1510,12 +1607,16 @@ class WindowsSandbox(SandboxBase):
         return applied
 
     async def dump_memory(self, output_path: Path | None = None) -> Path:
-        """Dump the sandbox worker process memory to a file.
+        """Dump sandbox guest memory by running a minidump inside the guest.
 
-        Uses ``MiniDumpWriteDump`` from ``dbghelp.dll`` with
-        ``MiniDumpWithFullMemory`` to produce a full-memory dump of the
-        vmwp.exe worker backing the sandbox. Falls back to ``procdump64.exe``
-        if the API call fails or ``dbghelp.dll`` cannot be loaded.
+        The Windows Sandbox worker process (``vmwp.exe``) is a Protected Process
+        Light (PPL). ``OpenProcess(PROCESS_VM_READ)`` from the host always returns
+        ``ERROR_ACCESS_DENIED`` — even from SYSTEM — so host-side minidump
+        approaches (``dbghelp``, ``procdump``) cannot succeed against it.
+
+        This implementation requests the dump from inside the guest by running
+        a PowerShell ``MiniDumpWriteDump`` script via the dispatcher and then
+        copying the resulting file back to the host via the shared folder.
 
         Args:
             output_path: Optional path to save the memory dump.
@@ -1533,37 +1634,42 @@ class WindowsSandbox(SandboxBase):
         if self._shared_folder is None:
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
-        if self._worker_pid is None:
-            resolved = await self._resolve_worker_pid()
-            if resolved is None:
-                raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
-            self._worker_pid = resolved
+        dump_filename = f"memdump_{secrets.token_hex(8)}.dmp"
+        sandbox_dump_path = rf"{self.SANDBOX_SHARED_PATH}\output\{dump_filename}"
+
+        ps_script = (
+            'Add-Type -TypeDefinition @"\n'
+            "using System;\n"
+            "using System.Runtime.InteropServices;\n"
+            "public class MiniDumper {\n"
+            '    [DllImport("dbghelp.dll")] public static extern bool MiniDumpWriteDump(\n'
+            "        IntPtr hProcess, uint ProcessId, IntPtr hFile, uint DumpType,\n"
+            "        IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);\n"
+            '    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();\n'
+            '    [DllImport("kernel32.dll")] public static extern uint GetCurrentProcessId();\n'
+            '}"@ -ErrorAction Stop;\n'
+            f"$fs = [System.IO.File]::Create('{sandbox_dump_path}');\n"
+            "try {\n"
+            "    $ok = [MiniDumper]::MiniDumpWriteDump(\n"
+            "        [MiniDumper]::GetCurrentProcess(),\n"
+            "        [MiniDumper]::GetCurrentProcessId(),\n"
+            "        $fs.SafeFileHandle.DangerousGetHandle(),\n"
+            "        2, [IntPtr]::Zero, [IntPtr]::Zero, [IntPtr]::Zero);\n"
+            "    if (-not $ok) { throw 'MiniDumpWriteDump returned false' }\n"
+            "} finally { $fs.Close() }"
+        )
+        exit_code, _, stderr = await self.run_command(f'powershell -Command "{ps_script}"')
+        if exit_code != _RETURNCODE_SUCCESS:
+            _logger.warning("guest_memory_dump_failed", stderr=stderr)
+            raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
 
         dump_dir = self._shared_folder / "output"
-        await asyncio.to_thread(dump_dir.mkdir, parents=True, exist_ok=True)
-        dump_path = dump_dir / f"memdump_{secrets.token_hex(8)}.dmp"
-        worker_pid = self._worker_pid
-
-        dbghelp_ok, dbghelp_err = await asyncio.to_thread(
-            _minidump_via_dbghelp,
-            worker_pid,
-            dump_path,
-        )
-        if not dbghelp_ok:
-            _logger.warning("dbghelp_minidump_unavailable_falling_back_to_procdump", error=dbghelp_err)
-            proc_ok = await self._minidump_via_procdump(worker_pid, dump_path)
-            if not proc_ok:
-                _logger.warning(
-                    "memory_dump_failed",
-                    worker_pid=worker_pid,
-                    error=dbghelp_err,
-                )
-                raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
+        dump_path = dump_dir / dump_filename
 
         if not await asyncio.to_thread(dump_path.exists):
             raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
 
-        _logger.info("memory_dump_created", path=str(dump_path), pid=worker_pid)
+        _logger.info("memory_dump_created", path=str(dump_path))
 
         try:
             yara_matches = await self.yara_scan(scan_target="memory")
@@ -1589,7 +1695,10 @@ class WindowsSandbox(SandboxBase):
 
     @staticmethod
     async def _minidump_via_procdump(pid: int, dump_path: Path) -> bool:
-        """Invoke ``procdump64.exe`` to dump a process.
+        """Dump a host process via ``dbghelp`` first, then ``procdump64.exe``.
+
+        Attempts ``MiniDumpWriteDump`` via ``dbghelp.dll`` first. Falls back
+        to ``procdump64.exe`` / ``procdump.exe`` if that fails.
 
         Args:
             pid: Process to dump.
@@ -1598,6 +1707,11 @@ class WindowsSandbox(SandboxBase):
         Returns:
             bool: True if the dump file was produced, False otherwise.
         """
+        dbghelp_ok, dbghelp_err = await asyncio.to_thread(_minidump_via_dbghelp, pid, dump_path)
+        if dbghelp_ok and await asyncio.to_thread(dump_path.exists):
+            return True
+        _logger.debug("minidump_via_dbghelp_failed_trying_procdump", pid=pid, error=dbghelp_err)
+
         procdump = shutil.which("procdump64.exe") or shutil.which("procdump.exe")
         if procdump is None:
             _logger.debug("procdump_not_found", pid=pid)
@@ -1657,8 +1771,32 @@ class WindowsSandbox(SandboxBase):
 
         for guest_dir in guest_dirs:
             dir_name = Path(guest_dir).name
-            copy_cmd = f'xcopy /S /E /Y /I /Q "{guest_dir}" "{sandbox_staging}\\{dir_name}" 2>nul'
-            await self.run_command(copy_cmd)
+            copy_cmd = f'xcopy /S /E /Y /I /Q "{guest_dir}" "{sandbox_staging}\\{dir_name}"'
+            xcopy_exit, _, xcopy_err = await self.run_command(copy_cmd)
+            if xcopy_exit == _XCOPY_INIT_ERROR:
+                _logger.warning(
+                    "xcopy_initialisation_error",
+                    guest_dir=guest_dir,
+                    exit_code=xcopy_exit,
+                    stderr=xcopy_err,
+                )
+                raise SandboxError(_ERR_EXTRACT_FILES_FAILED)
+            if xcopy_exit == _XCOPY_ACCESS_DENIED:
+                _logger.warning(
+                    "xcopy_access_denied",
+                    guest_dir=guest_dir,
+                    exit_code=xcopy_exit,
+                    stderr=xcopy_err,
+                )
+            elif xcopy_exit == _XCOPY_NO_FILES:
+                _logger.debug("xcopy_no_files_found", guest_dir=guest_dir)
+            elif xcopy_exit not in {0, 1}:
+                _logger.warning(
+                    "xcopy_unexpected_exit_code",
+                    guest_dir=guest_dir,
+                    exit_code=xcopy_exit,
+                    stderr=xcopy_err,
+                )
 
         zip_filename = f"dropped_files_{extract_id}.zip"
         zip_path = self._shared_folder / "output" / zip_filename
@@ -1753,9 +1891,8 @@ class WindowsSandbox(SandboxBase):
 
                 scan_files = await asyncio.to_thread(_extract_zips)
             else:
-                input_dir = self._shared_folder / "input"
                 scan_files = await asyncio.to_thread(
-                    lambda: [f for f in input_dir.iterdir() if f.is_file()],
+                    lambda: [f for f in output_dir.rglob("*") if f.is_file() and f.suffix.lower() not in {".txt", ".log"}],
                 )
 
             for scan_file in scan_files:

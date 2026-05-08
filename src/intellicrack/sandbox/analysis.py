@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from intellicrack.core.logging import get_logger
+from intellicrack.sandbox._tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 from intellicrack.sandbox.base import (
     BehaviorMatch,
     ExecutionReport,
@@ -37,7 +38,7 @@ _SHA256_PATTERN = re.compile(r"\b([a-fA-F0-9]{64})\b")
 _EMAIL_PATTERN = re.compile(r"\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b")
 _DOMAIN_PATTERN = re.compile(
     r"\b((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)"
-    r"+[a-zA-Z]{2,})\b",
+    r"+[a-zA-Z0-9-]{2,})\b",
 )
 
 _C2_PORTS: frozenset[int] = frozenset(
@@ -97,6 +98,29 @@ _IOC_CONTEXT_MAX_LEN = 200
 _CLIPBOARD_PREVIEW_MAX_LEN = 80
 
 
+def _has_valid_tld(candidate: str) -> bool:
+    """Validate that the trailing label of a candidate hostname is a real TLD.
+
+    Rejects any candidate whose rightmost dot-separated label appears in the
+    file-extension denylist, or is not present in the curated known-TLD set.
+    The check is case-insensitive.
+
+    Args:
+        candidate: A dot-separated hostname string to validate.
+
+    Returns:
+        bool: True if the trailing label is a recognised top-level domain and
+            is not a common file extension.
+    """
+    parts = candidate.split(".")
+    if len(parts) < 2:
+        return False
+    tld = parts[-1].lower()
+    if tld in FILE_EXTENSION_TLDS:
+        return False
+    return tld in KNOWN_TLDS
+
+
 def _is_private_ip(ip: str) -> bool:
     """Check whether an IPv4 address is private or reserved.
 
@@ -151,11 +175,14 @@ def _looks_like_domain(address: str) -> bool:
         address: The address string to evaluate.
 
     Returns:
-        bool: True if the address appears to be a domain name.
+        bool: True if the address appears to be a domain name with a valid
+            top-level label.
     """
     if _IPV4_PATTERN.fullmatch(address):
         return False
-    return bool(_DOMAIN_PATTERN.fullmatch(address))
+    if not _DOMAIN_PATTERN.fullmatch(address):
+        return False
+    return _has_valid_tld(address)
 
 
 def _shannon_entropy(text: str) -> float:
@@ -488,7 +515,7 @@ def extract_iocs(report: ExecutionReport) -> list[IOCEntry]:
             _add_ioc("email", match.group(1), source, ctx)
         for match in _DOMAIN_PATTERN.finditer(text):
             domain = match.group(1)
-            if not _IPV4_PATTERN.fullmatch(domain):
+            if not _IPV4_PATTERN.fullmatch(domain) and _has_valid_tld(domain):
                 _add_ioc("domain", domain, source, ctx)
 
     for activity in report.network_activity:

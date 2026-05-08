@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available
 
 
@@ -45,6 +46,8 @@ class DataInspectorMixin:
     _data_inspector_tree: QTreeWidget | None
     _document: Any | None
     document: Any | None
+    state_holder: Any | None
+    _bridge: Any | None
     _hex_widget: Any | None
     _bit_buttons: list[QPushButton]
     _bit_editor_offset: int
@@ -163,7 +166,11 @@ class DataInspectorMixin:
                 is_set = bool(self.document.get_bit(offset, bit_idx))
             except (AttributeError, ValueError, OverflowError):
                 _logger.exception("bit_read_failed", offset=offset, bit=bit_idx)
-                return
+                btn.setChecked(False)
+                btn.setText("?")
+                btn.setEnabled(False)
+                continue
+            btn.setEnabled(True)
             btn.setChecked(is_set)
             btn.setText("1" if is_set else "0")
 
@@ -190,6 +197,12 @@ class DataInspectorMixin:
         except (AttributeError, ValueError, OverflowError):
             _logger.exception("bit_write_failed", offset=offset, bit=bit_index)
             return
+
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            notify = getattr(state_holder, "notify_data_modified", None)
+            if callable(notify):
+                notify(offset, 1, source="hex-editor.data_inspector.bit")
 
         btn_idx = 7 - bit_index
         if 0 <= btn_idx < len(self._bit_buttons):
@@ -330,11 +343,12 @@ class DataInspectorMixin:
             self._decode_output.setPlainText(str(decoded))
 
     def _on_encode_text(self) -> None:
-        """Encode text input to hex using the hexcore backend.
+        """Encode text input to hex using the bridge's encode_text path.
 
-        Calls ``document.encode_text_to_bytes`` so the Rust codec
+        Routes the encode operation through the bridge so the Rust codec
         registry handles encodings that lack a Python stdlib codec
-        (e.g. EBCDIC).
+        (e.g. EBCDIC). When no document is open the status label is set
+        to "No document open" and no bytes are produced.
         """
         if self._encode_input is None or self._encode_output is None:
             return
@@ -343,34 +357,27 @@ class DataInspectorMixin:
         if not text:
             return
 
-        encoding = self._selected_encoding(self._encode_combo)
-
-        encode_bytes_fn: Any = None
-        if self.document is not None:
-            encode_bytes_fn = getattr(self.document, "encode_text_to_bytes", None)
-        if encode_bytes_fn is None and hexcore_available and hexcore is not None:
-            encode_bytes_fn = getattr(hexcore.HexDocument, "encode_text_to_bytes", None)
-        if encode_bytes_fn is None:
-            self._encode_output.setText("Error: hexcore not available")
+        if self.document is None:
+            self._encode_output.setText("No document open")
             return
 
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            self._encode_output.setText("Error: hex editor bridge not available")
+            return
+
+        encoding = self._selected_encoding(self._encode_combo)
+
         try:
-            encoded = encode_bytes_fn(text, encoding)
-        except (AttributeError, ValueError, OverflowError) as exc:
+            hex_str = run_bridge_coroutine(bridge.encode_text(text, encoding))
+        except (AttributeError, ValueError, OverflowError, RuntimeError) as exc:
+            _logger.warning("encode_text_bridge_failed", encoding=encoding)
             self._encode_output.setText(f"Error: {exc}")
             return
 
-        if isinstance(encoded, (bytes, bytearray)):
-            data = bytes(encoded)
-        elif isinstance(encoded, list):
-            try:
-                data = bytes(cast("list[int]", encoded))
-            except (ValueError, TypeError) as exc:
-                self._encode_output.setText(f"Error: {exc}")
-                return
-        else:
-            self._encode_output.setText("Error: unexpected encoder return type")
+        if hex_str is None:
+            self._encode_output.setText("Error: encode operation did not return a result")
             return
 
-        hex_str = " ".join(f"{b:02X}" for b in data)
-        self._encode_output.setText(hex_str)
+        spaced = " ".join(str(hex_str)[i : i + 2].upper() for i in range(0, len(str(hex_str)), 2))
+        self._encode_output.setText(spaced)
