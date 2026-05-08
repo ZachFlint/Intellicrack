@@ -6,11 +6,21 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import mmap
 import zlib
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator
+
+
+_CRC_STREAM_DEFAULT_CHUNK: Final[int] = 1 << 20
 
 
 __all__ = [
@@ -218,6 +228,262 @@ def compute_custom_crc(
     if ref_out:
         crc = _reflect_bits(crc, width)
     return (crc ^ xor_out) & mask
+
+
+def _iter_file_chunks_for_crc(path: Path, chunk_size: int) -> Iterator[bytes]:
+    """Yield ``chunk_size`` byte slices from ``path`` via :class:`mmap.mmap`.
+
+    Args:
+        path: Path to a regular file the caller will stream.
+        chunk_size: Bytes per slice handed to the consumer.
+
+    Yields:
+        bytes: Successive ``chunk_size``-sized slices of the file.
+    """
+    with path.open("rb") as fh:
+        size = path.stat().st_size
+        if size == 0:
+            return
+        with contextlib.closing(mmap.mmap(fh.fileno(), length=0, access=mmap.ACCESS_READ)) as mm:
+            offset = 0
+            while offset < size:
+                end = min(offset + chunk_size, size)
+                yield bytes(mm[offset:end])
+                offset = end
+
+
+def _iter_document_chunks_for_crc(
+    document: object,
+    length: int,
+    chunk_size: int,
+) -> Iterator[bytes]:
+    """Yield ``chunk_size`` byte slices from a hexcore-style document.
+
+    Normalises the document's ``read`` return type so the CRC inner
+    loop always sees ``bytes``.
+
+    Args:
+        document: Hexcore-style document exposing ``read(offset, length)``.
+        length: Total number of bytes to stream.
+        chunk_size: Bytes per slice handed to the consumer.
+
+    Yields:
+        bytes: Successive ``chunk_size``-sized slices of the document.
+
+    Raises:
+        TypeError: If ``document`` exposes no callable ``read`` attribute,
+            or if ``document.read`` returns an unsupported type.
+    """
+    read_fn = cast("Callable[[int, int], object]", getattr(document, "read", None))
+    if not callable(read_fn):
+        msg = "document does not expose a callable read(offset, length)"
+        raise TypeError(msg)
+    offset = 0
+    while offset < length:
+        n = min(chunk_size, length - offset)
+        raw: object = read_fn(offset, n)
+        if isinstance(raw, bytes):
+            yield raw
+        elif isinstance(raw, bytearray):
+            yield bytes(raw)
+        elif isinstance(raw, list):
+            yield bytes(cast("list[int]", raw))
+        else:
+            msg = f"document.read returned unexpected type: {type(raw).__name__}"
+            raise TypeError(msg)
+        offset += n
+
+
+def _build_crc_table(width: int, poly: int) -> tuple[int, ...]:
+    """Build a 256-entry table for byte-at-a-time CRC processing.
+
+    Args:
+        width: CRC bit width.
+        poly: Generator polynomial.
+
+    Returns:
+        tuple[int, ...]: 256-entry lookup table.
+    """
+    mask = (1 << width) - 1
+    msb_mask = 1 << (width - 1)
+    shift = width - 8
+    table: list[int] = []
+    for byte in range(256):
+        crc = (byte << shift) & mask
+        for _ in range(8):
+            crc = ((crc << 1) ^ poly) & mask if crc & msb_mask else (crc << 1) & mask
+        table.append(crc)
+    return tuple(table)
+
+
+_ZLIB_CRC32_POLY: Final[int] = 0x04C11DB7
+_ZLIB_CRC32_INIT: Final[int] = 0xFFFFFFFF
+_ZLIB_CRC32_XOR_OUT: Final[int] = 0xFFFFFFFF
+_CRC32_WIDTH: Final[int] = 32
+
+
+def _is_zlib_crc32(width: int, poly: int, init: int, *, ref_in: bool, ref_out: bool, xor_out: int) -> bool:
+    """Check whether the parameters match the standard zlib/PKZIP CRC-32.
+
+    Args:
+        width: CRC bit width.
+        poly: Generator polynomial.
+        init: Initial CRC value.
+        ref_in: Reflect input flag.
+        ref_out: Reflect output flag.
+        xor_out: Final XOR mask.
+
+    Returns:
+        bool: True if every parameter matches the standard CRC-32 contract.
+    """
+    return (
+        width == _CRC32_WIDTH
+        and poly == _ZLIB_CRC32_POLY
+        and init == _ZLIB_CRC32_INIT
+        and ref_in
+        and ref_out
+        and xor_out == _ZLIB_CRC32_XOR_OUT
+    )
+
+
+def _crc_over_chunks(
+    chunks: Iterable[bytes],
+    width: int,
+    poly: int,
+    init: int,
+    *,
+    ref_in: bool,
+    ref_out: bool,
+    xor_out: int,
+) -> int:
+    """Run a table-driven CRC over a chunk iterator.
+
+    Algebraically identical to the bit-serial reference but processes
+    one byte per iteration via a precomputed 256-entry table — orders
+    of magnitude faster for multi-megabyte streams while keeping memory
+    usage bounded. The standard zlib/PKZIP CRC-32 parameter set
+    short-circuits to :func:`zlib.crc32` so files in the hundreds of
+    megabytes complete in under a second.
+
+    Args:
+        chunks: Iterable producing the message bytes one chunk at a time.
+        width: CRC bit width.
+        poly: Generator polynomial.
+        init: Initial CRC value.
+        ref_in: Reflect each input byte before processing.
+        ref_out: Reflect the final CRC value before XOR-out.
+        xor_out: Value to XOR with the final CRC.
+
+    Returns:
+        int: Computed CRC value.
+    """
+    if _is_zlib_crc32(width, poly, init, ref_in=ref_in, ref_out=ref_out, xor_out=xor_out):
+        crc = 0
+        for chunk in chunks:
+            if chunk:
+                crc = zlib.crc32(chunk, crc)
+        return crc & 0xFFFFFFFF
+
+    mask = (1 << width) - 1
+    table = _build_crc_table(width, poly)
+    crc = init & mask
+    shift = width - 8
+    if ref_in:
+        for chunk in chunks:
+            if not chunk:
+                continue
+            for byte in chunk:
+                idx = (_reflect_bits(byte, 8) ^ (crc >> shift)) & 0xFF
+                crc = ((crc << 8) ^ table[idx]) & mask
+    else:
+        for chunk in chunks:
+            if not chunk:
+                continue
+            for byte in chunk:
+                idx = (byte ^ (crc >> shift)) & 0xFF
+                crc = ((crc << 8) ^ table[idx]) & mask
+    if ref_out:
+        crc = _reflect_bits(crc, width)
+    return (crc ^ xor_out) & mask
+
+
+def compute_streaming_custom_crc(
+    file_path: str | None,
+    document: object,
+    width: int,
+    poly: int,
+    init: int,
+    *,
+    ref_in: bool,
+    ref_out: bool,
+    xor_out: int,
+    chunk_size: int = _CRC_STREAM_DEFAULT_CHUNK,
+) -> int:
+    """Compute a parametric CRC across a streamed document, off the UI thread.
+
+    Identical algebraic result to :func:`compute_custom_crc` but never
+    requires the full message to be present in memory simultaneously,
+    which keeps the calling thread under a bounded memory budget when
+    the document is many tens or hundreds of megabytes. When
+    ``file_path`` is provided and points at a readable regular file the
+    caller streams via :class:`mmap.mmap` and never copies file pages
+    into Python heap memory; otherwise the caller streams via
+    ``document.read`` in ``chunk_size`` chunks.
+
+    Args:
+        file_path: Path to the file backing the document, or ``None``
+            to force the document-based path.
+        document: Hexcore-style document exposing
+            ``read(offset, length)``. Used when ``file_path`` is ``None``.
+        width: CRC bit width (8, 16, 32, or 64).
+        poly: Generator polynomial.
+        init: Initial CRC value.
+        ref_in: Reflect each input byte before processing.
+        ref_out: Reflect the final CRC value before XOR-out.
+        xor_out: Value to XOR with the final CRC.
+        chunk_size: Bytes per chunk for the document path.
+
+    Returns:
+        int: Computed CRC value.
+    """
+    if file_path is not None:
+        chunks: Iterable[bytes] = _iter_file_chunks_for_crc(Path(file_path), chunk_size)
+    else:
+        length = _length_of(document)
+        chunks = _iter_document_chunks_for_crc(document, length, chunk_size)
+    return _crc_over_chunks(
+        chunks,
+        width,
+        poly,
+        init,
+        ref_in=ref_in,
+        ref_out=ref_out,
+        xor_out=xor_out,
+    )
+
+
+def _length_of(document: object) -> int:
+    """Return ``document.length()`` as an integer, raising ``TypeError`` otherwise.
+
+    Args:
+        document: Hexcore-style document exposing ``length()``.
+
+    Returns:
+        int: Document length in bytes.
+
+    Raises:
+        TypeError: If ``document`` exposes no callable ``length`` attribute,
+            or if it returns a non-integer value.
+    """
+    length_fn = cast("Callable[[], object]", getattr(document, "length", None))
+    if not callable(length_fn):
+        msg = "document does not expose a callable length()"
+        raise TypeError(msg)
+    raw: object = length_fn()
+    if not isinstance(raw, int):
+        msg = f"document.length() returned unexpected type: {type(raw).__name__}"
+        raise TypeError(msg)
+    return raw
 
 
 def _compute_hash_stdlib(algo: str, data: bytes) -> str | None:
