@@ -1944,6 +1944,25 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.debug("get_selection_started", has_selection=self._selection is not None)
         return self._selection
 
+    def update_selection_from_gui(self, start: int, end: int) -> None:
+        """Synchronously update the stored selection from a GUI-driven change.
+
+        Called by the panel when the user drags a selection in the hex
+        widget so that bridge callers (AI tools, CLI scripts) see the
+        current selection without going through an async round-trip.
+        Does not fire any state-holder event; the panel's
+        ``_on_selection_changed`` handler already dispatches
+        ``SELECTION_CHANGED`` via the state holder before calling this.
+
+        Args:
+            start: Selection start offset, or -1 to clear.
+            end: Selection end offset, or -1 to clear.
+        """
+        if start >= 0 and end >= 0:
+            self._selection = (start, end)
+        else:
+            self._selection = None
+
     async def search_hex(self, pattern: str, max_results: int = 100) -> list[dict[str, int]]:
         """Search for a hex pattern with optional wildcards.
 

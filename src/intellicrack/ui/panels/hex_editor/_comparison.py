@@ -64,6 +64,7 @@ class ComparisonMixin:
     _diff_results_tree: QTreeWidget | None
     _diff_summary_label: QLabel | None
     _diff_worker: GenericCallableWorker | None
+    _diff_temp_path: Path | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to a specific offset.
@@ -104,6 +105,7 @@ class ComparisonMixin:
         layout.addWidget(self._diff_results_tree)
 
         self._diff_worker = None
+        self._diff_temp_path = None
         return container
 
     def _on_compare(self) -> None:
@@ -124,6 +126,8 @@ class ComparisonMixin:
 
         if self._diff_worker is not None and self._diff_worker.isRunning():
             return
+
+        self._cleanup_diff_temp()
 
         if self.file_path is not None and Path(self.file_path).exists():
             path_a = str(self.file_path)
@@ -150,6 +154,7 @@ class ComparisonMixin:
             except OSError:
                 _logger.exception("diff_temp_write_failed")
                 return
+            self._diff_temp_path = Path(path_a)
 
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText("Computing diff...")
@@ -178,12 +183,27 @@ class ComparisonMixin:
         """
         self._on_diff_error(str(exc))
 
+    def _cleanup_diff_temp(self) -> None:
+        """Delete any leftover diff snapshot tempfile from a prior comparison."""
+        path = self._diff_temp_path
+        if path is None:
+            return
+        self._diff_temp_path = None
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            _logger.warning("diff_temp_unlink_failed", path=str(path))
+
     def _on_diff_finished(self, result: dict[str, Any]) -> None:
         """Handle completed diff computation and populate the results tree.
 
         Args:
             result: Diff result dict with regions, total_differences, etc.
         """
+        self._cleanup_diff_temp()
+
         if self._diff_results_tree is None:
             return
 
@@ -222,6 +242,8 @@ class ComparisonMixin:
         Args:
             error: Error message from the diff worker.
         """
+        self._cleanup_diff_temp()
+
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText(f"Diff failed: {error}")
         _logger.warning("diff_failed", error=error)

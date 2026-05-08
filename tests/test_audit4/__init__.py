@@ -2,4 +2,5 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit 4 regression tests."""
+
+"""Audit4 regression tests, organised by remediation work unit."""

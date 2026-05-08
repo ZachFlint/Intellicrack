@@ -11,7 +11,7 @@ state machine.
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolError
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.process_panel._memory_tab import MemoryTab
 from intellicrack.ui.panels.process_panel._modules_tab import ModulesTab
@@ -87,12 +89,15 @@ class ProcessPanel(AnalysisPanelBase):
         Args:
             bridge: ProcessBridge instance.
         """
+        if self._bridge is not None:
+            self._bridge.remove_privileges_changed_callback(self._on_privileges_changed)
         self._bridge = bridge
         self._process_tab.set_bridge(bridge)
         self._memory_tab.set_bridge(bridge)
         self._threads_tab.set_bridge(bridge)
         self._modules_tab.set_bridge(bridge)
         self._system_tab.set_bridge(bridge)
+        bridge.add_privileges_changed_callback(self._on_privileges_changed)
         self._state = _PanelState.DETACHED
         self._update_controls_for_state()
         _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
@@ -224,21 +229,81 @@ class ProcessPanel(AnalysisPanelBase):
         self._attached_pid = pid
         self._state = _PanelState.ATTACHED
 
+        self._memory_tab.set_attached_pid(pid)
         self._threads_tab.set_attached_pid(pid)
         self._modules_tab.set_attached_pid(pid)
         self._system_tab.set_attached_pid(pid)
 
         self._update_controls_for_state()
         self._status_pid.setText(f"PID: {pid}")
+        self._refresh_arch_label(pid)
+        self._refresh_privilege_label()
         self.process_attached.emit(pid)
         self.tool_started.emit()
         _logger.info("panel_process_attached", pid=pid)
+
+    def _refresh_arch_label(self, pid: int) -> None:
+        """Fetch architecture from the bridge and update the arch status label.
+
+        Args:
+            pid: Process ID to query.
+        """
+        if self._bridge is None:
+            return
+
+        bridge = self._bridge
+
+        async def _detect() -> str | None:
+            try:
+                return await bridge.detect_architecture(pid)
+            except ToolError:
+                return None
+
+        def _on_arch(result: object) -> None:
+            arch = str(result) if result is not None else "Unknown"
+            self._status_arch.setText(f"Arch: {arch}")
+
+        run_bridge_coroutine_async(_detect(), _on_arch, None, self)
+
+    def _refresh_privilege_label(self) -> None:
+        """Fetch token privileges from the bridge and update the privilege status label."""
+        if self._bridge is None or self._attached_pid is None:
+            return
+
+        pid = self._attached_pid
+        bridge = self._bridge
+
+        async def _fetch_privs() -> list[dict[str, object]] | None:
+            try:
+                return await bridge.get_token_privileges(pid)
+            except ToolError:
+                return None
+
+        def _on_privs(result: object) -> None:
+            if not isinstance(result, list):
+                self._status_priv.setText("Privilege: Standard")
+                return
+            typed_result = cast("list[object]", result)
+            has_debug = any(
+                isinstance(entry, dict)
+                and str(cast("dict[str, object]", entry).get("name", "")) == "SeDebugPrivilege"
+                and bool(cast("dict[str, object]", entry).get("enabled", False))
+                for entry in typed_result
+            )
+            self._status_priv.setText(f"Privilege: {'Debug' if has_debug else 'Standard'}")
+
+        run_bridge_coroutine_async(_fetch_privs(), _on_privs, None, self)
+
+    def _on_privileges_changed(self) -> None:
+        """Handle bridge notification that token privileges have changed."""
+        self._refresh_privilege_label()
 
     def _on_process_detached(self) -> None:
         """Handle process detachment."""
         self._attached_pid = None
         self._state = _PanelState.DETACHED
 
+        self._memory_tab.set_attached_pid(None)
         self._threads_tab.set_attached_pid(None)
         self._modules_tab.set_attached_pid(None)
         self._system_tab.set_attached_pid(None)
@@ -246,11 +311,14 @@ class ProcessPanel(AnalysisPanelBase):
         self._update_controls_for_state()
         self._status_pid.setText("PID: --")
         self._status_arch.setText("Arch: --")
+        self._status_priv.setText("Privilege: Standard")
         self.process_detached.emit()
         _logger.info("panel_process_detached")
 
     def _update_controls_for_state(self) -> None:
-        """Enable/disable tab widgets based on panel state."""
+        """Enable/disable tab widgets and Process tab buttons based on panel state."""
+        attached = self._state == _PanelState.ATTACHED
+
         if self._state == _PanelState.DISCONNECTED:
             self._status_state.setText("Disconnected")
             self._status_bridge.setText("Bridge: Disconnected")
@@ -261,15 +329,22 @@ class ProcessPanel(AnalysisPanelBase):
             self._status_bridge.setText("Bridge: Connected")
             for tab in self._detail_tabs:
                 tab.setEnabled(False)
-        elif self._state == _PanelState.ATTACHED:
+        elif attached:
             self._status_state.setText("Attached")
             self._status_bridge.setText("Bridge: Connected")
             for tab in self._detail_tabs:
                 tab.setEnabled(True)
 
-        if self._bridge is not None:
-            debug_priv = getattr(self._bridge, "_debug_privilege_enabled", False)
-            self._status_priv.setText(f"Privilege: {'Debug' if debug_priv else 'Standard'}")
+        proc_tab = self._process_tab
+        has_selection = proc_tab.get_selected_pid() is not None
+        proc_tab.set_action_buttons_enabled(
+            attach=has_selection and not attached,
+            detach=attached,
+            suspend=attached,
+            resume=attached,
+            terminate=has_selection,
+            inject=attached,
+        )
 
     @override
     def _cleanup(self) -> None:
