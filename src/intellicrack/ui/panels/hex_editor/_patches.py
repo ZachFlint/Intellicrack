@@ -6,27 +6,44 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import QFileDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_info, show_warning
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
 
 
+_BPS_UPS_FORMATS: Final[frozenset[str]] = frozenset({".bps", ".ups"})
+_SUFFIX_TO_FORMAT: Final[dict[str, str]] = {
+    ".ips": "ips",
+    ".ips32": "ips32",
+    ".bps": "bps",
+    ".ups": "ups",
+}
+
+
 class PatchesMixin:
-    """Mixin providing patch tracking and IPS import/export for the hex editor panel."""
+    """Mixin providing patch tracking and IPS/BPS/UPS import/export for the hex editor panel."""
 
     _document: Any | None
     document: Any | None
     _hex_widget: Any | None
     _patches_tree: QTreeWidget | None
     _original_data_cache: dict[int, int]
+    _bridge: HexEditorBridge | None
+    file_path: Path | None
 
     def _on_data_changed(self) -> None:
         """Handle document data-change signals by refreshing derived views."""
@@ -92,23 +109,27 @@ class PatchesMixin:
                 self._original_data_cache[offset] = raw[0] if raw else 0
 
     def _on_export_patches(self) -> None:
-        """Export current patches via hexcore, dispatching on file extension.
+        """Export patches via :meth:`HexEditorBridge.export_patches`.
 
-        Prompts for a save path and routes to the matching document RPC:
-        ``.ips`` -> ``export_patches_ips``; ``.ips32`` -> ``export_patches_ips32``;
-        ``.bps`` -> ``export_patches_bps(source_data)``;
-        ``.ups`` -> ``export_patches_ups(source_data)``. The source bytes for
-        BPS/UPS are read from the document via ``document.read(0, doc_len)``.
-        The raw hexcore bytes are written verbatim to the selected file.
+        Routes through the bridge so the GUI, AI tools, and the CLI all
+        produce identical patch wire-format bytes — including the
+        bridge's Python-only fallback for hexcore builds without a
+        native exporter. Panel-side ``document.export_patches_*`` calls
+        bypassed that fallback and returned different bytes when the
+        native build was missing.
         """
         if self._patches_tree is None or self.document is None:
             return
         patch_count = self._patches_tree.topLevelItemCount()
+        parent = self if isinstance(self, QWidget) else None
         if patch_count == 0:
-            parent = self if isinstance(self, QWidget) else None
             show_info(parent, "Export Patches", "No patches to export.")
             return
-        parent = self if isinstance(self, QWidget) else None
+        bridge = self._bridge
+        if bridge is None:
+            show_warning(parent, "Export Patches", "Hex editor bridge is not attached.")
+            return
+
         result = QFileDialog.getSaveFileName(
             parent,
             "Export Patches",
@@ -118,26 +139,54 @@ class PatchesMixin:
         save_path = result[0] if result else ""
         if not save_path:
             return
+
         suffix = Path(save_path).suffix.lower()
-        try:
-            patch_data = self._dispatch_export_patches(suffix)
-        except (AttributeError, OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("patches_export_failed", suffix=suffix)
-            show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
-            return
-        if patch_data is None:
+        patch_format = _SUFFIX_TO_FORMAT.get(suffix)
+        if patch_format is None:
             show_warning(
                 parent,
                 "Export Patches",
                 f"Unsupported patch format for extension {suffix!r}.",
             )
             return
+
+        original_path: str | None = None
+        if suffix in _BPS_UPS_FORMATS:
+            if self.file_path is None or not Path(self.file_path).exists():
+                show_warning(
+                    parent,
+                    "Export Patches",
+                    f"{patch_format.upper()} export requires the original unmodified file on disk."
+                    " Save the document to a file before exporting BPS/UPS patches.",
+                )
+                return
+            original_path = str(self.file_path)
+
+        try:
+            patch_b64 = run_bridge_coroutine(bridge.export_patches(patch_format, original_path))
+        except (OSError, RuntimeError, ValueError) as exc:
+            _logger.exception("patches_export_failed", patch_format=patch_format)
+            show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
+            return
+
+        if not isinstance(patch_b64, str):
+            _logger.error("patches_export_unexpected_type", actual=type(patch_b64).__name__)
+            show_warning(parent, "Export Patches", "Bridge returned an unexpected payload type.")
+            return
+
+        try:
+            patch_data = base64.b64decode(patch_b64.encode("ascii"))
+        except (ValueError, TypeError) as exc:
+            _logger.exception("patches_export_b64_decode_failed", patch_format=patch_format)
+            show_warning(parent, "Export Patches", f"Bridge returned invalid base64:\n{exc}")
+            return
+
         _logger.info(
             "patches_export_write_begin",
             path=save_path,
             data_size=len(patch_data),
             data_sha256=hashlib.sha256(patch_data).hexdigest()[:12],
-            suffix=suffix,
+            patch_format=patch_format,
         )
         try:
             Path(save_path).write_bytes(patch_data)
@@ -145,117 +194,33 @@ class PatchesMixin:
             _logger.exception("patches_export_write_failed", path=save_path)
             show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
             return
+
         _logger.info(
             "patches_exported",
             path=save_path,
             count=patch_count,
-            suffix=suffix,
+            patch_format=patch_format,
             size=len(patch_data),
         )
         show_info(parent, "Export Patches", f"Exported {patch_count} patch(es).")
 
-    def _dispatch_export_patches(self, suffix: str) -> bytes | None:
-        """Dispatch patch export to the appropriate hexcore document method.
-
-        Args:
-            suffix: Lowercase file extension including the leading dot (for
-                example ``".ips"``). Unknown suffixes return ``None``.
-
-        Returns:
-            bytes | None: Raw hexcore patch bytes for the requested format,
-                or ``None`` if ``suffix`` is not a supported patch extension
-                or the document does not expose the required method.
-        """
-        document: Any = self.document
-        if document is None:
-            return None
-        if suffix == ".ips32":
-            export_ips32: Any = getattr(document, "export_patches_ips32", None)
-            if callable(export_ips32):
-                return self._coerce_patch_bytes(export_ips32())
-            return None
-        if suffix == ".ips":
-            export_ips: Any = getattr(document, "export_patches_ips", None)
-            if callable(export_ips):
-                return self._coerce_patch_bytes(export_ips())
-            return None
-        if suffix == ".bps":
-            export_bps: Any = getattr(document, "export_patches_bps", None)
-            if callable(export_bps):
-                source_data = self._read_document_bytes()
-                return self._coerce_patch_bytes(export_bps(source_data))
-            return None
-        if suffix == ".ups":
-            export_ups: Any = getattr(document, "export_patches_ups", None)
-            if callable(export_ups):
-                source_data = self._read_document_bytes()
-                return self._coerce_patch_bytes(export_ups(source_data))
-            return None
-        return None
-
-    @staticmethod
-    def _coerce_patch_bytes(raw: object) -> bytes:
-        """Coerce a hexcore patch export return value into immutable ``bytes``.
-
-        Args:
-            raw: Value returned by a hexcore ``export_patches_*`` method.
-                Typically ``bytes`` or ``bytearray``; ``list[int]`` is also
-                accepted for compatibility with Python-only fallbacks.
-
-        Returns:
-            bytes: Raw patch bytes. Returns empty bytes when ``raw`` is not a
-                recognized byte-sequence type.
-        """
-        if isinstance(raw, bytes):
-            return raw
-        if isinstance(raw, bytearray):
-            return bytes(raw)
-        if isinstance(raw, list):
-            return bytes(cast("list[int]", raw))
-        return b""
-
-    def _read_document_bytes(self) -> bytes:
-        """Read the entire document buffer via hexcore.
-
-        Returns:
-            bytes: Current document contents from offset ``0`` for
-                ``document.length()`` bytes. Returns empty bytes when the
-                document is closed or exposes no length/read methods.
-        """
-        document: Any = self.document
-        if document is None:
-            return b""
-        length_fn: Any = getattr(document, "length", None)
-        read_fn: Any = getattr(document, "read", None)
-        if not callable(length_fn) or not callable(read_fn):
-            return b""
-        length_val: Any = length_fn()
-        if not isinstance(length_val, int):
-            return b""
-        if length_val <= 0:
-            return b""
-        raw: Any = read_fn(0, length_val)
-        if isinstance(raw, bytes):
-            return raw
-        if isinstance(raw, bytearray):
-            return bytes(raw)
-        if isinstance(raw, list):
-            return bytes(cast("list[int]", raw))
-        return b""
-
     def _on_import_patches(self) -> None:
-        """Import patches via hexcore, dispatching on file extension.
+        """Import patches via :meth:`HexEditorBridge.import_patches`.
 
-        Reads the selected patch file and routes to the matching document RPC:
-        ``.ips`` / ``.ips32`` -> ``import_patches_ips(bytes)``;
-        ``.bps`` -> ``import_patches_bps(data, source_data)``;
-        ``.ups`` -> ``import_patches_ups(data, source_data)``. The source bytes
-        for BPS/UPS are read from the document via ``document.read(0, doc_len)``
-        so the patch is applied against the current document contents.
+        The bridge inspects the patch magic bytes and dispatches to the
+        correct format handler so IPS/IPS32/BPS/UPS all work through one
+        API. For BPS/UPS the bridge requires the original unmodified
+        source file so it can rebuild the target deterministically; the
+        panel passes ``self.file_path`` when available.
         """
         if self.document is None:
             return
         parent = self if isinstance(self, QWidget) else None
+        bridge = self._bridge
+        if bridge is None:
+            show_warning(parent, "Import Patches", "Hex editor bridge is not attached.")
+            return
+
         result = QFileDialog.getOpenFileName(
             parent,
             "Import Patches",
@@ -265,6 +230,7 @@ class PatchesMixin:
         file_path_str = result[0] if result else ""
         if not file_path_str:
             return
+
         try:
             patch_bytes = Path(file_path_str).read_bytes()
         except OSError as exc:
@@ -273,18 +239,29 @@ class PatchesMixin:
             return
 
         suffix = Path(file_path_str).suffix.lower()
+        original_path: str | None = None
+        if suffix in _BPS_UPS_FORMATS:
+            if self.file_path is None or not Path(self.file_path).exists():
+                show_warning(
+                    parent,
+                    "Import Patches",
+                    f"{suffix[1:].upper()} patches require the original unmodified file on disk."
+                    " Open the source file before importing this patch.",
+                )
+                return
+            original_path = str(self.file_path)
+
+        patch_b64 = base64.b64encode(patch_bytes).decode("ascii")
         try:
-            applied = self._dispatch_import_patches(suffix, patch_bytes)
-        except (AttributeError, OSError, RuntimeError, ValueError) as exc:
+            applied = run_bridge_coroutine(bridge.import_patches(patch_b64, original_path))
+        except (OSError, RuntimeError, ValueError) as exc:
             _logger.exception("patches_import_failed", suffix=suffix)
             show_warning(parent, "Import Patches", f"Import failed:\n{exc}")
             return
-        if applied is None:
-            show_warning(
-                parent,
-                "Import Patches",
-                f"Unsupported patch format for extension {suffix!r}.",
-            )
+
+        if not isinstance(applied, int):
+            _logger.error("patches_import_unexpected_type", actual=type(applied).__name__)
+            show_warning(parent, "Import Patches", "Bridge returned an unexpected payload type.")
             return
 
         if self._hex_widget is not None:
@@ -294,55 +271,3 @@ class PatchesMixin:
         self._on_data_changed()
         _logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
         show_info(parent, "Import Patches", f"Applied {applied} patch record(s).")
-
-    def _dispatch_import_patches(self, suffix: str, patch_bytes: bytes) -> int | None:
-        """Dispatch patch import to the appropriate hexcore document method.
-
-        Args:
-            suffix: Lowercase file extension including the leading dot (for
-                example ``".bps"``).
-            patch_bytes: Raw patch payload read from disk.
-
-        Returns:
-            int | None: Count of patch records applied, as returned by the
-                hexcore document method. Returns ``None`` when ``suffix`` is
-                not a supported patch extension or the document does not
-                expose the required method.
-        """
-        document: Any = self.document
-        if document is None:
-            return None
-        if suffix in {".ips", ".ips32"}:
-            import_ips: Any = getattr(document, "import_patches_ips", None)
-            if callable(import_ips):
-                return self._coerce_patch_count(import_ips(patch_bytes))
-            return None
-        if suffix == ".bps":
-            import_bps: Any = getattr(document, "import_patches_bps", None)
-            if callable(import_bps):
-                source_data = self._read_document_bytes()
-                return self._coerce_patch_count(import_bps(patch_bytes, source_data))
-            return None
-        if suffix == ".ups":
-            import_ups: Any = getattr(document, "import_patches_ups", None)
-            if callable(import_ups):
-                source_data = self._read_document_bytes()
-                return self._coerce_patch_count(import_ups(patch_bytes, source_data))
-            return None
-        return None
-
-    @staticmethod
-    def _coerce_patch_count(raw: object) -> int:
-        """Coerce a hexcore patch import return value into a non-negative count.
-
-        Args:
-            raw: Value returned by a hexcore ``import_patches_*`` method.
-                Expected to be an integer record count.
-
-        Returns:
-            int: The applied-record count when ``raw`` is an integer;
-                ``0`` otherwise so callers never report a negative count.
-        """
-        if isinstance(raw, int):
-            return raw
-        return 0
