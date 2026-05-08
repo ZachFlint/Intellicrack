@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
@@ -859,9 +860,24 @@ class HexEditorPanel(
                         update_fn()
             elif event_type == evt.TEMPLATE_REGISTERED:
                 self._populate_template_combo()
+            elif event_type == evt.HIGHLIGHT_RULE_ADDED:
+                rule = data.get("rule")
+                if isinstance(rule, dict):
+                    self._apply_bridge_highlight_rule_added(rule)
+            elif event_type == evt.HIGHLIGHT_RULE_REMOVED:
+                rule_id = data.get("rule_id")
+                if isinstance(rule_id, str):
+                    self._apply_bridge_highlight_rule_removed(rule_id)
 
         self._state_callback = on_state_event
         state_holder.register_callback(on_state_event, source_id="panel")
+
+        if self._bridge is not None:
+            run_bridge_coroutine_async(
+                self._bridge.list_highlight_rules(),
+                on_success=self.seed_highlights_from_bridge,
+                parent=self,
+            )
 
     def _on_selection_changed(self, start: int, end: int) -> None:
         """Handle selection range changes from the hex widget.
