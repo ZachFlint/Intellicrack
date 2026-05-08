@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+import os
+from pathlib import Path
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -26,6 +28,10 @@ from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
 _logger = get_logger(__name__)
 
 
+_PE_CHECKSUM_OFFSET: Final[int] = 0x58
+_PE_CHECKSUM_LEN: Final[int] = 4
+
+
 class HashingMixin:
     """Mixin providing hash computation for the hex editor panel.
 
@@ -41,6 +47,73 @@ class HashingMixin:
     _selection_start: int
     _selection_end: int
     _pe_checksum_status: QLabel | None
+    state_holder: Any | None
+    file_path: Path | None
+    _custom_crc_worker: Any | None
+
+    def _notify_state_data_modified_for_hashing(self, offset: int, length: int, *, source: str) -> None:
+        """Forward a byte-region mutation event to the shared state holder if attached.
+
+        Args:
+            offset: Start byte offset of the affected range.
+            length: Number of bytes affected.
+            source: Loop-guard identifier so the caller is filtered out.
+        """
+        holder = self.state_holder
+        if holder is None:
+            return
+        notify = getattr(holder, "notify_data_modified", None)
+        if not callable(notify):
+            return
+        notify(offset, length, source=source)
+
+    def _resolve_custom_crc_file_path(self) -> str | None:
+        """Resolve the best file source for the custom CRC streaming worker.
+
+        Prefers the panel's ``file_path`` attribute when present and
+        readable; falls back to ``document.file_path()`` when the
+        document exposes one. Returns ``None`` when the document is
+        purely in-memory so the worker streams via the document API.
+
+        Returns:
+            str | None: Absolute path of an existing readable file, or
+                ``None`` when the worker should stream via the
+                document API.
+        """
+        candidates: list[str] = []
+        panel_path = self.file_path
+        if panel_path is not None:
+            try:
+                candidates.append(os.fspath(panel_path))
+            except TypeError:
+                _logger.debug("custom_crc_panel_path_unfsable", path_type=type(panel_path).__name__)
+        document = self.document
+        if document is not None:
+            doc_path_fn = getattr(document, "file_path", None)
+            if callable(doc_path_fn):
+                try:
+                    doc_path: object = doc_path_fn()
+                except (OSError, RuntimeError, ValueError):
+                    doc_path = None
+                if isinstance(doc_path, str):
+                    candidates.append(doc_path)
+                elif doc_path is not None:
+                    try:
+                        candidates.append(os.fspath(cast("os.PathLike[str]", doc_path)))
+                    except TypeError:
+                        _logger.debug(
+                            "custom_crc_doc_path_unfsable",
+                            path_type=type(doc_path).__name__,
+                        )
+        for path_str in candidates:
+            if not path_str:
+                continue
+            try:
+                if Path(path_str).is_file():
+                    return path_str
+            except OSError:
+                continue
+        return None
 
     def _on_calculate_hash(self) -> None:
         """Calculate the hash of the current document via hexcore document.compute_hash."""
@@ -57,20 +130,32 @@ class HashingMixin:
             _logger.info("hash_calculated", algo=algo)
 
     def _on_custom_crc(self) -> None:
-        """Open the custom CRC dialog with the current document data."""
-        if self.document is None:
+        """Open the custom CRC dialog wired to the streaming worker.
+
+        The dialog never copies the document body onto the UI thread.
+        It receives the file path (when one is resolvable) and the
+        document handle; clicking Calculate spawns a worker that
+        streams the bytes through ``compute_streaming_custom_crc`` in
+        bounded chunks.
+        """
+        document = self.document
+        if document is None:
             return
         try:
-            doc_len: int = self.document.length()
-            raw: bytes | bytearray | list[int] = self.document.read(0, doc_len)
-            data = raw if isinstance(raw, bytes) else bytes(raw)
-        except (ValueError, AttributeError, TypeError) as exc:
+            doc_len: int = document.length()
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             if isinstance(self, QWidget):
-                show_warning(self, "Custom CRC", f"Failed to read document data:\n{exc}")
-        else:
-            parent = self if isinstance(self, QWidget) else None
-            dlg = CustomCrcDialog(data, parent)
-            dlg.exec()
+                show_warning(self, "Custom CRC", f"Failed to read document length:\n{exc}")
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        dlg = CustomCrcDialog(
+            file_path=self._resolve_custom_crc_file_path(),
+            document=document,
+            length=doc_len,
+            parent=parent,
+        )
+        dlg.exec()
 
     def _create_pe_checksum_group(self) -> QGroupBox:
         """Create the PE Checksum verification/repair group box.
@@ -169,6 +254,12 @@ class HashingMixin:
             _logger.exception("pe_checksum_repair_failed")
             show_warning(parent, "Repair Failed", str(exc))
             return
+
+        self._notify_state_data_modified_for_hashing(
+            _PE_CHECKSUM_OFFSET,
+            _PE_CHECKSUM_LEN,
+            source="hex-editor.hashing.repair_pe_checksum",
+        )
 
         if self._pe_checksum_status is not None:
             try:
