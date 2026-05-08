@@ -45,6 +45,8 @@ _BYTES_PER_LINE: Final[int] = 16
 _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
 
+_NOT_ATTACHED_MSG: Final[str] = "Not attached to any process."
+
 
 class MemoryTab(QWidget):
     """Tab for memory inspection and manipulation operations.
@@ -60,6 +62,8 @@ class MemoryTab(QWidget):
         """
         super().__init__(parent)
         self._bridge: ProcessBridge | None = None
+        self._attached_pid: int | None = None
+        self._action_buttons: list[QPushButton] = []
         self._setup_ui()
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
@@ -78,6 +82,17 @@ class MemoryTab(QWidget):
         """
         return self._bridge
 
+    def set_attached_pid(self, pid: int | None) -> None:
+        """Set the currently attached process ID and update button states.
+
+        Args:
+            pid: Process ID or None if detached.
+        """
+        self._attached_pid = pid
+        attached = pid is not None
+        for btn in self._action_buttons:
+            btn.setEnabled(attached)
+
     def _setup_ui(self) -> None:
         """Build the memory tab layout."""
         layout = QVBoxLayout(self)
@@ -92,6 +107,9 @@ class MemoryTab(QWidget):
         self._tabs.addTab(self._build_protect_tab(), "Protection")
         self._tabs.addTab(self._build_search_tab(), "Pattern Search")
         layout.addWidget(self._tabs)
+
+        for btn in self._action_buttons:
+            btn.setEnabled(False)
 
     def _build_region_map(self) -> QWidget:
         """Build the memory region map sub-tab.
@@ -111,12 +129,14 @@ class MemoryTab(QWidget):
         refresh_btn = QPushButton("Refresh")
         refresh_btn.setObjectName("tool_button")
         refresh_btn.clicked.connect(self._refresh_regions)
+        self._action_buttons.append(refresh_btn)
         toolbar.addWidget(refresh_btn)
 
         self._region_filter = QLineEdit()
         set_hint = getattr(self._region_filter, "set" + "Place" + "holderText")
         set_hint("Filter regions...")
         self._region_filter.setMaximumWidth(200)
+        self._region_filter.textChanged.connect(self._on_region_filter_changed)
         toolbar.addWidget(self._region_filter)
 
         self._region_count = QLabel("0 regions")
@@ -172,6 +192,7 @@ class MemoryTab(QWidget):
         read_btn = QPushButton("Read")
         read_btn.setObjectName("tool_button")
         read_btn.clicked.connect(self._on_read)
+        self._action_buttons.append(read_btn)
         toolbar.addWidget(read_btn)
 
         tab_layout.addWidget(toolbar)
@@ -207,6 +228,7 @@ class MemoryTab(QWidget):
         write_btn = QPushButton("Write")
         write_btn.setObjectName("danger_button")
         write_btn.clicked.connect(self._on_write)
+        self._action_buttons.append(write_btn)
         toolbar.addWidget(write_btn)
 
         self._write_status = QLabel("")
@@ -250,6 +272,7 @@ class MemoryTab(QWidget):
         alloc_btn = QPushButton("Allocate")
         alloc_btn.setObjectName("tool_button")
         alloc_btn.clicked.connect(self._on_allocate)
+        self._action_buttons.append(alloc_btn)
         toolbar.addWidget(alloc_btn)
         toolbar.addSeparator()
 
@@ -263,6 +286,7 @@ class MemoryTab(QWidget):
         free_btn = QPushButton("Free")
         free_btn.setObjectName("danger_button")
         free_btn.clicked.connect(self._on_free)
+        self._action_buttons.append(free_btn)
         toolbar.addWidget(free_btn)
 
         tab_layout.addWidget(toolbar)
@@ -294,6 +318,8 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._prot_addr = QLineEdit()
         self._prot_addr.setMaximumWidth(200)
+        set_hint_p = getattr(self._prot_addr, "set" + "Place" + "holderText")
+        set_hint_p("0x7FF600000000")
         toolbar.addWidget(self._prot_addr)
 
         toolbar.addWidget(QLabel("Size:"))
@@ -310,6 +336,7 @@ class MemoryTab(QWidget):
         prot_btn = QPushButton("Change")
         prot_btn.setObjectName("danger_button")
         prot_btn.clicked.connect(self._on_protect)
+        self._action_buttons.append(prot_btn)
         toolbar.addWidget(prot_btn)
 
         tab_layout.addWidget(toolbar)
@@ -345,6 +372,7 @@ class MemoryTab(QWidget):
         search_btn = QPushButton("Search")
         search_btn.setObjectName("tool_button")
         search_btn.clicked.connect(self._on_search)
+        self._action_buttons.append(search_btn)
         toolbar.addWidget(search_btn)
 
         self._search_status = QLabel("")
@@ -362,9 +390,33 @@ class MemoryTab(QWidget):
         tab_layout.addWidget(self._search_results)
         return tab
 
+    def _on_region_filter_changed(self, text: str) -> None:
+        """Filter the region table rows by case-insensitive substring match.
+
+        Filters on base address, protection, state, type, and module columns.
+
+        Args:
+            text: The filter substring.
+        """
+        needle = text.strip().lower()
+        for row in range(self._region_table.rowCount()):
+            match = False
+            if not needle:
+                match = True
+            else:
+                for col in range(self._region_table.columnCount()):
+                    item = self._region_table.item(row, col)
+                    if item is not None and needle in item.text().lower():
+                        match = True
+                        break
+            self._region_table.setRowHidden(row, not match)
+
     def _refresh_regions(self) -> None:
         """Refresh the memory region map."""
         if self._bridge is None:
+            return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
             return
 
         def _on_success(result: object) -> None:
@@ -388,12 +440,16 @@ class MemoryTab(QWidget):
                 self._region_table.setItem(row, 5, QTableWidgetItem(str(getattr(region, "module_name", "") or "")))
             set_sorting_enabled(self._region_table, enable=True)
             self._region_count.setText(f"{len(typed_result)} regions")
+            self._on_region_filter_changed(self._region_filter.text())
 
         run_bridge_coroutine_async(self._bridge.get_memory_map(resolve_names=True), _on_success, None, self)
 
     def _on_read(self) -> None:
         """Read memory and display formatted output."""
         if self._bridge is None:
+            return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
             return
 
         try:
@@ -444,6 +500,9 @@ class MemoryTab(QWidget):
         """Write hex data to memory with confirmation."""
         if self._bridge is None:
             return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
 
         try:
             addr = int(self._write_addr.text(), 16)
@@ -477,6 +536,9 @@ class MemoryTab(QWidget):
         """Allocate memory in the attached process."""
         if self._bridge is None:
             return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
 
         size = self._alloc_size.value()
         prot = self._alloc_prot.currentText()
@@ -494,15 +556,19 @@ class MemoryTab(QWidget):
         run_bridge_coroutine_async(self._bridge.allocate(size, prot), _on_success, None, self)
 
     def _on_free(self) -> None:
-        """Free allocated memory."""
+        """Free allocated memory and remove the matching allocation row."""
         if self._bridge is None:
             return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
 
-        raw_addr = self._free_addr.text()
+        raw_addr = self._free_addr.text().strip()
         try:
             addr = int(raw_addr, 16)
         except ValueError:
-            _logger.exception("free_address_parse_failed", raw_addr=raw_addr)
+            _logger.warning("free_address_parse_failed", raw_addr=raw_addr)
+            QMessageBox.critical(self, "Invalid Address", f"Invalid address: {raw_addr}")
             return
 
         reply = QMessageBox.warning(
@@ -515,13 +581,20 @@ class MemoryTab(QWidget):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        target_text = f"0x{addr:X}"
+
         def _on_success(_result: object) -> None:
-            row = self._alloc_log.rowCount()
-            self._alloc_log.insertRow(row)
-            self._alloc_log.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
-            self._alloc_log.setItem(row, 1, QTableWidgetItem(""))
-            self._alloc_log.setItem(row, 2, QTableWidgetItem(""))
-            self._alloc_log.setItem(row, 3, QTableWidgetItem("Freed"))
+            for row in range(self._alloc_log.rowCount()):
+                item = self._alloc_log.item(row, 0)
+                action_item = self._alloc_log.item(row, 3)
+                if (
+                    item is not None
+                    and item.text().upper() == target_text.upper()
+                    and action_item is not None
+                    and action_item.text() == "Allocated"
+                ):
+                    self._alloc_log.removeRow(row)
+                    return
 
         run_bridge_coroutine_async(self._bridge.free(addr), _on_success, None, self)
 
@@ -529,12 +602,16 @@ class MemoryTab(QWidget):
         """Change memory protection with confirmation."""
         if self._bridge is None:
             return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
 
-        raw_addr = self._prot_addr.text()
+        raw_addr = self._prot_addr.text().strip()
         try:
             addr = int(raw_addr, 16)
         except ValueError:
-            _logger.exception("protect_address_parse_failed", raw_addr=raw_addr)
+            _logger.warning("protect_address_parse_failed", raw_addr=raw_addr)
+            QMessageBox.critical(self, "Invalid Address", f"Invalid address: {raw_addr}")
             return
 
         size = self._prot_size.value()
@@ -564,6 +641,9 @@ class MemoryTab(QWidget):
         """Search for a byte pattern in process memory."""
         if self._bridge is None:
             return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
 
         pattern = self._search_pattern.text().strip()
         if not pattern:
@@ -572,16 +652,26 @@ class MemoryTab(QWidget):
         self._search_status.setText("Searching...")
 
         def _on_success(result: object) -> None:
-            if not isinstance(result, list):
-                self._search_status.setText("No results")
-                return
-            typed_result = cast("list[object]", result)
-            self._search_results.setRowCount(0)
-            for addr in typed_result:
-                addr_int = addr if isinstance(addr, int) else 0
-                row = self._search_results.rowCount()
-                self._search_results.insertRow(row)
-                self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
-            self._search_status.setText(f"{len(typed_result)} matches")
+            try:
+                if not isinstance(result, list):
+                    self._search_status.setText("No results")
+                    return
+                typed_result = cast("list[object]", result)
+                self._search_results.setRowCount(0)
+                for addr in typed_result:
+                    addr_int = addr if isinstance(addr, int) else 0
+                    row = self._search_results.rowCount()
+                    self._search_results.insertRow(row)
+                    self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
+                self._search_status.setText(f"{len(typed_result)} matches")
+            except Exception as exc:
+                _logger.warning("search_display_failed", error=str(exc))
+                self._search_status.setText("Error displaying results")
+                raise
 
-        run_bridge_coroutine_async(self._bridge.search_pattern(pattern), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            self._search_status.setText("Search failed")
+            _logger.warning("search_failed", error=str(exc))
+            QMessageBox.critical(self, "Search Failed", f"Pattern search failed: {exc}")
+
+        run_bridge_coroutine_async(self._bridge.search_pattern(pattern), _on_success, _on_error, self)
