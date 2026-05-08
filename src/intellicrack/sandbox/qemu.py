@@ -17,7 +17,6 @@ import secrets
 import shutil
 import socket
 import struct
-import subprocess
 import tempfile
 import time
 import zipfile
@@ -30,6 +29,10 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 
 import psutil
 
+from intellicrack.core._subprocess import (
+    TimeoutExpired as _SubprocessTimeoutExpired,
+    run as _subprocess_run,
+)
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.sandbox._log_helpers import format_yara_match as _format_yara_match
@@ -997,7 +1000,7 @@ class QEMUSandbox(SandboxBase):
             return False
 
         try:
-            ps_result = subprocess.run(
+            ps_result = _subprocess_run(
                 [
                     pwsh,
                     "-NoLogo",
@@ -1017,13 +1020,17 @@ class QEMUSandbox(SandboxBase):
             if feature_state != "enabled":
                 _logger.debug("whpx_hypervisor_platform_not_enabled", state=feature_state)
                 return False
-        except (OSError, subprocess.TimeoutExpired) as e:
+        except (OSError, _SubprocessTimeoutExpired) as e:
             _logger.debug("whpx_feature_probe_failed", error=str(e))
             return False
 
+        bcdedit_path = shutil.which("bcdedit.exe") or shutil.which("bcdedit")
+        if bcdedit_path is None:
+            _logger.debug("whpx_probe_no_bcdedit")
+            return False
         try:
-            bcdedit_result = subprocess.run(
-                ["bcdedit.exe", "/enum", "{current}"],
+            bcdedit_result = _subprocess_run(
+                [bcdedit_path, "/enum", "{current}"],
                 capture_output=True,
                 text=True,
                 timeout=_ACCEL_DETECT_TIMEOUT,
@@ -1036,7 +1043,7 @@ class QEMUSandbox(SandboxBase):
             if "hypervisorlaunchtype    auto" not in bcd_output and "hypervisorlaunchtype  auto" not in bcd_output:
                 _logger.debug("whpx_bcdedit_hypervisorlaunchtype_not_auto", bcd_output=bcd_output)
                 return False
-        except (OSError, subprocess.TimeoutExpired) as e:
+        except (OSError, _SubprocessTimeoutExpired) as e:
             _logger.debug("whpx_bcdedit_probe_failed", error=str(e))
             return False
 
@@ -1247,7 +1254,7 @@ class QEMUSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_NO_IMAGE)
 
-        if self._accelerator in (AcceleratorType.KVM, AcceleratorType.WHPX):
+        if self._accelerator in {AcceleratorType.KVM, AcceleratorType.WHPX}:
             cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
         else:
             cpu_arg = "max,hv-vendor-id=AuthenticAMD,hypervisor=off"
