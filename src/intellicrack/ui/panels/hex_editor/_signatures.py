@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import mmap
 from pathlib import Path
 from typing import Any, Final, cast
 
@@ -33,6 +34,102 @@ _logger = get_logger(__name__)
 _MAX_ENTRY_POINT_BYTES: Final[int] = 256
 _NDB_LINE_FIELDS: Final[int] = 4
 _HDB_LINE_FIELDS: Final[int] = 3
+
+
+def read_file_for_scan(path: Path) -> bytes:
+    """Read file contents using mmap for memory-efficient access.
+
+    Args:
+        path: Absolute path to the file to read.
+
+    Returns:
+        bytes: Complete file contents.
+    """
+    size = path.stat().st_size
+    if size == 0:
+        return b""
+    with path.open("rb") as fh, mmap.mmap(fh.fileno(), length=0, access=mmap.ACCESS_READ) as mm:
+        return bytes(mm)
+
+
+def read_document_for_scan(document: object) -> bytes:
+    """Read document contents via the document API on the calling thread.
+
+    Args:
+        document: Hex-editor document object exposing ``length()`` and
+            ``read(offset, length)`` methods.
+
+    Returns:
+        bytes: Complete document contents as a bytes object.
+
+    Raises:
+        TypeError: If the document does not expose the expected API.
+        ValueError: If the document read returns an unexpected type.
+    """
+    length_fn = getattr(document, "length", None)
+    read_fn = getattr(document, "read", None)
+    if not callable(length_fn) or not callable(read_fn):
+        msg = "Document does not expose length() and read() methods"
+        raise TypeError(msg)
+    doc_len: int = cast("int", length_fn())
+    raw: object = read_fn(0, doc_len)
+    if isinstance(raw, list):
+        return bytes(cast("list[int]", raw))
+    if isinstance(raw, bytearray):
+        return bytes(raw)
+    if isinstance(raw, bytes):
+        return raw
+    msg = f"Unexpected document.read return type: {type(raw).__name__}"
+    raise ValueError(msg)
+
+
+def execute_signature_scan_from_source(
+    file_path: str | None,
+    document: object | None,
+    db_type: str,
+    db_path: str,
+) -> list[dict[str, Any]]:
+    """Read document data on the calling thread then scan against the database.
+
+    Intended to be executed on a worker thread so that neither the file I/O
+    nor the scan computation blocks the Qt UI thread.  When ``file_path`` is
+    provided and refers to an existing file, the file is read via
+    :func:`read_file_for_scan` using ``mmap``.  Otherwise ``document`` is
+    used as a fallback via :func:`read_document_for_scan`.
+
+    Args:
+        file_path: Absolute path to the on-disk binary, or ``None`` when the
+            document is not file-backed.
+        document: Hex-editor document object used as a fallback when
+            ``file_path`` is ``None`` or the file does not exist.
+        db_type: Database format (``"die"``, ``"clamav"``, ``"custom"``).
+        db_path: Path to the signature database file.
+
+    Returns:
+        list[dict[str, Any]]: List of match dicts with ``name``, ``type``,
+            ``version``, ``offset``, and ``details`` keys.
+
+    Raises:
+        ValueError: If neither a valid ``file_path`` nor a usable ``document``
+            is available.
+    """
+    doc_data: bytes
+    if file_path is not None:
+        fp = Path(file_path)
+        if fp.is_file():
+            doc_data = read_file_for_scan(fp)
+        elif document is not None:
+            doc_data = read_document_for_scan(document)
+        else:
+            msg = f"File not found and no document fallback: {file_path}"
+            raise ValueError(msg)
+    elif document is not None:
+        doc_data = read_document_for_scan(document)
+    else:
+        msg = "No file path and no document provided for signature scan"
+        raise ValueError(msg)
+
+    return execute_signature_scan(doc_data, db_type, db_path)
 
 
 def execute_signature_scan(
@@ -353,6 +450,7 @@ class SignaturesMixin:
     """Mixin providing non-YARA signature scanning for the hex editor panel."""
 
     document: Any | None
+    file_path: Path | None
     _hex_widget: Any | None
     _sig_db_type_combo: QComboBox | None
     _sig_db_path_label: QLabel | None
@@ -434,21 +532,6 @@ class SignaturesMixin:
         if self._sig_worker is not None and self._sig_worker.isRunning():
             return
 
-        try:
-            doc_len: int = self.document.length()
-            raw: object = self.document.read(0, doc_len)
-            if isinstance(raw, list):
-                doc_data = bytes(cast("list[int]", raw))
-            elif isinstance(raw, bytearray):
-                doc_data = bytes(raw)
-            elif isinstance(raw, bytes):
-                doc_data = raw
-            else:
-                return
-        except (AttributeError, ValueError):
-            _logger.exception("sig_scan_read_failed")
-            return
-
         type_idx = self._sig_db_type_combo.currentIndex() if self._sig_db_type_combo else 0
         db_type_map = {0: "die", 1: "clamav", 2: "custom"}
         db_type = db_type_map.get(type_idx, "custom")
@@ -456,7 +539,14 @@ class SignaturesMixin:
         if self._sig_results_tree is not None:
             self._sig_results_tree.clear()
 
-        worker = GenericCallableWorker(execute_signature_scan, doc_data, db_type, self._sig_db_path)
+        fp_str: str | None = str(self.file_path) if getattr(self, "file_path", None) is not None else None
+        worker = GenericCallableWorker(
+            execute_signature_scan_from_source,
+            fp_str,
+            self.document,
+            db_type,
+            self._sig_db_path,
+        )
         _: object = worker.call_finished.connect(self._on_sig_scan_finished_obj)
         _ = worker.call_error.connect(self._on_sig_scan_error_obj)
         self._sig_worker = worker
