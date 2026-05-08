@@ -1111,6 +1111,7 @@ class ProcessBridge(ToolBridgeBase):
         self._pipe_handles: dict[int, str] = {}
         self._device_handles: dict[int, str] = {}
         self._handle_type_cache: dict[int, str] = {}
+        self._privileges_changed_callbacks: list[Callable[[], None]] = []
         self._capabilities = BridgeCapabilities(
             supports_memory_access=True,
             supports_debugging=False,
@@ -3100,6 +3101,34 @@ class ProcessBridge(ToolBridgeBase):
     # Token / privilege manipulation
     # ------------------------------------------------------------------
 
+    def add_privileges_changed_callback(self, callback: Callable[[], None]) -> None:
+        """Register a callback to invoke when token privileges change.
+
+        Args:
+            callback: Zero-argument callable invoked after a privilege mutation.
+        """
+        if callback not in self._privileges_changed_callbacks:
+            self._privileges_changed_callbacks.append(callback)
+
+    def remove_privileges_changed_callback(self, callback: Callable[[], None]) -> None:
+        """Unregister a previously added privileges-changed callback.
+
+        Args:
+            callback: Callback to remove; silently ignored if not registered.
+        """
+        try:
+            self._privileges_changed_callbacks.remove(callback)
+        except ValueError:
+            _logger.debug("privileges_changed_callback_not_registered")
+
+    def _notify_privileges_changed(self) -> None:
+        """Invoke all registered privileges-changed callbacks."""
+        for cb in list(self._privileges_changed_callbacks):
+            try:
+                cb()
+            except Exception:
+                _logger.exception("privileges_changed_callback_failed")
+
     async def get_token_privileges(self, pid: int | None = None) -> list[dict[str, object]]:
         """Get token privileges for a process.
 
@@ -3305,6 +3334,7 @@ class ProcessBridge(ToolBridgeBase):
                     raise ToolError(msg)
 
                 _logger.info("privilege_adjusted", privilege=privilege_name, enabled=enable)
+                self._notify_privileges_changed()
                 return True
             finally:
                 self._kernel32.CloseHandle(token_handle)
