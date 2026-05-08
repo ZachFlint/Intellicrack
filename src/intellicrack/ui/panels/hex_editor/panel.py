@@ -39,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
@@ -358,6 +359,7 @@ class HexEditorPanel(
         if self._search_mode_combo is not None:
             self._search_mode_combo.currentTextChanged.connect(self._on_search_mode_changed)
 
+        self._setup_search_signals()
         self._setup_shortcuts()
 
         return self._main_vsplit
@@ -830,7 +832,9 @@ class HexEditorPanel(
                 return
             if event_type == evt.DOCUMENT_OPENED:
                 file_path_str = data.get("file_path")
-                if file_path_str and self.document is None:
+                if file_path_str:
+                    if self.document is not None:
+                        self.document = None
                     self.load_file(file_path_str)
             elif event_type == evt.CURSOR_MOVED:
                 offset = data.get("offset", 0)
@@ -858,15 +862,32 @@ class HexEditorPanel(
                         update_fn()
             elif event_type == evt.TEMPLATE_REGISTERED:
                 self._populate_template_combo()
+            elif event_type == evt.HIGHLIGHT_RULE_ADDED:
+                rule = data.get("rule")
+                if isinstance(rule, dict):
+                    self._apply_bridge_highlight_rule_added(rule)
+            elif event_type == evt.HIGHLIGHT_RULE_REMOVED:
+                rule_id = data.get("rule_id")
+                if isinstance(rule_id, str):
+                    self._apply_bridge_highlight_rule_removed(rule_id)
 
         self._state_callback = on_state_event
         state_holder.register_callback(on_state_event, source_id="panel")
+
+        if self._bridge is not None:
+            run_bridge_coroutine_async(
+                self._bridge.list_highlight_rules(),
+                on_success=self.seed_highlights_from_bridge,
+                parent=self,
+            )
 
     def _on_selection_changed(self, start: int, end: int) -> None:
         """Handle selection range changes from the hex widget.
 
         Updates the data inspector, hash display, and stored selection
-        range for use by sub-panels.
+        range for use by sub-panels.  Propagates the new selection to
+        the shared state holder and bridge so AI tools and CLI callers
+        see the current GUI selection rather than stale data.
 
         Args:
             start: Selection start offset.
@@ -876,6 +897,16 @@ class HexEditorPanel(
         self._selection_end = end
         if start >= 0:
             self._update_data_inspector(start)
+        if start >= 0 and end >= 0:
+            if self.state_holder is not None:
+                self.state_holder.set_selection(start, end, source="panel")
+            if self._bridge is not None:
+                self._bridge.update_selection_from_gui(start, end)
+        else:
+            if self.state_holder is not None:
+                self.state_holder.clear_selection(source="panel")
+            if self._bridge is not None:
+                self._bridge.update_selection_from_gui(-1, -1)
 
     @staticmethod
     def _populate_toolbar_encoding_combo(combo: QComboBox) -> None:
@@ -1001,11 +1032,19 @@ class HexEditorPanel(
         if self._hex_widget is None:
             return
         copy_fn = getattr(self._hex_widget, "copy_as", None)
-        if callable(copy_fn):
-            result = str(copy_fn(fmt))
-            clipboard = QApplication.clipboard()
-            if clipboard is not None:
-                clipboard.setText(result)
+        if not callable(copy_fn):
+            return
+        result = str(copy_fn(fmt))
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            _logger.warning("copy_as_no_clipboard", fmt=fmt)
+            show_warning(self, "Clipboard Unavailable", "The system clipboard is not accessible. The selection could not be copied.")
+            return
+        try:
+            clipboard.setText(result)
+        except RuntimeError as exc:
+            _logger.warning("copy_as_clipboard_write_failed", fmt=fmt, exc_info=True)
+            show_warning(self, "Clipboard Write Failed", f"Could not write to the clipboard:\n{exc}")
 
     def _on_alignment_changed(self, text: str) -> None:
         """Handle alignment combo box changes.

@@ -119,6 +119,7 @@ class ModulesTab(QWidget):
         set_hint = getattr(self._mod_filter, "set" + "Place" + "holderText")
         set_hint("Filter modules...")
         self._mod_filter.setMaximumWidth(200)
+        self._mod_filter.textChanged.connect(self._on_filter_modules)
         toolbar.addWidget(self._mod_filter)
 
         self._mod_count = QLabel("0 modules")
@@ -131,6 +132,23 @@ class ModulesTab(QWidget):
         set_header_labels(self._mod_tree, ["Module", "Base Address", "Size", "Path", "Entry Point"])
         tab_layout.addWidget(self._mod_tree)
         return tab
+
+    def _on_filter_modules(self, text: str) -> None:
+        """Filter the module tree by case-insensitive substring match on the module name column.
+
+        Args:
+            text: The filter text entered by the user.
+        """
+        needle = text.strip().lower()
+        root = self._mod_tree.invisibleRootItem()
+        if root is None:
+            return
+        for i in range(root.childCount()):
+            item = root.child(i)
+            if item is None:
+                continue
+            col0 = item.text(0).lower()
+            item.setHidden(bool(needle) and needle not in col0)
 
     def _build_inject(self) -> QWidget:
         """Build the DLL injection sub-tab.
@@ -378,7 +396,10 @@ class ModulesTab(QWidget):
                 self._handle_table.setItem(row, 3, QTableWidgetItem(f"0x{oa:X}"))
             self._handle_count.setText(f"{len(typed_result)} handles")
 
-        run_bridge_coroutine_async(self._bridge.get_handles(self._attached_pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            QMessageBox.warning(self, "Handle Enumeration Error", str(exc))
+
+        run_bridge_coroutine_async(self._bridge.get_handles(self._attached_pid), _on_success, _on_error, self)
 
     def _refresh_heaps(self) -> None:
         """Refresh heap list from bridge."""
@@ -401,7 +422,10 @@ class ModulesTab(QWidget):
                 self._heap_table.setItem(row, 1, QTableWidgetItem(str(typed_heap.get("flags", 0))))
                 self._heap_table.setItem(row, 2, QTableWidgetItem("Yes" if typed_heap.get("is_default") else "No"))
 
-        run_bridge_coroutine_async(self._bridge.get_heaps(self._attached_pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            QMessageBox.warning(self, "Heap Enumeration Error", str(exc))
+
+        run_bridge_coroutine_async(self._bridge.get_heaps(self._attached_pid), _on_success, _on_error, self)
 
     def _refresh_com(self) -> None:
         """Refresh COM server list from bridge."""
@@ -422,7 +446,10 @@ class ModulesTab(QWidget):
                 self._com_table.setItem(row, 1, QTableWidgetItem(str(typed_srv.get("dll_path", ""))))
                 self._com_table.setItem(row, 2, QTableWidgetItem(str(typed_srv.get("loaded_path", ""))))
 
-        run_bridge_coroutine_async(self._bridge.enumerate_com_servers(self._attached_pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            QMessageBox.warning(self, "COM Enumeration Error", str(exc))
+
+        run_bridge_coroutine_async(self._bridge.enumerate_com_servers(self._attached_pid), _on_success, _on_error, self)
 
     def _refresh_dotnet(self) -> None:
         """Detect .NET CLR in the attached process."""
@@ -443,4 +470,7 @@ class ModulesTab(QWidget):
                 else:
                     QTreeWidgetItem(self._net_tree, [str(key), str(val)])
 
-        run_bridge_coroutine_async(self._bridge.detect_dotnet(self._attached_pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            QMessageBox.warning(self, ".NET Detection Error", str(exc))
+
+        run_bridge_coroutine_async(self._bridge.detect_dotnet(self._attached_pid), _on_success, _on_error, self)

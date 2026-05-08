@@ -229,6 +229,7 @@ class ProcessPanel(AnalysisPanelBase):
         self._attached_pid = pid
         self._state = _PanelState.ATTACHED
 
+        self._memory_tab.set_attached_pid(pid)
         self._threads_tab.set_attached_pid(pid)
         self._modules_tab.set_attached_pid(pid)
         self._system_tab.set_attached_pid(pid)
@@ -302,6 +303,7 @@ class ProcessPanel(AnalysisPanelBase):
         self._attached_pid = None
         self._state = _PanelState.DETACHED
 
+        self._memory_tab.set_attached_pid(None)
         self._threads_tab.set_attached_pid(None)
         self._modules_tab.set_attached_pid(None)
         self._system_tab.set_attached_pid(None)
