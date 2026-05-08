@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
     [string]$LogDir = '.',
     [int]$TargetPid = 0
@@ -8,9 +9,12 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
-$logPath = Join-Path -Path $LogDir -ChildPath 'injection_monitor.log'
+$script:logPathRef = Join-Path -Path $LogDir -ChildPath 'injection_monitor.log'
+$script:diagPathRef = Join-Path -Path $LogDir -ChildPath 'injection_monitor.diag.log'
+$script:targetPidFilter = [int]$TargetPid
 
 function Write-InjectionRecord {
+    [CmdletBinding()]
     param(
         [string]$Timestamp,
         [int]$SourcePid,
@@ -25,8 +29,19 @@ function Write-InjectionRecord {
     $safeType = ($InjectionType -replace '\|', '_')
     $safeApis = ($ApiCalls -replace '\|', '_')
     $record = "$Timestamp|$SourcePid|$safeSource|$InjectedPid|$safeInjected|$safeType|$safeApis"
-    $targetPath = if ($script:logPathRef) { $script:logPathRef } else { $logPath }
-    Add-Content -LiteralPath $targetPath -Value $record -Encoding utf8
+    Add-Content -LiteralPath $script:logPathRef -Value $record -Encoding utf8
+}
+
+function Write-InjectionDiagnostic {
+    [CmdletBinding()]
+    param(
+        [string]$Timestamp,
+        [string]$Category,
+        [string]$Detail
+    )
+    $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
+    $line = "$Timestamp|$Category|$safeDetail"
+    Add-Content -LiteralPath $script:diagPathRef -Value $line -Encoding utf8
 }
 
 $traceEventAssembly = $null
@@ -53,39 +68,39 @@ if (-not $traceEventAssembly) {
     Write-InjectionRecord -Timestamp $ts -SourcePid 0 -SourceName 'tracer' `
         -InjectedPid 0 -InjectedName '' -InjectionType 'ERROR' `
         -ApiCalls 'TraceEvent.dll not found'
-    return
+    Write-InjectionDiagnostic -Timestamp $ts -Category 'traceevent_dll_missing' `
+        -Detail "searched=$([string]::Join(';', $searchRoots))"
+    throw 'Microsoft.Diagnostics.Tracing.TraceEvent.dll not found in any search root'
 }
 
 try {
     Add-Type -Path $traceEventAssembly
 } catch {
     $ts = Get-Date -Format 'o'
+    $msg = $_.Exception.Message
     Write-InjectionRecord -Timestamp $ts -SourcePid 0 -SourceName 'tracer' `
         -InjectedPid 0 -InjectedName '' -InjectionType 'ERROR' `
-        -ApiCalls "TraceEvent.dll load failed: $($_.Exception.Message -replace '\|', '_')"
-    return
+        -ApiCalls "TraceEvent.dll load failed: $($msg -replace '\|', '_')"
+    Write-InjectionDiagnostic -Timestamp $ts -Category 'traceevent_dll_load_failed' `
+        -Detail $msg
+    throw "Failed to load Microsoft.Diagnostics.Tracing.TraceEvent assembly: $msg"
 }
 
 $sessionName = 'IntellicrackInjectionMonitor'
 $kernelProcessGuid = [Guid]::Parse('22fb2cd6-0e7b-422b-a0c7-2fad1fd0e716')
+$threatIntelGuid = [Guid]::Parse('f4e1897c-bb5d-5668-f1d8-040f4d8dd344')
 $threadStartKeyword = [uint64]0x20
 
-$logmanStarted = $false
-$etlPath = Join-Path -Path $LogDir -ChildPath 'injection_monitor.etl'
-$moduleCacheTtlSeconds = 5
-$allocEntryTtlSeconds = 30
-$allocEntryCap = 4096
-
+$script:threatIntelEnabled = $false
+$script:moduleCacheTtl = 5
+$script:allocTtl = 30
+$script:allocCap = 4096
 $script:moduleCache = @{}
 $script:moduleCacheStamp = @{}
 $script:virtualAllocByThread = @{}
-$script:targetPidFilter = $TargetPid
-$script:moduleCacheTtl = $moduleCacheTtlSeconds
-$script:allocTtl = $allocEntryTtlSeconds
-$script:allocCap = $allocEntryCap
-$script:logPathRef = $logPath
 
 function Sync-ModuleCache {
+    [CmdletBinding()]
     param([int]$ProcId)
     $now = [DateTime]::UtcNow
     $stamp = $script:moduleCacheStamp[$ProcId]
@@ -112,6 +127,7 @@ function Sync-ModuleCache {
 }
 
 function Resolve-StartAddress {
+    [CmdletBinding()]
     param(
         [int]$ProcId,
         [int64]$Address
@@ -130,6 +146,8 @@ function Resolve-StartAddress {
 }
 
 function Get-ProcessNameSafe {
+    [CmdletBinding()]
+    [OutputType([string])]
     param([int]$ProcId)
     try {
         $proc = Get-Process -Id $ProcId -ErrorAction Stop
@@ -137,6 +155,56 @@ function Get-ProcessNameSafe {
     } catch {
         return 'unknown'
     }
+}
+
+function Resolve-PayloadValue {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]$EtwEvent,
+        [Parameter(Mandatory = $true)][string[]]$FieldNames
+    )
+    foreach ($f in $FieldNames) {
+        try {
+            $val = $EtwEvent.PayloadByName($f)
+            if ($null -ne $val) { return $val }
+        } catch {
+            $null = $_
+        }
+    }
+    return $null
+}
+
+function Get-OpcodeNameSafe {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param($EtwEvent)
+    try { return [string]$EtwEvent.OpcodeName } catch { return '' }
+}
+
+function Get-TaskNameSafe {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param($EtwEvent)
+    try { return [string]$EtwEvent.TaskName } catch { return '' }
+}
+
+function Get-ProviderEventApiName {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param($EtwEvent)
+
+    $opcode = Get-OpcodeNameSafe -EtwEvent $EtwEvent
+    $task = Get-TaskNameSafe -EtwEvent $EtwEvent
+    if ($opcode -and $task) { return "$task/$opcode" }
+    if ($opcode) { return $opcode }
+    if ($task) { return $task }
+    try {
+        $name = [string]$EtwEvent.EventName
+        if ($name) { return $name }
+    } catch {
+        $null = $_
+    }
+    return "EventId_$([int]$EtwEvent.ID)"
 }
 
 $session = $null
@@ -147,7 +215,9 @@ try {
         Write-InjectionRecord -Timestamp $ts -SourcePid 0 -SourceName 'tracer' `
             -InjectedPid 0 -InjectedName '' -InjectionType 'ERROR' `
             -ApiCalls 'TraceEvent.dll not found'
-        return
+        Write-InjectionDiagnostic -Timestamp $ts -Category 'traceevent_session_type_missing' `
+            -Detail 'TraceEventSession type not loaded'
+        throw 'TraceEventSession type unavailable after Add-Type'
     }
 
     try {
@@ -169,11 +239,25 @@ try {
     try {
         $session.EnableProvider($kernelProcessGuid, [Microsoft.Diagnostics.Tracing.TraceEventLevel]::Informational, $threadStartKeyword) | Out-Null
     } catch {
-        $null = $_
+        $ts = Get-Date -Format 'o'
+        Write-InjectionDiagnostic -Timestamp $ts -Category 'kernel_process_provider_enable_failed' `
+            -Detail $_.Exception.Message
+    }
+
+    try {
+        $session.EnableProvider($threatIntelGuid, [Microsoft.Diagnostics.Tracing.TraceEventLevel]::Informational, [uint64]::MaxValue) | Out-Null
+        $script:threatIntelEnabled = $true
+    } catch {
+        $script:threatIntelEnabled = $false
+        $ts = Get-Date -Format 'o'
+        Write-InjectionDiagnostic -Timestamp $ts -Category 'threat_intel_provider_unavailable' `
+            -Detail "$($_.Exception.Message); falling back to narrowed Kernel-Process heuristic; events labelled remote_thread_start"
+        Write-Warning "Microsoft-Windows-Threat-Intelligence provider unavailable: $($_.Exception.Message)"
     }
 
     $source = $session.Source
     $kernelParser = $source.Kernel
+    $dynamicParser = New-Object Microsoft.Diagnostics.Tracing.Parsers.DynamicTraceEventParser($source)
 
     $kernelParser.add_ThreadStart({
         param($evt)
@@ -182,13 +266,9 @@ try {
             if ($script:targetPidFilter -ne 0 -and $evtPid -ne $script:targetPidFilter) { return }
             if ($evtPid -le 4) { return }
 
-            $startAddr = 0L
-            foreach ($f in @('Win32StartAddr','StartAddr')) {
-                try {
-                    $val = $evt.PayloadByName($f)
-                    if ($null -ne $val) { $startAddr = [int64]$val; break }
-                } catch {}
-            }
+            $startVal = Resolve-PayloadValue -EtwEvent $evt -FieldNames @('Win32StartAddr', 'StartAddr')
+            if ($null -eq $startVal) { return }
+            $startAddr = [int64]$startVal
             if ($startAddr -eq 0) { return }
 
             $resolution = Resolve-StartAddress -ProcId $evtPid -Address $startAddr
@@ -196,42 +276,44 @@ try {
 
             $threadId = [int]$evt.ThreadID
             $sourcePid = 0
-            foreach ($f in @('ParentProcessID','ParentPid','CreatorProcessID')) {
-                try {
-                    $val = $evt.PayloadByName($f)
-                    if ($null -ne $val) { $sourcePid = [int]$val; break }
-                } catch {}
-            }
+            $parentVal = Resolve-PayloadValue -EtwEvent $evt -FieldNames @('ParentProcessID', 'ParentPid', 'CreatorProcessID')
+            if ($null -ne $parentVal) { $sourcePid = [int]$parentVal }
             if ($sourcePid -eq 0) { $sourcePid = $evtPid }
 
             $sourceName = Get-ProcessNameSafe -ProcId $sourcePid
             $targetName = Get-ProcessNameSafe -ProcId $evtPid
+            $apiName = Get-ProviderEventApiName -EtwEvent $evt
 
-            $apis = New-Object System.Collections.Generic.List[string]
-            $apis.Add('CreateRemoteThread') | Out-Null
-            if ($script:virtualAllocByThread.ContainsKey($threadId)) {
-                $apis.Add('VirtualAllocEx') | Out-Null
+            $hasAlloc = $script:virtualAllocByThread.ContainsKey($threadId)
+            if ($hasAlloc) {
                 $script:virtualAllocByThread.Remove($threadId) | Out-Null
             }
 
-            $injType = 'remote_thread'
-            if ($resolution.InModule -and $resolution.Suspicious) {
-                $injType = 'dll_injection'
-                $apis.Add('LoadLibrary') | Out-Null
-            } elseif (-not $resolution.InModule) {
-                $injType = 'shellcode_injection'
-                if (-not ($apis -contains 'VirtualAllocEx')) { $apis.Add('VirtualAllocEx') | Out-Null }
-                $apis.Add('WriteProcessMemory') | Out-Null
+            if ($script:threatIntelEnabled) {
+                if ($resolution.InModule -and $resolution.Suspicious) {
+                    $injType = 'remote_thread_in_temp_module'
+                } elseif (-not $resolution.InModule) {
+                    $injType = 'remote_thread_outside_modules'
+                } else {
+                    $injType = 'remote_thread_start'
+                }
+            } else {
+                $injType = 'remote_thread_start'
             }
 
-            $uniqueApis = $apis | Select-Object -Unique
+            $apiList = New-Object System.Collections.Generic.List[string]
+            $apiList.Add($apiName) | Out-Null
+            if ($hasAlloc) { $apiList.Add('KernelTrace/VirtualAlloc') | Out-Null }
+            $unique = $apiList | Select-Object -Unique
 
             $ts = Get-Date -Format 'o'
             Write-InjectionRecord -Timestamp $ts -SourcePid $sourcePid -SourceName $sourceName `
                 -InjectedPid $evtPid -InjectedName $targetName `
-                -InjectionType $injType -ApiCalls ($uniqueApis -join ',')
+                -InjectionType $injType -ApiCalls ($unique -join ',')
         } catch {
-            $null = $_
+            $ts = Get-Date -Format 'o'
+            Write-InjectionDiagnostic -Timestamp $ts -Category 'thread_start_handler_error' `
+                -Detail $_.Exception.Message
         }
     })
 
@@ -250,7 +332,9 @@ try {
                 foreach ($k in $stale) { $script:virtualAllocByThread.Remove($k) | Out-Null }
             }
         } catch {
-            $null = $_
+            $ts = Get-Date -Format 'o'
+            Write-InjectionDiagnostic -Timestamp $ts -Category 'virtual_alloc_handler_error' `
+                -Detail $_.Exception.Message
         }
     })
 
@@ -262,11 +346,58 @@ try {
                 $script:virtualAllocByThread.Remove($threadId) | Out-Null
             }
         } catch {
-            $null = $_
+            $ts = Get-Date -Format 'o'
+            Write-InjectionDiagnostic -Timestamp $ts -Category 'virtual_free_handler_error' `
+                -Detail $_.Exception.Message
         }
     })
 
-    $logmanStarted = $true
+    $threatIntelHandler = {
+        param($evt)
+        try {
+            $providerName = ''
+            try { $providerName = [string]$evt.ProviderName } catch { $providerName = '' }
+            if ($providerName -ne 'Microsoft-Windows-Threat-Intelligence') { return }
+
+            $apiName = Get-ProviderEventApiName -EtwEvent $evt
+            if ($apiName -notmatch 'CreateThread|CreateUserThread|CreateThreadEx|AllocVirtualMemory|WriteVirtualMemory|MapView|ProtectVirtualMemory') {
+                return
+            }
+
+            $targetVal = Resolve-PayloadValue -EtwEvent $evt -FieldNames @('TargetProcessId', 'TargetProcessID', 'ProcessId', 'ProcessID')
+            if ($null -eq $targetVal) { return }
+            $targetPid = [int]$targetVal
+            if ($script:targetPidFilter -ne 0 -and $targetPid -ne $script:targetPidFilter) { return }
+            if ($targetPid -le 4) { return }
+
+            $sourceVal = Resolve-PayloadValue -EtwEvent $evt -FieldNames @('CallingProcessId', 'CallingProcessID', 'SourceProcessId', 'SourceProcessID')
+            $sourcePid = if ($null -ne $sourceVal) { [int]$sourceVal } else { [int]$evt.ProcessID }
+
+            $sourceName = Get-ProcessNameSafe -ProcId $sourcePid
+            $targetName = Get-ProcessNameSafe -ProcId $targetPid
+
+            $injType = switch -Regex ($apiName) {
+                'CreateUserThread|CreateThreadEx|CreateThread' { 'remote_thread_create' }
+                'AllocVirtualMemory|ProtectVirtualMemory' { 'remote_memory_alloc' }
+                'WriteVirtualMemory' { 'remote_memory_write' }
+                'MapView' { 'remote_section_map' }
+                Default { 'threat_intel_event' }
+            }
+
+            $ts = Get-Date -Format 'o'
+            Write-InjectionRecord -Timestamp $ts -SourcePid $sourcePid -SourceName $sourceName `
+                -InjectedPid $targetPid -InjectedName $targetName `
+                -InjectionType $injType -ApiCalls "Microsoft-Windows-Threat-Intelligence/$apiName"
+        } catch {
+            $ts = Get-Date -Format 'o'
+            Write-InjectionDiagnostic -Timestamp $ts -Category 'threat_intel_handler_error' `
+                -Detail $_.Exception.Message
+        }
+    }
+
+    $dynamicParser.add_All($threatIntelHandler)
+    $source.UnhandledEvents.add_All($threatIntelHandler)
+
     [void]$source.Process()
 } catch {
     $ts = Get-Date -Format 'o'
@@ -274,14 +405,11 @@ try {
     Write-InjectionRecord -Timestamp $ts -SourcePid 0 -SourceName 'tracer' `
         -InjectedPid 0 -InjectedName '' -InjectionType 'ERROR' `
         -ApiCalls "trace session failed: $msg"
+    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message
+    throw
 } finally {
     if ($session) {
         try { $session.Stop($true) | Out-Null } catch { $null = $_ }
         try { $session.Dispose() } catch { $null = $_ }
     }
-    if ($logmanStarted) {
-        try { & logman stop $sessionName -ets | Out-Null } catch { $null = $_ }
-        try { & logman delete $sessionName -ets | Out-Null } catch { $null = $_ }
-    }
-    try { Remove-Item -LiteralPath $etlPath -Force -ErrorAction SilentlyContinue } catch { $null = $_ }
 }

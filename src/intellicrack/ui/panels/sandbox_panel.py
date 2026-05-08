@@ -32,7 +32,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
+from intellicrack.sandbox.qemu import QEMUSandbox
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import (
@@ -45,7 +47,6 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
-    from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
 
@@ -325,10 +326,19 @@ class SandboxPanel(AnalysisPanelBase):
 
     @override
     def _cleanup(self) -> None:
-        """Stop the status poll timer, disconnect VNC, and shut down the sandbox."""
+        """Stop the status poll timer, disconnect VNC, halt PCAP, and shut down the sandbox."""
         self._disconnect_vnc_display()
         self._status_poll_timer.stop()
         if self._bridge is not None and self.sandbox_id is not None:
+            try:
+                run_bridge_coroutine(self._bridge.stop_pcap(self.sandbox_id))
+            except (RuntimeError, ConnectionError, OSError):
+                _logger.warning(
+                    "sandbox_cleanup_pcap_stop_skipped",
+                    sandbox_id=self.sandbox_id,
+                    exc_info=True,
+                )
+            self._pcap_capture_id = None
             try:
                 run_bridge_coroutine(self._bridge.destroy(self.sandbox_id))
             except (RuntimeError, ConnectionError, OSError):
@@ -356,31 +366,108 @@ class SandboxPanel(AnalysisPanelBase):
         return self._bridge
 
     def set_sandbox(self, sandbox: SandboxBase) -> None:
-        """Set the sandbox backend instance (deprecated).
+        """Wire a legacy ``SandboxBase`` into the panel via a bridge adapter.
+
+        The legacy ``SandboxBase`` contract pre-dates the
+        ``SandboxBridge``-based panel API. To preserve the public method
+        without short-circuiting around the bridge layer, the supplied
+        instance is wrapped in a fresh ``SandboxBridge``: a single-slot
+        ``SandboxManager`` is constructed, a ``SandboxInstance`` for the
+        legacy sandbox is registered against it, and the resulting
+        bridge is installed via :meth:`set_bridge` so all subsequent
+        panel operations route through the same code path used by the
+        production bridge.
 
         Args:
             sandbox: The SandboxBase implementation to use.
         """
         self._sandbox = sandbox
-        _logger.warning("sandbox_set_deprecated", note="Use set_bridge() instead")
+        bridge = self._build_bridge_from_sandbox(sandbox)
+        self.set_bridge(bridge)
+        _logger.info(
+            "sandbox_set_via_bridge_adapter",
+            sandbox_type=type(sandbox).__name__,
+            instance_id=self.sandbox_id,
+        )
 
     def set_sandbox_manager(self, manager: SandboxManager) -> None:
-        """Set the sandbox manager (deprecated).
+        """Wire a legacy ``SandboxManager`` into the panel via a bridge adapter.
+
+        The supplied manager replaces the ``SandboxBridge``'s lazy
+        manager slot, so any sandbox instances it already owns are
+        directly accessible through the bridge API used by this panel.
 
         Args:
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
-        _logger.warning("sandbox_manager_set_deprecated", note="Use set_bridge() instead")
+        bridge = self._build_bridge_from_manager(manager)
+        self.set_bridge(bridge)
+        _logger.info(
+            "sandbox_manager_set_via_bridge_adapter",
+            instance_count=len(manager.instances),
+        )
 
     def get_sandbox(self) -> SandboxBase | None:
-        """Get the current sandbox backend (deprecated).
+        """Get the legacy sandbox backend reachable through the bridge.
+
+        Returns the ``SandboxBase`` instance currently bound to the
+        panel's bridge, looking it up through ``get_bridge`` so it
+        reflects any subsequent ``set_bridge`` calls. Falls back to the
+        raw value passed to :meth:`set_sandbox` when no bridge is
+        wired up.
 
         Returns:
-            SandboxBase | None: The attached sandbox or None.
+            SandboxBase | None: The sandbox instance reachable through
+            the active bridge, or ``None`` if no sandbox is bound.
         """
-        _logger.warning("get_sandbox_deprecated", note="Use get_bridge() instead")
+        bridge = self.get_bridge()
+        if bridge is not None and self.sandbox_id is not None:
+            manager = bridge.manager
+            if manager is not None:
+                instance = manager.instances
+                for entry in instance:
+                    if entry.id == self.sandbox_id:
+                        return entry.sandbox
         return self._sandbox
+
+    def _build_bridge_from_sandbox(self, sandbox: SandboxBase) -> SandboxBridge:
+        """Wrap a ``SandboxBase`` in a fresh ``SandboxBridge``.
+
+        Constructs a ``SandboxManager``, registers the supplied legacy
+        sandbox as a managed ``SandboxInstance`` (inferring the
+        ``sandbox_type`` from the concrete class), and assigns the
+        manager to a new ``SandboxBridge``. The resulting bridge can
+        therefore drive every panel operation that takes ``sandbox_id``
+        without recreating the underlying VM.
+
+        Args:
+            sandbox: Legacy sandbox to expose through the bridge.
+
+        Returns:
+            SandboxBridge: A bridge that owns a manager pre-populated
+            with the supplied sandbox.
+        """
+        sandbox_type: SandboxType = "qemu" if isinstance(sandbox, QEMUSandbox) else "windows"
+        bridge = SandboxBridge()
+        instance_id = bridge.register_existing_sandbox(sandbox, sandbox_type)
+        self.sandbox_id = instance_id
+        return bridge
+
+    @staticmethod
+    def _build_bridge_from_manager(manager: SandboxManager) -> SandboxBridge:
+        """Wrap a ``SandboxManager`` in a fresh ``SandboxBridge``.
+
+        Args:
+            manager: Pre-existing manager owning sandbox instances.
+
+        Returns:
+            SandboxBridge: A bridge whose manager slot is populated with
+            the supplied manager.
+        """
+        bridge = SandboxBridge()
+        bridge.attach_manager(manager)
+        return bridge
 
     def _log(self, message: str) -> None:
         """Append a message to the console output.
@@ -947,6 +1034,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] Snapshot failed: {exc}")
         self.snapshot_btn.setEnabled(True)
+        self._pending_snapshot_label = None
         _logger.warning("sandbox_snapshot_failed", error=str(exc))
 
     def _on_restore_snapshot(self) -> None:
@@ -1664,6 +1752,12 @@ class SandboxPanel(AnalysisPanelBase):
     def _on_vnc_port_received(self, result: object) -> None:
         """Handle VNC port retrieval.
 
+        Forwards the port to :meth:`_connect_vnc_with_password`, which
+        retrieves the QEMU VNC password registered on the bridge (if any)
+        and passes it through to ``VNCWidget.connect_to_server`` so the
+        embedded RFB client can complete VNC Authentication (security
+        type 2) instead of failing with ``vnc_auth_missing_password``.
+
         Args:
             result: VNC port number or None.
         """
@@ -1673,9 +1767,24 @@ class SandboxPanel(AnalysisPanelBase):
         if vnc_port is None:
             _logger.debug("sandbox_vnc_port_not_available")
             return
+        self._connect_vnc_with_password(vnc_port)
+
+    def _connect_vnc_with_password(self, vnc_port: int) -> None:
+        """Connect the VNC widget after retrieving the configured password.
+
+        Args:
+            vnc_port: VNC server port returned by ``bridge.get_vnc_port``.
+        """
+        if self._vnc_widget is None or self._bridge is None or self.sandbox_id is None:
+            return
+        password = self._bridge.get_vnc_password(self.sandbox_id)
         self._log(f"[*] Connecting VNC display on port {vnc_port}...")
-        self._vnc_widget.connect_to_server("127.0.0.1", vnc_port)
-        _logger.info("vnc_display_connecting", port=vnc_port)
+        self._vnc_widget.connect_to_server("127.0.0.1", vnc_port, password=password)
+        _logger.info(
+            "vnc_display_connecting",
+            port=vnc_port,
+            authenticated=password is not None,
+        )
 
     def _disconnect_vnc_display(self) -> None:
         """Disconnect the VNC widget if connected."""

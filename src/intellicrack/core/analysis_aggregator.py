@@ -55,7 +55,11 @@ class AnalysisAggregator:
 
         Starts with data already present in BinaryInfo (sections, imports,
         exports, file_type, architecture), then queries connected bridges
-        for additional data (strings, functions).
+        for additional data (strings, functions). The returned summary's
+        ``complete`` flag is True only when at least one real analysis
+        bridge contributed data; consumers (notably AI report generation)
+        must check ``complete`` before treating the summary as
+        authoritative.
 
         Args:
             binary_name: Display name of the binary being analyzed.
@@ -95,7 +99,8 @@ class AnalysisAggregator:
         imports = _deduplicate_imports(imports)
         exports = _deduplicate_exports(exports)
 
-        if not source_bridges:
+        complete = bool(source_bridges)
+        if not complete:
             source_bridges.append("binary_info")
             notes.append("No bridges connected; using BinaryInfo metadata only")
 
@@ -105,6 +110,7 @@ class AnalysisAggregator:
             source_bridges=source_bridges,
             strings_count=len(strings),
             functions_count=len(functions),
+            complete=complete,
         )
         return BridgeAnalysisSummary(
             binary_name=binary_name,
@@ -117,6 +123,7 @@ class AnalysisAggregator:
             architecture=binary_info.architecture,
             source_bridges=source_bridges,
             analysis_notes=notes,
+            complete=complete,
         )
 
     async def _collect_from_static_bridge(
@@ -201,7 +208,13 @@ class AnalysisAggregator:
 
 
 def _deduplicate_imports(imports: list[ImportInfo]) -> list[ImportInfo]:
-    """Remove duplicate imports by address.
+    """Remove duplicate imports by ``(dll, function, ordinal)``.
+
+    Address alone is not a stable identity for an import: unbound or
+    by-ordinal entries frequently share ``address == 0``, and even bound
+    entries can share an address across DLLs in pathological PE layouts.
+    Keying on ``(dll, function, ordinal)`` preserves every distinct
+    import while still collapsing exact duplicates.
 
     Args:
         imports: List of import entries possibly containing duplicates.
@@ -209,17 +222,23 @@ def _deduplicate_imports(imports: list[ImportInfo]) -> list[ImportInfo]:
     Returns:
         list[ImportInfo]: Deduplicated list preserving first-seen order.
     """
-    seen: set[int] = set()
+    seen: set[tuple[str, str, int | None]] = set()
     result: list[ImportInfo] = []
     for imp in imports:
-        if imp.address not in seen:
-            seen.add(imp.address)
+        key = (imp.dll, imp.function, imp.ordinal)
+        if key not in seen:
+            seen.add(key)
             result.append(imp)
     return result
 
 
 def _deduplicate_exports(exports: list[ExportInfo]) -> list[ExportInfo]:
-    """Remove duplicate exports by address.
+    """Remove duplicate exports by ``(name, ordinal, address)``.
+
+    Forwarder exports legitimately share a single trampoline address
+    while exposing distinct names/ordinals. Keying on the natural identity
+    triple keeps every unique export entry while still removing exact
+    duplicates introduced when multiple bridges report the same symbol.
 
     Args:
         exports: List of export entries possibly containing duplicates.
@@ -227,10 +246,11 @@ def _deduplicate_exports(exports: list[ExportInfo]) -> list[ExportInfo]:
     Returns:
         list[ExportInfo]: Deduplicated list preserving first-seen order.
     """
-    seen: set[int] = set()
+    seen: set[tuple[str, int, int]] = set()
     result: list[ExportInfo] = []
     for exp in exports:
-        if exp.address not in seen:
-            seen.add(exp.address)
+        key = (exp.name, exp.ordinal, exp.address)
+        if key not in seen:
+            seen.add(key)
             result.append(exp)
     return result

@@ -16,6 +16,7 @@ from intellicrack.ui.panels.cutter_panel import CutterPanel
 from intellicrack.ui.panels.frida_panel import FridaPanel
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
 from intellicrack.ui.panels.hex_editor_panel import HexEditorPanel
+from intellicrack.ui.panels.hxd_panel import HxDPanel
 from intellicrack.ui.panels.process_panel import ProcessPanel
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 from intellicrack.ui.panels.script_manager import ScriptManagerPanel, ScriptTypeInfo
@@ -36,6 +37,7 @@ __all__ = [
     "FridaStackSource",
     "GhidraPanel",
     "HexEditorPanel",
+    "HxDPanel",
     "ProcessPanel",
     "SandboxPanel",
     "ScriptManagerPanel",
