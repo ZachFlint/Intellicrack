@@ -10,7 +10,7 @@ import ctypes
 import ctypes.wintypes
 import sys
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QDialog,
@@ -27,7 +27,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available
+
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -278,9 +285,21 @@ class ProcessMemoryMixin:
 
     document: Any | None
     _hex_widget: Any | None
+    _bridge: HexEditorBridge | None
 
     def _on_open_process_memory(self) -> None:
-        """Open the process memory dialog and load the selected region."""
+        """Open the process memory dialog and route the selected region through the bridge.
+
+        Routing through :meth:`HexEditorBridge.open_process_memory` is
+        the only correct path: the bridge closes any existing document,
+        publishes a ``DOCUMENT_OPENED`` event on the shared state holder,
+        updates ``binary_loaded`` / ``target_path`` / cursor / selection,
+        and only then exposes the new document to subscribers (AI tools,
+        peer GUIs). The previous implementation hard-replaced
+        ``self.document`` and left the bridge pointing at the old map,
+        so every consumer asking the bridge what it had open got stale
+        state.
+        """
         parent = self if isinstance(self, QWidget) else None
 
         if not hexcore_available or hexcore is None:
@@ -291,34 +310,84 @@ class ProcessMemoryMixin:
             )
             return
 
+        bridge = self._bridge
+        if bridge is None:
+            QMessageBox.warning(
+                parent,
+                "Process Memory",
+                "The hex editor bridge is not attached to this panel.",
+            )
+            return
+
         dlg = ProcessMemoryDialog(parent)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-
         if dlg.region_selected is None:
             return
 
         pid, addr, size = dlg.region_selected
+        _logger.info("process_memory_dispatch", pid=pid, address=hex(addr), size=size)
+        coro: Coroutine[object, object, dict[str, Any]] = bridge.open_process_memory(pid, addr, size)
+        run_bridge_coroutine_async(
+            coro,
+            on_success=self._on_process_memory_success,
+            on_error=self._on_process_memory_error,
+            parent=parent,
+        )
 
-        try:
-            from_mem_fn = getattr(hexcore.HexDocument, "from_process_memory", None)
-            if not callable(from_mem_fn):
-                QMessageBox.warning(parent, "Process Memory", "from_process_memory not available")
-                return
+    def _on_process_memory_success(self, result: object) -> None:
+        """Adopt the bridge's freshly-opened document into the panel widgets.
 
-            doc = from_mem_fn(pid, addr, size)
-            self.document = doc
+        The bridge has already updated its own document attribute and
+        emitted ``DOCUMENT_OPENED`` on the state holder. This handler
+        only mirrors the resulting document into the panel-local
+        attributes the GUI reads from, so the hex view repaints with
+        the new contents even if the panel's state-holder subscription
+        is filtered (loop-guard) on its own ``"bridge"`` source.
 
-            if self._hex_widget is not None:
-                set_doc = getattr(self._hex_widget, "set_document", None)
-                if callable(set_doc):
-                    set_doc(doc)
-
-            _logger.info("process_memory_opened", pid=pid, address=addr, size=size)
-        except (OSError, RuntimeError, ValueError) as exc:
-            QMessageBox.warning(
-                parent,
-                "Process Memory",
-                f"Failed to open process memory:\n{exc}",
+        Args:
+            result: ``dict`` payload returned by
+                :meth:`HexEditorBridge.open_process_memory` containing
+                ``pid``, ``address``, ``size`` and ``document_length``.
+        """
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            return
+        new_document = getattr(bridge, "document", None)
+        if new_document is None:
+            _logger.warning("process_memory_success_no_document")
+            return
+        self.document = new_document
+        if self._hex_widget is not None:
+            set_doc = getattr(self._hex_widget, "set_document", None)
+            if callable(set_doc):
+                set_doc(new_document)
+        if isinstance(result, dict):
+            payload: dict[str, Any] = cast("dict[str, Any]", result)
+            _logger.info(
+                "process_memory_success",
+                pid=payload.get("pid"),
+                address=payload.get("address"),
+                size=payload.get("size"),
+                document_length=payload.get("document_length"),
             )
-            _logger.exception("process_memory_open_failed")
+        else:
+            _logger.info("process_memory_success_unknown_payload_shape")
+
+    def _on_process_memory_error(self, exc: object) -> None:
+        """Surface a bridge ``open_process_memory`` failure to the user.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        QMessageBox.warning(
+            parent,
+            "Process Memory",
+            f"Failed to open process memory:\n{exc}",
+        )
+        _logger.warning(
+            "process_memory_open_failed",
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
