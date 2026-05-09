@@ -46,7 +46,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core._subprocess import TimeoutExpired
-from intellicrack.core.config import get_config_file
+from intellicrack.core.config import get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.ui._dialogs import show_info, show_warning
@@ -759,7 +759,7 @@ class ToolConfigDialog(QDialog):
         """
         super().__init__(parent)
         self._registry = tool_registry
-        self._tools_directory = tools_directory or Path("D:/Intellicrack/tools")
+        self._tools_directory = tools_directory or (get_project_root() / "tools")
         self._tool_widgets: dict[str, ToolSettingsWidget] = {}
         self._config_path = get_config_file("tools.json")
 

@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
-from intellicrack.core.config import get_config_dir, get_config_file
+from intellicrack.core.config import get_config_dir, get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.sandbox.base import SandboxConfig
@@ -533,7 +533,7 @@ class SandboxConfigDialog(QDialog):
 
     def _load_settings(self) -> None:
         """Load settings from config file."""
-        default_shared = Path("D:/Intellicrack/sandbox_shared")
+        default_shared = get_project_root() / "sandbox_shared"
 
         if self.CONFIG_FILE.exists():
             try:
