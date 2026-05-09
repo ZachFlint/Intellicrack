@@ -119,6 +119,52 @@ _UNARY_RIGHT_BP: int = 27
 _EOF_TOKEN = Token(TokenType.EOF, "", 0, 0)
 
 
+class HexPatAggregateParseError(HexPatParseError):
+    """Aggregated parser error produced when recovery collects multiple errors.
+
+    Subclasses :class:`HexPatParseError` so existing handlers continue to catch it.
+    Carries the full list of collected errors via :attr:`errors`, and exposes a
+    summary message that enumerates every error so callers do not silently lose
+    information about secondary failures.
+    """
+
+    def __init__(self, errors: tuple[HexPatParseError, ...]) -> None:
+        """Initialize the aggregate error from a non-empty tuple of parse errors.
+
+        Args:
+            errors: Tuple of collected :class:`HexPatParseError` instances; must
+                contain at least one element. The first error's location is
+                preserved as the headline location of the aggregate so existing
+                tooling that reads ``line``/``column`` continues to work.
+
+        Raises:
+            ValueError: If ``errors`` is empty.
+        """
+        if not errors:
+            msg = "HexPatAggregateParseError requires at least one collected error"
+            raise ValueError(msg)
+        self.errors: tuple[HexPatParseError, ...] = errors
+        first: HexPatParseError = errors[0]
+        if len(errors) == 1:
+            summary: str = first.message
+        else:
+            details: list[str] = []
+            total: int = len(errors)
+            for idx, err in enumerate(errors, start=1):
+                location: str = ""
+                if err.line > 0:
+                    location = f" at {err.line}:{err.column}" if err.column > 0 else f" at line {err.line}"
+                details.append(f"  [{idx}/{total}]{location}: {err.message}")
+            joined: str = "\n".join(details)
+            summary = f"{total} parse errors collected:\n{joined}"
+        super().__init__(
+            summary,
+            first.line,
+            first.column,
+            first.file,
+        )
+
+
 class HexPatParser:
     """Recursive-descent parser for the HexPat .hexpat pattern language.
 
@@ -161,16 +207,20 @@ class HexPatParser:
         The parser attempts to recover from individual top-level syntax errors by
         collecting the raised :class:`HexPatParseError` into :attr:`errors` and
         synchronising to the next top-level boundary (``;`` or ``}``). After the
-        entire token stream has been processed, the first collected error (if any)
-        is re-raised so that callers which expect strict behaviour still observe a
-        failure.
+        entire token stream has been processed, all collected errors are surfaced
+        to the caller as a single :class:`HexPatAggregateParseError` whose message
+        enumerates every collected error and whose :attr:`errors` attribute holds
+        the full list, so callers never silently lose information about secondary
+        failures.
 
         Returns:
             list[DeclNode | StmtNode]: Ordered list of top-level AST nodes parsed
                 from the token stream.
 
         Raises:
-            HexPatParseError: When one or more syntax errors were collected.
+            HexPatAggregateParseError: When one or more syntax errors were
+                collected. Subclass of :class:`HexPatParseError` so existing
+                ``except HexPatParseError`` clauses still catch it.
         """
         nodes: list[DeclNode | StmtNode] = []
         while not self._at_end():
@@ -185,13 +235,7 @@ class HexPatParser:
                 continue
             nodes.append(node)
         if self._errors:
-            first = self._errors[0]
-            raise HexPatParseError(
-                first.message,
-                first.line,
-                first.column,
-                first.file,
-            )
+            raise HexPatAggregateParseError(tuple(self._errors))
         return nodes
 
     def _parse_top_level_node(self) -> DeclNode | StmtNode:

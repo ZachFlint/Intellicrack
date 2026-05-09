@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Final
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.ast_nodes import (
     AddressOfExpr,
     ArrayType,
@@ -68,6 +69,7 @@ from intellicrack.core.hexpat.ast_nodes import (
 from intellicrack.core.hexpat.errors import HexPatError, HexPatParseError
 from intellicrack.core.hexpat.lexer import HexPatLexer
 from intellicrack.core.hexpat.parser import HexPatParser
+from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor
 from intellicrack.core.hexpat.tokens import Token, TokenType
 from intellicrack.core.logging import get_logger
 
@@ -160,7 +162,11 @@ class HexPatCodegen:
     static representation are rejected during the walk.
     """
 
-    def __init__(self, declarations: Sequence[DeclNode | StmtNode]) -> None:
+    def __init__(
+        self,
+        declarations: Sequence[DeclNode | StmtNode],
+        pragma: PragmaInfo | None = None,
+    ) -> None:
         """Initialize the HexPatCodegen with parsed top-level AST nodes.
 
         Top-level runtime-only declarations and statements raise
@@ -174,13 +180,22 @@ class HexPatCodegen:
                 or other ``StmtNode`` values are rejected at construction
                 time as they have no representation in the static JSON
                 template.
+            pragma: Optional preprocessor-extracted ``#pragma`` metadata to
+                propagate into the emitted JSON template. When supplied, the
+                template's ``default_endianness``, ``description``, ``author``,
+                and ``magic_detection`` fields are populated from the pragma
+                values; otherwise the codegen falls back to inert defaults.
         """
         self._reject_runtime_top_level(declarations)
         self._decls: list[DeclNode] = [node for node in declarations if isinstance(node, (StructDecl, UnionDecl, EnumDecl, BitfieldDecl))]
         self._nested_enums: dict[str, EnumDecl] = {decl.name: decl for decl in self._decls if isinstance(decl, EnumDecl)}
+        self._pragma: PragmaInfo = pragma if pragma is not None else PragmaInfo()
         _logger.debug(
             "hexpat_codegen_initialized",
             declaration_count=len(self._decls),
+            pragma_endian=self._pragma.endian,
+            pragma_base_address=self._pragma.base_address,
+            pragma_bitfield_order=self._pragma.bitfield_order,
         )
 
     @staticmethod
@@ -218,6 +233,14 @@ class HexPatCodegen:
 
     def generate(self) -> dict[str, Any]:
         """Generate the JSON template dict from all declarations.
+
+        Honours preprocessor-extracted ``#pragma`` metadata (when supplied at
+        construction) by populating the template's ``default_endianness``,
+        ``description``, ``author``, and ``magic_detection`` fields from the
+        corresponding pragma values. ``#pragma base_address`` and
+        ``#pragma bitfield_order`` are recorded under a ``pragma_metadata``
+        key so downstream consumers can apply them when materialising the
+        template against binary data.
 
         Returns:
             dict[str, Any]: JSON-serializable template definition.
@@ -263,12 +286,39 @@ class HexPatCodegen:
                     "fields": self._gen_bitfield_entries(decl.entries),
                 }
 
+        endian_value: str = self._pragma.endian if self._pragma.endian in {"little", "big"} else "little"
+        description: str = self._pragma.description or f"{main_struct.name} (compiled from HexPat DSL)"
+
         result: dict[str, Any] = {
             "name": main_struct.name,
-            "description": f"{main_struct.name} (compiled from HexPat DSL)",
-            "default_endianness": "little",
+            "description": description,
+            "default_endianness": endian_value,
             "fields": fields,
         }
+
+        if self._pragma.author:
+            result["author"] = self._pragma.author
+
+        if self._pragma.magic:
+            offset_val, magic_bytes = self._pragma.magic[0]
+            result["magic_detection"] = {
+                "offset": offset_val,
+                "bytes": list(magic_bytes),
+            }
+
+        default_pragma = PragmaInfo()
+        pragma_metadata: dict[str, Any] = {}
+        if self._pragma.base_address != default_pragma.base_address:
+            pragma_metadata["base_address"] = self._pragma.base_address
+        if self._pragma.bitfield_order != default_pragma.bitfield_order:
+            pragma_metadata["bitfield_order"] = self._pragma.bitfield_order
+        if self._pragma.mime != default_pragma.mime:
+            pragma_metadata["mime"] = self._pragma.mime
+        if self._pragma.pointer_size != default_pragma.pointer_size:
+            pragma_metadata["pointer_size"] = self._pragma.pointer_size
+        if pragma_metadata:
+            result["pragma_metadata"] = pragma_metadata
+
         if types:
             result["types"] = types
         return result
@@ -731,6 +781,14 @@ class HexPatCompiler:
     def compile_to_dict(source: str) -> dict[str, Any]:
         """Compile DSL source to a Python dict.
 
+        Runs the full preprocessor on ``source`` so that ``#pragma`` directives
+        (``endian``, ``base_address``, ``bitfield_order``, ``author``,
+        ``description``, ``magic``, ``mime``, ``pointer_size``) are honoured by
+        the generated static template. Without this step the codegen would
+        silently fall back to inert defaults (``little`` endian, generic
+        description, no magic detection), which the audit identified as a
+        codegen-behaviour drift.
+
         Args:
             source: HexPat DSL source code.
 
@@ -738,16 +796,28 @@ class HexPatCompiler:
             dict[str, Any]: JSON-compatible template definition dict.
 
         Raises:
-            HexPatError: If lexing, parsing, or code generation fails.
+            HexPatError: If preprocessing, lexing, parsing, or code generation
+                fails.
         """
-        lexer = HexPatLexer(source)
+        preprocessor = HexPatPreprocessor()
+        try:
+            processed_source, pragma = preprocessor.process(source)
+        except HexPatError as exc:
+            raise HexPatError(exc.message, exc.line, exc.column, exc.file) from exc
+
+        lexer = HexPatLexer(processed_source)
         tokens = lexer.tokenize()
         parser = HexPatParser(tokens)
         try:
             declarations = parser.parse()
         except HexPatParseError as exc:
             raise HexPatError(exc.message, exc.line, exc.column, exc.file) from exc
-        codegen = HexPatCodegen(list(declarations))
+        codegen = HexPatCodegen(list(declarations), pragma=pragma)
         result = codegen.generate()
-        _logger.debug("hexpat_compiled", template_name=result.get("name", ""))
+        _logger.debug(
+            "hexpat_compiled",
+            template_name=result.get("name", ""),
+            pragma_endian=pragma.endian,
+            pragma_base_address=pragma.base_address,
+        )
         return result
