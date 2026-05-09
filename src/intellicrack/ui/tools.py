@@ -13,6 +13,7 @@ Frida, Binary) and specialized panels (Licensing, Scripts, Stack).
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 from pathlib import Path
@@ -41,7 +42,7 @@ from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
 from intellicrack.ui.panel_dock import DetachedPanelWindow
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -337,7 +338,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from intellicrack.bridges.base import ToolBridgeBase
+    from intellicrack.bridges.base import StaticAnalysisBridge, ToolBridgeBase
     from intellicrack.bridges.cutter import CutterBridge
     from intellicrack.bridges.frida_bridge import FridaBridge
     from intellicrack.bridges.ghidra import GhidraBridge
@@ -347,7 +348,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import X64DbgBridge
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import BridgeAnalysisSummary
+    from intellicrack.core.types import BridgeAnalysisSummary, CrossReference
     from intellicrack.sandbox.base import SandboxBase
     from intellicrack.sandbox.manager import SandboxManager
     from intellicrack.ui.panels.analysis_panel import BridgeAnalysisPanel
@@ -860,20 +861,30 @@ class ToolOutputPanel(QFrame):
     def _on_function_selected(self, name: str, address: int) -> None:
         """Handle function selection in the list.
 
+        Emits ``address_clicked`` and asynchronously populates the xref panel
+        with cross-references to/from the selected function so the navigator
+        stays in sync with the current selection.
+
         Args:
             name: Function name.
             address: Function address.
         """
         del name
         self.address_clicked.emit(address)
+        self.populate_xrefs_for_address(address)
 
     def _on_xref_selected(self, address: int) -> None:
         """Handle xref selection.
+
+        Emits ``address_clicked`` and refreshes the xref panel with the
+        cross-references for the newly navigated address so the user can
+        keep walking the call graph from the destination.
 
         Args:
             address: Target address.
         """
         self.address_clicked.emit(address)
+        self.populate_xrefs_for_address(address)
 
     def set_tab_content(self, tab_name: OutputType, content: str) -> None:
         """Set content for a specific tab.
@@ -934,6 +945,99 @@ class ToolOutputPanel(QFrame):
             outgoing: List of (address, description) for refs from this location.
         """
         self.xref_panel.set_xrefs(incoming, outgoing)
+
+    def _select_static_analysis_bridge(self) -> StaticAnalysisBridge | None:
+        """Return the active static-analysis bridge for xref/function lookups.
+
+        Prefers the Cutter bridge (rizin-backed, fast `axt`/`axf` queries),
+        falling back to Ghidra. Returns ``None`` when neither bridge has been
+        constructed yet so callers can no-op gracefully instead of erroring.
+
+        Returns:
+            StaticAnalysisBridge | None: The bridge to use for xref queries,
+                or ``None`` if no static-analysis bridge is currently attached.
+        """
+        if self.cutter_bridge is not None:
+            return cast("StaticAnalysisBridge", self.cutter_bridge)
+        if self.ghidra_bridge is not None:
+            return cast("StaticAnalysisBridge", self.ghidra_bridge)
+        return None
+
+    @staticmethod
+    def _xref_label(ref: CrossReference, *, source: bool) -> str:
+        """Format a single CrossReference entry for display in the xref tree.
+
+        Args:
+            ref: Cross-reference returned by a static-analysis bridge.
+            source: When ``True`` use the source-side function name as the
+                label suffix (incoming view); when ``False`` use the
+                destination-side name (outgoing view).
+
+        Returns:
+            str: Human-readable description like ``"call <function>"``.
+        """
+        label = ref.from_function if source else ref.to_function
+        if label:
+            return f"{ref.ref_type} {label}"
+        return ref.ref_type
+
+    def populate_xrefs_for_address(self, address: int) -> None:
+        """Populate the xref panel with cross-references for ``address``.
+
+        Schedules an async fetch on the active static-analysis bridge
+        (Cutter preferred, Ghidra fallback) for ``get_xrefs_to`` and
+        ``get_xrefs_from``. Results are delivered back to the Qt main
+        thread and projected into ``XRefPanel.set_xrefs``. When no bridge
+        is attached the panel is cleared so stale data does not leak.
+
+        Args:
+            address: The address whose cross-references should be displayed.
+        """
+        bridge = self._select_static_analysis_bridge()
+        if bridge is None:
+            self.xref_panel.set_xrefs([], [])
+            _logger.debug("xref_population_skipped", reason="no_static_bridge", address=hex(address))
+            return
+
+        async def _fetch() -> tuple[list[CrossReference], list[CrossReference]]:
+            incoming, outgoing = await asyncio.gather(
+                bridge.get_xrefs_to(address),
+                bridge.get_xrefs_from(address),
+            )
+            return incoming, outgoing
+
+        def _on_success(result: object) -> None:
+            try:
+                raw_pair = cast("tuple[object, object]", result)
+                raw_in_obj, raw_out_obj = raw_pair
+            except (TypeError, ValueError):
+                _logger.warning("xref_population_unexpected_result", address=hex(address))
+                return
+            if not isinstance(raw_in_obj, list) or not isinstance(raw_out_obj, list):
+                _logger.warning("xref_population_non_list_result", address=hex(address))
+                return
+            incoming_raw = cast("list[CrossReference]", raw_in_obj)
+            outgoing_raw = cast("list[CrossReference]", raw_out_obj)
+            incoming_view: list[tuple[int, str]] = [(ref.from_address, self._xref_label(ref, source=True)) for ref in incoming_raw]
+            outgoing_view: list[tuple[int, str]] = [(ref.to_address, self._xref_label(ref, source=False)) for ref in outgoing_raw]
+            self.xref_panel.set_xrefs(incoming_view, outgoing_view)
+            _logger.info(
+                "xref_panel_populated",
+                address=hex(address),
+                incoming=len(incoming_view),
+                outgoing=len(outgoing_view),
+            )
+
+        def _on_error(exc: object) -> None:
+            self.xref_panel.set_xrefs([], [])
+            _logger.warning(
+                "xref_population_failed",
+                address=hex(address),
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+
+        run_bridge_coroutine_async(_fetch(), on_success=_on_success, on_error=_on_error, parent=self)
 
     def activate_tab(self, tab_name: OutputType) -> None:
         """Activate a specific tab.
@@ -1535,6 +1639,10 @@ class ToolOutputPanel(QFrame):
     def update_bridge_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Update the analysis panel with new bridge analysis data.
 
+        Populates the FunctionListPanel from ``analysis.functions`` so the
+        right-hand navigator reflects the current binary, then forwards the
+        full summary to the bridge analysis panel.
+
         Args:
             analysis: The bridge analysis data to display.
         """
@@ -1544,6 +1652,15 @@ class ToolOutputPanel(QFrame):
         if self.analysis_panel is not None:
             self.analysis_panel.set_analysis(analysis)
             _logger.info("bridge_analysis_updated", has_panel=True)
+
+        function_pairs: list[tuple[str, int]] = [(fn.name, fn.address) for fn in analysis.functions]
+        self.func_list.set_functions(function_pairs)
+        self.xref_panel.set_xrefs([], [])
+        _logger.info(
+            "function_list_populated",
+            count=len(function_pairs),
+            source_bridges=list(analysis.source_bridges),
+        )
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""
@@ -2121,16 +2238,50 @@ class ToolOutputPanel(QFrame):
             self._pending_sandbox_bridge = None
 
     def wire_sandbox_backend(self, sandbox: object, manager: object | None = None) -> None:
-        """Wire a sandbox backend and optional manager (deprecated).
+        """Wire an existing sandbox backend (and optional manager) to the panel.
 
-        Use ``wire_sandbox_bridge`` instead.
+        Adapter around ``wire_sandbox_bridge`` for callers that hold a raw
+        ``SandboxBase`` (and possibly a ``SandboxManager``) rather than a
+        ``SandboxBridge``. Constructs a ``SandboxBridge``, attaches the
+        supplied manager when provided, registers the sandbox under the
+        detected ``SandboxType``, and delegates to ``wire_sandbox_bridge``
+        so the sandbox tab and the chat workflow see a fully-initialised
+        bridge.
 
         Args:
-            sandbox: Sandbox backend instance (unused in new path).
-            manager: Optional SandboxManager instance (unused in new path).
+            sandbox: Pre-existing ``SandboxBase`` implementation to expose.
+            manager: Optional ``SandboxManager`` to install on the bridge.
+
+        Raises:
+            TypeError: If ``sandbox`` is not a ``SandboxBase`` or ``manager``
+                is not a ``SandboxManager``.
         """
-        _ = (self, sandbox, manager)
-        _logger.warning("wire_sandbox_backend_deprecated", deprecation_note="Use wire_sandbox_bridge() instead")
+        bridge_module = importlib.import_module("intellicrack.bridges.sandbox_bridge")
+        sandbox_pkg = importlib.import_module("intellicrack.sandbox")
+
+        sandbox_base_cls = sandbox_pkg.SandboxBase
+        sandbox_manager_cls = sandbox_pkg.SandboxManager
+
+        if not isinstance(sandbox, sandbox_base_cls):
+            msg = f"wire_sandbox_backend: sandbox must be SandboxBase, got {type(sandbox).__name__}"
+            raise TypeError(msg)
+        if manager is not None and not isinstance(manager, sandbox_manager_cls):
+            msg = f"wire_sandbox_backend: manager must be SandboxManager, got {type(manager).__name__}"
+            raise TypeError(msg)
+
+        bridge = cast("SandboxBridge", bridge_module.SandboxBridge())
+        if manager is not None:
+            bridge.attach_manager(cast("SandboxManager", manager))
+
+        sandbox_type: Literal["windows", "qemu"] = "qemu" if "qemu" in type(sandbox).__name__.lower() else "windows"
+        instance_id = bridge.register_existing_sandbox(sandbox, sandbox_type)
+        _logger.info(
+            "sandbox_backend_wired",
+            sandbox_type=sandbox_type,
+            instance_id=instance_id,
+            had_manager=manager is not None,
+        )
+        self.wire_sandbox_bridge(bridge)
 
     def wire_script_backend(self, backend: object, validator: object | None = None) -> None:
         """Wire a script generation backend to the script manager.
