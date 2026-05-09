@@ -462,6 +462,10 @@ gha-creds-*.json
 # Claude Code /batch worktrees (ephemeral, never tracked)
 .claude/worktrees/
 
+# Personal CLI launcher (per-user shortcut + tool launcher config, not part of the project)
+/CLI Launcher.lnk
+/CLI Coding/
+
 # Auto-regenerated knowledge-graph artifacts (never tracked)
 IntellicrackKnowledgeGraph.html
 scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot
