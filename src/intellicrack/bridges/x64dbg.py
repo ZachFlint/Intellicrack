@@ -14,10 +14,15 @@ import math
 import os
 import struct
 import sys
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
 from intellicrack.bridges._pe_format import (
+    PE32_OPTIONAL_HEADER_SIZE,
+    PE32PLUS_OPTIONAL_HEADER_SIZE,
+    PE_OPTIONAL_HEADER_MAGIC_PE32,
+    PE_OPTIONAL_HEADER_MAGIC_PE32PLUS,
     PE_OPTIONAL_HEADER_OFFSET,
     PE_SECTION_CHARACTERISTIC_EXECUTE,
     PE_SECTION_CHARACTERISTIC_READ,
@@ -34,6 +39,10 @@ from intellicrack.bridges._pe_format import (
 from intellicrack.bridges._win32_types import (
     CMD_LINE_OFFSET_32,
     CMD_LINE_OFFSET_64,
+    CONTEXT32,
+    CONTEXT64,
+    CONTEXT_ALL,
+    CONTEXT_I386_ALL,
     IMAGE_FILE_MACHINE_AMD64 as PE64_MACHINE,
     IMAGE_FILE_MACHINE_I386 as PE32_MACHINE,
     INVALID_HANDLE_VALUE,
@@ -62,7 +71,11 @@ from intellicrack.bridges._win32_types import (
     TH32CS_SNAPMODULE32,
     TH32CS_SNAPPROCESS,
     TH32CS_SNAPTHREAD,
+    THREAD_GET_CONTEXT,
+    THREAD_QUERY_INFORMATION,
+    THREAD_SUSPEND_RESUME,
     SystemExtendedHandleInformation,
+    ThreadQuerySetWin32StartAddress,
     get_ntdll,
 )
 from intellicrack.bridges.base import (
@@ -208,6 +221,8 @@ _ERR_CREATE_SNAPSHOT_FAILED = "failed to create snapshot"
 _ERR_GET_THREADS_FAILED = "failed to get threads"
 _ERR_GET_MODULES_FAILED = "failed to get modules"
 _ERR_GET_PARENT_PID_FAILED = "failed to get parent PID"
+_STILL_ACTIVE = 259
+_PE_HEADER_READ_SIZE = PE_OPTIONAL_HEADER_OFFSET + PE32PLUS_OPTIONAL_HEADER_SIZE + 0x100
 _ERR_YARA_NOT_AVAILABLE = "yara-python is not installed. Install with 'pixi run pip install yara-python' to enable YARA scanning"
 _ERR_YARA_EMPTY_RULE = "YARA rule must be non-empty"
 _ERR_YARA_NO_RULE = "yara_scan requires rule_text or rule_path"
@@ -303,6 +318,37 @@ def _x64dbg_error_code(exc: ToolError) -> str | None:
     """
     raw_code = exc.details.get("x64dbg_error_code")
     return raw_code if isinstance(raw_code, str) else None
+
+
+def _coerce_address(value: object) -> int | None:
+    """Coerce a raw plugin-supplied address payload into an integer.
+
+    The C++ x64dbg bridge plugin currently formats every address through
+    ``format_address`` which produces a hex string (e.g. ``"0xDEADBEEF"``).
+    Older response paths and tests can also produce integers directly.
+    Returns ``None`` for any value that cannot be parsed so callers can
+    distinguish a missing/unparseable address from address ``0``.
+
+    Args:
+        value: Raw payload extracted from a plugin response field.
+
+    Returns:
+        int | None: Parsed integer address, or ``None`` when the value
+        is neither an ``int`` nor a parseable hex/decimal string.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+        try:
+            return int(candidate, 0)
+        except ValueError:
+            return None
+    return None
 
 
 _win32_apis_configured: bool = False
@@ -412,6 +458,26 @@ def _configure_win32_apis() -> None:
         wintypes.DWORD,
         ctypes.POINTER(wintypes.HANDLE),
     ]
+
+    kernel32.OpenThread.restype = wintypes.HANDLE
+    kernel32.OpenThread.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+
+    kernel32.GetThreadContext.restype = wintypes.BOOL
+    kernel32.GetThreadContext.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+
+    kernel32.SuspendThread.restype = wintypes.DWORD
+    kernel32.SuspendThread.argtypes = [wintypes.HANDLE]
+
+    kernel32.ResumeThread.restype = wintypes.DWORD
+    kernel32.ResumeThread.argtypes = [wintypes.HANDLE]
+
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+    kernel32.GetCurrentThreadId.argtypes = []
+
+    wow64_get_ctx = getattr(kernel32, "Wow64GetThreadContext", None)
+    if wow64_get_ctx is not None:
+        wow64_get_ctx.restype = wintypes.BOOL
+        wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
 
     _win32_apis_configured = True
 
@@ -654,6 +720,9 @@ class X64DbgBridge(DebuggerBridge):
         self._next_wp_id: int = 1
         self._plugin_deployed: bool = False
         self.event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
+        self._state_lock: threading.Lock = threading.Lock()
+        self._process_handles: dict[int, int] = {}
+        self._handle_cache_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
             supports_debugging=True,
             supports_dynamic_analysis=True,
@@ -1943,6 +2012,7 @@ class X64DbgBridge(DebuggerBridge):
     async def shutdown(self) -> None:
         """Shutdown x64dbg and cleanup resources."""
         await self._close_connection()
+        self._release_process_handles()
 
         if self._process is not None:
             pid = self._process.pid
@@ -1963,8 +2033,9 @@ class X64DbgBridge(DebuggerBridge):
             self._process = None
 
         self._attached_pid = None
-        self._breakpoints.clear()
-        self._watchpoints.clear()
+        with self._state_lock:
+            self._breakpoints.clear()
+            self._watchpoints.clear()
         await super().shutdown()
         _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg")
 
@@ -2139,21 +2210,32 @@ class X64DbgBridge(DebuggerBridge):
     def _handle_event(self, message: dict[str, Any]) -> None:
         """Handle asynchronous debug events from x64dbg.
 
+        ``_handle_event`` is invoked from the named-pipe client's reader
+        background thread (via the asyncio default executor) while
+        coroutines on the main loop concurrently mutate ``_breakpoints``
+        and ``_watchpoints``. ``_state_lock`` serialises reads and
+        writes against the breakpoint/watchpoint registries so the
+        ``hit_count`` increment, dictionary lookup, and value iteration
+        cannot race a coroutine that simultaneously inserts, deletes,
+        or rebuilds a registry entry.
+
         Args:
             message: Event payload.
         """
         event_type = str(message.get("event", ""))
         if event_type == "breakpoint":
             addr = int(message.get("address", 0))
-            bp = self._breakpoints.get(addr)
-            if bp is not None:
-                bp.hit_count += 1
+            with self._state_lock:
+                bp = self._breakpoints.get(addr)
+                if bp is not None:
+                    bp.hit_count += 1
         elif event_type == "watchpoint":
             addr = int(message.get("address", 0))
-            for wp in self._watchpoints.values():
-                if wp.address == addr:
-                    wp.hit_count += 1
-                    break
+            with self._state_lock:
+                for wp in self._watchpoints.values():
+                    if wp.address == addr:
+                        wp.hit_count += 1
+                        break
 
         for cb in self.event_callbacks:
             try:
@@ -2407,6 +2489,7 @@ class X64DbgBridge(DebuggerBridge):
             pid: Process ID.
         """
         _logger.info("x64dbg_attaching", pid=pid)
+        self._release_process_handles()
         is_64 = await asyncio.to_thread(self._detect_process_arch, pid)
 
         if self._process is None:
@@ -2452,6 +2535,7 @@ class X64DbgBridge(DebuggerBridge):
     async def detach(self) -> None:
         """Detach from current process."""
         await self._send_command("detach")
+        self._release_process_handles()
         self._attached_pid = None
 
         self._state.connected = True
@@ -2522,14 +2606,22 @@ class X64DbgBridge(DebuggerBridge):
         bp_type: BreakpointType = "software",
         condition: str | None = None,
     ) -> int:
-        """Set a breakpoint and verify it was actually applied.
+        """Set a breakpoint and verify the debugger actually applied it.
 
-        Sends ``bp_set`` to the plugin, then issues a ``bp_list`` query
-        and confirms ``address`` is present before mutating local
-        breakpoint state. This prevents the previous behaviour where
-        the wrapper returned a synthetic id even if x64dbg's parser had
-        accepted the command without actually creating a breakpoint
-        (audit6.md F-0001).
+        x64dbg breakpoints are uniquely identified by their target
+        address - the ``BPMAP`` returned by ``DbgGetBpList`` keys each
+        entry by ``addr`` and exposes no separate numeric id, so the
+        breakpoint id round-tripped to the caller is the address
+        (audit6.md F-0002). After the plugin reports a successful
+        ``bp_set``, the local registry is only updated once a follow-up
+        ``bp_list`` confirms the breakpoint really exists at ``address``
+        (audit6.md F-0001); this rejects the case where the textual
+        x64dbg console command parses but the debugger never installs
+        the breakpoint (e.g. unmapped address, type rejected for the
+        active target). When ``condition`` is supplied, ``bpcond`` is
+        issued after the breakpoint is verified so the conditional
+        expression is honoured even when the plugin ignores the
+        in-payload ``condition`` field (audit6.md F-0026).
 
         Args:
             address: Breakpoint address.
@@ -2537,7 +2629,12 @@ class X64DbgBridge(DebuggerBridge):
             condition: Optional conditional expression.
 
         Returns:
-            int: Breakpoint ID.
+            int: Native breakpoint id (the breakpoint address) used by
+            x64dbg's ``BPMAP`` keying.
+
+        Raises:
+            ToolError: When the plugin cannot apply the breakpoint or
+                the post-condition ``bp_list`` lookup fails to find it.
         """
         await self._send_pipe_command(
             "bp_set",
@@ -2548,22 +2645,91 @@ class X64DbgBridge(DebuggerBridge):
             },
         )
 
-        await self._verify_breakpoint_applied(address)
+        verification_state = await self._verify_breakpoint_present(address, bp_type)
+        if verification_state is False:
+            msg = f"x64dbg accepted bp_set but no {bp_type} breakpoint exists at {hex(address)}"
+            raise ToolError(msg, tool_name="x64dbg")
 
-        bp_id = self._next_bp_id
-        self._next_bp_id += 1
+        if condition is not None:
+            await self._send_pipe_command(
+                "exec",
+                {"command": f'bpcond {hex(address)}, "{condition}"'},
+            )
 
-        self._breakpoints[address] = BreakpointInfo(
-            id=bp_id,
-            address=address,
-            bp_type=bp_type,
-            enabled=True,
-            hit_count=0,
-            condition=condition,
-        )
+        with self._state_lock:
+            self._breakpoints[address] = BreakpointInfo(
+                id=address,
+                address=address,
+                bp_type=bp_type,
+                enabled=True,
+                hit_count=0,
+                condition=condition,
+            )
 
-        _logger.info("breakpoint_set", type=bp_type, address=hex(address), id=bp_id)
-        return bp_id
+        _logger.info("breakpoint_set", type=bp_type, address=hex(address), native_id=hex(address))
+        return address
+
+    async def _verify_breakpoint_present(self, address: int, bp_type: BreakpointType) -> bool | None:
+        """Confirm the plugin's ``bp_list`` reports a breakpoint at ``address``.
+
+        Args:
+            address: Address that ``bp_set`` was just issued for.
+            bp_type: Expected breakpoint type for the verification.
+
+        Returns:
+            bool | None: ``True`` when the active breakpoint set
+            contains a matching entry; ``False`` when ``bp_list`` was
+            successfully returned but no entry matches; ``None`` when
+            the plugin reports ``bp_list`` as an unknown command (older
+            plugin builds) so the caller can skip verification rather
+            than fail.
+
+        Raises:
+            ToolError: When ``bp_list`` returns a non-list payload
+                (protocol violation that the caller must surface).
+        """
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                _logger.debug(
+                    "breakpoint_verification_skipped_no_bp_list",
+                    address=hex(address),
+                )
+                return None
+            _logger.debug("bp_set_verify_list_failed", address=hex(address), error=str(exc))
+            raise
+
+        if not isinstance(result, list):
+            msg = f"set_breakpoint verification: bp_list returned {type(result).__name__}, expected list"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "address": hex(address),
+                },
+            )
+
+        type_aliases: dict[BreakpointType, set[str]] = {
+            "software": {"software", "normal"},
+            "hardware": {"hardware"},
+            "memory": {"memory"},
+        }
+        accepted_types = type_aliases[bp_type]
+
+        for bp_entry in result:
+            if not _is_str_obj_dict(bp_entry):
+                continue
+            entry_addr_raw = bp_entry.get("address")
+            entry_addr = _coerce_address(entry_addr_raw)
+            if entry_addr != address:
+                continue
+            entry_type = bp_entry.get("type")
+            if isinstance(entry_type, str) and entry_type not in accepted_types:
+                continue
+            return True
+        return False
 
     async def _verify_breakpoint_applied(self, address: int) -> None:
         """Confirm via ``bp_list`` that a breakpoint exists at ``address``.
@@ -2635,8 +2801,8 @@ class X64DbgBridge(DebuggerBridge):
         """
         await self._send_pipe_command("bp_remove", {"address": address})
 
-        if address in self._breakpoints:
-            del self._breakpoints[address]
+        with self._state_lock:
+            self._breakpoints.pop(address, None)
 
         _logger.info("breakpoint_removed", address=hex(address))
         return True
@@ -2650,7 +2816,8 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
-        merged = dict(self._breakpoints)
+        with self._state_lock:
+            merged = dict(self._breakpoints)
 
         if self._pipe_client is not None and self._pipe_client.is_connected:
             try:
@@ -2663,30 +2830,30 @@ class X64DbgBridge(DebuggerBridge):
                 if isinstance(result, list):
                     for bp_data in result:
                         if _is_str_obj_dict(bp_data):
-                            raw_addr = bp_data.get("address")
-                            addr = raw_addr if isinstance(raw_addr, int) else 0
-                            if addr not in merged:
-                                raw_type = bp_data.get("type")
-                                bp_type_str = raw_type if isinstance(raw_type, str) else "software"
-                                raw_enabled = bp_data.get("enabled")
-                                raw_hits = bp_data.get("hit_count")
-                                raw_cond = bp_data.get("condition")
-                                bp_type_val: Literal["software", "hardware", "memory"]
-                                if bp_type_str == "hardware":
-                                    bp_type_val = "hardware"
-                                elif bp_type_str == "memory":
-                                    bp_type_val = "memory"
-                                else:
-                                    bp_type_val = "software"
-                                merged[addr] = BreakpointInfo(
-                                    id=self._next_bp_id,
-                                    address=addr,
-                                    bp_type=bp_type_val,
-                                    enabled=raw_enabled if isinstance(raw_enabled, bool) else True,
-                                    hit_count=raw_hits if isinstance(raw_hits, int) else 0,
-                                    condition=raw_cond if isinstance(raw_cond, str) else None,
-                                )
-                                self._next_bp_id += 1
+                            addr = _coerce_address(bp_data.get("address"))
+                            if addr is None or addr in merged:
+                                continue
+                            raw_type = bp_data.get("type")
+                            bp_type_str = raw_type if isinstance(raw_type, str) else "software"
+                            raw_enabled = bp_data.get("enabled")
+                            raw_hits = bp_data.get("hitCount", bp_data.get("hit_count"))
+                            raw_cond = bp_data.get("breakCondition", bp_data.get("condition"))
+                            bp_type_val: Literal["software", "hardware", "memory"]
+                            if bp_type_str == "hardware":
+                                bp_type_val = "hardware"
+                            elif bp_type_str == "memory":
+                                bp_type_val = "memory"
+                            else:
+                                bp_type_val = "software"
+                            cond_value: str | None = raw_cond if isinstance(raw_cond, str) and raw_cond else None
+                            merged[addr] = BreakpointInfo(
+                                id=addr,
+                                address=addr,
+                                bp_type=bp_type_val,
+                                enabled=raw_enabled if isinstance(raw_enabled, bool) else True,
+                                hit_count=raw_hits if isinstance(raw_hits, int) else 0,
+                                condition=cond_value,
+                            )
 
         return list(merged.values())
 
@@ -2718,16 +2885,17 @@ class X64DbgBridge(DebuggerBridge):
             },
         )
 
-        wp_id = self._next_wp_id
-        self._next_wp_id += 1
-        self._watchpoints[wp_id] = WatchpointInfo(
-            id=wp_id,
-            address=address,
-            size=size,
-            watch_type=watch_type,
-            enabled=True,
-            hit_count=0,
-        )
+        with self._state_lock:
+            wp_id = self._next_wp_id
+            self._next_wp_id += 1
+            self._watchpoints[wp_id] = WatchpointInfo(
+                id=wp_id,
+                address=address,
+                size=size,
+                watch_type=watch_type,
+                enabled=True,
+                hit_count=0,
+            )
 
         _logger.info("watchpoint_set", address=hex(address), size=size, type=watch_type)
         return wp_id
@@ -2741,7 +2909,8 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             bool: True if removed.
         """
-        watchpoint = self._watchpoints.get(watchpoint_id)
+        with self._state_lock:
+            watchpoint = self._watchpoints.get(watchpoint_id)
         if watchpoint is None:
             return False
 
@@ -2750,7 +2919,8 @@ class X64DbgBridge(DebuggerBridge):
             {"address": watchpoint.address},
         )
 
-        del self._watchpoints[watchpoint_id]
+        with self._state_lock:
+            self._watchpoints.pop(watchpoint_id, None)
         _logger.info("watchpoint_removed", id=watchpoint_id)
         return True
 
@@ -2763,7 +2933,8 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
-        merged = dict(self._watchpoints)
+        with self._state_lock:
+            merged = dict(self._watchpoints)
 
         if self._pipe_client is not None and self._pipe_client.is_connected:
             try:
@@ -2776,12 +2947,12 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(result, list):
                 for wp_data in result:
                     if _is_str_obj_dict(wp_data):
-                        raw_wp_addr = wp_data.get("address")
-                        wp_addr = raw_wp_addr if isinstance(raw_wp_addr, int) else 0
+                        wp_addr = _coerce_address(wp_data.get("address")) or 0
                         existing = any(w.address == wp_addr for w in merged.values())
                         if not existing:
-                            wp_id = self._next_wp_id
-                            self._next_wp_id += 1
+                            with self._state_lock:
+                                wp_id = self._next_wp_id
+                                self._next_wp_id += 1
                             raw_size = wp_data.get("size")
                             raw_wp_type = wp_data.get("type")
                             raw_wp_enabled = wp_data.get("enabled")
@@ -2910,6 +3081,75 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("register_set", register=register, value=hex(value))
         return True
 
+    def _get_cached_process_handle(self, access_mask: int) -> int:
+        """Return a cached process handle for ``access_mask``, opening one when absent.
+
+        The cache lives for the duration of a single attachment. Each
+        unique access mask maps to one open ``OpenProcess`` handle so
+        repeated memory reads, writes, and allocations against the
+        same target do not pay the ``OpenProcess`` / ``CloseHandle``
+        cost on every call (and do not generate per-call audit events
+        in environments that audit handle opens). The cache is cleared
+        by :meth:`_release_process_handles`, which is called on detach
+        and on shutdown so handles never outlive the target attachment.
+
+        Args:
+            access_mask: Win32 access flags requested for the handle.
+
+        Returns:
+            int: Open Windows handle. Always non-zero on success.
+
+        Raises:
+            ToolError: When called on a non-Windows platform, when no
+                process is attached, or when ``OpenProcess`` fails.
+        """
+        if not _IS_WIN32:
+            msg = "Windows API not available"
+            raise ToolError(msg)
+        if self._attached_pid is None:
+            msg = "No process attached"
+            raise ToolError(msg)
+        with self._handle_cache_lock:
+            cached = self._process_handles.get(access_mask)
+            if cached:
+                return cached
+            kernel32 = ctypes.windll.kernel32
+            inherit_handle = False
+            handle: int = kernel32.OpenProcess(access_mask, inherit_handle, self._attached_pid)
+            if not handle:
+                error_code = ctypes.get_last_error()
+                msg = f"Failed to open process {self._attached_pid} (access=0x{access_mask:X})"
+                raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+            self._process_handles[access_mask] = handle
+            return handle
+
+    def _release_process_handles(self) -> None:
+        """Close and forget every cached process handle.
+
+        Closes every open handle in ``_process_handles`` and clears the
+        cache atomically under ``_handle_cache_lock``. Errors raised by
+        ``CloseHandle`` are logged at ``debug`` so a partial cleanup
+        cannot mask later failures or block teardown. Safe to call when
+        the cache is empty (e.g. on a bridge that never attached).
+        """
+        if not _IS_WIN32:
+            return
+        with self._handle_cache_lock:
+            if not self._process_handles:
+                return
+            kernel32 = ctypes.windll.kernel32
+            for access_mask, handle in self._process_handles.items():
+                try:
+                    kernel32.CloseHandle(handle)
+                except (OSError, ctypes.ArgumentError) as exc:
+                    _logger.debug(
+                        "process_handle_close_failed",
+                        access=hex(access_mask),
+                        error=str(exc),
+                        error_type=type(exc).__name__,
+                    )
+            self._process_handles.clear()
+
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read process memory.
 
@@ -2934,37 +3174,24 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        inherit_handle = False
-        handle = kernel32.OpenProcess(
-            WIN_PROCESS_VM_READ,
-            inherit_handle,
-            self._attached_pid,
+        handle = self._get_cached_process_handle(WIN_PROCESS_VM_READ | WIN_PROCESS_QUERY_INFORMATION)
+
+        buffer = ctypes.create_string_buffer(size)
+        bytes_read = ctypes.c_size_t()
+
+        success = kernel32.ReadProcessMemory(
+            handle,
+            ctypes.c_void_p(address),
+            buffer,
+            size,
+            ctypes.byref(bytes_read),
         )
 
-        if not handle:
-            msg = f"Failed to open process {self._attached_pid}"
+        if not success:
+            msg = f"ReadProcessMemory failed at 0x{address:X}"
             raise ToolError(msg)
 
-        try:
-            buffer = ctypes.create_string_buffer(size)
-            bytes_read = ctypes.c_size_t()
-
-            success = kernel32.ReadProcessMemory(
-                handle,
-                ctypes.c_void_p(address),
-                buffer,
-                size,
-                ctypes.byref(bytes_read),
-            )
-
-            if not success:
-                msg = f"ReadProcessMemory failed at 0x{address:X}"
-                raise ToolError(msg)
-
-            return buffer.raw[: bytes_read.value]
-
-        finally:
-            kernel32.CloseHandle(handle)
+        return buffer.raw[: bytes_read.value]
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write to process memory.
@@ -2989,37 +3216,24 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        inherit_handle = False
-        handle = kernel32.OpenProcess(
-            WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION,
-            inherit_handle,
-            self._attached_pid,
+        handle = self._get_cached_process_handle(WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION)
+
+        bytes_written = ctypes.c_size_t()
+
+        success = kernel32.WriteProcessMemory(
+            handle,
+            ctypes.c_void_p(address),
+            data,
+            len(data),
+            ctypes.byref(bytes_written),
         )
 
-        if not handle:
-            msg = f"Failed to open process {self._attached_pid}"
+        if not success:
+            msg = f"WriteProcessMemory failed at 0x{address:X}"
             raise ToolError(msg)
 
-        try:
-            bytes_written = ctypes.c_size_t()
-
-            success = kernel32.WriteProcessMemory(
-                handle,
-                ctypes.c_void_p(address),
-                data,
-                len(data),
-                ctypes.byref(bytes_written),
-            )
-
-            if not success:
-                msg = f"WriteProcessMemory failed at 0x{address:X}"
-                raise ToolError(msg)
-
-            _logger.info("memory_written", bytes=bytes_written.value, address=hex(address))
-            return bytes_written.value
-
-        finally:
-            kernel32.CloseHandle(handle)
+        _logger.info("memory_written", bytes=bytes_written.value, address=hex(address))
+        return bytes_written.value
 
     async def allocate_memory(self, size: int, protection: str = "rwx") -> int:
         """Allocate memory in target process.
@@ -3058,36 +3272,23 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
-        inherit_handle = False
-        handle = kernel32.OpenProcess(
-            WIN_PROCESS_VM_OPERATION,
-            inherit_handle,
-            self._attached_pid,
+        handle = self._get_cached_process_handle(WIN_PROCESS_VM_OPERATION)
+
+        address_result = kernel32.VirtualAllocEx(
+            handle,
+            0,
+            size,
+            WIN_MEM_COMMIT | WIN_MEM_RESERVE,
+            prot_flag,
         )
 
-        if not handle:
-            msg = f"Failed to open process {self._attached_pid}"
+        if not address_result:
+            msg = "VirtualAllocEx failed"
             raise ToolError(msg)
 
-        try:
-            address_result = kernel32.VirtualAllocEx(
-                handle,
-                0,
-                size,
-                WIN_MEM_COMMIT | WIN_MEM_RESERVE,
-                prot_flag,
-            )
-
-            if not address_result:
-                msg = "VirtualAllocEx failed"
-                raise ToolError(msg)
-
-            address: int = int(address_result)
-            _logger.info("memory_allocated", size=size, address=hex(address))
-            return address
-
-        finally:
-            kernel32.CloseHandle(handle)
+        address: int = int(address_result)
+        _logger.info("memory_allocated", size=size, address=hex(address))
+        return address
 
     async def free_memory(self, address: int) -> bool:
         """Free memory in target process.
@@ -3107,28 +3308,20 @@ class X64DbgBridge(DebuggerBridge):
         if self._attached_pid is None:
             return False
 
-        inherit_handle = False
-        handle = kernel32.OpenProcess(
-            WIN_PROCESS_VM_OPERATION,
-            inherit_handle,
-            self._attached_pid,
-        )
-
-        if not handle:
+        try:
+            handle = self._get_cached_process_handle(WIN_PROCESS_VM_OPERATION)
+        except ToolError as exc:
+            _logger.debug("free_memory_handle_unavailable", address=hex(address), error=str(exc))
             return False
 
-        try:
-            success = kernel32.VirtualFreeEx(
-                handle,
-                ctypes.c_void_p(address),
-                0,
-                WIN_MEM_RELEASE,
-            )
+        success = kernel32.VirtualFreeEx(
+            handle,
+            ctypes.c_void_p(address),
+            0,
+            WIN_MEM_RELEASE,
+        )
 
-            return bool(success)
-
-        finally:
-            kernel32.CloseHandle(handle)
+        return bool(success)
 
     async def get_memory_regions(self) -> list[MemoryRegion]:
         """Get memory map of target process.
@@ -3317,9 +3510,16 @@ class X64DbgBridge(DebuggerBridge):
                 if len(capstone_lines) >= count:
                     break
 
-        except Exception:
-            _logger.exception("disassembly_failed", address=hex(address), count=count)
-            return []
+        except (OSError, struct.error, ValueError, ToolError) as exc:
+            _logger.warning(
+                "disassembly_failed",
+                address=hex(address),
+                count=count,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            msg = f"Disassembly failed at {hex(address)}: {exc}"
+            raise ToolError(msg, tool_name="x64dbg") from exc
         else:
             return capstone_lines
 
@@ -3675,17 +3875,20 @@ class X64DbgBridge(DebuggerBridge):
             if kernel32.Thread32First(snapshot, ctypes.byref(te32)):
                 while True:
                     if te32.th32OwnerProcessID == self._attached_pid:
+                        tid = int(te32.th32ThreadID)
+                        start_address = self._query_thread_start_address(tid)
+                        current_pc, state = self._query_thread_pc_and_state(tid)
                         threads.append(
                             ThreadInfo(
-                                tid=te32.th32ThreadID,
-                                start_address=0,
-                                current_pc=0,
-                                state="unknown",
+                                tid=tid,
+                                start_address=start_address,
+                                current_pc=current_pc,
+                                state=state,
                             ),
                         )
                     if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
                         break
-        except Exception as e:
+        except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_threads_failed", pid=self._attached_pid, error=str(e))
             msg = f"{_ERR_GET_THREADS_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
@@ -3694,6 +3897,172 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.debug("threads_found", count=len(threads), pid=self._attached_pid)
         return threads
+
+    @staticmethod
+    def _query_thread_start_address(tid: int) -> int:
+        """Query the Win32 thread start address via ``NtQueryInformationThread``.
+
+        Opens the thread with ``THREAD_QUERY_LIMITED_INFORMATION`` (the
+        minimal access right that NTSTATUS-bearing
+        ``ThreadQuerySetWin32StartAddress`` accepts on modern Windows)
+        and reads the ``Win32StartAddress`` produced by
+        ``CreateRemoteThread`` / ``CreateThread``. Returns ``0`` when
+        the thread cannot be opened or the kernel call reports an error
+        so the surrounding enumeration is not aborted by a transient
+        access-denied on a single thread.
+
+        Args:
+            tid: Thread identifier.
+
+        Returns:
+            int: Resolved start address, or ``0`` when unavailable.
+        """
+        if not _IS_WIN32:
+            return 0
+        try:
+            ntdll = get_ntdll()
+        except OSError as exc:
+            _logger.debug(
+                "thread_start_address_ntdll_unavailable",
+                tid=tid,
+                error=str(exc),
+            )
+            return 0
+        kernel32 = ctypes.windll.kernel32
+        inherit_handle = False
+        handle = kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
+        if not handle:
+            _logger.debug(
+                "thread_start_address_open_failed",
+                tid=tid,
+                error_code=ctypes.get_last_error(),
+            )
+            return 0
+        try:
+            start_address = ctypes.c_void_p(0)
+            try:
+                status: int = ntdll.NtQueryInformationThread(
+                    handle,
+                    ThreadQuerySetWin32StartAddress,
+                    ctypes.byref(start_address),
+                    ctypes.sizeof(start_address),
+                    None,
+                )
+            except (OSError, ctypes.ArgumentError) as exc:
+                _logger.debug(
+                    "thread_start_address_query_exception",
+                    tid=tid,
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
+                return 0
+            if status >= 0:
+                return int(start_address.value or 0)
+            _logger.debug(
+                "thread_start_address_nt_failed",
+                tid=tid,
+                ntstatus=hex(status & 0xFFFFFFFF),
+            )
+            return 0
+        finally:
+            kernel32.CloseHandle(handle)
+
+    def _query_thread_pc_and_state(self, tid: int) -> tuple[int, str]:
+        """Read the current PC and execution state for a single thread.
+
+        Suspends the thread once via ``SuspendThread`` (so the
+        ``GetThreadContext`` / ``Wow64GetThreadContext`` snapshot is
+        coherent), reads ``Rip`` (or ``Eip`` on WOW64) and derives a
+        textual state from the prior suspend count. ``ResumeThread`` is
+        called inside a ``finally`` block so the thread is never left
+        suspended on an exceptional path. The current Python thread is
+        skipped (``GetThreadContext`` against the calling thread is
+        undefined) and reported as ``"running"``.
+
+        Args:
+            tid: Thread identifier.
+
+        Returns:
+            tuple[int, str]: ``(current_pc, state)`` where ``state`` is
+            one of ``"running"``, ``"suspended"``, ``"terminated"``, or
+            ``"unknown"``.
+        """
+        if not _IS_WIN32:
+            return 0, "unknown"
+        kernel32 = ctypes.windll.kernel32
+        if tid == int(kernel32.GetCurrentThreadId()):
+            return 0, "running"
+
+        access = THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME
+        inherit_handle = False
+        handle = kernel32.OpenThread(access, inherit_handle, tid)
+        if not handle:
+            _logger.debug(
+                "thread_pc_open_failed",
+                tid=tid,
+                error_code=ctypes.get_last_error(),
+            )
+            return 0, "unknown"
+        try:
+            try:
+                raw_count: int = kernel32.SuspendThread(handle)
+            except (OSError, ctypes.ArgumentError) as exc:
+                _logger.debug(
+                    "thread_pc_suspend_exception",
+                    tid=tid,
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
+                return 0, "unknown"
+            signed_count = ctypes.c_long(raw_count).value
+            if signed_count < 0:
+                return 0, "unknown"
+            try:
+                state = "suspended" if signed_count > 0 else "running"
+                pc = self._read_thread_program_counter(handle)
+                return pc, state
+            finally:
+                kernel32.ResumeThread(handle)
+        finally:
+            kernel32.CloseHandle(handle)
+
+    def _read_thread_program_counter(self, handle: int) -> int:
+        """Read the instruction pointer of a thread via ``GetThreadContext``.
+
+        Uses ``Wow64GetThreadContext`` against the 32-bit context layout
+        when the bridge tracks a WOW64 (32-bit) target, and ``GetThreadContext``
+        with the AMD64 layout otherwise. Returns ``0`` when the kernel
+        call fails so the caller can record an unresolved PC without
+        aborting enumeration.
+
+        Args:
+            handle: Open thread handle with ``THREAD_GET_CONTEXT`` rights.
+
+        Returns:
+            int: Instruction pointer (``Rip`` or ``Eip``) for the
+            thread, or ``0`` when the context read fails.
+        """
+        if not _IS_WIN32:
+            return 0
+        kernel32 = ctypes.windll.kernel32
+        if not self._is_64bit:
+            wow64_get_ctx = getattr(kernel32, "Wow64GetThreadContext", None)
+            if wow64_get_ctx is not None:
+                ctx32 = CONTEXT32()
+                ctx32.ContextFlags = CONTEXT_I386_ALL
+                if wow64_get_ctx(handle, ctypes.byref(ctx32)):
+                    return int(ctx32.Eip)
+                return 0
+            ctx32_alt = CONTEXT32()
+            ctx32_alt.ContextFlags = CONTEXT_I386_ALL
+            if kernel32.GetThreadContext(handle, ctypes.byref(ctx32_alt)):
+                return int(ctx32_alt.Eip)
+            return 0
+        ctx64 = CONTEXT64()
+        ctx64.ContextFlags = CONTEXT_ALL
+        if kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
+            return int(ctx64.Rip)
+        return 0
 
     async def _get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
@@ -3768,7 +4137,7 @@ class X64DbgBridge(DebuggerBridge):
                     )
                     if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
                         break
-        except Exception as e:
+        except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_modules_failed", pid=self._attached_pid, error=str(e))
             msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
@@ -3799,10 +4168,17 @@ class X64DbgBridge(DebuggerBridge):
     async def _read_module_entry_point(self, base_address: int, module_name: str) -> int:
         """Read the PE ``AddressOfEntryPoint`` for a loaded module.
 
-        Reads the in-memory DOS and NT headers via ``ReadProcessMemory`` and
-        extracts the entry-point RVA from the optional header. Returns the
-        fully-resolved virtual address (``base_address + RVA``). Returns 0
-        if the PE header cannot be parsed for this module.
+        Reads enough of the in-memory NT headers to span any standard
+        Optional Header layout (PE32 or PE32+ plus the data-directory
+        slack), validates ``SizeOfOptionalHeader`` against the buffer
+        actually returned, branches on the Optional Header ``Magic``
+        field to pick the correct layout, and extracts
+        ``AddressOfEntryPoint`` from the documented fixed offset. The
+        entry-point field is the 5th 32-bit field of the Optional
+        Header (i.e. RVA at offset ``PE_ENTRY_POINT_OFFSET = 0x28``)
+        and is the same for both PE32 and PE32+, but bracketing the
+        read by ``SizeOfOptionalHeader`` lets us detect cropped headers
+        (paged-out trailing pages) before silently producing junk.
 
         Args:
             base_address: Module base address in the target process.
@@ -3813,9 +4189,64 @@ class X64DbgBridge(DebuggerBridge):
             PE header could not be read or validated.
         """
         try:
-            _, pe_header = await self._read_pe_header(base_address, module_name, size=256)
+            _, pe_header = await self._read_pe_header(base_address, module_name, size=_PE_HEADER_READ_SIZE)
         except ToolError as exc:
             _logger.debug("module_entry_point_read_failed", module_name=module_name, base=hex(base_address), error=str(exc))
+            return 0
+
+        try:
+            _machine, _num_sections, optional_header_size, _characteristics = unpack_coff_header(
+                pe_header,
+                NT_HEADERS_OPTIONAL_OFFSET - 20,
+            )
+        except struct.error as exc:
+            _logger.debug(
+                "module_entry_point_coff_unpack_failed",
+                module_name=module_name,
+                length=len(pe_header),
+                error=str(exc),
+            )
+            return 0
+
+        if optional_header_size <= 0:
+            _logger.debug(
+                "module_entry_point_optional_header_zero",
+                module_name=module_name,
+                base=hex(base_address),
+            )
+            return 0
+
+        try:
+            magic = int(struct.unpack_from("<H", pe_header, NT_HEADERS_OPTIONAL_OFFSET)[0])
+        except struct.error as exc:
+            _logger.debug(
+                "module_entry_point_magic_unpack_failed",
+                module_name=module_name,
+                length=len(pe_header),
+                error=str(exc),
+            )
+            return 0
+
+        if magic == PE_OPTIONAL_HEADER_MAGIC_PE32:
+            min_optional_size = PE32_OPTIONAL_HEADER_SIZE
+        elif magic == PE_OPTIONAL_HEADER_MAGIC_PE32PLUS:
+            min_optional_size = PE32PLUS_OPTIONAL_HEADER_SIZE
+        else:
+            _logger.debug(
+                "module_entry_point_unknown_magic",
+                module_name=module_name,
+                magic=hex(magic),
+                base=hex(base_address),
+            )
+            return 0
+
+        if optional_header_size < min_optional_size:
+            _logger.debug(
+                "module_entry_point_optional_header_too_small",
+                module_name=module_name,
+                optional_header_size=optional_header_size,
+                required=min_optional_size,
+            )
             return 0
 
         entry_offset = NT_HEADERS_OPTIONAL_OFFSET + PE_ENTRY_POINT_OFFSET
@@ -3823,7 +4254,18 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("module_entry_point_header_short", module_name=module_name, length=len(pe_header))
             return 0
 
-        entry_rva = struct.unpack_from("<I", pe_header, entry_offset)[0]
+        try:
+            entry_rva = int(struct.unpack_from("<I", pe_header, entry_offset)[0])
+        except struct.error as exc:
+            _logger.debug(
+                "module_entry_point_rva_unpack_failed",
+                module_name=module_name,
+                error=str(exc),
+            )
+            return 0
+
+        if entry_rva == 0:
+            return 0
         return base_address + entry_rva
 
     async def get_threads(self) -> list[ThreadInfo]:
@@ -4206,16 +4648,17 @@ class X64DbgBridge(DebuggerBridge):
         """
         _logger.debug("breakpoint_enabling", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"be {hex(address)}"})
-        bp = self._breakpoints.get(address)
-        if bp is not None:
-            self._breakpoints[address] = BreakpointInfo(
-                id=bp.id,
-                address=bp.address,
-                bp_type=bp.bp_type,
-                enabled=True,
-                hit_count=bp.hit_count,
-                condition=bp.condition,
-            )
+        with self._state_lock:
+            bp = self._breakpoints.get(address)
+            if bp is not None:
+                self._breakpoints[address] = BreakpointInfo(
+                    id=bp.id,
+                    address=bp.address,
+                    bp_type=bp.bp_type,
+                    enabled=True,
+                    hit_count=bp.hit_count,
+                    condition=bp.condition,
+                )
         return {"address": hex(address), "success": True}
 
     async def disable_breakpoint(self, address: int) -> dict[str, Any]:
@@ -4229,16 +4672,17 @@ class X64DbgBridge(DebuggerBridge):
         """
         _logger.debug("breakpoint_disabling", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"bd {hex(address)}"})
-        bp = self._breakpoints.get(address)
-        if bp is not None:
-            self._breakpoints[address] = BreakpointInfo(
-                id=bp.id,
-                address=bp.address,
-                bp_type=bp.bp_type,
-                enabled=False,
-                hit_count=bp.hit_count,
-                condition=bp.condition,
-            )
+        with self._state_lock:
+            bp = self._breakpoints.get(address)
+            if bp is not None:
+                self._breakpoints[address] = BreakpointInfo(
+                    id=bp.id,
+                    address=bp.address,
+                    bp_type=bp.bp_type,
+                    enabled=False,
+                    hit_count=bp.hit_count,
+                    condition=bp.condition,
+                )
         return {"address": hex(address), "success": True}
 
     async def set_breakpoint_on_api(self, module: str, function: str) -> dict[str, Any]:
@@ -6384,7 +6828,7 @@ class X64DbgBridge(DebuggerBridge):
                         break
                     if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
                         break
-        except Exception as e:
+        except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_parent_pid_failed", pid=pid, error=str(e))
             msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
             raise ToolError(msg, tool_name="x64dbg") from e
