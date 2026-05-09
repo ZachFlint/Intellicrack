@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from uuid import uuid4
 
 import structlog.contextvars
+import tiktoken
 
 from intellicrack.bridges.schemas import (
     build_schema_parameters,
@@ -59,12 +60,72 @@ if TYPE_CHECKING:
         SectionInfo,
         ToolCall,
         ToolDefinition,
+        ToolFunction,
     )
     from intellicrack.providers.base import LLMProvider
     from intellicrack.providers.registry import ProviderRegistry
 
 
 _logger = get_logger(__name__)
+
+
+_TIKTOKEN_O200K: str = "o200k_base"
+_TIKTOKEN_CL100K: str = "cl100k_base"
+
+_PROVIDER_TOKEN_ENCODINGS: dict[ProviderName, str] = {
+    ProviderName.OPENAI: _TIKTOKEN_O200K,
+    ProviderName.ANTHROPIC: _TIKTOKEN_CL100K,
+    ProviderName.GOOGLE: _TIKTOKEN_CL100K,
+    ProviderName.OLLAMA: _TIKTOKEN_CL100K,
+    ProviderName.OPENROUTER: _TIKTOKEN_CL100K,
+    ProviderName.HUGGINGFACE: _TIKTOKEN_CL100K,
+    ProviderName.GROK: _TIKTOKEN_CL100K,
+    ProviderName.LOCAL_TRANSFORMERS: _TIKTOKEN_CL100K,
+}
+
+_DEFAULT_TOKEN_ENCODING: str = _TIKTOKEN_CL100K
+
+_token_encoder_cache: dict[str, tiktoken.Encoding] = {}
+
+
+def _get_token_encoder(provider: ProviderName | None) -> tiktoken.Encoding:
+    """Resolve the tiktoken encoder for a provider.
+
+    Selects ``o200k_base`` for OpenAI (current default for GPT-4o family) and
+    ``cl100k_base`` for every other provider as a conservative shared default.
+    Encodings are cached per-name to avoid the cost of re-loading the BPE
+    tables on every call.
+
+    Args:
+        provider: Active LLM provider, or ``None`` to use the default encoding.
+
+    Returns:
+        tiktoken.Encoding: Encoder instance suitable for token counting.
+    """
+    encoding_name = _DEFAULT_TOKEN_ENCODING if provider is None else _PROVIDER_TOKEN_ENCODINGS.get(provider, _DEFAULT_TOKEN_ENCODING)
+    encoder = _token_encoder_cache.get(encoding_name)
+    if encoder is None:
+        encoder = tiktoken.get_encoding(encoding_name)
+        _token_encoder_cache[encoding_name] = encoder
+    return encoder
+
+
+def _count_tokens(text: str, provider: ProviderName | None) -> int:
+    """Count tokens in ``text`` using a provider-aware tiktoken encoder.
+
+    Args:
+        text: String to count tokens in. Empty input returns ``0``.
+        provider: Active LLM provider used to select the encoder, or ``None``
+            to fall back to the conservative default encoding.
+
+    Returns:
+        int: Token count for ``text``.
+    """
+    if not text:
+        return 0
+    encoder = _get_token_encoder(provider)
+    return len(encoder.encode(text, disallowed_special=()))
+
 
 OrchestratorState = Literal["idle", "processing", "waiting_confirmation", "cancelled"]
 
@@ -872,7 +933,12 @@ class Orchestrator:
         return session
 
     async def load_session(self, session_id: str) -> Session:
-        """Load an existing session.
+        """Load an existing session and make it the current session.
+
+        Delegates to :meth:`SessionManager.load` so the manager's ``_current``
+        pointer is updated and the auto-save background task is started for
+        this session, ensuring later edits persist without requiring an
+        explicit ``save_session`` call.
 
         Args:
             session_id: ID of session to load.
@@ -883,7 +949,7 @@ class Orchestrator:
         Raises:
             ValueError: If session not found.
         """
-        session = await self._sessions.get(session_id)
+        session = await self._sessions.load(session_id)
         if session is None:
             error_message = f"Session not found: {session_id}"
             raise ValueError(error_message)
@@ -926,18 +992,27 @@ class Orchestrator:
         """Process user input and generate response.
 
         This is the main agent loop:
-        1. Add user message to session
-        2. Send to LLM with tool definitions
-        3. If LLM returns tool calls, execute them
-        4. Send tool results back to LLM
-        5. Repeat until LLM returns final text response
-        6. Add assistant message to session
+
+        1. Send pre-flight ``user`` message + history to the LLM with tool
+           definitions; the user message is **not** persisted to the session
+           until the loop completes successfully.
+        2. If LLM returns tool calls, execute them.
+        3. Send tool results back to LLM.
+        4. Repeat until LLM returns final text response.
+        5. On successful completion, append the user message and any assistant
+           / tool messages emitted during the loop to the session and persist.
+        6. On cancellation or unhandled exception the session is **not**
+           modified, leaving the persisted state consistent with the last
+           successful turn.
 
         Args:
             text: User's natural language input.
 
         Raises:
             RuntimeError: If no active session.
+            asyncio.CancelledError: If the request is cancelled. The cancellation
+                is re-raised after the in-memory turn rollback so callers can
+                differentiate cancellation from completion.
         """
         if self._current_session is None:
             error_message = "No active session"
@@ -957,16 +1032,24 @@ class Orchestrator:
             content=text,
             timestamp=datetime.now(tz=UTC),
         )
-        self._current_session.messages.append(user_message)
 
         if self._on_message:
             self._on_message(user_message)
 
+        loop_messages: list[Message] = []
+        loop_succeeded = False
         try:
-            await self._run_agent_loop()
+            self._current_session.messages.append(user_message)
+            try:
+                await self._run_agent_loop(turn_messages=loop_messages)
+                loop_succeeded = True
+            finally:
+                if not loop_succeeded:
+                    self._rollback_turn_messages(user_message=user_message, turn_messages=loop_messages)
         except asyncio.CancelledError:
             _logger.info("request_cancelled", state=self._state)
             self._state = "cancelled"
+            raise
         finally:
             structlog.contextvars.unbind_contextvars("request_id")
             elapsed_ms = (time.time() - start_time) * 1000
@@ -975,10 +1058,56 @@ class Orchestrator:
             if self._state != "cancelled":
                 self._state = "idle"
 
-            await self._sessions.update(self._current_session)
+            if loop_succeeded:
+                await self._sessions.update(self._current_session)
 
-    async def _run_agent_loop(self) -> None:
+    def _rollback_turn_messages(
+        self,
+        *,
+        user_message: Message,
+        turn_messages: list[Message],
+    ) -> None:
+        """Remove a failed turn's messages from the session in-memory.
+
+        Strips the trailing user / assistant / tool messages added during a
+        single agent turn so a subsequent retry does not re-send a partial
+        conversation. The session is *not* persisted here -- the caller skips
+        the post-loop ``SessionManager.update`` so the on-disk state remains
+        the last successful turn.
+
+        Args:
+            user_message: The user message appended at the start of the turn.
+            turn_messages: Assistant / tool messages produced by the agent
+                loop during the failing turn (may be empty).
+        """
+        if self._current_session is None:
+            return
+        session_messages = self._current_session.messages
+        for message in reversed(turn_messages):
+            if session_messages and session_messages[-1] is message:
+                session_messages.pop()
+        if session_messages and session_messages[-1] is user_message:
+            session_messages.pop()
+        _logger.debug(
+            "turn_messages_rolled_back",
+            user_message_removed=True,
+            assistant_or_tool_removed=len(turn_messages),
+        )
+
+    async def _run_agent_loop(self, *, turn_messages: list[Message]) -> None:
         """Run the main agent loop until completion or cancellation.
+
+        ``_validate_tool_schemas`` and ``_require_model_context_window`` are
+        called at the top of the loop and raise ``ToolError`` when a tool
+        definition is invalid for the active provider or no context window is
+        known; those errors propagate to the caller and abort the turn before
+        any LLM request is sent.
+
+        Args:
+            turn_messages: Mutable list that the loop appends every assistant
+                and tool message it produces in this turn to. The caller uses
+                it to roll back the session in-memory if the loop fails before
+                completing.
 
         Raises:
             RuntimeError: If provider is not available.
@@ -998,7 +1127,7 @@ class Orchestrator:
 
         tool_definitions = self._tools.get_tool_definitions()
         self._validate_tool_schemas(tool_definitions, provider)
-        context_window = await self._get_model_context_window(provider)
+        context_window = await self._require_model_context_window(provider)
         iteration = 0
         force_no_tools_next = False
 
@@ -1010,7 +1139,11 @@ class Orchestrator:
             _logger.debug("agent_loop_iteration", iteration=iteration)
 
             messages = self._build_messages()
-            messages = self.trim_messages_to_context_window(messages, context_window)
+            messages = self.trim_messages_to_context_window(
+                messages,
+                context_window,
+                provider=provider.name,
+            )
 
             iteration_tool_choice_override: ToolChoice | None = ToolChoice(mode=ToolChoiceMode.NONE) if force_no_tools_next else None
 
@@ -1024,6 +1157,7 @@ class Orchestrator:
 
             if response.content:
                 self._current_session.messages.append(response)
+                turn_messages.append(response)
                 if self._on_message:
                     self._on_message(response)
 
@@ -1044,6 +1178,7 @@ class Orchestrator:
                 timestamp=datetime.now(tz=UTC),
             )
             self._current_session.messages.append(tool_message)
+            turn_messages.append(tool_message)
 
             if all(not r.success for r in tool_results):
                 _logger.warning("agent_loop_all_tool_calls_failed", next_turn="summary_with_no_tools")
@@ -1088,213 +1223,57 @@ class Orchestrator:
         )
         return messages
 
+    def build_system_prompt(self) -> str:
+        """Render the current system prompt.
+
+        Public seam over :meth:`_generate_system_prompt` for callers (UI,
+        tests, embedded clients) that need to inspect what the orchestrator
+        will send to the LLM without going through ``process_user_input``.
+
+        Returns:
+            str: System prompt for the active session, or an empty string
+                when no session is active.
+        """
+        return self._generate_system_prompt()
+
     def _generate_system_prompt(self) -> str:
         """Generate system prompt for the LLM.
 
         Returns:
-            str: System prompt describing available tools and capabilities.
+            str: System prompt describing available tools and capabilities. The
+                tools section is generated from the live :class:`ToolRegistry`
+                so the prompt always reflects the bridges that are actually
+                bound at request time -- it cannot drift to advertise tools
+                that no longer exist or to omit tools that have been added.
         """
         if self._current_session is None:
             return ""
 
-        prompt_parts = [
-            "You are Intellicrack, an advanced AI-powered reverse engineering assistant specialized in analyzing software licensing protections.",
+        prompt_parts: list[str] = [
+            (
+                "You are Intellicrack, an advanced AI-powered binary analysis assistant. You bridge external "
+                "reverse-engineering tools (debuggers, disassemblers, sandboxes, instrumentation frameworks) "
+                "into a single workspace and act through their tool APIs."
+            ),
             "",
-            "Your capabilities include:",
-            "- Static analysis via Ghidra (decompilation, disassembly, cross-references)",
-            "- Dynamic analysis via Frida (hooking, memory manipulation, tracing)",
-            "- Debugging via x64dbg (breakpoints, stepping, register manipulation)",
-            "- Binary analysis via Cutter/Rizin (disassembly, analysis, patching)",
-            "- Process control (memory reading/writing, DLL injection)",
-            "- Binary operations (loading, parsing, patching)",
-            "- Sandbox execution (isolated testing, behavior monitoring, snapshot/restore)",
-            "",
-            "## Ghidra Tools",
-            "",
-            "### Core Analysis",
-            "- `ghidra.load_binary` / `ghidra.analyze` - Load and analyze binaries",
-            "- `ghidra.get_functions` / `ghidra.get_function` - List/inspect functions",
-            "- `ghidra.decompile` / `ghidra.disassemble` - View code",
-            "- `ghidra.get_xrefs_to` / `ghidra.get_xrefs_from` - Cross-references",
-            "- `ghidra.search_strings` / `ghidra.search_bytes` - Search binary content",
-            "- `ghidra.get_imports` / `ghidra.get_exports` - Import/export tables",
-            "",
-            "### Code Annotation",
-            "- `ghidra.rename_function` - Rename functions",
-            "- `ghidra.add_comment` - Add comments (EOL, PRE, POST, PLATE)",
-            "- `ghidra.set_label` / `ghidra.get_labels` - Manage labels",
-            "- `ghidra.create_bookmark` / `ghidra.get_bookmarks` - Analysis bookmarks",
-            "",
-            "### Function Management",
-            "- `ghidra.create_function` / `ghidra.delete_function` - Define/remove functions",
-            "- `ghidra.edit_function_signature` - Change return type, calling convention, name",
-            "- `ghidra.set_function_variable_type` - Retype local variables",
-            "",
-            "### Type System",
-            "- `ghidra.get_data_type` / `ghidra.set_data_type` - Data types at addresses",
-            "- `ghidra.define_structure` / `ghidra.get_structures` - Struct definitions",
-            "- `ghidra.apply_structure_at` - Apply struct at memory address",
-            "",
-            "### Navigation & Program Info",
-            "- `ghidra.get_memory_map` / `ghidra.get_segments` - Memory layout",
-            "- `ghidra.get_call_graph` - Function call tree to configurable depth",
-            "- `ghidra.get_program_info` - Language, compiler, endianness, image base",
-            "",
-            "### Modification & State",
-            "- `ghidra.write_bytes` - Patch bytes in program",
-            "- `ghidra.undo` / `ghidra.redo` - Undo/redo changes",
-            "",
-            "### Escape Hatch",
-            "- `ghidra.execute_script` - Run arbitrary Jython in Ghidra's JVM. Use this when no structured tool covers your need. You have access to all Ghidra APIs including currentProgram, getMemory(), getFunctionManager(), etc.",
-            "",
-            "## x64dbg Tools",
-            "",
-            "### Execution Control",
-            "- `x64dbg.load` / `x64dbg.attach` / `x64dbg.detach` - Process management",
-            "- `x64dbg.continue_execution` / `x64dbg.pause` - Run/pause",
-            "- `x64dbg.step_into` / `x64dbg.step_over` / `x64dbg.step_out` - Stepping",
-            "- `x64dbg.run_to` - Run to specific address",
-            "- `x64dbg.execute_til_return` - Execute until function returns",
-            "- `x64dbg.skip_instruction` - Skip current instruction",
-            "- `x64dbg.set_ip` - Set instruction pointer directly",
-            "",
-            "### Breakpoints & Watchpoints",
-            "- `x64dbg.set_breakpoint` / `x64dbg.remove_breakpoint` - Software/hardware BPs",
-            "- `x64dbg.enable_breakpoint` / `x64dbg.disable_breakpoint` - Toggle BPs",
-            "- `x64dbg.set_breakpoint_on_api` - BP on imported function (e.g. kernel32.CreateFileW)",
-            "- `x64dbg.get_breakpoints` - List all BPs including GUI-set ones",
-            "- `x64dbg.set_watchpoint` / `x64dbg.remove_watchpoint` / `x64dbg.get_watchpoints`",
-            "",
-            "### Inspection",
-            "- `x64dbg.get_registers` - All register values",
-            "- `x64dbg.disassemble` - Disassemble at address",
-            "- `x64dbg.get_stack_trace` - Stack frames",
-            "- `x64dbg.get_memory_regions` - Full process memory map",
-            "- `x64dbg.get_threads` - Thread enumeration",
-            "- `x64dbg.get_modules` - Loaded modules",
-            "- `x64dbg.get_process_info` - Complete process info",
-            "- `x64dbg.get_module_sections` - PE sections of loaded module",
-            "- `x64dbg.get_module_exports` - Exports of loaded module",
-            "",
-            "### Memory Operations",
-            "- `x64dbg.read_memory` / `x64dbg.write_memory` - Read/write process memory",
-            "- `x64dbg.scan_memory` / `x64dbg.find_pattern` - Pattern search with wildcards",
-            "- `x64dbg.allocate_memory` / `x64dbg.free_memory` - Allocate/free with protection",
-            "- `x64dbg.dump_memory_to_file` - Dump region to disk",
-            "- `x64dbg.assemble_at` - Assemble instruction at address",
-            "",
-            "### Annotation",
-            "- `x64dbg.set_label` / `x64dbg.get_labels` - Debug labels",
-            "- `x64dbg.set_comment` / `x64dbg.get_comments` - Debug comments",
-            "",
-            "### Tracing & Exceptions",
-            "- `x64dbg.trace_start` / `x64dbg.trace_stop` - Conditional trace recording",
-            "- `x64dbg.set_exception_config` - Configure exception handling (break/ignore/log)",
-            "",
-            "### Escape Hatch",
-            "- `x64dbg.run_command` - Execute any x64dbg command directly",
-            "",
-            "## Cutter/Rizin Tools",
-            "",
-            "### Core Analysis",
-            "- `cutter.load_binary` - Load a binary file into Rizin for analysis",
-            "- `cutter.analyze` - Run analysis (quick, normal, deep) on loaded binary",
-            "- `cutter.get_functions` - List all analyzed functions, optional regex filter",
-            "- `cutter.get_function` - Get detailed function info at a specific address",
-            "- `cutter.get_function_address` - Look up function address by name",
-            "",
-            "### Code Inspection",
-            "- `cutter.decompile` - Decompile function at address to pseudocode",
-            "- `cutter.disassemble` - Disassemble N instructions at an address",
-            "- `cutter.get_xrefs_to` / `cutter.get_xrefs_from` - Cross-references",
-            "- `cutter.seek` - Seek to a specific address in the binary",
-            "",
-            "### Search",
-            "- `cutter.search_strings` - Search strings by regex pattern",
-            "- `cutter.search_bytes` - Search for hex byte pattern (e.g. '48 8B 05')",
-            "- `cutter.search_bytes_wildcard` - Search with wildcards (e.g. '48 8B ?? ??')",
-            "",
-            "### Data Tables",
-            "- `cutter.get_imports` - Get imported functions",
-            "- `cutter.get_exports` - Get exported functions",
-            "- `cutter.get_sections` - Get binary sections",
-            "",
-            "### Annotation & Patching",
-            "- `cutter.rename_function` - Rename a function at address",
-            "- `cutter.add_comment` - Add comment at address (EOL, function, unique)",
-            "- `cutter.write_bytes` - Write hex bytes at an address",
-            "- `cutter.assemble_at` - Assemble instruction and write at address",
-            "",
-            "### Escape Hatch",
-            "- `cutter.execute_command` - Execute any raw Rizin command directly",
-            "",
-            "## Sandbox Usage for Testing Patches",
-            "",
-            "When testing patched binaries:",
-            "1. Use `sandbox.create` to spin up an isolated environment",
-            "2. Use `sandbox.copy_to` to copy the patched binary",
-            "3. Use `sandbox.run_binary` to execute with monitoring",
-            "4. Analyze the ExecutionReport for:",
-            "   - exit_code: Did it crash or succeed?",
-            "   - file_changes: What files were created/modified?",
-            "   - registry_changes: License-related registry modifications?",
-            "   - network_activity: License server communications?",
-            "   - process_activity: Spawned processes?",
-            "5. Use `sandbox.snapshot_create` (QEMU) to save state before risky operations",
-            "6. Use `sandbox.snapshot_restore` to revert if needed",
-            "7. Use `sandbox.destroy` when done",
-            "",
-            "Always test patches in sandbox before considering them successful.",
-            "",
-            "## Cracking Workflow",
-            "",
-            "### Analysis Phase:",
-            "1. `binary.load_file` - Load target binary",
-            "2. `ghidra.load_binary` + `ghidra.analyze` - Static analysis",
-            "3. `ghidra.search_strings` - Find license-related strings",
-            "4. `ghidra.get_functions` - List functions",
-            "5. `ghidra.decompile` - Decompile suspicious functions",
-            "6. `ghidra.get_call_graph` - Trace call chains from license checks",
-            "7. `ghidra.get_program_info` - Understand binary format and architecture",
-            "",
-            "### Dynamic Analysis Phase:",
-            "1. `sandbox.create` - Create isolated environment",
-            "2. `frida.spawn` or `x64dbg.load` - Attach to process",
-            "3. `frida.hook_function` - Hook license checks",
-            "4. `x64dbg.set_breakpoint_on_api` - Break on license-related API calls",
-            "5. `x64dbg.trace_start` - Trace execution through validation logic",
-            "6. `x64dbg.find_pattern` - Search for known protection signatures",
-            "",
-            "### Patching Phase:",
-            "1. `ghidra.write_bytes` or `binary.write_bytes` - Apply patches",
-            "2. `binary.save` - Save patched binary",
-            "3. `sandbox.copy_to` + `sandbox.run_binary` - Test patch",
-            "4. Verify licensing bypassed via ExecutionReport",
-            "",
-            "### Iteration:",
-            "- If patch fails, analyze sandbox output",
-            "- Adjust patches and re-test",
-            "- Use `ghidra.undo` to revert failed patches",
-            "- Use QEMU snapshots for complex multi-step patches",
-            "",
-            "### Advanced Techniques:",
-            "- Use `ghidra.execute_script` for complex analysis not covered by structured tools",
-            "- Use `x64dbg.run_command` for x64dbg operations not available as structured tools",
-            "- Use `ghidra.define_structure` to model license data structures",
-            "- Use `x64dbg.get_module_exports` to find license validation DLL exports",
-            "- Use `x64dbg.skip_instruction` to test what happens when checks are skipped",
-            "",
-            "When analyzing software:",
-            "1. First understand the protection mechanism through static analysis",
-            "2. Use dynamic analysis to observe runtime behavior",
-            "3. Identify key validation functions and decision points",
-            "4. Propose bypass strategies (patching, hooking, keygen)",
-            "5. Implement the bypass with appropriate tools",
-            "6. Test in sandbox to verify the bypass works",
-            "",
-            "Always explain your reasoning and findings clearly.",
-            "Use tools iteratively to build understanding before making changes.",
+            (
+                "Operate the toolset described below. Every function name, parameter, and description "
+                "is generated from the live tool registry, so the list always reflects what is actually "
+                "available in this session. Do not assume any tool not listed below exists."
+            ),
         ]
+
+        prompt_parts.extend(self._render_tool_catalog())
+
+        prompt_parts.extend([
+            "",
+            "Workflow guidance:",
+            "1. Inspect with read-only tools before modifying state.",
+            "2. Prefer structured tools over raw escape-hatch commands when both exist.",
+            "3. Cite the tool calls you intend to make and explain why.",
+            "4. After each tool call, summarise the relevant results before deciding the next step.",
+            "5. Stop and ask the user when you need a confirmation, an artefact, or a decision.",
+        ])
 
         if self._current_session.binaries:
             active_binary = self._current_session.binaries[self._current_session.active_binary_index]
@@ -1318,17 +1297,93 @@ class Orchestrator:
 
         return "\n".join(prompt_parts)
 
-    @staticmethod
-    def _estimate_tokens(text: str) -> int:
-        """Estimate token count for text.
+    def _render_tool_catalog(self) -> list[str]:
+        """Render the tool catalog as a list of prompt lines.
 
-        Args:
-            text: Text to estimate tokens for.
+        The renderer queries :meth:`ToolRegistry.get_tool_definitions` and
+        formats every advertised tool / function so the LLM sees an up-to-date
+        list. When no bridges are registered the catalog renders an explicit
+        ``(no tools available)`` marker rather than silently producing an
+        empty section.
 
         Returns:
-            int: Estimated token count.
+            list[str]: Prompt lines describing every registered tool.
         """
-        return len(text) // 4
+        try:
+            tool_definitions = self._tools.get_tool_definitions()
+        except (RuntimeError, ToolError) as exc:
+            _logger.warning("system_prompt_tool_definitions_failed", error=str(exc))
+            return ["", "## Available tools", "", "(tool registry unavailable; no callable tools)"]
+
+        if not tool_definitions:
+            return ["", "## Available tools", "", "(no tools available)"]
+
+        lines: list[str] = ["", "## Available tools"]
+        for definition in tool_definitions:
+            lines.append("")
+            tool_name_value = definition.tool_name.value if hasattr(definition.tool_name, "value") else str(definition.tool_name)
+            description = (definition.description or "").strip()
+            heading_suffix = f" - {description}" if description else ""
+            lines.append(f"### {tool_name_value}{heading_suffix}")
+            if not definition.functions:
+                lines.append("(no functions advertised)")
+                continue
+            lines.extend(self._render_tool_function(func) for func in definition.functions)
+        return lines
+
+    @staticmethod
+    def _render_tool_function(func: ToolFunction) -> str:
+        """Format a single tool function entry for the system prompt.
+
+        Args:
+            func: Tool function to render.
+
+        Returns:
+            str: One-line summary in the form ``- name(params) -> return: description``.
+        """
+        params = ", ".join(f"{p.name}: {p.type}" for p in func.parameters)
+        description = (func.description or "").strip()
+        suffix = f" - {description}" if description else ""
+        return f"- `{func.name}({params}) -> {func.returns}`{suffix}"
+
+    @staticmethod
+    def estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
+        """Count tokens in ``text`` using a provider-aware tiktoken encoder.
+
+        OpenAI requests use the ``o200k_base`` encoding (matching the GPT-4o
+        family) and every other provider uses ``cl100k_base`` as a
+        conservative shared default that overcounts vs. each provider's
+        real tokenizer rather than undercounts. This avoids the runaway
+        prompt-size failures that the original ``len // 4`` heuristic
+        produced on token-dense payloads (code, hex dumps, table output).
+
+        Args:
+            text: Text to count tokens for.
+            provider: Active LLM provider, or ``None`` to use the default
+                conservative encoding.
+
+        Returns:
+            int: Token count for ``text``.
+        """
+        return _count_tokens(text, provider)
+
+    @staticmethod
+    def _estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
+        """Internal alias retained for backward compatibility.
+
+        Delegates to :meth:`estimate_tokens`. Existing callers that referenced
+        the underscored helper continue to work; new callers should prefer the
+        public name.
+
+        Args:
+            text: Text to count tokens for.
+            provider: Active LLM provider, or ``None`` to use the default
+                conservative encoding.
+
+        Returns:
+            int: Token count for ``text``.
+        """
+        return Orchestrator.estimate_tokens(text, provider)
 
     async def _get_model_context_window(self, provider: LLMProvider) -> int | None:
         """Resolve the context window for the active model.
@@ -1339,8 +1394,10 @@ class Orchestrator:
         2. Otherwise the provider's ``list_models()`` result is searched for the active
            model and its reported ``context_window`` is returned.
         3. If neither source yields a usable value the method logs a warning identifying
-           the provider and model, and returns ``None`` so callers can skip context-window
-           based trimming rather than operating on a hardcoded assumption.
+           the provider and model, and returns ``None`` so callers can decide how to
+           handle the missing value (the agent loop refuses to run via
+           :meth:`_require_model_context_window`; callers that legitimately want to
+           skip trimming may inspect ``None`` themselves).
 
         Args:
             provider: The LLM provider to query.
@@ -1379,30 +1436,83 @@ class Orchestrator:
         )
         return None
 
+    async def _require_model_context_window(self, provider: LLMProvider) -> int:
+        """Resolve a non-null context window or refuse to run the loop.
+
+        Wraps :meth:`_get_model_context_window` so the agent loop fails fast
+        with a precise, actionable error when neither
+        ``OrchestratorConfig.context_window_override`` nor the provider's
+        ``list_models()`` result yields a usable context window. Sending
+        unbounded history at that point would either silently truncate at
+        the provider boundary or trigger a low-quality 400-class error;
+        instead we ask the operator to set the override.
+
+        Args:
+            provider: The LLM provider to query.
+
+        Returns:
+            int: The resolved context window in tokens.
+
+        Raises:
+            ToolError: If neither the override nor the provider reports a
+                context window for the active model.
+        """
+        context_window = await self._get_model_context_window(provider)
+        if context_window is not None:
+            return context_window
+
+        model_id = self._current_session.model if self._current_session is not None else "<no session>"
+        provider_name = provider.name.value
+        error_message = (
+            f"No context window known for provider '{provider_name}' model '{model_id}'. "
+            "Configure OrchestratorConfig.context_window_override (or fix the provider's "
+            "list_models() to advertise context_window) before sending requests; refusing "
+            "to send unbounded history."
+        )
+        raise ToolError(error_message)
+
     @staticmethod
     def trim_messages_to_context_window(
         messages: list[Message],
         context_window: int | None,
+        *,
+        provider: ProviderName | None = None,
     ) -> list[Message]:
         """Remove oldest non-system messages until within context budget.
 
-        Keeps 85% of the context window as the token budget to leave headroom for the
-        response. When ``context_window`` is ``None`` the messages are returned unchanged
-        so callers can operate without trimming when the provider does not report a
-        context window and no override is configured.
+        Keeps 85% of the context window as the token budget to leave headroom
+        for the response. Token counting uses :func:`_count_tokens` which
+        selects a provider-specific tiktoken encoding when ``provider`` is
+        supplied and falls back to ``cl100k_base`` otherwise.
+
+        ``context_window=None`` is treated as a hard error rather than a
+        silent passthrough so callers cannot accidentally send unbounded
+        history to a provider that does not report a window. Use the
+        per-provider helper :meth:`_trim_messages_for_provider` from the
+        agent loop, which always passes a resolved value.
 
         Args:
-            messages: List of messages to trim.
-            context_window: Maximum context window in tokens, or ``None`` to skip trimming.
+            messages: List of messages to trim. Mutated in place.
+            context_window: Maximum context window in tokens. ``None`` raises
+                ``ToolError`` instead of skipping trimming.
+            provider: Active provider used to select the tiktoken encoding
+                for token counting.
 
         Returns:
-            list[Message]: Trimmed list of messages, or the original list when no trimming
-                is applied.
+            list[Message]: Trimmed list of messages.
+
+        Raises:
+            ToolError: If ``context_window`` is ``None``.
         """
         if context_window is None:
-            return messages
+            error_message = (
+                "Cannot trim messages: context window is unknown. Configure "
+                "OrchestratorConfig.context_window_override or pass a real "
+                "context_window value; refusing to send unbounded history."
+            )
+            raise ToolError(error_message)
         budget = int(context_window * 0.85)
-        total = sum(Orchestrator._estimate_tokens(m.content) for m in messages)
+        total = sum(_count_tokens(m.content, provider) for m in messages)
         while total > budget and len(messages) > 1:
             oldest_idx = next(
                 (i for i, m in enumerate(messages) if m.role != "system"),
@@ -1411,7 +1521,7 @@ class Orchestrator:
             if oldest_idx < 0:
                 break
             removed = messages.pop(oldest_idx)
-            removed_tokens = Orchestrator._estimate_tokens(removed.content)
+            removed_tokens = _count_tokens(removed.content, provider)
             total -= removed_tokens
             _logger.debug(
                 "message_trimmed_for_context",
@@ -1454,8 +1564,8 @@ class Orchestrator:
             _logger.error("call_llm_no_active_session")
             raise RuntimeError(error_message)
 
-        # Estimate input tokens
-        input_tokens = sum(self._estimate_tokens(m.content) for m in messages)
+        provider_name = provider.name
+        input_tokens = sum(_count_tokens(m.content, provider_name) for m in messages)
         self._stats.total_tokens_used += input_tokens
 
         tools_available = bool(tools)
@@ -1495,7 +1605,7 @@ class Orchestrator:
             )
 
         response, tool_calls_result = result
-        output_tokens = self._estimate_tokens(response.content)
+        output_tokens = _count_tokens(response.content, provider_name)
         self._stats.total_tokens_used += output_tokens
         self._record_provider_usage(provider=provider, response=response)
         _logger.debug(
@@ -1825,26 +1935,44 @@ class Orchestrator:
     ) -> None:
         """Validate tool definitions against the provider's schema format.
 
-        Logs warnings for any validation errors found. Uses the pure
-        ``validate_tool_for_provider`` validation pass so we do not
-        allocate per-provider schema dicts that the orchestrator never
-        consumes (each provider re-converts in its own ``chat`` /
-        ``chat_stream`` path).
+        Refuses to run the agent loop when any tool's schema would not be
+        accepted by the provider. ``validate_tool_for_provider`` returns a
+        mix of ``warning`` and ``error`` severities; only ``error`` entries
+        gate the loop, but every diagnostic is logged so warnings remain
+        observable. Raising here ensures invalid tool schemas surface on the
+        first failed iteration instead of being silently forwarded to the
+        provider, which would emit an opaque API error that callers cannot
+        attribute back to the offending tool.
 
         Args:
             tools: Tool definitions to validate.
             provider: The LLM provider to validate against.
+
+        Raises:
+            ToolError: If any tool definition is invalid for the provider.
         """
         provider_name = provider.name
+        broken: list[str] = []
         for tool in tools:
             errors = validate_tool_for_provider(tool, provider_name)
             for err in errors:
-                _logger.warning(
-                    "tool_schema_validation_error",
-                    tool=tool.tool_name.value,
-                    error=str(err),
-                    provider=provider_name.value,
-                )
+                if err.severity == "error":
+                    _logger.error(
+                        "tool_schema_validation_error",
+                        tool=tool.tool_name.value,
+                        location=err.location,
+                        error=err.message,
+                        provider=provider_name.value,
+                    )
+                    broken.append(f"{tool.tool_name.value}: {err}")
+                else:
+                    _logger.warning(
+                        "tool_schema_validation_warning",
+                        tool=tool.tool_name.value,
+                        location=err.location,
+                        error=err.message,
+                        provider=provider_name.value,
+                    )
             for func in tool.functions:
                 param_schema = build_schema_parameters(
                     func.parameters,
@@ -1856,6 +1984,14 @@ class Orchestrator:
                     param_count=len(func.parameters),
                     schema_keys=list(param_schema.keys()),
                 )
+
+        if broken:
+            joined = "; ".join(broken)
+            error_message = (
+                f"Tool schema validation failed for provider '{provider_name.value}': {joined}. "
+                "Fix the offending bridge's tool definition before sending the request."
+            )
+            raise ToolError(error_message, tool_name=broken[0].split(":", 1)[0])
 
     async def _should_confirm(self, call: ToolCall) -> bool:
         """Check if tool call requires user confirmation.
