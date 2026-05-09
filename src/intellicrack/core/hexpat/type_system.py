@@ -163,31 +163,65 @@ class TypeRegistry:
         self._all_names: set[str] = set()
         _logger.debug("hexpat_type_registry_initialized")
 
-    def register_struct(self, decl: StructDecl) -> None:
+    def _record_qualified(self, name: str, namespace: str | None) -> str | None:
+        """Record an aggregate type's local name and return its qualified alias.
+
+        Args:
+            name: The unqualified declared name to add to ``_all_names``.
+            namespace: Optional ``::``-joined namespace prefix.
+
+        Returns:
+            str | None: The fully qualified ``namespace::name`` when a
+            namespace is supplied, otherwise ``None``. The qualified name
+            (when present) is also added to ``_all_names`` for the caller's
+            reverse lookup.
+        """
+        self._all_names.add(name)
+        if not namespace:
+            return None
+        qualified = f"{namespace}::{name}"
+        self._all_names.add(qualified)
+        return qualified
+
+    def register_struct(self, decl: StructDecl, namespace: str | None = None) -> None:
         """Register a struct type declaration.
+
+        When ``namespace`` is supplied, the struct is registered under both
+        the local ``decl.name`` and the fully qualified ``namespace::name``.
+        Local-name collisions resolve to the most recently registered
+        declaration; fully qualified registrations never collide unless the
+        caller actually re-declares the same qualified path.
 
         Args:
             decl: The struct AST declaration to register.
+            namespace: Optional ``::``-joined namespace prefix.
         """
         info = StructTypeInfo(name=decl.name, parent=decl.parent, decl=decl)
         self._structs[decl.name] = info
-        self._all_names.add(decl.name)
+        qualified = self._record_qualified(decl.name, namespace)
+        if qualified is not None:
+            self._structs[qualified] = info
 
-    def register_union(self, decl: UnionDecl) -> None:
+    def register_union(self, decl: UnionDecl, namespace: str | None = None) -> None:
         """Register a union type declaration.
 
         Args:
             decl: The union AST declaration to register.
+            namespace: Optional ``::``-joined namespace prefix; when set the
+                union is also registered under the qualified path.
         """
         info = UnionTypeInfo(name=decl.name, decl=decl)
         self._unions[decl.name] = info
-        self._all_names.add(decl.name)
+        qualified = self._record_qualified(decl.name, namespace)
+        if qualified is not None:
+            self._unions[qualified] = info
 
     def register_enum(
         self,
         decl: EnumDecl,
         backing: HexPatType,
         members: dict[str, int],
+        namespace: str | None = None,
     ) -> None:
         """Register an enum type declaration with its resolved backing type and member values.
 
@@ -195,6 +229,8 @@ class TypeRegistry:
             decl: The enum AST declaration to register.
             backing: The resolved primitive type that backs the enum values.
             members: Mapping from enum member name to its integer value.
+            namespace: Optional ``::``-joined namespace prefix; when set the
+                enum is also registered under the qualified path.
         """
         info = EnumTypeInfo(
             name=decl.name,
@@ -203,17 +239,23 @@ class TypeRegistry:
             decl=decl,
         )
         self._enums[decl.name] = info
-        self._all_names.add(decl.name)
+        qualified = self._record_qualified(decl.name, namespace)
+        if qualified is not None:
+            self._enums[qualified] = info
 
-    def register_bitfield(self, decl: BitfieldDecl) -> None:
+    def register_bitfield(self, decl: BitfieldDecl, namespace: str | None = None) -> None:
         """Register a bitfield type declaration.
 
         Args:
             decl: The bitfield AST declaration to register.
+            namespace: Optional ``::``-joined namespace prefix; when set the
+                bitfield is also registered under the qualified path.
         """
         info = BitfieldTypeInfo(name=decl.name, decl=decl)
         self._bitfields[decl.name] = info
-        self._all_names.add(decl.name)
+        qualified = self._record_qualified(decl.name, namespace)
+        if qualified is not None:
+            self._bitfields[qualified] = info
 
     def register_alias(self, alias: str, target_name: str) -> None:
         """Register a type alias mapping alias to target_name.

@@ -19,8 +19,9 @@ import struct
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NoReturn
 
+from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, PatternValue
 from intellicrack.core.logging import get_logger
@@ -74,6 +75,24 @@ class _PrintSinkRegistry:
     """Module-level registry holding the optional ``std::print`` callback."""
 
     sink: Callable[[str], None] | None = None
+
+
+@dataclass
+class _MemorySection:
+    """An in-memory custom section managed by ``std::mem::create_section``.
+
+    Pattern-language code can allocate, resize, and copy bytes into custom
+    sections. The interpreter currently keeps these sections in process memory
+    for the lifetime of the evaluation; they are not persisted to the host
+    binary.
+
+    Attributes:
+        name: Human-readable section identifier supplied by the caller.
+        data: Mutable byte buffer backing the section.
+    """
+
+    name: str
+    data: bytearray
 
 
 def set_print_sink(sink: Callable[[str], None] | None) -> None:
@@ -188,23 +207,38 @@ class BuiltinFunctions:
     std/*.pat library files can call them transparently.
     """
 
-    def __init__(self, data_reader: DataReader) -> None:
+    def __init__(
+        self,
+        data_reader: DataReader,
+        pragma: PragmaInfo | None = None,
+    ) -> None:
         """Initialize the StdLib with a data reader for binary access.
 
         Args:
             data_reader: The DataReader wrapping the target binary.
+            pragma: Parsed ``#pragma`` directives controlling default endian,
+                base address, and other interpreter-wide configuration. When
+                ``None``, defaults match the dataclass defaults of
+                :class:`PragmaInfo` (little-endian, base address 0).
         """
         self._data: DataReader = data_reader
-        self._endian: str = "little"
+        self._pragma: PragmaInfo = pragma if pragma is not None else PragmaInfo()
+        endian_seed = self._pragma.endian if self._pragma.endian in {"little", "big"} else "little"
+        self._endian: str = endian_seed
         self._array_index: int = 0
+        self._sections: dict[int, _MemorySection] = {}
+        self._next_section_handle: int = 1
         self._file_handles: dict[int, BinaryIO] = {}
         self._file_next_handle: int = 1
         self._rng: _random.Random = _create_rng()
         self._reflection: _ReflectionProvider | None = None
+        self._endian_listener: Callable[[str], None] | None = None
+        self._array_index_listener: Callable[[], int] | None = None
         _logger.debug(
             "hexpat_builtins_initialized",
             data_size=data_reader.size,
             default_endian=self._endian,
+            base_address=self._pragma.base_address,
         )
 
     @staticmethod
@@ -257,17 +291,80 @@ class BuiltinFunctions:
         """
         self._array_index = index
 
-    def set_reflection_provider(self, provider: _ReflectionProvider | None) -> None:
-        """Register an evaluator-backed reflection provider.
+    def set_array_index_provider(self, provider: Callable[[], int] | None) -> None:
+        """Register a callback that returns the active array iteration index.
+
+        The HexPat evaluator owns the active array index across nested
+        ``placement[idx]`` traversals. Wiring this provider lets
+        ``std::core::array_index()`` reflect the live evaluator state instead
+        of the last value pushed via :meth:`set_array_index`.
 
         Args:
-            provider: An object implementing the reflection protocol, or ``None``
-                to remove any previously installed provider.
+            provider: Zero-argument callable returning the current index, or
+                ``None`` to clear the wiring and fall back to the value most
+                recently passed to :meth:`set_array_index`.
         """
-        self._reflection = provider
+        self._array_index_listener = provider
+
+    def set_endian_listener(self, listener: Callable[[str], None] | None) -> None:
+        """Register a callback receiving endian transitions from ``std::core::set_endian``.
+
+        Args:
+            listener: A callable receiving the resolved endian string
+                (``"little"`` or ``"big"``) whenever a pattern calls
+                ``std::core::set_endian``, or ``None`` to clear the wiring.
+        """
+        self._endian_listener = listener
+
+    @property
+    def endian(self) -> str:
+        """Return the active default endian, kept in sync with ``set_endian``.
+
+        Returns:
+            str: ``"little"`` or ``"big"`` reflecting the current default.
+        """
+        return self._endian
+
+    def set_reflection_provider(self, provider: object | None) -> None:
+        """Register an evaluator-backed reflection provider.
+
+        The provider is duck-typed against :class:`_ReflectionProvider`: any
+        object exposing the documented optional callable attributes is
+        accepted. The evaluator supplies a concrete provider via
+        :meth:`HexPatEvaluator.reflection_provider`.
+
+        Args:
+            provider: An object implementing the reflection protocol, or
+                ``None`` to remove any previously installed provider.
+        """
+        if provider is None:
+            self._reflection = None
+            return
+        if isinstance(provider, _ReflectionProvider):
+            self._reflection = provider
+            return
+        adapted = _ReflectionProvider(
+            has_attribute=getattr(provider, "has_attribute", None),
+            get_attribute_argument=getattr(provider, "get_attribute_argument", None),
+            member_count=getattr(provider, "member_count", None),
+            has_member=getattr(provider, "has_member", None),
+            formatted_value=getattr(provider, "formatted_value", None),
+            is_valid_enum=getattr(provider, "is_valid_enum", None),
+            set_pattern_color=getattr(provider, "set_pattern_color", None),
+            set_display_name=getattr(provider, "set_display_name", None),
+            set_pattern_comment=getattr(provider, "set_pattern_comment", None),
+            set_pattern_palette_colors=getattr(provider, "set_pattern_palette_colors", None),
+            reset_pattern_palette=getattr(provider, "reset_pattern_palette", None),
+            execute_function=getattr(provider, "execute_function", None),
+        )
+        self._reflection = adapted
 
     def _resolve_endian(self, tag: int) -> Literal["little", "big"]:
         """Resolve a hexpat endian tag to a byteorder string.
+
+        ``Native`` falls back to the active default endian, which the
+        interpreter seeds from ``#pragma endian`` and which
+        ``std::core::set_endian`` may subsequently overwrite.
 
         Args:
             tag: The hexpat endian enum value (0=Native, 1=Big, 2=Little).
@@ -291,22 +388,41 @@ class BuiltinFunctions:
             "builtin::std::mem::read_unsigned": self._mem_read_unsigned,
             "builtin::std::mem::read_signed": self._mem_read_signed,
             "builtin::std::mem::read_string": self._mem_read_string,
+            "builtin::std::mem::read_bits": self._mem_read_bits,
             "builtin::std::mem::find_sequence_in_range": self._mem_find_sequence,
+            "builtin::std::mem::find_string_in_range": self._mem_find_string_in_range,
             "builtin::std::mem::size": self._mem_size,
             "builtin::std::mem::base_address": self._mem_base_address,
+            "builtin::std::mem::current_bit_offset": self._mem_current_bit_offset,
+            "builtin::std::mem::create_section": self._mem_create_section,
+            "builtin::std::mem::delete_section": self._mem_delete_section,
+            "builtin::std::mem::get_section_size": self._mem_get_section_size,
+            "builtin::std::mem::set_section_size": self._mem_set_section_size,
+            "builtin::std::mem::copy_to_section": self._mem_copy_to_section,
+            "builtin::std::mem::copy_value_to_section": self._mem_copy_value_to_section,
             "std::mem::read_unsigned": self._mem_read_unsigned,
             "std::mem::read_signed": self._mem_read_signed,
             "std::mem::read_string": self._mem_read_string,
+            "std::mem::read_bits": self._mem_read_bits,
             "std::mem::find_sequence_in_range": self._mem_find_sequence,
+            "std::mem::find_string_in_range": self._mem_find_string_in_range,
             "std::mem::size": self._mem_size,
             "std::mem::base_address": self._mem_base_address,
+            "std::mem::current_bit_offset": self._mem_current_bit_offset,
+            "std::mem::create_section": self._mem_create_section,
+            "std::mem::delete_section": self._mem_delete_section,
+            "std::mem::get_section_size": self._mem_get_section_size,
+            "std::mem::set_section_size": self._mem_set_section_size,
+            "std::mem::copy_to_section": self._mem_copy_to_section,
+            "std::mem::copy_value_to_section": self._mem_copy_value_to_section,
             "builtin::std::string::length": self._string_length,
             "builtin::std::string::at": self._string_at,
             "builtin::std::string::substr": self._string_substr,
             "builtin::std::string::contains": self._string_contains,
             "builtin::std::string::starts_with": self._string_starts_with,
             "builtin::std::string::ends_with": self._string_ends_with,
-            "builtin::std::string::to_int": self._string_to_int,
+            "builtin::std::string::parse_int": self._string_parse_int,
+            "builtin::std::string::parse_float": self._string_parse_float,
             "builtin::std::string::reverse": self._string_reverse,
             "std::string::length": self._string_length,
             "std::string::at": self._string_at,
@@ -314,7 +430,8 @@ class BuiltinFunctions:
             "std::string::contains": self._string_contains,
             "std::string::starts_with": self._string_starts_with,
             "std::string::ends_with": self._string_ends_with,
-            "std::string::to_int": self._string_to_int,
+            "std::string::parse_int": self._string_parse_int,
+            "std::string::parse_float": self._string_parse_float,
             "std::string::reverse": self._string_reverse,
             "builtin::std::math::abs": self._math_abs,
             "builtin::std::math::min": self._math_min,
@@ -460,6 +577,10 @@ class BuiltinFunctions:
             "std::format": self._io_format,
             "std::error": self._io_error,
             "std::warning": self._io_warning,
+            "print": self._io_print,
+            "format": self._io_format,
+            "error": self._io_error,
+            "warning": self._io_warning,
         }
 
         for name, func in builtins.items():
@@ -564,9 +685,12 @@ class BuiltinFunctions:
         """
         return PatternValue(value=self._data.size)
 
-    @staticmethod
-    def _mem_base_address(*_args: object) -> PatternValue:
-        """Get the base address (always 0 for file-based analysis).
+    def _mem_base_address(self, *_args: object) -> PatternValue:
+        """Get the base address as configured by ``#pragma base_address``.
+
+        The result is the integer base address recorded in the active
+        :class:`PragmaInfo`. Patterns combine this with ``$`` and computed
+        offsets to map between file offsets and absolute addresses.
 
         Args:
             *_args: Unused arguments for API compatibility.
@@ -574,7 +698,301 @@ class BuiltinFunctions:
         Returns:
             PatternValue: A PatternValue containing the base address.
         """
+        return PatternValue(value=int(self._pragma.base_address))
+
+    def _mem_read_bits(self, *args: object) -> PatternValue:
+        """Read an arbitrary-width unsigned bitfield from the binary.
+
+        Bits are extracted starting at ``bit_offset`` within the byte at
+        ``byte_offset``, advancing toward higher byte addresses. The returned
+        value packs the requested bits into an unsigned integer with the
+        first-read bit in the most-significant position.
+
+        Args:
+            *args: ``(byte_offset: int, bit_offset: int, bit_size: int)``.
+
+        Returns:
+            PatternValue: A PatternValue carrying the unsigned integer
+                composed from the requested bit range.
+
+        Raises:
+            HexPatRuntimeError: When the requested bit-size is non-positive,
+                unrealistically large, or the read would walk off the data.
+        """
+        if len(args) < 3:
+            msg = "std::mem::read_bits requires (byte_offset, bit_offset, bit_size)"
+            raise HexPatRuntimeError(msg)
+        byte_offset = int(self._unwrap(args[0]))
+        bit_offset = int(self._unwrap(args[1]))
+        bit_size = int(self._unwrap(args[2]))
+        if bit_size <= 0:
+            msg = "std::mem::read_bits: bit_size must be positive"
+            raise HexPatRuntimeError(msg)
+        if bit_size > 128:
+            msg = "std::mem::read_bits: bit_size must not exceed 128"
+            raise HexPatRuntimeError(msg)
+        if bit_offset < 0 or bit_offset > 7:
+            msg = "std::mem::read_bits: bit_offset must be in [0, 7]"
+            raise HexPatRuntimeError(msg)
+        bits_total = bit_offset + bit_size
+        bytes_needed = (bits_total + 7) // 8
+        raw = self._data.read(byte_offset, bytes_needed)
+        if len(raw) < bytes_needed:
+            msg = f"std::mem::read_bits: short read at byte 0x{byte_offset:X} (needed {bytes_needed} bytes, got {len(raw)})"
+            raise HexPatRuntimeError(msg)
+        big_value = int.from_bytes(raw, byteorder="big", signed=False)
+        shift = (bytes_needed * 8) - bit_offset - bit_size
+        mask = (1 << bit_size) - 1
+        return PatternValue(value=(big_value >> shift) & mask)
+
+    def _mem_find_string_in_range(self, *args: object) -> PatternValue:
+        """Locate the Nth occurrence of ``needle`` in a byte range.
+
+        Args:
+            *args: ``(occurrence_index: int, offsetFrom: int, offsetTo: int,
+                needle: str | bytes)``. The needle is encoded as UTF-8 when
+                supplied as a string.
+
+        Returns:
+            PatternValue: A PatternValue holding the absolute byte offset of
+                the matching occurrence, or ``-1`` when fewer matches exist.
+        """
+        if len(args) < 4:
+            return PatternValue(value=-1)
+        occurrence_index = int(self._unwrap(args[0]))
+        offset_from = int(self._unwrap(args[1]))
+        offset_to = int(self._unwrap(args[2]))
+        needle = self._unwrap_bytes(args[3])
+        if not needle or occurrence_index < 0:
+            return PatternValue(value=-1)
+        pos = offset_from
+        found_count = 0
+        while True:
+            result = self._data.find_sequence(needle, pos)
+            if result < 0:
+                return PatternValue(value=-1)
+            if result + len(needle) > offset_to:
+                return PatternValue(value=-1)
+            if found_count == occurrence_index:
+                return PatternValue(value=result)
+            found_count += 1
+            pos = result + 1
+
+    def _mem_current_bit_offset(self, *_args: object) -> PatternValue:
+        """Return the current bit offset within an active bitfield read.
+
+        Bit-level reflection is provided by the evaluator's reflection
+        provider when one is wired. For tree-walking evaluations not nested
+        inside a bitfield read the offset is always ``0``.
+
+        Args:
+            *_args: Unused arguments for API compatibility.
+
+        Returns:
+            PatternValue: A PatternValue carrying the bit offset (``0``-``7``).
+        """
+        if self._reflection is not None:
+            hook = getattr(self._reflection, "current_bit_offset", None)
+            if callable(hook):
+                hook_result = hook()
+                if isinstance(hook_result, int):
+                    return PatternValue(value=hook_result)
+                return PatternValue(value=0)
         return PatternValue(value=0)
+
+    def _mem_create_section(self, *args: object) -> PatternValue:
+        """Allocate a fresh in-memory section and return its handle.
+
+        Args:
+            *args: ``(name: str)``.
+
+        Returns:
+            PatternValue: A PatternValue carrying the section handle.
+        """
+        name = str(self._unwrap(args[0])) if args else ""
+        handle = self._next_section_handle
+        self._next_section_handle += 1
+        self._sections[handle] = _MemorySection(name=name, data=bytearray())
+        return PatternValue(value=handle)
+
+    def _mem_delete_section(self, *args: object) -> PatternValue:
+        """Release the storage backing a previously created section.
+
+        Args:
+            *args: ``(section: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the supplied handle is unknown.
+        """
+        if not args:
+            msg = "std::mem::delete_section requires a section handle"
+            raise HexPatRuntimeError(msg)
+        handle = int(self._unwrap(args[0]))
+        if self._sections.pop(handle, None) is None:
+            msg = f"std::mem::delete_section: unknown section handle {handle}"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=None)
+
+    def _mem_get_section_size(self, *args: object) -> PatternValue:
+        """Return the byte size of a custom section.
+
+        Args:
+            *args: ``(section: int)``.
+
+        Returns:
+            PatternValue: A PatternValue carrying the section size.
+
+        Raises:
+            HexPatRuntimeError: When the supplied handle is unknown.
+        """
+        section = self._section_for(args[0]) if args else None
+        if section is None:
+            msg = "std::mem::get_section_size: unknown section handle"
+            raise HexPatRuntimeError(msg)
+        return PatternValue(value=len(section.data))
+
+    def _mem_set_section_size(self, *args: object) -> PatternValue:
+        """Resize a custom section, zero-extending or truncating its bytes.
+
+        Args:
+            *args: ``(section: int, size: int)``.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the supplied handle is unknown or the
+                requested size is negative.
+        """
+        if len(args) < 2:
+            msg = "std::mem::set_section_size requires (section, size)"
+            raise HexPatRuntimeError(msg)
+        section = self._section_for(args[0])
+        if section is None:
+            msg = "std::mem::set_section_size: unknown section handle"
+            raise HexPatRuntimeError(msg)
+        new_size = int(self._unwrap(args[1]))
+        if new_size < 0:
+            msg = "std::mem::set_section_size: size must be non-negative"
+            raise HexPatRuntimeError(msg)
+        current = len(section.data)
+        if new_size > current:
+            section.data.extend(b"\x00" * (new_size - current))
+        else:
+            del section.data[new_size:]
+        return PatternValue(value=None)
+
+    def _mem_copy_to_section(self, *args: object) -> PatternValue:
+        """Copy bytes from the main binary or another section into a section.
+
+        Args:
+            *args: ``(from_section: int, from_address: int, to_section: int,
+                to_address: int, size: int)``. ``from_section`` of ``0`` reads
+                from the main binary; non-zero handles read from the matching
+                custom section.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When either section handle is unknown or the
+                source range is out of bounds.
+        """
+        if len(args) < 5:
+            msg = "std::mem::copy_to_section requires (from_section, from_address, to_section, to_address, size)"
+            raise HexPatRuntimeError(msg)
+        from_handle = int(self._unwrap(args[0]))
+        from_address = int(self._unwrap(args[1]))
+        to_handle = int(self._unwrap(args[2]))
+        to_address = int(self._unwrap(args[3]))
+        size = int(self._unwrap(args[4]))
+        if size < 0:
+            msg = "std::mem::copy_to_section: size must be non-negative"
+            raise HexPatRuntimeError(msg)
+        if from_handle == 0:
+            payload = self._data.read(from_address, size)
+        else:
+            src = self._sections.get(from_handle)
+            if src is None:
+                msg = f"std::mem::copy_to_section: unknown source section {from_handle}"
+                raise HexPatRuntimeError(msg)
+            if from_address < 0 or from_address + size > len(src.data):
+                msg = "std::mem::copy_to_section: source range out of bounds"
+                raise HexPatRuntimeError(msg)
+            payload = bytes(src.data[from_address : from_address + size])
+        self._write_section(to_handle, to_address, payload, "copy_to_section")
+        return PatternValue(value=None)
+
+    def _mem_copy_value_to_section(self, *args: object) -> PatternValue:
+        """Copy a pattern's raw bytes into a custom section.
+
+        Args:
+            *args: ``(value, to_section: int, to_address: int)`` where
+                ``value`` is a :class:`PatternValue` referencing a region of
+                the main binary.
+
+        Returns:
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the destination section is unknown or
+                the source value lacks a binary footprint.
+        """
+        if len(args) < 3:
+            msg = "std::mem::copy_value_to_section requires (value, to_section, to_address)"
+            raise HexPatRuntimeError(msg)
+        value_arg = args[0]
+        to_handle = int(self._unwrap(args[1]))
+        to_address = int(self._unwrap(args[2]))
+        if not isinstance(value_arg, PatternValue) or value_arg.size <= 0:
+            msg = "std::mem::copy_value_to_section: value has no binary footprint"
+            raise HexPatRuntimeError(msg)
+        payload = self._data.read(value_arg.offset, value_arg.size)
+        self._write_section(to_handle, to_address, payload, "copy_value_to_section")
+        return PatternValue(value=None)
+
+    def _write_section(
+        self,
+        handle: int,
+        address: int,
+        payload: bytes,
+        op: str,
+    ) -> None:
+        """Write ``payload`` into a section, zero-extending when needed.
+
+        Args:
+            handle: Destination section handle.
+            address: Byte offset within the destination section.
+            payload: Bytes to splice into the destination.
+            op: Builtin name embedded in error messages for diagnostics.
+
+        Raises:
+            HexPatRuntimeError: When the destination handle is unknown.
+        """
+        dst = self._sections.get(handle)
+        if dst is None:
+            msg = f"std::mem::{op}: unknown destination section {handle}"
+            raise HexPatRuntimeError(msg)
+        end = address + len(payload)
+        if end > len(dst.data):
+            dst.data.extend(b"\x00" * (end - len(dst.data)))
+        dst.data[address:end] = payload
+
+    def _section_for(self, arg: object) -> _MemorySection | None:
+        """Resolve a section-handle argument to its backing storage.
+
+        Args:
+            arg: A pattern-value or primitive carrying the section handle.
+
+        Returns:
+            _MemorySection | None: The backing section, or ``None`` when the
+            handle is unknown.
+        """
+        handle = int(self._unwrap(arg))
+        return self._sections.get(handle)
 
     def _string_length(self, *args: object) -> PatternValue:
         """Get the length of a string.
@@ -659,7 +1077,7 @@ class BuiltinFunctions:
             return PatternValue(value=False)
         return PatternValue(value=str(self._unwrap(args[0])).endswith(str(self._unwrap(args[1]))))
 
-    def _string_to_int(self, *args: object) -> PatternValue:
+    def _string_parse_int(self, *args: object) -> PatternValue:
         """Parse a string as an integer.
 
         Args:
@@ -667,17 +1085,48 @@ class BuiltinFunctions:
 
         Returns:
             PatternValue: A PatternValue containing the parsed integer value.
+
+        Raises:
+            HexPatRuntimeError: When the input cannot be parsed in the
+                requested base or the base is outside the supported range.
         """
         if not args:
-            return PatternValue(value=0)
-        s = str(self._unwrap(args[0]))
+            msg = "std::string::parse_int requires a string argument"
+            raise HexPatRuntimeError(msg)
+        s = str(self._unwrap(args[0])).strip()
         base = int(self._unwrap(args[1])) if len(args) > 1 else 10
+        if base != 0 and (base < 2 or base > 36):
+            msg = f"std::string::parse_int: unsupported base {base}"
+            raise HexPatRuntimeError(msg)
         try:
             result = int(s, base)
-        except ValueError:
-            return PatternValue(value=0)
-        else:
-            return PatternValue(value=result)
+        except ValueError as exc:
+            msg = f"std::string::parse_int: cannot parse {s!r} as base-{base} integer"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=result)
+
+    def _string_parse_float(self, *args: object) -> PatternValue:
+        """Parse a string as a floating-point value.
+
+        Args:
+            *args: ``(s: str)``.
+
+        Returns:
+            PatternValue: A PatternValue containing the parsed float value.
+
+        Raises:
+            HexPatRuntimeError: When the input cannot be parsed as a float.
+        """
+        if not args:
+            msg = "std::string::parse_float requires a string argument"
+            raise HexPatRuntimeError(msg)
+        s = str(self._unwrap(args[0])).strip()
+        try:
+            result = float(s)
+        except ValueError as exc:
+            msg = f"std::string::parse_float: cannot parse {s!r} as float"
+            raise HexPatRuntimeError(msg) from exc
+        return PatternValue(value=result)
 
     def _string_reverse(self, *args: object) -> PatternValue:
         """Reverse a string.
@@ -1834,19 +2283,31 @@ class BuiltinFunctions:
 
         Args:
             *args: ``(endian: int)`` where 0=Native, 1=Big, 2=Little. Native
-                leaves the current value unchanged.
+                resets the default to whatever ``#pragma endian`` selected.
 
         Returns:
-            PatternValue: A PatternValue containing None.
+            PatternValue: A PatternValue containing ``None``.
+
+        Raises:
+            HexPatRuntimeError: When the supplied endian tag is unrecognised.
         """
-        if args:
-            tag = int(self._unwrap(args[0]))
-            if tag == _ENDIAN_BIG:
-                self._endian = "big"
-            elif tag == _ENDIAN_LITTLE:
-                self._endian = "little"
-            elif tag != _ENDIAN_NATIVE:
-                self._endian = "big" if tag != 0 else "little"
+        if not args:
+            return PatternValue(value=None)
+        tag = int(self._unwrap(args[0]))
+        if tag == _ENDIAN_BIG:
+            new_endian = "big"
+        elif tag == _ENDIAN_LITTLE:
+            new_endian = "little"
+        elif tag == _ENDIAN_NATIVE:
+            new_endian = self._pragma.endian if self._pragma.endian in {"little", "big"} else "little"
+        else:
+            _logger.error("hexpat_set_endian_invalid_tag", endian_tag=tag)
+            msg = f"std::core::set_endian: unsupported endian tag {tag}"
+            raise HexPatRuntimeError(msg)
+        if new_endian != self._endian:
+            self._endian = new_endian
+            if self._endian_listener is not None:
+                self._endian_listener(new_endian)
         return PatternValue(value=None)
 
     def _core_get_endian(self, *_args: object) -> PatternValue:
@@ -1863,12 +2324,19 @@ class BuiltinFunctions:
     def _core_array_index(self, *_args: object) -> PatternValue:
         """Get the current array iteration index.
 
+        When the evaluator has wired an array-index provider via
+        :meth:`set_array_index_provider`, the live evaluator-owned index is
+        returned. Otherwise the most recent value passed to
+        :meth:`set_array_index` is returned.
+
         Args:
             *_args: Unused arguments for API compatibility.
 
         Returns:
             PatternValue: A PatternValue containing the current array index.
         """
+        if self._array_index_listener is not None:
+            return PatternValue(value=int(self._array_index_listener()))
         return PatternValue(value=self._array_index)
 
     @staticmethod
@@ -2204,16 +2672,11 @@ class BuiltinFunctions:
             return PatternValue(value="")
         return PatternValue(value=self._format_string(args[0], list(args[1:])))
 
-    def _io_error(self, *args: object) -> PatternValue:
+    def _io_error(self, *args: object) -> NoReturn:
         """Raise a fatal pattern error.
 
         Args:
             *args: ``(message: str)``.
-
-        Returns:
-            PatternValue: This method never returns; it always raises
-            ``HexPatRuntimeError``. The return type matches the builtin
-            calling convention.
 
         Raises:
             HexPatRuntimeError: Always, carrying the supplied message.

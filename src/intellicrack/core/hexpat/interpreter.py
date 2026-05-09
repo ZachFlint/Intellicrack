@@ -20,12 +20,13 @@ from intellicrack.core.hexpat.evaluator import HexPatEvaluator
 from intellicrack.core.hexpat.lexer import HexPatLexer
 from intellicrack.core.hexpat.parser import HexPatParser
 from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor
-from intellicrack.core.hexpat.stdlib import BuiltinFunctions
+from intellicrack.core.hexpat.stdlib import BuiltinFunctions, set_print_sink
 from intellicrack.core.hexpat.type_system import TypeRegistry
 from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Any
 
     from intellicrack.core.types import HexDocumentLike
@@ -52,12 +53,17 @@ class HexPatInterpreter:
         self,
         include_paths: list[Path] | None = None,
         std_lib_path: Path | None = None,
+        print_sink: Callable[[str], None] | None = None,
     ) -> None:
         """Initialize the HexPatInterpreter with include search paths.
 
         Args:
             include_paths: Additional directories to search for included files.
             std_lib_path: Override path for the standard library directory.
+            print_sink: Optional sink invoked with each formatted message
+                produced by ``std::print``. The sink is registered via
+                :func:`stdlib.set_print_sink` for the lifetime of every
+                ``execute*`` call originating from this instance.
         """
         paths: list[Path] = []
 
@@ -69,11 +75,21 @@ class HexPatInterpreter:
             paths.extend(include_paths)
 
         self._include_paths: list[Path] = paths
+        self._print_sink: Callable[[str], None] | None = print_sink
         _logger.info(
             "hexpat_interpreter_initialized",
             include_path_count=len(self._include_paths),
             std_lib_present=lib_path.exists(),
         )
+
+    def set_print_sink(self, sink: Callable[[str], None] | None) -> None:
+        """Replace the ``std::print`` output sink for subsequent executions.
+
+        Args:
+            sink: Callable receiving each formatted ``std::print`` payload,
+                or ``None`` to clear any previously installed sink.
+        """
+        self._print_sink = sink
 
     def execute(
         self,
@@ -117,7 +133,8 @@ class HexPatInterpreter:
 
         evaluator = HexPatEvaluator(data_reader, type_registry, pragma)
 
-        stdlib = BuiltinFunctions(data_reader)
+        stdlib = BuiltinFunctions(data_reader, pragma)
+        self._wire_stdlib_to_evaluator(stdlib, evaluator)
         stdlib.register_all(evaluator.scope)
 
         return evaluator.evaluate(program)
@@ -180,7 +197,8 @@ class HexPatInterpreter:
 
         evaluator = HexPatEvaluator(data_reader, type_registry, pragma)
 
-        stdlib = BuiltinFunctions(data_reader)
+        stdlib = BuiltinFunctions(data_reader, pragma)
+        self._wire_stdlib_to_evaluator(stdlib, evaluator)
         stdlib.register_all(evaluator.scope)
 
         return evaluator.evaluate(program)
@@ -215,7 +233,12 @@ class HexPatInterpreter:
         """Compile a simple pattern to JSON for the Rust evaluator.
 
         Delegates to the existing HexPatCompiler for patterns that pass
-        can_compile_to_json().
+        :meth:`can_compile_to_json`. Native :class:`HexPatError` instances
+        propagate unchanged so callers preserve precise diagnostic
+        information (parse vs. type vs. runtime errors). Only an unrelated
+        :class:`ImportError` from the helper module is wrapped, since the
+        compiler module is treated as an integration boundary rather than a
+        runtime defect path.
 
         Args:
             source: The .hexpat source code.
@@ -224,14 +247,41 @@ class HexPatInterpreter:
             str: JSON string representing the template.
 
         Raises:
-            HexPatError: If compilation fails.
+            HexPatError: If the underlying compiler module cannot be
+                imported. Native ``HexPatError`` subclasses raised by the
+                compiler propagate unchanged.
         """
         try:
             from intellicrack.core.hexpat_compiler import HexPatCompiler
-
-            result = HexPatCompiler.compile(source)
-        except (HexPatError, ImportError) as exc:
-            msg = str(exc)
+        except ImportError as exc:
+            _logger.exception("hexpat_compile_to_json_import_failed")
+            msg = f"compile_to_json unavailable: {exc}"
             raise HexPatError(msg) from exc
-        else:
-            return result
+        return HexPatCompiler.compile(source)
+
+    def _wire_stdlib_to_evaluator(
+        self,
+        stdlib: BuiltinFunctions,
+        evaluator: HexPatEvaluator,
+    ) -> None:
+        """Connect cross-cutting stdlib hooks to the evaluator instance.
+
+        - Registers the optional print sink so ``std::print`` reaches the
+          GUI/CLI sink installed on the interpreter.
+        - Installs a callable returning the live array index so
+          ``std::core::array_index()`` reflects the active iteration.
+        - Wires an endian listener so ``std::core::set_endian`` updates the
+          evaluator's primitive read default.
+        - Installs the evaluator-backed reflection provider so the
+          ``std::core::*`` reflection builtins resolve.
+
+        Args:
+            stdlib: The :class:`BuiltinFunctions` instance bound to the
+                evaluator's scope.
+            evaluator: The active :class:`HexPatEvaluator` whose state should
+                drive the registered hooks.
+        """
+        set_print_sink(self._print_sink)
+        stdlib.set_array_index_provider(evaluator.current_array_index)
+        stdlib.set_endian_listener(evaluator.set_default_endian)
+        stdlib.set_reflection_provider(evaluator.reflection_provider())
