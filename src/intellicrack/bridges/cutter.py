@@ -59,7 +59,7 @@ from intellicrack.core.types import (
 )
 
 
-__all__ = ["CutterBridge"]
+__all__ = ["CutterBridge", "is_rizin_64bit", "validate_r2_argument"]
 
 XRefType = Literal["call", "jump", "data", "read", "write"]
 StringEncoding = Literal["ascii", "utf-8", "utf-16le", "utf-16be"]
@@ -75,9 +75,104 @@ _ERR_TOOL_NOT_AVAILABLE = "cutter not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
 _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
 _ERR_CMD_TIMEOUT = "cutter command timed out"
+_ERR_INVALID_R2_INPUT = "input contains rizin command-control characters"
+_ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 60.0
 R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
+
+_RZ_64BIT_ARCHES: frozenset[str] = frozenset(
+    {
+        "x86_64",
+        "amd64",
+        "x64",
+        "aarch64",
+        "arm64",
+        "ppc64",
+        "powerpc64",
+        "mips64",
+        "riscv64",
+        "sparc64",
+        "alpha",
+        "ia64",
+        "loongarch64",
+    },
+)
+
+_RZ_64BIT_CLASS_TOKENS: frozenset[str] = frozenset(
+    {
+        "elf64",
+        "pe32+",
+        "pe64",
+        "mach-o-64",
+        "mach064",
+        "macho64",
+        "te64",
+    },
+)
+
+_RZ_COMMAND_CONTROL_CHARS: frozenset[str] = frozenset({";", "\n", "\r", "@", "|", "~", "`", ">", "<", "$", "#"})
+
+
+def is_rizin_64bit(bits: int, arch: str, file_class: str) -> bool:
+    """Determine whether a rizin-reported binary is 64-bit.
+
+    Rizin's ``ij`` output exposes a binary's word width through three
+    overlapping fields. ``bin.bits`` is the most direct, but several
+    formats (notably PE32+ and split debug variants) leave it set to a
+    32-bit value while the architecture or container class still
+    indicates 64-bit. Combining the three sources matches what Cutter
+    itself does when classifying loaded binaries.
+
+    Args:
+        bits: ``bin.bits`` value reported by rizin (0 if missing).
+        arch: ``bin.arch`` value reported by rizin (e.g. ``x86``,
+            ``x86_64``, ``arm``, ``arm64``).
+        file_class: ``bin.class`` value reported by rizin
+            (e.g. ``ELF64``, ``PE32+``, ``MACH064``).
+
+    Returns:
+        bool: ``True`` when any of the three sources indicates 64-bit
+        word size.
+    """
+    if bits == _BITS_64:
+        return True
+    if arch.lower() in _RZ_64BIT_ARCHES:
+        return True
+    normalized_class = file_class.lower().replace(" ", "").replace("_", "")
+    return any(token in normalized_class for token in _RZ_64BIT_CLASS_TOKENS)
+
+
+def validate_r2_argument(value: str, *, field: str) -> str:
+    """Reject raw user input that would inject rizin command-control characters.
+
+    Rizin parses ``;`` as a command separator, ``@`` as a temporary
+    seek, ``|`` as a shell pipe, ``~`` as the internal grep operator,
+    backticks as nested-command substitution, ``>`` as redirection,
+    and treats ``$`` / ``#`` as variable / comment prefixes. Forwarding
+    untrusted user input directly into command strings allows
+    arbitrary rizin commands to run in the analysed session, including
+    file writes through ``wx`` or process spawning through ``!``.
+
+    Args:
+        value: Caller-supplied text destined for an rizin command line.
+        field: Name of the parameter being validated, used in the
+            raised error message.
+
+    Returns:
+        str: The unmodified ``value`` when safe to forward.
+
+    Raises:
+        ToolError: When ``value`` contains a rizin command-control
+            character or starts with ``!`` (shell escape).
+    """
+    if value.startswith("!"):
+        msg = f"{_ERR_INVALID_R2_INPUT}: {field} must not start with '!'"
+        raise ToolError(msg)
+    if any(ch in _RZ_COMMAND_CONTROL_CHARS for ch in value):
+        msg = f"{_ERR_INVALID_R2_INPUT}: {field}"
+        raise ToolError(msg)
+    return value
 
 
 def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
@@ -386,7 +481,7 @@ def _build_tool_functions() -> list[ToolFunction]:
                 _tp("address", "integer", "Target address"),
                 _tp("instruction", "string", "Assembly instruction to assemble"),
             ],
-            "Assembled bytes",
+            "Assembled instruction as a Python bytes object (raw machine code).",
         ),
         _tf(
             "seek",
@@ -740,7 +835,7 @@ class CutterBridge(StaticAnalysisBridge):
         self._r2_pid: int | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
-            supports_dynamic_analysis=False,
+            supports_dynamic_analysis=True,
             supports_decompilation=True,
             supports_debugging=False,
             supports_patching=True,
@@ -876,23 +971,38 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.info("cutter_bridge_initialized", bridge="cutter")
 
     async def shutdown(self) -> None:
-        """Shutdown Cutter bridge and cleanup resources."""
-        if self._r2 is not None:
-            try:
-                await asyncio.to_thread(self._r2.quit)
-            except (OSError, RuntimeError) as e:
-                _logger.warning("cutter_close_failed", error=str(e))
-            self._r2 = None
+        """Shutdown Cutter bridge and cleanup resources.
 
-        if self._r2_pid is not None:
-            process_manager = ProcessManager.get_instance()
-            process_manager.unregister_external_pid(self._r2_pid)
-            self._r2_pid = None
+        Wraps every reference-releasing step in ``try/finally`` so
+        ``super().shutdown()`` is guaranteed to run even when an
+        intermediate cleanup step raises. Without the guarantee a
+        ``ProcessManager`` failure would leave the base ``BridgeState``
+        marked ``connected=True`` after the bridge had released its
+        rizin handle, presenting observers with a stuck-alive state.
+        """
+        try:
+            if self._r2 is not None:
+                try:
+                    await asyncio.to_thread(self._r2.quit)
+                except (OSError, RuntimeError) as e:
+                    _logger.warning("cutter_close_failed", error=str(e))
+                finally:
+                    self.r2 = None
 
-        self._binary_path = None
-        self._analyzed = False
-        await super().shutdown()
-        _logger.info("cutter_bridge_shutdown", bridge="cutter")
+            if self._r2_pid is not None:
+                try:
+                    process_manager = ProcessManager.get_instance()
+                    process_manager.unregister_external_pid(self._r2_pid)
+                except (OSError, RuntimeError, ValueError, KeyError) as e:
+                    _logger.warning("cutter_unregister_pid_failed", pid=self._r2_pid, error=str(e))
+                finally:
+                    self._r2_pid = None
+
+            self._binary_path = None
+            self._analyzed = False
+        finally:
+            await super().shutdown()
+            _logger.info("cutter_bridge_shutdown", bridge="cutter")
 
     @override
     async def is_available(self) -> bool:
@@ -936,7 +1046,7 @@ class CutterBridge(StaticAnalysisBridge):
             except (OSError, RuntimeError, ValueError) as e:
                 _logger.warning("r2_session_close_failed", error=str(e))
             finally:
-                self._r2 = None
+                self.r2 = None
             if self._r2_pid is not None:
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._r2_pid)
@@ -1028,7 +1138,7 @@ class CutterBridge(StaticAnalysisBridge):
         try:
             await self._close_existing_r2()
 
-            self._r2 = await asyncio.to_thread(r2pipe.open, str(path), ["-2"])
+            self.r2 = await asyncio.to_thread(r2pipe.open, str(path), ["-2"])
             self._binary_path = await asyncio.to_thread(path.resolve)
             self._analyzed = False
 
@@ -1057,7 +1167,7 @@ class CutterBridge(StaticAnalysisBridge):
                 sha256=sha256,
                 file_type=file_type.lower(),
                 architecture=arch,
-                is_64bit=bits == _BITS_64,
+                is_64bit=is_rizin_64bit(bits, arch, file_type),
                 entry_point=entry,
                 sections=sections,
                 imports=imports,
@@ -1145,6 +1255,14 @@ class CutterBridge(StaticAnalysisBridge):
     async def get_function(self, address: int) -> FunctionInfo | None:
         """Get function at a specific address.
 
+        Variable size and storage location are computed from the
+        rizin ``afvj`` payload rather than hard-coded. The previous
+        implementation reported every parameter as ``size=0`` and
+        ``location="stack"`` regardless of what rizin actually
+        produced, which mis-classified register-resident arguments
+        (``afvj.reg``) and stripped any size information rizin had
+        already inferred.
+
         Args:
             address: Function address.
 
@@ -1172,38 +1290,44 @@ class CutterBridge(StaticAnalysisBridge):
 
         vars_data_list = await self._cmd_json("afvj")
         vars_data = vars_data_list[0] if vars_data_list else {}
+        word_size = self._word_size_bytes(f)
+
         params: list[ParameterInfo] = []
         locals_list: list[VariableInfo] = []
 
-        sp_vars = _get_list(vars_data, "sp")
-        bp_vars = _get_list(vars_data, "bp")
-        reg_vars = _get_list(vars_data, "reg")
-        all_vars: list[dict[str, Any]] = [var_item for var_item in sp_vars + bp_vars + reg_vars if isinstance(var_item, dict)]
+        for storage in ("sp", "bp", "reg"):
+            location = "register" if storage == "reg" else "stack"
+            for raw_var in _get_list(vars_data, storage):
+                if not isinstance(raw_var, dict):
+                    continue
+                var = cast("dict[str, Any]", raw_var)
+                var_name = _get_str(var, "name")
+                var_type = _get_str(var, "type", "unknown")
+                ref_data = _get_dict(var, "ref")
+                var_offset = _get_int(ref_data, "offset")
+                computed_size = _get_optional_int(var, "size")
+                if computed_size is None:
+                    computed_size = self._size_for_type(var_type, word_size)
 
-        for var in all_vars:
-            var_name = _get_str(var, "name")
-            var_type = _get_str(var, "type", "unknown")
-            ref_data = _get_dict(var, "ref")
-            var_offset = _get_int(ref_data, "offset")
-
-            if _get_str(var, "kind") == "arg":
-                params.append(
-                    ParameterInfo(
-                        name=var_name,
-                        type=var_type,
-                        size=0,
-                        location="stack",
-                    ),
-                )
-            else:
-                locals_list.append(
-                    VariableInfo(
-                        name=var_name,
-                        type=var_type,
-                        offset=var_offset,
-                        size=0,
-                    ),
-                )
+                if _get_str(var, "kind") == "arg":
+                    var_location = _get_str(ref_data, "base") or location
+                    params.append(
+                        ParameterInfo(
+                            name=var_name,
+                            type=var_type,
+                            size=computed_size,
+                            location=var_location,
+                        ),
+                    )
+                else:
+                    locals_list.append(
+                        VariableInfo(
+                            name=var_name,
+                            type=var_type,
+                            offset=var_offset,
+                            size=computed_size,
+                        ),
+                    )
 
         _logger.debug("function_queried", address=hex(address), found=True)
         return FunctionInfo(
@@ -1217,6 +1341,74 @@ class CutterBridge(StaticAnalysisBridge):
             decompiled_code=None,
             disassembly=None,
         )
+
+    @staticmethod
+    def _word_size_bytes(func_info: dict[str, Any]) -> int:
+        """Return the word size implied by a rizin ``afij`` entry.
+
+        Args:
+            func_info: One element of the ``afij`` payload.
+
+        Returns:
+            int: 8 when the function entry advertises a 64-bit word
+            size, otherwise 4.
+        """
+        bits = _get_optional_int(func_info, "bits") or 0
+        if bits >= _BITS_64:
+            return 8
+        return 4
+
+    @staticmethod
+    def _size_for_type(type_str: str, word_size: int) -> int:
+        """Best-effort C-type-name to size-in-bytes mapping.
+
+        Inspects the textual type name rizin returns in ``afvj`` to
+        infer a byte size. Pointer types (``*``) and platform-sized
+        types (``size_t``, ``intptr_t``, etc.) follow ``word_size``.
+        Width-encoded names (``int32_t``, ``uint64_t``) are returned
+        verbatim. Recognised C scalars fall back to platform-typical
+        sizes used by both x86 and x86-64 ABIs. Unrecognised types
+        yield ``0`` so callers can detect that no information was
+        available.
+
+        Args:
+            type_str: Type name as reported by rizin (may be empty).
+            word_size: Pointer/word width in bytes for the loaded
+                binary (4 or 8).
+
+        Returns:
+            int: Inferred size in bytes, or 0 when unknown.
+        """
+        if not type_str:
+            return 0
+        normalized = type_str.strip().lower()
+        if "*" in normalized:
+            return word_size
+        for token, size in (
+            ("int8", 1),
+            ("uint8", 1),
+            ("int16", 2),
+            ("uint16", 2),
+            ("int32", 4),
+            ("uint32", 4),
+            ("int64", 8),
+            ("uint64", 8),
+        ):
+            if token in normalized:
+                return size
+        if normalized in {"size_t", "ssize_t", "intptr_t", "uintptr_t", "ptrdiff_t"}:
+            return word_size
+        if normalized in {"char", "int8_t", "uint8_t", "bool", "_bool"}:
+            return 1
+        if normalized in {"short", "int16_t", "uint16_t", "wchar_t"}:
+            return 2
+        if normalized in {"int", "uint", "unsigned int", "float"}:
+            return 4
+        if normalized in {"long", "unsigned long"}:
+            return word_size
+        if normalized in {"long long", "unsigned long long", "double", "int64_t", "uint64_t"}:
+            return 8
+        return 0
 
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
@@ -1389,6 +1581,13 @@ class CutterBridge(StaticAnalysisBridge):
     async def search_strings(self, pattern: str) -> list[StringInfo]:
         """Search for strings matching pattern.
 
+        Rizin's ``izj`` (data-section strings) listing is produced by
+        the binary loader and does not require analysis, so the
+        previous ``_analyzed`` precondition was unnecessarily
+        restrictive -- callers were forced to pay for a full ``aaa``
+        pass even though string extraction only needs the parsed file
+        structure.
+
         Args:
             pattern: Regex pattern to match.
 
@@ -1396,14 +1595,11 @@ class CutterBridge(StaticAnalysisBridge):
             list[StringInfo]: List of matching strings.
 
         Raises:
-            ToolError: If search fails.
+            ToolError: If no binary is loaded.
         """
         if self._r2 is None:
             _logger.warning("search_strings_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
-        if not self._analyzed:
-            _logger.warning("search_strings_without_analysis", pattern=pattern)
-            raise ToolError(_ERR_NOT_ANALYZED)
 
         strings = await self._cmd_json("izj")
 
@@ -1568,30 +1764,66 @@ class CutterBridge(StaticAnalysisBridge):
     async def get_imports(self) -> list[ImportInfo]:
         """Get imported functions.
 
+        Rizin's ``iij`` (import) listing is populated by the binary
+        loader, not by analysis, so the result does not depend on
+        :attr:`_analyzed`. The previous behaviour of silently returning
+        ``[]`` when analysis hadn't been run hid real imports from
+        callers that reasonably skip ``aaa``.
+
         Returns:
             list[ImportInfo]: List of import information.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
-        result = await self._get_imports_internal() if self._analyzed else []
+        if self._r2 is None:
+            _logger.warning("get_imports_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+        result = await self._get_imports_internal()
         _logger.debug("imports_queried", result_count=len(result))
         return result
 
     async def get_exports(self) -> list[ExportInfo]:
         """Get exported functions.
 
+        Rizin's ``iEj`` listing comes from the binary loader and is
+        available immediately after ``load_binary``; analysis is not
+        required. The previous behaviour of silently returning ``[]``
+        before analysis made exports invisible to callers that did not
+        run ``aaa`` first.
+
         Returns:
             list[ExportInfo]: List of export information.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
-        result = await self._get_exports_internal() if self._analyzed else []
+        if self._r2 is None:
+            _logger.warning("get_exports_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+        result = await self._get_exports_internal()
         _logger.debug("exports_queried", result_count=len(result))
         return result
 
     async def get_sections(self) -> list[SectionInfo]:
         """Get binary section information.
 
+        Rizin's ``iSj`` (sections) listing reflects the parsed binary
+        layout produced by the loader, so it does not require an
+        analysis pass. The previous behaviour of silently returning
+        ``[]`` until ``analyze()`` ran hid section metadata from
+        legitimate callers.
+
         Returns:
             list[SectionInfo]: List of section info.
+
+        Raises:
+            ToolError: If no binary is loaded.
         """
-        result = await self._get_sections_internal() if self._analyzed else []
+        if self._r2 is None:
+            _logger.warning("get_sections_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+        result = await self._get_sections_internal()
         _logger.debug("sections_queried", result_count=len(result))
         return result
 
@@ -1678,20 +1910,28 @@ class CutterBridge(StaticAnalysisBridge):
         return True
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
-        """Assemble instruction at address.
+        """Assemble an instruction and commit it at ``address``.
 
-        Validates the assembly via ``pa`` (dry-run encoding) first, then
-        commits the resulting hex to the target address with ``wx``.
+        Validates the assembly first via rizin's ``pa`` (dry-run
+        encoding) so the returned ``bytes`` are guaranteed to match
+        what gets written, then commits a single ``wx <hex>`` write at
+        ``address``. The previous implementation issued both ``wa`` and
+        ``wx``, which produced two writes for the same instruction;
+        ``wx`` is preferred over ``wa`` because it accepts the
+        already-validated hex output without re-running the assembler
+        and avoids any drift between the dry-run encoding and the
+        committed bytes.
 
         Args:
             address: Target address.
             instruction: Assembly instruction.
 
         Returns:
-            bytes: Assembled bytes.
+            bytes: The exact bytes written at ``address``.
 
         Raises:
-            ToolError: If assembly fails.
+            ToolError: If the dry-run assembly fails or returns a
+                non-hex result.
         """
         if self._r2 is None:
             _logger.warning("assemble_at_without_binary", address=hex(address), instruction=instruction)
@@ -1712,7 +1952,6 @@ class CutterBridge(StaticAnalysisBridge):
         except ValueError as exc:
             raise ToolError(_ERR_ASSEMBLE_FAILED) from exc
 
-        await self._r2_cmd(f"wa {instruction} @ {address}")
         await self._r2_cmd(f"wx {assembled_hex} @ {address}")
 
         _logger.info("instruction_assembled", instruction=instruction, address=hex(address))
@@ -1737,10 +1976,15 @@ class CutterBridge(StaticAnalysisBridge):
             command: Command to execute.
 
         Returns:
-            list[dict[str, Any]]: Parsed JSON as list of dicts.
+            list[dict[str, Any]]: Parsed JSON as list of dicts. An empty
+            list is only returned when the command produced an empty
+            response (which rizin uses to indicate ``no results``); a
+            response that fails to parse as JSON is treated as a
+            command-execution failure and surfaces as ``ToolError``.
 
         Raises:
-            ToolError: If no binary is loaded.
+            ToolError: If no binary is loaded or the command output
+                cannot be decoded as JSON.
         """
         if self._r2 is None:
             _logger.warning("cmd_json_without_binary", command=command)
@@ -1753,9 +1997,15 @@ class CutterBridge(StaticAnalysisBridge):
 
         try:
             parsed = json.loads(result)
-        except json.JSONDecodeError:
-            _logger.exception("json_parse_failed", command=command)
-            return []
+        except json.JSONDecodeError as exc:
+            _logger.warning(
+                "json_parse_failed",
+                command=command,
+                error=str(exc),
+                response_prefix=result[:120],
+            )
+            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
+            raise ToolError(msg) from exc
         if isinstance(parsed, list):
             return cast("list[dict[str, Any]]", parsed)
         return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
@@ -1802,15 +2052,48 @@ class CutterBridge(StaticAnalysisBridge):
     async def get_function_address(self, name: str) -> int | None:
         """Get address of a function by name.
 
+        Resolves ``name`` directly through rizin's ``afij <name>``
+        command, which returns the function info entry for the named
+        symbol when one exists. The previous implementation enumerated
+        every analysed function through ``get_functions`` and filtered
+        the result in Python, paying a full ``aflj`` round-trip on
+        every call.
+
         Args:
-            name: Function name.
+            name: Function name. Empty names are rejected; names
+                containing rizin command-control characters are also
+                rejected to avoid command injection.
 
         Returns:
-            int | None: Address of function or None if not found.
+            int | None: Address of function or ``None`` if no symbol
+            with that exact name resolves.
+
+        Raises:
+            ToolError: If no binary is loaded, the binary has not been
+                analysed, or ``name`` is empty/invalid.
         """
+        if self._r2 is None:
+            _logger.warning("get_function_address_without_binary", function_name=name)
+            raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("get_function_address_without_analysis", function_name=name)
+            raise ToolError(_ERR_NOT_ANALYZED)
+        if not name:
+            msg = "get_function_address: name must not be empty"
+            raise ToolError(msg)
+
+        validate_r2_argument(name, field="get_function_address name")
         _logger.debug("get_function_address_started", function_name=name)
-        funcs = await self.get_functions(filter_pattern=name)
-        return next((f.address for f in funcs if f.name == name), None)
+
+        info = await self._cmd_json(f"afij {name}")
+        if not info:
+            return None
+
+        entry = info[0]
+        resolved_name = _get_str(entry, "name")
+        if resolved_name != name:
+            return None
+        return _get_optional_int(entry, "offset")
 
     async def get_all_strings(self) -> list[StringInfo]:
         """Get all strings from the binary including non-data sections.
@@ -1953,6 +2236,15 @@ class CutterBridge(StaticAnalysisBridge):
     async def get_classes(self) -> list[ClassInfo]:
         """Get class information from the binary.
 
+        Methods and fields rizin reports under ``icj`` are normalised
+        into uniformly-shaped dictionaries -- every method gets
+        ``name``, ``address``, ``flags``, ``type``; every field gets
+        ``name``, ``offset``, ``size``, ``type``. The previous
+        implementation forwarded rizin's raw entries, leaving callers
+        to deal with rizin's varying key spellings (``addr`` vs
+        ``vaddr``, ``offset`` vs ``paddr``) and inconsistently-typed
+        values.
+
         Returns:
             list[ClassInfo]: List of class information.
 
@@ -1967,14 +2259,73 @@ class CutterBridge(StaticAnalysisBridge):
         result: list[ClassInfo] = [
             ClassInfo(
                 name=_get_str(c, "classname", _get_str(c, "name")),
-                address=_get_int(c, "addr"),
-                methods=_get_list(c, "methods"),
-                fields=_get_list(c, "fields"),
+                address=_get_int(c, "addr", _get_int(c, "vaddr")),
+                methods=self._normalize_class_methods(_get_list(c, "methods")),
+                fields=self._normalize_class_fields(_get_list(c, "fields")),
             )
             for c in classes
         ]
         _logger.debug("classes_queried", result_count=len(result))
         return result
+
+    @staticmethod
+    def _normalize_class_methods(raw_methods: list[Any]) -> list[dict[str, Any]]:
+        """Normalise rizin ``icj`` method entries.
+
+        Args:
+            raw_methods: Raw ``methods`` list from a single rizin
+                ``icj`` class entry.
+
+        Returns:
+            list[dict[str, Any]]: One dictionary per method with keys
+            ``name``, ``address``, ``flags`` and ``type``.
+        """
+        normalized: list[dict[str, Any]] = []
+        for entry in raw_methods:
+            if not isinstance(entry, dict):
+                continue
+            method = cast("dict[str, Any]", entry)
+            method_type = _get_str(method, "type")
+            normalized.append(
+                {
+                    "name": _get_str(method, "name"),
+                    "address": _get_int(method, "addr", _get_int(method, "vaddr")),
+                    "flags": _get_str(method, "flags") or method_type,
+                    "type": method_type,
+                },
+            )
+        return normalized
+
+    @staticmethod
+    def _normalize_class_fields(raw_fields: list[Any]) -> list[dict[str, Any]]:
+        """Normalise rizin ``icj`` field entries.
+
+        Args:
+            raw_fields: Raw ``fields`` list from a single rizin
+                ``icj`` class entry.
+
+        Returns:
+            list[dict[str, Any]]: One dictionary per field with keys
+            ``name``, ``offset``, ``size`` and ``type``.
+        """
+        normalized: list[dict[str, Any]] = []
+        for entry in raw_fields:
+            if not isinstance(entry, dict):
+                continue
+            field_entry = cast("dict[str, Any]", entry)
+            normalized.append(
+                {
+                    "name": _get_str(field_entry, "name"),
+                    "offset": _get_int(
+                        field_entry,
+                        "offset",
+                        _get_int(field_entry, "paddr", _get_int(field_entry, "addr")),
+                    ),
+                    "size": _get_int(field_entry, "size"),
+                    "type": _get_str(field_entry, "type"),
+                },
+            )
+        return normalized
 
     async def get_relocations(self) -> list[RelocationInfo]:
         """Get relocation table entries from the binary.
@@ -2005,21 +2356,25 @@ class CutterBridge(StaticAnalysisBridge):
     async def get_resources(self) -> list[ResourceInfo]:
         """Get embedded resources from the binary.
 
+        Resource enumeration is performed via rizin's ``irj`` command.
+        Errors raised by the underlying command (timeouts, JSON parse
+        failures, missing-binary checks) are propagated to the caller
+        as ``ToolError`` rather than being swallowed and reported as
+        an empty list, so genuine failures are not silently hidden
+        behind a ``no resources`` outcome.
+
         Returns:
             list[ResourceInfo]: List of resource information.
 
         Raises:
-            ToolError: If no binary is loaded.
+            ToolError: If no binary is loaded or the ``irj`` command
+                fails.
         """
         if self._r2 is None:
             _logger.warning("get_resources_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        try:
-            resources = await self._cmd_json("irj")
-        except ToolError:
-            _logger.exception("resources_query_failed")
-            return []
+        resources = await self._cmd_json("irj")
         result: list[ResourceInfo] = [
             ResourceInfo(
                 name=_get_str(r, "name"),
@@ -2148,21 +2503,43 @@ class CutterBridge(StaticAnalysisBridge):
     async def save_binary(self, path: str | None = None) -> bool:
         """Save the binary with all cached patches applied.
 
+        Uses rizin's ``wcf <file>`` (write cache to file) command so the
+        full IO image -- original bytes plus every cached patch produced
+        by ``io.cache=true`` -- is written to ``path``. The previously
+        used ``wtf`` command emits only the current block (default
+        256 bytes) and is therefore unsuitable for saving a patched
+        binary in its entirety.
+
         Args:
-            path: Output file path. If None, overwrites the original binary.
+            path: Output file path. If ``None``, overwrites the
+                originally loaded binary.
 
         Returns:
-            bool: True if save succeeded.
+            bool: ``True`` when ``wcf`` accepted the request.
 
         Raises:
-            ToolError: If no binary is loaded or save fails.
+            ToolError: If no binary is loaded, no original path is
+                tracked when ``path`` is ``None``, or rizin reports a
+                save failure.
         """
         if self._r2 is None:
             _logger.warning("save_binary_without_binary", path=str(path))
             raise ToolError(_ERR_NO_BINARY)
 
-        target = path if path is not None else str(self._binary_path)
-        await self._r2_cmd(f"wtf {target}")
+        if path is None:
+            if self._binary_path is None:
+                _logger.warning("save_binary_no_default_target")
+                raise ToolError(_ERR_NO_BINARY)
+            target = str(self._binary_path)
+        else:
+            target = path
+
+        validate_r2_argument(target, field="save_binary path")
+        result = await self._r2_cmd(f"wcf {target}")
+        if "error" in result.lower() or "cannot" in result.lower() or "fail" in result.lower():
+            _logger.warning("binary_save_failed", path=target, response=result.strip())
+            msg = f"failed to save binary to {target}: {result.strip()}"
+            raise ToolError(msg)
         _logger.info("binary_saved", path=target)
         return True
 
@@ -2862,45 +3239,69 @@ class CutterBridge(StaticAnalysisBridge):
         return True
 
     async def search_string_live(self, text: str) -> list[int]:
-        """Search for a string in binary content.
+        """Search for a literal string in binary content.
+
+        Encodes ``text`` to UTF-8 hex and dispatches a ``/xj`` byte
+        search instead of forwarding the raw text through ``/j``. This
+        eliminates rizin command-injection vectors (``;``, ``@``,
+        ``|``, ``~``, backticks, etc.) that the previous implementation
+        carried by interpolating user input directly into the command
+        string.
 
         Args:
-            text: String text to search for.
+            text: String text to search for. Empty strings are
+                rejected because rizin would otherwise return every
+                address in the binary.
 
         Returns:
             list[int]: List of addresses where the string was found.
 
         Raises:
-            ToolError: If no binary is loaded.
+            ToolError: If no binary is loaded or ``text`` is empty.
         """
         if self._r2 is None:
             _logger.warning("search_string_live_without_binary", text=text)
             raise ToolError(_ERR_NO_BINARY)
+        if not text:
+            msg = "search_string_live: text must not be empty"
+            raise ToolError(msg)
 
-        results = await self._cmd_json(f"/j {text}")
+        hex_pattern = text.encode("utf-8").hex()
+        results = await self._cmd_json(f"/xj {hex_pattern}")
         addrs = [_get_int(r, "offset") for r in results]
-        _logger.debug("string_search_live", text=text, result_count=len(addrs))
+        _logger.debug("string_search_live", text_length=len(text), result_count=len(addrs))
         return addrs
 
     async def search_assembly_pattern(self, pattern: str) -> list[int]:
         """Search for an assembly instruction pattern.
 
+        Validates ``pattern`` via :func:`validate_r2_argument` so that
+        rizin command-control characters (``;``, ``@``, ``|``, ``~``,
+        backticks, ``>``) cannot be used to inject additional rizin
+        commands through the searched text.
+
         Args:
-            pattern: Assembly pattern to search for.
+            pattern: Assembly pattern to search for (e.g. ``mov eax,
+                ebx``). Empty patterns are rejected.
 
         Returns:
             list[int]: List of addresses matching the pattern.
 
         Raises:
-            ToolError: If no binary is loaded.
+            ToolError: If no binary is loaded, ``pattern`` is empty, or
+                ``pattern`` contains rizin command-control characters.
         """
         if self._r2 is None:
             _logger.warning("search_assembly_pattern_without_binary", pattern=pattern)
             raise ToolError(_ERR_NO_BINARY)
+        if not pattern:
+            msg = "search_assembly_pattern: pattern must not be empty"
+            raise ToolError(msg)
 
+        validate_r2_argument(pattern, field="search_assembly_pattern pattern")
         results = await self._cmd_json(f"/aj {pattern}")
         addrs = [_get_int(r, "offset") for r in results]
-        _logger.debug("assembly_pattern_searched", pattern=pattern, result_count=len(addrs))
+        _logger.debug("assembly_pattern_searched", pattern_length=len(pattern), result_count=len(addrs))
         return addrs
 
     async def search_crypto_constants(self) -> list[dict[str, Any]]:
