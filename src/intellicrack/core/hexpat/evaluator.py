@@ -50,6 +50,7 @@ from intellicrack.core.hexpat.ast_nodes import (
     SizeofExpr,
     StringLiteral,
     StructDecl,
+    TemplateParam,
     TernaryExpr,
     TryStmt,
     TypeNameOfExpr,
@@ -62,6 +63,7 @@ from intellicrack.core.hexpat.ast_nodes import (
 from intellicrack.core.hexpat.errors import HexPatRuntimeError, HexPatTypeError
 from intellicrack.core.hexpat.type_system import (
     BitfieldTypeInfo,
+    BuiltinTypes,
     EnumTypeInfo,
     HexPatType,
     StructTypeInfo,
@@ -118,6 +120,44 @@ class BuiltinCallable:
 
     fn: Callable[..., PatternValue]
     name: str
+
+
+@dataclass
+class _EvaluatorReflectionProvider:
+    """Concrete reflection provider exposing :class:`HexPatEvaluator` state.
+
+    The dataclass mirrors the optional callable-field protocol consumed by
+    :mod:`intellicrack.core.hexpat.stdlib`. Splitting this provider into the
+    evaluator module avoids a circular import between the evaluator and the
+    stdlib while still letting the interpreter wire reflection at runtime.
+
+    Attributes:
+        has_attribute: Callback answering ``std::core::has_attribute``.
+        get_attribute_argument: Callback answering ``std::core::get_attribute_argument``.
+        member_count: Callback answering ``std::core::member_count``.
+        has_member: Callback answering ``std::core::has_member``.
+        formatted_value: Callback answering ``std::core::formatted_value``.
+        is_valid_enum: Callback answering ``std::core::is_valid_enum``.
+        set_pattern_color: Callback implementing ``std::core::set_pattern_color``.
+        set_display_name: Callback implementing ``std::core::set_display_name``.
+        set_pattern_comment: Callback implementing ``std::core::set_pattern_comment``.
+        set_pattern_palette_colors: Callback implementing ``std::core::set_pattern_palette_colors``.
+        reset_pattern_palette: Callback implementing ``std::core::reset_pattern_palette``.
+        execute_function: Callback dispatching ``std::core::execute_function``.
+    """
+
+    has_attribute: Callable[[PatternValue, str], bool]
+    get_attribute_argument: Callable[[PatternValue, str, int], PatternValue]
+    member_count: Callable[[PatternValue], int]
+    has_member: Callable[[PatternValue, str], bool]
+    formatted_value: Callable[[PatternValue], str]
+    is_valid_enum: Callable[[PatternValue], bool]
+    set_pattern_color: Callable[[PatternValue, int], None]
+    set_display_name: Callable[[PatternValue, str], None]
+    set_pattern_comment: Callable[[PatternValue, str], None]
+    set_pattern_palette_colors: Callable[[list[int]], None]
+    reset_pattern_palette: Callable[[], None]
+    execute_function: Callable[[str, list[PatternValue]], PatternValue]
 
 
 @dataclass
@@ -313,6 +353,10 @@ class HexPatEvaluator:
         self._color_index: int = 0
         self._pointer_size: int = pragma.pointer_size
         self._namespace_stack: list[str] = []
+        self._type_node_aliases: dict[str, TypeNode] = {}
+        self._template_args_stack: list[dict[str, ExprNode | TypeNode]] = []
+        self._reflection_overrides: dict[int, dict[str, object]] = {}
+        self._field_color_palette: tuple[str, ...] | None = None
         self._builtins: dict[str, BuiltinCallable] = self._build_builtins()
         _logger.debug(
             "hexpat_evaluator_initialized",
@@ -330,6 +374,256 @@ class HexPatEvaluator:
             EvalScope: The current EvalScope used for variable bindings.
         """
         return self._scope
+
+    def current_array_index(self) -> int:
+        """Return the live array iteration index for the active loop.
+
+        The evaluator pushes an entry onto its array-index stack each time it
+        begins instantiating an array element and pops on completion. The
+        topmost entry corresponds to the inner-most iteration; when no array
+        is active, ``0`` is returned to mirror the documented stdlib default.
+
+        Returns:
+            int: The active array iteration index, or ``0`` outside of any
+            array-element instantiation.
+        """
+        return self._array_index_stack[-1] if self._array_index_stack else 0
+
+    def set_default_endian(self, endian: str) -> None:
+        """Update the evaluator's default endian for subsequent primitive reads.
+
+        Args:
+            endian: ``"little"`` or ``"big"``. Other values are ignored to
+                preserve existing semantics.
+        """
+        if endian in {"little", "big"}:
+            self._default_endian = endian
+
+    def reflection_provider(self) -> _EvaluatorReflectionProvider:
+        """Build a reflection provider exposing evaluator metadata.
+
+        The returned object is duck-typed against the optional callable
+        attribute layout consumed by the stdlib reflection-provider hook.
+        Each callable forwards to a small helper that operates on the
+        supplied :class:`PatternValue` and the evaluator's live type
+        registry.
+
+        Returns:
+            _EvaluatorReflectionProvider: A reflection-provider container
+            exposing every callable hook required by ``std::core::*``.
+        """
+        return _EvaluatorReflectionProvider(
+            has_attribute=self._reflect_has_attribute,
+            get_attribute_argument=self._reflect_get_attribute_argument,
+            member_count=self._reflect_member_count,
+            has_member=self._reflect_has_member,
+            formatted_value=self._reflect_formatted_value,
+            is_valid_enum=self._reflect_is_valid_enum,
+            set_pattern_color=self._reflect_set_pattern_color,
+            set_display_name=self._reflect_set_display_name,
+            set_pattern_comment=self._reflect_set_pattern_comment,
+            set_pattern_palette_colors=self._reflect_set_pattern_palette_colors,
+            reset_pattern_palette=self._reflect_reset_pattern_palette,
+            execute_function=self._reflect_execute_function,
+        )
+
+    def _reflect_has_attribute(self, pattern: PatternValue, attribute: str) -> bool:
+        """Return whether ``pattern`` carries a field-annotation named ``attribute``.
+
+        Args:
+            pattern: The reflected pattern value.
+            attribute: The annotation name to test for.
+
+        Returns:
+            bool: ``True`` when the type referenced by the pattern has an
+            annotation with the given name.
+        """
+        decl_annotations = self._reflection_annotations(pattern)
+        return any(name == attribute for name, _ in decl_annotations)
+
+    def _reflect_get_attribute_argument(
+        self,
+        pattern: PatternValue,
+        attribute: str,
+        index: int,
+    ) -> PatternValue:
+        """Return the ``index``-th argument of ``attribute`` on ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+            attribute: The annotation name whose arguments are queried.
+            index: Zero-based argument index. Currently only ``0`` is
+                supported because annotations carry a single expression.
+
+        Returns:
+            PatternValue: A PatternValue wrapping the resolved annotation
+                argument.
+
+        Raises:
+            HexPatRuntimeError: When the annotation is missing, has no
+                expression body, or ``index`` exceeds the available count.
+        """
+        for name, expr in self._reflection_annotations(pattern):
+            if name == attribute:
+                if expr is None:
+                    msg = f"std::core::get_attribute_argument: '{attribute}' has no value"
+                    raise HexPatRuntimeError(msg)
+                if index != 0:
+                    msg = f"std::core::get_attribute_argument: index {index} out of range"
+                    raise HexPatRuntimeError(msg)
+                return self._eval_expr(expr)
+        msg = f"std::core::get_attribute_argument: attribute '{attribute}' not found"
+        raise HexPatRuntimeError(msg)
+
+    @staticmethod
+    def _reflect_member_count(pattern: PatternValue) -> int:
+        """Return the number of structurally exposed members on ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+
+        Returns:
+            int: The cardinality of ``pattern.members``.
+        """
+        return len(pattern.members)
+
+    @staticmethod
+    def _reflect_has_member(pattern: PatternValue, name: str) -> bool:
+        """Return whether ``pattern`` exposes a structurally visible member ``name``.
+
+        Args:
+            pattern: The reflected pattern value.
+            name: The candidate member identifier.
+
+        Returns:
+            bool: ``True`` when ``name`` is present in ``pattern.members``.
+        """
+        return name in pattern.members
+
+    def _reflect_formatted_value(self, pattern: PatternValue) -> str:
+        """Return a formatted string representation of ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+
+        Returns:
+            str: The output of :meth:`_format_value` applied to the pattern's
+                primitive value and resolved type.
+        """
+        return self._format_value(pattern.value, pattern.type_info)
+
+    def _reflect_is_valid_enum(self, pattern: PatternValue) -> bool:
+        """Return whether ``pattern`` carries a value matching a declared enum entry.
+
+        Args:
+            pattern: The reflected pattern value, expected to carry an enum
+                primitive value.
+
+        Returns:
+            bool: ``True`` when the pattern's value is in the registered enum
+                members for its declared type.
+        """
+        type_info = pattern.type_info
+        if type_info is None:
+            return False
+        resolved = self._types.resolve(type_info.name)
+        if not isinstance(resolved, EnumTypeInfo):
+            return False
+        return pattern.value in resolved.members.values() if isinstance(pattern.value, int) else False
+
+    def _reflect_set_pattern_color(self, pattern: PatternValue, color: int) -> None:
+        """Record an RGBA8 pattern colour override on the supplied pattern.
+
+        Args:
+            pattern: The reflected pattern value.
+            color: The 32-bit RGBA8 color word to attach.
+        """
+        self._reflection_overrides.setdefault(id(pattern), {})["color"] = color
+
+    def _reflect_set_display_name(self, pattern: PatternValue, name: str) -> None:
+        """Override the displayed name for ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+            name: The display name to record.
+        """
+        self._reflection_overrides.setdefault(id(pattern), {})["display_name"] = name
+
+    def _reflect_set_pattern_comment(self, pattern: PatternValue, comment: str) -> None:
+        """Attach a comment annotation to ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+            comment: The comment text to record.
+        """
+        self._reflection_overrides.setdefault(id(pattern), {})["comment"] = comment
+
+    def _reflect_set_pattern_palette_colors(self, colors: list[int]) -> None:
+        """Replace the rotating palette with ``colors``.
+
+        The palette stays effective for subsequent fields placed during
+        evaluation. The ``FIELD_COLORS`` class-level palette is intentionally
+        left untouched; the override is held on the instance.
+
+        Args:
+            colors: New palette entries as RGBA8 integers.
+        """
+        if colors:
+            self._field_color_palette = tuple(f"#{c & 0xFFFFFFFF:08X}" for c in colors)
+            self._color_index = 0
+
+    def _reflect_reset_pattern_palette(self) -> None:
+        """Restore the default palette and reset the rotation index."""
+        self._field_color_palette = None
+        self._color_index = 0
+
+    def _reflect_execute_function(self, function_name: str, args: list[PatternValue]) -> PatternValue:
+        """Invoke a previously declared user-defined function by name.
+
+        Args:
+            function_name: The fully qualified or unqualified function name.
+            args: The argument list forwarded to the function call.
+
+        Returns:
+            PatternValue: The function's return value.
+
+        Raises:
+            HexPatRuntimeError: When ``function_name`` does not resolve to a
+                declared :class:`FunctionDecl`.
+        """
+        binding = self._scope.get(function_name)
+        if binding is None:
+            msg = f"std::core::execute_function: undefined function '{function_name}'"
+            raise HexPatRuntimeError(msg)
+        if not isinstance(binding.value, FunctionDecl):
+            msg = f"std::core::execute_function: '{function_name}' is not a callable function"
+            raise HexPatRuntimeError(msg)
+        return self._call_user_function(binding.value, args)
+
+    def _reflection_annotations(self, pattern: PatternValue) -> tuple[tuple[str, ExprNode | None], ...]:
+        """Return the annotation tuple recorded on the type referenced by ``pattern``.
+
+        Args:
+            pattern: The reflected pattern value.
+
+        Returns:
+            tuple[tuple[str, ExprNode | None], ...]: The annotations declared
+            on the pattern's resolved struct/union/enum/bitfield type, or an
+            empty tuple when the pattern lacks a registered type.
+        """
+        type_info = pattern.type_info
+        if type_info is None:
+            return ()
+        resolved = self._types.resolve(type_info.name)
+        if isinstance(resolved, StructTypeInfo):
+            return resolved.decl.annotations
+        if isinstance(resolved, UnionTypeInfo):
+            return resolved.decl.annotations
+        if isinstance(resolved, EnumTypeInfo):
+            return resolved.decl.annotations
+        if isinstance(resolved, BitfieldTypeInfo):
+            return resolved.decl.annotations
+        return ()
 
     @staticmethod
     def _normalize_endian(endian: str | None) -> str | None:
@@ -371,10 +665,15 @@ class HexPatEvaluator:
     def _next_color(self) -> str:
         """Return the next colour from the rotation and advance the index.
 
+        When a custom palette has been installed via the reflection hook
+        ``std::core::set_pattern_palette_colors``, that palette drives the
+        rotation; otherwise the default :data:`FIELD_COLORS` palette is used.
+
         Returns:
             str: A hex colour string such as "#E06C75".
         """
-        color = self.FIELD_COLORS[self._color_index % len(self.FIELD_COLORS)]
+        palette = self._field_color_palette or self.FIELD_COLORS
+        color = palette[self._color_index % len(palette)]
         self._color_index += 1
         return color
 
@@ -420,21 +719,20 @@ class HexPatEvaluator:
         Args:
             node: The declaration AST node to process.
         """
+        ns = "::".join(self._namespace_stack) if self._namespace_stack else None
         if isinstance(node, StructDecl):
-            self._types.register_struct(node)
-            self._register_namespaced(node.name)
+            self._types.register_struct(node, namespace=ns)
         elif isinstance(node, UnionDecl):
-            self._types.register_union(node)
-            self._register_namespaced(node.name)
+            self._types.register_union(node, namespace=ns)
         elif isinstance(node, EnumDecl):
-            self._register_enum(node)
-            self._register_namespaced(node.name)
+            self._register_enum(node, namespace=ns)
         elif isinstance(node, BitfieldDecl):
-            self._types.register_bitfield(node)
-            self._register_namespaced(node.name)
+            self._types.register_bitfield(node, namespace=ns)
         elif isinstance(node, FunctionDecl):
             fn_value = PatternValue(value=node)
             self._scope.define(node.name, fn_value)
+            if ns:
+                self._scope.define(f"{ns}::{node.name}", fn_value)
         elif isinstance(node, NamespaceDecl):
             self._eval_namespace_decl(node)
         else:
@@ -450,11 +748,13 @@ class HexPatEvaluator:
             qualified = "::".join(self._namespace_stack) + "::" + name
             self._types.register_alias(qualified, name)
 
-    def _register_enum(self, node: EnumDecl) -> None:
+    def _register_enum(self, node: EnumDecl, namespace: str | None = None) -> None:
         """Register an enum declaration with resolved member values.
 
         Args:
             node: The enum AST declaration to register.
+            namespace: Optional ``::``-joined namespace prefix used for the
+                qualified registration mirror.
 
         Raises:
             HexPatTypeError: If the backing type cannot be resolved to a primitive.
@@ -475,27 +775,37 @@ class HexPatEvaluator:
                 next_value = raw_int
             members[entry.name] = next_value
             next_value += 1
-        self._types.register_enum(node, backing, members)
+        self._types.register_enum(node, backing, members, namespace=namespace)
 
     def _register_using(self, node: UsingDecl) -> None:
         """Register a type alias from a using declaration.
 
+        Plain primitive and named-type targets are registered as scalar
+        aliases in the type registry. Composite targets (arrays, pointers,
+        padding) cannot collapse into a single registry name, so they are
+        recorded as type-node aliases on the evaluator instead and resolved
+        lazily on every reference. The qualified namespace alias is also
+        recorded so a path such as ``std::time::Time = u64`` resolves both
+        as ``Time`` (inside the namespace) and as ``std::time::Time``.
+
         Args:
             node: The using declaration AST node.
-
-        Raises:
-            HexPatTypeError: If the alias target cannot be resolved.
         """
         if isinstance(node.target, PrimitiveType):
             self._types.register_alias(node.alias, node.target.name)
-        elif isinstance(node.target, NamedType):
+            self._register_namespaced(node.alias)
+            return
+        if isinstance(node.target, NamedType):
             target_name = node.target.name
             if node.target.namespace:
                 target_name = f"{node.target.namespace}::{target_name}"
             self._types.register_alias(node.alias, target_name)
-        else:
-            msg = f"using '{node.alias}': unsupported target type"
-            raise HexPatTypeError(msg, node.line, node.column)
+            self._register_namespaced(node.alias)
+            return
+        self._type_node_aliases[node.alias] = node.target
+        if self._namespace_stack:
+            qualified = "::".join(self._namespace_stack) + "::" + node.alias
+            self._type_node_aliases[qualified] = node.target
 
     def _eval_namespace_decl(self, node: NamespaceDecl) -> None:
         """Evaluate a namespace declaration, registering its members.
@@ -589,10 +899,10 @@ class HexPatEvaluator:
                 for stmt in node.body:
                     self._eval_stmt(stmt)
             except _BreakSignalError:
-                _logger.warning("hexpat_while_break", line=node.line, column=node.column)
+                _logger.debug("hexpat_while_break", line=node.line, column=node.column)
                 break
             except _ContinueSignalError:
-                _logger.warning("hexpat_while_continue", line=node.line, column=node.column)
+                _logger.debug("hexpat_while_continue", line=node.line, column=node.column)
                 continue
 
     def _eval_for(self, node: ForStmt) -> None:
@@ -616,10 +926,10 @@ class HexPatEvaluator:
                     for stmt in node.body:
                         self._eval_stmt(stmt)
                 except _BreakSignalError:
-                    _logger.warning("hexpat_for_break", line=node.line, column=node.column)
+                    _logger.debug("hexpat_for_break", line=node.line, column=node.column)
                     break
                 except _ContinueSignalError:
-                    _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
+                    _logger.debug("hexpat_for_continue", line=node.line, column=node.column)
                 if node.update is not None:
                     self._eval_expr(node.update)
         finally:
@@ -887,9 +1197,40 @@ class HexPatEvaluator:
         Raises:
             HexPatTypeError: If the type name cannot be resolved.
         """
-        resolved = self._types.resolve(type_node.name)
+        lookup_name = type_node.name
+        if type_node.namespace:
+            lookup_name = f"{type_node.namespace}::{type_node.name}"
+        template_arg = self._lookup_template_arg(type_node.name)
+        if template_arg is not None:
+            return self._instantiate_type(template_arg, var_name, offset, color, description, endianness=None)
+        node_alias = self._type_node_aliases.get(lookup_name)
+        if node_alias is None and type_node.namespace:
+            node_alias = self._type_node_aliases.get(type_node.name)
+        if node_alias is not None:
+            return self._instantiate_type(
+                node_alias,
+                var_name,
+                offset,
+                color,
+                description,
+                endianness=None,
+            )
+        if type_node.template_args:
+            template_result = self._instantiate_template_named_type(
+                type_node,
+                lookup_name,
+                var_name,
+                offset,
+                color,
+                description,
+            )
+            if template_result is not None:
+                return template_result
+        resolved = self._types.resolve(lookup_name)
+        if resolved is None and type_node.namespace:
+            resolved = self._types.resolve(type_node.name)
         if resolved is None:
-            msg = f"unknown type '{type_node.name}'"
+            msg = f"unknown type '{lookup_name}'"
             raise HexPatTypeError(msg, type_node.line, type_node.column)
         if isinstance(resolved, HexPatType):
             pv = self._read_primitive(resolved, offset)
@@ -1310,11 +1651,15 @@ class HexPatEvaluator:
         color = self._next_color()
         description = self._extract_description(node.annotations)
 
+        is_array = node.array_size is not None or node.while_condition is not None
+        if node.is_pointer and is_array:
+            return self._eval_array_field(node, target_offset, eff_endian, color, description, pointer_elements=True)
+
         if node.is_pointer:
             return self._eval_pointer_field(node, target_offset, eff_endian, color, description)
 
-        if node.array_size is not None or node.while_condition is not None:
-            return self._eval_array_field(node, target_offset, eff_endian, color, description)
+        if is_array:
+            return self._eval_array_field(node, target_offset, eff_endian, color, description, pointer_elements=False)
 
         return self._eval_plain_field(node, target_offset, eff_endian, color, description)
 
@@ -1383,8 +1728,16 @@ class HexPatEvaluator:
         eff_endian: str,
         color: str,
         description: str,
+        *,
+        pointer_elements: bool = False,
     ) -> dict[str, Any] | None:
         """Evaluate an array field declaration.
+
+        When ``pointer_elements`` is true the array is interpreted as
+        ``T *name[N]``: each slot stores an independent pointer that is read
+        from the binary and dereferenced into a pointee instance. The
+        advancement of ``$`` reflects the storage size of the pointer
+        array, not the cumulative size of the dereferenced pointees.
 
         Args:
             node: The field declaration AST node.
@@ -1392,12 +1745,18 @@ class HexPatEvaluator:
             eff_endian: Effective endianness for this field.
             color: Hex colour string for UI highlighting.
             description: Optional description annotation.
+            pointer_elements: When ``True`` each element is wrapped in a
+                :class:`PointerType` before instantiation.
 
         Returns:
-            dict[str, Any] | None: A parsed-field dictionary for this array field, or None.
+            dict[str, Any] | None: A parsed-field dictionary for this array
+            field, or ``None`` when no elements were produced.
         """
+        element_node: TypeNode = (
+            PointerType(pointee=node.type_node, line=node.line, column=node.column) if pointer_elements else node.type_node
+        )
         array_type_node = ArrayType(
-            element=node.type_node,
+            element=element_node,
             size=node.array_size,
             while_condition=node.while_condition,
             line=node.line,
@@ -1823,21 +2182,41 @@ class HexPatEvaluator:
     ) -> PatternValue:
         """Call a user-defined pattern function.
 
+        Variadic ``auto ... name`` trailing parameters bind every remaining
+        argument into a synthetic :class:`PatternValue` whose ``members`` map
+        carries the elements under ``[0]``, ``[1]``, etc. The bound value
+        also exposes a ``size`` member equal to the pack length, so library
+        helpers using ``std::sizeof_pack`` work transparently.
+
         Args:
             decl: The function declaration AST node.
             args: The evaluated argument values.
 
         Returns:
-            PatternValue: The PatternValue returned by the function, or null if no return.
+            PatternValue: The PatternValue returned by the function, or null
+            when no ``return`` statement runs.
+
+        Raises:
+            HexPatRuntimeError: When the caller supplied excess arguments to
+                a non-variadic function.
         """
         fn_scope = EvalScope(parent=self._scope)
+        last_param = decl.params[-1] if decl.params else None
+        is_variadic = last_param is not None and last_param.is_varargs
         for i, param in enumerate(decl.params):
+            if param.is_varargs:
+                fn_scope.define(param.name, self._build_varargs_pack(args[i:]))
+                continue
             if i < len(args):
                 fn_scope.define(param.name, args[i])
             elif param.default_value is not None:
                 fn_scope.define(param.name, self._eval_expr(param.default_value))
             else:
                 fn_scope.define(param.name, PatternValue(value=None))
+        if not is_variadic and len(args) > len(decl.params):
+            param_count = len(decl.params)
+            msg = f"function '{decl.name}' takes {param_count} argument{'s' if param_count != 1 else ''} but {len(args)} were given"
+            raise HexPatRuntimeError(msg, decl.line, decl.column)
         saved_scope = self._scope
         self._scope = fn_scope
         try:
@@ -1848,6 +2227,29 @@ class HexPatEvaluator:
         finally:
             self._scope = saved_scope
         return PatternValue(value=None)
+
+    @staticmethod
+    def _build_varargs_pack(values: list[PatternValue]) -> PatternValue:
+        """Bundle a variadic argument tail into a synthetic ``PatternValue``.
+
+        Each element is exposed via the ``[idx]`` indexed member key used by
+        :meth:`_eval_subscript`, mirroring how arrays expose their elements.
+        A synthetic ``size`` member also carries the pack length so the
+        ``std::sizeof_pack`` builtin and user-side ``pack.size`` accesses
+        report the correct count.
+
+        Args:
+            values: The ordered tail of evaluated arguments.
+
+        Returns:
+            PatternValue: A pattern value whose ``members`` map exposes the
+            pack contents.
+        """
+        pack = PatternValue(value=None)
+        for idx, pv in enumerate(values):
+            pack.members[f"[{idx}]"] = pv
+        pack.members["size"] = PatternValue(value=len(values))
+        return pack
 
     def _eval_member_access(self, node: MemberAccessExpr) -> PatternValue:
         """Evaluate a member access expression (obj.member).
@@ -1871,6 +2273,20 @@ class HexPatEvaluator:
     def _eval_namespace_access(self, node: NamespaceAccessExpr) -> PatternValue:
         """Evaluate a namespace-qualified access expression (ns::member).
 
+        Resolution order:
+
+        1. Reconstruct the full ``a::b::c::member`` path by walking the chain
+           of nested :class:`NamespaceAccessExpr` / :class:`IdentifierExpr`
+           nodes from the leftmost component. This recovers the original
+           textual identifier from the parser, so multi-segment paths such as
+           ``builtin::std::mem::base_address`` map onto a single flat scope
+           key without requiring intermediate namespaces to be evaluated.
+        2. If the full path is registered in the evaluator builtin table or
+           any reachable scope, return the bound :class:`PatternValue`.
+        3. Otherwise evaluate the namespace expression normally and look the
+           member up among its registered children. This preserves nested
+           ``ns_value.members`` access for user-defined namespaces.
+
         Args:
             node: The namespace access AST node.
 
@@ -1880,17 +2296,53 @@ class HexPatEvaluator:
         Raises:
             HexPatRuntimeError: If the namespace or member is not found.
         """
+        flat_path = self._namespace_path(node)
+        if flat_path is not None:
+            builtin = self._builtins.get(flat_path)
+            if builtin is not None:
+                return PatternValue(value=builtin)
+            scope_val = self._scope.get(flat_path)
+            if scope_val is not None:
+                return scope_val
         ns_val = self._eval_expr(node.namespace)
         member = ns_val.members.get(node.member)
         if member is not None:
             return member
-        ns_name = ns_val.value if isinstance(ns_val.value, str) else ""
-        builtin_name = f"{ns_name}::{node.member}"
-        scope_val = self._scope.get(builtin_name)
-        if scope_val is not None:
-            return scope_val
+        if isinstance(ns_val.value, str):
+            qualified = f"{ns_val.value}::{node.member}"
+            scope_val = self._scope.get(qualified)
+            if scope_val is not None:
+                return scope_val
         msg = f"namespace has no member '{node.member}'"
         raise HexPatRuntimeError(msg, node.line, node.column)
+
+    @staticmethod
+    def _namespace_path(node: NamespaceAccessExpr) -> str | None:
+        """Reconstruct the dotted namespace path from a chain of access nodes.
+
+        Walks the leftmost expression chain starting from ``node``. Returns
+        the full ``a::b::c::member`` string when every left-hand component is
+        either another :class:`NamespaceAccessExpr` or a single
+        :class:`IdentifierExpr`. Returns ``None`` for chains that include
+        non-name nodes such as function calls or member-access expressions.
+
+        Args:
+            node: The outermost namespace access expression.
+
+        Returns:
+            str | None: The flat ``::`` separated path, or ``None`` when the
+            chain cannot be reduced to a pure identifier sequence.
+        """
+        segments: list[str] = [node.member]
+        current: ExprNode = node.namespace
+        while isinstance(current, NamespaceAccessExpr):
+            segments.append(current.member)
+            current = current.namespace
+        if not isinstance(current, IdentifierExpr):
+            return None
+        segments.append(current.name)
+        segments.reverse()
+        return "::".join(segments)
 
     def _eval_subscript(self, node: ArraySubscriptExpr) -> PatternValue:
         """Evaluate an array subscript expression (arr[idx]).
@@ -2314,10 +2766,146 @@ class HexPatEvaluator:
         if isinstance(type_node, PrimitiveType):
             return self._types.resolve_primitive(type_node.name, type_node.endianness)
         if isinstance(type_node, NamedType):
+            template_arg = self._lookup_template_arg(type_node.name)
+            if isinstance(template_arg, (PrimitiveType, NamedType)):
+                return self._resolve_type_node_to_primitive(template_arg)
             resolved = self._types.resolve(type_node.name)
             if isinstance(resolved, HexPatType):
                 return resolved
         return None
+
+    def _lookup_template_arg(self, name: str) -> TypeNode | None:
+        """Return the type-node bound to ``name`` by an active template scope.
+
+        Args:
+            name: The unqualified template parameter identifier to resolve.
+
+        Returns:
+            TypeNode | None: The bound type node, or ``None`` when the name
+            is not a template parameter in any active scope.
+        """
+        for frame in reversed(self._template_args_stack):
+            bound = frame.get(name)
+            if isinstance(bound, (PrimitiveType, NamedType, ArrayType, PointerType, PaddingType, AutoType)):
+                return bound
+        return None
+
+    def _instantiate_template_named_type(
+        self,
+        type_node: NamedType,
+        lookup_name: str,
+        var_name: str,
+        offset: int,
+        color: str,
+        description: str,
+    ) -> dict[str, Any] | None:
+        """Instantiate a generic named type with explicit template arguments.
+
+        Substitutes the supplied template arguments into the declared template
+        parameter list and dispatches to the underlying struct/union/etc.
+        instantiation. The bindings persist on a stack so nested type
+        references inside the body resolve through ``_lookup_template_arg``.
+        Argument-count mismatches surface as :class:`HexPatTypeError` from
+        :meth:`_bind_template_args`.
+
+        Args:
+            type_node: The NamedType AST node carrying ``template_args``.
+            lookup_name: The fully qualified name of the underlying type.
+            var_name: The variable name for the resulting field.
+            offset: Byte offset at which to instantiate the type.
+            color: Hex colour string for UI highlighting.
+            description: Optional description annotation.
+
+        Returns:
+            dict[str, Any] | None: The resulting parsed-field dict, or
+            ``None`` when the underlying type cannot be located.
+        """
+        resolved = self._types.resolve(lookup_name)
+        if resolved is None and type_node.namespace:
+            resolved = self._types.resolve(type_node.name)
+        params: tuple[TemplateParam, ...] = ()
+        if isinstance(resolved, StructTypeInfo):
+            params = resolved.decl.template_params
+        elif resolved is None:
+            return None
+        bindings = self._bind_template_args(params, type_node.template_args, type_node.line, type_node.column, lookup_name)
+        self._template_args_stack.append(bindings)
+        try:
+            if isinstance(resolved, StructTypeInfo):
+                return self._eval_struct_instance(resolved.name, resolved, var_name, offset, color, description)
+            if isinstance(resolved, UnionTypeInfo):
+                return self._eval_union_instance(resolved.name, resolved, var_name, offset, color, description)
+            if isinstance(resolved, EnumTypeInfo):
+                return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
+            if isinstance(resolved, BitfieldTypeInfo):
+                return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
+            pv = self._read_primitive(resolved, offset)
+            raw = self._data.read(offset, resolved.size)
+            display = self._format_value(pv.value, resolved)
+            return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+        finally:
+            self._template_args_stack.pop()
+
+    def _bind_template_args(
+        self,
+        params: tuple[TemplateParam, ...],
+        args: tuple[ExprNode, ...],
+        line: int,
+        column: int,
+        type_name: str,
+    ) -> dict[str, ExprNode | TypeNode]:
+        """Bind a tuple of template arguments onto a parameter declaration list.
+
+        Args:
+            params: The declared template parameters.
+            args: The expressions supplied at the call site. Identifier
+                expressions are interpreted as named-type references; numeric
+                expressions remain as constant value bindings.
+            line: Source line for error reporting.
+            column: Source column for error reporting.
+            type_name: The fully qualified name of the type being instantiated.
+
+        Returns:
+            dict[str, ExprNode | TypeNode]: A name → bound type-node mapping
+            for type parameters, plus value-bound expressions for non-auto
+            parameters used as numeric template arguments.
+
+        Raises:
+            HexPatTypeError: When the argument count does not match the
+                declared parameter list.
+        """
+        if len(args) != len(params):
+            msg = (
+                f"template type '{type_name}' takes {len(params)} parameter{'s' if len(params) != 1 else ''} but {len(args)} were supplied"
+            )
+            raise HexPatTypeError(msg, line, column)
+        bindings: dict[str, ExprNode | TypeNode] = {}
+        for param, arg in zip(params, args, strict=True):
+            bindings[param.name] = self._template_arg_to_type_node(arg)
+        return bindings
+
+    @staticmethod
+    def _template_arg_to_type_node(expr: ExprNode) -> TypeNode | ExprNode:
+        """Coerce a template-argument expression to a type node when possible.
+
+        Identifier expressions reference user-defined types or primitive
+        names, so they map onto :class:`NamedType` references. Other
+        expressions are returned unchanged so the evaluator can later treat
+        them as runtime values.
+
+        Args:
+            expr: The expression appearing inside the ``< ... >`` arguments.
+
+        Returns:
+            TypeNode | ExprNode: A type node for identifier-like arguments or
+            the original expression otherwise.
+        """
+        if isinstance(expr, IdentifierExpr):
+            primitive = BuiltinTypes.get(expr.name)
+            if primitive is not None:
+                return PrimitiveType(name=expr.name, endianness=None, line=expr.line, column=expr.column)
+            return NamedType(name=expr.name, namespace=None, line=expr.line, column=expr.column)
+        return expr
 
     def _extract_description(
         self,
@@ -2366,24 +2954,6 @@ class HexPatEvaluator:
                 _logger.error("hexpat_builtin_assert_failed", assert_message=resolved)
                 raise HexPatRuntimeError(resolved)
             return PatternValue(value=None)
-
-        def builtin_print(*_args: PatternValue) -> PatternValue:
-            return PatternValue(value=None)
-
-        def builtin_format(*args: PatternValue) -> PatternValue:
-            if not args:
-                return PatternValue(value="")
-            fmt = args[0].value
-            if not isinstance(fmt, str):
-                return PatternValue(value=str(fmt) if fmt is not None else "null")
-            parts = fmt.split("{}")
-            result_parts: list[str] = []
-            for i, part in enumerate(parts):
-                result_parts.append(part)
-                if i < len(args) - 1:
-                    arg_val = args[i + 1].value
-                    result_parts.append(str(arg_val) if arg_val is not None else "null")
-            return PatternValue(value="".join(result_parts))
 
         def builtin_read_unsigned(*args: PatternValue) -> PatternValue:
             if len(args) < 2:
@@ -2451,8 +3021,6 @@ class HexPatEvaluator:
             ("addressof", builtin_addressof),
             ("typenameof", builtin_typenameof),
             ("assert", builtin_assert),
-            ("print", builtin_print),
-            ("format", builtin_format),
             ("read_unsigned", builtin_read_unsigned),
             ("read_signed", builtin_read_signed),
             ("read_string", builtin_read_string),
