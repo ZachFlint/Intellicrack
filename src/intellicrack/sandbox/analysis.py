@@ -45,7 +45,7 @@ _C2_PORTS: frozenset[int] = frozenset(
     {4444, 5555, 8080, 8443, 1337, 31337, 6666, 6667, 9999},
 )
 
-_UNSPECIFIED_ADDR = "0.0.0.0"  # noqa: S104
+_UNSPECIFIED_ADDR = "0.0.0.0"  # noqa: S104  # nosec B104  # IPv4 sentinel constant; not used as bind address
 
 _PRIVATE_IP_PREFIXES: tuple[str, ...] = (
     "10.",
@@ -96,6 +96,7 @@ _EXFIL_BASE_CONFIDENCE = 0.4
 _SLEEP_EVASION_THRESHOLD_MS = 60000
 _IOC_CONTEXT_MAX_LEN = 200
 _CLIPBOARD_PREVIEW_MAX_LEN = 80
+_MIN_HOSTNAME_LABELS = 2
 
 
 def _has_valid_tld(candidate: str) -> bool:
@@ -113,7 +114,7 @@ def _has_valid_tld(candidate: str) -> bool:
             is not a common file extension.
     """
     parts = candidate.split(".")
-    if len(parts) < 2:
+    if len(parts) < _MIN_HOSTNAME_LABELS:
         return False
     tld = parts[-1].lower()
     if tld in FILE_EXTENSION_TLDS:
