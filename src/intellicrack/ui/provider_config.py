@@ -12,12 +12,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 
 import httpx
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QDesktopServices
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -174,6 +175,40 @@ _PROVIDER_DISPLAY_NAMES: dict[str, str] = {
     "grok": "Grok",
     "local_transformers": "Local Transformers",
 }
+
+_PROVIDER_RESOURCE_LINKS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "anthropic": (
+        ("Open Console", "https://console.anthropic.com/", "Open the Anthropic console to manage API keys and usage"),
+        ("API Reference", "https://docs.anthropic.com/en/api/getting-started", "Open the Anthropic API documentation"),
+        ("Pricing", "https://www.anthropic.com/pricing", "View current Anthropic model pricing"),
+    ),
+    "openai": (
+        ("Open Platform", "https://platform.openai.com/", "Open the OpenAI platform dashboard"),
+        ("API Reference", "https://platform.openai.com/docs/api-reference", "Open the OpenAI API documentation"),
+        ("Usage Dashboard", "https://platform.openai.com/usage", "View OpenAI usage and billing"),
+    ),
+    "google": (
+        ("Open AI Studio", "https://aistudio.google.com/", "Open Google AI Studio to manage API keys"),
+        ("API Reference", "https://ai.google.dev/api", "Open the Gemini API documentation"),
+        ("Pricing", "https://ai.google.dev/pricing", "View current Gemini model pricing"),
+    ),
+    "huggingface": (
+        ("Open Hub", "https://huggingface.co/", "Open the Hugging Face Hub"),
+        ("Token Settings", "https://huggingface.co/settings/tokens", "Manage Hugging Face access tokens"),
+        ("Inference Endpoints", "https://ui.endpoints.huggingface.co/", "Manage Hugging Face inference endpoints"),
+    ),
+    "grok": (
+        ("Open Console", "https://console.x.ai/", "Open the xAI console to manage API keys"),
+        ("API Reference", "https://docs.x.ai/docs/api-reference", "Open the xAI API documentation"),
+        ("Status Page", "https://status.x.ai/", "View xAI service status"),
+    ),
+    "openrouter": (
+        ("Open Dashboard", "https://openrouter.ai/", "Open the OpenRouter dashboard"),
+        ("API Reference", "https://openrouter.ai/docs", "Open the OpenRouter API documentation"),
+        ("Activity", "https://openrouter.ai/activity", "View OpenRouter activity and usage"),
+    ),
+}
+
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 
@@ -1670,41 +1705,127 @@ class ProviderSettingsWidget(QFrame):
     def _setup_provider_specific_ui(self, layout: QVBoxLayout) -> None:
         """Add provider-specific UI elements.
 
+        Each supported provider receives a dedicated UI section so the configuration
+        dialog exposes provider-specific capabilities consistently. Cloud providers
+        receive a "Resources" group with deep links to their console, API reference,
+        and other operational pages so users can manage credentials and usage without
+        leaving the application. Providers with additional capabilities (model
+        downloads for Ollama, device tuning for local transformers, generation cost
+        lookup for OpenRouter) receive their bespoke groups in addition to or in
+        place of the generic resources block.
+
         Args:
             layout: Parent layout to add widgets to.
         """
         if self.provider_id == "ollama":
-            pull_group = QGroupBox("Model Download")
-            pull_form = QFormLayout()
-            self._pull_model_input = QLineEdit()
-            self._pull_model_input.setToolTip("Enter model name, e.g. llama3.3:latest")
-            pull_btn = QPushButton("Pull Model")
-            pull_btn.setToolTip("Download an Ollama model")
-            pull_btn.clicked.connect(self._on_pull_model)
-            pull_row = QHBoxLayout()
-            pull_row.addWidget(self._pull_model_input)
-            pull_row.addWidget(pull_btn)
-            pull_form.addRow("Model:", pull_row)
-            pull_group.setLayout(pull_form)
-            layout.addWidget(pull_group)
-
+            self._add_ollama_pull_group(layout)
+            return
         if self.provider_id == "local_transformers":
             self._setup_xpu_settings(layout)
-
+            return
         if self.provider_id == "openrouter":
-            gen_group = QGroupBox("Cost Tracking")
-            gen_form = QFormLayout()
-            self._generation_id_input = QLineEdit()
-            self._generation_id_input.setToolTip("Enter generation ID for cost lookup")
-            gen_btn = QPushButton("Lookup Cost")
-            gen_btn.setToolTip("Look up generation cost by ID")
-            gen_btn.clicked.connect(self._on_lookup_generation)
-            gen_row = QHBoxLayout()
-            gen_row.addWidget(self._generation_id_input)
-            gen_row.addWidget(gen_btn)
-            gen_form.addRow("Generation ID:", gen_row)
-            gen_group.setLayout(gen_form)
-            layout.addWidget(gen_group)
+            self._add_openrouter_cost_group(layout)
+        self._add_provider_resource_links(layout)
+
+    def _add_ollama_pull_group(self, layout: QVBoxLayout) -> None:
+        """Add the Ollama model download group to the layout.
+
+        Args:
+            layout: Parent layout to add the group to.
+        """
+        pull_group = QGroupBox("Model Download")
+        pull_form = QFormLayout()
+        self._pull_model_input = QLineEdit()
+        self._pull_model_input.setToolTip("Enter model name, e.g. llama3.3:latest")
+        pull_btn = QPushButton("Pull Model")
+        pull_btn.setToolTip("Download an Ollama model")
+        pull_btn.clicked.connect(self._on_pull_model)
+        pull_row = QHBoxLayout()
+        pull_row.addWidget(self._pull_model_input)
+        pull_row.addWidget(pull_btn)
+        pull_form.addRow("Model:", pull_row)
+        pull_group.setLayout(pull_form)
+        layout.addWidget(pull_group)
+
+    def _add_openrouter_cost_group(self, layout: QVBoxLayout) -> None:
+        """Add the OpenRouter cost-lookup group to the layout.
+
+        Args:
+            layout: Parent layout to add the group to.
+        """
+        gen_group = QGroupBox("Cost Tracking")
+        gen_form = QFormLayout()
+        self._generation_id_input = QLineEdit()
+        self._generation_id_input.setToolTip("Enter generation ID for cost lookup")
+        gen_btn = QPushButton("Lookup Cost")
+        gen_btn.setToolTip("Look up generation cost by ID")
+        gen_btn.clicked.connect(self._on_lookup_generation)
+        gen_row = QHBoxLayout()
+        gen_row.addWidget(self._generation_id_input)
+        gen_row.addWidget(gen_btn)
+        gen_form.addRow("Generation ID:", gen_row)
+        gen_group.setLayout(gen_form)
+        layout.addWidget(gen_group)
+
+    def _add_provider_resource_links(self, layout: QVBoxLayout) -> None:
+        """Add a Resources group with deep links for the current provider.
+
+        Builds one ``QPushButton`` per entry in ``_PROVIDER_RESOURCE_LINKS`` for the
+        active provider. Each button opens the associated URL via
+        ``QDesktopServices.openUrl`` so the system default browser is used and the
+        action works on Windows, macOS, and Linux without spawning a subprocess.
+        Buttons are stored on ``self._resource_buttons`` keyed by label so they can
+        be exercised in tests without traversing the layout tree.
+
+        Args:
+            layout: Parent layout to add the group to.
+        """
+        links = _PROVIDER_RESOURCE_LINKS.get(self.provider_id)
+        if not links:
+            return
+
+        resource_group = QGroupBox("Resources")
+        resource_layout = QHBoxLayout()
+        self._resource_buttons: dict[str, QPushButton] = {}
+
+        for label, url, tooltip in links:
+            btn = QPushButton(label)
+            btn.setToolTip(tooltip)
+            btn.clicked.connect(partial(self._open_resource_url, QUrl(url), label))
+            resource_layout.addWidget(btn)
+            self._resource_buttons[label] = btn
+
+        resource_layout.addStretch()
+        resource_group.setLayout(resource_layout)
+        layout.addWidget(resource_group)
+
+    def _open_resource_url(self, url: QUrl, label: str) -> None:
+        """Open a provider resource URL in the system default browser.
+
+        Args:
+            url: The URL to open.
+            label: Human-readable label for the link, used for logging.
+        """
+        opened = QDesktopServices.openUrl(url)
+        if opened:
+            _logger.info(
+                "provider_resource_opened",
+                provider=self.provider_id,
+                label=label,
+                url=url.toString(),
+            )
+        else:
+            _logger.warning(
+                "provider_resource_open_failed",
+                provider=self.provider_id,
+                label=label,
+                url=url.toString(),
+            )
+            show_warning(
+                self,
+                "Open Link Failed",
+                f"Could not open {label} ({url.toString()}).",
+            )
 
     def _on_pull_model(self) -> None:
         """Handle pull model button click for Ollama."""
