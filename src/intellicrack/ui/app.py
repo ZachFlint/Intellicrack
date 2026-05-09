@@ -85,6 +85,7 @@ if TYPE_CHECKING:
     from intellicrack.core.template_manager import TemplateManager
 
 _MAX_RESULT_DISPLAY_LEN = 500
+_STATUS_REFRESH_FAILURE_THRESHOLD = 5
 
 _original_excepthook = sys.excepthook
 
@@ -231,6 +232,9 @@ class MainWindow(QMainWindow):
         self.template_manager: TemplateManager | None = None
         self.model_discovery: ModelDiscovery | None = None
         self._hxd_panel: HxDPanel | None = None
+        self._sandbox_monitor_wired_widgets: set[int] = set()
+        self._process_attached_wired: bool = False
+        self._status_failure_count: int = 0
 
         _logger.debug("loading_icon_manager")
         self._icon_manager = IconManager.get_instance()
@@ -590,14 +594,20 @@ class MainWindow(QMainWindow):
         self.tool_panel.activate_analysis_tab()
 
     def _on_view_scripts(self) -> None:
-        """Show the scripts manager panel."""
-        script_state = self.tool_panel.get_script_panel_state()
-        selected_id, current_script = script_state
-        if selected_id is not None:
-            _logger.debug("scripts_panel_state", selected=selected_id)
-        if current_script is not None:
-            _logger.debug("current_script", script_name=current_script[0])
+        """Show the scripts manager panel and surface the current script context.
+
+        After activating the scripts tab, the previously selected script ID and
+        current draft script name (if any) are reported through the application
+        status bar so the user can confirm which script the panel is editing.
+        """
         self.tool_panel.activate_scripts_tab()
+        selected_id, current_script = self.tool_panel.get_script_panel_state()
+        if current_script is not None:
+            self.status_update.emit(f"Scripts: editing '{current_script[0]}'")
+        elif selected_id is not None:
+            self.status_update.emit(f"Scripts: selected '{selected_id}'")
+        else:
+            self.status_update.emit("Scripts: no script selected")
 
     def _on_view_stack(self) -> None:
         """Show the stack viewer panel."""
@@ -711,6 +721,8 @@ class MainWindow(QMainWindow):
             raise TypeError(msg)
 
         self._add_menu_action(help_menu, "About", self._on_about)
+        help_menu.addSeparator()
+        self._add_menu_action(help_menu, "XPU Status...", self._on_xpu_status)
 
     def _setup_menus(self) -> None:
         """Set up the menu bar.
@@ -880,7 +892,13 @@ class MainWindow(QMainWindow):
         self._status_timer.start(30000)
 
     def _refresh_system_status(self) -> None:
-        """Periodically refresh the system status display."""
+        """Periodically refresh the system status display.
+
+        Tracks consecutive failures of the orchestrator status fetch and stops
+        the periodic timer after :data:`_STATUS_REFRESH_FAILURE_THRESHOLD`
+        consecutive errors so the status bar does not silently mask a broken
+        orchestrator with debug logs forever.
+        """
         if self._shutting_down:
             return
         from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
@@ -890,13 +908,29 @@ class MainWindow(QMainWindow):
 
         try:
             status = run_bridge_coroutine(fetch_status())
-            if status is not None:
-                state = status.get("state", "unknown")
-                session_id = status.get("session_id")
-                session_text = f" | Session: {session_id}" if session_id else ""
-                self.status_label.setText(f"State: {state}{session_text}")
-        except (RuntimeError, AttributeError, OSError):
-            _logger.debug("system_status_refresh_failed", exc_info=True)
+        except (RuntimeError, AttributeError, OSError) as exc:
+            self._status_failure_count += 1
+            _logger.warning(
+                "system_status_refresh_failed",
+                error=str(exc),
+                failure_count=self._status_failure_count,
+                threshold=_STATUS_REFRESH_FAILURE_THRESHOLD,
+            )
+            if self._status_failure_count >= _STATUS_REFRESH_FAILURE_THRESHOLD:
+                self._status_timer.stop()
+                _logger.exception(
+                    "system_status_timer_stopped",
+                    consecutive_failures=self._status_failure_count,
+                )
+                self.status_label.setText("Status refresh disabled (see logs)")
+            return
+
+        self._status_failure_count = 0
+        if status is not None:
+            state = status.get("state", "unknown")
+            session_id = status.get("session_id")
+            session_text = f" | Session: {session_id}" if session_id else ""
+            self.status_label.setText(f"State: {state}{session_text}")
 
         self._refresh_memory_status()
         self._refresh_model_discovery_status()
@@ -940,7 +974,27 @@ class MainWindow(QMainWindow):
         self.status_update.connect(self._update_status)
         self.tool_panel.address_clicked.connect(self._on_address_clicked)
         self.tool_panel.hex_context_ready.connect(self._on_hex_context_ready)
+        self.tool_panel.embedded_tool_started.connect(self._on_embedded_tool_started)
+        self.tool_panel.embedded_tool_closed.connect(self._on_embedded_tool_closed)
         self.bridge_analysis_received.connect(self._on_bridge_analysis_activated)
+
+    def _on_embedded_tool_started(self, tool_id: str) -> None:
+        """Handle embedded-tool start broadcast from ``ToolOutputPanel``.
+
+        Args:
+            tool_id: Identifier of the embedded tool that started.
+        """
+        _logger.info("embedded_tool_started", tool_id=tool_id)
+        self.status_update.emit(f"{tool_id} started")
+
+    def _on_embedded_tool_closed(self, tool_id: str) -> None:
+        """Handle embedded-tool close broadcast from ``ToolOutputPanel``.
+
+        Args:
+            tool_id: Identifier of the embedded tool that closed.
+        """
+        _logger.info("embedded_tool_closed", tool_id=tool_id)
+        self.status_update.emit(f"{tool_id} closed")
 
     def _configure_orchestrator(self) -> None:
         """Configure orchestrator callbacks."""
@@ -1271,19 +1325,57 @@ class MainWindow(QMainWindow):
         self._run_async(create_session())
 
     def _on_load_session(self) -> None:
-        """Handle load session action."""
+        """Handle load session action.
+
+        Connects :attr:`SessionManagerDialog.session_loaded` and
+        :attr:`SessionManagerDialog.session_deleted` to MainWindow handlers so
+        the dialog's load button (which emits ``session_loaded`` and accepts the
+        dialog) and delete button (which emits ``session_deleted`` while keeping
+        the dialog open) both trigger orchestrator-side state changes.
+        """
         dialog = SessionManagerDialog(parent=self)
+        dialog.session_loaded.connect(self._on_session_load_requested)
+        dialog.session_deleted.connect(self._on_session_deleted)
         if dialog.exec():
             session_id = dialog.get_selected_session_id()
             if session_id:
+                self._on_session_load_requested(session_id)
 
-                async def load_session() -> None:
-                    await self._orchestrator.load_session(session_id)
+    def _on_session_load_requested(self, session_id: str) -> None:
+        """Load a session by ID through the orchestrator.
 
-                self._chat_panel.clear_messages()
-                self.tool_panel.clear_all()
-                self.status_update.emit(f"Loading session {session_id}...")
-                self._run_async(load_session())
+        Args:
+            session_id: Identifier of the session to load.
+        """
+
+        async def load_session() -> None:
+            await self._orchestrator.load_session(session_id)
+
+        self._chat_panel.clear_messages()
+        self.tool_panel.clear_all()
+        self.status_update.emit(f"Loading session {session_id}...")
+        self._run_async(load_session())
+
+    def _on_session_deleted(self, session_id: str) -> None:
+        """Handle a session deletion broadcast from the dialog.
+
+        If the deleted session is the orchestrator's current session, request a
+        cancel so any pending work tied to that session is aborted.
+
+        Args:
+            session_id: Identifier of the session that was deleted.
+        """
+        _logger.info("session_deleted_from_manager", session_id=session_id)
+        current = self._orchestrator.current_session
+        if current is not None and current.id == session_id:
+
+            async def cancel_active() -> None:
+                await self._orchestrator.cancel()
+
+            self.status_update.emit(f"Active session {session_id} deleted; cancelling work")
+            self._run_async(cancel_active())
+        else:
+            self.status_update.emit(f"Session deleted: {session_id}")
 
     def _on_save_session(self) -> None:
         """Handle save session action."""
@@ -1473,8 +1565,13 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "Import", f"Failed to import session: {err}")
 
     def _on_save_patched_binary(self) -> None:
-        """Save the currently loaded binary with applied patches via the hex editor."""
-        hex_panel = self.tool_panel.get_panel("hex_editor")
+        """Save the currently loaded binary with applied patches via the hex editor.
+
+        The hex editor lives in :attr:`ToolOutputPanel.embedded_tools` (registered
+        by :meth:`ToolOutputPanel.add_hex_editor_tab`), not :attr:`panels`, so this
+        method resolves it through :meth:`ToolOutputPanel.get_embedded_tool`.
+        """
+        hex_panel = self.tool_panel.get_embedded_tool("hex_editor")
         if hex_panel is None:
             QMessageBox.information(self, "Save", "No hex editor loaded.")
             return
@@ -1482,12 +1579,14 @@ class MainWindow(QMainWindow):
         save_as_fn = getattr(hex_panel, "save_as", None)
         if callable(save_as_fn):
             save_as_fn()
-        else:
-            save_fn = getattr(hex_panel, "save", None)
-            if callable(save_fn):
-                save_fn()
-            else:
-                QMessageBox.information(self, "Save", "Hex editor does not support saving.")
+            return
+
+        save_fn = getattr(hex_panel, "save", None)
+        if callable(save_fn):
+            save_fn()
+            return
+
+        QMessageBox.information(self, "Save", "Hex editor does not support saving.")
 
     def _on_export_analysis(self) -> None:
         """Export the current bridge analysis to a JSON file."""
@@ -1524,15 +1623,12 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Export", f"Analysis exported to {path}")
 
     def _on_tool_status(self) -> None:
-        """Handle tool status action."""
-        success_pixmap = self._icon_manager.get_status_pixmap(success=True, size=16)
-        failure_pixmap = self._icon_manager.get_status_pixmap(success=False, size=16)
-        _logger.debug(
-            "tool_status_icons",
-            success_icon=not success_pixmap.isNull(),
-            failure_icon=not failure_pixmap.isNull(),
-        )
+        """Handle tool status action.
 
+        Pre-fetches the live tool registry from the orchestrator and threads it
+        through to ``ToolStatusDialog`` so the dialog can render real availability
+        instead of an empty checking-only state.
+        """
         try:
             from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
@@ -1544,18 +1640,60 @@ class MainWindow(QMainWindow):
         except (RuntimeError, AttributeError, OSError):
             _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
 
-        dialog = ToolStatusDialog(parent=self)
+        tool_registry = getattr(self._orchestrator, "_tool_registry", None)
+        dialog = ToolStatusDialog(tool_registry=tool_registry, parent=self)
         dialog.exec()
 
     def _on_configure_tools(self) -> None:
-        """Handle configure tools action."""
+        """Handle configure tools action.
+
+        Passes the live tool registry from the orchestrator to ``ToolConfigDialog``
+        so per-tool widgets can query real registry state for status checks. Wires
+        :attr:`ToolConfigDialog.tool_updated` and each
+        :attr:`ToolSettingsWidget.status_changed` signal to MainWindow handlers so
+        config saves and per-tool status changes update the application state and
+        status bar in real time.
+        """
+        tool_registry = getattr(self._orchestrator, "_tool_registry", None)
         dialog = ToolConfigDialog(
+            tool_registry=tool_registry,
             tools_directory=self._config.tools_directory,
             parent=self,
         )
+        dialog.tool_updated.connect(self._on_tool_config_updated)
+        widgets_attr = getattr(dialog, "_tool_widgets", None)
+        if isinstance(widgets_attr, dict):
+
+            def _status_slot(tool_id: str, available: int) -> None:
+                self._on_tool_status_changed(tool_id=tool_id, available=bool(available))
+
+            for widget in cast("dict[str, object]", widgets_attr).values():
+                status_changed = getattr(widget, "status_changed", None)
+                if status_changed is not None:
+                    status_changed.connect(_status_slot)
         if dialog.exec():
             settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_tool_settings(settings)
+
+    def _on_tool_config_updated(self, tool_id: str) -> None:
+        """Handle a per-tool config save broadcast from ``ToolConfigDialog``.
+
+        Args:
+            tool_id: Identifier of the tool whose configuration was just saved.
+        """
+        _logger.info("tool_config_updated", tool_id=tool_id)
+        self.status_update.emit(f"Tool configuration updated: {tool_id}")
+
+    def _on_tool_status_changed(self, *, tool_id: str, available: bool) -> None:
+        """Handle per-widget tool status checks emitted from ``ToolSettingsWidget``.
+
+        Args:
+            tool_id: Identifier of the tool whose status was checked.
+            available: Whether the tool is currently available.
+        """
+        state = "available" if available else "unavailable"
+        _logger.info("tool_status_changed", tool_id=tool_id, available=available)
+        self.status_update.emit(f"Tool status: {tool_id} {state}")
 
     def _apply_tool_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply tool configuration settings at runtime.
@@ -1618,7 +1756,14 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Tool re-initialization failed")
 
     def _on_configure_providers(self) -> None:
-        """Handle configure providers action."""
+        """Handle configure providers action.
+
+        Wires :attr:`ProviderConfigDialog.provider_updated` (fired per-provider on
+        Save/Apply) and :attr:`ProviderConfigDialog.active_provider_changed` (fired
+        when the user clicks "Set Active" inside the dialog) to MainWindow handlers
+        so credential edits and active-provider switches surface in the toolbar
+        combo and status bar without waiting for dialog acceptance.
+        """
         registry = self._orchestrator.provider_registry
         discovery = ModelDiscovery(registry)
         dialog = ProviderConfigDialog(
@@ -1626,22 +1771,62 @@ class MainWindow(QMainWindow):
             model_discovery=discovery,
             parent=self,
         )
+        dialog.provider_updated.connect(self._on_provider_dialog_updated)
+        dialog.active_provider_changed.connect(self._on_active_provider_changed)
         if dialog.exec():
             settings: dict[str, dict[str, object]] = dialog.get_settings()
             self._apply_provider_settings(settings)
+
+    def _on_provider_dialog_updated(self, provider_id: str) -> None:
+        """Handle per-provider save broadcast from ``ProviderConfigDialog``.
+
+        Args:
+            provider_id: Identifier of the provider whose settings were saved.
+        """
+        _logger.info("provider_dialog_updated", provider_id=provider_id)
+        self.status_update.emit(f"Provider configuration updated: {provider_id}")
+
+    def _on_active_provider_changed(self, provider_id: str) -> None:
+        """Handle active-provider switch broadcast from ``ProviderConfigDialog``.
+
+        Synchronizes the toolbar provider combo with the dialog's selection so
+        future requests issued through the toolbar match the provider the user
+        just activated.
+
+        Args:
+            provider_id: Identifier of the provider that was made active.
+        """
+        try:
+            new_active = ProviderName(provider_id)
+        except ValueError:
+            _logger.warning("active_provider_changed_unknown_id", provider_id=provider_id)
+            return
+
+        for index in range(self._provider_combo.count()):
+            data = self._provider_combo.itemData(index)
+            if isinstance(data, ProviderName) and data == new_active:
+                self._provider_combo.blockSignals(b=True)
+                self._provider_combo.setCurrentIndex(index)
+                self._provider_combo.blockSignals(b=False)
+                break
+
+        _logger.info("toolbar_provider_synced", provider_id=provider_id)
+        self.status_update.emit(f"Active provider: {provider_id}")
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings at runtime.
 
         The ProviderConfigDialog handles persistence via its own JSON config file.
         This method reconnects providers with updated API keys and credentials
-        so changes take effect without an application restart.
+        and explicitly disconnects providers the user has disabled or cleared
+        credentials for, so changes take effect without an application restart.
 
         Args:
             settings: Provider settings dictionary mapping provider IDs to their settings.
         """
         registry = self._orchestrator.provider_registry
         providers_to_connect: list[tuple[ProviderName, ProviderCredentials]] = []
+        providers_to_disconnect: list[ProviderName] = []
 
         for provider_id, provider_settings in settings.items():
             enabled = bool(provider_settings.get("enabled", False))
@@ -1649,25 +1834,38 @@ class MainWindow(QMainWindow):
             api_base = str(provider_settings.get("api_base", "")) or None
             org_id = str(provider_settings.get("organization_id", "")) or None
 
-            if not enabled or not api_key:
-                continue
-
             try:
                 pname = ProviderName(provider_id)
             except ValueError:
                 _logger.warning("unknown_provider_id", provider_id=provider_id)
                 continue
 
-            provider = registry.get(pname)
-            if provider is None:
+            existing_provider = registry.get(pname)
+
+            if not enabled or not api_key:
+                if existing_provider is not None and existing_provider.is_connected:
+                    providers_to_disconnect.append(pname)
+                continue
+
+            if existing_provider is None:
                 continue
 
             creds = ProviderCredentials(api_key=api_key, api_base=api_base, organization_id=org_id)
             providers_to_connect.append((pname, creds))
 
-        if providers_to_connect:
+        if providers_to_connect or providers_to_disconnect:
 
-            async def _reconnect_providers() -> None:
+            async def _apply_provider_changes() -> None:
+                for pname in providers_to_disconnect:
+                    try:
+                        await registry.disconnect_provider(pname)
+                        _logger.info("provider_disconnected", provider=pname.value)
+                    except (RuntimeError, OSError, ValueError) as e:
+                        _logger.warning(
+                            "provider_disconnect_failed",
+                            provider=pname.value,
+                            error=str(e),
+                        )
                 for pname, creds in providers_to_connect:
                     try:
                         await registry.connect_provider(pname, creds)
@@ -1679,13 +1877,15 @@ class MainWindow(QMainWindow):
                             error=str(e),
                         )
 
-            worker = AsyncWorker(_reconnect_providers(), self)
+            worker = AsyncWorker(_apply_provider_changes(), self)
             worker.finished.connect(self._on_provider_reconnect_finished)
             worker.error.connect(self._on_provider_reconnect_error)
             worker.start()
 
         count = len(settings)
-        self.status_update.emit(f"Provider settings applied ({count} providers configured)")
+        self.status_update.emit(
+            f"Provider settings applied ({count} providers configured, {len(providers_to_disconnect)} disabled)",
+        )
 
     def _on_provider_reconnect_finished(self, result: object) -> None:
         """Handle provider reconnection completion.
@@ -1800,6 +2000,13 @@ class MainWindow(QMainWindow):
     def _on_browse_models_result(self, result: object) -> None:
         """Handle browse models async result.
 
+        Constructs ``ModelSelectionDialog`` with the active provider's name, the
+        currently selected toolbar model (so the dialog highlights it), and the
+        shared :class:`ModelDiscovery` so the dialog can render
+        provider-aware status. Also wires :attr:`ModelSelectionDialog.model_selected`
+        so a model selection (Ok or double-click) updates the toolbar combo
+        immediately.
+
         Args:
             result: The list of ModelInfo objects from the provider.
         """
@@ -1814,30 +2021,83 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Browse Models", "No models available.")
             return
 
-        if self.model_discovery is not None:
-            first_model = model_infos[0]
-            model_detail = self.model_discovery.get_by_id(first_model.provider, first_model.id)
-            if model_detail is not None:
-                _logger.debug(
-                    "model_detail_fetched",
-                    model_id=first_model.id,
-                )
+        active_provider = self._orchestrator.provider_registry.active
+        provider_name = active_provider.name if active_provider is not None else None
 
-        dialog = ModelSelectionDialog(models=model_infos, parent=self)
+        current_model_text = self.model_combo.currentText() or None
+
+        dialog = ModelSelectionDialog(
+            models=model_infos,
+            current_model=current_model_text,
+            provider_name=provider_name,
+            discovery=self.model_discovery,
+            parent=self,
+        )
+        dialog.model_selected.connect(self._on_model_selected_from_browse)
         if dialog.exec() and (selected := dialog.get_selected_model()):
-            idx = self.model_combo.findText(selected)
-            if idx >= 0:
-                self.model_combo.setCurrentIndex(idx)
+            self._sync_model_combo(selected)
+
+    def _on_model_selected_from_browse(self, model_id: str) -> None:
+        """Handle the live ``model_selected`` signal emitted on dialog accept.
+
+        Args:
+            model_id: Identifier of the model the user selected.
+        """
+        _logger.info("model_selected_from_browse", model_id=model_id)
+        self._sync_model_combo(model_id)
+
+    def _sync_model_combo(self, model_id: str) -> None:
+        """Select ``model_id`` in the toolbar model combo, adding it if missing.
+
+        Args:
+            model_id: Identifier of the model to make current in the combo.
+        """
+        idx = self.model_combo.findText(model_id)
+        if idx < 0:
+            self.model_combo.addItem(model_id)
+            idx = self.model_combo.findText(model_id)
+        if idx >= 0:
+            self.model_combo.setCurrentIndex(idx)
+        self.status_update.emit(f"Model selected: {model_id}")
 
     def _on_configure_sandbox(self) -> None:
-        """Handle configure sandbox action."""
+        """Handle configure sandbox action.
+
+        Wires :attr:`SandboxConfigDialog.settings_updated` to
+        :meth:`_on_sandbox_settings_updated` so an Apply press inside the dialog
+        (which fires the signal without dialog acceptance) propagates settings to
+        the runtime sandbox manager just like an OK acceptance does.
+        """
         dialog = SandboxConfigDialog(
             sandbox_manager=self.sandbox_manager,
             parent=self,
         )
+        dialog.settings_updated.connect(self._on_sandbox_settings_updated)
         if dialog.exec():
             settings: dict[str, object] = dialog.get_settings()
             self._apply_sandbox_settings(settings)
+
+    def _on_sandbox_settings_updated(self) -> None:
+        """Apply runtime sandbox settings when the dialog signals an Apply event.
+
+        ``SandboxConfigDialog.settings_updated`` carries no payload (the dialog
+        already persisted to disk and rebuilt its own ``SandboxConfig``); this
+        slot pulls the dialog's current settings via ``sender()`` and routes them
+        through :meth:`_apply_sandbox_settings`.
+        """
+        sender = self.sender()
+        if sender is None:
+            _logger.debug("sandbox_settings_updated_without_sender")
+            return
+        get_settings = getattr(sender, "get_settings", None)
+        if not callable(get_settings):
+            _logger.debug("sandbox_settings_updated_sender_missing_get_settings")
+            return
+        settings_obj = get_settings()
+        if not isinstance(settings_obj, dict):
+            _logger.debug("sandbox_settings_updated_invalid_payload")
+            return
+        self._apply_sandbox_settings(cast("dict[str, object]", settings_obj))
 
     def _apply_sandbox_settings(self, settings: dict[str, object]) -> None:
         """Apply sandbox configuration settings to the runtime manager.
@@ -1990,15 +2250,15 @@ class MainWindow(QMainWindow):
         return bridge
 
     def _on_open_sandbox(self) -> None:
-        """Handle open sandbox action."""
-        if not SandboxConfigDialog().is_sandbox_available():
-            QMessageBox.warning(
-                self,
-                "Sandbox Unavailable",
-                "Sandbox functionality is not available on this system.",
-            )
-            return
+        """Handle open sandbox action.
 
+        Routes the availability check through ``SandboxBridge.is_available`` (the
+        same API the dialog ultimately depends on for ``create()``) instead of
+        constructing a throwaway ``SandboxConfigDialog`` purely to call its
+        instance ``is_sandbox_available()``. The bridge is reused for the
+        subsequent ``create()`` call so the availability probe and the create
+        path target the same backend instance.
+        """
         bridge = self._get_or_create_sandbox_bridge()
 
         async def open_sandbox() -> object:
@@ -2036,16 +2296,35 @@ class MainWindow(QMainWindow):
         self._current_worker = worker
 
     def _on_preferences(self) -> None:
-        """Handle preferences action."""
+        """Handle preferences action.
+
+        Wires :attr:`PreferencesDialog.settings_changed` to
+        :meth:`_on_preferences_changed` so that pressing Apply (which fires the
+        signal without closing the dialog) immediately propagates the new config
+        to MainWindow, instead of only being captured on the OK acceptance path.
+        """
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
         config_path = get_config_file("config.json")
         set_config_path = getattr(dialog, "set_config_path", None)
         if callable(set_config_path):
             set_config_path(config_path)
+        dialog.settings_changed.connect(self._on_preferences_changed)
         if dialog.exec():
             self._config = dialog.get_config()
             self.status_update.emit("Preferences saved")
+
+    def _on_preferences_changed(self, new_config: Config) -> None:
+        """Handle preferences applied without dialog acceptance.
+
+        Args:
+            new_config: The freshly built :class:`Config` emitted by the dialog
+                when the user pressed Apply.
+        """
+        self._config = new_config
+        self._initialize_model_cache()
+        _logger.info("preferences_applied")
+        self.status_update.emit("Preferences applied")
 
     def _on_toggle_theme(self) -> None:
         """Toggle between dark and light themes."""
@@ -2074,6 +2353,13 @@ class MainWindow(QMainWindow):
     def _on_focus_chat_input(self) -> None:
         """Focus the chat input field."""
         self._chat_panel.set_focus_input()
+
+    def _on_xpu_status(self) -> None:
+        """Open the XPU status dialog showing device, memory, and cache state."""
+        from intellicrack.ui.xpu_status import XPUStatusDialog
+
+        dialog = XPUStatusDialog(self)
+        dialog.exec()
 
     def _on_about(self) -> None:
         """Handle about action."""
@@ -2140,28 +2426,26 @@ class MainWindow(QMainWindow):
         """Open the HxD hex editor panel.
 
         Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel
-        during MainWindow initialization. Falls back to the legacy
-        ``tool_panel.add_hxd_tab`` accessor when no panel was pre-registered (for
-        example, when HxD was installed after launch).
+        during MainWindow initialization. If HxD was installed after launch and no
+        panel was pre-registered, attempts late registration via
+        :meth:`_register_hxd_panel_if_available` before opening the tab.
         """
         try:
-            widget: HxDPanel | object | None = self._hxd_panel
-            if widget is not None:
-                tab_idx = self.tool_panel.tab_widget.indexOf(widget)
-                if tab_idx >= 0:
-                    self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
-            else:
-                add_hxd = getattr(self.tool_panel, "add_hxd_tab", None)
-                if not callable(add_hxd):
-                    self._show_tool_error("HxD", "HxD panel not available")
-                    return
-                widget = add_hxd()
-                if widget is None:
-                    self._show_tool_error("HxD", "Failed to initialize HxD panel")
-                    return
-            start = getattr(widget, "start_tool", None)
-            if callable(start):
-                start()
+            if self._hxd_panel is None:
+                self._register_hxd_panel_if_available()
+
+            widget: HxDPanel | None = self._hxd_panel
+            if widget is None:
+                self._show_tool_error(
+                    "HxD",
+                    "HxD executable not found. Install HxD and restart Intellicrack to use this tab.",
+                )
+                return
+
+            tab_idx = self.tool_panel.tab_widget.indexOf(widget)
+            if tab_idx >= 0:
+                self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
+            widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="HxD")
             self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
@@ -2336,9 +2620,36 @@ class MainWindow(QMainWindow):
         if sandbox_bridge is not None:
             _logger.debug("sandbox_bridge_available", bridge_type=type(sandbox_bridge).__name__)
 
-        sandbox_widget = self.tool_panel.get_active_tool_widget("sandbox")
+        sandbox_widget = self.tool_panel.get_panel("sandbox")
         if sandbox_widget is not None:
             _logger.debug("sandbox_widget_active", widget_type=type(sandbox_widget).__name__)
+            self._wire_sandbox_monitor_widgets(sandbox_widget)
+
+    def _wire_sandbox_monitor_widgets(self, sandbox_widget: QWidget) -> None:
+        """Connect ``SandboxMonitorWidget.sandbox_stopped`` for monitors under ``sandbox_widget``.
+
+        Args:
+            sandbox_widget: Root widget hosting the sandbox panel.
+        """
+        from intellicrack.ui.sandbox_config import SandboxMonitorWidget
+
+        monitors = sandbox_widget.findChildren(SandboxMonitorWidget)
+        for monitor in monitors:
+            ident = id(monitor)
+            if ident in self._sandbox_monitor_wired_widgets:
+                continue
+            monitor.sandbox_stopped.connect(self._on_sandbox_monitor_stopped)
+            self._sandbox_monitor_wired_widgets.add(ident)
+        _logger.debug("sandbox_monitor_signals_wired", count=len(monitors))
+
+    def _on_sandbox_monitor_stopped(self) -> None:
+        """Reflect a SandboxMonitorWidget stop event in MainWindow state."""
+        _logger.info("sandbox_monitor_stopped")
+        self._sandbox_btn.blockSignals(b=True)
+        self._sandbox_btn.setChecked(False)
+        self._sandbox_btn.setText("Sandbox: OFF")
+        self._sandbox_btn.blockSignals(b=False)
+        self.status_update.emit("Sandbox stopped")
 
     def _on_debug_current_binary(self) -> None:
         """Debug the currently loaded binary with x64dbg."""
@@ -2403,13 +2714,49 @@ class MainWindow(QMainWindow):
     def _on_provider_changed(self, index: int) -> None:
         """Handle provider selection change.
 
+        Sets the registry's active provider so subsequent requests are routed to
+        the user's selection. Falls back to logging only when the selected
+        provider is not yet connected (i.e. has no credentials registered) so
+        ``set_active`` would raise.
+
         Args:
             index: New selection index.
         """
         del index
         provider: object = self._provider_combo.currentData()
-        provider_value = provider.value if isinstance(provider, ProviderName) else None
-        _logger.info("provider_changed", provider=provider_value)
+        if not isinstance(provider, ProviderName):
+            _logger.debug("provider_changed_invalid_data")
+            return
+
+        registry = self._orchestrator.provider_registry
+        instance = registry.get(provider)
+        if instance is None or not instance.is_connected:
+            _logger.info(
+                "provider_changed_not_connected",
+                provider=provider.value,
+            )
+            self.status_update.emit(
+                f"Provider {provider.value} selected but not connected. Configure credentials in Providers menu.",
+            )
+            return
+
+        from intellicrack.core.types import ProviderError
+
+        try:
+            registry.set_active(provider)
+        except (ProviderError, RuntimeError, ValueError) as exc:
+            _logger.warning(
+                "provider_set_active_failed",
+                provider=provider.value,
+                error=str(exc),
+            )
+            self.status_update.emit(
+                f"Failed to activate provider {provider.value}: {exc}",
+            )
+            return
+
+        _logger.info("provider_changed", provider=provider.value)
+        self.status_update.emit(f"Active provider: {provider.value}")
 
     def _on_sandbox_toggled(self, *, checked: bool) -> None:
         """Handle sandbox toggle.
