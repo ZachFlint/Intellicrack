@@ -272,7 +272,7 @@ def _scan_clamav_hdb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
     Returns:
         list[dict[str, Any]]: Match results.
     """
-    file_md5 = hashlib.md5(doc_data).hexdigest()  # noqa: S324
+    file_md5 = hashlib.md5(doc_data, usedforsecurity=False).hexdigest()
     file_size = len(doc_data)
     results: list[dict[str, Any]] = []
     for line in lines:

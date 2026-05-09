@@ -2847,8 +2847,8 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             shared_base = self.GUEST_SHARED_PATH_WINDOWS
         else:
             guest_dirs = [
-                "/tmp",  # noqa: S108
-                "/var/tmp",  # noqa: S108
+                "/tmp",  # noqa: S108  # nosec B108  # guest VM filesystem path, not host
+                "/var/tmp",  # noqa: S108  # nosec B108  # guest VM filesystem path, not host
                 "/home",
             ]
             shared_base = self.GUEST_SHARED_PATH_LINUX

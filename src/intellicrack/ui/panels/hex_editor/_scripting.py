@@ -232,7 +232,6 @@ _BUILTIN_NAMES: Final[list[str]] = [
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-
     class _HexDocumentProtocol(Protocol):
         """Protocol describing the minimal hex document interface used by scripting."""
 
@@ -1195,7 +1194,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
     traceback_text: str | None = None
     try:
         compiled = compile(source, "<script>", "exec")
-        exec(compiled, namespace)  # noqa: S102
+        exec(compiled, namespace)  # noqa: S102  # nosec B102  # user-facing scripting in restricted namespace
     except BaseException as exc:
         if isinstance(exc, (KeyboardInterrupt, SystemExit, MemoryError)):
             for handle in user_opened_files.values():
