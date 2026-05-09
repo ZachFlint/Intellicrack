@@ -39,10 +39,10 @@ class TestPragmaDefaultEvalDepth:
     def test_default_eval_depth_handles_tiff_pattern(self) -> None:
         """The default must clear the bar that ``tiff.hexpat`` sets explicitly.
 
-        ``vendor/ImHex-Patterns/patterns/tiff.hexpat`` bumps ``eval_depth`` to
-        ``100``. The default must be at least that high so users can run the
-        TIFF pattern (and similar parent-relative patterns) without manually
-        editing the source.
+        The upstream vendor pattern collection's ``patterns/tiff.hexpat`` bumps
+        ``eval_depth`` to ``100``. The default must be at least that high so
+        users can run the TIFF pattern (and similar parent-relative patterns)
+        without manually editing the source.
         """
         assert DEFAULT_EVAL_DEPTH >= 100
 
