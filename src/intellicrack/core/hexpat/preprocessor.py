@@ -12,7 +12,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from intellicrack.core.hexpat._pragma import PragmaInfo
+from intellicrack.core.hexpat._pragma import (
+    DEFAULT_ARRAY_LIMIT,
+    DEFAULT_EVAL_DEPTH,
+    DEFAULT_PATTERN_LIMIT,
+    DEFAULT_POINTER_SIZE,
+    PragmaInfo,
+)
 from intellicrack.core.hexpat.errors import HexPatPreprocessorError
 from intellicrack.core.logging import get_logger
 
@@ -112,20 +118,24 @@ class HexPatPreprocessor:
         mime: str | None = None
         magic_list: list[tuple[int, bytes]] = []
         base_address: int = 0
-        eval_depth: int = 32
-        array_limit: int = 0x10000
-        pattern_limit: int = 0x40000
+        eval_depth: int = DEFAULT_EVAL_DEPTH
+        array_limit: int = DEFAULT_ARRAY_LIMIT
+        pattern_limit: int = DEFAULT_PATTERN_LIMIT
         author: str | None = None
         description: str | None = None
-        pointer_size: int = 8
+        pointer_size: int = DEFAULT_POINTER_SIZE
         bitfield_order: str | None = None
 
         processed = self._process_source(source, file_path, depth=0)
 
+        output_lines: list[str] = []
         for line in processed.splitlines():
             stripped = line.strip()
             if not stripped.startswith("#pragma"):
+                output_lines.append(line)
                 continue
+
+            output_lines.append(f"// hexpat-pragma: {stripped[len('#pragma') :].strip()}")
 
             m = _PRAGMA_ENDIAN_RE.match(stripped)
             if m:
@@ -180,14 +190,6 @@ class HexPatPreprocessor:
             if m := _PRAGMA_POINTER_SIZE_RE.match(stripped):
                 pointer_size = int(m.group(1))
                 continue
-
-        output_lines: list[str] = []
-        for line in processed.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("#pragma"):
-                output_lines.append("")
-            else:
-                output_lines.append(line)
 
         pragma = PragmaInfo(
             endian=endian,
@@ -723,8 +725,12 @@ class HexPatPreprocessor:
 def extract_pragmas_fast(source: str) -> PragmaInfo:
     """Extract pragma metadata from source without full preprocessing.
 
-    Reads only lines starting with #pragma for fast metadata extraction.
-    Used by PatternRegistry for indexing .hexpat files.
+    Scans every line of the source for ``#pragma`` directives. Pragmas in
+    common .hexpat files are emitted in the file header, but vendor patterns
+    occasionally interleave additional pragmas (for example ``#pragma debug``
+    blocks or pragma-controlled feature toggles) deeper in the source. This
+    function therefore scans the full file rather than truncating to a fixed
+    line window so that no pragma is silently dropped during indexing.
 
     Args:
         source: The .hexpat source code.
@@ -736,15 +742,15 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
     mime: str | None = None
     magic_list: list[tuple[int, bytes]] = []
     base_address: int = 0
-    eval_depth: int = 32
-    array_limit: int = 0x10000
-    pattern_limit: int = 0x40000
+    eval_depth: int = DEFAULT_EVAL_DEPTH
+    array_limit: int = DEFAULT_ARRAY_LIMIT
+    pattern_limit: int = DEFAULT_PATTERN_LIMIT
     author: str | None = None
     description: str | None = None
-    pointer_size: int = 8
+    pointer_size: int = DEFAULT_POINTER_SIZE
     bitfield_order: str | None = None
 
-    for line in source.splitlines()[:80]:
+    for line in source.splitlines():
         stripped = line.strip()
         if not stripped.startswith("#pragma"):
             continue
