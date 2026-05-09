@@ -459,8 +459,15 @@ def test_f0011_resolve_symbol_raises_on_unresolved() -> None:
         _run(driver())
 
 
-def test_f0012_compile_typescript_reuses_compiler_instance() -> None:
-    """F-0012: ``frida.Compiler`` must be reused, not instantiated per call."""
+def test_f0012_compile_typescript_reuses_compiler_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F-0012: ``frida.Compiler`` must be reused, not instantiated per call.
+
+    Args:
+        monkeypatch: Pytest fixture used to swap ``frida.Compiler`` with a
+            recording fake for the duration of the test.
+    """
     bridge = FridaBridge()
     instance_counter: list[int] = [0]
     build_log: list[str] = []
@@ -485,21 +492,17 @@ def test_f0012_compile_typescript_reuses_compiler_instance() -> None:
             build_log.append(entrypoint)
             return "compiled-js"
 
-    real_compiler = frida.Compiler
-    frida.Compiler = _FakeCompiler  # type: ignore[misc]
-    try:
+    monkeypatch.setattr(frida, "Compiler", _FakeCompiler)
 
-        async def driver() -> tuple[str, str]:
-            r1 = await bridge.compile_typescript("console.log(1);")
-            r2 = await bridge.compile_typescript("console.log(2);")
-            return r1, r2
+    async def driver() -> tuple[str, str]:
+        r1 = await bridge.compile_typescript("console.log(1);")
+        r2 = await bridge.compile_typescript("console.log(2);")
+        return r1, r2
 
-        out = _run(driver())
-        assert out == ("compiled-js", "compiled-js")
-        assert instance_counter[0] == 1, f"compiler instances created: {instance_counter[0]}"
-        assert len(build_log) == 2
-    finally:
-        frida.Compiler = real_compiler  # type: ignore[misc]
+    out = _run(driver())
+    assert out == ("compiled-js", "compiled-js")
+    assert instance_counter[0] == 1, f"compiler instances created: {instance_counter[0]}"
+    assert len(build_log) == 2
 
 
 def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:
