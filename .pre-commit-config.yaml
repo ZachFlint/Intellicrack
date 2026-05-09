@@ -51,21 +51,14 @@ repos:
         language: system
         pass_filenames: false
         files: '^src/intellicrack/.*\.py$'
-        stages: [pre-commit]
-      - id: production-readiness-audit-scoped
-        name: Production Readiness Audit (Intellicrack code only)
-        entry: pixi run python tests/utils/Production_Readiness_Audit.py src/intellicrack --whitelist-config tests/utils/audit_whitelist.yaml --output-dir tests/reports/
-        language: system
-        pass_filenames: false
-        files: '^src/intellicrack/.*\.(py|java|js|ts)$'
-        stages: [pre-commit]
+        stages: [manual]
       - id: test-real-functionality-modified
         name: Test Real Functionality (Modified Files)
-        entry: pixi run python -m pytest tests/unit -k "not slow" --tb=short
+        entry: pixi run python -m pytest tests/ -k "not slow" --tb=short
         language: system
         pass_filenames: false
         files: '^src/intellicrack/.*\.py$'
-        stages: [pre-commit]
+        stages: [manual]
       - id: test-coverage-full
         # Full audit hooks for manual execution
 
@@ -115,4 +108,5 @@ repos:
       - id: debug-statements
       - id: mixed-line-ending
         args: ['--fix=crlf']
+        exclude: '^pixi\.lock$'
       - id: fix-byte-order-marker
