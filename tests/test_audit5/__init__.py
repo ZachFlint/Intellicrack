@@ -2,5 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-
-"""Audit5 regression tests, organised by remediation work unit."""
+"""Regression tests for audit5 remediation units."""
