@@ -305,10 +305,12 @@ class _StubBridgeBase(X64DbgBridge):
             dict[str, Any]: Canned PEB response.
 
         Raises:
-            ToolError: When ``stub_peb_error`` was set.
+            stub_peb_error: When set, propagates the scripted ``ToolError``
+                so callers can exercise the failure path.
         """
-        if self.stub_peb_error is not None:
-            raise self.stub_peb_error
+        stub_peb_error: ToolError | None = self.stub_peb_error
+        if stub_peb_error is not None:
+            raise stub_peb_error
         return dict(self.stub_peb)
 
     async def write_memory(self, address: int, data: bytes) -> int:
@@ -322,10 +324,12 @@ class _StubBridgeBase(X64DbgBridge):
             int: Number of bytes "written".
 
         Raises:
-            ToolError: When ``stub_write_error`` was set.
+            stub_write_error: When set, propagates the scripted ``ToolError``
+                so callers can exercise the failure path.
         """
-        if self.stub_write_error is not None:
-            raise self.stub_write_error
+        stub_write_error: ToolError | None = self.stub_write_error
+        if stub_write_error is not None:
+            raise stub_write_error
         self.stub_writes.append((address, bytes(data)))
         return len(data)
 
