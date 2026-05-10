@@ -12,9 +12,11 @@ from __future__ import annotations
 import asyncio
 import math
 import os
+import re
 import struct
 import sys
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
@@ -212,6 +214,70 @@ _PE_RESOURCE_TYPE_NAMES: dict[int, str] = {
     16: "RT_VERSION",
     24: "RT_MANIFEST",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class _ResourcePathLabels:
+    """Path labels accumulated while walking the PE resource tree.
+
+    Attributes:
+        type_id: Resolved Type id when available (depth >= 1, integer
+            type entry).
+        type_name: Resolved Type string name when available (depth >= 1).
+        res_id: Resolved Name/Id resource id when available (depth >= 2,
+            integer entry).
+        res_name: Resolved Name string when available (depth >= 2).
+    """
+
+    type_id: int | None = None
+    type_name: str | None = None
+    res_id: int | None = None
+    res_name: str | None = None
+
+    def descend(
+        self,
+        *,
+        depth: int,
+        is_named: bool,
+        entry_id: int,
+        entry_str: str | None,
+    ) -> _ResourcePathLabels:
+        """Return a new label set for the directory below ``self``.
+
+        Args:
+            depth: Current depth of the entry being descended into
+                (0 = Type level, 1 = Name/Id level).
+            is_named: Whether the entry's name field is a string.
+            entry_id: Numeric id (when ``is_named`` is False).
+            entry_str: Decoded string name (when ``is_named`` is True).
+
+        Returns:
+            _ResourcePathLabels: Updated label set for the child level.
+        """
+        next_type_id = self.type_id
+        next_type_name = self.type_name
+        next_res_id = self.res_id
+        next_res_name = self.res_name
+        if depth == 0:
+            if is_named:
+                next_type_id = None
+                next_type_name = entry_str
+            else:
+                next_type_id = entry_id
+                next_type_name = _PE_RESOURCE_TYPE_NAMES.get(entry_id, f"RT_{entry_id}")
+        elif depth == 1:
+            if is_named:
+                next_res_id = None
+                next_res_name = entry_str
+            else:
+                next_res_id = entry_id
+                next_res_name = None
+        return _ResourcePathLabels(
+            type_id=next_type_id,
+            type_name=next_type_name,
+            res_id=next_res_id,
+            res_name=next_res_name,
+        )
 
 
 _ERR_REQUIRES_WINDOWS = "requires Windows platform"
@@ -4315,6 +4381,11 @@ class X64DbgBridge(DebuggerBridge):
     ) -> list[dict[str, Any]]:
         """Search memory for a hex pattern with optional wildcards.
 
+        Both the no-wildcard and wildcard branches stream each readable
+        region in ``MAX_MEMORY_READ_SIZE`` chunks while keeping a rolling
+        tail of ``len(pattern) - 1`` bytes between chunks so matches that
+        span a chunk boundary are not missed.
+
         Args:
             pattern: Hex pattern string with optional '??' wildcards
                 (e.g. "48 8B ?? 90" or "488B??90").
@@ -4346,28 +4417,122 @@ class X64DbgBridge(DebuggerBridge):
             else:
                 pat_bytes.append(int(token, 16))
 
-        pat_len = len(pat_bytes)
         regions = await self.get_memory_regions()
         matches: list[dict[str, Any]] = []
 
         for region in regions:
             if "r" not in region.protection:
                 continue
-            try:
-                data = await self.read_memory(region.base_address, min(region.size, MAX_MEMORY_READ_SIZE))
-            except ToolError as exc:
-                _logger.debug("pattern_search_region_read_failed", base=hex(region.base_address), error=str(exc))
-                continue
-
-            for i in range(len(data) - pat_len + 1):
-                matched = not any(pat_bytes[j] is not None and data[i + j] != pat_bytes[j] for j in range(pat_len))
-                if matched:
-                    addr = region.base_address + i
-                    if addr % alignment == 0:
-                        matches.append({"address": hex(addr), "offset": addr})
+            await self._scan_region_chunks_wildcard(region, pat_bytes, alignment, matches)
 
         _logger.debug("pattern_search_completed", matches=len(matches))
         return matches
+
+    async def _scan_region_chunks_wildcard(
+        self,
+        region: MemoryRegion,
+        pat_bytes: list[int | None],
+        alignment: int,
+        matches: list[dict[str, Any]],
+    ) -> None:
+        """Scan one memory region for a wildcard pattern in chunks with rolling overlap.
+
+        Args:
+            region: Memory region metadata.
+            pat_bytes: Wildcard pattern; ``None`` entries match any byte.
+            alignment: Only return matches at addresses divisible by this value.
+            matches: Output list that match dicts are appended to.
+        """
+        pat_len = len(pat_bytes)
+        if pat_len == 0:
+            return
+        compiled = self._compile_wildcard_regex(pat_bytes)
+        overlap = pat_len - 1
+        region_end = region.base_address + region.size
+        chunk_start = region.base_address
+        carry: bytes = b""
+        carry_addr = chunk_start
+
+        while chunk_start < region_end:
+            read_size = min(MAX_MEMORY_READ_SIZE, region_end - chunk_start)
+            try:
+                chunk = await self.read_memory(chunk_start, read_size)
+            except ToolError as exc:
+                _logger.debug(
+                    "pattern_search_region_read_failed",
+                    base=hex(chunk_start),
+                    size=read_size,
+                    error=str(exc),
+                )
+                carry = b""
+                chunk_start += read_size
+                carry_addr = chunk_start
+                continue
+            if not chunk:
+                break
+
+            buffer = carry + chunk
+            self._extend_wildcard_matches(buffer, carry_addr, compiled, pat_len, alignment, matches)
+
+            chunk_start += read_size
+            if overlap > 0 and chunk_start < region_end:
+                carry = buffer[-overlap:] if len(buffer) >= overlap else buffer
+                carry_addr = chunk_start - len(carry)
+            else:
+                carry = b""
+                carry_addr = chunk_start
+
+    @staticmethod
+    def _compile_wildcard_regex(pat_bytes: list[int | None]) -> re.Pattern[bytes]:
+        """Compile a wildcard byte pattern to a ``re`` Pattern.
+
+        ``None`` bytes become ``b"."`` (any single byte under DOTALL);
+        concrete bytes become their escaped literal so a value like
+        ``0x2E`` ('.') is not interpreted as a regex metacharacter.
+
+        Args:
+            pat_bytes: Wildcard pattern; ``None`` entries match any byte.
+
+        Returns:
+            re.Pattern[bytes]: Compiled regex (DOTALL) for fast scanning.
+        """
+        parts: list[bytes] = [b"." if b is None else re.escape(bytes([b])) for b in pat_bytes]
+        return re.compile(b"".join(parts), re.DOTALL)
+
+    @staticmethod
+    def _extend_wildcard_matches(
+        buffer: bytes,
+        buffer_base: int,
+        compiled: re.Pattern[bytes],
+        pat_len: int,
+        alignment: int,
+        matches: list[dict[str, Any]],
+    ) -> None:
+        """Find every wildcard-pattern occurrence in ``buffer`` and append match dicts.
+
+        Iterates with ``re.search`` and advances by one byte after each
+        hit so overlapping matches are not skipped.
+
+        Args:
+            buffer: Raw memory buffer to search.
+            buffer_base: Virtual address of ``buffer[0]``.
+            compiled: Pre-compiled regex matching the wildcard pattern.
+            pat_len: Pattern length in bytes.
+            alignment: Only return matches at addresses divisible by this value.
+            matches: Output list that match dicts are appended to.
+        """
+        buffer_len = len(buffer)
+        if buffer_len < pat_len:
+            return
+        pos = 0
+        while pos <= buffer_len - pat_len:
+            match = compiled.search(buffer, pos)
+            if match is None:
+                return
+            addr = buffer_base + match.start()
+            if addr % alignment == 0:
+                matches.append({"address": hex(addr), "offset": addr})
+            pos = match.start() + 1
 
     async def run_to(self, address: int) -> dict[str, Any]:
         """Run execution until a specific address is reached.
@@ -4688,17 +4853,69 @@ class X64DbgBridge(DebuggerBridge):
     async def set_breakpoint_on_api(self, module: str, function: str) -> dict[str, Any]:
         """Set a breakpoint on an imported API function.
 
+        Resolves the function via x64dbg's expression evaluator
+        (``GetProcAddress(<module>,"<function>")``); when that yields a
+        non-zero VA the breakpoint is installed at the resolved address
+        through ``set_breakpoint``. When ``GetProcAddress`` returns 0
+        (unresolved forwarder, ordinal-only export, manifest-resolved
+        import, etc.) the call falls back to the historical
+        ``bpx module.function`` script command and surfaces
+        ``resolved_address: None`` / ``resolution_method: "bpx"`` so
+        callers can detect the unresolved case.
+
         Args:
             module: Module name (e.g. 'kernel32').
             function: Function name (e.g. 'CreateFileW').
 
         Returns:
-            dict[str, Any]: Dict with target and success status.
+            dict[str, Any]: Dict with ``success``, ``target``,
+            ``resolved_address`` (hex string of VA or ``None``),
+            ``resolution_method`` (``"GetProcAddress"`` or ``"bpx"``),
+            and ``breakpoint_id`` (only when set via ``set_breakpoint``).
         """
         target = f"{module}.{function}"
-        _logger.debug("x64dbg_command_queued", command="bpx", target=target)
+        _logger.debug("api_breakpoint_resolving", target=target)
+        resolution_expr = f'GetProcAddress({module},"{function}")'
+        try:
+            resolved_va = await self.evaluate_expression(resolution_expr)
+        except ToolError as exc:
+            _logger.debug(
+                "api_breakpoint_resolution_eval_failed",
+                target=target,
+                error=str(exc),
+            )
+            resolved_va = 0
+
+        if resolved_va > 0:
+            bp_id = await self.set_breakpoint(resolved_va, "software")
+            _logger.info(
+                "api_breakpoint_setting",
+                target=target,
+                resolved_address=hex(resolved_va),
+                method="GetProcAddress",
+                breakpoint_id=bp_id,
+            )
+            return {
+                "success": True,
+                "target": target,
+                "resolved_address": hex(resolved_va),
+                "resolution_method": "GetProcAddress",
+                "breakpoint_id": bp_id,
+            }
+
+        _logger.info(
+            "api_breakpoint_setting",
+            target=target,
+            resolved_address=None,
+            method="bpx",
+        )
         await self._send_pipe_command("exec", {"command": f"bpx {target}"})
-        return {"success": True, "target": target}
+        return {
+            "success": True,
+            "target": target,
+            "resolved_address": None,
+            "resolution_method": "bpx",
+        }
 
     async def dump_memory_to_file(self, address: int, size: int, path: str) -> dict[str, Any]:
         """Dump a memory region to a file on disk.
@@ -4911,6 +5128,12 @@ class X64DbgBridge(DebuggerBridge):
     ) -> tuple[list[dict[str, Any]], ToolError | None]:
         """Build per-export dicts from previously-read PE export tables.
 
+        Walks every named export reported by the PE export directory; no
+        cap is applied. When ``num_names`` exceeds the
+        ``PE_EXPORT_MAX`` soft threshold a warning log is emitted but
+        enumeration continues, and every entry carries an explicit
+        ``truncated`` field set to ``False``.
+
         Args:
             base_address: Module base address.
             module_name: Module name for diagnostic logging.
@@ -4926,7 +5149,14 @@ class X64DbgBridge(DebuggerBridge):
         addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, _ = tables
         exports: list[dict[str, Any]] = []
         last_error: ToolError | None = None
-        for i in range(min(num_names, PE_EXPORT_MAX)):
+        if num_names > PE_EXPORT_MAX:
+            _logger.warning(
+                "module_exports_large",
+                module=module_name,
+                num_names=num_names,
+                soft_limit=PE_EXPORT_MAX,
+            )
+        for i in range(num_names):
             name_rva = struct.unpack_from("<I", name_ptrs, i * 4)[0]
             ordinal_index = struct.unpack_from("<H", ordinal_table, i * 2)[0]
             func_rva = struct.unpack_from("<I", addr_table, ordinal_index * 4)[0]
@@ -4938,6 +5168,7 @@ class X64DbgBridge(DebuggerBridge):
                 "ordinal": ordinal,
                 "name": func_name,
                 "address": hex(base_address + func_rva),
+                "truncated": False,
             })
         return exports, last_error
 
@@ -5851,21 +6082,67 @@ class X64DbgBridge(DebuggerBridge):
     async def analyze_entropy(self, address: int, size: int, block_size: int = 256) -> list[dict[str, Any]]:
         """Analyze Shannon entropy of a memory region.
 
+        Reads each ``block_size``-byte block independently so a single
+        unreadable page (guarded, paged-out, or otherwise rejected by
+        ``ReadProcessMemory``) does not abort the whole scan. Each block
+        result carries ``readable`` to distinguish a block that yielded
+        zero entropy from one that could not be read; an explicit
+        ``error`` field captures the read-failure message when the block
+        could not be read.
+
         Args:
             address: Start address.
             size: Total bytes to analyze.
             block_size: Size of each entropy calculation block.
 
         Returns:
-            list[dict[str, Any]]: List of dicts with address, entropy value, and block size.
+            list[dict[str, Any]]: List of dicts with ``address``,
+            ``entropy``, ``size``, ``readable``, and (when not readable)
+            ``error``.
+
+        Raises:
+            ToolError: If ``block_size`` or ``size`` is non-positive.
         """
+        if block_size <= 0:
+            msg = f"analyze_entropy: block_size must be positive, got {block_size}"
+            raise ToolError(msg, tool_name="x64dbg")
+        if size <= 0:
+            msg = f"analyze_entropy: size must be positive, got {size}"
+            raise ToolError(msg, tool_name="x64dbg")
         _logger.debug("entropy_analyzing", address=hex(address), size=size, block_size=block_size)
-        data = await self.read_memory(address, size)
         results: list[dict[str, Any]] = []
-        for offset in range(0, len(data), block_size):
-            block = data[offset : offset + block_size]
+        skipped = 0
+        for offset in range(0, size, block_size):
+            current_size = min(block_size, size - offset)
+            current_addr = address + offset
+            try:
+                block = await self.read_memory(current_addr, current_size)
+            except ToolError as exc:
+                skipped += 1
+                _logger.debug(
+                    "entropy_block_read_failed",
+                    address=hex(current_addr),
+                    size=current_size,
+                    error=str(exc),
+                )
+                results.append({
+                    "address": hex(current_addr),
+                    "entropy": 0.0,
+                    "size": current_size,
+                    "readable": False,
+                    "error": str(exc),
+                })
+                continue
             if not block:
-                break
+                results.append({
+                    "address": hex(current_addr),
+                    "entropy": 0.0,
+                    "size": 0,
+                    "readable": False,
+                    "error": "empty read",
+                })
+                skipped += 1
+                continue
             freq: list[int] = [0] * 256
             for b in block:
                 freq[b] += 1
@@ -5876,10 +6153,19 @@ class X64DbgBridge(DebuggerBridge):
                     p = f / block_len
                     entropy -= p * math.log2(p)
             results.append({
-                "address": hex(address + offset),
+                "address": hex(current_addr),
                 "entropy": round(entropy, 4),
                 "size": block_len,
+                "readable": True,
             })
+        if skipped:
+            _logger.debug(
+                "entropy_blocks_skipped",
+                address=hex(address),
+                size=size,
+                skipped=skipped,
+                total=len(results),
+            )
         return results
 
     async def yara_scan(
@@ -6543,13 +6829,24 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "breakpoints_set": len(callbacks)}
 
     async def get_resources(self, module_name: str) -> list[dict[str, Any]]:
-        """Get PE resource entries for a module.
+        """Get PE resource leaf entries for a module.
+
+        Walks the resource tree recursively (Type -> Name/Id -> Language ->
+        DataEntry), reading every directory level via the in-memory PE
+        image and emitting one dict per leaf ``IMAGE_RESOURCE_DATA_ENTRY``
+        with the full triple (type, id, language) plus the leaf's RVA,
+        size, and code page.
 
         Args:
             module_name: Module name.
 
         Returns:
-            list[dict[str, Any]]: List of resource dicts with type, id, size, and rva.
+            list[dict[str, Any]]: List of resource leaf dicts. Each entry
+            contains ``type_id``, ``type_name`` (well-known
+            ``RT_*`` name when known, otherwise ``"RT_<id>"``),
+            ``id`` (numeric resource id), ``name`` (string name when
+            applicable), ``language``, ``rva`` (hex string of leaf VA),
+            ``size`` (bytes), and ``code_page``.
         """
         _logger.debug("resources_reading", module=module_name)
         base_address = await self._resolve_module_base(module_name)
@@ -6564,19 +6861,169 @@ class X64DbgBridge(DebuggerBridge):
         if rsrc_rva == 0 or rsrc_size == 0:
             return []
 
-        rsrc_header = await self.read_memory(base_address + rsrc_rva, min(rsrc_size, 4096))
-        num_named = struct.unpack_from("<H", rsrc_header, 12)[0]
-        num_id = struct.unpack_from("<H", rsrc_header, 14)[0]
+        rsrc_blob = await self.read_memory(base_address + rsrc_rva, rsrc_size)
         resources: list[dict[str, Any]] = []
-        offset = 16
-        for i in range(num_named + num_id):
-            if offset + 8 > len(rsrc_header):
-                break
-            type_id = struct.unpack_from("<I", rsrc_header, offset)[0]
-            resources.append({"index": i, "type_id": type_id, "type_name": _PE_RESOURCE_TYPE_NAMES.get(type_id, f"RT_{type_id}")})
-            offset += 8
-
+        self._walk_resource_directory(
+            blob=rsrc_blob,
+            module_base=base_address,
+            dir_offset=0,
+            depth=0,
+            resources=resources,
+            labels=_ResourcePathLabels(),
+        )
+        _logger.debug("resources_walk_completed", module=module_name, count=len(resources))
         return resources
+
+    def _walk_resource_directory(
+        self,
+        *,
+        blob: bytes,
+        module_base: int,
+        dir_offset: int,
+        depth: int,
+        resources: list[dict[str, Any]],
+        labels: _ResourcePathLabels,
+    ) -> None:
+        """Recursively walk one IMAGE_RESOURCE_DIRECTORY level.
+
+        Args:
+            blob: Raw resource section bytes copied from the target.
+            module_base: Module base VA (used to resolve leaf RVAs).
+            dir_offset: Offset of the current directory inside ``blob``.
+            depth: Current depth (0=Type, 1=Name/Id, 2=Language).
+            resources: Output list to append leaf dicts to.
+            labels: Path-so-far labels (type_id, type_name, res_id,
+                res_name) accumulated by the parent directories.
+        """
+        header_size = 16
+        if dir_offset + header_size > len(blob):
+            return
+        num_named = struct.unpack_from("<H", blob, dir_offset + 12)[0]
+        num_id = struct.unpack_from("<H", blob, dir_offset + 14)[0]
+        cursor = dir_offset + header_size
+        for _ in range(num_named + num_id):
+            cursor = self._walk_resource_entry(
+                blob=blob,
+                module_base=module_base,
+                cursor=cursor,
+                depth=depth,
+                resources=resources,
+                labels=labels,
+            )
+            if cursor < 0:
+                return
+
+    def _walk_resource_entry(
+        self,
+        *,
+        blob: bytes,
+        module_base: int,
+        cursor: int,
+        depth: int,
+        resources: list[dict[str, Any]],
+        labels: _ResourcePathLabels,
+    ) -> int:
+        """Process a single IMAGE_RESOURCE_DIRECTORY_ENTRY.
+
+        Args:
+            blob: Raw resource section bytes.
+            module_base: Module base VA.
+            cursor: Offset of the entry inside ``blob``.
+            depth: Current tree depth.
+            resources: Output list for leaf dicts.
+            labels: Path labels accumulated by parent directories.
+
+        Returns:
+            int: The new cursor (advanced by 8) when processing
+            succeeded; -1 when the entry was truncated and the caller
+            must abort.
+        """
+        entry_size = 8
+        if cursor + entry_size > len(blob):
+            return -1
+        name_field = struct.unpack_from("<I", blob, cursor)[0]
+        offset_to_data = struct.unpack_from("<I", blob, cursor + 4)[0]
+        next_cursor = cursor + entry_size
+
+        is_named = bool(name_field & 0x80000000)
+        entry_id_value: int = (name_field & 0x7FFFFFFF) if is_named else (name_field & 0xFFFFFFFF)
+        entry_str: str | None = self._read_resource_name_string(blob, name_field & 0x7FFFFFFF) if is_named else None
+
+        is_subdir = bool(offset_to_data & 0x80000000)
+        child_offset = offset_to_data & 0x7FFFFFFF
+        if is_subdir:
+            self._walk_resource_directory(
+                blob=blob,
+                module_base=module_base,
+                dir_offset=child_offset,
+                depth=depth + 1,
+                resources=resources,
+                labels=labels.descend(
+                    depth=depth,
+                    is_named=is_named,
+                    entry_id=entry_id_value,
+                    entry_str=entry_str,
+                ),
+            )
+        else:
+            language = entry_id_value if not is_named else 0
+            leaf = self._read_resource_data_entry(blob, module_base, child_offset)
+            if leaf is not None:
+                leaf_va, leaf_size, code_page = leaf
+                resources.append({
+                    "type_id": labels.type_id,
+                    "type_name": labels.type_name,
+                    "id": labels.res_id,
+                    "name": labels.res_name,
+                    "language": language,
+                    "rva": hex(leaf_va),
+                    "size": leaf_size,
+                    "code_page": code_page,
+                })
+        return next_cursor
+
+    @staticmethod
+    def _read_resource_name_string(blob: bytes, offset: int) -> str | None:
+        """Read an ``IMAGE_RESOURCE_DIR_STRING_U`` from the resource blob.
+
+        Args:
+            blob: Raw resource section bytes.
+            offset: Offset within ``blob`` to the IMAGE_RESOURCE_DIR_STRING_U.
+
+        Returns:
+            str | None: Decoded UTF-16-LE string, or ``None`` on read failure.
+        """
+        if offset + 2 > len(blob):
+            return None
+        length = struct.unpack_from("<H", blob, offset)[0]
+        start = offset + 2
+        end = start + length * 2
+        if end > len(blob):
+            return None
+        return blob[start:end].decode("utf-16-le", errors="replace")
+
+    @staticmethod
+    def _read_resource_data_entry(
+        blob: bytes,
+        module_base: int,
+        offset: int,
+    ) -> tuple[int, int, int] | None:
+        """Read an ``IMAGE_RESOURCE_DATA_ENTRY`` at ``offset`` in the blob.
+
+        Args:
+            blob: Raw resource section bytes.
+            module_base: Module base VA used to translate the leaf's image-relative RVA.
+            offset: Offset within ``blob`` of the leaf entry.
+
+        Returns:
+            tuple[int, int, int] | None: ``(leaf_va, size, code_page)`` or
+            ``None`` when the entry is truncated.
+        """
+        entry_size = 16
+        if offset + entry_size > len(blob):
+            return None
+        data_rva, size, code_page = struct.unpack_from("<III", blob, offset)
+        return module_base + int(data_rva), int(size), int(code_page)
 
     @staticmethod
     async def get_privileges() -> list[dict[str, Any]]:
