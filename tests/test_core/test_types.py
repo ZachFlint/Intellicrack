@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import fields
 from pathlib import Path
 
+from intellicrack.core.session import Session
 from intellicrack.core.types import (
     AttachError,
     AuthenticationError,
@@ -40,7 +41,6 @@ from intellicrack.core.types import (
     RegisterState,
     SandboxError,
     SectionInfo,
-    Session,
     StringInfo,
     ThreadInfo,
     ToolCall,
