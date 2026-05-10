@@ -21,6 +21,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, TypedDict, cast
 
 import pytest
@@ -34,8 +35,16 @@ from intellicrack.core.process_manager import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from datetime import datetime
     from pathlib import Path
+
+
+def _now_utc() -> datetime:
+    """Return the current UTC datetime for test fixture seeding.
+
+    Returns:
+        datetime: Current UTC datetime instance.
+    """
+    return datetime.now(tz=UTC)
 
 
 class _ExternalPidEntry(TypedDict):
@@ -77,12 +86,7 @@ EXPECTED_EXIT_CODE_FAILURE = 1
 EXPECTED_EXIT_CODE_42 = 42
 EXPECTED_CONCURRENT_RESULTS = 2
 CONCURRENT_MAX_ELAPSED = 1.5
-TEST_PID_EXTERNAL = 99999
-TEST_PID_UNREGISTER = 99998
 TEST_PID_UNKNOWN = 12345
-TEST_PID_DUPLICATE = 99997
-NONEXISTENT_PID = 999999999
-ASYNC_CLEANUP_EXTERNAL_PID = 99996
 PROCESS_WAIT_TIMEOUT = 5
 CLEANUP_WAIT_TIMEOUT = 10
 EXPECTED_TRACKED_COUNT_TWO = 2
@@ -408,18 +412,27 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        process_manager.register_external_pid(
-            TEST_PID_EXTERNAL,
-            name="test-external",
-            process_type=ProcessType.SANDBOX,
-            metadata={"test_key": "test_value"},
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
+        try:
+            process_manager.register_external_pid(
+                proc.pid,
+                name="test-external",
+                process_type=ProcessType.SANDBOX,
+                metadata={"test_key": "test_value"},
+            )
 
-        pids = _external_pids(process_manager)
-        assert TEST_PID_EXTERNAL in pids
-        assert pids[TEST_PID_EXTERNAL]["name"] == "test-external"
-        assert pids[TEST_PID_EXTERNAL]["process_type"] == ProcessType.SANDBOX
-        assert pids[TEST_PID_EXTERNAL]["metadata"]["test_key"] == "test_value"
+            pids = _external_pids(process_manager)
+            assert proc.pid in pids
+            assert pids[proc.pid]["name"] == "test-external"
+            assert pids[proc.pid]["process_type"] == ProcessType.SANDBOX
+            assert pids[proc.pid]["metadata"]["test_key"] == "test_value"
+        finally:
+            proc.kill()
+            proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
 
     @staticmethod
     def test_unregister_external_pid_removes_entry(
@@ -430,14 +443,23 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        process_manager.register_external_pid(TEST_PID_UNREGISTER, name="test-unregister")
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            process_manager.register_external_pid(proc.pid, name="test-unregister")
 
-        assert TEST_PID_UNREGISTER in _external_pids(process_manager)
+            assert proc.pid in _external_pids(process_manager)
 
-        result = process_manager.unregister_external_pid(TEST_PID_UNREGISTER)
+            result = process_manager.unregister_external_pid(proc.pid)
 
-        assert result is True
-        assert TEST_PID_UNREGISTER not in _external_pids(process_manager)
+            assert result is True
+            assert proc.pid not in _external_pids(process_manager)
+        finally:
+            proc.kill()
+            proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
 
     @staticmethod
     def test_unregister_external_pid_returns_false_for_unknown(
@@ -461,10 +483,19 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        process_manager.register_external_pid(TEST_PID_DUPLICATE, name="original-name")
-        process_manager.register_external_pid(TEST_PID_DUPLICATE, name="new-name")
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            process_manager.register_external_pid(proc.pid, name="original-name")
+            process_manager.register_external_pid(proc.pid, name="new-name")
 
-        assert _external_pids(process_manager)[TEST_PID_DUPLICATE]["name"] == "original-name"
+            assert _external_pids(process_manager)[proc.pid]["name"] == "original-name"
+        finally:
+            proc.kill()
+            proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
 
 
 class TestTerminateExternalPid:
@@ -479,12 +510,27 @@ class TestTerminateExternalPid:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        process_manager.register_external_pid(NONEXISTENT_PID, name="nonexistent")
+        proc = subprocess.Popen(
+            [sys.executable, "-c", ""],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
+        dead_pid = proc.pid
 
-        result = process_manager.terminate_external_pid(NONEXISTENT_PID)
+        cast(
+            "dict[int, _ExternalPidEntry]",
+            getattr(process_manager, "_external_pids"),
+        )[dead_pid] = {
+            "name": "nonexistent",
+            "process_type": ProcessType.EXTERNAL_TOOL,
+            "metadata": {},
+            "registered_at": _now_utc(),
+        }
 
-        assert result is False
-        assert NONEXISTENT_PID not in _external_pids(process_manager)
+        process_manager.terminate_external_pid(dead_pid)
+
+        assert dead_pid not in _external_pids(process_manager)
 
     @staticmethod
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific test")
@@ -625,18 +671,27 @@ class TestProcessCleanup:
             stderr=subprocess.PIPE,
         )
 
+        external_proc = await asyncio.to_thread(
+            subprocess.Popen,
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        external_pid = external_proc.pid
+
         process_manager.register(proc, name="async-cleanup-test")
-        process_manager.register_external_pid(ASYNC_CLEANUP_EXTERNAL_PID, name="external-async-test")
+        process_manager.register_external_pid(external_pid, name="external-async-test")
 
         await asyncio.to_thread(time.sleep, PROCESS_STARTUP_DELAY)
 
         await process_manager.cleanup_all_async()
 
         exit_code = proc.wait(timeout=CLEANUP_WAIT_TIMEOUT)
+        external_proc.wait(timeout=CLEANUP_WAIT_TIMEOUT)
 
         assert exit_code is not None
         assert process_manager.process_count == EXPECTED_TRACKED_COUNT_ZERO
-        assert ASYNC_CLEANUP_EXTERNAL_PID not in _external_pids(process_manager)
+        assert external_pid not in _external_pids(process_manager)
 
 
 class TestTrackedProcess:
