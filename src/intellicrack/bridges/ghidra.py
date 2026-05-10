@@ -10,14 +10,17 @@ ghidra_bridge.
 
 from __future__ import annotations
 
+import ast
 import asyncio
 import hashlib
 import importlib
 import importlib.util
+import itertools
 import json
 import re
 import socket
 import tempfile
+import textwrap
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -57,10 +60,66 @@ from intellicrack.core.types import (
 _logger = get_logger(__name__)
 
 _RemoteExecFunc = Callable[[str], object]
+_RemoteEvalFunc = Callable[[str], object]
 
 _JAVA_SIGNED_THRESHOLD = 127
 _JAVA_SIGNED_RANGE = 256
 _ARCH_64_POINTER_BYTES = 8
+
+_RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
+
+_remote_call_counter: itertools.count[int] = itertools.count(1)
+
+
+def prepare_remote_script(code: str) -> tuple[str, str | None]:
+    """Dedent a Jython script and rewrite any trailing expression as a sentinel assignment.
+
+    The Ghidra bridge transports user scripts to a remote Jython
+    interpreter where they are run via Python's :func:`exec`, which
+    discards the value of any trailing expression statement. This
+    helper rewrites such scripts so the trailing expression value is
+    preserved on the remote interpreter as a uniquely named global
+    variable, suitable for retrieval via a follow-up ``remote_eval``.
+
+    Args:
+        code: Jython source as authored at the call site.
+
+    Returns:
+        tuple[str, str | None]: Tuple of (rewritten Jython source,
+        sentinel variable name or ``None`` when there is no trailing
+        expression to capture).
+
+    Raises:
+        ToolError: If the Jython source fails to parse.
+    """
+    dedented = textwrap.dedent(code).strip("\n")
+    if not dedented.strip():
+        return "", None
+
+    try:
+        tree = ast.parse(dedented, mode="exec")
+    except SyntaxError as exc:
+        error_message = f"Failed to parse remote script: {exc}"
+        raise ToolError(error_message) from exc
+
+    if not tree.body:
+        return dedented, None
+
+    last_stmt = tree.body[-1]
+    if not isinstance(last_stmt, ast.Expr):
+        return dedented, None
+
+    sentinel = f"{_RESULT_SENTINEL_BASE}{next(_remote_call_counter)}"
+    assign_node = ast.Assign(
+        targets=[ast.Name(id=sentinel, ctx=ast.Store())],
+        value=last_stmt.value,
+    )
+    ast.copy_location(assign_node, last_stmt)
+    ast.fix_missing_locations(assign_node)
+    tree.body[-1] = assign_node
+    rewritten_source = ast.unparse(tree)
+    return rewritten_source, sentinel
+
 
 _ERR_NOT_CONNECTED = "Ghidra not connected"
 _ERR_IMPORT_FILE_FAILED = "Failed to import binary into Ghidra"
@@ -1092,6 +1151,28 @@ class GhidraBridge(StaticAnalysisBridge):
         _logger.info("ghidra_set_port_started", port=port)
         self._port = port
 
+    def attach_remote_bridge(self, bridge_client: object) -> None:
+        """Attach an externally constructed ``ghidra_bridge`` client.
+
+        Provides an explicit seam for callers that already own a live
+        ``ghidra_bridge`` RPC client (for example, when sharing a
+        long-lived headless server across tools, or when supplying a
+        compatible double for deterministic testing). The client must
+        expose ``remote_exec`` and ``remote_eval`` methods matching the
+        upstream :class:`jfx_bridge.bridge.BridgeClient` contract; both
+        are invoked through :meth:`_execute_remote` for every Jython
+        script the bridge dispatches.
+
+        Args:
+            bridge_client: Object exposing ``remote_exec(code: str)`` and
+                ``remote_eval(expr: str)`` matching the upstream
+                ``ghidra_bridge`` client semantics.
+        """
+        self._bridge = bridge_client
+        self.state.connected = True
+        self.state.tool_running = True
+        _logger.info("ghidra_bridge_attached", port=self._port)
+
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the Ghidra bridge.
 
@@ -1768,7 +1849,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 functions = []
                 fm = currentProgram.getFunctionManager()
                 for func in fm.getFunctions(True):
@@ -1780,34 +1862,37 @@ metadata
                         'return_type': str(func.getReturnType()),
                     })
                 functions
-            """)
-
-            pattern = re.compile(filter_pattern) if filter_pattern else None
-            functions: list[FunctionInfo] = []
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            for f in result_list:
-                name = str(f.get("name", ""))
-                if pattern and not pattern.search(name):
-                    continue
-
-                functions.append(
-                    FunctionInfo(
-                        name=name,
-                        address=int(f.get("address", 0)),
-                        size=int(f.get("size", 0)),
-                        calling_convention=str(f.get("calling_convention", "unknown")),
-                        return_type=str(f.get("return_type", "unknown")),
-                        parameters=[],
-                        local_variables=[],
-                        decompiled_code=None,
-                        disassembly=None,
-                    ),
-                )
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_functions_failed", filter_pattern=filter_pattern)
-            return []
+            error_message = f"Get functions failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        pattern = re.compile(filter_pattern) if filter_pattern else None
+        functions: list[FunctionInfo] = []
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        for f in result_list:
+            name = str(f.get("name", ""))
+            if pattern and not pattern.search(name):
+                continue
+
+            functions.append(
+                FunctionInfo(
+                    name=name,
+                    address=int(f.get("address", 0)),
+                    size=int(f.get("size", 0)),
+                    calling_convention=str(f.get("calling_convention", "unknown")),
+                    return_type=str(f.get("return_type", "unknown")),
+                    parameters=[],
+                    local_variables=[],
+                    decompiled_code=None,
+                    disassembly=None,
+                ),
+            )
 
         return functions
 
@@ -1821,7 +1906,7 @@ metadata
             FunctionInfo | None: Function info or None if not found.
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected or the remote call fails.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
@@ -1829,7 +1914,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is not None:
@@ -1846,7 +1932,7 @@ metadata
                             'type': str(var.getDataType()),
                             'offset': var.getStackOffset(),
                         }})
-                    {{
+                    _func_info = {{
                         'name': func.getName(),
                         'address': func.getEntryPoint().getOffset(),
                         'size': func.getBody().getNumAddresses(),
@@ -1856,49 +1942,53 @@ metadata
                         'variables': vars,
                     }}
                 else:
-                    None
-            """)
-
-            if result is None:
-                return None
-
-            result_dict = cast("dict[str, Any]", result)
-
-            params = [
-                ParameterInfo(
-                    name=str(p.get("name", "")),
-                    type=str(p.get("type", "unknown")),
-                    size=0,
-                    location="unknown",
-                )
-                for p in cast("list[dict[str, Any]]", result_dict.get("parameters", []))
-            ]
-
-            variables = [
-                VariableInfo(
-                    name=str(v.get("name", "")),
-                    type=str(v.get("type", "unknown")),
-                    offset=int(v.get("offset", 0)),
-                    size=0,
-                )
-                for v in cast("list[dict[str, Any]]", result_dict.get("variables", []))
-            ]
-
-            return FunctionInfo(
-                name=str(result_dict.get("name", "")),
-                address=int(result_dict.get("address", 0)),
-                size=int(result_dict.get("size", 0)),
-                calling_convention=str(result_dict.get("calling_convention", "unknown")),
-                return_type=str(result_dict.get("return_type", "unknown")),
-                parameters=params,
-                local_variables=variables,
-                decompiled_code=None,
-                disassembly=None,
+                    _func_info = None
+                _func_info
+                """,
             )
-
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_function_failed", address=hex(address))
+            error_message = f"Get function failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if result is None:
             return None
+
+        result_dict = cast("dict[str, Any]", result)
+
+        params = [
+            ParameterInfo(
+                name=str(p.get("name", "")),
+                type=str(p.get("type", "unknown")),
+                size=0,
+                location="unknown",
+            )
+            for p in cast("list[dict[str, Any]]", result_dict.get("parameters", []))
+        ]
+
+        variables = [
+            VariableInfo(
+                name=str(v.get("name", "")),
+                type=str(v.get("type", "unknown")),
+                offset=int(v.get("offset", 0)),
+                size=0,
+            )
+            for v in cast("list[dict[str, Any]]", result_dict.get("variables", []))
+        ]
+
+        return FunctionInfo(
+            name=str(result_dict.get("name", "")),
+            address=int(result_dict.get("address", 0)),
+            size=int(result_dict.get("size", 0)),
+            calling_convention=str(result_dict.get("calling_convention", "unknown")),
+            return_type=str(result_dict.get("return_type", "unknown")),
+            parameters=params,
+            local_variables=variables,
+            decompiled_code=None,
+            disassembly=None,
+        )
 
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
@@ -1914,7 +2004,9 @@ metadata
             str: Decompiled C pseudocode.
 
         Raises:
-            ToolError: If Ghidra is not connected or decompilation fails.
+            ToolError: If Ghidra is not connected, no function exists at
+                ``address``, decompilation does not complete, or the
+                remote call fails.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
@@ -1923,7 +2015,8 @@ metadata
         max_instr_literal = str(self._decompiler_max_instructions) if self._decompiler_max_instructions is not None else "None"
         extra_literal = json.dumps(self._decompiler_options_extra)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 import json as _json
                 from ghidra.app.decompiler import DecompInterface
 
@@ -1948,24 +2041,50 @@ metadata
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
 
-                if func is not None:
+                if func is None:
+                    _decompile_outcome = {{'status': 'function_not_found', 'code': None, 'error': None}}
+                else:
                     results = ifc.decompileFunction(func, {self.DECOMPILE_TIMEOUT_SECONDS}, monitor)
                     if results.decompileCompleted():
-                        results.getDecompiledFunction().getC()
+                        _decompile_outcome = {{
+                            'status': 'ok',
+                            'code': results.getDecompiledFunction().getC(),
+                            'error': None,
+                        }}
                     else:
-                        "Decompilation failed"
-                else:
-                    "Function not found"
-            """)
-
-            return str(result) if result else "Decompilation failed"
-
+                        _decompile_outcome = {{
+                            'status': 'decompile_failed',
+                            'code': None,
+                            'error': str(results.getErrorMessage()) if results.getErrorMessage() else None,
+                        }}
+                _decompile_outcome
+                """,
+            )
         except ToolError:
             raise
         except Exception as exc:
             _logger.warning("ghidra_decompilation_failed", error=str(exc))
             msg = f"Decompilation failed: {exc}"
             raise ToolError(msg) from exc
+
+        if not isinstance(result, dict):
+            msg = "Decompilation failed: unexpected response from Ghidra"
+            raise ToolError(msg)
+
+        outcome = cast("dict[str, Any]", result)
+        status = str(outcome.get("status", ""))
+        if status == "ok":
+            code = outcome.get("code")
+            if not isinstance(code, str) or not code:
+                msg = "Decompilation produced empty output"
+                raise ToolError(msg)
+            return code
+        if status == "function_not_found":
+            msg = f"{_ERR_FUNCTION_NOT_FOUND}: {hex(address)}"
+            raise ToolError(msg)
+        error_detail = outcome.get("error")
+        msg = f"Decompilation failed at {hex(address)}: {error_detail or 'unknown error'}"
+        raise ToolError(msg)
 
     async def disassemble(
         self,
@@ -1982,7 +2101,7 @@ metadata
             list[DisassemblyLine]: List of disassembly lines.
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected or the remote call fails.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
@@ -1990,7 +2109,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 instructions = []
                 addr = toAddr({address})
                 listing = currentProgram.getListing()
@@ -2013,23 +2133,26 @@ metadata
                         break
 
                 instructions
-            """)
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                DisassemblyLine(
-                    address=int(i.get("address", 0)),
-                    bytes_str=str(i.get("bytes", "")),
-                    mnemonic=str(i.get("mnemonic", "")),
-                    operands=str(i.get("operands", "")),
-                    comment=None,
-                )
-                for i in result_list
-            ]
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("disassembly_failed", address=hex(address), count=count)
-            return []
+            error_message = f"Disassembly failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            DisassemblyLine(
+                address=int(i.get("address", 0)),
+                bytes_str=str(i.get("bytes", "")),
+                mnemonic=str(i.get("mnemonic", "")),
+                operands=str(i.get("operands", "")),
+                comment=None,
+            )
+            for i in result_list
+        ]
 
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
         """Get cross-references to an address.
@@ -2049,7 +2172,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 xrefs = []
                 addr = toAddr({address})
 
@@ -2061,23 +2185,26 @@ metadata
                     }})
 
                 xrefs
-            """)
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                CrossReference(
-                    from_address=int(x.get("from", 0)),
-                    to_address=int(x.get("to", 0)),
-                    ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
-                    from_function=None,
-                    to_function=None,
-                )
-                for x in result_list
-            ]
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_xrefs_to_failed", address=hex(address))
-            return []
+            error_message = f"Get xrefs to failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            CrossReference(
+                from_address=int(x.get("from", 0)),
+                to_address=int(x.get("to", 0)),
+                ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
+                from_function=None,
+                to_function=None,
+            )
+            for x in result_list
+        ]
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
         """Get cross-references from an address.
@@ -2097,7 +2224,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 xrefs = []
                 addr = toAddr({address})
 
@@ -2109,23 +2237,26 @@ metadata
                     }})
 
                 xrefs
-            """)
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                CrossReference(
-                    from_address=int(x.get("from", 0)),
-                    to_address=int(x.get("to", 0)),
-                    ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
-                    from_function=None,
-                    to_function=None,
-                )
-                for x in result_list
-            ]
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_xrefs_from_failed", address=hex(address))
-            return []
+            error_message = f"Get xrefs from failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            CrossReference(
+                from_address=int(x.get("from", 0)),
+                to_address=int(x.get("to", 0)),
+                ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
+                from_function=None,
+                to_function=None,
+            )
+            for x in result_list
+        ]
 
     async def search_strings(self, pattern: str, encoding: str = "ascii") -> list[StringInfo]:
         """Search for strings matching pattern.
@@ -2147,7 +2278,8 @@ metadata
 
         encoding_filter = json.dumps(encoding)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 import re
                 strings = []
                 pattern = re.compile({json.dumps(pattern)}, re.IGNORECASE)
@@ -2174,33 +2306,36 @@ metadata
                             }})
 
                 strings
-            """)
-
-            normalized_encoding: Literal["ascii", "utf-8", "utf-16le", "utf-16be"] = (
-                "ascii"
-                if encoding == "ascii"
-                else "utf-8"
-                if encoding in {"utf-8", "utf8"}
-                else "utf-16le"
-                if encoding in {"utf-16", "utf-16-le", "utf-16le"}
-                else "utf-16be"
-                if encoding in {"utf-16-be", "utf-16be"}
-                else "ascii"
+                """,
             )
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                StringInfo(
-                    address=int(s.get("address", 0)),
-                    value=str(s.get("value", "")),
-                    encoding=normalized_encoding,
-                    section="",
-                )
-                for s in result_list
-            ]
-
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("string_search_failed", pattern=pattern)
-            return []
+            error_message = f"String search failed for {pattern!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        normalized_encoding: Literal["ascii", "utf-8", "utf-16le", "utf-16be"] = (
+            "ascii"
+            if encoding == "ascii"
+            else "utf-8"
+            if encoding in {"utf-8", "utf8"}
+            else "utf-16le"
+            if encoding in {"utf-16", "utf-16-le", "utf-16le"}
+            else "utf-16be"
+            if encoding in {"utf-16-be", "utf-16be"}
+            else "ascii"
+        )
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            StringInfo(
+                address=int(s.get("address", 0)),
+                value=str(s.get("value", "")),
+                encoding=normalized_encoding,
+                section="",
+            )
+            for s in result_list
+        ]
 
     async def search_bytes(
         self,
@@ -2256,7 +2391,8 @@ metadata
             mask_arr_str = ", ".join(str(v) for v in mask_vals)
 
             try:
-                result = await self._execute_remote(f"""
+                result = await self._execute_remote(
+                    f"""
                     from jarray import array
                     addresses = []
                     memory = currentProgram.getMemory()
@@ -2269,17 +2405,24 @@ metadata
                         addresses.append(found.getOffset())
                         found = memory.findBytes(found.add(1), end, byte_arr, mask_arr, True, monitor)
                     addresses
-                """)
-                if isinstance(result, list):
-                    return [int(addr) for addr in cast("list[int | float | str]", result)]
-            except Exception:
+                    """,
+                )
+            except ToolError:
+                raise
+            except Exception as exc:
                 _logger.exception("byte_search_failed_hex", pattern_length=len(tokens))
-            return []
+                error_message = f"Byte search (hex/wildcard) failed: {exc}"
+                raise ToolError(error_message) from exc
+
+            if not isinstance(result, list):
+                return []
+            return [int(addr) for addr in cast("list[int | float | str]", result)]
 
         raw_bytes = pattern if isinstance(pattern, bytes) else b""
         try:
             byte_list_str = ", ".join(str(b) for b in raw_bytes)
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addresses = []
                 memory = currentProgram.getMemory()
                 start = memory.getMinAddress()
@@ -2289,12 +2432,18 @@ metadata
                     addresses.append(searcher.getOffset())
                     searcher = memory.findBytes(searcher.add(1), end, [{byte_list_str}], None, True, monitor)
                 addresses
-            """)
-            if isinstance(result, list):
-                return [int(addr) for addr in cast("list[int | float | str]", result)]
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("byte_search_failed", pattern_length=len(raw_bytes))
-        return []
+            error_message = f"Byte search failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, list):
+            return []
+        return [int(addr) for addr in cast("list[int | float | str]", result)]
 
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
@@ -2397,7 +2546,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 imports = []
                 st = currentProgram.getSymbolTable()
 
@@ -2409,22 +2559,25 @@ metadata
                     })
 
                 imports
-            """)
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                ImportInfo(
-                    dll=str(i.get("dll", "")),
-                    function=str(i.get("function", "")),
-                    ordinal=None,
-                    address=int(i.get("address", 0)),
-                )
-                for i in result_list
-            ]
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_imports_failed", binary_path=str(self._binary_path))
-            return []
+            error_message = f"Get imports failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            ImportInfo(
+                dll=str(i.get("dll", "")),
+                function=str(i.get("function", "")),
+                ordinal=None,
+                address=int(i.get("address", 0)),
+            )
+            for i in result_list
+        ]
 
     async def get_exports(self) -> list[ExportInfo]:
         """Get exported functions.
@@ -2441,7 +2594,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 exports = []
                 st = currentProgram.getSymbolTable()
 
@@ -2453,21 +2607,24 @@ metadata
                         })
 
                 exports
-            """)
-
-            result_list = cast("list[dict[str, Any]]", result) if result else []
-            return [
-                ExportInfo(
-                    name=str(e.get("name", "")),
-                    ordinal=idx,
-                    address=int(e.get("address", 0)),
-                )
-                for idx, e in enumerate(result_list)
-            ]
-
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_exports_failed", binary_path=str(self._binary_path))
-            return []
+            error_message = f"Get exports failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        result_list = cast("list[dict[str, Any]]", result) if result else []
+        return [
+            ExportInfo(
+                name=str(e.get("name", "")),
+                ordinal=idx,
+                address=int(e.get("address", 0)),
+            )
+            for idx, e in enumerate(result_list)
+        ]
 
     async def get_data_type(self, address: int) -> DataTypeInfo | None:
         """Get data type at address via Ghidra DataTypeManager.
@@ -2487,13 +2644,14 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from ghidra.program.model.data import Pointer, Array
 
                 addr = toAddr({address})
                 data = currentProgram.getListing().getDataAt(addr)
                 if data is None:
-                    None
+                    _dt_payload = None
                 else:
                     dt = data.getDataType()
                     is_pointer = isinstance(dt, Pointer)
@@ -2505,7 +2663,7 @@ metadata
                     if is_array:
                         base_type = str(dt.getDataType())
                         array_length = int(dt.getNumElements())
-                    {{
+                    _dt_payload = {{
                         'address': data.getAddress().getOffset(),
                         'name': dt.getName(),
                         'category': dt.getCategoryPath().getPath(),
@@ -2515,26 +2673,30 @@ metadata
                         'array_length': array_length,
                         'base_type': base_type,
                     }}
-            """)
-
-            if result is None or not isinstance(result, dict):
-                return None
-
-            result_dict = cast("dict[str, Any]", result)
-            return DataTypeInfo(
-                address=int(result_dict.get("address", address)),
-                name=str(result_dict.get("name", "")),
-                category=str(result_dict.get("category", "")),
-                size=int(result_dict.get("size", 0)),
-                is_pointer=bool(result_dict.get("is_pointer", False)),
-                is_array=bool(result_dict.get("is_array", False)),
-                array_length=(int(result_dict["array_length"]) if result_dict.get("array_length") is not None else None),
-                base_type=(str(result_dict["base_type"]) if result_dict.get("base_type") is not None else None),
+                _dt_payload
+                """,
             )
-
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_data_type_failed", address=hex(address))
+            error_message = f"Get data type failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if result is None or not isinstance(result, dict):
             return None
+
+        result_dict = cast("dict[str, Any]", result)
+        return DataTypeInfo(
+            address=int(result_dict.get("address", address)),
+            name=str(result_dict.get("name", "")),
+            category=str(result_dict.get("category", "")),
+            size=int(result_dict.get("size", 0)),
+            is_pointer=bool(result_dict.get("is_pointer", False)),
+            is_array=bool(result_dict.get("is_array", False)),
+            array_length=(int(result_dict["array_length"]) if result_dict.get("array_length") is not None else None),
+            base_type=(str(result_dict["base_type"]) if result_dict.get("base_type") is not None else None),
+        )
 
     async def set_data_type(self, address: int, data_type: str) -> bool:
         """Set data type at an address.
@@ -2641,7 +2803,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 labels = []
                 start = toAddr({address} - {radius})
                 end = toAddr({address} + {radius})
@@ -2656,11 +2819,16 @@ metadata
                         'type': str(sym.getSymbolType()),
                     }})
                 labels
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_labels_failed", address=hex(address))
-            return []
+            error_message = f"Get labels failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def create_bookmark(
         self,
@@ -2714,7 +2882,8 @@ metadata
 
         cat_filter = json.dumps(category) if category else "None"
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 bookmarks = []
                 bm = currentProgram.getBookmarkManager()
                 cat_filter = {cat_filter}
@@ -2729,11 +2898,16 @@ metadata
                             'type': bk.getTypeString(),
                         }})
                 bookmarks
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_bookmarks_failed")
-            return []
+            error_message = f"Get bookmarks failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def create_function(self, address: int, name: str | None = None) -> dict[str, Any]:
         """Define a new function at an address.
@@ -3030,7 +3204,8 @@ metadata
 
         name_filter = json.dumps(filter_name) if filter_name else "None"
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 structs = []
                 name_filter = {name_filter}
                 it = currentProgram.getDataTypeManager().getAllStructures()
@@ -3044,11 +3219,16 @@ metadata
                             'path': str(s.getCategoryPath()),
                         }})
                 structs
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_structures_failed")
-            return []
+            error_message = f"Get structures failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def apply_structure_at(self, address: int, struct_name: str) -> dict[str, Any]:
         """Apply a defined structure type at a memory address.
@@ -3114,7 +3294,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 blocks = []
                 for block in getMemory().getBlocks():
                     blocks.append({
@@ -3129,11 +3310,16 @@ metadata
                         'volatile': block.isVolatile(),
                     })
                 blocks
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_memory_map_failed")
-            return []
+            error_message = f"Get memory map failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_call_graph(self, address: int, depth: int = 2) -> dict[str, Any]:
         """Get function call graph rooted at an address in both directions.
@@ -3160,31 +3346,24 @@ metadata
             raise ToolError(_ERR_NOT_CONNECTED)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 def collect_callees(func, cur_depth, max_depth, visited):
                     offset = func.getEntryPoint().getOffset()
                     if cur_depth >= max_depth or offset in visited:
                         return {{'name': func.getName(), 'address': offset, 'callees': []}}
                     visited = set(visited)
                     visited.add(offset)
-                    body = func.getBody()
-                    seen_targets = set()
                     callees = []
-                    addr_iter = body.getAddresses(True)
-                    while addr_iter.hasNext():
-                        a = addr_iter.next()
-                        for ref in getReferencesFrom(a):
-                            if ref.getReferenceType().isCall():
-                                target = ref.getToAddress()
-                                target_func = getFunctionAt(target)
-                                if target_func is None:
-                                    target_func = getFunctionContaining(target)
-                                if target_func is not None:
-                                    target_offset = target_func.getEntryPoint().getOffset()
-                                    if target_offset in seen_targets:
-                                        continue
-                                    seen_targets.add(target_offset)
-                                    callees.append(collect_callees(target_func, cur_depth + 1, max_depth, visited))
+                    seen_targets = set()
+                    for target_func in func.getCalledFunctions(monitor):
+                        if target_func is None:
+                            continue
+                        target_offset = target_func.getEntryPoint().getOffset()
+                        if target_offset in seen_targets:
+                            continue
+                        seen_targets.add(target_offset)
+                        callees.append(collect_callees(target_func, cur_depth + 1, max_depth, visited))
                     return {{'name': func.getName(), 'address': offset, 'callees': callees}}
 
                 def collect_callers(func, cur_depth, max_depth, visited):
@@ -3193,34 +3372,34 @@ metadata
                         return {{'name': func.getName(), 'address': offset, 'callers': []}}
                     visited = set(visited)
                     visited.add(offset)
-                    seen_sources = set()
                     callers = []
-                    for ref in getReferencesTo(func.getEntryPoint()):
-                        if ref.getReferenceType().isCall():
-                            from_addr = ref.getFromAddress()
-                            caller_func = getFunctionContaining(from_addr)
-                            if caller_func is not None:
-                                caller_offset = caller_func.getEntryPoint().getOffset()
-                                if caller_offset in seen_sources:
-                                    continue
-                                seen_sources.add(caller_offset)
-                                callers.append(collect_callers(caller_func, cur_depth + 1, max_depth, visited))
+                    seen_sources = set()
+                    for caller_func in func.getCallingFunctions(monitor):
+                        if caller_func is None:
+                            continue
+                        caller_offset = caller_func.getEntryPoint().getOffset()
+                        if caller_offset in seen_sources:
+                            continue
+                        seen_sources.add(caller_offset)
+                        callers.append(collect_callers(caller_func, cur_depth + 1, max_depth, visited))
                     return {{'name': func.getName(), 'address': offset, 'callers': callers}}
 
                 root_addr = toAddr({address})
                 root_func = getFunctionContaining(root_addr)
                 if root_func is None:
-                    None
+                    _call_graph_payload = None
                 else:
                     callee_tree = collect_callees(root_func, 0, {depth}, set())
                     caller_tree = collect_callers(root_func, 0, {depth}, set())
-                    {{
+                    _call_graph_payload = {{
                         'name': root_func.getName(),
                         'address': root_func.getEntryPoint().getOffset(),
                         'callees': callee_tree.get('callees', []),
                         'callers': caller_tree.get('callers', []),
                     }}
-            """)
+                _call_graph_payload
+                """,
+            )
         except ToolError:
             raise
         except Exception as exc:
@@ -3254,7 +3433,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 segments = []
                 for block in getMemory().getBlocks():
                     segments.append({
@@ -3272,11 +3452,16 @@ metadata
                         'comment': block.getComment() if block.getComment() else '',
                     })
                 segments
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_segments_failed")
-            return []
+            error_message = f"Get segments failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_program_info(self) -> dict[str, Any]:
         """Get program metadata including language, compiler, and layout info.
@@ -3294,7 +3479,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 lang = currentProgram.getLanguage()
                 cs = currentProgram.getCompilerSpec()
                 {
@@ -3311,11 +3497,16 @@ metadata
                     'num_functions': currentProgram.getFunctionManager().getFunctionCount(),
                     'num_symbols': currentProgram.getSymbolTable().getNumSymbols(),
                 }
-            """)
-            return cast("dict[str, Any]", result) if result else {}
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_program_info_failed")
-            return {}
+            error_message = f"Get program info failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("dict[str, Any]", result) if result else {}
 
     async def write_bytes(self, address: int, data: str) -> dict[str, Any]:
         """Patch bytes at an address in the program.
@@ -3447,7 +3638,8 @@ metadata
             dict[str, Any]: Dict with address, hex string, bytes list, and length.
 
         Raises:
-            ToolError: If Ghidra is not connected or read fails.
+            ToolError: If Ghidra is not connected, the read returns no
+                payload, or the remote call fails.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
@@ -3456,28 +3648,39 @@ metadata
 
         _logger.debug("bytes_reading", address=hex(address), length=length)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from jarray import zeros
                 addr = toAddr({address})
                 buf = zeros({length}, 'b')
                 currentProgram.getMemory().getBytes(addr, buf)
-                result = []
-                for b in buf:
-                    result.append((b + 256) % 256)
-                {{'address': addr.getOffset(), 'bytes': result}}
-            """)
-            result_dict = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
-            addr_int = int(result_dict.get("address", address))
-            byte_list = [int(b) for b in cast("list[int]", result_dict.get("bytes", []))]
-            return {
-                "address": hex(addr_int),
-                "hex": " ".join(f"{b:02X}" for b in byte_list),
-                "bytes": byte_list,
-                "length": len(byte_list),
-            }
-        except Exception as e:
-            error_message = f"Read bytes failed: {e}"
-            raise ToolError(error_message) from e
+                _read_bytes_payload = [((b + 256) % 256) for b in buf]
+                {{'address': addr.getOffset(), 'bytes': _read_bytes_payload}}
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("read_bytes_failed", address=hex(address), length=length)
+            error_message = f"Read bytes failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Read bytes returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+
+        result_dict = cast("dict[str, Any]", result)
+        addr_int = int(result_dict.get("address", address))
+        byte_list = [int(b) & 0xFF for b in cast("list[int]", result_dict.get("bytes", []))]
+        if len(byte_list) != length:
+            error_message = f"Read bytes truncated at {hex(address)}: requested {length}, got {len(byte_list)}"
+            raise ToolError(error_message)
+        return {
+            "address": hex(addr_int),
+            "hex": " ".join(f"{b:02X}" for b in byte_list),
+            "bytes": byte_list,
+            "length": len(byte_list),
+        }
 
     async def undo(self) -> dict[str, Any]:
         """Undo the last change in Ghidra.
@@ -3551,7 +3754,8 @@ metadata
 
         _logger.debug("pcode_fetching", address=hex(address), max_ops=max_ops)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from ghidra.app.decompiler import DecompInterface
 
                 ifc = DecompInterface()
@@ -3559,11 +3763,11 @@ metadata
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is None:
-                    {{'function': None, 'pcode_ops': []}}
+                    _pcode_payload = {{'function': None, 'pcode_ops': []}}
                 else:
                     res = ifc.decompileFunction(func, 60, monitor)
                     if not res.decompileCompleted():
-                        {{'function': func.getName(), 'pcode_ops': []}}
+                        _pcode_payload = {{'function': func.getName(), 'pcode_ops': []}}
                     else:
                         hfunc = res.getHighFunction()
                         ops = []
@@ -3596,12 +3800,21 @@ metadata
                                 'inputs': inputs,
                             }})
                             count += 1
-                        {{'function': func.getName(), 'pcode_ops': ops}}
-            """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "pcode_ops": []}
-        except Exception:
+                        _pcode_payload = {{'function': func.getName(), 'pcode_ops': ops}}
+                _pcode_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_pcode_failed", address=hex(address))
-            return {"function": None, "pcode_ops": []}
+            error_message = f"Get pcode failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get pcode returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_basic_blocks(self, address: int, max_blocks: int = 100) -> dict[str, Any]:
         """Get basic block structure of the function at an address.
@@ -3623,21 +3836,20 @@ metadata
 
         _logger.debug("basic_blocks_fetching", address=hex(address), max_blocks=max_blocks)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from ghidra.program.model.block import BasicBlockModel
 
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is None:
-                    {{'function': None, 'blocks': []}}
+                    _bb_payload = {{'function': None, 'blocks': []}}
                 else:
                     bbm = BasicBlockModel(currentProgram)
                     blocks = []
                     count = 0
-                    it = bbm.getCodeBlocksContaining(addr, monitor)
                     func_body = func.getBody()
                     addr_iter = func_body.getAddressRanges()
-                    block_set = []
                     while addr_iter.hasNext() and count < {max_blocks}:
                         rng = addr_iter.next()
                         blk_it = bbm.getCodeBlocksContaining(rng.getMinAddress(), monitor)
@@ -3662,12 +3874,21 @@ metadata
                                     'destinations': dst_addrs,
                                 }})
                                 count += 1
-                    {{'function': func.getName(), 'blocks': blocks}}
-            """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "blocks": []}
-        except Exception:
+                    _bb_payload = {{'function': func.getName(), 'blocks': blocks}}
+                _bb_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_basic_blocks_failed", address=hex(address))
-            return {"function": None, "blocks": []}
+            error_message = f"Get basic blocks failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get basic blocks returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_slice(self, address: int, direction: str = "backward") -> dict[str, Any]:
         """Compute a backward or forward program slice from an address.
@@ -3690,19 +3911,21 @@ metadata
         _logger.debug("slice_computing", address=hex(address), direction=direction)
         direction_literal = json.dumps(direction)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from ghidra.app.decompiler import DecompInterface
 
                 ifc = DecompInterface()
                 ifc.openProgram(currentProgram)
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
+                _slice_payload = None
                 if func is None:
-                    {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
+                    _slice_payload = {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
                 else:
                     res = ifc.decompileFunction(func, 60, monitor)
                     if not res.decompileCompleted():
-                        {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
+                        _slice_payload = {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': [], 'slice_pcode_ops': []}}
                     else:
                         hfunc = res.getHighFunction()
                         target_op = None
@@ -3756,16 +3979,21 @@ metadata
                             collect_forward(target_op, 0)
 
                         slice_addrs = list(set(op['address'] for op in slice_ops))
-                        {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': slice_addrs, 'slice_pcode_ops': slice_ops}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"address": hex(address), "direction": direction, "slice_addresses": [], "slice_pcode_ops": []}
+                        _slice_payload = {{'address': {address}, 'direction': {direction_literal}, 'slice_addresses': slice_addrs, 'slice_pcode_ops': slice_ops}}
+                _slice_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_slice_failed", address=hex(address))
-            return {"address": hex(address), "direction": direction, "slice_addresses": [], "slice_pcode_ops": []}
+            error_message = f"Get slice failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get slice returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_callers(self, address: int) -> list[dict[str, Any]]:
         """Get all functions that call the function at the given address.
@@ -3786,7 +4014,8 @@ metadata
 
         _logger.debug("callers_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 callers = []
                 addr = toAddr({address})
                 for ref in getReferencesTo(addr):
@@ -3800,11 +4029,16 @@ metadata
                             'ref_type': str(ref.getReferenceType()),
                         }})
                 callers
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_callers_failed", address=hex(address))
-            return []
+            error_message = f"Get callers failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_register_value(self, address: int, register: str) -> dict[str, Any]:
         """Get the context-tracked register value at an address.
@@ -3827,28 +4061,34 @@ metadata
         _logger.debug("register_value_fetching", address=hex(address), register=register)
         register_literal = json.dumps(register)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 ctx = currentProgram.getProgramContext()
                 reg = ctx.getRegister({register_literal})
                 if reg is None:
-                    {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
+                    _reg_payload = {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
                 else:
                     val = ctx.getRegisterValue(reg, addr)
                     if val is None:
-                        {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
+                        _reg_payload = {{'address': {address}, 'register': {register_literal}, 'value': None, 'has_value': False}}
                     else:
                         uval = val.getUnsignedValue()
-                        {{'address': {address}, 'register': {register_literal}, 'value': int(uval) if uval is not None else None, 'has_value': uval is not None}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"address": hex(address), "register": register, "value": None, "has_value": False}
+                        _reg_payload = {{'address': {address}, 'register': {register_literal}, 'value': int(uval) if uval is not None else None, 'has_value': uval is not None}}
+                _reg_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_register_value_failed", address=hex(address), register=register)
-            return {"address": hex(address), "register": register, "value": None, "has_value": False}
+            error_message = f"Get register value failed at {hex(address)} for {register}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get register value returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def import_debug_info(self, path: str) -> dict[str, Any]:
         """Import debug symbols from a PDB or DWARF file.
@@ -4057,7 +4297,8 @@ metadata
 
         _logger.debug("reference_deleting", from_addr=hex(from_addr), to_addr=hex(to_addr))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from_address = toAddr({from_addr})
                 to_address = toAddr({to_addr})
                 refMgr = currentProgram.getReferenceManager()
@@ -4069,11 +4310,16 @@ metadata
                         deleted = True
                         break
                 deleted
-            """)
-            return {"from": hex(from_addr), "to": hex(to_addr), "success": bool(result)}
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("delete_reference_failed", from_addr=hex(from_addr), to_addr=hex(to_addr))
-            return {"from": hex(from_addr), "to": hex(to_addr), "success": False}
+            error_message = f"Delete reference {hex(from_addr)} -> {hex(to_addr)} failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return {"from": hex(from_addr), "to": hex(to_addr), "success": bool(result)}
 
     async def get_relocations(self) -> list[dict[str, Any]]:
         """Get all relocations from the program relocation table.
@@ -4090,7 +4336,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 relocations = []
                 reloc_table = currentProgram.getRelocationTable()
                 it = reloc_table.getRelocations()
@@ -4105,11 +4352,16 @@ metadata
                         'values': vals,
                     })
                 relocations
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_relocations_failed")
-            return []
+            error_message = f"Get relocations failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def create_namespace(self, name: str, parent: str | None = None) -> dict[str, Any]:
         """Create a namespace in the Ghidra symbol table.
@@ -4167,7 +4419,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 from ghidra.program.model.symbol import SymbolType
 
                 namespaces = []
@@ -4179,11 +4432,16 @@ metadata
                             'path': sym.getName(True),
                         })
                 namespaces
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_namespaces_failed")
-            return []
+            error_message = f"Get namespaces failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def create_equate(self, address: int, value: int, name: str) -> dict[str, Any]:
         """Create an equate (named constant) and attach it to an address.
@@ -4236,7 +4494,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 equates = []
                 eqTable = currentProgram.getEquateTable()
                 it = eqTable.getEquates()
@@ -4248,11 +4507,16 @@ metadata
                         'references': eq.getReferenceCount(),
                     })
                 equates
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_equates_failed")
-            return []
+            error_message = f"Get equates failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def search_symbols(self, name: str, symbol_type: str | None = None) -> list[dict[str, Any]]:
         """Search symbols by name pattern with optional type filter.
@@ -4274,7 +4538,8 @@ metadata
 
         type_filter_literal = json.dumps(symbol_type) if symbol_type else "None"
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 st = currentProgram.getSymbolTable()
                 type_filter = {type_filter_literal}
                 symbols = []
@@ -4291,11 +4556,16 @@ metadata
                         'namespace': sym.getParentNamespace().getName() if sym.getParentNamespace() else '',
                     }})
                 symbols
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("search_symbols_failed", symbol_name=name)
-            return []
+            error_message = f"Search symbols failed for {name!r}: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_stack_frame(self, address: int) -> dict[str, Any]:
         """Get stack frame layout for the function at an address.
@@ -4316,11 +4586,12 @@ metadata
 
         _logger.debug("stack_frame_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is None:
-                    {{'function': None, 'frame_size': 0, 'variables': []}}
+                    _sf_payload = {{'function': None, 'frame_size': 0, 'variables': []}}
                 else:
                     frame = func.getStackFrame()
                     vars = []
@@ -4331,12 +4602,21 @@ metadata
                             'size': v.getLength(),
                             'type': str(v.getDataType()),
                         }})
-                    {{'function': func.getName(), 'frame_size': frame.getFrameSize(), 'variables': vars}}
-            """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"function": None, "frame_size": 0, "variables": []}
-        except Exception:
+                    _sf_payload = {{'function': func.getName(), 'frame_size': frame.getFrameSize(), 'variables': vars}}
+                _sf_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_stack_frame_failed", address=hex(address))
-            return {"function": None, "frame_size": 0, "variables": []}
+            error_message = f"Get stack frame failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get stack frame returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_function_body(self, address: int) -> dict[str, Any]:
         """Get address ranges, thunk status, and size for a function.
@@ -4357,11 +4637,12 @@ metadata
 
         _logger.debug("function_body_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is None:
-                    {{'name': None, 'address': {address}, 'is_thunk': False, 'thunked_function': None, 'ranges': [], 'total_size': 0}}
+                    _fb_payload = {{'name': None, 'address': {address}, 'is_thunk': False, 'thunked_function': None, 'ranges': [], 'total_size': 0}}
                 else:
                     is_thunk = func.isThunk()
                     thunked_name = None
@@ -4376,16 +4657,21 @@ metadata
                         rng = addr_ranges.next()
                         ranges.append({{'start': rng.getMinAddress().getOffset(), 'end': rng.getMaxAddress().getOffset()}})
                     total = body.getNumAddresses()
-                    {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'ranges': ranges, 'total_size': total}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"name": None, "address": hex(address), "is_thunk": False, "thunked_function": None, "ranges": [], "total_size": 0}
+                    _fb_payload = {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'ranges': ranges, 'total_size': total}}
+                _fb_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_function_body_failed", address=hex(address))
-            return {"name": None, "address": hex(address), "is_thunk": False, "thunked_function": None, "ranges": [], "total_size": 0}
+            error_message = f"Get function body failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get function body returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_call_tree(self, address: int, direction: str = "callees", depth: int = 3) -> dict[str, Any]:
         """Get recursive call tree for callees, callers, or both.
@@ -4409,24 +4695,22 @@ metadata
         _logger.debug("call_tree_building", address=hex(address), direction=direction, depth=depth)
         direction_literal = json.dumps(direction)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 def get_callee_tree(func, max_depth, cur_depth, visited):
                     if cur_depth >= max_depth or func.getEntryPoint().getOffset() in visited:
                         return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': []}}
                     visited.add(func.getEntryPoint().getOffset())
                     children = []
-                    body = func.getBody()
-                    addr_iter = body.getAddresses(True)
                     seen = set()
-                    while addr_iter.hasNext():
-                        a = addr_iter.next()
-                        for ref in getReferencesFrom(a):
-                            if ref.getReferenceType().isCall():
-                                t = ref.getToAddress()
-                                tf = getFunctionAt(t)
-                                if tf is not None and t.getOffset() not in seen:
-                                    seen.add(t.getOffset())
-                                    children.append(get_callee_tree(tf, max_depth, cur_depth + 1, set(visited)))
+                    for tf in func.getCalledFunctions(monitor):
+                        if tf is None:
+                            continue
+                        toff = tf.getEntryPoint().getOffset()
+                        if toff in seen:
+                            continue
+                        seen.add(toff)
+                        children.append(get_callee_tree(tf, max_depth, cur_depth + 1, set(visited)))
                     return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': children}}
 
                 def get_caller_tree(func, max_depth, cur_depth, visited):
@@ -4435,37 +4719,49 @@ metadata
                     visited.add(func.getEntryPoint().getOffset())
                     children = []
                     seen = set()
-                    for ref in getReferencesTo(func.getEntryPoint()):
-                        if ref.getReferenceType().isCall():
-                            cf = getFunctionContaining(ref.getFromAddress())
-                            if cf is not None and cf.getEntryPoint().getOffset() not in seen:
-                                seen.add(cf.getEntryPoint().getOffset())
-                                children.append(get_caller_tree(cf, max_depth, cur_depth + 1, set(visited)))
+                    for cf in func.getCallingFunctions(monitor):
+                        if cf is None:
+                            continue
+                        coff = cf.getEntryPoint().getOffset()
+                        if coff in seen:
+                            continue
+                        seen.add(coff)
+                        children.append(get_caller_tree(cf, max_depth, cur_depth + 1, set(visited)))
                     return {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'children': children}}
 
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 direction = {direction_literal}
                 if func is None:
-                    {{'function': None, 'address': {address}, 'direction': direction, 'children': []}}
+                    _ct_payload = {{'function': None, 'address': {address}, 'direction': direction, 'children': []}}
+                elif direction == 'callees':
+                    _ct_payload = get_callee_tree(func, {depth}, 0, set())
+                elif direction == 'callers':
+                    _ct_payload = get_caller_tree(func, {depth}, 0, set())
                 else:
-                    if direction == 'callees':
-                        get_callee_tree(func, {depth}, 0, set())
-                    elif direction == 'callers':
-                        get_caller_tree(func, {depth}, 0, set())
-                    else:
-                        callees = get_callee_tree(func, {depth}, 0, set())
-                        callers = get_caller_tree(func, {depth}, 0, set())
-                        {{'function': func.getName(), 'address': func.getEntryPoint().getOffset(), 'direction': direction, 'callees': callees.get('children', []), 'callers': callers.get('children', [])}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"function": None, "address": hex(address), "direction": direction, "children": []}
+                    callees = get_callee_tree(func, {depth}, 0, set())
+                    callers = get_caller_tree(func, {depth}, 0, set())
+                    _ct_payload = {{
+                        'function': func.getName(),
+                        'address': func.getEntryPoint().getOffset(),
+                        'direction': direction,
+                        'callees': callees.get('children', []),
+                        'callers': callers.get('children', []),
+                    }}
+                _ct_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_call_tree_failed", address=hex(address))
-            return {"function": None, "address": hex(address), "direction": direction, "children": []}
+            error_message = f"Get call tree failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get call tree returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_calling_conventions(self) -> list[str]:
         """List all calling conventions defined in the compiler spec.
@@ -4482,18 +4778,23 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 cs = currentProgram.getCompilerSpec()
                 conventions = [str(cc.getName()) for cc in cs.getCallingConventions()]
                 conventions
-            """)
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_calling_conventions_failed")
-            return []
-        else:
-            if isinstance(result, list):
-                return [str(c) for c in cast("list[object]", result)]
-            return []
+            error_message = f"Get calling conventions failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if isinstance(result, list):
+            return [str(c) for c in cast("list[object]", result)]
+        return []
 
     async def get_instruction_flow(self, address: int) -> dict[str, Any]:
         """Get control flow information for a single instruction.
@@ -4514,25 +4815,31 @@ metadata
 
         _logger.debug("instruction_flow_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 listing = currentProgram.getListing()
                 instr = listing.getInstructionAt(addr)
                 if instr is None:
-                    {{'address': {address}, 'mnemonic': None, 'flow_type': None, 'fall_through': None, 'flows': []}}
+                    _if_payload = {{'address': {address}, 'mnemonic': None, 'flow_type': None, 'fall_through': None, 'flows': []}}
                 else:
                     ft = instr.getFallThrough()
                     flows = [f.getOffset() for f in (instr.getFlows() or [])]
-                    {{'address': addr.getOffset(), 'mnemonic': instr.getMnemonicString(), 'flow_type': str(instr.getFlowType()), 'fall_through': ft.getOffset() if ft is not None else None, 'flows': flows}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"address": hex(address), "mnemonic": None, "flow_type": None, "fall_through": None, "flows": []}
+                    _if_payload = {{'address': addr.getOffset(), 'mnemonic': instr.getMnemonicString(), 'flow_type': str(instr.getFlowType()), 'fall_through': ft.getOffset() if ft is not None else None, 'flows': flows}}
+                _if_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_instruction_flow_failed", address=hex(address))
-            return {"address": hex(address), "mnemonic": None, "flow_type": None, "fall_through": None, "flows": []}
+            error_message = f"Get instruction flow failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get instruction flow returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def create_data_type(
         self,
@@ -4905,7 +5212,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 from ghidra.program.model.listing import CodeUnit
 
                 start = toAddr({address})
@@ -4931,11 +5239,16 @@ metadata
                                 'comment': text,
                             }})
                 comments
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_comments_failed", address=hex(address))
-            return []
+            error_message = f"Get comments failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_all_comments(self) -> list[dict[str, Any]]:
         """Get all comments in the entire program.
@@ -4952,7 +5265,8 @@ metadata
             raise ToolError(error_message)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 from ghidra.program.model.listing import CodeUnit
 
                 listing = currentProgram.getListing()
@@ -4976,11 +5290,16 @@ metadata
                                 'comment': text,
                             })
                 comments
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_all_comments_failed")
-            return []
+            error_message = f"Get all comments failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def get_program_tree(self) -> dict[str, Any]:
         """Get the program tree module and fragment hierarchy.
@@ -5097,7 +5416,8 @@ metadata
 
         _logger.debug("properties_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 upm = currentProgram.getUsrPropertyManager()
                 props = {{}}
@@ -5112,12 +5432,21 @@ metadata
                                 props[prop_name] = bool(map_obj.getBoolean(addr))
                             except Exception:
                                 props[prop_name] = None
-                {{'address': {address}, 'properties': props}}
-            """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"address": hex(address), "properties": {}}
-        except Exception:
+                _props_payload = {{'address': {address}, 'properties': props}}
+                _props_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_properties_failed", address=hex(address))
-            return {"address": hex(address), "properties": {}}
+            error_message = f"Get properties failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get properties returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def diff_programs(self, other_program_path: str) -> dict[str, Any]:
         """Compare the current program with another program file.
@@ -5138,7 +5467,8 @@ metadata
 
         _logger.info("program_diffing", other_path=other_program_path)
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 import java.io.File as JFile
                 from ghidra.program.util import ProgramDiff, ProgramDiffFilter
 
@@ -5156,12 +5486,21 @@ metadata
                             a = addr_iter.next()
                             details.append({{'address': a.getOffset()}})
                             differences += 1
-                {{'differences': differences, 'details': details}}
-            """)
-            return cast("dict[str, Any]", result) if isinstance(result, dict) else {"differences": 0, "details": []}
-        except Exception:
+                _diff_payload = {{'differences': differences, 'details': details}}
+                _diff_payload
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("diff_programs_failed", other_path=other_program_path)
-            return {"differences": 0, "details": []}
+            error_message = f"Diff programs failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = "Diff programs returned no payload"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def set_color(self, address: int, color: int) -> dict[str, Any]:
         """Set a background color on a code unit at an address.
@@ -5335,11 +5674,12 @@ metadata
 
         _logger.debug("thunk_info_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
                 if func is None:
-                    {{'address': {address}, 'is_thunk': False, 'thunked_function': None, 'thunked_address': None}}
+                    _ti_payload = {{'address': {address}, 'is_thunk': False, 'thunked_function': None, 'thunked_address': None}}
                 else:
                     is_thunk = func.isThunk()
                     thunked_name = None
@@ -5349,16 +5689,21 @@ metadata
                         if thunked is not None:
                             thunked_name = thunked.getName()
                             thunked_addr = thunked.getEntryPoint().getOffset()
-                    {{'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'thunked_address': thunked_addr}}
-            """)
-            return (
-                cast("dict[str, Any]", result)
-                if isinstance(result, dict)
-                else {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
+                    _ti_payload = {{'address': func.getEntryPoint().getOffset(), 'is_thunk': bool(is_thunk), 'thunked_function': thunked_name, 'thunked_address': thunked_addr}}
+                _ti_payload
+                """,
             )
-        except Exception:
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_thunk_info_failed", address=hex(address))
-            return {"address": hex(address), "is_thunk": False, "thunked_function": None, "thunked_address": None}
+            error_message = f"Get thunk info failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        if not isinstance(result, dict):
+            error_message = f"Get thunk info returned no payload at {hex(address)}"
+            raise ToolError(error_message)
+        return cast("dict[str, Any]", result)
 
     async def get_external_references(self, address: int) -> list[dict[str, Any]]:
         """Get external (imported) references from an address.
@@ -5379,7 +5724,8 @@ metadata
 
         _logger.debug("external_references_fetching", address=hex(address))
         try:
-            result = await self._execute_remote(f"""
+            result = await self._execute_remote(
+                f"""
                 addr = toAddr({address})
                 ext_refs = []
                 for ref in getReferencesFrom(addr):
@@ -5396,11 +5742,16 @@ metadata
                             'type': str(ref.getReferenceType()),
                         }})
                 ext_refs
-            """)
-            return cast("list[dict[str, Any]]", result) if result else []
-        except Exception:
+                """,
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
             _logger.exception("get_external_references_failed", address=hex(address))
-            return []
+            error_message = f"Get external references failed at {hex(address)}: {exc}"
+            raise ToolError(error_message) from exc
+
+        return cast("list[dict[str, Any]]", result) if result else []
 
     async def add_external_function(self, library: str, name: str, address: int | None = None) -> dict[str, Any]:
         """Add an external function to the external symbol table.
@@ -5954,16 +6305,36 @@ metadata
         return {"from_addr": hex(from_addr), "removed": removed, "success": True}
 
     async def _execute_remote(self, code: str) -> object:
-        """Execute code on the Ghidra bridge.
+        """Execute Jython code on the Ghidra bridge and return any trailing expression value.
+
+        Dedents the supplied code via :func:`textwrap.dedent` so call-site
+        indentation does not propagate into the remote ``exec()`` payload.
+        Parses the dedented script with :mod:`ast`; if the final top-level
+        statement is an :class:`ast.Expr`, rewrites it into an assignment to
+        a unique sentinel variable and dispatches the rewritten script via
+        the underlying ``ghidra_bridge`` ``remote_exec`` channel. The
+        sentinel is then read back via ``remote_eval`` so the caller
+        receives the expression value Jython produced.
+
+        Scripts that have no trailing expression (purely side-effect
+        statements such as ``analyzeAll(currentProgram)``) execute via
+        ``remote_exec`` only and return ``None``.
 
         Args:
-            code: Python code to execute.
+            code: Jython source to execute on the Ghidra side. May be a
+                single expression, a multi-statement block, or a
+                multi-statement block ending in a value-producing
+                expression.
 
         Returns:
-            object: Result of execution.
+            object: Deserialized result of the trailing expression, or
+            ``None`` when the script has no trailing expression.
 
         Raises:
-            ToolError: If execution fails.
+            ToolError: If the bridge is not connected, the underlying
+                ``ghidra_bridge`` client is missing the required RPC
+                primitives, the Jython source fails to parse on the
+                client, or the remote execution / evaluation raises.
         """
         if self._bridge is None:
             error_message = "Ghidra bridge not connected"
@@ -5973,14 +6344,28 @@ metadata
         if remote_exec_attr is None:
             error_message = "Ghidra bridge missing remote_exec"
             raise ToolError(error_message)
+        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
+        if remote_eval_attr is None:
+            error_message = "Ghidra bridge missing remote_eval"
+            raise ToolError(error_message)
         remote_exec = cast("_RemoteExecFunc", remote_exec_attr)
+        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
+
+        exec_source, sentinel = prepare_remote_script(code)
 
         try:
-            return await asyncio.to_thread(
-                remote_exec,
-                code,
-            )
-        except Exception as e:
+            await asyncio.to_thread(remote_exec, exec_source)
+        except Exception as exc:
             _logger.exception("ghidra_remote_exec_failed")
-            error_message = f"Remote execution failed: {e}"
-            raise ToolError(error_message) from e
+            error_message = f"Remote execution failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if sentinel is None:
+            return None
+
+        try:
+            return await asyncio.to_thread(remote_eval, sentinel)
+        except Exception as exc:
+            _logger.exception("ghidra_remote_eval_failed", sentinel=sentinel)
+            error_message = f"Remote evaluation failed: {exc}"
+            raise ToolError(error_message) from exc
