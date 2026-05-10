@@ -1146,7 +1146,7 @@ class CutterBridge(StaticAnalysisBridge):
 
             file_type, arch, bits, entry = await self._extract_binary_metadata()
             await self._r2_cmd("e io.cache=true")
-            md5, sha256 = await self._extract_hashes()
+            _, sha256 = await self._extract_hashes()
 
             sections = await self._get_sections_internal()
             imports = await self._get_imports_internal()
@@ -1163,7 +1163,6 @@ class CutterBridge(StaticAnalysisBridge):
                 path=self._binary_path,
                 name=path.name,
                 size=(await asyncio.to_thread(path.stat)).st_size,
-                md5=md5,
                 sha256=sha256,
                 file_type=file_type.lower(),
                 architecture=arch,

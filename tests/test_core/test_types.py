@@ -391,7 +391,6 @@ def test_binary_info_pe() -> None:
         path=Path("/path/to/binary.dll"),
         name="binary.dll",
         size=SIZE_BINARY,
-        md5="d41d8cd98f00b204e9800998ecf8427e",
         sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         file_type="pe",
         architecture="x86_64",
@@ -410,7 +409,7 @@ def test_binary_info_pe() -> None:
     assert len(info.imports) == 1
     assert len(info.exports) == 1
     assert info.name == "binary.dll"
-    assert info.md5 == "d41d8cd98f00b204e9800998ecf8427e"
+    assert info.sha256 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 def test_section_info_has_entropy() -> None:
