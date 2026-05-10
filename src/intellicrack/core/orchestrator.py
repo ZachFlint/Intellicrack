@@ -102,12 +102,437 @@ class OrchestratorConfig:
     context_window_override: int | None = None
 
 
-@dataclass
+@dataclass(eq=False)
 class PendingConfirmation:
-    """A tool call waiting for user confirmation."""
+    """A tool call waiting for user confirmation.
+
+    Hashing falls back to :func:`id`-based identity (``eq=False``) so
+    instances can live inside the orchestrator's pending-confirmation set
+    even though :class:`ToolCall` is not hashable. Identity semantics are
+    correct here because each pending confirmation is a unique instance.
+
+    Attributes:
+        call: The tool call awaiting confirmation.
+        future: Future that resolves to ``True`` when the user approves the
+            call, ``False`` when they decline, and is cancelled (raising
+            :class:`asyncio.CancelledError` to the awaiter) when the
+            orchestrator shuts down or a cancellation is signalled while a
+            confirmation is pending.
+    """
 
     call: ToolCall
     future: asyncio.Future[bool]
+
+
+DestructiveClassification = Literal["destructive", "read_only", "unknown"]
+"""Classification of a tool call's effect on external state.
+
+``destructive`` operations modify external state (memory, files, processes,
+sandboxes) and require confirmation when the orchestrator is configured for
+``ConfirmationLevel.DESTRUCTIVE``. ``read_only`` operations only inspect state
+and never need confirmation. ``unknown`` indicates the bridge is not
+recognised; the orchestrator treats unknown operations as destructive to fail
+safe.
+"""
+
+
+_FRIDA_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "spawn",
+        "attach",
+        "attach_by_name",
+        "detach",
+        "resume",
+        "resume_child",
+        "write_memory",
+        "allocate_memory",
+        "protect_memory",
+        "hook_function",
+        "remove_hook",
+        "intercept_return",
+        "replace_function",
+        "revert_hook",
+        "flush_interceptor",
+        "call_function",
+        "call_system_function",
+        "execute_script",
+        "execute_persistent_script",
+        "unload_script",
+        "unload_all_scripts",
+        "eternalize_script",
+        "post_message",
+        "rpc_call",
+        "patch_code",
+        "allocate_string",
+        "load_module",
+        "set_exception_handler",
+        "stalker_follow",
+        "stalker_unfollow",
+        "stalker_add_call_probe",
+        "stalker_remove_call_probe",
+        "enable_child_gating",
+        "disable_child_gating",
+        "enable_crash_reporting",
+        "disable_crash_reporting",
+        "connect_device",
+        "create_cancellable",
+        "cancel",
+        "inject_library_file",
+        "inject_library_blob",
+        "objc_hook_method",
+        "java_hook_method",
+        "java_deoptimize",
+        "create_cmodule",
+        "kernel_write",
+        "kernel_alloc",
+        "kernel_protect",
+        "socket_listen",
+        "socket_connect",
+        "file_write_target",
+        "sqlite_open",
+        "sqlite_exec",
+        "write_code",
+        "cloak_add_thread",
+        "cloak_remove_thread",
+        "cloak_add_range",
+        "cloak_remove_range",
+        "monitor_path",
+        "stop_monitor",
+    },
+)
+"""Frida bridge methods that mutate process / runtime state."""
+
+
+_GHIDRA_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "load_binary",
+        "analyze",
+        "rename_function",
+        "add_comment",
+        "set_data_type",
+        "start_headless",
+        "execute_script",
+        "execute_script_with_params",
+        "set_label",
+        "create_bookmark",
+        "create_function",
+        "delete_function",
+        "edit_function_signature",
+        "set_function_variable_type",
+        "define_structure",
+        "apply_structure_at",
+        "write_bytes",
+        "undo",
+        "redo",
+        "import_debug_info",
+        "add_reference",
+        "delete_reference",
+        "create_namespace",
+        "create_equate",
+        "create_data_type",
+        "create_data",
+        "configure_analysis",
+        "set_decompiler_options",
+        "create_memory_block",
+        "set_color",
+        "set_program_metadata",
+        "add_external_function",
+        "create_overlay_space",
+        "add_bookmark",
+        "remove_bookmark",
+        "add_label",
+        "remove_label",
+        "add_thunk",
+        "remove_thunk",
+        "add_external_reference",
+        "remove_external_reference",
+    },
+)
+"""Ghidra bridge methods that mutate program / project state."""
+
+
+_X64DBG_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "load",
+        "attach",
+        "detach",
+        "run",
+        "pause",
+        "stop",
+        "step_into",
+        "step_over",
+        "step_out",
+        "step_count",
+        "set_breakpoint",
+        "remove_breakpoint",
+        "enable_breakpoint",
+        "disable_breakpoint",
+        "set_breakpoint_on_api",
+        "configure_breakpoint",
+        "set_dll_breakpoint",
+        "set_logging_breakpoint",
+        "set_register",
+        "write_memory",
+        "set_watchpoint",
+        "remove_watchpoint",
+        "allocate_memory",
+        "free_memory",
+        "assemble_at",
+        "run_command",
+        "run_to",
+        "execute_til_return",
+        "skip_instruction",
+        "set_ip",
+        "set_label",
+        "set_comment",
+        "dump_memory_to_file",
+        "trace_start",
+        "trace_stop",
+        "trace_into",
+        "trace_over",
+        "set_exception_config",
+        "spawn",
+        "patch_instruction",
+        "nop_range",
+        "save_database",
+        "load_database",
+        "clear_database",
+        "restore_patch",
+        "export_patches",
+        "suspend_thread",
+        "resume_thread",
+        "switch_thread",
+        "set_thread_name",
+        "add_watch",
+        "remove_watch",
+        "animate_start",
+        "animate_stop",
+        "yara_scan",
+        "script_load",
+        "script_run",
+        "script_cmd",
+        "script_abort",
+        "plugin_load",
+        "plugin_unload",
+        "close_handle",
+        "patch_anti_debug",
+        "reconstruct_imports",
+        "goto_address",
+        "break_on_tls_callbacks",
+        "adjust_privilege",
+    },
+)
+"""x64dbg bridge methods that mutate debugger / target state."""
+
+
+_SANDBOX_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "create",
+        "destroy",
+        "run_binary",
+        "execute",
+        "copy_to",
+        "copy_from",
+        "snapshot_create",
+        "snapshot_restore",
+        "snapshot_delete",
+        "cont",
+        "pcap_start",
+        "pcap_stop",
+        "stop_pcap",
+        "screenshot",
+        "anti_evasion",
+        "memory_dump",
+        "extract_dropped_files",
+        "set_vnc_password",
+    },
+)
+"""Sandbox bridge methods that create, mutate, or terminate sandbox instances."""
+
+
+_PROCESS_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "open",
+        "close",
+        "terminate",
+        "suspend",
+        "resume",
+        "write_memory",
+        "allocate",
+        "free",
+        "protect",
+        "inject_dll",
+        "adjust_token_privilege",
+        "set_thread_context",
+        "pipe_connect",
+        "pipe_read",
+        "pipe_write",
+        "pipe_close",
+        "device_open",
+        "device_ioctl",
+        "device_close",
+        "create_section",
+        "map_section",
+        "unmap_section",
+    },
+)
+"""Process bridge methods that mutate target process state or kernel objects."""
+
+
+_HEX_EDITOR_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "open_file",
+        "close_file",
+        "write_bytes",
+        "insert_bytes",
+        "delete_bytes",
+        "undo",
+        "redo",
+        "register_template",
+        "remove_template",
+        "save",
+        "save_as",
+        "select_range",
+        "goto_offset",
+        "replace_bytes",
+        "save_to_sandbox",
+        "test_in_sandbox",
+        "apply_transform",
+        "apply_pipeline",
+        "open_process_memory",
+        "import_patches",
+        "export_patches",
+        "add_bookmark",
+        "remove_bookmark",
+        "add_highlight_rule",
+        "remove_highlight_rule",
+        "set_display_mode",
+        "fill_block",
+        "copy_block",
+        "move_block",
+        "swap_blocks",
+        "apply_arithmetic_to_selection",
+        "set_bit",
+        "toggle_bit",
+        "set_va_base",
+        "remove_va_mapping",
+        "auto_detect_va_mappings",
+        "generate_structure_bookmarks",
+        "export_annotated_html",
+        "export_annotated_pdf",
+        "snap_to_alignment",
+        "set_alignment_grid",
+        "repair_pe_checksum",
+        "run_python_script",
+        "set_chunk_size",
+        "set_memory_budget",
+        "set_color_mode",
+        "import_patches_bps",
+        "export_patches_bps",
+        "import_patches_ups",
+        "export_patches_ups",
+    },
+)
+"""Hex editor bridge methods that mutate document / editor state."""
+
+
+_CUTTER_DESTRUCTIVE: frozenset[str] = frozenset(
+    {
+        "load_binary",
+        "analyze",
+        "rename_function",
+        "add_comment",
+        "add_flag",
+        "add_zignature",
+        "save_project",
+        "open_project",
+        "execute_command",
+        "set_function_signature",
+        "patch_bytes",
+    },
+)
+"""Cutter bridge methods that mutate analysis state or invoke r2 commands."""
+
+
+BRIDGE_DESTRUCTIVE_METHODS: dict[ToolName, frozenset[str]] = {
+    ToolName.FRIDA: _FRIDA_DESTRUCTIVE,
+    ToolName.GHIDRA: _GHIDRA_DESTRUCTIVE,
+    ToolName.X64DBG: _X64DBG_DESTRUCTIVE,
+    ToolName.SANDBOX: _SANDBOX_DESTRUCTIVE,
+    ToolName.PROCESS: _PROCESS_DESTRUCTIVE,
+    ToolName.HEX_EDITOR: _HEX_EDITOR_DESTRUCTIVE,
+    ToolName.CUTTER: _CUTTER_DESTRUCTIVE,
+}
+"""Per-bridge whitelist of method names that mutate external state.
+
+Each entry maps a :class:`ToolName` to the exact method-name leaves (the part
+after the ``"<tool>."`` prefix) that the orchestrator must classify as
+destructive. Method names not present in the relevant set are read-only.
+Bridges absent from this map default to ``unknown`` classification, which the
+orchestrator treats as destructive so that newly added bridges fail safe until
+their methods are catalogued here.
+"""
+
+
+def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
+    """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
+
+    The orchestrator receives function names in either the ``"tool.method"``
+    namespaced form (the canonical schema produced by :class:`ToolDefinition`)
+    or as a bare ``"method"`` leaf. This helper normalises both shapes so the
+    classifier can look up exact method names against
+    :data:`BRIDGE_DESTRUCTIVE_METHODS`.
+
+    Args:
+        call: The :class:`ToolCall` whose function name and tool name should be
+            normalised.
+
+    Returns:
+        tuple[str, str]: A ``(tool_name, method_leaf)`` pair. ``tool_name`` is
+        the value from :attr:`ToolCall.tool_name` if present; otherwise it is
+        derived from a ``"tool.method"`` style ``function_name``.
+        ``method_leaf`` is the trailing identifier with no ``"."`` separator.
+    """
+    fn = call.function_name
+    if "." in fn:
+        prefix, _, leaf = fn.partition(".")
+        tool_name = call.tool_name or prefix
+        return tool_name, leaf
+    return call.tool_name, fn
+
+
+def classify_tool_call(call: ToolCall) -> DestructiveClassification:
+    """Classify a tool call as ``destructive``, ``read_only`` or ``unknown``.
+
+    Performs an exact lookup against :data:`BRIDGE_DESTRUCTIVE_METHODS`. The
+    bridge name is resolved from :attr:`ToolCall.tool_name`, falling back to
+    the prefix of a ``"tool.method"`` style ``function_name`` when the field
+    is empty. Method names are looked up by their leaf (the segment after the
+    ``"."``).
+
+    Args:
+        call: The :class:`ToolCall` to classify.
+
+    Returns:
+        DestructiveClassification: ``"destructive"`` when the bridge is known
+        and the method is in its destructive set; ``"read_only"`` when the
+        bridge is known and the method is not in its destructive set;
+        ``"unknown"`` when the bridge name cannot be resolved to a registered
+        :class:`ToolName`.
+    """
+    tool_name, method_leaf = _split_tool_function_name(call)
+    if not tool_name:
+        return "unknown"
+    try:
+        tool_enum = ToolName(tool_name.lower())
+    except ValueError:
+        return "unknown"
+    destructive_set = BRIDGE_DESTRUCTIVE_METHODS.get(tool_enum)
+    if destructive_set is None:
+        return "unknown"
+    if method_leaf in destructive_set:
+        return "destructive"
+    return "read_only"
 
 
 @dataclass
@@ -183,7 +608,11 @@ class Orchestrator:
     Coordinates tool execution and handles confirmations.
 
     Attributes:
-        DESTRUCTIVE_PATTERNS: Substrings identifying tool calls that modify state and require user confirmation.
+        DESTRUCTIVE_PATTERNS: Legacy substring tuple kept for callers that
+            iterate the public attribute. The orchestrator itself classifies
+            tool calls via :func:`classify_tool_call`, which performs exact
+            method-name lookup against :data:`BRIDGE_DESTRUCTIVE_METHODS`
+            instead of substring matching.
     """
 
     DESTRUCTIVE_PATTERNS: tuple[str, ...] = (
@@ -225,7 +654,9 @@ class Orchestrator:
         self._state: OrchestratorState = "idle"
         self._stats = OrchestratorStats()
         self._pending_confirmation: PendingConfirmation | None = None
+        self._pending_confirmations: set[PendingConfirmation] = set()
         self._cancel_event = asyncio.Event()
+        self._shutdown_event = asyncio.Event()
 
         self._script_manager: ScriptManager | None = None
         self._shutdown_called: bool = False
@@ -279,6 +710,90 @@ class Orchestrator:
             ProviderRegistry: The provider registry instance.
         """
         return self._providers
+
+    @property
+    def pending_confirmation(self) -> PendingConfirmation | None:
+        """Return the most-recently registered pending confirmation, if any.
+
+        Returns:
+            PendingConfirmation | None: The latest entry registered via
+            :meth:`_request_confirmation`, or ``None`` when no confirmation
+            is currently outstanding.
+        """
+        return self._pending_confirmation
+
+    @property
+    def pending_confirmations(self) -> frozenset[PendingConfirmation]:
+        """Return a snapshot of every outstanding confirmation.
+
+        Returns:
+            frozenset[PendingConfirmation]: An immutable snapshot of the
+            pending-confirmation set. Mutating the orchestrator after the
+            call will not affect the returned snapshot.
+        """
+        return frozenset(self._pending_confirmations)
+
+    @property
+    def shutdown_called(self) -> bool:
+        """Return whether :meth:`shutdown` has been invoked at least once.
+
+        Returns:
+            bool: ``True`` once :meth:`shutdown` has run; ``False`` before.
+        """
+        return self._shutdown_called
+
+    @property
+    def shutdown_complete(self) -> bool:
+        """Return whether the orchestrator's shutdown event has fired.
+
+        Returns:
+            bool: ``True`` when :meth:`shutdown` has marked the internal
+            shutdown event; otherwise ``False``.
+        """
+        return self._shutdown_event.is_set()
+
+    @staticmethod
+    def is_destructive_operation(call: ToolCall) -> bool:
+        """Determine whether a tool call requires destructive-op confirmation.
+
+        Uses the explicit per-bridge classifier
+        :func:`classify_tool_call`, which does exact method-name lookup
+        against :data:`BRIDGE_DESTRUCTIVE_METHODS`. ``destructive`` and
+        ``unknown`` classifications both require confirmation - unknown
+        bridges fail safe so newly added integrations cannot bypass
+        confirmation by virtue of not being catalogued. ``read_only``
+        operations skip confirmation.
+
+        Args:
+            call: The tool call to evaluate.
+
+        Returns:
+            bool: ``True`` when the call is classified as destructive or
+            unknown; ``False`` only when the call is explicitly classified
+            as read-only.
+        """
+        classification = classify_tool_call(call)
+        if classification == "unknown":
+            _logger.warning(
+                "destructive_classification_unknown",
+                tool=call.tool_name,
+                function=call.function_name,
+                fail_safe="treating_as_destructive",
+            )
+            return True
+        return classification == "destructive"
+
+    async def request_confirmation(self, call: ToolCall) -> bool:
+        """Request user confirmation for a tool call via the public API.
+
+        Args:
+            call: The tool call requiring confirmation.
+
+        Returns:
+            bool: The confirmation outcome (``True`` confirmed, ``False``
+            declined, cancelled, or no callback registered).
+        """
+        return await self._request_confirmation(call)
 
     def set_script_manager(self, manager: ScriptManager) -> None:
         """Set the script manager for recording tool execution results.
@@ -1365,7 +1880,7 @@ class Orchestrator:
                 reason="level_all",
             )
             return True
-        is_destructive = self._is_destructive_operation(call)
+        is_destructive = self.is_destructive_operation(call)
         _logger.debug(
             "confirmation_check",
             function=call.function_name,
@@ -1374,43 +1889,44 @@ class Orchestrator:
         )
         return is_destructive
 
-    def _is_destructive_operation(self, call: ToolCall) -> bool:
-        """Check if a tool call is destructive.
-
-        Destructive operations include:
-        - Writing to memory or files
-        - Patching binaries
-        - Executing code in target
-        - Any modification operations
-
-        Args:
-            call: The tool call to check.
-
-        Returns:
-            bool: True if operation is destructive.
-        """
-        function_lower = call.function_name.lower()
-        return any(pattern in function_lower for pattern in self.DESTRUCTIVE_PATTERNS)
-
     async def _request_confirmation(self, call: ToolCall) -> bool:
         """Request user confirmation for a tool call.
+
+        Registers the pending confirmation in :attr:`_pending_confirmations`
+        so that :meth:`shutdown` and :meth:`cancel` can marshal it cleanly
+        even when several confirmations overlap. A pending future cancelled
+        from :meth:`cancel` raises :class:`asyncio.CancelledError` here, which
+        is translated into a ``False`` return so the caller treats the call
+        as declined and continues teardown without blocking.
 
         Args:
             call: The tool call requiring confirmation.
 
         Returns:
-            bool: True if user confirmed, False otherwise.
+            bool: ``True`` if the user confirmed, ``False`` if declined,
+            cancelled, or no callback is registered.
         """
+        if self._shutdown_called or self._shutdown_event.is_set():
+            _logger.debug("confirmation_skipped_shutdown", call_id=call.id)
+            return False
+
         self._state = "waiting_confirmation"
 
         if self._async_confirmation_callback:
             future = self._async_confirmation_callback(call)
-            self._pending_confirmation = PendingConfirmation(call=call, future=future)
+            pending = PendingConfirmation(call=call, future=future)
+            self._pending_confirmation = pending
+            self._pending_confirmations.add(pending)
 
             try:
                 return await future
+            except asyncio.CancelledError:
+                _logger.debug("confirmation_future_cancelled", call_id=call.id)
+                return False
             finally:
-                self._pending_confirmation = None
+                self._pending_confirmations.discard(pending)
+                if self._pending_confirmation is pending:
+                    self._pending_confirmation = None
                 self._state = "processing"
 
         if self._confirmation_callback:
@@ -1423,16 +1939,39 @@ class Orchestrator:
         return False
 
     def confirm_pending(self, *, confirmed: bool) -> None:
-        """Confirm or decline a pending operation.
+        """Confirm or decline the most recently registered pending operation.
+
+        Resolves the latest entry registered in
+        :attr:`_pending_confirmations`. If the future was already cancelled
+        (for example, by :meth:`cancel` or :meth:`shutdown`), this is a no-op
+        rather than raising :class:`asyncio.InvalidStateError`.
 
         Args:
-            confirmed: True to confirm, False to decline.
+            confirmed: ``True`` to confirm the operation, ``False`` to decline.
         """
-        if self._pending_confirmation is not None and not self._pending_confirmation.future.done():
-            self._pending_confirmation.future.set_result(confirmed)
+        pending = self._pending_confirmation
+        if pending is None or pending.future.done():
+            return
+        try:
+            pending.future.set_result(confirmed)
+        except asyncio.InvalidStateError:
+            _logger.debug(
+                "confirm_pending_invalid_state",
+                call_id=pending.call.id,
+                confirmed=confirmed,
+            )
 
     async def cancel(self) -> None:
-        """Cancel current operation."""
+        """Cancel the current operation and marshal pending confirmations.
+
+        Sets the cancel event, requests provider-side cancellation, then
+        cancels every outstanding confirmation future tracked in
+        :attr:`_pending_confirmations`. ``future.cancel()`` propagates an
+        :class:`asyncio.CancelledError` to any awaiting
+        :meth:`_request_confirmation`, which translates it back into a
+        ``False`` return so callers do not see leaked exceptions and do not
+        hang waiting for user input that will never arrive.
+        """
         _logger.info("operation_cancelling", state=self._state)
         self._cancel_event.set()
 
@@ -1445,14 +1984,37 @@ class Orchestrator:
             except (OSError, RuntimeError) as exc:
                 _logger.warning("cancel_provider_request_failed", provider=provider_name, error=str(exc))
 
-        if self._pending_confirmation and not self._pending_confirmation.future.done():
-            call_id = self._pending_confirmation.call.id
-            try:
-                declined = False
-                self._pending_confirmation.future.set_result(declined)
-                _logger.debug("cancel_pending_confirmation_declined", call_id=call_id)
-            except (asyncio.InvalidStateError, RuntimeError) as exc:
-                _logger.warning("cancel_pending_confirmation_failed", call_id=call_id, error=str(exc))
+        self._marshal_pending_confirmations(reason="cancel")
+
+    def _marshal_pending_confirmations(self, *, reason: str) -> None:
+        """Cancel every outstanding confirmation future.
+
+        Iterates a snapshot of :attr:`_pending_confirmations` so that
+        ``_request_confirmation``'s ``finally`` block (which mutates the set)
+        can run without raising ``RuntimeError: Set changed size during
+        iteration``. Each not-yet-resolved future is cancelled via
+        :meth:`asyncio.Future.cancel`; the awaiting coroutine then receives
+        :class:`asyncio.CancelledError` and translates it into a ``False``
+        return per the contract in :meth:`_request_confirmation`. Already
+        resolved futures are left untouched.
+
+        Args:
+            reason: Short identifier (``"cancel"``, ``"shutdown"``) recorded
+                in structured logs for traceability.
+        """
+        pending_snapshot = tuple(self._pending_confirmations)
+        for pending in pending_snapshot:
+            future = pending.future
+            call_id = pending.call.id
+            if future.done():
+                continue
+            cancelled = future.cancel()
+            _logger.debug(
+                "pending_confirmation_marshalled",
+                reason=reason,
+                call_id=call_id,
+                cancelled=cancelled,
+            )
 
     async def add_binary(self, path: Path, *, run_bridge_analysis: bool = True) -> BinaryInfo:
         """Add a binary to the current session.
@@ -1863,6 +2425,10 @@ class Orchestrator:
         bundled into a single ``ExceptionGroup`` so callers learn about every teardown
         failure.
 
+        Before any other teardown work, all in-flight confirmation futures are
+        marshalled via :meth:`_marshal_pending_confirmations` so awaiters do
+        not leak coroutines or hang waiting for input that will never arrive.
+
         Raises:
             ExceptionGroup: When one or more teardown steps raised non-cancellation
                 exceptions, all collected failures are bundled into an ``ExceptionGroup``.
@@ -1871,11 +2437,15 @@ class Orchestrator:
             _logger.info("orchestrator_shutdown_already_called", state=self._state)
             return
         self._shutdown_called = True
+        self._shutdown_event.set()
         _logger.info("orchestrator_shutdown_started", state=self._state)
 
         errors: list[Exception] = []
 
         try:
+            self._marshal_pending_confirmations(reason="shutdown")
+            await asyncio.sleep(0)
+
             try:
                 await self.cancel()
             except Exception as exc:
@@ -1946,6 +2516,19 @@ class Orchestrator:
             raise ExceptionGroup(group_message, errors)
 
 
+_MACHO_N_EXT_BIT: int = 0x01
+"""``N_EXT`` flag in a Mach-O ``nlist``'s ``n_type`` byte (external symbol)."""
+
+_MACHO_N_TYPE_MASK: int = 0x0E
+"""Mask isolating the type field within a Mach-O ``n_type`` byte."""
+
+_MACHO_N_SECT: int = 0x0E
+"""``n_type & N_TYPE`` value indicating the symbol is defined in a section."""
+
+_MACHO_N_UNDF: int = 0x00
+"""``n_type & N_TYPE`` value indicating the symbol is undefined (imported)."""
+
+
 _ARCH_KEYWORDS: dict[str, str] = {
     "AMD64": "x86_64",
     "x86_64": "x86_64",
@@ -2005,14 +2588,29 @@ def _extract_sections(binary: object) -> list[SectionInfo]:
     return result
 
 
-def _extract_imports(binary: object) -> list[ImportInfo]:
-    """Extract import info from a parsed lief binary.
+def extract_imports(binary: object) -> list[ImportInfo]:
+    """Extract import metadata from a parsed lief binary.
+
+    Implements full coverage for the three formats Intellicrack ingests:
+
+    * **PE** - walks every ``ImportEntry`` from every imported DLL.
+    * **ELF** - enumerates every imported dynamic symbol (object and function),
+      not just PLT/GOT relocations. This pulls in data symbols
+      (``__environ``, ``stdout``) and lazy-bound functions that the previous
+      ``pltgot_relocations`` scan missed entirely on stripped or
+      ``BIND_NOW``-linked binaries.
+    * **Mach-O** - walks ``imported_symbols`` so dyld-resolved imports
+      (e.g. ``_printf``) appear in the import list. The enclosing dylib is
+      resolved through the symbol's ``library`` attribute when ordinal-based
+      two-level lookups expose it.
 
     Args:
-        binary: A lief.Binary (PE, ELF, or Mach-O).
+        binary: A parsed ``lief.PE.Binary``, ``lief.ELF.Binary``, or
+            ``lief.MachO.Binary`` instance.
 
     Returns:
-        list[ImportInfo]: Extracted import metadata.
+        list[ImportInfo]: Imported entries with the full ``(dll, function,
+        ordinal, address)`` tuple populated as far as the format reveals.
     """
     import lief
 
@@ -2033,23 +2631,78 @@ def _extract_imports(binary: object) -> list[ImportInfo]:
                     ),
                 )
     elif isinstance(binary, lief.ELF.Binary):
-        for rel in binary.pltgot_relocations:
-            sym_name = str(getattr(rel.symbol, "name", "")) if getattr(rel, "has_symbol", True) else ""
-            if sym_name:
+        for sym in binary.imported_symbols:
+            sym_name = str(sym.name) if sym.name else ""
+            if not sym_name:
+                continue
+            result.append(
+                _ImportInfo(
+                    dll="",
+                    function=sym_name,
+                    ordinal=None,
+                    address=int(sym.value),
+                ),
+            )
+    elif isinstance(binary, lief.MachO.Binary):
+        seen_imports: set[str] = set()
+        for sym in binary.imported_symbols:
+            sym_name = str(sym.name) if sym.name else ""
+            if not sym_name or sym_name in seen_imports:
+                continue
+            seen_imports.add(sym_name)
+            library_obj = getattr(sym, "library", None)
+            library_name = str(library_obj.name) if library_obj is not None and getattr(library_obj, "name", None) else ""
+            ordinal_attr = getattr(sym, "library_ordinal", None)
+            ordinal_value = int(ordinal_attr) if isinstance(ordinal_attr, int) else None
+            result.append(
+                _ImportInfo(
+                    dll=library_name,
+                    function=sym_name,
+                    ordinal=ordinal_value,
+                    address=int(sym.value),
+                ),
+            )
+        for sym in binary.symbols:
+            sym_name = str(sym.name) if sym.name else ""
+            if not sym_name or sym_name in seen_imports:
+                continue
+            raw_type = int(getattr(sym, "raw_type", 0))
+            if raw_type & _MACHO_N_EXT_BIT and (raw_type & _MACHO_N_TYPE_MASK) == _MACHO_N_UNDF:
+                seen_imports.add(sym_name)
+                library_obj = getattr(sym, "library", None)
+                library_name = str(library_obj.name) if library_obj is not None and getattr(library_obj, "name", None) else ""
+                ordinal_attr = getattr(sym, "library_ordinal", None)
+                ordinal_value = int(ordinal_attr) if isinstance(ordinal_attr, int) else None
                 result.append(
-                    _ImportInfo(dll="", function=sym_name, ordinal=None, address=int(rel.address)),
+                    _ImportInfo(
+                        dll=library_name,
+                        function=sym_name,
+                        ordinal=ordinal_value,
+                        address=int(sym.value),
+                    ),
                 )
     return result
 
 
-def _extract_exports(binary: object) -> list[ExportInfo]:
-    """Extract export info from a parsed lief binary.
+def extract_exports(binary: object) -> list[ExportInfo]:
+    """Extract export metadata from a parsed lief binary.
+
+    Implements full coverage for the three formats Intellicrack ingests:
+
+    * **PE** - walks every ``ExportEntry`` from the export directory.
+    * **ELF** - walks every dynamic symbol marked as exported.
+    * **Mach-O** - walks ``exported_symbols``, which surfaces both classic
+      ``__TEXT`` symbol-table exports and ``LC_DYLD_EXPORTS_TRIE`` /
+      ``LC_DYLD_INFO`` trie-encoded exports that newer macOS dylibs publish.
 
     Args:
-        binary: A lief.Binary (PE, ELF, or Mach-O).
+        binary: A parsed ``lief.PE.Binary``, ``lief.ELF.Binary``, or
+            ``lief.MachO.Binary`` instance.
 
     Returns:
-        list[ExportInfo]: Extracted export metadata.
+        list[ExportInfo]: Exported entries with ``(name, ordinal, address)``
+        populated. Ordinals are ``0`` for ELF / Mach-O because those formats
+        do not assign export ordinals.
     """
     import lief
 
@@ -2067,7 +2720,23 @@ def _extract_exports(binary: object) -> list[ExportInfo]:
                 ),
             )
     elif isinstance(binary, lief.ELF.Binary):
-        result.extend(_ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols)
+        result.extend(_ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols if sym.name)
+    elif isinstance(binary, lief.MachO.Binary):
+        seen_names: set[str] = set()
+        for sym in binary.exported_symbols:
+            sym_name = str(sym.name) if sym.name else ""
+            if not sym_name or sym_name in seen_names:
+                continue
+            seen_names.add(sym_name)
+            result.append(_ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
+        for sym in binary.symbols:
+            sym_name = str(sym.name) if sym.name else ""
+            if not sym_name or sym_name in seen_names:
+                continue
+            raw_type = int(getattr(sym, "raw_type", 0))
+            if raw_type & _MACHO_N_EXT_BIT and (raw_type & _MACHO_N_TYPE_MASK) == _MACHO_N_SECT:
+                seen_names.add(sym_name)
+                result.append(_ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
     return result
 
 
@@ -2164,6 +2833,6 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
         is_64bit=meta[2],
         entry_point=meta[3],
         sections=_extract_sections(binary),
-        imports=_extract_imports(binary),
-        exports=_extract_exports(binary),
+        imports=extract_imports(binary),
+        exports=extract_exports(binary),
     )
