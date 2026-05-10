@@ -5,10 +5,32 @@
 
 """Audit6 regression tests for ``intellicrack.bridges.x64dbg``.
 
-Combines the X64DBG-B, X64DBG-C, X64DBG-D, and X64DBG-E audit6 work
-units into a single test module so their helpers and fixtures are
+Combines the X64DBG-A, X64DBG-B, X64DBG-C, X64DBG-D, and X64DBG-E audit6
+work units into a single test module so their helpers and fixtures are
 shared.
 
+X64DBG-A production-blocker findings:
+
+* F-0004 - step coroutines wait on the plugin's paused event with a
+  bounded timeout instead of a fixed sleep.
+* F-0011 - shutdown completes process termination, state clearing, and
+  super-shutdown even when an earlier cleanup phase raises.
+* F-0013 - `_start_debugger` refuses to launch when the C++ plugin is
+  not deployed.
+* F-0015 - `Popen` invocation routes stdout/stderr/stdin to `DEVNULL`
+  so the GUI cannot deadlock on a full pipe.
+* F-0017 - `_wait_for_pipe_ready` raises on non-Windows instead of
+  sleeping and returning.
+* F-0018 - `_detect_process_arch` returns `None` and `attach`
+  raises rather than guessing 64-bit on error.
+* F-0023 - `_detect_architecture` rejects unsupported / corrupt PE
+  inputs instead of silently returning 64-bit / 32-bit.
+
+The X64DBG-A tests exercise the actual defect surface: real PE bytes
+feed into the architecture detector, real `Popen` kwargs are
+inspected via a recording wrapper installed at the bridge's `Popen`
+import binding, and step waiting uses real `asyncio.Future`
+resolution scheduled through the bridge's threadsafe event handler.
 X64DBG-B production-blocker findings:
 
 * F-0003 - ``patch_anti_debug`` PEB-base plumbing and broader patch
@@ -119,6 +141,8 @@ from intellicrack.bridges._pe_format import (
 from intellicrack.bridges._win32_types import NT_HEADERS_OPTIONAL_OFFSET
 from intellicrack.bridges.x64dbg import (
     MAX_MEMORY_READ_SIZE,
+    PE32_MACHINE,
+    PE64_MACHINE,
     PE_EXPORT_MAX,
     X64DbgBridge,
 )
@@ -2681,3 +2705,712 @@ class TestApiBreakpointResolution:
         assert result["resolution_method"] == "bpx"
         assert result["resolved_address"] is None
         assert sent_commands == ["bpx user32.MessageBoxW"]
+
+
+# =====================================================================
+# X64DBG-A regression tests (lifecycle / subprocess / platform).
+# Helpers are suffixed ``_a`` to avoid collisions with the X64DBG-B/C/D/E
+# helpers above. The classes target one finding each as documented in
+# the module docstring.
+# =====================================================================
+
+
+_AWAIT_STEP_ATTR_A = "_await_step_complete"
+_DETECT_ARCH_ATTR_A = "_detect_architecture"
+_DETECT_PROCESS_ARCH_ATTR_A = "_detect_process_arch"
+_WAIT_FOR_PIPE_ATTR_A = "_wait_for_pipe_ready"
+_START_DEBUGGER_ATTR_A = "_start_debugger"
+_REGISTER_STEP_WAITER_ATTR_A = "_register_step_waiter"
+_CANCEL_STEP_WAITER_ATTR_A = "_cancel_step_waiter"
+_X64DBG_PATH_ATTR_A = "_x64dbg_path"
+_PLUGIN_DEPLOYED_ATTR_A = "_plugin_deployed"
+_IS_64BIT_ATTR_A = "_is_64bit"
+_ATTACHED_PID_ATTR_A = "_attached_pid"
+_PROCESS_ATTR_A = "_process"
+_STEP_WAITERS_ATTR_A = "_step_waiters"
+_PE_HEADER_OFFSET_A = 0x3C
+_DEFAULT_PE_OFFSET_A = 0x80
+_PE_SIGNATURE_LEN_A = 4
+_TEST_PID_A = 4242
+_FAKE_IP_A = 0xDEADBEEF
+_X86_TRUNCATED_IP_A = 0xCAFEBABE & 0xFFFFFFFF
+
+
+def _build_pe_bytes_a(machine: int, *, e_lfanew: int = _DEFAULT_PE_OFFSET_A) -> bytes:
+    """Synthesize a minimal PE file with a chosen ``Machine`` value.
+
+    Args:
+        machine: ``IMAGE_FILE_MACHINE_*`` value to embed in the COFF
+            header.
+        e_lfanew: Offset to the PE signature inside the buffer.
+
+    Returns:
+        bytes: A PE-formatted byte string just large enough to satisfy
+        ``X64DbgBridge._detect_architecture``.
+    """
+    buf = bytearray(0x200)
+    buf[0:2] = b"MZ"
+    struct.pack_into("<I", buf, _PE_HEADER_OFFSET_A, e_lfanew)
+    buf[e_lfanew : e_lfanew + 4] = b"PE\x00\x00"
+    struct.pack_into("<H", buf, e_lfanew + 4, machine)
+    return bytes(buf)
+
+
+async def _await_step_a(bridge: X64DbgBridge, command: str) -> int:
+    """Invoke the bridge's protected step-await coroutine.
+
+    Args:
+        bridge: Bridge instance.
+        command: One of ``step_into`` / ``step_over`` / ``step_out``.
+
+    Returns:
+        int: The post-step instruction pointer the bridge resolved.
+    """
+    raw_attr: object = getattr(bridge, _AWAIT_STEP_ATTR_A)
+    coro = cast("Callable[[str], Any]", raw_attr)
+    return cast("int", await coro(command))
+
+
+def _detect_architecture_a(path: Path) -> bool:
+    """Invoke ``X64DbgBridge._detect_architecture`` via dynamic attribute lookup.
+
+    Args:
+        path: Path to the binary whose architecture should be detected.
+
+    Returns:
+        bool: ``True`` for x64, ``False`` for x86.
+    """
+    raw_attr: object = getattr(X64DbgBridge, _DETECT_ARCH_ATTR_A)
+    func = cast("Callable[[Path], bool]", raw_attr)
+    return func(path)
+
+
+def _detect_process_arch_a(pid: int) -> bool | None:
+    """Invoke ``X64DbgBridge._detect_process_arch`` via dynamic attribute lookup.
+
+    Args:
+        pid: Process identifier.
+
+    Returns:
+        bool | None: ``True``/``False`` for resolved arch, ``None`` when unknown.
+    """
+    raw_attr: object = getattr(X64DbgBridge, _DETECT_PROCESS_ARCH_ATTR_A)
+    func = cast("Callable[[int], bool | None]", raw_attr)
+    return func(pid)
+
+
+async def _wait_for_pipe_ready_a(bridge: X64DbgBridge) -> None:
+    """Invoke ``bridge._wait_for_pipe_ready`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+    """
+    raw_attr: object = getattr(bridge, _WAIT_FOR_PIPE_ATTR_A)
+    coro = cast("Callable[[], Any]", raw_attr)
+    await coro()
+
+
+async def _start_debugger_a(bridge: X64DbgBridge, *, is_64bit: bool) -> None:
+    """Invoke ``bridge._start_debugger`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+        is_64bit: Whether to launch the x64dbg variant (vs x32dbg).
+    """
+    raw_attr: object = getattr(bridge, _START_DEBUGGER_ATTR_A)
+    coro = cast("Callable[..., Any]", raw_attr)
+    await coro(is_64bit=is_64bit)
+
+
+def _register_step_waiter_a(bridge: X64DbgBridge) -> asyncio.Future[int]:
+    """Invoke ``bridge._register_step_waiter`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+
+    Returns:
+        asyncio.Future[int]: The newly registered step-completion future.
+    """
+    raw_attr: object = getattr(bridge, _REGISTER_STEP_WAITER_ATTR_A)
+    func = cast("Callable[[], asyncio.Future[int]]", raw_attr)
+    return func()
+
+
+def _cancel_step_waiter_a(bridge: X64DbgBridge, future: asyncio.Future[int]) -> None:
+    """Invoke ``bridge._cancel_step_waiter`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+        future: Step-completion future returned by ``_register_step_waiter``.
+    """
+    raw_attr: object = getattr(bridge, _CANCEL_STEP_WAITER_ATTR_A)
+    func = cast("Callable[[asyncio.Future[int]], None]", raw_attr)
+    func(future)
+
+
+def _step_waiters_a(bridge: X64DbgBridge) -> list[asyncio.Future[int]]:
+    """Read ``bridge._step_waiters`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+
+    Returns:
+        list[asyncio.Future[int]]: The bridge's current step-waiter list.
+    """
+    raw_attr: object = getattr(bridge, _STEP_WAITERS_ATTR_A)
+    return cast("list[asyncio.Future[int]]", raw_attr)
+
+
+def _attached_pid_a(bridge: X64DbgBridge) -> int | None:
+    """Read ``bridge._attached_pid`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+
+    Returns:
+        int | None: The attached PID, or ``None`` when not attached.
+    """
+    raw_attr: object = getattr(bridge, _ATTACHED_PID_ATTR_A)
+    return cast("int | None", raw_attr)
+
+
+def _process_a(bridge: X64DbgBridge) -> object:
+    """Read ``bridge._process`` via dynamic attribute lookup.
+
+    Args:
+        bridge: Bridge instance.
+
+    Returns:
+        object: The currently bound process object (or ``None``).
+    """
+    return getattr(bridge, _PROCESS_ATTR_A)
+
+
+class _FakeRegistersA:
+    """Stand-in for the registers dataclass used in step tests."""
+
+    def __init__(self, rip: int) -> None:
+        """Initialize with a chosen instruction pointer.
+
+        Args:
+            rip: Instruction pointer to expose as ``self.rip``.
+        """
+        self.rip = rip
+
+
+class TestArchitectureTriState:
+    """F-0023 - ``_detect_architecture`` rejects unsupported PE inputs."""
+
+    @staticmethod
+    def test_pe64_machine_returns_true(tmp_path: Path) -> None:
+        """An AMD64 PE returns ``True`` (use x64dbg).
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "amd64.exe"
+        path.write_bytes(_build_pe_bytes_a(PE64_MACHINE))
+        assert _detect_architecture_a(path) is True
+
+    @staticmethod
+    def test_pe32_machine_returns_false(tmp_path: Path) -> None:
+        """An i386 PE returns ``False`` (use x32dbg).
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "i386.exe"
+        path.write_bytes(_build_pe_bytes_a(PE32_MACHINE))
+        assert _detect_architecture_a(path) is False
+
+    @staticmethod
+    def test_arm64_machine_raises(tmp_path: Path) -> None:
+        """An ARM64 PE raises ``ToolError`` instead of returning False.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "arm64.exe"
+        path.write_bytes(_build_pe_bytes_a(0xAA64))
+        with pytest.raises(ToolError, match=r"Machine|architecture"):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_arm_machine_raises(tmp_path: Path) -> None:
+        """An ARM PE raises ``ToolError``.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "arm.exe"
+        path.write_bytes(_build_pe_bytes_a(0x01C0))
+        with pytest.raises(ToolError):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_ia64_machine_raises(tmp_path: Path) -> None:
+        """An IA64 PE raises ``ToolError``.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "ia64.exe"
+        path.write_bytes(_build_pe_bytes_a(0x0200))
+        with pytest.raises(ToolError):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_missing_mz_raises(tmp_path: Path) -> None:
+        """A buffer without ``MZ`` raises rather than defaulting to 64-bit.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "junk.exe"
+        path.write_bytes(b"NO" + b"\x00" * 256)
+        with pytest.raises(ToolError, match=r"MZ|architecture"):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_truncated_file_raises(tmp_path: Path) -> None:
+        """A buffer too short to hold a DOS header raises.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "tiny.exe"
+        path.write_bytes(b"MZ")
+        with pytest.raises(ToolError):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_missing_pe_signature_raises(tmp_path: Path) -> None:
+        """A DOS image without a PE signature raises.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        buf = bytearray(0x200)
+        buf[0:2] = b"MZ"
+        struct.pack_into("<I", buf, _PE_HEADER_OFFSET_A, _DEFAULT_PE_OFFSET_A)
+        buf[_DEFAULT_PE_OFFSET_A : _DEFAULT_PE_OFFSET_A + 4] = b"NOPE"
+        path = tmp_path / "no_pe.exe"
+        path.write_bytes(bytes(buf))
+        with pytest.raises(ToolError, match="PE"):
+            _detect_architecture_a(path)
+
+    @staticmethod
+    def test_io_error_raises(tmp_path: Path) -> None:
+        """A missing file raises ``ToolError`` instead of defaulting.
+
+        Args:
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        path = tmp_path / "does_not_exist.exe"
+        with pytest.raises(ToolError):
+            _detect_architecture_a(path)
+
+
+class TestProcessArchTriState:
+    """F-0018 - ``_detect_process_arch`` returns tri-state and ``attach`` raises."""
+
+    @staticmethod
+    def test_non_windows_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+        """When ``_IS_WIN32`` is False the detector reports None.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(x64dbg_module, "_IS_WIN32", False)
+        assert _detect_process_arch_a(_TEST_PID_A) is None
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only path")
+    @staticmethod
+    def test_invalid_pid_returns_none() -> None:
+        """An impossible PID yields ``None`` rather than ``True``."""
+        bogus_pid = 0x7FFFFFFE
+        result = _detect_process_arch_a(bogus_pid)
+        assert result is None
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only path")
+    @staticmethod
+    def test_current_process_resolves() -> None:
+        """The current process resolves to a concrete bool, not ``None``."""
+        result = _detect_process_arch_a(os.getpid())
+        assert result in {True, False}
+
+    @staticmethod
+    def test_attach_raises_when_arch_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+        """``attach`` surfaces a ``ToolError`` instead of guessing 64-bit.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+
+        def _stub_detect(_pid: int) -> bool | None:
+            return None
+
+        monkeypatch.setattr(X64DbgBridge, "_detect_process_arch", staticmethod(_stub_detect))
+        with pytest.raises(ToolError, match="cannot detect architecture"):
+            asyncio.run(bridge.attach(_TEST_PID_A))
+
+
+class TestPipeReadyPlatformRefusal:
+    """F-0017 - non-Windows path raises rather than sleeping."""
+
+    @staticmethod
+    def test_non_windows_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Non-Windows ``_wait_for_pipe_ready`` raises ``ToolError``.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(x64dbg_module, "_IS_WIN32", False)
+        bridge = X64DbgBridge()
+
+        async def runner() -> None:
+            await _wait_for_pipe_ready_a(bridge)
+
+        with pytest.raises(ToolError, match="Windows"):
+            asyncio.run(runner())
+
+    @staticmethod
+    def test_non_windows_does_not_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+        """The non-Windows path raises before any sleep occurs.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(x64dbg_module, "_IS_WIN32", False)
+        bridge = X64DbgBridge()
+        sleep_called = False
+        original_sleep = asyncio.sleep
+
+        async def tracking_sleep(seconds: float) -> None:
+            nonlocal sleep_called
+            sleep_called = True
+            await original_sleep(seconds)
+
+        monkeypatch.setattr(asyncio, "sleep", tracking_sleep)
+
+        async def runner() -> None:
+            with contextlib.suppress(ToolError):
+                await _wait_for_pipe_ready_a(bridge)
+
+        asyncio.run(runner())
+        assert sleep_called is False
+
+
+class TestSubprocessStreamDrain:
+    """F-0015 - ``Popen`` is called with ``DEVNULL`` for std streams."""
+
+    @staticmethod
+    def test_popen_uses_devnull(
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Recorded ``Popen`` invocation requests DEVNULL for stdout/stderr.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _X64DBG_PATH_ATTR_A, tmp_path)
+        setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
+        x64_dir = tmp_path / "release" / "x64"
+        x64_dir.mkdir(parents=True)
+        exe_path = x64_dir / "x64dbg.exe"
+        exe_path.write_bytes(b"\x00")
+
+        captured: dict[str, Any] = {}
+
+        class _DummyProcess:
+            def __init__(self) -> None:
+                self.pid = 0xC0FFEE
+
+            def terminate(self) -> None:
+                pass
+
+            def wait(self) -> int:
+                return 0
+
+        def fake_popen(args: object, **kwargs: object) -> _DummyProcess:
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+            return _DummyProcess()
+
+        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
+
+        async def fake_wait(_self: X64DbgBridge) -> None:
+            await asyncio.sleep(0)
+
+        monkeypatch.setattr(X64DbgBridge, "_wait_for_pipe_ready", fake_wait)
+
+        async def runner() -> None:
+            await _start_debugger_a(bridge, is_64bit=True)
+
+        asyncio.run(runner())
+
+        assert captured["kwargs"].get("stdout") is x64dbg_module.DEVNULL
+        assert captured["kwargs"].get("stderr") is x64dbg_module.DEVNULL
+        assert captured["kwargs"].get("stdin") is x64dbg_module.DEVNULL
+
+
+class TestPluginRequiredStartGate:
+    """F-0013 - ``_start_debugger`` refuses without the plugin."""
+
+    @staticmethod
+    def test_refuses_when_plugin_not_deployed(
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """``_start_debugger`` raises before spawning x64dbg.exe.
+
+        Sets up a working directory with a real ``x64dbg.exe`` file
+        present so the previous behaviour (spawn first, fail at the
+        first RPC call) would have proceeded to ``Popen``. The fix
+        gates on ``_plugin_deployed`` and must therefore raise a
+        plugin-related ``ToolError`` instead.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+            tmp_path: Per-test temp directory provided by pytest.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _X64DBG_PATH_ATTR_A, tmp_path)
+        setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, False)
+        x64_dir = tmp_path / "release" / "x64"
+        x64_dir.mkdir(parents=True)
+        exe_path = x64_dir / "x64dbg.exe"
+        exe_path.write_bytes(b"\x00")
+
+        popen_called = False
+
+        def fake_popen(*_args: object, **_kwargs: object) -> object:
+            nonlocal popen_called
+            popen_called = True
+            msg = "Popen must not be invoked when plugin is not deployed"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
+
+        async def runner() -> None:
+            await _start_debugger_a(bridge, is_64bit=True)
+
+        with pytest.raises(ToolError, match="plugin"):
+            asyncio.run(runner())
+
+        assert popen_called is False
+        assert _process_a(bridge) is None
+
+
+class TestShutdownTryFinally:
+    """F-0011 - shutdown reaches every cleanup phase even on early failure."""
+
+    @staticmethod
+    def test_close_connection_failure_still_terminates_process(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A raise from ``_close_connection`` still terminates the process.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _ATTACHED_PID_ATTR_A, 1234)
+
+        terminate_called = threading.Event()
+        wait_called = threading.Event()
+
+        class _RaisingProcess:
+            def __init__(self) -> None:
+                self.pid = 0xBADC0DE
+
+            def terminate(self) -> None:
+                terminate_called.set()
+
+            def wait(self) -> int:
+                wait_called.set()
+                return 0
+
+            def kill(self) -> None:
+                pass
+
+        setattr(bridge, _PROCESS_ATTR_A, _RaisingProcess())
+
+        async def raising_close(_self: X64DbgBridge) -> None:
+            await asyncio.sleep(0)
+            msg = "induced close failure"
+            raise ToolError(msg)
+
+        monkeypatch.setattr(X64DbgBridge, "_close_connection", raising_close)
+
+        unregistered: list[int] = []
+
+        class _FakeManager:
+            def unregister(self, pid: int) -> None:
+                unregistered.append(pid)
+
+        def _stub_get_instance(_cls: type[Any]) -> _FakeManager:
+            return _FakeManager()
+
+        monkeypatch.setattr(
+            x64dbg_module.ProcessManager,
+            "get_instance",
+            classmethod(_stub_get_instance),
+        )
+
+        async def runner() -> None:
+            await bridge.shutdown()
+
+        with pytest.raises(ToolError, match="induced close failure"):
+            asyncio.run(runner())
+
+        assert terminate_called.is_set(), "terminate must run after close failure"
+        assert wait_called.is_set(), "wait must run after terminate"
+        assert unregistered == [0xBADC0DE], "process manager must be informed of cleanup"
+        assert _attached_pid_a(bridge) is None
+        assert _process_a(bridge) is None
+
+
+class TestStepEventSync:
+    """F-0004 - step coroutines wait on the paused event with timeout."""
+
+    @staticmethod
+    def test_step_resolves_on_paused_event(monkeypatch: pytest.MonkeyPatch) -> None:
+        """A ``paused`` event released from a thread resolves the step.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
+        setattr(bridge, _IS_64BIT_ATTR_A, True)
+
+        async def fake_send_pipe_command(
+            _self: X64DbgBridge,
+            _command: str,
+            _params: dict[str, Any] | None = None,
+        ) -> None:
+            await asyncio.sleep(0)
+
+        async def fake_get_registers(_self: X64DbgBridge) -> _FakeRegistersA:
+            await asyncio.sleep(0)
+            return _FakeRegistersA(_FAKE_IP_A)
+
+        monkeypatch.setattr(X64DbgBridge, "_send_pipe_command", fake_send_pipe_command)
+        monkeypatch.setattr(X64DbgBridge, "get_registers", fake_get_registers)
+
+        async def runner() -> int:
+            async def emit_pause_after_delay() -> None:
+                await asyncio.sleep(0.05)
+                _dispatch_event(bridge, {"event": "paused", "address": hex(_FAKE_IP_A)})
+
+            emit_task = asyncio.create_task(emit_pause_after_delay())
+            try:
+                return await _await_step_a(bridge, "step_into")
+            finally:
+                await emit_task
+
+        result = asyncio.run(runner())
+        assert result == _FAKE_IP_A
+
+    @staticmethod
+    def test_step_resolves_on_breakpoint_event(monkeypatch: pytest.MonkeyPatch) -> None:
+        """A breakpoint hit also pauses the debuggee and resolves the step.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
+        setattr(bridge, _IS_64BIT_ATTR_A, False)
+
+        async def fake_send_pipe_command(
+            _self: X64DbgBridge,
+            _command: str,
+            _params: dict[str, Any] | None = None,
+        ) -> None:
+            await asyncio.sleep(0)
+
+        async def fake_get_registers(_self: X64DbgBridge) -> _FakeRegistersA:
+            await asyncio.sleep(0)
+            return _FakeRegistersA(0xCAFEBABE)
+
+        monkeypatch.setattr(X64DbgBridge, "_send_pipe_command", fake_send_pipe_command)
+        monkeypatch.setattr(X64DbgBridge, "get_registers", fake_get_registers)
+
+        async def runner() -> int:
+            async def emit_breakpoint_after_delay() -> None:
+                await asyncio.sleep(0.05)
+                _dispatch_event(bridge, {"event": "breakpoint", "address": "0xCAFEBABE"})
+
+            emit_task = asyncio.create_task(emit_breakpoint_after_delay())
+            try:
+                return await _await_step_a(bridge, "step_over")
+            finally:
+                await emit_task
+
+        result = asyncio.run(runner())
+        assert result == _X86_TRUNCATED_IP_A
+
+    @staticmethod
+    def test_step_times_out_when_no_pause_arrives(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Without a paused event the step raises a bounded ``ToolError``.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
+        monkeypatch.setattr(X64DbgBridge, "STEP_TIMEOUT_SECONDS", 0.05)
+
+        async def fake_send_pipe_command(
+            _self: X64DbgBridge,
+            _command: str,
+            _params: dict[str, Any] | None = None,
+        ) -> None:
+            await asyncio.sleep(0)
+
+        async def unreachable_get_registers(_self: X64DbgBridge) -> _FakeRegistersA:
+            await asyncio.sleep(0)
+            msg = "get_registers must not be invoked when the step times out"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(X64DbgBridge, "_send_pipe_command", fake_send_pipe_command)
+        monkeypatch.setattr(X64DbgBridge, "get_registers", unreachable_get_registers)
+
+        async def runner() -> None:
+            await _await_step_a(bridge, "step_into")
+
+        with pytest.raises(ToolError, match="did not complete"):
+            asyncio.run(runner())
+
+        assert _step_waiters_a(bridge) == []
+
+    @staticmethod
+    def test_step_does_not_use_fixed_sleep() -> None:
+        """The step body must not call ``asyncio.sleep`` for a fixed delay."""
+        for name in ("step_into", "step_over", "step_out"):
+            source = inspect.getsource(getattr(X64DbgBridge, name))
+            assert "asyncio.sleep" not in source, f"{name} must not use asyncio.sleep; wait on the paused event instead"
+
+    @staticmethod
+    def test_register_step_waiter_returns_future_bound_to_loop() -> None:
+        """Sanity-check the protected helper used by all step coroutines."""
+        bridge = X64DbgBridge()
+
+        async def runner() -> asyncio.Future[int]:
+            await asyncio.sleep(0)
+            future = _register_step_waiter_a(bridge)
+            assert future in _step_waiters_a(bridge)
+            _cancel_step_waiter_a(bridge, future)
+            assert future not in _step_waiters_a(bridge)
+            return future
+
+        future = asyncio.run(runner())
+        assert isinstance(future, asyncio.Future)
