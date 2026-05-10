@@ -216,6 +216,33 @@ _ERR_YARA_RULE_FILE_NOT_FOUND = "YARA rule file not found"
 MIN_YARA_PATTERN_BYTES = 1
 PE_ENTRY_POINT_OFFSET = 0x28
 _HANDLE_QUERY_MAX_BUFFER = 0x10000000
+_X86_NOP_OPCODE = 0x90
+
+# Structured pipe-protocol error codes used to drive recovery decisions
+# without resorting to substring matching on the human-readable message
+# (see audit6.md F-0008/F-0028). The bridge attaches one of these values
+# via ``ToolError.details["x64dbg_error_code"]`` so callers can branch on
+# the actual failure mode (no transport vs. RPC name unknown vs. timeout)
+# rather than guessing from text.
+_X64DBG_ERR_PLUGIN_UNAVAILABLE = "plugin_unavailable"
+_X64DBG_ERR_PIPE_DISCONNECTED = "pipe_disconnected"
+_X64DBG_ERR_TIMEOUT = "timeout"
+_X64DBG_ERR_UNKNOWN_COMMAND = "unknown_command"
+_X64DBG_ERR_REMOTE = "remote_error"
+_X64DBG_ERR_PROTOCOL_VIOLATION = "protocol_violation"
+
+# Marker substrings recognised on legacy plugin builds that returned a
+# raw error string rather than a structured ``code`` field. Mapping is
+# strict to specific transport/RPC failures - any other text is treated
+# as a real plugin error and propagated.
+_LEGACY_UNKNOWN_COMMAND_MARKERS = ("unknown command", "unknown rpc", "unknown method")
+_LEGACY_PIPE_DISCONNECTED_MARKERS = ("pipe not connected", "pipe disconnected", "pipe reader failed")
+_LEGACY_TIMEOUT_MARKERS = ("timed out",)
+_LEGACY_PLUGIN_UNAVAILABLE_MARKERS = ("bridge plugin not available",)
+
+# Codes that classify as "RPC missing" - allowed to fall back to the
+# x64dbg console-script command for the same operation.
+_RECOVERABLE_RPC_MISSING_CODES = frozenset({_X64DBG_ERR_UNKNOWN_COMMAND})
 
 BreakpointType = Literal["software", "hardware", "memory"]
 MemoryProtection = Literal["read", "write", "execute"]
@@ -232,6 +259,50 @@ def _is_str_obj_dict(data: object) -> TypeGuard[dict[str, object]]:
         TypeGuard[dict[str, object]]: True if data is a dict with string keys.
     """
     return isinstance(data, dict)
+
+
+def _classify_legacy_error(message: str) -> str:
+    """Map a legacy plugin error string to a structured x64dbg error code.
+
+    Older builds of the x64dbg bridge plugin returned only a free-form
+    ``error`` string in their responses. To preserve recovery behaviour
+    against those builds without resorting to substring matching at
+    every call site (audit6.md F-0008), classify the legacy text once
+    here and attach the resulting code to ``ToolError.details``.
+
+    Args:
+        message: The free-form error message reported by the plugin.
+
+    Returns:
+        str: One of the ``_X64DBG_ERR_*`` constants. Returns
+        ``_X64DBG_ERR_REMOTE`` when no specific transport pattern
+        matches so the caller does not silently treat a real plugin
+        error as recoverable.
+    """
+    text = message.lower()
+    if any(marker in text for marker in _LEGACY_UNKNOWN_COMMAND_MARKERS):
+        return _X64DBG_ERR_UNKNOWN_COMMAND
+    if any(marker in text for marker in _LEGACY_PIPE_DISCONNECTED_MARKERS):
+        return _X64DBG_ERR_PIPE_DISCONNECTED
+    if any(marker in text for marker in _LEGACY_TIMEOUT_MARKERS):
+        return _X64DBG_ERR_TIMEOUT
+    if any(marker in text for marker in _LEGACY_PLUGIN_UNAVAILABLE_MARKERS):
+        return _X64DBG_ERR_PLUGIN_UNAVAILABLE
+    return _X64DBG_ERR_REMOTE
+
+
+def _x64dbg_error_code(exc: ToolError) -> str | None:
+    """Return the structured x64dbg error code attached to a ToolError.
+
+    Args:
+        exc: ToolError raised by the bridge.
+
+    Returns:
+        str | None: The ``x64dbg_error_code`` value from
+        ``exc.details`` if present, otherwise ``None``.
+    """
+    raw_code = exc.details.get("x64dbg_error_code")
+    return raw_code if isinstance(raw_code, str) else None
 
 
 _win32_apis_configured: bool = False
@@ -553,6 +624,10 @@ class X64DbgBridge(DebuggerBridge):
     Attributes:
         DEFAULT_PORT: TCP port for the x64dbg remote command interface.
         COMMAND_TIMEOUT: Maximum seconds to wait for a debugger command response.
+        RUN_TO_TIMEOUT: Maximum seconds to wait for the IP to reach a
+            ``run_to`` target before treating the command as failed.
+        RUN_TO_POLL_INTERVAL: Seconds between successive ``reg_get rip``
+            polls during a ``run_to`` verification wait.
         SUPPORTED_ANTI_DEBUG_PATCHES: Tuple of accepted check names for
             ``patch_anti_debug``; documents the fixed contract that
             unknown names are rejected with a per-check error.
@@ -560,6 +635,8 @@ class X64DbgBridge(DebuggerBridge):
 
     DEFAULT_PORT = 27015
     COMMAND_TIMEOUT = 10.0
+    RUN_TO_TIMEOUT = 30.0
+    RUN_TO_POLL_INTERVAL = 0.05
 
     def __init__(self) -> None:
         """Initialize the X64DbgBridge instance."""
@@ -2104,14 +2181,22 @@ class X64DbgBridge(DebuggerBridge):
         if not self._plugin_deployed:
             diag = str(self.plugin_status.get("diagnostic", ""))
             msg = f"x64dbg bridge plugin not available: {diag}"
-            raise ToolError(msg)
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PLUGIN_UNAVAILABLE, "command": command},
+            )
 
         if self._pipe_client is None or not self._pipe_client.is_connected:
             await self._connect()
 
         if self._pipe_client is None:
             msg = "Named pipe client not available"
-            raise ToolError(msg)
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED, "command": command},
+            )
 
         try:
             response = await asyncio.wait_for(
@@ -2121,40 +2206,90 @@ class X64DbgBridge(DebuggerBridge):
         except TimeoutError as e:
             _logger.warning("x64dbg_command_timeout", command=command, error=str(e))
             msg = f"Command {command} timed out"
-            raise ToolError(msg) from e
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_TIMEOUT, "command": command},
+            ) from e
+        except ToolError as exc:
+            raise ToolError(
+                str(exc),
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _classify_legacy_error(str(exc)),
+                    "command": command,
+                },
+            ) from exc
 
         if not response.get("success", False):
             error = response.get("error", "Command failed")
             msg = str(error)
-            raise ToolError(msg)
+            raw_code = response.get("code")
+            classified = str(raw_code) if isinstance(raw_code, str) and raw_code else _classify_legacy_error(msg)
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": classified, "command": command},
+            )
         data: str | int | float | bool | dict[str, object] | list[object] | None = response.get("result")
         return data
 
     @staticmethod
     def _is_recoverable_pipe_error(exc: ToolError) -> bool:
-        """Return True when an error indicates a disconnected pipe or missing command.
+        """Return True only when the structured error code indicates a missing RPC.
 
-        Only pipe-disconnect or file-not-found-style errors should be
-        silently fallen back on; other errors must propagate so that
-        callers can see real plugin/RPC failures.
+        Replaces the legacy substring-matching classifier (audit6.md
+        F-0008/F-0028). The bridge attaches a structured
+        ``x64dbg_error_code`` to every ``ToolError`` raised from
+        ``_send_pipe_command``; this helper inspects that code and
+        returns ``True`` only for codes that are genuinely recoverable
+        via the alternative ``_send_command`` console-script path.
+
+        A "pipe not connected" or "plugin unavailable" failure is
+        explicitly *not* recoverable because the script-command
+        fallback travels the same broken pipe; treating it as
+        recoverable would mask the underlying transport failure
+        (F-0028).
 
         Args:
             exc: The raised ``ToolError`` to classify.
 
         Returns:
-            bool: True if the error matches a known recoverable pattern.
+            bool: True when the underlying failure is "RPC name unknown
+            on this plugin build", indicating the script-command
+            fallback may legitimately succeed.
         """
-        text = str(exc).lower()
-        markers = (
-            "pipe",
-            "not connected",
-            "bridge plugin",
-            "not found",
-            "unknown command",
-            "disconnected",
-            "timed out",
-        )
-        return any(marker in text for marker in markers)
+        code = _x64dbg_error_code(exc)
+        if code is None:
+            return False
+        return code in _RECOVERABLE_RPC_MISSING_CODES
+
+    @staticmethod
+    def _is_local_fallback_eligible(exc: ToolError) -> bool:
+        """Return True when a non-pipe local fallback is appropriate.
+
+        Some bridge methods (e.g. :meth:`disassemble_at`) have a local
+        fallback that does not travel the pipe at all - it uses an
+        in-process Python library such as Capstone. For those methods
+        any pipe/plugin-side failure may legitimately be retried via
+        the local path, including transport-level failures that would
+        be non-recoverable for fallbacks routed through
+        :meth:`_send_command`.
+
+        Genuine remote errors (e.g. malformed input, semantic failure)
+        still propagate so the caller learns about real failures.
+
+        Args:
+            exc: The raised ``ToolError`` to classify.
+
+        Returns:
+            bool: True when the failure is transport- or
+            availability-related and a local fallback may be tried.
+        """
+        code = _x64dbg_error_code(exc)
+        if code is None:
+            return False
+        return code not in {_X64DBG_ERR_REMOTE, _X64DBG_ERR_PROTOCOL_VIOLATION}
 
     async def _send_command(self, command: str) -> str:
         """Send command to x64dbg and get response.
@@ -2387,7 +2522,14 @@ class X64DbgBridge(DebuggerBridge):
         bp_type: BreakpointType = "software",
         condition: str | None = None,
     ) -> int:
-        """Set a breakpoint.
+        """Set a breakpoint and verify it was actually applied.
+
+        Sends ``bp_set`` to the plugin, then issues a ``bp_list`` query
+        and confirms ``address`` is present before mutating local
+        breakpoint state. This prevents the previous behaviour where
+        the wrapper returned a synthetic id even if x64dbg's parser had
+        accepted the command without actually creating a breakpoint
+        (audit6.md F-0001).
 
         Args:
             address: Breakpoint address.
@@ -2406,6 +2548,8 @@ class X64DbgBridge(DebuggerBridge):
             },
         )
 
+        await self._verify_breakpoint_applied(address)
+
         bp_id = self._next_bp_id
         self._next_bp_id += 1
 
@@ -2420,6 +2564,65 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.info("breakpoint_set", type=bp_type, address=hex(address), id=bp_id)
         return bp_id
+
+    async def _verify_breakpoint_applied(self, address: int) -> None:
+        """Confirm via ``bp_list`` that a breakpoint exists at ``address``.
+
+        Issues a single ``bp_list`` RPC and matches the response
+        against ``address`` using the same address-extraction rules as
+        :meth:`get_breakpoints`. Falls back gracefully when the plugin
+        build does not implement ``bp_list``: in that case there is no
+        secondary source of truth and the bridge has to trust the
+        ``bp_set`` response, so verification is skipped with a debug
+        log rather than raising.
+
+        Args:
+            address: Breakpoint address that ``bp_set`` was issued for.
+
+        Raises:
+            ToolError: If ``bp_list`` succeeds but does not include
+                ``address`` in its returned list.
+        """
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                _logger.debug(
+                    "breakpoint_verification_skipped_no_bp_list",
+                    address=hex(address),
+                )
+                return
+            raise
+        if not isinstance(result, list):
+            msg = f"set_breakpoint verification: bp_list returned {type(result).__name__}, expected list"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "address": hex(address),
+                },
+            )
+        for entry in result:
+            if not _is_str_obj_dict(entry):
+                continue
+            raw_addr = entry.get("address")
+            entry_addr: int | None = None
+            if isinstance(raw_addr, int):
+                entry_addr = raw_addr
+            elif isinstance(raw_addr, str):
+                try:
+                    entry_addr = int(raw_addr, 0)
+                except ValueError:
+                    continue
+            if entry_addr == address:
+                return
+        msg = f"set_breakpoint verification failed: address {hex(address)} not present in bp_list after bp_set"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address)},
+        )
 
     async def remove_breakpoint(self, address: int) -> bool:
         """Remove a breakpoint.
@@ -3082,7 +3285,7 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(result, list):
                 return [self._parse_disasm_entry(e) for e in result if _is_str_obj_dict(e)]
         except ToolError as exc:
-            if not self._is_recoverable_pipe_error(exc):
+            if not self._is_local_fallback_eligible(exc):
                 raise
             last_error = exc
             _logger.debug("disasm_pipe_unavailable_using_capstone", error=str(exc))
@@ -3727,15 +3930,116 @@ class X64DbgBridge(DebuggerBridge):
     async def run_to(self, address: int) -> dict[str, Any]:
         """Run execution until a specific address is reached.
 
+        Sends the ``runto`` console command, then polls ``reg_get rip``
+        with a bounded timeout to confirm the debugger has actually
+        reached ``address``. The previous implementation returned
+        ``{"success": True}`` immediately after queuing the command,
+        even though x64dbg's interpreter dispatches ``runto``
+        asynchronously and the IP may still be at the original site
+        (audit6.md F-0001).
+
         Args:
             address: Target address to run to.
 
         Returns:
-            dict[str, Any]: Dict with success status and target address.
+            dict[str, Any]: Dict with ``success``, ``target`` (hex
+            string), ``current_ip`` (hex string of the IP observed
+            after the command settled), and ``verified`` (bool). When
+            the bridge cannot poll ``reg_get`` because the plugin is
+            older, ``current_ip`` is ``None`` and ``verified`` is
+            ``False``.
+
+        Raises:
+            ToolError: If the IP did not reach ``target`` within the
+                configured timeout.
         """
-        _logger.debug("run_to_executing", address=hex(address))
+        _logger.debug("run_to_queueing", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"runto {hex(address)}"})
-        return {"success": True, "target": hex(address)}
+        observed = await self._wait_for_instruction_pointer(
+            address,
+            timeout_s=self.RUN_TO_TIMEOUT,
+        )
+        if observed is None:
+            return {
+                "success": True,
+                "target": hex(address),
+                "current_ip": None,
+                "verified": False,
+            }
+        if observed != address:
+            msg = f"run_to verification failed: instruction pointer is {hex(observed)} after timeout, expected {hex(address)}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "target": hex(address),
+                    "observed": hex(observed),
+                },
+            )
+        _logger.info("run_to_reached", address=hex(address))
+        return {
+            "success": True,
+            "target": hex(address),
+            "current_ip": hex(observed),
+            "verified": True,
+        }
+
+    async def _wait_for_instruction_pointer(
+        self,
+        target: int,
+        *,
+        timeout_s: float,
+    ) -> int | None:
+        """Poll ``reg_get rip`` until the IP reaches ``target`` or timeout.
+
+        Used to verify that an asynchronous control-flow command (e.g.
+        ``runto``) actually landed at the requested address before
+        reporting success. Returns ``None`` when the plugin lacks the
+        ``reg_get`` RPC (older builds) so the caller can surface
+        ``verified=False`` instead of synthesising an unverified
+        success status.
+
+        Args:
+            target: Address the instruction pointer should reach.
+            timeout_s: Maximum total seconds to poll before giving up.
+
+        Returns:
+            int | None: The instruction pointer value last observed -
+            ``target`` when the wait succeeded, the last sampled value
+            when the timeout elapsed, or ``None`` when polling could
+            not be performed.
+
+        Raises:
+            ToolError: If ``reg_get rip`` fails with any code other
+                than ``unknown_command`` (e.g. pipe disconnected, real
+                RPC error). Unknown-command failures are silently
+                converted to ``None`` so older plugins skip polling.
+        """
+        deadline = asyncio.get_running_loop().time() + timeout_s
+        last_ip: int | None = None
+        while True:
+            try:
+                rip_result = await self._send_pipe_command("reg_get", {"name": "rip"})
+            except ToolError as exc:
+                if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                    return None
+                raise
+            ip_value: int | None = None
+            if isinstance(rip_result, int):
+                ip_value = rip_result
+            elif isinstance(rip_result, str):
+                try:
+                    ip_value = int(rip_result, 0)
+                except ValueError:
+                    ip_value = None
+            if ip_value is not None:
+                last_ip = ip_value
+                if ip_value == target:
+                    return ip_value
+            if asyncio.get_running_loop().time() >= deadline:
+                return last_ip
+            await asyncio.sleep(self.RUN_TO_POLL_INTERVAL)
 
     async def execute_til_return(self) -> dict[str, Any]:
         """Execute until the current function returns.
@@ -3948,7 +4252,7 @@ class X64DbgBridge(DebuggerBridge):
             dict[str, Any]: Dict with target and success status.
         """
         target = f"{module}.{function}"
-        _logger.info("api_breakpoint_setting", target=target)
+        _logger.debug("x64dbg_command_queued", command="bpx", target=target)
         await self._send_pipe_command("exec", {"command": f"bpx {target}"})
         return {"success": True, "target": target}
 
@@ -4323,39 +4627,143 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with code, handling, and success status.
         """
-        _logger.info("exception_config_set", code=hex(code), handling=handling)
+        _logger.debug("x64dbg_command_queued", command="SetExceptionBPX", code=hex(code), handling=handling)
         handling_map = {"break": 1, "ignore": 0, "log": 2}
         handling_code = handling_map.get(handling, 1)
         await self._send_pipe_command("exec", {"command": f"SetExceptionBPX {hex(code)}, {handling_code}"})
         return {"success": True, "code": hex(code), "handling": handling}
 
     async def patch_instruction(self, address: int, instruction: str) -> dict[str, Any]:
-        """Assemble and write an instruction at address using x64dbg's assembler.
+        """Assemble and write an instruction at address, then verify the patch.
+
+        Issues the plugin's ``assemble`` RPC and, when attached, reads
+        memory back at ``address`` to confirm the bytes actually
+        changed. Returns the post-patch byte string so callers can
+        correlate the assembled output with the requested mnemonic
+        (audit6.md F-0001).
 
         Args:
             address: Target address.
             instruction: Assembly instruction text.
 
         Returns:
-            dict[str, Any]: Dict with success status and address.
+            dict[str, Any]: Dict with ``success``, ``address``,
+            ``instruction``, and ``patched_bytes`` (hex string of bytes
+            now resident at ``address``). When the bridge is not yet
+            attached and cannot read memory back, ``patched_bytes`` is
+            ``None`` and ``verified`` is ``False``.
+
+        Raises:
+            ToolError: If the verifying read finds memory unchanged
+                after the assemble RPC returned successfully.
         """
+        _logger.debug("patch_instruction_queueing", address=hex(address), instruction=instruction)
+        original = await self._read_memory_for_verification(address, 16)
+        await self._send_pipe_command(
+            "assemble",
+            {"address": hex(address), "instruction": instruction},
+        )
+        patched = await self._read_memory_for_verification(address, 16)
+        if original is not None and patched is not None and original == patched:
+            msg = f"patch_instruction verification failed: memory at {hex(address)} is unchanged after assemble"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_REMOTE, "address": hex(address)},
+            )
         _logger.info("patching_instruction", address=hex(address), instruction=instruction)
-        await self._send_pipe_command("assemble", {"address": hex(address), "instruction": instruction})
-        return {"success": True, "address": hex(address), "instruction": instruction}
+        return {
+            "success": True,
+            "address": hex(address),
+            "instruction": instruction,
+            "patched_bytes": patched.hex() if patched is not None else None,
+            "verified": patched is not None,
+        }
 
     async def nop_range(self, address: int, size: int) -> dict[str, Any]:
-        """Fill an address range with NOP (0x90) bytes.
+        """Fill an address range with NOP (0x90) bytes and verify the fill.
+
+        After issuing the ``fill`` console command, reads ``size`` bytes
+        back from ``address`` (when attached) and confirms every byte is
+        ``0x90``. The wrapper used to claim ``success: True``
+        unconditionally; that masked silent fill failures (audit6.md
+        F-0001).
 
         Args:
             address: Start address.
             size: Number of bytes to NOP.
 
         Returns:
-            dict[str, Any]: Dict with success status, address, and size.
+            dict[str, Any]: Dict with ``success``, ``address``,
+            ``size``, and ``verified``. When verification can be
+            performed, ``verified`` is ``True`` and the dict echoes
+            ``bytes_filled``.
+
+        Raises:
+            ToolError: If post-condition verification reads back any
+                non-NOP byte in the requested range.
         """
-        _logger.info("nop_range_filling", address=hex(address), size=size)
+        _logger.debug("nop_range_queueing", address=hex(address), size=size)
         await self._send_command(f"fill {hex(address)}, {size}, 90")
-        return {"success": True, "address": hex(address), "size": size}
+        verified = await self._read_memory_for_verification(address, size)
+        if verified is None:
+            _logger.info("nop_range_filling", address=hex(address), size=size)
+            return {"success": True, "address": hex(address), "size": size, "verified": False}
+        if verified != bytes([_X86_NOP_OPCODE]) * size:
+            non_nop_offset = next(
+                (off for off, b in enumerate(verified) if b != _X86_NOP_OPCODE),
+                None,
+            )
+            failed_address = address + (non_nop_offset or 0)
+            msg = f"nop_range verification failed: byte at {hex(failed_address)} is not {hex(_X86_NOP_OPCODE)} after fill"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "size": size,
+                },
+            )
+        _logger.info("nop_range_filled", address=hex(address), size=size)
+        return {
+            "success": True,
+            "address": hex(address),
+            "size": size,
+            "verified": True,
+            "bytes_filled": size,
+        }
+
+    async def _read_memory_for_verification(self, address: int, size: int) -> bytes | None:
+        """Best-effort read used to verify a write side-effect.
+
+        Returns ``None`` (rather than raising) when the bridge is not
+        currently attached to a process or when the read otherwise
+        cannot complete (no Win32 host, OpenProcess refused). In those
+        cases the verification is skipped and the caller surfaces
+        ``verified=False`` instead of synthesising an unverified
+        success status.
+
+        Args:
+            address: Memory address to read.
+            size: Number of bytes to read.
+
+        Returns:
+            bytes | None: The bytes read, or ``None`` when verification
+            is not possible in the current environment.
+        """
+        if self._attached_pid is None or not _IS_WIN32:
+            return None
+        try:
+            return await self.read_memory(address, size)
+        except ToolError as exc:
+            _logger.debug(
+                "verification_read_failed",
+                address=hex(address),
+                size=size,
+                error=str(exc),
+            )
+            return None
 
     async def get_module_imports(self, module_name: str) -> list[dict[str, Any]]:
         """Get imports of a loaded module via the plugin.
@@ -4434,14 +4842,49 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             int: Expression result value.
+
+        Raises:
+            ToolError: If the plugin returns a value that is neither an
+                integer nor a parseable hex/decimal string. A failure to
+                evaluate must not be conflated with a legitimate
+                expression that evaluates to ``0`` (audit6.md F-0014).
         """
         _logger.debug("evaluating_expression", expression=expression)
         result = await self._send_pipe_command("eval", {"expression": expression})
-        if isinstance(result, str):
-            return int(result, 0)
+        if isinstance(result, bool):
+            msg = f"evaluate_expression: plugin returned bool for {expression!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "expression": expression,
+                },
+            )
         if isinstance(result, int):
             return result
-        return 0
+        if isinstance(result, str):
+            try:
+                return int(result, 0)
+            except ValueError as parse_err:
+                msg = f"evaluate_expression: plugin returned unparseable value {result!r} for {expression!r}"
+                raise ToolError(
+                    msg,
+                    tool_name="x64dbg",
+                    details={
+                        "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                        "expression": expression,
+                    },
+                ) from parse_err
+        msg = f"evaluate_expression: plugin returned unexpected type {type(result).__name__} for {expression!r}"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={
+                "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                "expression": expression,
+            },
+        )
 
     async def get_function_cfg(self, address: int, max_blocks: int = 500) -> dict[str, Any]:
         """Get control flow graph of a function.
@@ -4572,7 +5015,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and path.
         """
-        _logger.info("patches_exporting", path=path)
+        _logger.debug("x64dbg_command_queued", command="savedata", path=path)
         await self._send_command(f'savedata "{path}"')
         return {"success": True, "path": path}
 
@@ -4585,7 +5028,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and tid.
         """
-        _logger.info("thread_suspending", tid=tid)
+        _logger.debug("x64dbg_command_queued", command="suspendthread", tid=tid)
         await self._send_command(f"suspendthread {tid}")
         return {"success": True, "tid": tid}
 
@@ -4598,7 +5041,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and tid.
         """
-        _logger.info("thread_resuming", tid=tid)
+        _logger.debug("x64dbg_command_queued", command="resumethread", tid=tid)
         await self._send_command(f"resumethread {tid}")
         return {"success": True, "tid": tid}
 
@@ -4611,7 +5054,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and tid.
         """
-        _logger.info("thread_switching", tid=tid)
+        _logger.debug("x64dbg_command_queued", command="switchthread", tid=tid)
         await self._send_command(f"switchthread {tid}")
         return {"success": True, "tid": tid}
 
@@ -4625,7 +5068,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status, tid, and name.
         """
-        _logger.info("thread_name_setting", tid=tid)
+        _logger.debug("x64dbg_command_queued", command="setthreadname", tid=tid)
         await self._send_command(f'setthreadname {tid}, "{name}"')
         return {"success": True, "tid": tid, "name": name}
 
@@ -4807,7 +5250,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status, address, and log_text.
         """
-        _logger.info("logging_breakpoint_setting", address=hex(address))
+        _logger.debug("x64dbg_command_queued", command="logging_breakpoint", address=hex(address))
         await self._send_command(f"bp {hex(address)}")
         await self._send_command(f'SetBreakpointLog {hex(address)}, "{log_text}"')
         if non_stopping:
@@ -4835,7 +5278,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and configured properties.
         """
-        _logger.info("breakpoint_configuring", address=hex(address))
+        _logger.debug("x64dbg_command_queued", command="configure_breakpoint", address=hex(address))
         if condition is not None:
             await self._send_command(f'bpcond {hex(address)}, "{condition}"')
         if log_text is not None:
@@ -4856,7 +5299,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status, dll_name, and event.
         """
-        _logger.info("dll_breakpoint_setting", dll=dll_name, dll_event=event)
+        _logger.debug("x64dbg_command_queued", command="dll_breakpoint", dll=dll_name, dll_event=event)
         cmd = f'LibrarianSetBreakPoint "{dll_name}"'
         if event == "unload":
             cmd += ", unload"
@@ -4873,7 +5316,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("trace_into_starting", max_steps=max_steps)
+        _logger.debug("x64dbg_command_queued", command="trace_into", max_steps=max_steps)
         cmd = f"TraceIntoConditional {max_steps}"
         if condition:
             cmd += f', "{condition}"'
@@ -4890,7 +5333,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("trace_over_starting", max_steps=max_steps)
+        _logger.debug("x64dbg_command_queued", command="trace_over", max_steps=max_steps)
         cmd = f"TraceOverConditional {max_steps}"
         if condition:
             cmd += f', "{condition}"'
@@ -4932,7 +5375,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status, count, and step_type.
         """
-        _logger.info("step_count_executing", count=count, step_type=step_type)
+        _logger.debug("x64dbg_command_queued", command="step_count", count=count, step_type=step_type)
         cmd = f"tic 0, {count}" if step_type == "into" else f"toc 0, {count}"
         await self._send_command(cmd)
         return {"success": True, "count": count, "step_type": step_type}
@@ -4946,7 +5389,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and step_type.
         """
-        _logger.info("animation_starting", step_type=step_type)
+        _logger.debug("x64dbg_command_queued", command="animate_start", step_type=step_type)
         cmd = "AnimateInto" if step_type == "into" else "AnimateOver"
         await self._send_command(cmd)
         return {"success": True, "step_type": step_type}
@@ -4957,7 +5400,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("animation_stopping")
+        _logger.debug("x64dbg_command_queued", command="animate_stop")
         await self._send_command("AnimateStop")
         return {"success": True}
 
@@ -5102,7 +5545,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and path.
         """
-        _logger.info("script_loading", path=path)
+        _logger.debug("x64dbg_command_queued", command="scriptload", path=path)
         await self._send_command(f'scriptload "{path}"')
         return {"success": True, "path": path}
 
@@ -5112,7 +5555,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("script_running")
+        _logger.debug("x64dbg_command_queued", command="scriptrun")
         await self._send_command("scriptrun")
         return {"success": True}
 
@@ -5125,7 +5568,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and line.
         """
-        _logger.debug("script_cmd_executing", line=line)
+        _logger.debug("x64dbg_command_queued", command="scriptcmd", line=line)
         await self._send_command(f'scriptcmd "{line}"')
         return {"success": True, "line": line}
 
@@ -5135,7 +5578,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("script_aborting")
+        _logger.debug("x64dbg_command_queued", command="scriptabort")
         await self._send_command("scriptabort")
         return {"success": True}
 
@@ -5148,7 +5591,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and path.
         """
-        _logger.info("plugin_loading", path=path)
+        _logger.debug("x64dbg_command_queued", command="plugload", path=path)
         await self._send_command(f'plugload "{path}"')
         return {"success": True, "path": path}
 
@@ -5161,7 +5604,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status and name.
         """
-        _logger.info("plugin_unloading", plugin_name=name)
+        _logger.debug("x64dbg_command_queued", command="plugunload", plugin_name=name)
         await self._send_command(f'plugunload "{name}"')
         return {"success": True, "name": name}
 
@@ -5314,7 +5757,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             dict[str, Any]: Dict with success status.
         """
-        _logger.info("handle_closing", handle=hex(handle))
+        _logger.debug("x64dbg_command_queued", command="handleclose", handle=hex(handle))
         await self._send_command(f"handleclose {hex(handle)}")
         return {"success": True, "handle": hex(handle)}
 
@@ -5542,7 +5985,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
-        _logger.info("imports_reconstructing", oep=hex(oep), output=output_path)
+        _logger.debug("x64dbg_command_queued", command="scylla_reconstruct", oep=hex(oep), output=output_path)
         try:
             result = await self._send_pipe_command(
                 "scylla_reconstruct",
@@ -5567,12 +6010,24 @@ class X64DbgBridge(DebuggerBridge):
 
         Returns:
             dict[str, Any]: Dict with debugging, paused, and initialized flags.
+
+        Raises:
+            ToolError: If the plugin returns a non-dict payload. A
+                degenerate fallback of ``{"debugging": False, ...}`` is
+                indistinguishable from a real "not running" state and
+                would cause orchestrators polling this endpoint to act
+                on stale information (audit6.md F-0029).
         """
         _logger.debug("status_querying")
         result = await self._send_pipe_command("status")
         if _is_str_obj_dict(result):
             return dict(result)
-        return {"debugging": False, "paused": False, "initialized": False}
+        msg = f"get_status: plugin returned non-dict payload of type {type(result).__name__}"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={"x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION, "command": "status"},
+        )
 
     async def goto_address(self, address: int) -> dict[str, Any]:
         """Navigate the disassembly view to an address.
