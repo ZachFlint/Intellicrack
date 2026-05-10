@@ -44,7 +44,6 @@ def _make_binary_info() -> BinaryInfo:
         path=Path("/test/binary.exe"),
         name="binary.exe",
         size=65536,
-        md5="d41d8cd98f00b204e9800998ecf8427e",
         sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         file_type="pe",
         architecture="x86_64",

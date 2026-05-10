@@ -446,7 +446,6 @@ class BinaryInfo:
         path: Filesystem path to the binary.
         name: Filename without path.
         size: File size in bytes.
-        md5: MD5 hash of the file.
         sha256: SHA-256 hash of the file.
         file_type: Detected file type (PE, ELF, Mach-O, etc.).
         architecture: Target architecture (x86, x64, ARM, etc.).
@@ -460,7 +459,6 @@ class BinaryInfo:
     path: Path
     name: str
     size: int
-    md5: str
     sha256: str
     file_type: str
     architecture: str

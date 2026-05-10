@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-6 GHIDRA-A, GHIDRA-B, and GHIDRA-C regression tests.
+"""Audit-6 GHIDRA-A, GHIDRA-B, GHIDRA-C, and GHIDRA-D regression tests.
 
 GHIDRA-A foundation findings:
 
@@ -66,6 +66,18 @@ GHIDRA-C write-method and analyze findings:
 * F-0027 - ``analyze`` emits structured logs that distinguish the
   ``analyzeAll`` start phase from the
   ``waitForAnalysis``-returned phase.
+
+GHIDRA-D parsing/xrefs/security/capability findings:
+
+* F-0017 - MD5 must not be exposed in :class:`BinaryInfo`.
+* F-0018 - ``import_debug_info`` must canonicalise + existence-check the path.
+* F-0022 - ``get_xrefs_to`` / ``get_xrefs_from`` must preserve the full
+  Ghidra reference-type taxonomy (call/jump/read/write/data) instead of
+  flattening to ``call``/``data``.
+* F-0023 - ``BridgeCapabilities.supports_patching`` must be ``False`` because
+  ``GhidraBridge`` exposes no ``apply_patch`` implementation.
+* F-0026 - xref results must populate ``from_function`` / ``to_function``
+  enrichment fields when Ghidra resolves a containing function.
 """
 
 from __future__ import annotations
@@ -80,8 +92,9 @@ import threading
 import time
 import types
 from collections.abc import Callable
+from dataclasses import fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import pytest
@@ -89,7 +102,7 @@ import pytest
 import intellicrack.bridges.ghidra as ghidra_mod
 from intellicrack.bridges.ghidra import GhidraBridge, prepare_remote_script
 from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen
-from intellicrack.core.types import ToolError
+from intellicrack.core.types import BinaryInfo, CrossReference, ToolError
 
 
 if TYPE_CHECKING:
@@ -2202,3 +2215,483 @@ async def test_disconnected_search_bytes_raises() -> None:
     b = GhidraBridge()
     with pytest.raises(ToolError, match="not connected"):
         await b.search_bytes(hex_pattern="48 8B")
+
+
+# ---------------------------------------------------------------------------
+# GHIDRA-D parsing/xrefs/security/capability tests
+# ---------------------------------------------------------------------------
+
+
+_XRefRefType = Literal["call", "jump", "data", "read", "write"]
+_map_ghidra_ref_type: Callable[[str], _XRefRefType] = cast(
+    "Callable[[str], _XRefRefType]",
+    getattr(ghidra_mod, "_map_ghidra_ref_type"),
+)
+_resolve_debug_info_path: Callable[[str], Path] = cast(
+    "Callable[[str], Path]",
+    getattr(ghidra_mod, "_resolve_debug_info_path"),
+)
+
+
+_BRIDGE_ATTR: Final[str] = "_bridge"
+_TARGET_ADDR: Final[int] = 0x401000
+_FROM_ADDR_CALL: Final[int] = 0x401100
+_FROM_ADDR_JUMP: Final[int] = 0x401200
+_FROM_ADDR_READ: Final[int] = 0x401300
+_FROM_ADDR_WRITE: Final[int] = 0x401400
+_FROM_ADDR_DATA: Final[int] = 0x401500
+
+
+class _StubGhidraRemote:
+    """Stub for ``ghidra_bridge`` exposing ``remote_exec`` + ``remote_eval``.
+
+    Stores a callable that replaces the live Jython evaluator. Tests
+    inject canned xref payloads through this hook so the production
+    parsing/mapping code is exercised end-to-end without needing a live
+    Ghidra installation. The stub mirrors the sentinel-readback contract
+    that ``GhidraBridge._execute_remote`` depends on: the evaluator's
+    return value is stashed under the sentinel name produced by
+    ``prepare_remote_script`` so the follow-up ``remote_eval`` returns
+    the same canned payload the test wired in.
+    """
+
+    def __init__(self, evaluator: Callable[[str], object]) -> None:
+        """Wire the supplied evaluator as the stub's remote backend.
+
+        Args:
+            evaluator: Callable invoked with the Jython source string
+                forwarded by :meth:`GhidraBridge._execute_remote`. Its
+                return value is what the bridge will see when it reads
+                the sentinel back via ``remote_eval``.
+        """
+        self._evaluator = evaluator
+        self._sentinel_value: object = None
+
+    def remote_exec(self, code: str) -> None:
+        """Capture the canned result for the upcoming ``remote_eval``.
+
+        Args:
+            code: Jython source string emitted by the bridge after
+                ``prepare_remote_script`` has rewritten any trailing
+                expression as a sentinel assignment.
+        """
+        self._sentinel_value = self._evaluator(code)
+
+    def remote_eval(self, _expr: str) -> object:
+        """Return the canned sentinel value stashed during ``remote_exec``.
+
+        Args:
+            _expr: Sentinel variable name produced by
+                ``prepare_remote_script``. Ignored because the stub
+                stores exactly one canned value at a time.
+
+        Returns:
+            object: The canned value supplied by the evaluator on the
+            preceding ``remote_exec``.
+        """
+        return self._sentinel_value
+
+
+def _attach_stub_bridge(
+    target_bridge: GhidraBridge,
+    evaluator: Callable[[str], object],
+) -> None:
+    """Replace the bridge's live Ghidra connection with a deterministic stub.
+
+    Args:
+        target_bridge: GhidraBridge instance to mutate.
+        evaluator: Callable that returns canned values for any Jython source
+            forwarded by the bridge.
+    """
+    setattr(target_bridge, _BRIDGE_ATTR, _StubGhidraRemote(evaluator))
+
+
+@pytest.fixture
+def disconnected_bridge() -> GhidraBridge:
+    """Return a freshly-constructed disconnected ``GhidraBridge``.
+
+    Returns:
+        GhidraBridge: Disconnected bridge instance.
+    """
+    return GhidraBridge()
+
+
+# F-0017 - MD5 must not be exposed in BinaryInfo.
+
+
+def test_binary_info_dataclass_has_no_md5_field() -> None:
+    """Verify ``BinaryInfo`` no longer carries an ``md5`` field (F-0017)."""
+    field_names = {f.name for f in fields(BinaryInfo)}
+    assert "md5" not in field_names, (
+        "BinaryInfo must not expose MD5; the algorithm is cryptographically "
+        "broken and an integrity hash that says 'md5' implies a guarantee "
+        "Intellicrack cannot uphold."
+    )
+    assert "sha256" in field_names, "SHA-256 must remain the integrity hash."
+
+
+def test_binary_info_construction_rejects_md5_keyword() -> None:
+    """Verify constructing :class:`BinaryInfo` with ``md5=`` raises (F-0017)."""
+    binary_info_constructor = cast("Callable[..., BinaryInfo]", BinaryInfo)
+    with pytest.raises(TypeError):
+        binary_info_constructor(
+            path=Path.cwd(),
+            name="x",
+            size=0,
+            md5="d41d8cd98f00b204e9800998ecf8427e",  # pragma: allowlist secret
+            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  # pragma: allowlist secret
+            file_type="raw",
+            architecture="x86_64",
+            is_64bit=True,
+            entry_point=0,
+            sections=[],
+            imports=[],
+            exports=[],
+        )
+
+
+# F-0023 - Capability flag accuracy.
+
+
+def test_capability_supports_patching_is_false(disconnected_bridge: GhidraBridge) -> None:
+    """Verify ``supports_patching`` is False because no ``apply_patch`` exists.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+    """
+    assert disconnected_bridge.capabilities.supports_patching is False
+
+
+def test_capability_no_apply_patch_method(disconnected_bridge: GhidraBridge) -> None:
+    """Verify the bridge does not advertise an ``apply_patch`` method (F-0023).
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+    """
+    assert not hasattr(disconnected_bridge, "apply_patch")
+
+
+# F-0018 - import_debug_info path canonicalisation + existence check.
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_empty_path(disconnected_bridge: GhidraBridge) -> None:
+    """Verify empty path is rejected before reaching Ghidra.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+    """
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for empty path"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError, match="invalid"):
+        await disconnected_bridge.import_debug_info("")
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_whitespace_path(disconnected_bridge: GhidraBridge) -> None:
+    """Verify whitespace-only path is rejected.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+    """
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for whitespace path"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError, match="invalid"):
+        await disconnected_bridge.import_debug_info("   \t  ")
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_nonexistent_path(
+    disconnected_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """Verify non-existent path raises before any remote dispatch.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+        tmp_path: pytest temp path.
+    """
+    missing = tmp_path / "does_not_exist.pdb"
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for missing path"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError, match="not found"):
+        await disconnected_bridge.import_debug_info(str(missing))
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_path_traversal_to_missing_target(
+    disconnected_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    r"""Verify a traversal path that resolves to a missing target is rejected.
+
+    The canonicaliser collapses ``..`` segments via ``Path.resolve(strict=True)``
+    so a craft path like ``<tmp>\..\<tmp>\nope.pdb`` either resolves to a
+    non-existent file (rejected by ``not found``) or to a path outside the
+    intended root.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+        tmp_path: pytest temp path.
+    """
+    traversal = tmp_path / ".." / tmp_path.name / "nope.pdb"
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for traversal path"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError):
+        await disconnected_bridge.import_debug_info(str(traversal))
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_directory_path(
+    disconnected_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """Verify directory paths are rejected (only regular files are allowed).
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+        tmp_path: pytest temp path.
+    """
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for directory path"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError, match="not a regular file"):
+        await disconnected_bridge.import_debug_info(str(tmp_path))
+
+
+@pytest.mark.asyncio
+async def test_import_debug_info_rejects_unsupported_extension_after_resolve(
+    disconnected_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """Verify unsupported extensions are rejected after canonicalisation.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture.
+        tmp_path: pytest temp path.
+    """
+    bogus = tmp_path / "real_file.txt"
+    bogus.write_bytes(b"")
+
+    def _evaluator(_code: str) -> object:
+        msg = "remote should not be invoked for unsupported extension"
+        raise AssertionError(msg)
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+    with pytest.raises(ToolError, match="Unsupported"):
+        await disconnected_bridge.import_debug_info(str(bogus))
+
+
+def test_resolve_debug_info_path_returns_absolute(tmp_path: Path) -> None:
+    """Verify the resolver returns an absolute, canonical path.
+
+    Args:
+        tmp_path: pytest temp path.
+    """
+    real = tmp_path / "x.pdb"
+    real.write_bytes(b"")
+    relative_via_traversal = tmp_path / ".." / tmp_path.name / "x.pdb"
+
+    resolved = _resolve_debug_info_path(str(relative_via_traversal))
+
+    assert resolved.is_absolute()
+    assert resolved == real.resolve()
+
+
+# F-0022 / F-0026 - xref taxonomy + function enrichment.
+
+
+def test_map_ghidra_ref_type_call() -> None:
+    """Verify CALL variants map to ``call``."""
+    assert _map_ghidra_ref_type("UNCONDITIONAL_CALL") == "call"
+    assert _map_ghidra_ref_type("COMPUTED_CALL") == "call"
+    assert _map_ghidra_ref_type("CONDITIONAL_CALL") == "call"
+
+
+def test_map_ghidra_ref_type_jump() -> None:
+    """Verify JUMP variants map to ``jump``."""
+    assert _map_ghidra_ref_type("CONDITIONAL_JUMP") == "jump"
+    assert _map_ghidra_ref_type("UNCONDITIONAL_JUMP") == "jump"
+    assert _map_ghidra_ref_type("COMPUTED_JUMP") == "jump"
+
+
+def test_map_ghidra_ref_type_read() -> None:
+    """Verify READ maps to ``read``."""
+    assert _map_ghidra_ref_type("READ") == "read"
+    assert _map_ghidra_ref_type("READ_IND") == "read"
+
+
+def test_map_ghidra_ref_type_write() -> None:
+    """Verify WRITE variants map to ``write``."""
+    assert _map_ghidra_ref_type("WRITE") == "write"
+    assert _map_ghidra_ref_type("WRITE_IND") == "write"
+    assert _map_ghidra_ref_type("READ_WRITE") == "write"
+
+
+def test_map_ghidra_ref_type_data_default() -> None:
+    """Verify unknown / DATA types map to ``data``."""
+    assert _map_ghidra_ref_type("DATA") == "data"
+    assert _map_ghidra_ref_type("PARAM") == "data"
+    assert _map_ghidra_ref_type("EXTERNAL_REF") == "data"
+    assert _map_ghidra_ref_type("") == "data"
+
+
+def _xref_payload_full_taxonomy() -> list[dict[str, Any]]:
+    """Build a fixture xref payload covering every taxonomy bucket.
+
+    Returns:
+        list[dict[str, Any]]: Five xref dicts simulating the dictionary
+        structure produced by the bridge's remote Jython script.
+    """
+    return [
+        {
+            "from": _FROM_ADDR_CALL,
+            "to": _TARGET_ADDR,
+            "type": "UNCONDITIONAL_CALL",
+            "from_function": "caller_call",
+            "to_function": "target_fn",
+        },
+        {
+            "from": _FROM_ADDR_JUMP,
+            "to": _TARGET_ADDR,
+            "type": "CONDITIONAL_JUMP",
+            "from_function": "caller_jump",
+            "to_function": "target_fn",
+        },
+        {
+            "from": _FROM_ADDR_READ,
+            "to": _TARGET_ADDR,
+            "type": "READ",
+            "from_function": "caller_read",
+            "to_function": None,
+        },
+        {
+            "from": _FROM_ADDR_WRITE,
+            "to": _TARGET_ADDR,
+            "type": "WRITE",
+            "from_function": "caller_write",
+            "to_function": None,
+        },
+        {
+            "from": _FROM_ADDR_DATA,
+            "to": _TARGET_ADDR,
+            "type": "DATA",
+            "from_function": None,
+            "to_function": "target_fn",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_xrefs_to_preserves_full_taxonomy(disconnected_bridge: GhidraBridge) -> None:
+    """Verify ``get_xrefs_to`` returns call/jump/read/write/data distinctly.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture mutated to use a stub
+            remote that returns a deterministic xref payload.
+    """
+    payload = _xref_payload_full_taxonomy()
+
+    def _evaluator(_code: str) -> object:
+        return payload
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+
+    refs = await disconnected_bridge.get_xrefs_to(_TARGET_ADDR)
+
+    assert len(refs) == len(payload)
+    types = [r.ref_type for r in refs]
+    assert types == ["call", "jump", "read", "write", "data"]
+
+
+@pytest.mark.asyncio
+async def test_get_xrefs_to_populates_function_enrichment(disconnected_bridge: GhidraBridge) -> None:
+    """Verify ``get_xrefs_to`` surfaces ``from_function`` / ``to_function``.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture mutated to use a stub
+            remote that returns a deterministic xref payload.
+    """
+    payload = _xref_payload_full_taxonomy()
+
+    def _evaluator(_code: str) -> object:
+        return payload
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+
+    refs = await disconnected_bridge.get_xrefs_to(_TARGET_ADDR)
+
+    by_type: dict[str, CrossReference] = {r.ref_type: r for r in refs}
+    assert by_type["call"].from_function == "caller_call"
+    assert by_type["call"].to_function == "target_fn"
+    assert by_type["jump"].from_function == "caller_jump"
+    assert by_type["read"].from_function == "caller_read"
+    assert by_type["read"].to_function is None
+    assert by_type["data"].from_function is None
+    assert by_type["data"].to_function == "target_fn"
+
+
+@pytest.mark.asyncio
+async def test_get_xrefs_from_preserves_full_taxonomy(disconnected_bridge: GhidraBridge) -> None:
+    """Verify ``get_xrefs_from`` returns call/jump/read/write/data distinctly.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture mutated to use a stub
+            remote that returns a deterministic xref payload.
+    """
+    payload = _xref_payload_full_taxonomy()
+
+    def _evaluator(_code: str) -> object:
+        return payload
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+
+    refs = await disconnected_bridge.get_xrefs_from(_TARGET_ADDR)
+
+    types = [r.ref_type for r in refs]
+    assert types == ["call", "jump", "read", "write", "data"]
+
+
+@pytest.mark.asyncio
+async def test_get_xrefs_from_populates_function_enrichment(disconnected_bridge: GhidraBridge) -> None:
+    """Verify ``get_xrefs_from`` surfaces ``from_function`` / ``to_function``.
+
+    Args:
+        disconnected_bridge: Disconnected GhidraBridge fixture mutated to use a stub
+            remote that returns a deterministic xref payload.
+    """
+    payload = _xref_payload_full_taxonomy()
+
+    def _evaluator(_code: str) -> object:
+        return payload
+
+    _attach_stub_bridge(disconnected_bridge, _evaluator)
+
+    refs = await disconnected_bridge.get_xrefs_from(_TARGET_ADDR)
+
+    by_type: dict[str, CrossReference] = {r.ref_type: r for r in refs}
+    assert by_type["call"].from_function == "caller_call"
+    assert by_type["call"].to_function == "target_fn"
+    assert by_type["write"].from_function == "caller_write"
+    assert by_type["write"].to_function is None
+    assert by_type["data"].from_function is None
+    assert by_type["data"].to_function == "target_fn"

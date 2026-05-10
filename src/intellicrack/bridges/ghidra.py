@@ -154,6 +154,80 @@ _ERR_BOOKMARK_NOT_FOUND = "Bookmark not found"
 _ERR_LABEL_NOT_FOUND = "Label not found"
 _ERR_DEBUG_IMPORT_FAILED = "Debug info import failed"
 _ERR_UNSUPPORTED_DEBUG_FORMAT = "Unsupported debug info file format"
+_ERR_DEBUG_PATH_INVALID = "Debug info file path invalid"
+_ERR_DEBUG_PATH_NOT_FOUND = "Debug info file not found"
+_ERR_DEBUG_PATH_NOT_FILE = "Debug info path is not a regular file"
+
+
+_XRefRefType = Literal["call", "jump", "data", "read", "write"]
+
+
+def _map_ghidra_ref_type(raw_type: str) -> _XRefRefType:
+    """Map a Ghidra ``RefType`` string to the canonical xref taxonomy.
+
+    Ghidra's ``ghidra.program.model.symbol.RefType`` exposes a rich set of
+    reference flavours such as ``UNCONDITIONAL_CALL``, ``COMPUTED_CALL``,
+    ``CONDITIONAL_JUMP``, ``COMPUTED_JUMP``, ``READ``, ``WRITE``, ``DATA``,
+    ``READ_WRITE``, ``READ_IND``, ``WRITE_IND``, ``PARAM``, and
+    ``EXTERNAL_REF``. This helper preserves call/jump/read/write
+    distinctions instead of collapsing every non-call entry to ``"data"``.
+
+    Args:
+        raw_type: The string returned by Ghidra's ``RefType.toString()``.
+
+    Returns:
+        _XRefRefType: One of ``"call"``, ``"jump"``, ``"data"``, ``"read"``,
+        or ``"write"``.
+    """
+    upper = raw_type.upper()
+    if "CALL" in upper:
+        return "call"
+    if "JUMP" in upper or upper == "FLOW" or upper.endswith("_FLOW"):
+        return "jump"
+    if "WRITE" in upper:
+        return "write"
+    if "READ" in upper:
+        return "read"
+    return "data"
+
+
+def _resolve_debug_info_path(path: str) -> Path:
+    r"""Canonicalise and validate a debug-info path before passing it to Ghidra.
+
+    Resolves the supplied path with ``Path.resolve(strict=True)`` to reject
+    non-existent paths and to defeat traversal sequences such as
+    ``..\..\Windows\System32``. Refuses paths that resolve to anything
+    other than a regular file (directories, devices, symlink loops).
+
+    Args:
+        path: Untrusted, possibly-relative path supplied by the caller.
+
+    Returns:
+        Path: Absolute, normalised filesystem path that is guaranteed to
+        exist and to refer to a regular file at the moment of the check.
+
+    Raises:
+        ToolError: If ``path`` is empty, cannot be resolved, does not
+            exist, or does not refer to a regular file.
+    """
+    if not path or not str(path).strip():
+        raise ToolError(_ERR_DEBUG_PATH_INVALID)
+
+    candidate = Path(path)
+    try:
+        resolved = candidate.resolve(strict=True)
+    except FileNotFoundError as exc:
+        msg = f"{_ERR_DEBUG_PATH_NOT_FOUND}: {path}"
+        raise ToolError(msg) from exc
+    except OSError as exc:
+        msg = f"{_ERR_DEBUG_PATH_INVALID}: {path}: {exc}"
+        raise ToolError(msg) from exc
+
+    if not resolved.is_file():
+        msg = f"{_ERR_DEBUG_PATH_NOT_FILE}: {resolved}"
+        raise ToolError(msg)
+
+    return resolved
 
 
 class GhidraBridge(StaticAnalysisBridge):
@@ -195,7 +269,7 @@ class GhidraBridge(StaticAnalysisBridge):
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_decompilation=True,
-            supports_patching=True,
+            supports_patching=False,
             supports_scripting=True,
             supported_architectures=[
                 "x86",
@@ -1815,7 +1889,6 @@ class GhidraBridge(StaticAnalysisBridge):
                 raise ToolError(msg)
 
         data = await asyncio.to_thread(path.read_bytes)
-        md5 = hashlib.md5(data, usedforsecurity=False).hexdigest()
         sha256 = hashlib.sha256(data).hexdigest()
 
         file_type = self._detect_format(data)
@@ -1848,7 +1921,6 @@ class GhidraBridge(StaticAnalysisBridge):
             path=self._binary_path,
             name=path.name,
             size=len(data),
-            md5=md5,
             sha256=sha256,
             file_type=file_type,
             architecture=arch,
@@ -2507,10 +2579,15 @@ metadata
                 addr = toAddr({address})
 
                 for ref in getReferencesTo(addr):
+                    from_addr = ref.getFromAddress()
+                    from_func = getFunctionContaining(from_addr)
+                    to_func = getFunctionContaining(addr)
                     xrefs.append({{
-                        'from': ref.getFromAddress().getOffset(),
+                        'from': from_addr.getOffset(),
                         'to': addr.getOffset(),
                         'type': str(ref.getReferenceType()),
+                        'from_function': from_func.getName() if from_func is not None else None,
+                        'to_function': to_func.getName() if to_func is not None else None,
                     }})
 
                 xrefs
@@ -2524,16 +2601,7 @@ metadata
             raise ToolError(error_message) from exc
 
         result_list = cast("list[dict[str, Any]]", result) if result else []
-        return [
-            CrossReference(
-                from_address=int(x.get("from", 0)),
-                to_address=int(x.get("to", 0)),
-                ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
-                from_function=None,
-                to_function=None,
-            )
-            for x in result_list
-        ]
+        return [self._build_cross_reference(x) for x in result_list]
 
     async def get_xrefs_from(self, address: int) -> list[CrossReference]:
         """Get cross-references from an address.
@@ -2559,10 +2627,15 @@ metadata
                 addr = toAddr({address})
 
                 for ref in getReferencesFrom(addr):
+                    to_addr = ref.getToAddress()
+                    from_func = getFunctionContaining(addr)
+                    to_func = getFunctionContaining(to_addr)
                     xrefs.append({{
                         'from': addr.getOffset(),
-                        'to': ref.getToAddress().getOffset(),
+                        'to': to_addr.getOffset(),
                         'type': str(ref.getReferenceType()),
+                        'from_function': from_func.getName() if from_func is not None else None,
+                        'to_function': to_func.getName() if to_func is not None else None,
                     }})
 
                 xrefs
@@ -2576,16 +2649,35 @@ metadata
             raise ToolError(error_message) from exc
 
         result_list = cast("list[dict[str, Any]]", result) if result else []
-        return [
-            CrossReference(
-                from_address=int(x.get("from", 0)),
-                to_address=int(x.get("to", 0)),
-                ref_type="call" if str(x.get("type", "")).startswith("CALL") else "data",
-                from_function=None,
-                to_function=None,
-            )
-            for x in result_list
-        ]
+        return [self._build_cross_reference(x) for x in result_list]
+
+    @staticmethod
+    def _build_cross_reference(payload: dict[str, Any]) -> CrossReference:
+        """Construct a ``CrossReference`` from a Ghidra xref payload.
+
+        Preserves the full reference taxonomy returned by Ghidra (call,
+        jump, read, write, data) and surfaces ``from_function`` /
+        ``to_function`` enrichment captured by the remote script.
+
+        Args:
+            payload: Dict produced by the remote Jython script with keys
+                ``from``, ``to``, ``type``, ``from_function``, and
+                ``to_function``.
+
+        Returns:
+            CrossReference: Populated cross-reference instance.
+        """
+        from_function_raw = payload.get("from_function")
+        to_function_raw = payload.get("to_function")
+        from_function = str(from_function_raw) if from_function_raw is not None else None
+        to_function = str(to_function_raw) if to_function_raw is not None else None
+        return CrossReference(
+            from_address=int(payload.get("from", 0)),
+            to_address=int(payload.get("to", 0)),
+            ref_type=_map_ghidra_ref_type(str(payload.get("type", ""))),
+            from_function=from_function,
+            to_function=to_function,
+        )
 
     async def search_strings(self, pattern: str, encoding: str = "ascii") -> list[StringInfo]:
         """Search for strings matching pattern.
@@ -4652,7 +4744,10 @@ metadata
         ``DWARFAnalyzer`` for DWARF-bearing files (``.debug``, ``.dbg``,
         ``.dwarf``, ``.so``, ``.dylib``, ``.o``, ``.elf``). The import
         runs inside a Ghidra transaction and is rolled back if the
-        analyzer raises.
+        analyzer raises. The supplied path is canonicalised with
+        ``Path.resolve(strict=True)`` and verified to exist as a regular
+        file before any value is forwarded to Ghidra to defeat path
+        traversal sequences and dangling references.
 
         Args:
             path: Path to a ``.pdb`` file or to a DWARF-bearing debug file.
@@ -4663,23 +4758,28 @@ metadata
             Ghidra.
 
         Raises:
-            ToolError: If Ghidra is not connected, if the file extension
-                is not recognised, or if the Ghidra analyzer raises.
+            ToolError: If Ghidra is not connected, if ``path`` is empty,
+                cannot be resolved, does not exist, is not a regular file,
+                if the file extension is not recognised, or if the Ghidra
+                analyzer raises.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
-        ext = Path(path).suffix.lower()
+        resolved_path = await asyncio.to_thread(_resolve_debug_info_path, path)
+
+        ext = resolved_path.suffix.lower()
         if ext == ".pdb":
             debug_type = "pdb"
         elif ext in {".debug", ".dwarf", ".dbg", ".so", ".dylib", ".o", ".elf"}:
             debug_type = "dwarf"
         else:
-            msg = f"{_ERR_UNSUPPORTED_DEBUG_FORMAT}: {path}"
+            msg = f"{_ERR_UNSUPPORTED_DEBUG_FORMAT}: {resolved_path}"
             raise ToolError(msg)
 
-        _logger.info("debuginfo_importing", path=path, debug_type=debug_type)
-        path_literal = json.dumps(path)
+        canonical_path = str(resolved_path)
+        _logger.info("debuginfo_importing", path=canonical_path, debug_type=debug_type)
+        path_literal = json.dumps(canonical_path)
         try:
             result = await self._execute_remote(f"""
                 import java.io.File as _JFile
@@ -4766,14 +4866,14 @@ metadata
         except ToolError:
             raise
         except Exception as exc:
-            _logger.exception("ghidra_import_debug_info_failed", path=path)
+            _logger.exception("ghidra_import_debug_info_failed", path=canonical_path)
             msg = f"{_ERR_DEBUG_IMPORT_FAILED}: {exc}"
             raise ToolError(msg) from exc
 
         info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
         success = bool(info.get("success", False))
         response: dict[str, Any] = {
-            "path": str(info.get("path", path)),
+            "path": str(info.get("path", canonical_path)),
             "success": success,
             "type": str(info.get("type", debug_type)),
             "analyzer": str(info.get("analyzer", "")),
