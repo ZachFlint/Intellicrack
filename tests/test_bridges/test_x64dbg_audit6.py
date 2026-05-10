@@ -42,6 +42,30 @@ The X64DBG-C tests substitute the bridge's ``_pipe_client`` with an
 in-process fake that records sent commands and replays scripted
 responses; this is the smallest viable boundary because launching real
 x64dbg from CI is not feasible.
+
+X64DBG-D production-blocker findings:
+
+* F-0002 - ``set_breakpoint`` round-trips the native breakpoint id and
+  verifies the debugger actually applied the breakpoint via ``bp_list``.
+* F-0006 - ``get_threads`` populates ``start_address``, ``current_pc``,
+  and ``state`` from real Win32 thread queries.
+* F-0007 - ``_read_module_entry_point`` validates the optional-header
+  layout (PE32 vs PE32+) and ``SizeOfOptionalHeader`` instead of blindly
+  trusting a 256-byte read.
+* F-0009 - ``except Exception`` swallow paths in ``disassemble_at``,
+  ``_get_threads``, ``_get_modules``, and ``_get_parent_pid`` are
+  narrowed to typed-failure handlers.
+* F-0010 - per-handle process-handle cache is populated on first
+  memory access and released on detach/shutdown.
+* F-0012 - ``_breakpoints``/``_watchpoints`` dictionaries are guarded
+  against concurrent mutation from coroutines and ``_handle_event``.
+* F-0026 - ``set_breakpoint`` issues ``bpcond`` after ``bp_set`` when a
+  conditional expression is supplied.
+
+The X64DBG-D tests also use a deterministic in-process pipe-client
+substitute that records every command/params pair without spawning
+x64dbg, so the failure modes above can be reproduced on a developer
+workstation.
 """
 
 from __future__ import annotations
@@ -51,7 +75,9 @@ import contextlib
 import ctypes
 import inspect
 import os
+import struct
 import sys
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -62,12 +88,20 @@ if sys.platform == "win32":
 import pytest
 
 from intellicrack.bridges import x64dbg as x64dbg_module
+from intellicrack.bridges._pe_format import (
+    PE32_OPTIONAL_HEADER_SIZE,
+    PE32PLUS_OPTIONAL_HEADER_SIZE,
+    PE_OPTIONAL_HEADER_MAGIC_PE32,
+    PE_OPTIONAL_HEADER_OFFSET,
+    PE_SIGNATURE,
+)
+from intellicrack.bridges._win32_types import NT_HEADERS_OPTIONAL_OFFSET
 from intellicrack.bridges.x64dbg import X64DbgBridge
-from intellicrack.core.types import ToolError, ToolName
+from intellicrack.core.types import BreakpointInfo, ToolError, ToolName
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Generator
+    from collections.abc import Awaitable, Callable, Coroutine, Generator
 
 
 _bridge_module = x64dbg_module
@@ -970,7 +1004,7 @@ class TestSetBreakpointVerification:
 
         fake = _install_fake_pipe(bridge, responder)
         bp_id = await bridge.set_breakpoint(_BP_ADDR)
-        assert bp_id == 1
+        assert bp_id == _BP_ADDR
         assert ("bp_set", {"address": _BP_ADDR, "type": "software", "condition": None}) in fake.sent
         assert ("bp_list", None) in fake.sent
 
@@ -990,7 +1024,7 @@ class TestSetBreakpointVerification:
             raise AssertionError(msg)
 
         _install_fake_pipe(bridge, responder)
-        with pytest.raises(ToolError, match="not present in bp_list"):
+        with pytest.raises(ToolError, match="no software breakpoint exists"):
             await bridge.set_breakpoint(_BP_ADDR)
         assert _BP_ADDR not in bridge.breakpoints
 
@@ -1011,7 +1045,7 @@ class TestSetBreakpointVerification:
 
         _install_fake_pipe(bridge, responder)
         bp_id = await bridge.set_breakpoint(_BP_ADDR)
-        assert bp_id == 1
+        assert bp_id == _BP_ADDR
         assert _BP_ADDR in bridge.breakpoints
 
     async def test_breakpoint_protocol_violation_raises(self, bridge: X64DbgBridge) -> None:
@@ -1352,3 +1386,706 @@ class TestErrorCodeDetails:
         with pytest.raises(ToolError) as exc_info:
             await _call_send_pipe(bridge, "anything")
         assert exc_info.value.details.get("x64dbg_error_code") == "plugin_unavailable"
+
+
+_HANDLE_EVENT_ATTR = "_handle_event"
+_PIPE_CLIENT_ATTR = "_pipe_client"
+_PLUGIN_DEPLOYED_ATTR = "_plugin_deployed"
+_STATE_LOCK_ATTR = "_state_lock"
+_PROCESS_HANDLES_ATTR = "_process_handles"
+_RELEASE_HANDLES_ATTR = "_release_process_handles"
+_GET_CACHED_HANDLE_ATTR = "_get_cached_process_handle"
+_READ_PE_HEADER_ATTR = "_read_pe_header"
+_READ_MODULE_ENTRY_POINT_ATTR = "_read_module_entry_point"
+_READ_MEMORY_ATTR = "read_memory"
+_GET_PARENT_PID_ATTR = "_get_parent_pid"
+
+_BP_ADDR_PRIMARY = 0x401000
+_BP_ADDR_SECONDARY = 0x402000
+_BP_ADDR_TERTIARY = 0x403000
+_PE_ENTRY_RVA = 0x12345
+_TEST_BASE_ADDRESS = 0x140000000
+_PROCESS_VM_OPERATION = 0x0008
+
+
+def _dispatch_event(bridge: X64DbgBridge, message: dict[str, Any]) -> None:
+    """Invoke the bridge's protected event dispatcher.
+
+    Args:
+        bridge: Bridge under test.
+        message: Event payload.
+    """
+    raw_handler: object = getattr(bridge, _HANDLE_EVENT_ATTR)
+    handler = cast("Callable[[dict[str, Any]], None]", raw_handler)
+    handler(message)
+
+
+class _FakePipeClientD:
+    """In-process substitute for ``NamedPipeClient`` that records traffic.
+
+    Each ``send_command`` invocation appends a ``(command, params)``
+    tuple to ``calls`` and returns the response queued by the test via
+    ``queue_response``. ``send_command`` raises ``ToolError`` when no
+    response has been queued so a missing test setup is loud rather
+    than silent.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the fake pipe client."""
+        self.calls: list[tuple[str, dict[str, Any] | None]] = []
+        self._responses: dict[str, list[dict[str, Any]]] = {}
+        self._default_responses: dict[str, dict[str, Any]] = {}
+        self.is_connected: bool = True
+
+    def queue_response(self, command: str, response: dict[str, Any]) -> None:
+        """Queue a single response for a given command name.
+
+        Args:
+            command: Command name.
+            response: Response dict to return for the next call.
+        """
+        self._responses.setdefault(command, []).append(response)
+
+    def set_default_response(self, command: str, response: dict[str, Any]) -> None:
+        """Set a default response for a command when the queue is empty.
+
+        Args:
+            command: Command name.
+            response: Response dict.
+        """
+        self._default_responses[command] = response
+
+    def set_event_handler(self, handler: Callable[[dict[str, Any]], None] | None) -> None:
+        """No-op event handler setter to satisfy the bridge contract.
+
+        Args:
+            handler: Ignored.
+        """
+        del handler
+
+    async def send_command(
+        self,
+        command: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Record the call and return the queued response.
+
+        Args:
+            command: Command name.
+            params: Command parameters.
+
+        Returns:
+            dict[str, Any]: Queued response.
+
+        Raises:
+            ToolError: If no response is queued for ``command``.
+        """
+        self.calls.append((command, params))
+        queue = self._responses.get(command, [])
+        if queue:
+            return queue.pop(0)
+        if command in self._default_responses:
+            return self._default_responses[command]
+        msg = f"_FakePipeClientD: no response queued for command={command!r}"
+        raise ToolError(msg)
+
+    async def connect(self) -> None:
+        """No-op connect for compatibility."""
+
+    async def close(self) -> None:
+        """Mark the fake client disconnected to mirror the real client."""
+        self.is_connected = False
+
+
+def _attach_fake_pipe_d(bridge: X64DbgBridge) -> _FakePipeClientD:
+    """Wire a fake pipe client and mark the plugin deployed.
+
+    Uses ``setattr`` with string-constant attribute names so the test
+    does not access the bridge's protected private slots through
+    direct attribute syntax (which basedpyright would flag as
+    ``reportPrivateUsage``).
+
+    Args:
+        bridge: Bridge under test.
+
+    Returns:
+        _FakePipeClientD: The freshly attached fake client.
+    """
+    fake = _FakePipeClientD()
+    setattr(bridge, _PIPE_CLIENT_ATTR, fake)
+    setattr(bridge, _PLUGIN_DEPLOYED_ATTR, True)
+    return fake
+
+
+def _fake_of_d(bridge: X64DbgBridge) -> _FakePipeClientD:
+    """Return the fake pipe client previously attached to ``bridge``.
+
+    Args:
+        bridge: Bridge whose pipe client to return.
+
+    Returns:
+        _FakePipeClientD: The previously attached fake.
+    """
+    raw: object = getattr(bridge, _PIPE_CLIENT_ATTR)
+    return cast("_FakePipeClientD", raw)
+
+
+@pytest.fixture
+def bridge_d() -> X64DbgBridge:
+    """Provide a fresh bridge instance with the fake plugin wired.
+
+    Returns:
+        X64DbgBridge: Bridge with ``_pipe_client`` set to a fake.
+    """
+    b = X64DbgBridge()
+    _attach_fake_pipe_d(b)
+    return b
+
+
+@pytest.mark.asyncio
+async def test_set_breakpoint_returns_native_address_after_verification(bridge_d: X64DbgBridge) -> None:
+    """F-0002: native breakpoint id is the address; verified by ``bp_list``.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    fake = _fake_of_d(bridge_d)
+    fake.queue_response("bp_set", {"success": True, "result": hex(_BP_ADDR_PRIMARY)})
+    fake.queue_response(
+        "bp_list",
+        {
+            "success": True,
+            "result": [
+                {
+                    "address": hex(_BP_ADDR_PRIMARY),
+                    "type": "normal",
+                    "enabled": True,
+                    "hitCount": 0,
+                    "breakCondition": "",
+                },
+            ],
+        },
+    )
+
+    bp_id = await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software")
+
+    assert bp_id == _BP_ADDR_PRIMARY
+    stored = bridge_d.breakpoints[_BP_ADDR_PRIMARY]
+    assert stored.id == _BP_ADDR_PRIMARY
+    assert stored.address == _BP_ADDR_PRIMARY
+
+
+@pytest.mark.asyncio
+async def test_set_breakpoint_rejects_unverifiable_breakpoint(bridge_d: X64DbgBridge) -> None:
+    """F-0002: ``bp_set`` parse-success without ``bp_list`` confirmation raises.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    fake = _fake_of_d(bridge_d)
+    fake.queue_response("bp_set", {"success": True, "result": hex(_BP_ADDR_PRIMARY)})
+    fake.queue_response("bp_list", {"success": True, "result": []})
+
+    with pytest.raises(ToolError, match="no software breakpoint exists"):
+        await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software")
+    assert _BP_ADDR_PRIMARY not in bridge_d.breakpoints
+
+
+@pytest.mark.asyncio
+async def test_set_breakpoint_with_condition_issues_bpcond(bridge_d: X64DbgBridge) -> None:
+    """F-0026: conditional bp issues a ``bpcond`` script command after ``bp_set``.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    fake = _fake_of_d(bridge_d)
+    fake.queue_response("bp_set", {"success": True, "result": hex(_BP_ADDR_PRIMARY)})
+    fake.queue_response(
+        "bp_list",
+        {
+            "success": True,
+            "result": [
+                {
+                    "address": hex(_BP_ADDR_PRIMARY),
+                    "type": "normal",
+                    "enabled": True,
+                    "hitCount": 0,
+                    "breakCondition": "",
+                },
+            ],
+        },
+    )
+    fake.queue_response("exec", {"success": True, "result": "ok"})
+
+    await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software", "rax==0")
+
+    exec_calls = [c for c in fake.calls if c[0] == "exec"]
+    assert len(exec_calls) == 1
+    params = exec_calls[0][1]
+    assert params is not None
+    cmd = params.get("command", "")
+    assert isinstance(cmd, str)
+    assert cmd.startswith("bpcond ")
+    assert hex(_BP_ADDR_PRIMARY) in cmd
+    assert '"rax==0"' in cmd
+
+
+@pytest.mark.asyncio
+async def test_remove_breakpoint_uses_address_keyed_native_id(bridge_d: X64DbgBridge) -> None:
+    """F-0002: removal is keyed by native id (address) and clears local registry.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    fake = _fake_of_d(bridge_d)
+    fake.queue_response("bp_set", {"success": True, "result": hex(_BP_ADDR_PRIMARY)})
+    fake.queue_response(
+        "bp_list",
+        {
+            "success": True,
+            "result": [
+                {
+                    "address": hex(_BP_ADDR_PRIMARY),
+                    "type": "normal",
+                    "enabled": True,
+                    "hitCount": 0,
+                    "breakCondition": "",
+                },
+            ],
+        },
+    )
+    fake.queue_response("bp_remove", {"success": True, "result": True})
+
+    bp_id = await bridge_d.set_breakpoint(_BP_ADDR_PRIMARY, "software")
+    assert bp_id == _BP_ADDR_PRIMARY
+
+    removed = await bridge_d.remove_breakpoint(bp_id)
+    assert removed is True
+    assert _BP_ADDR_PRIMARY not in bridge_d.breakpoints
+
+
+@pytest.mark.asyncio
+async def test_concurrent_set_breakpoint_calls_serialise_state(bridge_d: X64DbgBridge) -> None:
+    """F-0012: parallel ``set_breakpoint`` does not corrupt the registry.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    fake = _fake_of_d(bridge_d)
+    addresses = [_BP_ADDR_PRIMARY, _BP_ADDR_SECONDARY, _BP_ADDR_TERTIARY]
+    bp_list_payload: list[dict[str, Any]] = []
+    for addr in addresses:
+        fake.queue_response("bp_set", {"success": True, "result": hex(addr)})
+        bp_list_payload.append(
+            {
+                "address": hex(addr),
+                "type": "normal",
+                "enabled": True,
+                "hitCount": 0,
+                "breakCondition": "",
+            },
+        )
+        fake.queue_response("bp_list", {"success": True, "result": list(bp_list_payload)})
+
+    coroutines: list[Awaitable[int]] = [bridge_d.set_breakpoint(addr, "software") for addr in addresses]
+    results: list[int] = await asyncio.gather(*coroutines)
+
+    assert sorted(results) == sorted(addresses)
+    assert set(bridge_d.breakpoints.keys()) == set(addresses)
+
+
+def test_handle_event_breakpoint_hit_counts_under_concurrent_mutation() -> None:
+    """F-0012: ``_handle_event`` and coroutine mutation cannot race.
+
+    Spawns many threads that simultaneously dispatch breakpoint events
+    and mutate ``_breakpoints`` so a missing lock would surface as a
+    ``RuntimeError`` ("dictionary changed size during iteration") or a
+    lost ``hit_count`` increment.
+    """
+    bridge = X64DbgBridge()
+    iterations = 200
+    addresses = [0x401000 + i * 0x10 for i in range(8)]
+    for addr in addresses:
+        bridge.breakpoints[addr] = BreakpointInfo(
+            id=addr,
+            address=addr,
+            bp_type="software",
+            enabled=True,
+            hit_count=0,
+        )
+
+    state_lock_obj: object = getattr(bridge, _STATE_LOCK_ATTR)
+    state_lock = cast("threading.Lock", state_lock_obj)
+
+    def event_thread(addr: int) -> None:
+        """Repeatedly dispatch breakpoint events for one address.
+
+        Args:
+            addr: Address to fire breakpoints against.
+        """
+        for _ in range(iterations):
+            _dispatch_event(bridge, {"event": "breakpoint", "address": addr})
+
+    def mutator_thread(addr: int) -> None:
+        """Add and remove a parallel breakpoint while events fire.
+
+        Args:
+            addr: Base address used for the mutator state.
+        """
+        for i in range(iterations):
+            ephemeral_addr = addr + 0x100 + i
+            with state_lock:
+                bridge.breakpoints[ephemeral_addr] = BreakpointInfo(
+                    id=ephemeral_addr,
+                    address=ephemeral_addr,
+                    bp_type="software",
+                    enabled=True,
+                    hit_count=0,
+                )
+            with state_lock:
+                bridge.breakpoints.pop(ephemeral_addr, None)
+
+    threads = [threading.Thread(target=event_thread, args=(addr,)) for addr in addresses]
+    threads.extend(threading.Thread(target=mutator_thread, args=(addr,)) for addr in addresses)
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    for addr in addresses:
+        assert bridge.breakpoints[addr].hit_count == iterations
+
+
+@pytest.mark.asyncio
+async def test_get_threads_populates_start_address_and_pc() -> None:
+    """F-0006: live threads expose non-zero start_address and a real state.
+
+    Verifies the audit's core complaint that the bridge advertised
+    ``start_address``/``current_pc`` but always returned 0. With the
+    fix in place, at least one thread reports a non-zero start address
+    produced by ``NtQueryInformationThread`` and at least one reports
+    a real running/suspended state.
+    """
+    if sys.platform != "win32":
+        pytest.skip("Windows only")
+
+    import os  # noqa: PLC0415
+
+    bridge = X64DbgBridge()
+    bridge.attached_pid = os.getpid()
+
+    threads = await bridge.get_threads()
+    assert threads, "expected at least one thread for the current process"
+    states = {t.state for t in threads}
+    assert states & {"running", "suspended", "terminated"}, f"expected at least one thread with a real state, got {states!r}"
+    assert any(t.start_address != 0 for t in threads), "no thread carried a non-zero start address"
+
+
+def _build_pe_header(*, magic: int, optional_header_size: int) -> bytes:
+    """Construct a buffer mimicking ``ReadProcessMemory`` of a PE NT-headers region.
+
+    Args:
+        magic: Optional-header ``Magic`` value (PE32, PE32+, or other).
+        optional_header_size: ``SizeOfOptionalHeader`` to embed in the COFF header.
+
+    Returns:
+        bytes: Buffer starting at the PE signature (i.e. what the bridge sees
+        after ``read_dos_e_lfanew``).
+    """
+    buf = bytearray(NT_HEADERS_OPTIONAL_OFFSET + max(optional_header_size, PE32PLUS_OPTIONAL_HEADER_SIZE) + 0x100)
+    buf[0:4] = PE_SIGNATURE
+    struct.pack_into("<H", buf, 4, 0x8664)
+    struct.pack_into("<H", buf, 6, 1)
+    struct.pack_into("<I", buf, 8, 0)
+    struct.pack_into("<I", buf, 12, 0)
+    struct.pack_into("<I", buf, 16, 0)
+    struct.pack_into("<H", buf, 20, optional_header_size)
+    struct.pack_into("<H", buf, 22, 0)
+    struct.pack_into("<H", buf, NT_HEADERS_OPTIONAL_OFFSET, magic)
+    entry_offset = NT_HEADERS_OPTIONAL_OFFSET + 0x28
+    struct.pack_into("<I", buf, entry_offset, _PE_ENTRY_RVA)
+    assert NT_HEADERS_OPTIONAL_OFFSET == PE_OPTIONAL_HEADER_OFFSET
+    assert PE32PLUS_OPTIONAL_HEADER_SIZE > PE32_OPTIONAL_HEADER_SIZE
+    return bytes(buf)
+
+
+def _patch_read_pe_header(bridge: X64DbgBridge, payload: bytes) -> None:
+    """Replace ``_read_pe_header`` on ``bridge`` so ``_read_module_entry_point`` sees ``payload``.
+
+    Args:
+        bridge: Bridge under test.
+        payload: Synthetic PE header payload to return.
+    """
+
+    async def fake_read_pe_header(base_address: int, module_name: str, size: int = 256) -> tuple[int, bytes]:
+        """Return the synthesised PE header.
+
+        Yields back to the loop once so the coroutine is a genuine
+        async function (the real implementation awaits ``read_memory``).
+
+        Args:
+            base_address: Ignored.
+            module_name: Ignored.
+            size: Ignored.
+
+        Returns:
+            tuple[int, bytes]: ``(0, payload)``.
+        """
+        del base_address, module_name, size
+        await asyncio.sleep(0)
+        return 0, payload
+
+    setattr(bridge, _READ_PE_HEADER_ATTR, fake_read_pe_header)
+
+
+def test_read_module_entry_point_validates_pe32_magic() -> None:
+    """F-0007: PE32 (32-bit) magic is honoured by entry-point parsing."""
+    bridge = X64DbgBridge()
+    pe_header = _build_pe_header(magic=PE_OPTIONAL_HEADER_MAGIC_PE32, optional_header_size=PE32_OPTIONAL_HEADER_SIZE)
+    _patch_read_pe_header(bridge, pe_header)
+
+    raw_method: object = getattr(bridge, _READ_MODULE_ENTRY_POINT_ATTR)
+    method = cast("Callable[[int, str], Coroutine[Any, Any, int]]", raw_method)
+    result = asyncio.run(method(_TEST_BASE_ADDRESS, "test32.dll"))
+    assert result == _TEST_BASE_ADDRESS + _PE_ENTRY_RVA
+
+
+def test_read_module_entry_point_rejects_unknown_magic() -> None:
+    """F-0007: unknown optional-header magic returns 0 instead of garbage."""
+    bridge = X64DbgBridge()
+    pe_header = _build_pe_header(magic=0x107, optional_header_size=PE32_OPTIONAL_HEADER_SIZE)
+    _patch_read_pe_header(bridge, pe_header)
+
+    raw_method: object = getattr(bridge, _READ_MODULE_ENTRY_POINT_ATTR)
+    method = cast("Callable[[int, str], Coroutine[Any, Any, int]]", raw_method)
+    assert asyncio.run(method(_TEST_BASE_ADDRESS, "rom-image.dll")) == 0
+
+
+def test_read_module_entry_point_rejects_undersized_optional_header() -> None:
+    """F-0007: ``SizeOfOptionalHeader`` below PE32 minimum returns 0."""
+    bridge = X64DbgBridge()
+    pe_header = _build_pe_header(magic=PE_OPTIONAL_HEADER_MAGIC_PE32, optional_header_size=PE32_OPTIONAL_HEADER_SIZE - 16)
+    _patch_read_pe_header(bridge, pe_header)
+
+    raw_method: object = getattr(bridge, _READ_MODULE_ENTRY_POINT_ATTR)
+    method = cast("Callable[[int, str], Coroutine[Any, Any, int]]", raw_method)
+    assert asyncio.run(method(_TEST_BASE_ADDRESS, "shrunken.dll")) == 0
+
+
+@pytest.mark.asyncio
+async def test_disassemble_failure_raises_instead_of_swallowing(bridge_d: X64DbgBridge) -> None:
+    """F-0009: ``disassemble_at`` no longer silently returns ``[]`` on errors.
+
+    Uses a controlled ``read_memory`` failure to drive the previously
+    bare-``Exception`` branch in ``disassemble_at`` and asserts that
+    the error now propagates as a ``ToolError`` with the actual cause.
+
+    Args:
+        bridge_d: Pre-wired bridge fixture.
+    """
+    pytest.importorskip("capstone")
+
+    fake = _fake_of_d(bridge_d)
+    fake.set_default_response(
+        "disasm",
+        {"success": False, "error": "pipe disconnected", "code": "pipe_disconnected"},
+    )
+
+    async def failing_read_memory(address: int, size: int) -> bytes:
+        """Always raise to simulate a memory failure inside the cap-disasm path.
+
+        The body yields once so the coroutine matches the real async
+        ``read_memory`` shape before the controlled failure.
+
+        Args:
+            address: Ignored.
+            size: Ignored.
+
+        Returns:
+            bytes: never returns.
+
+        Raises:
+            ToolError: Always.
+        """
+        del address, size
+        await asyncio.sleep(0)
+        msg = "ReadProcessMemory failed at 0x401000"
+        raise ToolError(msg)
+
+    setattr(bridge_d, _READ_MEMORY_ATTR, failing_read_memory)
+
+    with pytest.raises(ToolError, match="Disassembly failed"):
+        await bridge_d.disassemble_at(_BP_ADDR_PRIMARY, count=1)
+
+
+def test_get_parent_pid_narrow_exception_does_not_swallow_typeerror() -> None:
+    """F-0009: ``_get_parent_pid`` no longer swallows non-OS errors.
+
+    A plain ``TypeError`` from a programming bug must surface to the
+    caller instead of being converted to a generic ``ToolError`` by
+    the previous bare-``except Exception`` clause.
+    """
+    if sys.platform != "win32":
+        pytest.skip("Windows only")
+
+    import ctypes  # noqa: PLC0415
+    import os  # noqa: PLC0415
+
+    saved = ctypes.windll.kernel32.Process32FirstW
+    failure_message = "simulated programmer error"
+
+    def boom(*_args: object, **_kwargs: object) -> int:
+        """Replacement for ``Process32FirstW`` that raises ``TypeError``.
+
+        Args:
+            *_args: Forwarded positional arguments (ignored).
+            **_kwargs: Forwarded keyword arguments (ignored).
+
+        Returns:
+            int: Never returns.
+
+        Raises:
+            TypeError: Always raised so the test can verify the
+                bare-Exception swallow path is gone.
+        """
+        raise TypeError(failure_message)
+
+    setattr(ctypes.windll.kernel32, "Process32FirstW", boom)
+    raw_get_parent_pid: object = getattr(X64DbgBridge, _GET_PARENT_PID_ATTR)
+    get_parent_pid = cast("Callable[[int], int]", raw_get_parent_pid)
+    try:
+        with pytest.raises(TypeError, match=failure_message):
+            get_parent_pid(os.getpid())
+    finally:
+        setattr(ctypes.windll.kernel32, "Process32FirstW", saved)
+
+
+@pytest.mark.asyncio
+async def test_process_handle_cache_reused_across_reads() -> None:
+    """F-0010: repeated ``read_memory`` calls reuse one open handle.
+
+    Verifies the bridge no longer pays an ``OpenProcess`` /
+    ``CloseHandle`` cost on every memory access.
+    """
+    if sys.platform != "win32":
+        pytest.skip("Windows only")
+
+    import ctypes  # noqa: PLC0415
+    import os  # noqa: PLC0415
+
+    bridge = X64DbgBridge()
+    bridge.attached_pid = os.getpid()
+
+    test_data = b"AUDIT6_HANDLE_CACHE_PROBE_VALUE"
+    buffer = ctypes.create_string_buffer(test_data)
+    addr = ctypes.addressof(buffer)
+
+    open_count = 0
+    saved_open = ctypes.windll.kernel32.OpenProcess
+
+    def counting_open(*args: object, **kwargs: object) -> int:
+        """Wrap ``OpenProcess`` to count invocations during the test.
+
+        Args:
+            *args: Forwarded positional arguments.
+            **kwargs: Forwarded keyword arguments.
+
+        Returns:
+            int: The handle returned by the real ``OpenProcess``.
+        """
+        nonlocal open_count
+        open_count += 1
+        return cast("int", saved_open(*args, **kwargs))
+
+    setattr(ctypes.windll.kernel32, "OpenProcess", counting_open)
+    try:
+        first = await bridge.read_memory(addr, len(test_data))
+        second = await bridge.read_memory(addr, len(test_data))
+        third = await bridge.read_memory(addr, len(test_data))
+    finally:
+        setattr(ctypes.windll.kernel32, "OpenProcess", saved_open)
+        release: object = getattr(bridge, _RELEASE_HANDLES_ATTR)
+        cast("Callable[[], None]", release)()
+
+    assert first == test_data
+    assert second == test_data
+    assert third == test_data
+    assert open_count == 1
+
+
+def test_release_process_handles_empties_cache() -> None:
+    """F-0010: ``_release_process_handles`` closes and forgets every handle."""
+    if sys.platform != "win32":
+        pytest.skip("Windows only")
+
+    import ctypes  # noqa: PLC0415
+    import os  # noqa: PLC0415
+
+    bridge = X64DbgBridge()
+    bridge.attached_pid = os.getpid()
+
+    get_handle: object = getattr(bridge, _GET_CACHED_HANDLE_ATTR)
+    handle = cast("Callable[[int], int]", get_handle)(_PROCESS_VM_OPERATION)
+    assert handle != 0
+
+    handles_attr: object = getattr(bridge, _PROCESS_HANDLES_ATTR)
+    handles = cast("dict[int, int]", handles_attr)
+    assert handles[_PROCESS_VM_OPERATION] == handle
+
+    closed: list[int] = []
+    saved_close = ctypes.windll.kernel32.CloseHandle
+
+    def counting_close(h: int) -> int:
+        closed.append(h)
+        return cast("int", saved_close(h))
+
+    setattr(ctypes.windll.kernel32, "CloseHandle", counting_close)
+    try:
+        release: object = getattr(bridge, _RELEASE_HANDLES_ATTR)
+        cast("Callable[[], None]", release)()
+    finally:
+        setattr(ctypes.windll.kernel32, "CloseHandle", saved_close)
+
+    assert handle in closed
+    handles_after: object = getattr(bridge, _PROCESS_HANDLES_ATTR)
+    assert cast("dict[int, int]", handles_after) == {}
+
+
+@pytest.mark.asyncio
+async def test_detach_releases_cached_handles() -> None:
+    """F-0010: ``detach`` releases the per-handle cache.
+
+    Sets up a stand-in subprocess holder and a fake pipe so the
+    detach control flow runs end-to-end without a live x64dbg, then
+    asserts the per-handle cache is emptied so a follow-up attachment
+    opens a fresh handle.
+    """
+    if sys.platform != "win32":
+        pytest.skip("Windows only")
+
+    import os  # noqa: PLC0415
+
+    bridge = X64DbgBridge()
+    fake = _attach_fake_pipe_d(bridge)
+    fake.queue_response("exec", {"success": True, "result": ""})
+
+    class _StubProcess:
+        """Minimal ``Popen`` stand-in so ``_send_command`` does not bail.
+
+        Attributes:
+            pid: Process identifier exposed by ``debugger_pid``.
+        """
+
+        pid: int = -1
+
+    setattr(bridge, "_process", cast("Any", _StubProcess()))
+    bridge.attached_pid = os.getpid()
+
+    get_handle: object = getattr(bridge, _GET_CACHED_HANDLE_ATTR)
+    cast("Callable[[int], int]", get_handle)(_PROCESS_VM_OPERATION)
+    handles_attr: object = getattr(bridge, _PROCESS_HANDLES_ATTR)
+    assert cast("dict[int, int]", handles_attr), "cache should be populated"
+
+    await bridge.detach()
+    handles_after: object = getattr(bridge, _PROCESS_HANDLES_ATTR)
+    assert cast("dict[int, int]", handles_after) == {}
