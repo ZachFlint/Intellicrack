@@ -10,6 +10,7 @@ for development. Includes automatic cleanup of old log files on startup.
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import logging
 import sys
@@ -37,13 +38,71 @@ _STRING_TRUNCATE_SIZE = 200
 
 
 def _default_log_dir() -> Path:
-    """Return a portable default directory for log files.
+    """Return the configured default directory for log files.
+
+    Resolution order:
+
+    1. The most recently configured ``logs_directory`` recorded by
+       :func:`setup_logging` via :data:`_logger_state` (typically supplied by
+       :class:`intellicrack.core.config.Config`).
+    2. The ``logs_directory`` field of the application's configured Config
+       singleton (loaded lazily to avoid import cycles).
+    3. ``Path.cwd() / "logs"`` as a final portable fallback when no
+       configuration is present.
 
     Returns:
-        Path: ``Path.cwd() / "logs"`` as the portable default when no explicit
-            log directory is provided by the caller.
+        Path: The resolved log directory.
     """
+    configured = _logger_state.configured_log_dir
+    if configured is not None:
+        return configured
+
+    config_dir = _resolve_log_dir_from_config()
+    if config_dir is not None:
+        return config_dir
+
     return Path.cwd() / "logs"
+
+
+def _resolve_log_dir_from_config() -> Path | None:
+    """Return ``logs_directory`` from a freshly loaded Config, if available.
+
+    Loads ``intellicrack.core.config`` lazily and probes the canonical config
+    file path. When the config file is absent or fails to load, returns
+    ``None`` so callers can fall back to ``Path.cwd() / "logs"``.
+
+    Returns:
+        Path | None: The configured ``logs_directory`` when discoverable from
+            disk, otherwise ``None``.
+    """
+    try:
+        config_module = importlib.import_module("intellicrack.core.config")
+    except ImportError:
+        return None
+
+    config_cls = getattr(config_module, "Config", None)
+    get_config_dir_fn = getattr(config_module, "get_config_dir", None)
+    if config_cls is None or get_config_dir_fn is None:
+        return None
+
+    try:
+        config_dir = cast("Path", get_config_dir_fn())
+    except (OSError, RuntimeError):
+        return None
+
+    config_path = config_dir / "config.toml"
+    if not config_path.exists():
+        return None
+
+    try:
+        config = config_cls.load(config_path)
+    except (OSError, ValueError, KeyError):
+        return None
+
+    logs_directory = getattr(config, "logs_directory", None)
+    if isinstance(logs_directory, Path):
+        return logs_directory
+    return None
 
 
 class ColoredConsoleRenderer:
@@ -349,9 +408,17 @@ class IntellicrackLogger:
 
 
 class _LoggerState:
-    """Container for the global logger state."""
+    """Container for the global logger state.
+
+    Attributes:
+        app_logger: The configured :class:`IntellicrackLogger` if any.
+        configured_log_dir: Last :class:`pathlib.Path` passed to
+            :func:`setup_logging` so subsequent ``_default_log_dir()`` calls can
+            return the user-configured directory rather than ``Path.cwd()``.
+    """
 
     app_logger: IntellicrackLogger | None = None
+    configured_log_dir: Path | None = None
 
 
 _logger_state = _LoggerState()
@@ -363,12 +430,17 @@ def setup_logging(
 ) -> IntellicrackLogger:
     """Set up application logging from configuration.
 
+    Records the resolved log directory in the global :data:`_logger_state` so
+    later calls to :func:`_default_log_dir` honour the user-configured
+    location.
+
     Args:
         config: LogConfig instance with logging settings.
-        log_dir: Optional directory for log files. When ``None`` the portable
-            default ``Path.cwd() / "logs"`` is used. Callers that have a loaded
-            ``Config`` instance should pass ``config.logs_directory`` here so
-            the logs land in the user-configured location.
+        log_dir: Optional directory for log files. When ``None``,
+            :func:`_default_log_dir` resolves the configured
+            ``Config.logs_directory`` if available; otherwise falls back to
+            ``Path.cwd() / "logs"``. Callers that have a loaded ``Config``
+            instance should pass ``config.logs_directory`` here.
 
     Returns:
         IntellicrackLogger: Configured IntellicrackLogger instance.
@@ -390,6 +462,7 @@ def setup_logging(
     )
 
     _logger_state.app_logger = logger
+    _logger_state.configured_log_dir = resolved_log_dir
     return logger
 
 
