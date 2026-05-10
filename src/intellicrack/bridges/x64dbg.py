@@ -164,7 +164,6 @@ def get_keystone() -> ModuleType | None:
     return _keystone
 
 
-WIN_NO_INHERIT_HANDLE: bool = False
 MAX_USER_ADDRESS_64 = 0x7FFFFFFFFFFF
 MIN_PATTERN_LENGTH = 16
 MAX_MEMORY_READ_SIZE = 0x100000
@@ -481,13 +480,22 @@ def _get_process_pointer_size(handle: int) -> int:
 def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: int) -> str | None:
     """Read UNICODE_STRING command line from process parameters.
 
+    The Windows ``UNICODE_STRING`` layout is ``Length`` (USHORT, in
+    bytes), ``MaximumLength`` (USHORT, in bytes), then the buffer
+    pointer. A well-formed string always has an even ``Length`` (UTF-16
+    code units are 2 bytes) and ``Length <= MaximumLength``. Any
+    deviation indicates a corrupt read - silently coercing odd lengths
+    would mask the corruption. Reject malformed input via ``None`` and
+    log at debug.
+
     Args:
         handle: Process handle.
         params_addr: Address of RTL_USER_PROCESS_PARAMETERS.
         ptr_size: Pointer size for the process.
 
     Returns:
-        str | None: Command line string, or None on failure.
+        str | None: Command line string, or None on failure or
+        malformed input.
     """
     if not _IS_WIN32:
         return None
@@ -500,6 +508,7 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
         return None
 
     length = int.from_bytes(ustr_bytes[:2], "little")
+    maximum_length = int.from_bytes(ustr_bytes[2:4], "little")
     buf_offset = POINTER_SIZE_64 if ptr_size == POINTER_SIZE_64 else POINTER_SIZE_32
     buf_ptr = int.from_bytes(ustr_bytes[buf_offset : buf_offset + ptr_size], "little")
 
@@ -507,7 +516,22 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
         return None
 
     if length % 2 != 0:
-        length -= 1
+        _logger.debug(
+            "command_line_unicode_string_odd_length",
+            length=length,
+            maximum_length=maximum_length,
+            params_addr=hex(params_addr),
+        )
+        return None
+
+    if length > maximum_length:
+        _logger.debug(
+            "command_line_unicode_string_length_exceeds_maximum",
+            length=length,
+            maximum_length=maximum_length,
+            params_addr=hex(params_addr),
+        )
+        return None
 
     cmd_bytes = _read_process_memory_block(handle, buf_ptr, length)
     return cmd_bytes.decode("utf-16-le", errors="ignore") if cmd_bytes else None
@@ -529,6 +553,9 @@ class X64DbgBridge(DebuggerBridge):
     Attributes:
         DEFAULT_PORT: TCP port for the x64dbg remote command interface.
         COMMAND_TIMEOUT: Maximum seconds to wait for a debugger command response.
+        SUPPORTED_ANTI_DEBUG_PATCHES: Tuple of accepted check names for
+            ``patch_anti_debug``; documents the fixed contract that
+            unknown names are rejected with a per-check error.
     """
 
     DEFAULT_PORT = 27015
@@ -1457,7 +1484,11 @@ class X64DbgBridge(DebuggerBridge):
                     name="x64dbg.read_peb",
                     description="Read the Process Environment Block",
                     parameters=[],
-                    returns="Dict with PEB fields including beingDebugged, imageBaseAddress, ntGlobalFlag",
+                    returns=(
+                        "Dict with PEB fields: address (PEB base, hex string), beingDebugged (int), "
+                        "imageBaseAddress (hex string), ldr (hex string), processParameters (hex string), "
+                        "ntGlobalFlag (int)"
+                    ),
                 ),
                 ToolFunction(
                     name="x64dbg.read_teb",
@@ -2700,9 +2731,10 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_READ,
-            WIN_NO_INHERIT_HANDLE,
+            inherit_handle,
             self._attached_pid,
         )
 
@@ -2754,9 +2786,10 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_WRITE | WIN_PROCESS_VM_OPERATION,
-            WIN_NO_INHERIT_HANDLE,
+            inherit_handle,
             self._attached_pid,
         )
 
@@ -2822,9 +2855,10 @@ class X64DbgBridge(DebuggerBridge):
             msg = "No process attached"
             raise ToolError(msg)
 
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
-            WIN_NO_INHERIT_HANDLE,
+            inherit_handle,
             self._attached_pid,
         )
 
@@ -2870,9 +2904,10 @@ class X64DbgBridge(DebuggerBridge):
         if self._attached_pid is None:
             return False
 
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_VM_OPERATION,
-            WIN_NO_INHERIT_HANDLE,
+            inherit_handle,
             self._attached_pid,
         )
 
@@ -2929,9 +2964,10 @@ class X64DbgBridge(DebuggerBridge):
                 ("Type", wintypes.DWORD),
             ]
 
+        inherit_handle = False
         handle = kernel32.OpenProcess(
             WIN_PROCESS_QUERY_INFORMATION | WIN_PROCESS_VM_READ,
-            WIN_NO_INHERIT_HANDLE,
+            inherit_handle,
             self._attached_pid,
         )
 
@@ -3595,17 +3631,21 @@ class X64DbgBridge(DebuggerBridge):
         """
         return await self._get_threads()
 
-    async def get_process_info(self) -> ProcessInfo | None:
+    async def get_process_info(self) -> ProcessInfo:
         """Get complete process information including threads and modules.
 
-        Aggregates thread and module information along with process details
-        using Windows APIs.
+        Aggregates thread and module information along with process
+        details using Windows APIs.
 
         Returns:
-            ProcessInfo | None: ProcessInfo with populated threads and modules, or None if not attached.
+            ProcessInfo: ProcessInfo with populated threads and modules.
+
+        Raises:
+            ToolError: If no process is currently attached.
         """
         if self._attached_pid is None:
-            return None
+            msg = f"get_process_info: {_ERR_NOT_ATTACHED}"
+            raise ToolError(msg, tool_name="x64dbg")
 
         threads = await self.get_threads()
         modules = await self.get_modules()
@@ -4613,8 +4653,17 @@ class X64DbgBridge(DebuggerBridge):
     async def read_peb(self) -> dict[str, Any]:
         """Read the Process Environment Block.
 
+        Forwards to the bridge plugin's ``peb_read`` RPC. The plugin
+        returns a dict containing the PEB base address (``address``),
+        the ``beingDebugged`` flag, ``imageBaseAddress``, ``ldr``,
+        ``processParameters``, and ``ntGlobalFlag``.
+
         Returns:
-            dict[str, Any]: Dict with PEB fields including beingDebugged, imageBaseAddress, ntGlobalFlag.
+            dict[str, Any]: Dict with PEB fields. Keys include
+            ``address`` (PEB base, hex string), ``beingDebugged`` (int),
+            ``imageBaseAddress`` (hex string), ``ldr`` (hex string),
+            ``processParameters`` (hex string), and ``ntGlobalFlag``
+            (int).
 
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
@@ -5285,54 +5334,88 @@ class X64DbgBridge(DebuggerBridge):
             checks["nt_global_flag_set"] = (nt_global_flag & 0x70) != 0
         return {"success": True, "checks": checks, "peb": peb}
 
+    SUPPORTED_ANTI_DEBUG_PATCHES: ClassVar[tuple[str, ...]] = (
+        "being_debugged",
+        "nt_global_flag",
+        "heap_flags",
+        "process_heap_flags",
+    )
+
     async def patch_anti_debug(self, checks: list[str] | None = None) -> dict[str, Any]:
-        """Patch common anti-debug checks in the target process.
+        """Patch supported PEB-resident anti-debug checks in the target process.
 
         Returns a per-check status map so callers can tell exactly which
-        patches were applied, which were skipped, and which failed.
+        patches were applied, which were skipped, and which failed. Only
+        the checks listed in :pyattr:`SUPPORTED_ANTI_DEBUG_PATCHES` are
+        honoured; passing an unknown check name records an error for
+        that entry without aborting other patches. The supported
+        patches are:
+
+        * ``being_debugged`` - clears ``PEB.BeingDebugged`` (PEB+0x02).
+        * ``nt_global_flag`` - clears ``PEB.NtGlobalFlag`` (PEB+0x68 on
+          32-bit, PEB+0xBC on 64-bit).
+        * ``heap_flags`` - clears the ``HeapFlags`` and ``ForceFlags``
+          fields of the process default heap (read via PEB+0x18 on
+          32-bit, PEB+0x30 on 64-bit; flag fields at heap+0x40/+0x44 on
+          32-bit, heap+0x70/+0x74 on 64-bit).
+        * ``process_heap_flags`` - alias for ``heap_flags``.
+
+        Other anti-debug techniques (ProcessDebugFlags,
+        ProcessDebugObjectHandle, KdDebuggerNotPresent, hardware
+        breakpoints, IsDebuggerPresent IAT hooks,
+        NtQueryInformationProcess hooks) are out of scope for this
+        method - they require kernel queries or IAT manipulation that
+        cannot be issued through the PEB-write primitive used here.
+        Passing unsupported names results in a per-check error rather
+        than a misleading success.
 
         Args:
-            checks: Specific checks to patch. Patches all known checks if None.
+            checks: Specific checks to patch. Patches the default set
+                (``being_debugged``, ``nt_global_flag``, ``heap_flags``)
+                when ``None``.
 
         Returns:
             dict[str, Any]: Dict with ``success`` (True when every
-            requested patch applied), ``status`` mapping each check name
-            to a bool, and optional ``errors`` mapping check names to
-            error strings when patches failed.
+            requested patch applied and no unknown check names were
+            supplied), ``status`` mapping each requested check name to
+            a bool, ``supported`` listing every accepted check name,
+            and optional ``errors`` mapping check names to error
+            strings when patches failed or the name is unknown.
         """
         _logger.info("anti_debug_patching")
-        all_checks = checks or ["being_debugged", "nt_global_flag"]
+        all_checks: list[str] = list(checks) if checks is not None else ["being_debugged", "nt_global_flag", "heap_flags"]
         status: dict[str, bool] = dict.fromkeys(all_checks, False)
         errors: dict[str, str] = {}
+
+        for name in all_checks:
+            if name not in self.SUPPORTED_ANTI_DEBUG_PATCHES:
+                errors[name] = f"unsupported anti-debug check: {name}; supported checks are {', '.join(self.SUPPORTED_ANTI_DEBUG_PATCHES)}"
+
+        actionable = [name for name in all_checks if name in self.SUPPORTED_ANTI_DEBUG_PATCHES]
+        if not actionable:
+            return self._anti_debug_result(all_checks, status, errors)
 
         try:
             peb = await self.read_peb()
         except ToolError as peb_err:
-            for name in all_checks:
+            for name in actionable:
                 errors[name] = f"read_peb failed: {peb_err}"
-            return {"success": False, "status": status, "errors": errors}
+            return self._anti_debug_result(all_checks, status, errors)
 
-        peb_addr_raw = peb.get("address")
-        if not isinstance(peb_addr_raw, str) or not peb_addr_raw:
-            for name in all_checks:
-                errors[name] = "cannot read PEB address"
-            return {"success": False, "status": status, "errors": errors}
+        peb_addr = self._coerce_hex_int(peb.get("address"))
+        if peb_addr is None:
+            for name in actionable:
+                errors[name] = "PEB base address missing or malformed in peb_read response"
+            return self._anti_debug_result(all_checks, status, errors)
 
-        try:
-            peb_addr = int(peb_addr_raw, 0)
-        except ValueError as parse_err:
-            for name in all_checks:
-                errors[name] = f"invalid PEB address: {parse_err}"
-            return {"success": False, "status": status, "errors": errors}
-
-        if "being_debugged" in all_checks:
+        if "being_debugged" in actionable:
             try:
                 await self.write_memory(peb_addr + 2, b"\x00")
                 status["being_debugged"] = True
             except ToolError as bd_err:
                 errors["being_debugged"] = str(bd_err)
 
-        if "nt_global_flag" in all_checks:
+        if "nt_global_flag" in actionable:
             flag_offset = 0xBC if self._is_64bit else 0x68
             try:
                 await self.write_memory(peb_addr + flag_offset, b"\x00\x00\x00\x00")
@@ -5340,13 +5423,104 @@ class X64DbgBridge(DebuggerBridge):
             except ToolError as nt_err:
                 errors["nt_global_flag"] = str(nt_err)
 
+        if "heap_flags" in actionable or "process_heap_flags" in actionable:
+            heap_status, heap_error = await self._patch_process_heap_flags(peb_addr)
+            for alias in ("heap_flags", "process_heap_flags"):
+                if alias in actionable:
+                    status[alias] = heap_status
+                    if heap_error is not None:
+                        errors[alias] = heap_error
+
+        return self._anti_debug_result(all_checks, status, errors)
+
+    def _anti_debug_result(
+        self,
+        all_checks: list[str],
+        status: dict[str, bool],
+        errors: dict[str, str],
+    ) -> dict[str, Any]:
+        """Assemble the final ``patch_anti_debug`` response payload.
+
+        Args:
+            all_checks: Every check name the caller requested.
+            status: Per-check applied/not-applied flags.
+            errors: Per-check error messages (may be empty).
+
+        Returns:
+            dict[str, Any]: Response with ``success``, ``status``,
+            ``supported``, and (when non-empty) ``errors`` keys.
+        """
         result: dict[str, Any] = {
-            "success": all(status[name] for name in all_checks),
+            "success": all(status[name] for name in all_checks) and not errors,
             "status": status,
+            "supported": list(self.SUPPORTED_ANTI_DEBUG_PATCHES),
         }
         if errors:
             result["errors"] = errors
         return result
+
+    @staticmethod
+    def _coerce_hex_int(raw: object) -> int | None:
+        """Parse an integer from a hex string or numeric input.
+
+        Args:
+            raw: Value to parse. Accepts ``int`` directly or ``str`` in
+                hex (``0x...``) or decimal form.
+
+        Returns:
+            int | None: Parsed integer, or ``None`` when input is
+            missing, empty, or unparseable.
+        """
+        if isinstance(raw, bool):
+            return None
+        if isinstance(raw, int):
+            return raw
+        if isinstance(raw, str) and raw:
+            try:
+                return int(raw, 0)
+            except ValueError:
+                return None
+        return None
+
+    async def _patch_process_heap_flags(self, peb_addr: int) -> tuple[bool, str | None]:
+        """Clear the process default heap's HeapFlags and ForceFlags.
+
+        Reads ``PEB.ProcessHeap`` (PEB+0x18 on 32-bit, PEB+0x30 on
+        64-bit) through ``read_memory`` and writes zero into the heap's
+        ``HeapFlags`` and ``ForceFlags`` fields (heap+0x40/+0x44 on
+        32-bit, heap+0x70/+0x74 on 64-bit). The default heap is what
+        ``HeapAlloc`` etc. use, so clearing the flags neuters the
+        ``HEAP_TAIL_CHECKING_ENABLED`` /
+        ``HEAP_FREE_CHECKING_ENABLED`` markers that anti-debug code
+        samples to detect a debugger.
+
+        Args:
+            peb_addr: PEB base address in the target process.
+
+        Returns:
+            tuple[bool, str | None]: Tuple of
+            ``(applied, error_message)``. ``applied`` is True only
+            when both ``HeapFlags`` and ``ForceFlags`` were written.
+        """
+        ptr_size = POINTER_SIZE_64 if self._is_64bit else POINTER_SIZE_32
+        process_heap_offset = 0x30 if self._is_64bit else 0x18
+        heap_flags_offset = 0x70 if self._is_64bit else 0x40
+        force_flags_offset = 0x74 if self._is_64bit else 0x44
+        try:
+            heap_ptr_bytes = await self.read_memory(peb_addr + process_heap_offset, ptr_size)
+        except ToolError as read_err:
+            return False, f"read PEB.ProcessHeap failed: {read_err}"
+        if len(heap_ptr_bytes) < ptr_size:
+            return False, "PEB.ProcessHeap read returned truncated data"
+        heap_addr = int.from_bytes(heap_ptr_bytes, "little")
+        if heap_addr == 0:
+            return False, "PEB.ProcessHeap is null"
+        try:
+            await self.write_memory(heap_addr + heap_flags_offset, b"\x00\x00\x00\x00")
+            await self.write_memory(heap_addr + force_flags_offset, b"\x00\x00\x00\x00")
+        except ToolError as write_err:
+            return False, f"write heap flags failed: {write_err}"
+        return True, None
 
     async def reconstruct_imports(self, oep: int, output_path: str) -> dict[str, Any]:
         """Reconstruct the import table using Scylla via the bridge plugin.
