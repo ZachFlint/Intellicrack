@@ -171,6 +171,28 @@ void on_process_exit(uint32_t exit_code) {
     g_pipe_server.broadcast_event(event_json);
 }
 
+void on_paused(uint64_t address) {
+    // Broadcast a "paused" event whenever x64dbg suspends the debuggee
+    // (after a step, after explicit pause, after an unhandled exception
+    // routed through the breakpoint manager). The Intellicrack bridge
+    // awaits this event after issuing step_into/step_over/step_out so it
+    // can read registers only once the IP has actually moved (audit6.md
+    // F-0004).
+    if (!g_state.pipe_server_running) return;
+
+    char event_json[256];
+    snprintf(event_json, sizeof(event_json),
+        R"({"type":"event","event":"paused","address":"0x%llX"})",
+        static_cast<unsigned long long>(address));
+    g_pipe_server.broadcast_event(event_json);
+}
+
+void on_resumed() {
+    if (!g_state.pipe_server_running) return;
+
+    g_pipe_server.broadcast_event(R"({"type":"event","event":"resumed"})");
+}
+
 }
 
 
@@ -293,12 +315,15 @@ DLL_EXPORT void CBPAUSEDEBUG(CBTYPE cbType, void* info) {
     (void)cbType;
     (void)info;
     intellicrack::g_state.paused = true;
+    duint cip = Script::Register::GetCIP();
+    intellicrack::on_paused(static_cast<uint64_t>(cip));
 }
 
 DLL_EXPORT void CBRESUMEDEBUG(CBTYPE cbType, void* info) {
     (void)cbType;
     (void)info;
     intellicrack::g_state.paused = false;
+    intellicrack::on_resumed();
 }
 
 DLL_EXPORT void CBSTOPDEBUG(CBTYPE cbType, void* info) {

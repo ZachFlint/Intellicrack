@@ -10,6 +10,7 @@ This module provides integration with x64dbg for dynamic analysis, debugging, an
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import math
 import os
 import re
@@ -92,7 +93,7 @@ from intellicrack.bridges.base import (
 from intellicrack.bridges.installer import deploy_x64dbg_plugin
 from intellicrack.bridges.named_pipe_client import NamedPipeClient, PipeConfig
 from intellicrack.core._subprocess import (
-    PIPE,
+    DEVNULL,
     STARTF_USESHOWWINDOW,
     STARTUPINFO,
     Popen,
@@ -760,6 +761,9 @@ class X64DbgBridge(DebuggerBridge):
             ``run_to`` target before treating the command as failed.
         RUN_TO_POLL_INTERVAL: Seconds between successive ``reg_get rip``
             polls during a ``run_to`` verification wait.
+        STEP_TIMEOUT_SECONDS: Maximum seconds to wait for the plugin's
+            paused-event reply before a step coroutine times out (the
+            audit6 F-0004 bound that replaces the legacy fixed sleep).
         SUPPORTED_ANTI_DEBUG_PATCHES: Tuple of accepted check names for
             ``patch_anti_debug``; documents the fixed contract that
             unknown names are rejected with a per-check error.
@@ -789,6 +793,8 @@ class X64DbgBridge(DebuggerBridge):
         self._state_lock: threading.Lock = threading.Lock()
         self._process_handles: dict[int, int] = {}
         self._handle_cache_lock: threading.Lock = threading.Lock()
+        self._step_waiters: list[asyncio.Future[int]] = []
+        self._step_waiters_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
             supports_debugging=True,
             supports_dynamic_analysis=True,
@@ -2076,34 +2082,134 @@ class X64DbgBridge(DebuggerBridge):
             )
 
     async def shutdown(self) -> None:
-        """Shutdown x64dbg and cleanup resources."""
-        await self._close_connection()
-        self._release_process_handles()
+        """Shutdown x64dbg and cleanup resources.
 
-        if self._process is not None:
-            pid = self._process.pid
-            process_manager = ProcessManager.get_instance()
+        Each cleanup phase is wrapped so that a fault in one stage cannot
+        strand a later one. An exception from ``_close_connection`` no
+        longer leaks the spawned ``x64dbg.exe`` process (audit6.md
+        F-0011): the process-termination block is reached
+        unconditionally, and the bookkeeping state (attached PID,
+        breakpoints, watchpoints, pending step waiters, cached process
+        handles) is always cleared in the ``finally`` arm even when
+        termination itself raises. The first captured cleanup exception
+        is re-raised after every other stage has run so callers can
+        observe shutdown failures.
 
-            self._process.terminate()
+        Raises:
+            ToolError: Re-raises the first ``ToolError`` captured from
+                ``_close_connection`` or ``super().shutdown()`` after
+                every other cleanup stage has run.
+            OSError: Re-raises the first ``OSError`` captured from
+                process termination, kill, ``super().shutdown()``, or
+                ``_release_process_handles``.
+            KeyError: Re-raises a ``KeyError`` from the process manager
+                if it could not unregister the captured PID.
+            RuntimeError: Re-raises the first ``RuntimeError`` captured
+                from any other cleanup stage (this branch also handles
+                the residual case where ``cleanup_errors`` contains an
+                exception class outside the typed-handler tuples).
+        """
+        cleanup_errors: list[BaseException] = []
+
+        try:
             try:
-                await asyncio.wait_for(
-                    asyncio.to_thread(self._process.wait),
-                    timeout=5,
-                )
-            except TimeoutError:
-                _logger.warning("x64dbg_process_terminate_timeout", pid=pid)
-                self._process.kill()
-                await asyncio.to_thread(self._process.wait)
+                await self._close_connection()
+            except (ToolError, OSError, RuntimeError) as exc:
+                _logger.warning("x64dbg_close_connection_failed_during_shutdown", error=str(exc))
+                cleanup_errors.append(exc)
 
-            process_manager.unregister(pid)
-            self._process = None
+            if self._process is not None:
+                process = self._process
+                pid = process.pid
+                process_manager = ProcessManager.get_instance()
+                try:
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.to_thread(process.wait),
+                            timeout=5,
+                        )
+                    except TimeoutError:
+                        _logger.warning("x64dbg_process_terminate_timeout", pid=pid)
+                        try:
+                            process.kill()
+                        except OSError as kill_exc:
+                            _logger.warning("x64dbg_process_kill_failed", pid=pid, error=str(kill_exc))
+                            cleanup_errors.append(kill_exc)
+                        else:
+                            await asyncio.to_thread(process.wait)
+                except OSError as exc:
+                    _logger.warning("x64dbg_process_terminate_failed", pid=pid, error=str(exc))
+                    cleanup_errors.append(exc)
+                finally:
+                    try:
+                        process_manager.unregister(pid)
+                    except (RuntimeError, KeyError) as exc:
+                        _logger.warning("x64dbg_process_unregister_failed", pid=pid, error=str(exc))
+                        cleanup_errors.append(exc)
+                    self._process = None
+        finally:
+            self._attached_pid = None
+            with self._state_lock:
+                self._breakpoints.clear()
+                self._watchpoints.clear()
+            self._cancel_all_step_waiters()
+            try:
+                self._release_process_handles()
+            except (OSError, RuntimeError) as exc:
+                _logger.warning("x64dbg_release_handles_failed", error=str(exc))
+                cleanup_errors.append(exc)
+            try:
+                await super().shutdown()
+            except (ToolError, OSError, RuntimeError) as exc:
+                _logger.warning("x64dbg_super_shutdown_failed", error=str(exc))
+                cleanup_errors.append(exc)
+            _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg", errors=len(cleanup_errors))
 
-        self._attached_pid = None
-        with self._state_lock:
-            self._breakpoints.clear()
-            self._watchpoints.clear()
-        await super().shutdown()
-        _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg")
+        if cleanup_errors:
+            first = cleanup_errors[0]
+            if isinstance(first, ToolError):
+                raise ToolError(
+                    first.message,
+                    tool_name=first.tool_name,
+                    exit_code=first.exit_code,
+                    stderr=first.stderr,
+                    error_code=first.error_code,
+                    details=dict(first.details),
+                ) from first
+            if isinstance(first, OSError):
+                raise OSError(*first.args) from first
+            if isinstance(first, KeyError):
+                raise KeyError(*first.args) from first
+            raise RuntimeError(*first.args) from first
+
+    def _cancel_all_step_waiters(self) -> None:
+        """Cancel every pending step waiter future during shutdown.
+
+        Drains :attr:`_step_waiters` under the lock and signals each
+        future with a cancellation so callers stuck inside
+        :meth:`step_into` / :meth:`step_over` / :meth:`step_out` exit
+        promptly when the bridge is being torn down.
+        """
+        with self._step_waiters_lock:
+            waiters = self._step_waiters[:]
+            self._step_waiters.clear()
+        for waiter in waiters:
+            try:
+                loop = waiter.get_loop()
+            except RuntimeError:
+                continue
+            loop.call_soon_threadsafe(self._cancel_step_waiter_future, waiter)
+
+    @staticmethod
+    def _cancel_step_waiter_future(waiter: asyncio.Future[int]) -> None:
+        """Cancel a single step waiter future on its own loop.
+
+        Args:
+            waiter: The future created by :meth:`_register_step_waiter`.
+        """
+        if not waiter.done():
+            waiter.cancel()
 
     async def is_available(self) -> bool:
         """Check if x64dbg is available.
@@ -2127,16 +2233,39 @@ class X64DbgBridge(DebuggerBridge):
         ``_PIPE_READY_TIMEOUT_SECONDS`` seconds, rather than sleeping for
         a fixed interval.
 
+        The bridge requires the Intellicrack x64dbg plugin to be
+        deployed because every public RPC method routes through
+        ``_send_pipe_command``. When the plugin is not present this
+        method raises immediately rather than starting an x64dbg.exe
+        whose UI would advertise as "connected" while every command
+        raised at the point of invocation (audit6.md F-0013).
+
         Args:
             is_64bit: Whether to use 64-bit debugger.
 
         Raises:
-            ToolError: If debugger cannot be started or the pipe never
-                becomes available.
+            ToolError: If invoked on a non-Windows platform, the bridge
+                plugin is not deployed, the configured x64dbg
+                executable is missing, or the named pipe never becomes
+                available.
         """
+        if not _IS_WIN32:
+            msg = f"x64dbg {_ERR_REQUIRES_WINDOWS}; cannot start the debugger on this OS"
+            raise ToolError(msg, tool_name="x64dbg")
+
         if self._x64dbg_path is None:
             msg = "x64dbg path not set"
-            raise ToolError(msg)
+            raise ToolError(msg, tool_name="x64dbg")
+
+        if not self._plugin_deployed:
+            diag = str(self.plugin_status.get("diagnostic", ""))
+            msg = (
+                "x64dbg bridge plugin not deployed; refusing to start the debugger because every RPC tool "
+                "would fail at the point of invocation"
+            )
+            if diag:
+                msg = f"{msg}. {diag}"
+            raise ToolError(msg, tool_name="x64dbg")
 
         if is_64bit:
             exe_path = self._x64dbg_path / "release" / "x64" / "x64dbg.exe"
@@ -2145,7 +2274,7 @@ class X64DbgBridge(DebuggerBridge):
 
         if not await asyncio.to_thread(exe_path.exists):
             msg = f"x64dbg executable not found: {exe_path}"
-            raise ToolError(msg)
+            raise ToolError(msg, tool_name="x64dbg")
 
         self._is_64bit = is_64bit
         _logger.info("x64dbg_starting", path=str(exe_path))
@@ -2154,11 +2283,18 @@ class X64DbgBridge(DebuggerBridge):
         si.dwFlags |= STARTF_USESHOWWINDOW
         si.wShowWindow = 1
 
+        # x64dbg.exe is a GUI-only application that does not need its
+        # standard streams. Routing them through pipes that the bridge
+        # never drains causes a deadlock once the kernel buffer (~64
+        # KiB) fills - typically when a plugin writes diagnostics or a
+        # native assertion fires (audit6.md F-0015). Discarding both
+        # streams via ``DEVNULL`` prevents the deadlock entirely.
         self._process = await asyncio.to_thread(
             Popen,
             [str(exe_path)],
-            stdout=PIPE,
-            stderr=PIPE,
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+            stdin=DEVNULL,
             startupinfo=si,
         )
 
@@ -2180,20 +2316,29 @@ class X64DbgBridge(DebuggerBridge):
     _PIPE_NAME: str = r"\\.\pipe\intellicrack_x64dbg"
 
     async def _wait_for_pipe_ready(self) -> None:
-        """Poll the named pipe via ``WaitNamedPipeW`` until it is ready.
+        r"""Poll the named pipe via ``WaitNamedPipeW`` until it is ready.
 
-        On non-Windows platforms this becomes a fixed async sleep because
-        named pipes are Windows-only. On Windows the call loops
-        ``WaitNamedPipeW`` with a small per-iteration timeout until the
-        pipe is available or the overall timeout elapses.
+        x64dbg.exe is a Windows-only debugger and the bridge plugin
+        publishes its IPC channel over a Win32 named pipe at
+        ``\\\\.\\pipe\\intellicrack_x64dbg``. Named pipes do not exist
+        on POSIX platforms, so this method refuses to run on non-Windows
+        rather than sleeping for a hard-coded interval and reporting
+        readiness when the pipe never existed - a misclassification
+        that would cascade into a misleading ``CreateFileW`` failure
+        downstream (audit6.md F-0017).
+
+        On Windows the call loops ``WaitNamedPipeW`` with a small
+        per-iteration timeout until the pipe is available or the overall
+        timeout elapses.
 
         Raises:
-            ToolError: If the pipe never becomes available inside the
-                overall timeout window.
+            ToolError: If invoked on a non-Windows platform, or if the
+                pipe never becomes available inside the overall timeout
+                window.
         """
         if not _IS_WIN32:
-            await asyncio.sleep(1.0)
-            return
+            msg = f"x64dbg {_ERR_REQUIRES_WINDOWS}; named pipes are unavailable on this OS"
+            raise ToolError(msg, tool_name="x64dbg")
 
         kernel32 = ctypes.windll.kernel32
         wait_fn = kernel32.WaitNamedPipeW
@@ -2283,31 +2428,132 @@ class X64DbgBridge(DebuggerBridge):
         writes against the breakpoint/watchpoint registries so the
         ``hit_count`` increment, dictionary lookup, and value iteration
         cannot race a coroutine that simultaneously inserts, deletes,
-        or rebuilds a registry entry.
+        or rebuilds a registry entry. Because this runs in an executor
+        thread, any interaction with asyncio futures must use
+        ``loop.call_soon_threadsafe``. ``paused`` events resolve any
+        pending step waiters with the reported instruction pointer
+        (audit6.md F-0004); the pause-emitting plugin extracts the IP
+        via ``Script::Register::GetCIP``. ``breakpoint`` and
+        ``watchpoint`` events also pause the debuggee, so those resolve
+        step waiters as well to avoid hanging when a step lands on a
+        live breakpoint.
 
         Args:
             message: Event payload.
         """
         event_type = str(message.get("event", ""))
         if event_type == "breakpoint":
-            addr = int(message.get("address", 0))
+            addr = self._coerce_address(message.get("address"))
             with self._state_lock:
                 bp = self._breakpoints.get(addr)
                 if bp is not None:
                     bp.hit_count += 1
+            self._resolve_step_waiters(addr)
         elif event_type == "watchpoint":
-            addr = int(message.get("address", 0))
+            addr = self._coerce_address(message.get("address"))
             with self._state_lock:
                 for wp in self._watchpoints.values():
                     if wp.address == addr:
                         wp.hit_count += 1
                         break
+            self._resolve_step_waiters(addr)
+        elif event_type == "paused":
+            addr = self._coerce_address(message.get("address"))
+            self._resolve_step_waiters(addr)
 
         for cb in self.event_callbacks:
             try:
                 cb(event_type, message)
             except (RuntimeError, TypeError, ValueError):
                 _logger.warning("event_callback_error", event_type=event_type, exc_info=True)
+
+    @staticmethod
+    def _coerce_address(raw: object) -> int:
+        """Coerce a JSON address payload to an integer.
+
+        The plugin emits addresses as ``"0xDEADBEEF"`` strings but legacy
+        builds and unit tests sometimes send raw integers. Both forms
+        are accepted; everything else falls back to ``0``.
+
+        Args:
+            raw: The raw payload from the event message.
+
+        Returns:
+            int: The address as an integer, or ``0`` if it cannot be
+            parsed.
+        """
+        if isinstance(raw, bool):
+            return 0
+        if isinstance(raw, int):
+            return raw
+        if isinstance(raw, str):
+            try:
+                return int(raw, 0)
+            except ValueError:
+                return 0
+        return 0
+
+    def _resolve_step_waiters(self, address: int) -> None:
+        """Wake every coroutine awaiting the next pause event.
+
+        Drains the waiter list under the lock and schedules each
+        future's ``set_result`` on the future's own event loop using
+        ``loop.call_soon_threadsafe``. A step always completes by
+        x64dbg pausing the target, so resolving on every paused-class
+        event (paused / breakpoint / watchpoint) lets the corresponding
+        step coroutine return the new instruction pointer rather than
+        racing a hard-coded sleep (audit6.md F-0004).
+
+        Args:
+            address: Instruction pointer reported by the plugin in the
+                paused event payload.
+        """
+        with self._step_waiters_lock:
+            waiters = self._step_waiters[:]
+            self._step_waiters.clear()
+        for waiter in waiters:
+            try:
+                loop = waiter.get_loop()
+            except RuntimeError:
+                continue
+            loop.call_soon_threadsafe(self._set_step_waiter_result, waiter, address)
+
+    @staticmethod
+    def _set_step_waiter_result(waiter: asyncio.Future[int], address: int) -> None:
+        """Set the result of a step waiter future if it is still pending.
+
+        Args:
+            waiter: The future created by :meth:`_register_step_waiter`.
+            address: Instruction pointer to deliver as the result.
+        """
+        if not waiter.done():
+            waiter.set_result(address)
+
+    def _register_step_waiter(self) -> asyncio.Future[int]:
+        """Allocate a future that will be resolved by the next pause event.
+
+        Returns:
+            asyncio.Future[int]: A future bound to the running event
+            loop whose result will be the instruction pointer reported
+            in the next paused/breakpoint/watchpoint event.
+        """
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[int] = loop.create_future()
+        with self._step_waiters_lock:
+            self._step_waiters.append(future)
+        return future
+
+    def _cancel_step_waiter(self, waiter: asyncio.Future[int]) -> None:
+        """Remove a waiter from the pending list.
+
+        Used when a step coroutine times out so a stale future is not
+        held by ``_step_waiters`` indefinitely.
+
+        Args:
+            waiter: The future to remove.
+        """
+        with self._step_waiters_lock, contextlib.suppress(ValueError):
+            self._step_waiters.remove(waiter)
 
     async def _send_pipe_command(
         self,
@@ -2513,50 +2759,96 @@ class X64DbgBridge(DebuggerBridge):
 
     @staticmethod
     def _detect_architecture(path: Path) -> bool:
-        """Detect if binary is 64-bit.
+        r"""Detect whether a binary should be opened with x64dbg or x32dbg.
+
+        Inspects the PE COFF ``Machine`` field directly so the result is
+        derived from the binary header rather than guessed. Only the two
+        x86 ``Machine`` codes that the x64dbg / x32dbg pair can debug
+        are accepted; every other failure mode (I/O error, truncated
+        image, missing ``MZ`` / ``PE\\x00\\x00`` signatures, or a
+        non-x86 ``Machine`` such as ARM/ARM64/IA64) raises
+        :class:`ToolError` so the caller cannot launch the wrong
+        debugger and silently fail to attach (audit6.md F-0023).
 
         Args:
             path: Path to binary.
 
         Returns:
-            bool: True if 64-bit, False if 32-bit.
+            bool: ``True`` for an x86_64 PE, ``False`` for an x86 PE.
+
+        Raises:
+            ToolError: If the file cannot be read, is too short to hold
+                a DOS+PE header, lacks the ``MZ`` or ``PE\\x00\\x00``
+                signatures, or has a ``Machine`` value other than
+                :data:`IMAGE_FILE_MACHINE_I386` /
+                :data:`IMAGE_FILE_MACHINE_AMD64`.
         """
         try:
             data = path.read_bytes()
-        except OSError as e:
-            _logger.debug("architecture_detection_failed", error=str(e))
-            return True
+        except OSError as exc:
+            _logger.warning("x64dbg_architecture_detection_io_failed", path=str(path), error=str(exc))
+            msg = f"x64dbg cannot read PE header for {path}: {exc}"
+            raise ToolError(msg, tool_name="x64dbg") from exc
 
-        if len(data) < PE_MAGIC_OFFSET:
-            return True
+        if len(data) < PE_MAGIC_OFFSET + 4:
+            msg = f"x64dbg cannot detect architecture: {path} is too short to be a PE image"
+            raise ToolError(msg, tool_name="x64dbg")
 
         if data[:2] != b"MZ":
-            return True
+            msg = f"x64dbg cannot detect architecture: {path} is not a PE image (missing MZ signature)"
+            raise ToolError(msg, tool_name="x64dbg")
 
         pe_offset = int.from_bytes(data[PE_HEADER_OFFSET:PE_MAGIC_OFFSET], "little")
 
-        if len(data) < pe_offset + 6:
-            return True
+        if pe_offset <= 0 or len(data) < pe_offset + 6:
+            msg = f"x64dbg cannot detect architecture: {path} has truncated or invalid e_lfanew={pe_offset:#x}"
+            raise ToolError(msg, tool_name="x64dbg")
 
         if data[pe_offset : pe_offset + 4] != b"PE\x00\x00":
-            return True
+            msg = f"x64dbg cannot detect architecture: {path} is missing the PE\\x00\\x00 signature at {pe_offset:#x}"
+            raise ToolError(msg, tool_name="x64dbg")
 
         machine = int.from_bytes(data[pe_offset + 4 : pe_offset + 6], "little")
 
-        return False if machine == PE32_MACHINE else machine == PE64_MACHINE
+        if machine == PE64_MACHINE:
+            return True
+        if machine == PE32_MACHINE:
+            return False
+
+        msg = (
+            f"x64dbg does not support PE Machine {machine:#06x} in {path}; "
+            f"only IMAGE_FILE_MACHINE_I386 ({PE32_MACHINE:#06x}) and "
+            f"IMAGE_FILE_MACHINE_AMD64 ({PE64_MACHINE:#06x}) are debuggable"
+        )
+        raise ToolError(msg, tool_name="x64dbg")
 
     async def attach(self, pid: int) -> None:
         """Attach to a running process.
 
-        Detects the target process architecture and starts the
-        matching debugger variant (x64dbg or x32dbg).
+        Detects the target process architecture and starts the matching
+        debugger variant (x64dbg or x32dbg). When the architecture
+        cannot be determined the call refuses rather than guessing
+        64-bit and silently launching the wrong debugger (audit6.md
+        F-0018).
 
         Args:
             pid: Process ID.
+
+        Raises:
+            ToolError: If the target process architecture cannot be
+                determined (non-Windows host, ``OpenProcess`` denied,
+                ``IsWow64Process`` failed, etc.).
         """
         _logger.info("x64dbg_attaching", pid=pid)
         self._release_process_handles()
         is_64 = await asyncio.to_thread(self._detect_process_arch, pid)
+        if is_64 is None:
+            msg = (
+                f"x64dbg cannot detect architecture for pid {pid}; refusing to launch a debugger that may not "
+                "match the target. Re-run with elevated privileges, or attach to a process that grants "
+                "PROCESS_QUERY_INFORMATION."
+            )
+            raise ToolError(msg, tool_name="x64dbg")
 
         if self._process is None:
             await self._start_debugger(is_64bit=is_64)
@@ -2571,32 +2863,57 @@ class X64DbgBridge(DebuggerBridge):
         _logger.info("x64dbg_attached", pid=pid)
 
     @staticmethod
-    def _detect_process_arch(pid: int) -> bool:
-        """Detect whether a process is 64-bit.
+    def _detect_process_arch(pid: int) -> bool | None:
+        """Detect whether a running process is 64-bit.
+
+        Returns ``True`` for native x86_64 processes, ``False`` for
+        WOW64 (32-bit) processes, and ``None`` for every error mode
+        (non-Windows host, ``OpenProcess`` denied, ``IsWow64Process``
+        failed, or no x64dbg-debuggable architecture). Returning
+        ``None`` instead of defaulting to ``True`` prevents the bridge
+        from launching x64dbg.exe against a 32-bit target it cannot
+        attach to, so :meth:`attach` can surface the failure to the
+        caller (audit6.md F-0018).
 
         Args:
-            pid: Process ID.
+            pid: Process ID of the target process.
 
         Returns:
-            bool: True if 64-bit, False if 32-bit. Defaults to True on error.
+            bool | None: ``True`` for x86_64, ``False`` for x86, or
+            ``None`` if the architecture could not be determined.
         """
         if not _IS_WIN32:
-            return True
+            _logger.debug("x64dbg_arch_detect_skipped_non_windows", pid=pid)
+            return None
         try:
             kernel32 = ctypes.windll.kernel32
             inherit_handle = False
-            handle = kernel32.OpenProcess(0x0400, inherit_handle, pid)
+            handle = kernel32.OpenProcess(WIN_PROCESS_QUERY_INFORMATION, inherit_handle, pid)
             if not handle:
-                return True
+                last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
+                _logger.warning(
+                    "x64dbg_arch_detect_open_process_failed",
+                    pid=pid,
+                    last_error=last_error,
+                )
+                return None
             try:
                 is_wow64 = ctypes.c_int(0)
                 ok: int = kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
-                return not bool(is_wow64.value) if ok else True
+                if not ok:
+                    last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
+                    _logger.warning(
+                        "x64dbg_arch_detect_iswow64_failed",
+                        pid=pid,
+                        last_error=last_error,
+                    )
+                    return None
+                return not bool(is_wow64.value)
             finally:
                 kernel32.CloseHandle(handle)
-        except (OSError, AttributeError):
-            _logger.debug("wow64_check_failed_assuming_64bit")
-            return True
+        except (OSError, AttributeError) as exc:
+            _logger.warning("x64dbg_arch_detect_unexpected_error", pid=pid, error=str(exc))
+            return None
 
     async def detach(self) -> None:
         """Detach from current process."""
@@ -2630,41 +2947,111 @@ class X64DbgBridge(DebuggerBridge):
         self._state.target_pid = None
         _logger.info("debugging_stopped", bridge="x64dbg")
 
+    STEP_TIMEOUT_SECONDS: float = 30.0
+
+    async def _await_step_complete(self, command: str) -> int:
+        """Send a step command and await the resulting paused event.
+
+        Registers a waiter future before issuing the RPC so a paused
+        event that fires immediately (for example, a step that lands on
+        an existing breakpoint) cannot race past us. Reads the
+        instruction pointer from a register fetch only after the event
+        reports completion, masking the result to the architecture's
+        pointer width. This replaces the previous hard-coded
+        ``asyncio.sleep(0.05)`` (audit6.md F-0004), which was both too
+        short for stepping into syscalls/long calls and unsynchronised
+        with x64dbg's actual paused state.
+
+        Args:
+            command: One of ``step_into`` / ``step_over`` / ``step_out``.
+
+        Returns:
+            int: Instruction pointer after the step completes, masked to
+            32 bits for x86 targets.
+
+        Raises:
+            ToolError: If the step never completes within
+                :attr:`STEP_TIMEOUT_SECONDS`.
+            BaseException: Re-raised after cancelling the step waiter
+                when ``_send_pipe_command`` or the ``asyncio.wait_for``
+                wait is cancelled or fails for any other reason; the
+                bare re-raise preserves cancellations and unexpected
+                framework-level errors so callers see the original
+                cause.
+        """
+        waiter = self._register_step_waiter()
+        try:
+            await self._send_pipe_command(command)
+            try:
+                event_ip = await asyncio.wait_for(waiter, timeout=self.STEP_TIMEOUT_SECONDS)
+            except TimeoutError as exc:
+                self._cancel_step_waiter(waiter)
+                msg = (
+                    f"x64dbg {command} did not complete within {self.STEP_TIMEOUT_SECONDS:.0f}s; "
+                    "the debuggee may be blocked in a syscall, on a long-running call, or hung"
+                )
+                raise ToolError(msg, tool_name="x64dbg") from exc
+        except BaseException:
+            self._cancel_step_waiter(waiter)
+            raise
+
+        try:
+            regs = await self.get_registers()
+        except ToolError as exc:
+            _logger.debug(
+                "x64dbg_step_register_read_failed_after_event",
+                command=command,
+                event_ip=hex(event_ip),
+                error=str(exc),
+            )
+            return event_ip if self._is_64bit else event_ip & DWORD_MASK
+        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+
     async def step_into(self) -> int:
         """Single step into.
+
+        Awaits the plugin's ``paused`` event so the returned instruction
+        pointer reflects the post-step CPU state rather than racing a
+        hard-coded delay (audit6.md F-0004). Propagates any exception
+        raised by :meth:`_await_step_complete`, including ``ToolError``
+        when the step does not complete within
+        :attr:`STEP_TIMEOUT_SECONDS`.
 
         Returns:
             int: New instruction pointer.
         """
         _logger.debug("step_into_executing")
-        await self._send_pipe_command("step_into")
-        await asyncio.sleep(0.05)
-        regs = await self.get_registers()
-        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+        return await self._await_step_complete("step_into")
 
     async def step_over(self) -> int:
         """Single step over.
+
+        Awaits the plugin's ``paused`` event so the returned instruction
+        pointer reflects the post-step CPU state (audit6.md F-0004).
+        Propagates any exception raised by :meth:`_await_step_complete`,
+        including ``ToolError`` when the step does not complete within
+        :attr:`STEP_TIMEOUT_SECONDS`.
 
         Returns:
             int: New instruction pointer.
         """
         _logger.debug("step_over_executing")
-        await self._send_pipe_command("step_over")
-        await asyncio.sleep(0.05)
-        regs = await self.get_registers()
-        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+        return await self._await_step_complete("step_over")
 
     async def step_out(self) -> int:
         """Step out of current function.
+
+        Awaits the plugin's ``paused`` event so the returned instruction
+        pointer reflects the post-step CPU state (audit6.md F-0004).
+        Propagates any exception raised by :meth:`_await_step_complete`,
+        including ``ToolError`` when the step does not complete within
+        :attr:`STEP_TIMEOUT_SECONDS`.
 
         Returns:
             int: New instruction pointer.
         """
         _logger.debug("step_out_executing")
-        await self._send_pipe_command("step_out")
-        await asyncio.sleep(0.05)
-        regs = await self.get_registers()
-        return regs.rip if self._is_64bit else regs.rip & DWORD_MASK
+        return await self._await_step_complete("step_out")
 
     async def set_breakpoint(
         self,

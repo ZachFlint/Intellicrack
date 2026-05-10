@@ -54,6 +54,8 @@ void on_dll_load(const char* dll_name, uint64_t base_address);
 void on_dll_unload(const char* dll_name, uint64_t base_address);
 void on_process_start(const char* exe_path, uint32_t pid);
 void on_process_exit(uint32_t exit_code);
+void on_paused(uint64_t address);
+void on_resumed();
 
 }
 
