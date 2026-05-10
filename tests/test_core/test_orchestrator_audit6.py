@@ -3,9 +3,26 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit 6 CORE-C regression tests for ``intellicrack.core.orchestrator``.
+"""Audit 6 CORE-B and CORE-C regression tests for ``intellicrack.core.orchestrator``.
 
-These tests target the four findings owned by work unit CORE-C:
+These tests target the findings owned by work units CORE-B (agent loop /
+session / tool registry seams) and CORE-C (binary parsing + cancellation /
+shutdown future marshalling):
+
+CORE-B findings:
+
+* F-0001 - ``load_session`` must mark the loaded session as current and start
+  the auto-save task (currently bypasses both via ``SessionManager.get``).
+* F-0002 - System prompt must list the bridges actually registered with the
+  ``ToolRegistry`` rather than a hardcoded set.
+* F-0004 - Token estimator must use ``tiktoken`` (not ``len // 4``).
+* F-0005 - User message must only persist after the agent loop succeeds.
+* F-0011 - ``_validate_tool_schemas`` must raise ``ToolError`` on broken
+  schemas instead of forwarding them to the provider.
+* F-0019 - Missing context window must raise ``ToolError`` instead of
+  silently sending unbounded history.
+
+CORE-C findings:
 
 * F-0003 - ``_extract_imports`` / ``_extract_exports`` silently dropped
   Mach-O binaries because no isinstance branch handled
@@ -21,23 +38,28 @@ These tests target the four findings owned by work unit CORE-C:
   raced pending confirmation futures, leaving them orphaned and able to
   hang teardown indefinitely.
 
-Each test exercises the actual defect: it constructs real Mach-O / ELF
-fixtures with :mod:`lief`, invokes the production extraction helpers, and
-drives a real ``asyncio`` event loop through the cancellation paths.
+Each test exercises the actual defect against real fixtures and bridges:
+it constructs real Mach-O / ELF fixtures with :mod:`lief`, invokes the
+production extraction helpers, drives a real ``asyncio`` event loop
+through the cancellation paths, and exercises the agent loop /
+session persistence seams against a minimal connected provider.
 """
 
 from __future__ import annotations
 
 import asyncio
 import struct
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, Self, cast, override
 
 import lief
 import pytest
+import tiktoken
 
+from intellicrack.bridges.base import ToolBridgeBase
 from intellicrack.core.orchestrator import (
     BRIDGE_DESTRUCTIVE_METHODS,
     Orchestrator,
+    OrchestratorConfig,
     PendingConfirmation,
     classify_tool_call,
     extract_exports,
@@ -45,13 +67,28 @@ from intellicrack.core.orchestrator import (
 )
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ToolCall, ToolName
+from intellicrack.core.types import (
+    Message,
+    ModelInfo,
+    ProviderCredentials,
+    ProviderName,
+    ToolCall,
+    ToolDefinition,
+    ToolError,
+    ToolFunction,
+    ToolName,
+    ToolParameter,
+)
+from intellicrack.providers.base import LLMProviderBase
 from intellicrack.providers.registry import ProviderRegistry
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
     from pathlib import Path
+    from types import TracebackType
+
+    from intellicrack.core.types import ThinkingConfig, ToolChoice
 
     _LiefParseFn = Callable[
         [str],
@@ -948,3 +985,645 @@ def test_pending_confirmation_dataclass_fields() -> None:
         assert pending.future is future
     finally:
         loop.close()
+
+
+_DEFAULT_CONTEXT_WINDOW: Final[int] = 32_000
+_TINY_CONTEXT_WINDOW: Final[int] = 256
+_MODEL_ID: Final[str] = "audit6-model"
+
+
+class _FakeProvider(LLMProviderBase):
+    """Minimal connected provider used to exercise the agent loop."""
+
+    def __init__(
+        self,
+        provider_name: ProviderName = ProviderName.OPENAI,
+        *,
+        context_window: int | None = _DEFAULT_CONTEXT_WINDOW,
+        chat_response: Message | None = None,
+        chat_error_message: str | None = None,
+    ) -> None:
+        """Initialize the fake provider for orchestrator-loop testing.
+
+        Args:
+            provider_name: Provider name to advertise.
+            context_window: Context window reported by ``list_models``.
+                ``None`` means the model entry is omitted, which forces the
+                orchestrator to handle the missing-window path.
+            chat_response: Message the provider returns when ``chat`` is
+                called. Defaults to a successful no-tool-call response.
+            chat_error_message: Message used to raise a ``RuntimeError`` from
+                ``chat`` / ``chat_stream``. Used by tests that exercise
+                loop-failure persistence behaviour. ``None`` disables
+                error-injection.
+        """
+        super().__init__()
+        self._provider_name = provider_name
+        self._context_window = context_window
+        self._chat_response = chat_response or Message(role="assistant", content="ok")
+        self._chat_error_message = chat_error_message
+        self.chat_call_count = 0
+        self.last_messages: list[Message] | None = None
+        self.connected = True
+
+    @property
+    @override
+    def name(self) -> ProviderName:
+        """Return provider name.
+
+        Returns:
+            ProviderName: Configured provider name.
+        """
+        return self._provider_name
+
+    @override
+    async def connect(self, credentials: ProviderCredentials) -> None:
+        """Mark provider connected.
+
+        Args:
+            credentials: Unused credentials placeholder.
+        """
+        self._credentials = credentials
+        self.connected = True
+
+    @override
+    async def list_models(self) -> list[ModelInfo]:
+        """List models with optional context window.
+
+        Returns:
+            list[ModelInfo]: Single-entry model list when a context window is
+                configured; empty list otherwise.
+        """
+        if self._context_window is None:
+            return []
+        return [
+            ModelInfo(
+                id=_MODEL_ID,
+                name=_MODEL_ID,
+                provider=self._provider_name,
+                context_window=self._context_window,
+                supports_tools=True,
+                supports_vision=False,
+                supports_streaming=True,
+                input_cost_per_1m_tokens=None,
+                output_cost_per_1m_tokens=None,
+            ),
+        ]
+
+    @override
+    async def chat(
+        self,
+        messages: list[Message],
+        model: str,
+        tools: list[ToolDefinition] | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        *,
+        enable_cache: bool = False,
+    ) -> tuple[Message, list[ToolCall] | None]:
+        """Return the configured response or raise the configured error.
+
+        Args:
+            messages: Conversation history forwarded by the orchestrator.
+            model: Model id forwarded by the orchestrator.
+            tools: Tool definitions forwarded by the orchestrator.
+            temperature: Sampling temperature.
+            max_tokens: Maximum response tokens.
+            tool_choice: Tool selection directive.
+            thinking: Extended-thinking configuration.
+            enable_cache: Whether prompt caching is enabled.
+
+        Returns:
+            tuple[Message, list[ToolCall] | None]: Configured assistant
+                message and ``None`` for tool calls.
+
+        Raises:
+            RuntimeError: When the fake provider was configured with a
+                ``chat_error_message`` so loop-failure paths can be exercised.
+        """
+        del model, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
+        self.chat_call_count += 1
+        self.last_messages = list(messages)
+        if self._chat_error_message is not None:
+            raise RuntimeError(self._chat_error_message)
+        return self._chat_response, None
+
+    @override
+    async def chat_stream(
+        self,
+        messages: list[Message],
+        model: str,
+        tools: list[ToolDefinition] | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        tool_choice: ToolChoice | None = None,
+        thinking: ThinkingConfig | None = None,
+        *,
+        enable_cache: bool = False,
+    ) -> AsyncIterator[str]:
+        """Yield the configured response one chunk.
+
+        Args:
+            messages: Conversation history.
+            model: Model id.
+            tools: Tool definitions.
+            temperature: Sampling temperature.
+            max_tokens: Maximum response tokens.
+            tool_choice: Tool selection directive.
+            thinking: Extended-thinking configuration.
+            enable_cache: Whether prompt caching is enabled.
+
+        Yields:
+            str: Response content text.
+
+        Raises:
+            RuntimeError: When the fake provider was configured with a
+                ``chat_error_message`` so streaming-failure paths can be
+                exercised.
+        """
+        del messages, model, tools, temperature, max_tokens, tool_choice, thinking, enable_cache
+        if self._chat_error_message is not None:
+            raise RuntimeError(self._chat_error_message)
+        yield self._chat_response.content
+
+    @override
+    def _convert_tools_to_provider_format(
+        self,
+        tools: list[ToolDefinition],
+    ) -> list[dict[str, object]]:
+        """Return empty tool list (orchestrator hands raw definitions to providers).
+
+        Args:
+            tools: Tool definitions.
+
+        Returns:
+            list[dict[str, object]]: Empty list.
+        """
+        del tools
+        return []
+
+    @override
+    def _convert_messages_to_provider_format(
+        self,
+        messages: list[Message],
+    ) -> list[dict[str, object]]:
+        """Return a passthrough representation of messages for testing.
+
+        Args:
+            messages: Message list.
+
+        Returns:
+            list[dict[str, object]]: List with role/content dictionaries.
+        """
+        return [{"role": message.role, "content": message.content} for message in messages]
+
+
+class _StubBridge(ToolBridgeBase):
+    """Bridge stub registering a single tool definition for prompt-rendering tests."""
+
+    def __init__(self, *, name: ToolName, definition: ToolDefinition) -> None:
+        """Initialize the stub bridge.
+
+        Args:
+            name: Tool name advertised by this bridge.
+            definition: Tool definition exposed via ``tool_definition``.
+        """
+        super().__init__()
+        self._tool_name = name
+        self._tool_definition = definition
+
+    @property
+    @override
+    def name(self) -> ToolName:
+        """Return tool name.
+
+        Returns:
+            ToolName: Configured tool name.
+        """
+        return self._tool_name
+
+    @property
+    @override
+    def tool_definition(self) -> ToolDefinition:
+        """Return the configured tool definition.
+
+        Returns:
+            ToolDefinition: Configured tool definition.
+        """
+        return self._tool_definition
+
+    @override
+    async def initialize(self, tool_path: object | None = None) -> None:
+        """Mark the bridge ready without touching disk.
+
+        Args:
+            tool_path: Ignored.
+        """
+        del tool_path
+        self._state.connected = True
+        self._state.tool_running = True
+
+    @override
+    async def shutdown(self) -> None:
+        """Reset state. Subclass override; no external resources to release."""
+        self._state.connected = False
+        self._state.tool_running = False
+        await self._finalize_shutdown()
+
+    @override
+    async def is_available(self) -> bool:
+        """Return whether the stub is available.
+
+        Returns:
+            bool: Always True.
+        """
+        return True
+
+
+def _make_stub_bridge(
+    *,
+    tool_name: ToolName = ToolName.PROCESS,
+    function_name: str = "process.do_thing",
+    parameters: list[ToolParameter] | None = None,
+) -> _StubBridge:
+    """Create a stub bridge with one well-formed function.
+
+    Args:
+        tool_name: Tool name to register.
+        function_name: Fully-qualified function name advertised on the bridge.
+        parameters: Optional parameter list. Defaults to a single ``string`` arg.
+
+    Returns:
+        _StubBridge: Constructed stub bridge.
+    """
+    params = (
+        parameters
+        if parameters is not None
+        else [
+            ToolParameter(name="target", type="string", description="Target identifier."),
+        ]
+    )
+    definition = ToolDefinition(
+        tool_name=tool_name,
+        description="Stub bridge for orchestrator audit tests.",
+        functions=[
+            ToolFunction(
+                name=function_name,
+                description="Execute the stub operation.",
+                parameters=params,
+                returns="dict",
+            ),
+        ],
+    )
+    return _StubBridge(name=tool_name, definition=definition)
+
+
+def _build_orchestrator(
+    tmp_path: Path,
+    *,
+    provider: _FakeProvider | None = None,
+    bridge: _StubBridge | None = None,
+    config: OrchestratorConfig | None = None,
+) -> tuple[Orchestrator, _FakeProvider, ToolRegistry, SessionManager]:
+    """Build a wired orchestrator with optional fake provider and stub bridge.
+
+    Args:
+        tmp_path: Pytest temporary directory for the session DB.
+        provider: Optional fake provider instance. A fresh one is created
+            when omitted.
+        bridge: Optional stub bridge to register with the tool registry.
+        config: Optional orchestrator config.
+
+    Returns:
+        tuple[Orchestrator, _FakeProvider, ToolRegistry, SessionManager]:
+            Constructed orchestrator and its underlying registries.
+    """
+    fake_provider = provider or _FakeProvider()
+    provider_registry = ProviderRegistry()
+    provider_registry.register(fake_provider)
+
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+    tool_registry = ToolRegistry(tools_dir=tools_dir)
+    if bridge is not None:
+        tool_registry.register_bridge(bridge.name, bridge)
+
+    db_path = tmp_path / "sessions.db"
+    session_manager = SessionManager(
+        store=SessionStore(db_path=db_path),
+        auto_save=True,
+        save_interval=3600,
+    )
+
+    orchestrator = Orchestrator(
+        provider_registry=provider_registry,
+        tool_registry=tool_registry,
+        session_manager=session_manager,
+        config=config or OrchestratorConfig(stream_responses=False),
+    )
+    return orchestrator, fake_provider, tool_registry, session_manager
+
+
+class _AutoStopSessionManager:
+    """Async context manager that ensures the auto-save task is cancelled."""
+
+    def __init__(self, manager: SessionManager) -> None:
+        """Initialize the cleanup manager.
+
+        Args:
+            manager: SessionManager whose auto-save task should be cancelled.
+        """
+        self._manager = manager
+
+    async def __aenter__(self) -> Self:
+        """Enter the context.
+
+        Returns:
+            Self: This instance.
+        """
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        """Stop the auto-save task on exit.
+
+        Args:
+            exc_type: Exception class if raised.
+            exc_val: Exception instance if raised.
+            exc_tb: Traceback if raised.
+        """
+        del exc_type, exc_val, exc_tb
+        await self._manager.stop_auto_save()
+
+
+@pytest.mark.asyncio
+async def test_load_session_marks_current_and_starts_autosave(tmp_path: Path) -> None:
+    """F-0001: ``load_session`` must mark the session current and start auto-save.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path)
+    async with _AutoStopSessionManager(session_manager):
+        created = await session_manager.create(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+        await session_manager.close()
+        assert session_manager.current is None
+        assert not session_manager.is_auto_saving
+
+        loaded = await orch.load_session(created.id)
+
+        assert loaded.id == created.id
+        assert session_manager.current is not None
+        assert session_manager.current.id == created.id
+        assert session_manager.is_auto_saving
+
+
+@pytest.mark.asyncio
+async def test_system_prompt_lists_only_registered_tools(tmp_path: Path) -> None:
+    """F-0002: System prompt must enumerate only the bridges actually registered.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    bridge = _make_stub_bridge(
+        tool_name=ToolName.PROCESS,
+        function_name="process.list_processes",
+    )
+    orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
+    async with _AutoStopSessionManager(session_manager):
+        await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+
+        prompt = orch.build_system_prompt()
+
+        assert "process.list_processes" in prompt
+        assert "ghidra.execute_script" not in prompt
+        assert "binary.load_file" not in prompt
+        assert "x64dbg.set_breakpoint_on_api" not in prompt
+
+
+def test_estimate_tokens_uses_tiktoken_for_openai() -> None:
+    """F-0004: Token estimator must agree with tiktoken's ``o200k_base`` for OpenAI."""
+    sample = "function calculate_license_token(input) { return SHA256(input ^ 0xDEADBEEF); }"
+
+    naive = len(sample) // 4
+    encoder = tiktoken.get_encoding("o200k_base")
+    real = len(encoder.encode(sample))
+    estimate = Orchestrator.estimate_tokens(sample, ProviderName.OPENAI)
+
+    assert estimate == real
+    assert estimate != naive
+
+
+def test_estimate_tokens_uses_cl100k_for_anthropic() -> None:
+    """F-0004: Anthropic estimation must use the conservative cl100k_base encoding."""
+    sample = "Decompile the license validation function and propose a bypass."
+
+    encoder = tiktoken.get_encoding("cl100k_base")
+    real = len(encoder.encode(sample))
+    estimate = Orchestrator.estimate_tokens(sample, ProviderName.ANTHROPIC)
+
+    assert estimate == real
+
+
+def test_estimate_tokens_handles_empty_string() -> None:
+    """F-0004: Empty input must produce zero tokens for any provider."""
+    assert Orchestrator.estimate_tokens("", ProviderName.OPENAI) == 0
+    assert Orchestrator.estimate_tokens("", ProviderName.ANTHROPIC) == 0
+
+
+def test_trim_messages_raises_when_context_window_missing() -> None:
+    """F-0019: ``trim_messages_to_context_window(None)`` must raise ``ToolError``.
+
+    Sending unbounded history when the provider does not advertise a context
+    window is a runaway-cost defect; the orchestrator must reject the request
+    rather than silently forwarding the entire history.
+    """
+    messages = [
+        Message(role="system", content="System."),
+        Message(role="user", content="A" * 10),
+    ]
+
+    with pytest.raises(ToolError, match="context window"):
+        Orchestrator.trim_messages_to_context_window(messages, None)
+
+
+def test_trim_messages_uses_provider_specific_encoding() -> None:
+    """F-0004: Provider-specific token counting must drive trimming decisions.
+
+    A high-token-density payload (alternating CJK + punctuation) tokenises
+    very differently from ``len // 4``. The trimmer must remove the user
+    message because the budget is exceeded under the real encoder.
+    """
+    dense_content = "你好" * 200
+    messages = [
+        Message(role="system", content="System."),
+        Message(role="user", content=dense_content),
+    ]
+
+    encoder = tiktoken.get_encoding("o200k_base")
+    real_tokens = len(encoder.encode(dense_content))
+    naive_tokens = len(dense_content) // 4
+    assert real_tokens > naive_tokens, "test precondition: dense content must tokenise dense"
+
+    budget_window = max(2, int(real_tokens * 0.5))
+    trimmed = Orchestrator.trim_messages_to_context_window(
+        list(messages),
+        budget_window,
+        provider=ProviderName.OPENAI,
+    )
+
+    assert len(trimmed) == 1
+    assert trimmed[0].role == "system"
+
+
+@pytest.mark.asyncio
+async def test_user_message_not_persisted_on_loop_failure(tmp_path: Path) -> None:
+    """F-0005: Failure must leave the on-disk session unchanged.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    bridge = _make_stub_bridge()
+    failing_provider = _FakeProvider(chat_error_message="simulated provider failure")
+    orch, _provider, _tools, session_manager = _build_orchestrator(
+        tmp_path,
+        provider=failing_provider,
+        bridge=bridge,
+    )
+    async with _AutoStopSessionManager(session_manager):
+        session = await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+        baseline_message_count = len(session.messages)
+
+        with pytest.raises(RuntimeError, match="simulated provider failure"):
+            await orch.process_user_input("please decompile main")
+
+        assert len(session.messages) == baseline_message_count
+        assert all(msg.content != "please decompile main" for msg in session.messages)
+
+        store_session = session_manager.store.load(session.id)
+        assert store_session is not None
+        assert all(msg.content != "please decompile main" for msg in store_session.messages)
+
+
+@pytest.mark.asyncio
+async def test_user_message_persisted_on_loop_success(tmp_path: Path) -> None:
+    """F-0005 control case: successful loop must persist the user message.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    bridge = _make_stub_bridge()
+    orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=bridge)
+    async with _AutoStopSessionManager(session_manager):
+        session = await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+
+        await orch.process_user_input("hello orchestrator")
+
+        store_session = session_manager.store.load(session.id)
+        assert store_session is not None
+        roles_contents = [(msg.role, msg.content) for msg in store_session.messages]
+        assert ("user", "hello orchestrator") in roles_contents
+
+
+@pytest.mark.asyncio
+async def test_broken_tool_schema_raises_tool_error(tmp_path: Path) -> None:
+    """F-0011: A bridge that advertises a broken schema must raise ``ToolError``.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    broken_bridge = _StubBridge(
+        name=ToolName.PROCESS,
+        definition=ToolDefinition(
+            tool_name=ToolName.PROCESS,
+            description="Bridge with a broken function definition.",
+            functions=[
+                ToolFunction(
+                    name="",
+                    description="",
+                    parameters=[],
+                    returns="dict",
+                ),
+            ],
+        ),
+    )
+    orch, _provider, _tools, session_manager = _build_orchestrator(tmp_path, bridge=broken_bridge)
+    async with _AutoStopSessionManager(session_manager):
+        await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+
+        with pytest.raises(ToolError, match="Tool schema validation failed"):
+            await orch.process_user_input("hello")
+
+
+@pytest.mark.asyncio
+async def test_missing_context_window_raises_tool_error(tmp_path: Path) -> None:
+    """F-0019: Missing context window must raise ``ToolError`` before sending.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    bridge = _make_stub_bridge()
+    provider_no_window = _FakeProvider(context_window=None)
+    orch, _provider, _tools, session_manager = _build_orchestrator(
+        tmp_path,
+        provider=provider_no_window,
+        bridge=bridge,
+    )
+    async with _AutoStopSessionManager(session_manager):
+        await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+
+        with pytest.raises(ToolError, match="context window"):
+            await orch.process_user_input("anything")
+
+        assert provider_no_window.chat_call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_context_window_override_bypasses_provider_lookup(tmp_path: Path) -> None:
+    """F-0019 control case: configured override must satisfy the loop.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    bridge = _make_stub_bridge()
+    provider_no_window = _FakeProvider(context_window=None)
+    config = OrchestratorConfig(stream_responses=False, context_window_override=_TINY_CONTEXT_WINDOW)
+    orch, _provider, _tools, session_manager = _build_orchestrator(
+        tmp_path,
+        provider=provider_no_window,
+        bridge=bridge,
+        config=config,
+    )
+    async with _AutoStopSessionManager(session_manager):
+        await orch.start_session(
+            provider=ProviderName.OPENAI,
+            model=_MODEL_ID,
+        )
+
+        await orch.process_user_input("ping")
+
+        assert provider_no_window.chat_call_count == 1

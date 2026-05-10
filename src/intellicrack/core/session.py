@@ -1224,6 +1224,26 @@ class SessionManager:
 
         await asyncio.to_thread(self.store.export_to_json, self._current, path)
 
+    @property
+    def is_auto_saving(self) -> bool:
+        """Whether the auto-save background task is currently running.
+
+        Returns:
+            bool: ``True`` when an auto-save task has been started and has
+                not yet been cancelled or finished.
+        """
+        return self._save_task is not None and not self._save_task.done()
+
+    async def stop_auto_save(self) -> None:
+        """Cancel the auto-save background task.
+
+        Public counterpart to :meth:`_stop_auto_save` for callers (test
+        harnesses, embedding applications) that need to cleanly cancel the
+        background save loop without reaching into private members. No-op
+        when no task is currently running.
+        """
+        await self._stop_auto_save()
+
     async def _start_auto_save(self) -> None:
         """Start the auto-save task."""
         await self._stop_auto_save()
