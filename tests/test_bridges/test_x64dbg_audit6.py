@@ -5,8 +5,9 @@
 
 """Audit6 regression tests for ``intellicrack.bridges.x64dbg``.
 
-Combines the X64DBG-B and X64DBG-C audit6 work units into a single
-test module so their helpers and fixtures are shared.
+Combines the X64DBG-B, X64DBG-C, X64DBG-D, and X64DBG-E audit6 work
+units into a single test module so their helpers and fixtures are
+shared.
 
 X64DBG-B production-blocker findings:
 
@@ -66,6 +67,26 @@ The X64DBG-D tests also use a deterministic in-process pipe-client
 substitute that records every command/params pair without spawning
 x64dbg, so the failure modes above can be reproduced on a developer
 workstation.
+
+X64DBG-E production-blocker findings:
+
+* F-0005 - ``find_pattern`` with wildcards must stream regions in
+  chunks with rolling overlap so wildcard matches that fall outside the
+  first ``MAX_MEMORY_READ_SIZE`` window are still found.
+* F-0019 - ``get_resources`` must walk the resource tree recursively
+  and emit one dict per leaf with size and rva populated.
+* F-0020 - ``_build_export_entries`` must enumerate every export
+  reported by the PE export directory; no silent truncation.
+* F-0021 - ``analyze_entropy`` must read in chunks so a single
+  unreadable page does not abort the whole scan.
+* F-0022 - ``set_breakpoint_on_api`` must resolve the API VA via the
+  expression evaluator and place the breakpoint at the resolved VA.
+
+The X64DBG-E tests inject deterministic in-memory data through
+``monkeypatch`` of ``read_memory`` / ``get_memory_regions`` /
+``_send_pipe_command`` / ``set_breakpoint`` so the production code
+paths execute exactly as in production but without requiring a live
+x64dbg.exe.
 """
 
 from __future__ import annotations
@@ -96,8 +117,12 @@ from intellicrack.bridges._pe_format import (
     PE_SIGNATURE,
 )
 from intellicrack.bridges._win32_types import NT_HEADERS_OPTIONAL_OFFSET
-from intellicrack.bridges.x64dbg import X64DbgBridge
-from intellicrack.core.types import BreakpointInfo, ToolError, ToolName
+from intellicrack.bridges.x64dbg import (
+    MAX_MEMORY_READ_SIZE,
+    PE_EXPORT_MAX,
+    X64DbgBridge,
+)
+from intellicrack.core.types import BreakpointInfo, MemoryRegion, ToolError, ToolName
 
 
 if TYPE_CHECKING:
@@ -385,6 +410,11 @@ def _capture_logger_events() -> _LoggerEventRecorder:
         duration of the block.
     """
     return _LoggerEventRecorder()
+
+
+_REGION_BASE: Final[int] = 0x10000000
+_MODULE_BASE: Final[int] = 0x40000000
+_RSRC_RVA: Final[int] = 0x1000
 
 
 @pytest.fixture
@@ -2089,3 +2119,565 @@ async def test_detach_releases_cached_handles() -> None:
     await bridge.detach()
     handles_after: object = getattr(bridge, _PROCESS_HANDLES_ATTR)
     assert cast("dict[int, int]", handles_after) == {}
+
+
+# ---------------------------------------------------------------------------
+# X64DBG-E tests: F-0005, F-0019, F-0020, F-0021, F-0022
+# ---------------------------------------------------------------------------
+
+
+def _build_region(base: int, size: int) -> MemoryRegion:
+    """Construct a readable committed memory region.
+
+    Args:
+        base: Region base address.
+        size: Region size in bytes.
+
+    Returns:
+        MemoryRegion: A readable committed region.
+    """
+    return MemoryRegion(
+        base_address=base,
+        size=size,
+        protection="r",
+        state="committed",
+        type="private",
+        module_name=None,
+    )
+
+
+@pytest.mark.asyncio
+class TestFindPatternWildcardStreaming:
+    """F-0005: wildcard ``find_pattern`` must stream the entire region."""
+
+    async def test_wildcard_match_beyond_first_chunk(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Wildcard matches at offsets > MAX_MEMORY_READ_SIZE must be returned.
+
+        Constructs a 3 MiB virtual region with the marker
+        ``DE AD BE EF`` placed at offset ``MAX_MEMORY_READ_SIZE +
+        0x100`` so the no-streaming implementation would silently miss
+        it.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture used to inject
+                deterministic memory regions and reads.
+        """
+        marker = b"\xde\xad\xbe\xef"
+        match_offset = MAX_MEMORY_READ_SIZE + 0x100
+        region_size = MAX_MEMORY_READ_SIZE * 3
+        backing = bytearray(region_size)
+        backing[match_offset : match_offset + len(marker)] = marker
+
+        async def fake_get_memory_regions() -> list[MemoryRegion]:
+            await asyncio.sleep(0)
+            return [_build_region(_REGION_BASE, region_size)]
+
+        async def fake_read_memory(address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            offset = address - _REGION_BASE
+            if offset < 0 or offset >= region_size:
+                msg = f"out of bounds read at {hex(address)}"
+                raise ToolError(msg)
+            return bytes(backing[offset : offset + size])
+
+        monkeypatch.setattr(bridge, "get_memory_regions", fake_get_memory_regions)
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        results = await bridge.find_pattern("DE ?? BE EF")
+        offsets = [int(r["offset"]) for r in results]
+        assert _REGION_BASE + match_offset in offsets, (
+            f"wildcard match at {hex(_REGION_BASE + match_offset)} missed; got {[hex(o) for o in offsets]}"
+        )
+
+    async def test_wildcard_match_across_chunk_boundary(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Wildcard match straddling the chunk boundary must be found.
+
+        Places ``DE AD BE EF CA FE`` so that the first two bytes are at
+        the end of the first ``MAX_MEMORY_READ_SIZE`` chunk and the
+        remaining four are at the start of the second chunk. Without
+        rolling overlap the streaming scanner would split the match
+        across two read buffers and miss it.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        marker = b"\xde\xad\xbe\xef\xca\xfe"
+        boundary = MAX_MEMORY_READ_SIZE
+        match_offset = boundary - 2
+        region_size = MAX_MEMORY_READ_SIZE * 2
+        backing = bytearray(region_size)
+        backing[match_offset : match_offset + len(marker)] = marker
+
+        async def fake_get_memory_regions() -> list[MemoryRegion]:
+            await asyncio.sleep(0)
+            return [_build_region(_REGION_BASE, region_size)]
+
+        async def fake_read_memory(address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            offset = address - _REGION_BASE
+            return bytes(backing[offset : offset + size])
+
+        monkeypatch.setattr(bridge, "get_memory_regions", fake_get_memory_regions)
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        results = await bridge.find_pattern("DE AD ?? EF CA FE")
+        offsets = [int(r["offset"]) for r in results]
+        assert _REGION_BASE + match_offset in offsets, f"cross-boundary wildcard match at {hex(_REGION_BASE + match_offset)} missed"
+
+
+@pytest.mark.asyncio
+class TestRecursiveResourceWalker:
+    """F-0019: ``get_resources`` must recurse through Type/Name/Language."""
+
+    async def test_recursive_walk_emits_leaves_with_size_and_rva(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Build a minimal three-level resource tree and verify all leaves.
+
+        Type RT_VERSION (16) -> Id 1 -> Lang 0x0409 -> DataEntry of
+        size 0x40 at RVA 0x2000.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        resource_data = self._build_three_level_resource()
+        pe_blob = self._build_pe_with_rsrc_directory(_RSRC_RVA, len(resource_data))
+
+        async def fake_resolve(_module_name: str) -> int:
+            await asyncio.sleep(0)
+            return _MODULE_BASE
+
+        async def fake_read_pe_header(
+            _base: int,
+            _module: str,
+            size: int = 256,
+        ) -> tuple[int, bytes]:
+            await asyncio.sleep(0)
+            return 0, pe_blob[:size]
+
+        async def fake_read_memory(address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            if address == _MODULE_BASE + _RSRC_RVA:
+                return resource_data[:size]
+            msg = f"unexpected read at {hex(address)}"
+            raise ToolError(msg)
+
+        monkeypatch.setattr(bridge, "_resolve_module_base", fake_resolve)
+        monkeypatch.setattr(bridge, "_read_pe_header", fake_read_pe_header)
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        result = await bridge.get_resources("test.dll")
+        assert len(result) == 1, f"expected one leaf, got {result!r}"
+        leaf = result[0]
+        assert leaf["type_id"] == 16
+        assert leaf["type_name"] == "RT_VERSION"
+        assert leaf["id"] == 1
+        assert leaf["language"] == 0x0409
+        assert leaf["size"] == 0x40
+        assert int(leaf["rva"], 16) == _MODULE_BASE + 0x2000
+
+    async def test_multiple_leaves(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify multi-leaf and multi-language enumeration.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        resource_data = self._build_multi_leaf_resource()
+        pe_blob = self._build_pe_with_rsrc_directory(_RSRC_RVA, len(resource_data))
+
+        async def fake_resolve(_module_name: str) -> int:
+            await asyncio.sleep(0)
+            return _MODULE_BASE
+
+        async def fake_read_pe_header(
+            _base: int,
+            _module: str,
+            size: int = 256,
+        ) -> tuple[int, bytes]:
+            await asyncio.sleep(0)
+            return 0, pe_blob[:size]
+
+        async def fake_read_memory(_address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            return resource_data[:size]
+
+        monkeypatch.setattr(bridge, "_resolve_module_base", fake_resolve)
+        monkeypatch.setattr(bridge, "_read_pe_header", fake_read_pe_header)
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        result = await bridge.get_resources("test.dll")
+        assert len(result) == 3, f"expected three leaves, got {len(result)}: {result!r}"
+        keys_present = {(r["type_id"], r["id"], r["language"]) for r in result}
+        assert (24, 1, 0x0409) in keys_present
+        assert (10, 100, 0x0409) in keys_present
+        assert (10, 100, 0x0407) in keys_present
+
+    @staticmethod
+    def _build_three_level_resource() -> bytes:
+        """Build a minimal IMAGE_RESOURCE_DIRECTORY tree (Type/Id/Lang) with one leaf.
+
+        Returns:
+            bytes: Resource section bytes.
+        """
+        blob = bytearray(0x200)
+        struct.pack_into("<IIHHHH", blob, 0, 0, 0, 0, 0, 0, 1)
+        type_dir_offset = 0x40
+        struct.pack_into("<II", blob, 16, 16, 0x80000000 | type_dir_offset)
+
+        struct.pack_into("<IIHHHH", blob, type_dir_offset, 0, 0, 0, 0, 0, 1)
+        id_dir_offset = 0x80
+        struct.pack_into(
+            "<II",
+            blob,
+            type_dir_offset + 16,
+            1,
+            0x80000000 | id_dir_offset,
+        )
+
+        struct.pack_into("<IIHHHH", blob, id_dir_offset, 0, 0, 0, 0, 0, 1)
+        leaf_offset = 0xC0
+        struct.pack_into("<II", blob, id_dir_offset + 16, 0x0409, leaf_offset)
+
+        struct.pack_into("<IIII", blob, leaf_offset, 0x2000, 0x40, 0, 0)
+        return bytes(blob)
+
+    @staticmethod
+    def _build_multi_leaf_resource() -> bytes:
+        """Build a resource tree with three leaves across two types and two languages.
+
+        Returns:
+            bytes: Resource section bytes.
+        """
+        blob = bytearray(0x400)
+        struct.pack_into("<IIHHHH", blob, 0, 0, 0, 0, 0, 0, 2)
+        manifest_dir = 0x40
+        rcdata_dir = 0x80
+        struct.pack_into("<II", blob, 16, 24, 0x80000000 | manifest_dir)
+        struct.pack_into("<II", blob, 24, 10, 0x80000000 | rcdata_dir)
+
+        struct.pack_into("<IIHHHH", blob, manifest_dir, 0, 0, 0, 0, 0, 1)
+        manifest_lang_dir = 0xC0
+        struct.pack_into(
+            "<II",
+            blob,
+            manifest_dir + 16,
+            1,
+            0x80000000 | manifest_lang_dir,
+        )
+        struct.pack_into("<IIHHHH", blob, manifest_lang_dir, 0, 0, 0, 0, 0, 1)
+        manifest_leaf = 0x180
+        struct.pack_into("<II", blob, manifest_lang_dir + 16, 0x0409, manifest_leaf)
+        struct.pack_into("<IIII", blob, manifest_leaf, 0x3000, 0x80, 0, 0)
+
+        struct.pack_into("<IIHHHH", blob, rcdata_dir, 0, 0, 0, 0, 0, 1)
+        rcdata_lang_dir = 0x100
+        struct.pack_into(
+            "<II",
+            blob,
+            rcdata_dir + 16,
+            100,
+            0x80000000 | rcdata_lang_dir,
+        )
+        struct.pack_into("<IIHHHH", blob, rcdata_lang_dir, 0, 0, 0, 0, 0, 2)
+        rc_leaf_a = 0x1A0
+        rc_leaf_b = 0x1C0
+        struct.pack_into("<II", blob, rcdata_lang_dir + 16, 0x0409, rc_leaf_a)
+        struct.pack_into("<II", blob, rcdata_lang_dir + 24, 0x0407, rc_leaf_b)
+        struct.pack_into("<IIII", blob, rc_leaf_a, 0x4000, 0x100, 0, 0)
+        struct.pack_into("<IIII", blob, rc_leaf_b, 0x5000, 0x120, 0, 0)
+        return bytes(blob)
+
+    @staticmethod
+    def _build_pe_with_rsrc_directory(rsrc_rva: int, rsrc_size: int) -> bytes:
+        """Build a PE32+ header with the resource data directory pointing at our blob.
+
+        The PE32+ optional header places data directories at offset
+        0x88 from the start of the optional header. The 3rd entry
+        (index 2) is the resource directory.
+
+        Args:
+            rsrc_rva: Resource directory RVA to embed.
+            rsrc_size: Resource directory size to embed.
+
+        Returns:
+            bytes: PE header bytes large enough for the resource directory entry.
+        """
+        header = bytearray(0x200)
+        header[:4] = b"PE\x00\x00"
+        struct.pack_into("<H", header, 4, 0x8664)
+        opt_off = 24
+        struct.pack_into("<H", header, opt_off, 0x020B)
+        rsrc_dir_off = opt_off + 0x70 + 2 * 8
+        struct.pack_into("<II", header, rsrc_dir_off, rsrc_rva, rsrc_size)
+        return bytes(header)
+
+
+@pytest.mark.asyncio
+class TestExportNoCap:
+    """F-0020: ``_build_export_entries`` must not silently truncate."""
+
+    async def test_no_truncation_above_pe_export_max(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Exports above PE_EXPORT_MAX must still be returned.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        num_names = PE_EXPORT_MAX + 50
+        addr_table = bytes(b"\x00\x00\x00\x00" * num_names)
+        name_ptrs = b"".join(struct.pack("<I", 0x10000 + i) for i in range(num_names))
+        ordinal_table = b"".join(struct.pack("<H", i) for i in range(num_names))
+        ordinal_base = 1
+        num_functions = num_names
+
+        captured_names: list[str] = []
+
+        async def fake_read_export_name(
+            _base: int,
+            name_rva: int,
+            ordinal: int,
+            _module: str,
+        ) -> tuple[str, ToolError | None]:
+            await asyncio.sleep(0)
+            name = f"export_{name_rva - 0x10000}_{ordinal}"
+            captured_names.append(name)
+            return name, None
+
+        monkeypatch.setattr(bridge, "_read_export_name", fake_read_export_name)
+
+        tables = (addr_table, name_ptrs, ordinal_table, num_names, ordinal_base, num_functions)
+        build = getattr(bridge, "_build_export_entries")
+        exports, last_error = await build(_MODULE_BASE, "test.dll", tables)
+        assert last_error is None
+        assert len(exports) == num_names, f"export list truncated: {len(exports)} != {num_names}"
+        assert exports[PE_EXPORT_MAX]["ordinal"] == ordinal_base + PE_EXPORT_MAX
+        assert exports[-1]["ordinal"] == ordinal_base + num_names - 1
+
+
+@pytest.mark.asyncio
+class TestEntropyChunkedReads:
+    """F-0021: ``analyze_entropy`` must read each block independently."""
+
+    async def test_partial_results_when_some_blocks_unreadable(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a single bad page does not abort the whole scan.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        block_size = 256
+        total_size = block_size * 5
+        bad_block_index = 2
+
+        async def fake_read_memory(address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            block_idx = (address - _REGION_BASE) // block_size
+            if block_idx == bad_block_index:
+                msg = f"ReadProcessMemory failed at {hex(address)}"
+                raise ToolError(msg)
+            return bytes([block_idx & 0xFF] * size)
+
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        result = await bridge.analyze_entropy(_REGION_BASE, total_size, block_size)
+        assert len(result) == 5
+        for i, block in enumerate(result):
+            if i == bad_block_index:
+                assert block["readable"] is False
+                assert "error" in block
+            else:
+                assert block["readable"] is True
+                assert abs(float(block["entropy"])) < 1e-9
+                assert block["size"] == block_size
+
+    async def test_large_region_chunked_calls(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Each block must trigger an individual ``read_memory`` call.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        block_size = 1024
+        block_count = 8
+        total_size = block_size * block_count
+        call_count = {"n": 0}
+
+        async def fake_read_memory(_address: int, size: int) -> bytes:
+            await asyncio.sleep(0)
+            call_count["n"] += 1
+            return bytes(size)
+
+        monkeypatch.setattr(bridge, "read_memory", fake_read_memory)
+
+        result = await bridge.analyze_entropy(_REGION_BASE, total_size, block_size)
+        assert len(result) == block_count
+        assert call_count["n"] == block_count, f"expected {block_count} block reads, got {call_count['n']}"
+
+    async def test_invalid_block_size_raises(self, bridge: X64DbgBridge) -> None:
+        """Non-positive block_size must raise ToolError.
+
+        Args:
+            bridge: Fresh bridge instance.
+        """
+        with pytest.raises(ToolError, match="block_size must be positive"):
+            await bridge.analyze_entropy(_REGION_BASE, 1024, 0)
+
+
+@pytest.mark.asyncio
+class TestApiBreakpointResolution:
+    """F-0022: ``set_breakpoint_on_api`` must resolve VA before installing bp."""
+
+    async def test_resolves_via_get_proc_address(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When GetProcAddress yields non-zero, set_breakpoint must be called.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        resolved_va = 0x7FFEDEADBEEF
+
+        async def fake_eval(expression: str) -> int:
+            await asyncio.sleep(0)
+            assert "GetProcAddress" in expression
+            assert "kernel32" in expression
+            assert "CreateFileW" in expression
+            return resolved_va
+
+        captured_bp: dict[str, int | str] = {}
+
+        async def fake_set_breakpoint(address: int, bp_type: str = "software") -> int:
+            await asyncio.sleep(0)
+            captured_bp["address"] = address
+            captured_bp["type"] = bp_type
+            return 42
+
+        monkeypatch.setattr(bridge, "evaluate_expression", fake_eval)
+        monkeypatch.setattr(bridge, "set_breakpoint", fake_set_breakpoint)
+
+        result = await bridge.set_breakpoint_on_api("kernel32", "CreateFileW")
+        assert result["success"] is True
+        assert result["resolution_method"] == "GetProcAddress"
+        assert result["resolved_address"] == hex(resolved_va)
+        assert result["breakpoint_id"] == 42
+        assert captured_bp["address"] == resolved_va
+        assert captured_bp["type"] == "software"
+
+    async def test_falls_back_to_bpx_when_unresolved(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When GetProcAddress returns 0 the historical bpx path must run.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+
+        async def fake_eval(_expression: str) -> int:
+            await asyncio.sleep(0)
+            return 0
+
+        sent_commands: list[tuple[str, dict[str, object] | None]] = []
+
+        async def fake_send_pipe(
+            command: str,
+            params: dict[str, object] | None = None,
+        ) -> dict[str, object]:
+            await asyncio.sleep(0)
+            sent_commands.append((command, params))
+            return {"success": True}
+
+        called_set_bp = {"n": 0}
+
+        async def fake_set_breakpoint(_address: int, _bp_type: str = "software") -> int:
+            await asyncio.sleep(0)
+            called_set_bp["n"] += 1
+            return 1
+
+        monkeypatch.setattr(bridge, "evaluate_expression", fake_eval)
+        monkeypatch.setattr(bridge, "_send_pipe_command", fake_send_pipe)
+        monkeypatch.setattr(bridge, "set_breakpoint", fake_set_breakpoint)
+
+        result = await bridge.set_breakpoint_on_api("ntdll", "RtlExitUserProcess")
+        assert result["success"] is True
+        assert result["resolution_method"] == "bpx"
+        assert result["resolved_address"] is None
+        assert called_set_bp["n"] == 0, "set_breakpoint must not run when address is 0"
+        assert len(sent_commands) > 0
+        first_cmd, first_params = sent_commands[0]
+        assert first_cmd == "exec"
+        assert first_params is not None
+        assert first_params["command"] == "bpx ntdll.RtlExitUserProcess"
+
+    async def test_falls_back_when_eval_raises(
+        self,
+        bridge: X64DbgBridge,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When evaluate_expression raises ToolError, bpx fallback runs.
+
+        Args:
+            bridge: Fresh bridge instance.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+
+        async def fake_eval(_expression: str) -> int:
+            await asyncio.sleep(0)
+            msg = "expression evaluation failed"
+            raise ToolError(msg)
+
+        sent_commands: list[str] = []
+
+        async def fake_send_pipe(
+            _command: str,
+            params: dict[str, object] | None = None,
+        ) -> dict[str, object]:
+            await asyncio.sleep(0)
+            if params is not None:
+                cmd_str = params.get("command")
+                if isinstance(cmd_str, str):
+                    sent_commands.append(cmd_str)
+            return {"success": True}
+
+        monkeypatch.setattr(bridge, "evaluate_expression", fake_eval)
+        monkeypatch.setattr(bridge, "_send_pipe_command", fake_send_pipe)
+
+        result = await bridge.set_breakpoint_on_api("user32", "MessageBoxW")
+        assert result["resolution_method"] == "bpx"
+        assert result["resolved_address"] is None
+        assert sent_commands == ["bpx user32.MessageBoxW"]
