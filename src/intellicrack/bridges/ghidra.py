@@ -20,6 +20,7 @@ import json
 import os
 import re
 import socket
+import string
 import tempfile
 import textwrap
 import threading
@@ -67,6 +68,8 @@ _RemoteEvalFunc = Callable[[str], object]
 _JAVA_SIGNED_THRESHOLD = 127
 _JAVA_SIGNED_RANGE = 256
 _ARCH_64_POINTER_BYTES = 8
+_HEX_TOKEN_LENGTH = 2
+_BOOKMARK_READBACK_PAIR_LEN = 2
 
 _RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
 
@@ -2105,23 +2108,48 @@ metadata
         return header_arch, header_is_64
 
     async def analyze(self) -> None:
-        """Run full Ghidra analysis.
+        """Run full Ghidra analysis and block until every analyser pass completes.
+
+        ``GhidraScript.analyzeAll`` only schedules pending analyses; it
+        does not wait for the asynchronous analyzers to finish. Callers
+        that immediately query symbols/functions afterwards observe a
+        partially-analysed program. This implementation invokes
+        ``analyzeAll`` and then blocks on
+        ``AutoAnalysisManager.waitForAnalysis`` so the method only
+        returns once Ghidra reports the program fully analysed.
 
         Raises:
             ToolError: If Ghidra is not connected or analysis fails.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
+        _logger.info("ghidra_analysis_started", bridge="ghidra")
+        analyze_script = textwrap.dedent(
+            """
+            from ghidra.app.plugin.core.analysis import AutoAnalysisManager
+            analyzeAll(currentProgram)
+            mgr = AutoAnalysisManager.getAnalysisManager(currentProgram)
+            mgr.waitForAnalysis(None, monitor)
+            """,
+        )
         try:
-            await self._execute_remote("analyzeAll(currentProgram)")
-            _logger.info("ghidra_analysis_complete", bridge="ghidra")
-        except Exception as e:
-            _logger.warning("ghidra_analysis_failed", error=str(e))
-            error_message = f"Analysis failed: {e}"
-            raise ToolError(error_message) from e
+            await self._execute_remote(analyze_script)
+        except ToolError:
+            _logger.warning("ghidra_analysis_failed", phase="wait_for_analysis")
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_analysis_failed", phase="wait_for_analysis", error=str(exc))
+            error_message = f"Analysis failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        _logger.info(
+            "ghidra_analysis_complete",
+            bridge="ghidra",
+            phase="wait_for_analysis_returned",
+        )
 
     async def get_functions(
         self,
@@ -2291,7 +2319,12 @@ metadata
 
         Applies the bridge-level decompiler configuration (set via
         :meth:`set_decompiler_options`) to the ``DecompInterface``
-        before invoking decompilation.
+        before invoking decompilation. The decompiler outcome is
+        captured in module-level Jython variables on the bridge server,
+        then read back through ``remote_eval`` so the client can
+        distinguish "function not found", decompiler failure, and
+        success - and raise :class:`ToolError` instead of returning an
+        opaque "Decompilation failed" sentinel string.
 
         Args:
             address: Function address.
@@ -2359,7 +2392,7 @@ metadata
         except ToolError:
             raise
         except Exception as exc:
-            _logger.warning("ghidra_decompilation_failed", error=str(exc))
+            _logger.warning("ghidra_decompilation_failed", address=hex(address), error=str(exc))
             msg = f"Decompilation failed: {exc}"
             raise ToolError(msg) from exc
 
@@ -2633,6 +2666,57 @@ metadata
             for s in result_list
         ]
 
+    @staticmethod
+    def _parse_hex_search_pattern(raw_hex: str) -> tuple[list[int], list[int]]:
+        """Parse a wildcarded hex pattern into Java-signed byte/mask arrays.
+
+        Splits the input on whitespace when any whitespace is present,
+        otherwise reads two-hex-digit tokens. ``??`` / ``?`` tokens
+        produce a ``(0x00, 0x00)`` byte/mask pair; everything else must
+        be exactly two hex digits and is converted to a ``(byte,
+        0xFF)`` pair. The returned values are folded into the
+        ``-128..127`` signed range Ghidra's ``jarray`` requires.
+
+        Args:
+            raw_hex: User-supplied hex pattern, optionally with ``??``
+                wildcards.
+
+        Returns:
+            tuple[list[int], list[int]]: ``(byte_vals, mask_vals)``
+            both already sign-folded for the remote ``jarray('b')``
+            constructor.
+
+        Raises:
+            ToolError: If ``raw_hex`` is empty after trimming or
+                contains a token that is neither ``??`` / ``?`` nor a
+                pair of hex digits.
+        """
+        clean = raw_hex.strip()
+        if not clean:
+            _logger.warning("byte_search_invalid_hex", reason="empty")
+            msg = "Hex pattern is empty"
+            raise ToolError(msg)
+
+        tokens = clean.split() if " " in clean else [clean[i : i + 2] for i in range(0, len(clean), 2)]
+        byte_vals: list[int] = []
+        mask_vals: list[int] = []
+        for tok in tokens:
+            if tok in {"??", "?"}:
+                b = 0x00
+                m = 0x00
+            else:
+                if len(tok) != _HEX_TOKEN_LENGTH or any(ch not in string.hexdigits for ch in tok):
+                    _logger.warning("byte_search_invalid_hex", token=tok)
+                    msg = f"Malformed hex token in pattern: {tok!r}"
+                    raise ToolError(msg)
+                b = int(tok, 16)
+                m = 0xFF
+            bj = (b - 256) if b > _JAVA_SIGNED_THRESHOLD else b
+            mj = (m - 256) if m > _JAVA_SIGNED_THRESHOLD else m
+            byte_vals.append(bj)
+            mask_vals.append(mj)
+        return byte_vals, mask_vals
+
     async def search_bytes(
         self,
         pattern: bytes | str | None = None,
@@ -2640,6 +2724,12 @@ metadata
         hex_pattern: str | None = None,
     ) -> list[int]:
         """Search for a byte pattern in the binary, with optional wildcard mask support.
+
+        Hex tokens are validated before being shipped to Ghidra: any
+        token that is not ``??`` / ``?`` and does not parse as a single
+        byte (``00``..``FF``) raises :class:`ToolError`. Empty hex input
+        also raises ``ToolError`` because an empty needle would
+        otherwise match every byte in the program.
 
         Args:
             pattern: Bytes to find (exact match) or hex string pattern.
@@ -2649,11 +2739,12 @@ metadata
             list[int]: List of addresses where the pattern was found.
 
         Raises:
-            ToolError: If Ghidra is not connected.
+            ToolError: If Ghidra is not connected, the supplied hex
+                pattern is empty, or it contains malformed tokens.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.debug("byte_search_starting", has_hex_pattern=hex_pattern is not None)
@@ -2666,23 +2757,7 @@ metadata
             raw_hex = None
 
         if raw_hex is not None:
-            clean = raw_hex.strip()
-            tokens = clean.split() if " " in clean else [clean[i : i + 2] for i in range(0, len(clean), 2)]
-
-            byte_vals: list[int] = []
-            mask_vals: list[int] = []
-            for tok in tokens:
-                if tok in {"??", "?"}:
-                    b = 0x00
-                    m = 0x00
-                else:
-                    b = int(tok, 16)
-                    m = 0xFF
-                bj = (b - 256) if b > _JAVA_SIGNED_THRESHOLD else b
-                mj = (m - 256) if m > _JAVA_SIGNED_THRESHOLD else m
-                byte_vals.append(bj)
-                mask_vals.append(mj)
-
+            byte_vals, mask_vals = self._parse_hex_search_pattern(raw_hex)
             byte_arr_str = ", ".join(str(v) for v in byte_vals)
             mask_arr_str = ", ".join(str(v) for v in mask_vals)
 
@@ -2706,7 +2781,7 @@ metadata
             except ToolError:
                 raise
             except Exception as exc:
-                _logger.exception("byte_search_failed_hex", pattern_length=len(tokens))
+                _logger.exception("byte_search_failed_hex", pattern_length=len(byte_vals))
                 error_message = f"Byte search (hex/wildcard) failed: {exc}"
                 raise ToolError(error_message) from exc
 
@@ -2744,6 +2819,13 @@ metadata
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
 
+        After ``Function.setName`` returns, the bridge re-queries the
+        function at ``address`` via ``remote_eval`` and verifies that
+        ``getName()`` matches ``new_name``. This catches the previous
+        failure mode where ``setName`` rejected an invalid name (empty
+        string, namespace conflict, identifier clash) but the bridge
+        still reported success.
+
         Args:
             address: Function address.
             new_name: New name.
@@ -2752,27 +2834,57 @@ metadata
             bool: True if renamed.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If Ghidra is not connected, no function exists
+                at ``address``, the rename call fails, or the readback
+                does not show the new name.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         try:
-            await self._execute_remote(f"""
-                from ghidra.program.model.symbol import SourceType
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.symbol import SourceType
 
-                addr = toAddr({address})
-                func = getFunctionContaining(addr)
-                if func is not None:
+                    addr = toAddr({address})
+                    func = getFunctionContaining(addr)
+                    if func is None:
+                        raise RuntimeError('No function at ' + str(addr))
                     func.setName({json.dumps(new_name)}, SourceType.USER_DEFINED)
-            """)
-
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
         except Exception as e:
             _logger.warning("ghidra_rename_failed", address=hex(address), error=str(e))
             error_message = f"Rename failed: {e}"
             raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                f"(lambda f: f.getName() if f is not None else None)(getFunctionContaining(toAddr({address})))",
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_rename_readback_failed", address=hex(address), error=str(e))
+            error_message = f"Rename readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        observed = None if readback is None else str(readback)
+        if observed != new_name:
+            _logger.error(
+                "ghidra_rename_verification_failed",
+                address=hex(address),
+                expected_name=new_name,
+                observed_name=observed,
+            )
+            msg = f"Rename verification failed at {hex(address)}: expected {new_name!r}, observed {observed!r}"
+            raise ToolError(msg)
 
         _logger.info("function_renamed", address=hex(address), new_name=new_name)
         return True
@@ -2785,6 +2897,13 @@ metadata
     ) -> bool:
         """Add a comment at an address.
 
+        After issuing ``CodeUnit.setComment`` the bridge re-queries the
+        same comment slot via ``remote_eval`` and verifies the stored
+        value matches ``comment``. This catches the previous failure
+        mode where the address resolved to a code unit boundary that
+        Ghidra silently dropped the comment on, or where no code unit
+        existed at all.
+
         Args:
             address: Address.
             comment: Comment text.
@@ -2794,11 +2913,13 @@ metadata
             bool: True if added.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If Ghidra is not connected, no code unit exists
+                at ``address``, the write fails, or the readback does
+                not match the requested comment.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         comment_map = {
@@ -2810,21 +2931,56 @@ metadata
         ghidra_type = comment_map.get(comment_type, "CodeUnit.EOL_COMMENT")
 
         try:
-            await self._execute_remote(f"""
-                from ghidra.program.model.listing import CodeUnit
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.listing import CodeUnit
 
-                addr = toAddr({address})
-                cu = currentProgram.getListing().getCodeUnitAt(addr)
-                if cu is not None:
+                    addr = toAddr({address})
+                    cu = currentProgram.getListing().getCodeUnitAt(addr)
+                    if cu is None:
+                        raise RuntimeError('No code unit at ' + str(addr))
                     cu.setComment({ghidra_type}, {json.dumps(comment)})
-            """)
-
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
         except Exception as e:
             _logger.warning("ghidra_add_comment_failed", address=hex(address), error=str(e))
             error_message = f"Add comment failed: {e}"
             raise ToolError(error_message) from e
 
-        _logger.info("comment_added", address=hex(address))
+        try:
+            readback = await self._execute_remote_eval(
+                textwrap.dedent(
+                    f"""
+                    (lambda cu: cu.getComment({ghidra_type}) if cu is not None else None)(
+                        currentProgram.getListing().getCodeUnitAt(toAddr({address}))
+                    )
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_add_comment_readback_failed", address=hex(address), error=str(e))
+            error_message = f"Add comment readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        observed = "" if readback is None else str(readback)
+        if observed != comment:
+            _logger.error(
+                "ghidra_add_comment_verification_failed",
+                address=hex(address),
+                comment_type=comment_type,
+                expected_length=len(comment),
+                observed_length=len(observed),
+            )
+            msg = f"Comment verification failed at {hex(address)}: comment did not round-trip"
+            raise ToolError(msg)
+
+        _logger.info("comment_added", address=hex(address), comment_type=comment_type)
         return True
 
     async def get_imports(self) -> list[ImportInfo]:
@@ -3056,6 +3212,14 @@ metadata
     async def set_label(self, address: int, name: str) -> dict[str, Any]:
         """Create or modify a label at an address.
 
+        After issuing ``createLabel`` the bridge re-queries
+        ``SymbolTable.getSymbols(addr)`` via ``remote_eval`` and verifies
+        that the requested name appears among the labels actually
+        attached to ``address``. This catches the previous failure mode
+        where ``createLabel`` rejected an invalid name (empty string,
+        duplicate primary label, etc.) but the bridge still reported
+        ``success: True``.
+
         Args:
             address: Address for the label.
             name: Label name.
@@ -3064,20 +3228,57 @@ metadata
             dict[str, Any]: Dict with address, name, and success status.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, the create call
+                fails, or the readback does not include ``name`` among
+                the symbols at ``address``.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.debug("label_setting", address=hex(address), label_name=name)
-        await self._execute_remote(f"""
-            from ghidra.program.model.symbol import SourceType
-            addr = toAddr({address})
-            st = currentProgram.getSymbolTable()
-            st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)
-        """)
+        try:
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.symbol import SourceType
+                    addr = toAddr({address})
+                    st = currentProgram.getSymbolTable()
+                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_set_label_failed", address=hex(address), label_name=name, error=str(exc))
+            error_message = f"Set label failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        try:
+            readback = await self._execute_remote_eval(
+                f"[s.getName() for s in currentProgram.getSymbolTable().getSymbols(toAddr({address}))]",
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_set_label_readback_failed", address=hex(address), error=str(exc))
+            error_message = f"Set label readback failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        names = [str(item) for item in cast("list[Any]", readback)] if isinstance(readback, list) else []
+        if name not in names:
+            _logger.error(
+                "ghidra_set_label_verification_failed",
+                address=hex(address),
+                expected_name=name,
+                observed_names=names,
+            )
+            msg = f"Label verification failed at {hex(address)}: expected {name!r}, observed {names!r}"
+            raise ToolError(msg)
+
+        _logger.info("ghidra_label_set_verified", address=hex(address), label_name=name)
         return {"address": hex(address), "name": name, "success": True}
 
     async def get_labels(self, address: int, radius: int = 0x100) -> list[dict[str, Any]]:
@@ -3135,6 +3336,10 @@ metadata
     ) -> dict[str, Any]:
         """Create an analysis bookmark at an address.
 
+        After ``BookmarkManager.setBookmark`` returns, the bridge
+        re-queries ``getBookmarks(addr, type)`` via ``remote_eval`` and
+        verifies the requested ``category`` and ``comment`` round-trip.
+
         Args:
             address: Address to bookmark.
             category: Bookmark category.
@@ -3145,18 +3350,71 @@ metadata
             dict[str, Any]: Dict with address, category, comment, bookmark_type, and success status.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, the bookmark write
+                fails, or the readback does not include the requested
+                ``(category, comment)`` for ``bookmark_type``.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.debug("bookmark_creating", address=hex(address), category=category, bookmark_type=bookmark_type)
-        await self._execute_remote(f"""
-            bm = currentProgram.getBookmarkManager()
-            bm.setBookmark(toAddr({address}), {json.dumps(bookmark_type)}, {json.dumps(category)}, {json.dumps(comment)})
-        """)
+        try:
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    bm = currentProgram.getBookmarkManager()
+                    bm.setBookmark(toAddr({address}), {json.dumps(bookmark_type)}, {json.dumps(category)}, {json.dumps(comment)})
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_create_bookmark_failed", address=hex(address), error=str(exc))
+            error_message = f"Create bookmark failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        try:
+            readback = await self._execute_remote_eval(
+                f"[(b.getCategory(), b.getComment()) "
+                f"for b in currentProgram.getBookmarkManager().getBookmarks("
+                f"toAddr({address}), {json.dumps(bookmark_type)})]",
+            )
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.warning("ghidra_create_bookmark_readback_failed", address=hex(address), error=str(exc))
+            error_message = f"Create bookmark readback failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        pairs: list[tuple[str, str]] = []
+        if isinstance(readback, list):
+            for entry in cast("list[Any]", readback):
+                if not isinstance(entry, list | tuple):
+                    continue
+                seq = cast("list[Any] | tuple[Any, ...]", entry)
+                if len(seq) < _BOOKMARK_READBACK_PAIR_LEN:
+                    continue
+                pairs.append((str(seq[0]), str(seq[1])))
+        if (category, comment) not in pairs:
+            _logger.error(
+                "ghidra_create_bookmark_verification_failed",
+                address=hex(address),
+                bookmark_type=bookmark_type,
+                expected_category=category,
+                observed=pairs,
+            )
+            msg = f"Bookmark verification failed at {hex(address)}: ({category!r}, {comment!r}) not in {pairs!r}"
+            raise ToolError(msg)
+
+        _logger.info(
+            "ghidra_bookmark_created_verified",
+            address=hex(address),
+            category=category,
+            bookmark_type=bookmark_type,
+        )
         return {"address": hex(address), "category": category, "comment": comment, "bookmark_type": bookmark_type, "success": True}
 
     async def get_bookmarks(self, category: str | None = None) -> list[dict[str, Any]]:
@@ -4530,6 +4788,13 @@ metadata
     async def add_reference(self, from_addr: int, to_addr: int, ref_type: str = "DATA") -> dict[str, Any]:
         """Add a memory reference between two addresses.
 
+        After ``ReferenceManager.addMemoryReference`` returns, the
+        bridge re-queries ``getReferencesFrom(from_addr)`` via
+        ``remote_eval`` and verifies a reference targeting ``to_addr``
+        is present. This catches the previous failure mode where the
+        write call succeeded but Ghidra silently rejected the
+        ``RefType``/``SourceType`` combination.
+
         Args:
             from_addr: Source address.
             to_addr: Destination address.
@@ -4539,39 +4804,83 @@ metadata
             dict[str, Any]: Dict with from, to, type, and success.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, the write fails, or
+                the readback does not include a reference from
+                ``from_addr`` targeting ``to_addr``.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.debug("reference_adding", from_addr=hex(from_addr), to_addr=hex(to_addr), ref_type=ref_type)
         ref_type_literal = json.dumps(ref_type)
         try:
-            await self._execute_remote(f"""
-                from ghidra.program.model.symbol import RefType, SourceType
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    from ghidra.program.model.symbol import RefType, SourceType
 
-                from_address = toAddr({from_addr})
-                to_address = toAddr({to_addr})
-                ref_type_str = {ref_type_literal}
+                    from_address = toAddr({from_addr})
+                    to_address = toAddr({to_addr})
+                    ref_type_str = {ref_type_literal}
 
-                ref_type_map = {{
-                    'DATA': RefType.DATA,
-                    'READ': RefType.READ,
-                    'WRITE': RefType.WRITE,
-                    'CALL': RefType.UNCONDITIONAL_CALL,
-                    'UNCONDITIONAL_JUMP': RefType.UNCONDITIONAL_JUMP,
-                    'CONDITIONAL_JUMP': RefType.CONDITIONAL_JUMP,
-                }}
-                rt = ref_type_map.get(ref_type_str, RefType.DATA)
-                refMgr = currentProgram.getReferenceManager()
-                refMgr.addMemoryReference(from_address, to_address, rt, SourceType.USER_DEFINED, 0)
-            """)
-            return {"from": hex(from_addr), "to": hex(to_addr), "type": ref_type, "success": True}
+                    ref_type_map = {{
+                        'DATA': RefType.DATA,
+                        'READ': RefType.READ,
+                        'WRITE': RefType.WRITE,
+                        'CALL': RefType.UNCONDITIONAL_CALL,
+                        'UNCONDITIONAL_JUMP': RefType.UNCONDITIONAL_JUMP,
+                        'CONDITIONAL_JUMP': RefType.CONDITIONAL_JUMP,
+                    }}
+                    rt = ref_type_map.get(ref_type_str, RefType.DATA)
+                    refMgr = currentProgram.getReferenceManager()
+                    refMgr.addMemoryReference(from_address, to_address, rt, SourceType.USER_DEFINED, 0)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
         except Exception as e:
+            _logger.warning("ghidra_add_reference_failed", from_addr=hex(from_addr), to_addr=hex(to_addr), error=str(e))
             error_message = f"Add reference failed: {e}"
             raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                f"[r.getToAddress().getOffset() for r in currentProgram.getReferenceManager().getReferencesFrom(toAddr({from_addr}))]",
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_add_reference_readback_failed", from_addr=hex(from_addr), error=str(e))
+            error_message = f"Add reference readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        targets: list[int] = []
+        if isinstance(readback, list):
+            for offset in cast("list[Any]", readback):
+                try:
+                    targets.append(int(offset))
+                except (TypeError, ValueError):
+                    continue
+        if to_addr not in targets:
+            _logger.error(
+                "ghidra_add_reference_verification_failed",
+                from_addr=hex(from_addr),
+                to_addr=hex(to_addr),
+                observed_targets=[hex(t) for t in targets],
+            )
+            msg = f"Reference verification failed: {hex(from_addr)} -> {hex(to_addr)} not present in {[hex(t) for t in targets]!r}"
+            raise ToolError(msg)
+
+        _logger.info(
+            "ghidra_reference_added_verified",
+            from_addr=hex(from_addr),
+            to_addr=hex(to_addr),
+            ref_type=ref_type,
+        )
+        return {"from": hex(from_addr), "to": hex(to_addr), "type": ref_type, "success": True}
 
     async def delete_reference(self, from_addr: int, to_addr: int) -> dict[str, Any]:
         """Delete a memory reference between two addresses.
@@ -4742,6 +5051,12 @@ metadata
     async def create_equate(self, address: int, value: int, name: str) -> dict[str, Any]:
         """Create an equate (named constant) and attach it to an address.
 
+        After ``EquateTable.createEquate`` and ``Equate.addReference``
+        return, the bridge re-queries the equate by name via
+        ``remote_eval`` and verifies that the stored value matches
+        ``value`` and that ``address`` appears in the equate's
+        reference set.
+
         Args:
             address: Address of the scalar operand.
             value: Numeric value of the equate.
@@ -4751,29 +5066,82 @@ metadata
             dict[str, Any]: Dict with name, value, address, and success.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, the create call
+                fails, or the readback shows the equate was not
+                persisted with ``value`` and a reference at
+                ``address``.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.debug("equate_creating", equate_name=name, value=value, address=hex(address))
         try:
-            await self._execute_remote(f"""
-                addr = toAddr({address})
-                eqTable = currentProgram.getEquateTable()
-                existing = eqTable.getEquate({json.dumps(name)})
-                if existing is None:
-                    eq = eqTable.createEquate({json.dumps(name)}, {value})
-                else:
-                    eq = existing
-                eq.addReference(addr, 0)
-            """)
-            return {"name": name, "value": value, "address": hex(address), "success": True}
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    addr = toAddr({address})
+                    eqTable = currentProgram.getEquateTable()
+                    existing = eqTable.getEquate({json.dumps(name)})
+                    if existing is None:
+                        eq = eqTable.createEquate({json.dumps(name)}, {value})
+                    else:
+                        eq = existing
+                    eq.addReference(addr, 0)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
         except Exception as e:
+            _logger.warning("ghidra_create_equate_failed", equate_name=name, address=hex(address), error=str(e))
             error_message = f"Create equate failed: {e}"
             raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                textwrap.dedent(
+                    f"""
+                    (lambda eq: None if eq is None else {{
+                        'value': long(eq.getValue()),
+                        'addresses': [r.getAddress().getOffset() for r in eq.getReferences()],
+                    }})(currentProgram.getEquateTable().getEquate({json.dumps(name)}))
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_create_equate_readback_failed", equate_name=name, error=str(e))
+            error_message = f"Create equate readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        info = cast("dict[str, Any]", readback) if isinstance(readback, dict) else None
+        if info is None:
+            _logger.error("ghidra_create_equate_verification_failed", equate_name=name, reason="missing")
+            msg = f"Equate verification failed: equate {name!r} not found after create"
+            raise ToolError(msg)
+        observed_value = int(info.get("value", 0))
+        observed_addrs = [int(a) for a in cast("list[Any]", info.get("addresses", [])) if isinstance(a, int | float)]
+        if observed_value != value or address not in observed_addrs:
+            _logger.error(
+                "ghidra_create_equate_verification_failed",
+                equate_name=name,
+                expected_value=value,
+                observed_value=observed_value,
+                expected_address=hex(address),
+                observed_addresses=[hex(a) for a in observed_addrs],
+            )
+            msg = (
+                f"Equate verification failed for {name!r}: "
+                f"expected value={value} address={hex(address)}, "
+                f"observed value={observed_value} addresses={[hex(a) for a in observed_addrs]!r}"
+            )
+            raise ToolError(msg)
+
+        _logger.info("ghidra_equate_created_verified", equate_name=name, value=value, address=hex(address))
+        return {"name": name, "value": value, "address": hex(address), "success": True}
 
     async def get_equates(self) -> list[dict[str, Any]]:
         """List all equates defined in the program.
@@ -5807,6 +6175,13 @@ metadata
         so the color survives reload even when no colorizing service is
         registered.
 
+        In headless mode (``SystemUtilities.isInHeadlessMode()`` true),
+        the ``IntPropertyMap`` fallback has no visual effect and no
+        consumer in the Ghidra UI - it would be a silent no-op. This
+        method therefore raises :class:`ToolError` when the
+        ``ColorizingService`` is not available *and* the bridge is
+        running headless, instead of returning ``success: True``.
+
         Args:
             address: Address to colorize.
             color: RGB color as integer (0xRRGGBB).
@@ -5815,67 +6190,80 @@ metadata
             dict[str, Any]: Dict with address, color, backend used, and success.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, neither colorization
+                backend can persist the color, or the bridge is running
+                headless without an interactive ``ColorizingService``.
         """
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
         _logger.debug("color_setting", address=hex(address), color=hex(color))
         try:
-            result = await self._execute_remote(f"""
-                import java.awt.Color as JColor
+            result = await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    import java.awt.Color as JColor
+                    from ghidra.framework import SystemUtilities
 
-                addr = toAddr({address})
-                color_int = {color}
-                r = (color_int >> 16) & 0xFF
-                g = (color_int >> 8) & 0xFF
-                b = color_int & 0xFF
-                col = JColor(r, g, b)
-                backend = 'none'
-                applied = False
-                error_msg = None
+                    addr = toAddr({address})
+                    color_int = {color}
+                    r = (color_int >> 16) & 0xFF
+                    g = (color_int >> 8) & 0xFF
+                    b = color_int & 0xFF
+                    col = JColor(r, g, b)
+                    backend = 'none'
+                    applied = False
+                    error_msg = None
+                    is_headless = bool(SystemUtilities.isInHeadlessMode())
 
-                tx_id = currentProgram.startTransaction('intellicrack.set_color')
-                commit_ok = False
-                try:
+                    tx_id = currentProgram.startTransaction('intellicrack.set_color')
+                    commit_ok = False
                     try:
-                        from ghidra.app.plugin.core.colorizer import ColorizingService
-                        from ghidra.framework.plugintool import PluginTool
-                        svc = None
                         try:
-                            tool_obj = state.getTool()
-                            if tool_obj is not None:
-                                svc = tool_obj.getService(ColorizingService)
-                        except Exception:
+                            from ghidra.app.plugin.core.colorizer import ColorizingService
                             svc = None
-                        if svc is not None:
-                            svc.setBackgroundColor(addr, addr, col)
-                            backend = 'colorizing_service'
-                            applied = True
-                    except Exception as _svc_exc:
-                        error_msg = str(_svc_exc)
+                            try:
+                                tool_obj = state.getTool()
+                                if tool_obj is not None:
+                                    svc = tool_obj.getService(ColorizingService)
+                            except Exception:
+                                svc = None
+                            if svc is not None:
+                                svc.setBackgroundColor(addr, addr, col)
+                                backend = 'colorizing_service'
+                                applied = True
+                        except Exception as _svc_exc:
+                            error_msg = str(_svc_exc)
 
-                    if not applied:
-                        try:
-                            upm = currentProgram.getUsrPropertyManager()
-                            prop_name = 'IntellicrackColorMap'
-                            prop_map = upm.getIntPropertyMap(prop_name)
-                            if prop_map is None:
-                                prop_map = upm.createIntPropertyMap(prop_name)
-                            prop_map.add(addr, color_int & 0xFFFFFF)
-                            backend = 'int_property_map'
-                            applied = True
-                            error_msg = None
-                        except Exception as _map_exc:
-                            if error_msg is None:
-                                error_msg = str(_map_exc)
+                        if not applied:
+                            if is_headless:
+                                error_msg = (
+                                    'set_color requires an interactive Ghidra ColorizingService; '
+                                    'IntPropertyMap fallback has no visual effect in headless mode'
+                                )
+                            else:
+                                try:
+                                    upm = currentProgram.getUsrPropertyManager()
+                                    prop_name = 'IntellicrackColorMap'
+                                    prop_map = upm.getIntPropertyMap(prop_name)
+                                    if prop_map is None:
+                                        prop_map = upm.createIntPropertyMap(prop_name)
+                                    prop_map.add(addr, color_int & 0xFFFFFF)
+                                    backend = 'int_property_map'
+                                    applied = True
+                                    error_msg = None
+                                except Exception as _map_exc:
+                                    if error_msg is None:
+                                        error_msg = str(_map_exc)
 
-                    commit_ok = applied
-                finally:
-                    currentProgram.endTransaction(tx_id, commit_ok)
+                        commit_ok = applied
+                    finally:
+                        currentProgram.endTransaction(tx_id, commit_ok)
 
-                {{'applied': applied, 'backend': backend, 'error': error_msg}}
-            """)
+                    {{'applied': applied, 'backend': backend, 'error': error_msg, 'headless': is_headless}}
+                    """,
+                ),
+            )
         except ToolError:
             raise
         except Exception as exc:
@@ -5886,6 +6274,12 @@ metadata
         info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
         if not bool(info.get("applied", False)):
             err = info.get("error") or "color could not be persisted"
+            _logger.warning(
+                "ghidra_set_color_unapplied",
+                address=hex(address),
+                headless=bool(info.get("headless", False)),
+                error=str(err),
+            )
             msg = f"Set color failed: {err}"
             raise ToolError(msg)
 
@@ -5903,6 +6297,11 @@ metadata
     ) -> dict[str, Any]:
         """Set program name and/or image base address.
 
+        After ``Program.setName`` / ``Program.setImageBase`` return, the
+        bridge re-queries ``getName()`` and ``getImageBase().getOffset()``
+        via ``remote_eval`` and verifies each requested change is
+        observable on the live program.
+
         Args:
             name: New program name, or None to leave unchanged.
             image_base: New image base address, or None to leave unchanged.
@@ -5911,29 +6310,74 @@ metadata
             dict[str, Any]: Dict with name, image_base, and success.
 
         Raises:
-            ToolError: If Ghidra is not connected or operation fails.
+            ToolError: If Ghidra is not connected, the write fails, or
+                the readback does not reflect the requested changes.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
-            error_message = "Ghidra not connected"
+            error_message = _ERR_NOT_CONNECTED
             raise ToolError(error_message)
 
         _logger.info("program_metadata_setting", prog_name=name, image_base=image_base)
         name_literal = json.dumps(name) if name else "None"
         image_base_literal = str(image_base) if image_base is not None else "None"
         try:
-            await self._execute_remote(f"""
-                new_name = {name_literal}
-                new_base = {image_base_literal}
-                if new_name is not None:
-                    currentProgram.setName(new_name)
-                if new_base is not None:
-                    currentProgram.setImageBase(toAddr(new_base), True)
-            """)
-            return {"name": name, "image_base": hex(image_base) if image_base is not None else None, "success": True}
+            await self._execute_remote(
+                textwrap.dedent(
+                    f"""
+                    new_name = {name_literal}
+                    new_base = {image_base_literal}
+                    if new_name is not None:
+                        currentProgram.setName(new_name)
+                    if new_base is not None:
+                        currentProgram.setImageBase(toAddr(new_base), True)
+                    """,
+                ),
+            )
+        except ToolError:
+            raise
         except Exception as e:
+            _logger.warning("ghidra_set_program_metadata_failed", prog_name=name, error=str(e))
             error_message = f"Set program metadata failed: {e}"
             raise ToolError(error_message) from e
+
+        try:
+            readback = await self._execute_remote_eval(
+                "{'name': currentProgram.getName(), 'image_base': currentProgram.getImageBase().getOffset()}",
+            )
+        except ToolError:
+            raise
+        except Exception as e:
+            _logger.warning("ghidra_set_program_metadata_readback_failed", error=str(e))
+            error_message = f"Set program metadata readback failed: {e}"
+            raise ToolError(error_message) from e
+
+        info = cast("dict[str, Any]", readback) if isinstance(readback, dict) else {}
+        observed_name = str(info.get("name", "")) if info else ""
+        observed_base = int(info.get("image_base", 0)) if info else 0
+        if name is not None and observed_name != name:
+            _logger.error(
+                "ghidra_set_program_metadata_verification_failed",
+                expected_name=name,
+                observed_name=observed_name,
+            )
+            msg = f"Program name verification failed: expected {name!r}, observed {observed_name!r}"
+            raise ToolError(msg)
+        if image_base is not None and observed_base != image_base:
+            _logger.error(
+                "ghidra_set_program_metadata_verification_failed",
+                expected_image_base=hex(image_base),
+                observed_image_base=hex(observed_base),
+            )
+            msg = f"Program image base verification failed: expected {hex(image_base)}, observed {hex(observed_base)}"
+            raise ToolError(msg)
+
+        _logger.info(
+            "ghidra_program_metadata_set_verified",
+            prog_name=observed_name,
+            image_base=hex(observed_base),
+        )
+        return {"name": name, "image_base": hex(image_base) if image_base is not None else None, "success": True}
 
     async def execute_script_with_params(self, code: str, params: dict[str, Any] | None = None) -> str:
         """Execute Jython code with a JSON params dict injected as a local variable.
@@ -6664,4 +7108,46 @@ metadata
         except Exception as exc:
             _logger.exception("ghidra_remote_eval_failed", sentinel=sentinel)
             error_message = f"Remote evaluation failed: {exc}"
+            raise ToolError(error_message) from exc
+
+    async def _execute_remote_eval(self, expression: str) -> object:
+        """Evaluate a single Jython expression remotely and return its value.
+
+        ``remote_eval`` ships a single expression to the bridge server and
+        returns the evaluated result, in contrast to ``remote_exec`` which
+        always returns ``None``. This is the canonical primitive for
+        readback verification: after a write, issue an eval that reads the
+        property back so the client can compare it to the requested value.
+
+        The expression is dedented before transmission so callers can
+        embed multi-line conditional expressions inside f-strings without
+        triggering ``IndentationError`` on the remote ``compile``.
+
+        Args:
+            expression: A single Jython expression evaluated on the
+                Ghidra bridge server. Must not be a statement.
+
+        Returns:
+            object: The value the expression evaluates to on the server.
+
+        Raises:
+            ToolError: If the bridge is not connected, the bridge runtime
+                does not expose ``remote_eval``, or the server raises
+                while evaluating.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
+        if remote_eval_attr is None:
+            error_message = "Ghidra bridge missing remote_eval"
+            raise ToolError(error_message)
+        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
+
+        dedented = textwrap.dedent(expression).strip()
+        try:
+            return await asyncio.to_thread(remote_eval, dedented)
+        except Exception as exc:
+            _logger.exception("ghidra_remote_eval_failed")
+            error_message = f"Remote eval failed: {exc}"
             raise ToolError(error_message) from exc
