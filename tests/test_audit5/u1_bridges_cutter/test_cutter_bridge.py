@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -26,7 +27,7 @@ from intellicrack.bridges.cutter import (
     is_rizin_64bit,
     validate_r2_argument,
 )
-from intellicrack.core.process_manager import ProcessManager
+from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import ToolError
 
 
@@ -574,13 +575,25 @@ class TestF0020SearchStringsNoAnalysisGate:
 def _force_register_pid(bridge: CutterBridge, pid: int) -> None:
     """Drive the bridge through the same internal handler used at load time.
 
+    Bypasses :meth:`ProcessManager.register_external_pid` so the test can use a
+    synthetic PID that does not correspond to a live OS process.
+
     Args:
         bridge: Bridge instance under test.
         pid: Synthetic PID for the test.
     """
     bridge.state.target_pid = pid
-    register = ProcessManager.get_instance().register_external_pid
-    register(pid, name=f"cutter-test-{pid}")
+    pm = ProcessManager.get_instance()
+    registry = cast(
+        "dict[int, dict[str, object]]",
+        getattr(pm, "_external_pids"),
+    )
+    registry[pid] = {
+        "name": f"cutter-test-{pid}",
+        "process_type": ProcessType.EXTERNAL_TOOL,
+        "metadata": {},
+        "registered_at": datetime.now(tz=UTC),
+    }
 
 
 class TestF0024ShutdownAlwaysRunsSuper:

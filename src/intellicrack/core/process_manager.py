@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import ctypes
+import os
 import signal
 import sys
 import threading
@@ -19,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
+from pathlib import Path
 from types import FrameType
 from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
@@ -39,6 +42,109 @@ _logger = get_logger(__name__)
 _WIN_PROCESS_TERMINATE = 1
 _SIGNAL_SIGKILL = 9
 _SIGNAL_SIGTERM = 15
+
+_WIN_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+_WIN_PROCESS_QUERY_INFORMATION = 0x0400
+_WIN_INVALID_PARAMETER = 87
+_WIN_ACCESS_DENIED = 5
+
+_atexit_registered_globally: bool = False
+_atexit_guard_lock: threading.Lock = threading.Lock()
+
+
+def _pid_exists(pid: int) -> bool:
+    """Check whether a process with the given PID exists on the host OS.
+
+    Uses ``kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, ...)`` on
+    Windows (falling back to ``PROCESS_QUERY_INFORMATION`` on older systems).
+    On POSIX systems, checks for ``/proc/<pid>`` membership and falls back to
+    ``os.kill(pid, 0)`` semantics. The PID ``0`` is treated as never existing
+    because the OS reserves it for the idle/system process and cannot be a
+    normal external process to manage.
+
+    Args:
+        pid: The process identifier to verify.
+
+    Returns:
+        bool: True when a live process is detected for ``pid``; False when the
+            PID is invalid, dead, or impossible to verify.
+    """
+    if pid <= 0:
+        return False
+
+    if sys.platform == "win32":
+        return _pid_exists_windows(pid)
+    return _pid_exists_posix(pid)
+
+
+def _pid_exists_windows(pid: int) -> bool:
+    """Verify a PID exists on Windows by attempting to open a handle.
+
+    Args:
+        pid: The Windows process identifier.
+
+    Returns:
+        bool: True when ``OpenProcess`` returns a non-NULL handle, indicating
+            the process is alive; False when the kernel refuses with
+            ``ERROR_INVALID_PARAMETER`` (no such PID).
+    """
+    windll = getattr(ctypes, "windll", None)
+    if windll is None:
+        return psutil.pid_exists(pid)
+    kernel32 = windll.kernel32
+    open_process = kernel32.OpenProcess
+    open_process.restype = ctypes.c_void_p
+    open_process.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32]
+
+    handle = cast("int | None", open_process(_WIN_PROCESS_QUERY_LIMITED_INFORMATION, 0, pid))
+    if not handle:
+        last_error = kernel32.GetLastError()
+        if last_error == _WIN_ACCESS_DENIED:
+            return True
+        if last_error == _WIN_INVALID_PARAMETER:
+            return False
+        handle = cast("int | None", open_process(_WIN_PROCESS_QUERY_INFORMATION, 0, pid))
+        if not handle:
+            second_error = kernel32.GetLastError()
+            return second_error == _WIN_ACCESS_DENIED
+
+    try:
+        exit_code = ctypes.c_uint32(0)
+        get_exit = kernel32.GetExitCodeProcess
+        get_exit.restype = ctypes.c_int
+        get_exit.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32)]
+        if get_exit(handle, ctypes.byref(exit_code)) == 0:
+            return True
+        still_active = 259
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _pid_exists_posix(pid: int) -> bool:
+    """Verify a PID exists on POSIX systems via ``/proc`` and ``os.kill``.
+
+    Args:
+        pid: The POSIX process identifier.
+
+    Returns:
+        bool: True when ``/proc/<pid>`` is present or ``os.kill(pid, 0)``
+            indicates the process is alive; False when the kernel reports
+            ``ESRCH``.
+    """
+    proc_path = Path("/proc") / str(pid)
+    if proc_path.exists():
+        return True
+
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
 
 
 class ProcessStateError(RuntimeError):
@@ -224,12 +330,20 @@ class ProcessManager:
     def install_handlers(self) -> None:
         """Install signal handlers and atexit hook for cleanup.
 
-        This should be called once during application startup, typically in main.py before any processes are spawned.
+        This should be called once during application startup, typically in
+        ``main.py`` before any processes are spawned. The atexit hook is
+        registered at most once per Python interpreter — even when
+        :meth:`reset_instance` is invoked between calls — using a
+        module-level guard so cleanup never executes twice on shutdown.
         """
         if self.atexit_registered:
             return
 
-        atexit.register(self._atexit_cleanup)
+        global _atexit_registered_globally  # noqa: PLW0603
+        with _atexit_guard_lock:
+            if not _atexit_registered_globally:
+                atexit.register(ProcessManager._atexit_cleanup_global)
+                _atexit_registered_globally = True
         self.atexit_registered = True
 
         if sys.platform != "win32":
@@ -266,16 +380,39 @@ class ProcessManager:
                 _logger.exception("signal_handler_uninstall_failed")
 
         if self.atexit_registered:
-            try:
-                atexit.unregister(self._atexit_cleanup)
-            except (TypeError, OSError) as exc:
-                _logger.warning("atexit_unregister_failed", error=str(exc))
             self.atexit_registered = False
 
         ProcessManager._get_logger().info("handlers_uninstalled")
 
+    @staticmethod
+    def _atexit_cleanup_global() -> None:
+        """Global atexit hook that delegates to the active singleton.
+
+        Registered once per interpreter via :meth:`install_handlers`. If no
+        :class:`ProcessManager` singleton exists (because callers reset it),
+        this is a no-op and exit proceeds without spurious work.
+        """
+        instance = ProcessManager._instance
+        if instance is None:
+            return
+        instance.run_atexit_cleanup()
+
+    def run_atexit_cleanup(self) -> None:
+        """Public entry point that runs the at-exit cleanup once.
+
+        Delegates to :meth:`_atexit_cleanup`; provided so the global hook can
+        invoke instance cleanup without violating member-access lint rules.
+        """
+        self._atexit_cleanup()
+
     def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
         """Handle termination signals by triggering cleanup.
+
+        Returns control to the interpreter immediately so the OS-level signal
+        handler does not block other system activity. When an asyncio loop is
+        running, the cleanup coroutine is scheduled thread-safely. Otherwise a
+        background daemon thread runs :meth:`_sync_cleanup` so the original
+        handler delegate fires without waiting on process termination.
 
         Args:
             signum: The signal number received.
@@ -291,7 +428,12 @@ class ProcessManager:
             loop.call_soon_threadsafe(lambda: asyncio.create_task(self.cleanup_all_async()))
         except RuntimeError:
             logger.warning("no_running_event_loop_for_async_cleanup")
-            self._sync_cleanup()
+            cleanup_thread = threading.Thread(
+                target=self._sync_cleanup,
+                name="ProcessManagerSignalCleanup",
+                daemon=True,
+            )
+            cleanup_thread.start()
 
         if (
             self._original_sigint_handler not in {None, signal.SIG_DFL, signal.SIG_IGN}
@@ -301,16 +443,19 @@ class ProcessManager:
             self._original_sigint_handler(signum, frame)
 
     def _atexit_cleanup(self) -> None:
-        """Cleanup handler for normal program exit."""
+        """Cleanup handler for normal program exit.
+
+        Delegates to :meth:`_sync_cleanup`, which terminates every tracked
+        subprocess and external PID along with their descendants in a single
+        pass. The historical implementation invoked
+        :meth:`_terminate_process_sync` for each tracked entry before calling
+        :meth:`_sync_cleanup`, causing every process tree to be walked twice
+        and adding tens of seconds of latency to interpreter shutdown.
+        """
         if self._cleanup_in_progress:
             return
 
         ProcessManager._get_logger().info("atexit_cleanup_triggered")
-        with self._process_lock:
-            tracked = list(self._processes.values())
-        for t in tracked:
-            if t.is_running:
-                ProcessManager._terminate_process_sync(t.process)
         self._sync_cleanup()
         ProcessManager.reset_instance()
 
@@ -944,16 +1089,30 @@ class ProcessManager:
     ) -> None:
         """Register an external process by PID for cleanup tracking.
 
-        Use this for processes not directly spawned by subprocess (e.g., daemonized
-        processes) that should be terminated when the application exits.
+        Use this for processes not directly spawned by subprocess (e.g.,
+        daemonized processes) that should be terminated when the application
+        exits. Verifies the PID corresponds to a live OS process via
+        :func:`_pid_exists` before registering.
 
         Args:
             pid: The process ID to track.
             name: Human-readable name for the process.
             process_type: Type of process being tracked.
             metadata: Optional metadata about the process.
+
+        Raises:
+            ValueError: If ``pid`` does not correspond to a live process.
         """
         logger = ProcessManager._get_logger()
+
+        if not _pid_exists(pid):
+            logger.warning(
+                "external_pid_register_rejected_dead_pid",
+                process_name=name,
+                pid=pid,
+            )
+            msg = f"cannot register external PID {pid}: process does not exist"
+            raise ValueError(msg)
 
         with self._process_lock:
             if pid in self._processes or pid in self._external_pids:

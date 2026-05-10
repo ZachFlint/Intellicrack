@@ -50,6 +50,16 @@ _ERR_NOT_CALLABLE = "not callable"
 _ERR_CALL_FAILED = "call failed"
 _ERR_MISSING_CAPABILITY = "missing capability"
 
+_LOCAL_INIT_TOOLS: frozenset[ToolName] = frozenset(
+    {
+        ToolName.PROCESS,
+        ToolName.FRIDA,
+        ToolName.SANDBOX,
+        ToolName.HEX_EDITOR,
+        ToolName.CUTTER,
+    },
+)
+
 
 @dataclass
 class ToolStatus:
@@ -133,13 +143,7 @@ class ToolRegistry:
             bridge_names=[n.value for n in self._bridges],
         )
 
-        init_targets = (
-            ToolName.PROCESS,
-            ToolName.FRIDA,
-            ToolName.SANDBOX,
-            ToolName.HEX_EDITOR,
-        )
-        for tool_name in init_targets:
+        for tool_name in _LOCAL_INIT_TOOLS:
             if tool_name in self._bridges:
                 try:
                     await self._bridges[tool_name].initialize()
@@ -171,7 +175,7 @@ class ToolRegistry:
 
         bridge = self._bridges[name]
 
-        if name in {ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
+        if name in _LOCAL_INIT_TOOLS:
             if not await bridge.is_available():
                 await bridge.initialize()
             return await bridge.is_available()
@@ -193,7 +197,15 @@ class ToolRegistry:
         return success
 
     async def shutdown(self) -> None:
-        """Shutdown all tool bridges."""
+        """Shutdown all tool bridges.
+
+        Clears ``self._bridges`` after every bridge has been shut down so a
+        subsequent call to :meth:`initialize` rebuilds the registry from
+        scratch instead of reusing closed bridge instances. Without this,
+        callers observing ``_bridges`` after shutdown would see references to
+        bridges whose underlying tool processes have been terminated.
+        """
+        bridge_count = len(self._bridges)
         for name, bridge in self._bridges.items():
             try:
                 await bridge.shutdown()
@@ -201,8 +213,9 @@ class ToolRegistry:
             except (OSError, RuntimeError, ToolError) as e:
                 _logger.warning("bridge_shutdown_error", bridge_name=name.value, error=str(e))
 
+        self._bridges.clear()
         self._initialized = False
-        _logger.info("tool_registry_shutdown", bridge_count=len(self._bridges))
+        _logger.info("tool_registry_shutdown", bridge_count=bridge_count)
 
     def get(self, name: ToolName) -> ToolBridgeBase | None:
         """Get a tool bridge by name.
@@ -366,7 +379,7 @@ class ToolRegistry:
             version = None
             path = None
 
-            if name not in {ToolName.PROCESS, ToolName.FRIDA, ToolName.SANDBOX, ToolName.HEX_EDITOR}:
+            if name not in _LOCAL_INIT_TOOLS:
                 try:
                     path = await self._installer.find_tool(name)
                     if path is not None:
@@ -388,7 +401,7 @@ class ToolRegistry:
             )
 
         except (OSError, RuntimeError, ToolError) as e:
-            _logger.warning("tool_status_check_failed", tool=name, error=str(e))
+            _logger.warning("tool_status_check_failed", tool_name=name.value, error=str(e))
             return ToolStatus(
                 name=name,
                 available=False,

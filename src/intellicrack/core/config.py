@@ -199,6 +199,18 @@ def _default_providers() -> dict[ProviderName, ProviderConfig]:
             timeout_seconds=120,
             max_retries=3,
         ),
+        ProviderName.HUGGINGFACE: ProviderConfig(
+            enabled=True,
+            api_base="https://api-inference.huggingface.co",
+            timeout_seconds=120,
+            max_retries=3,
+        ),
+        ProviderName.GROK: ProviderConfig(
+            enabled=True,
+            api_base="https://api.x.ai/v1",
+            timeout_seconds=120,
+            max_retries=3,
+        ),
         ProviderName.LOCAL_TRANSFORMERS: ProviderConfig(
             enabled=True,
             default_model="microsoft/Phi-3-mini-4k-instruct",
@@ -342,6 +354,12 @@ class Config:
     def parse_providers(providers_data: dict[str, Any]) -> dict[ProviderName, ProviderConfig]:
         """Parse providers configuration section.
 
+        Round-trip safe: every entry in ``providers_data`` whose key resolves to
+        a valid ``ProviderName`` is preserved in the returned mapping, even when
+        the provider is not present in ``_default_providers()``. Unknown keys
+        that do not match any ``ProviderName`` member are skipped with a
+        warning.
+
         Args:
             providers_data: Dictionary with provider configuration values.
 
@@ -356,15 +374,14 @@ class Config:
                 _logger.warning("config_unknown_provider_skipped", value=name_str)
                 continue
 
-            if provider_name in providers:
-                prov_base = providers[provider_name]
-                providers[provider_name] = ProviderConfig(
-                    enabled=prov_data.get("enabled", prov_base.enabled),
-                    api_base=prov_data.get("api_base", prov_base.api_base),
-                    default_model=prov_data.get("default_model", prov_base.default_model),
-                    timeout_seconds=prov_data.get("timeout_seconds", prov_base.timeout_seconds),
-                    max_retries=prov_data.get("max_retries", prov_base.max_retries),
-                )
+            prov_base = providers.get(provider_name, ProviderConfig())
+            providers[provider_name] = ProviderConfig(
+                enabled=prov_data.get("enabled", prov_base.enabled),
+                api_base=prov_data.get("api_base", prov_base.api_base),
+                default_model=prov_data.get("default_model", prov_base.default_model),
+                timeout_seconds=prov_data.get("timeout_seconds", prov_base.timeout_seconds),
+                max_retries=prov_data.get("max_retries", prov_base.max_retries),
+            )
         return providers
 
     @staticmethod
