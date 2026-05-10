@@ -3,7 +3,9 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-6 GHIDRA-A regression tests.
+"""Audit-6 GHIDRA-A and GHIDRA-B regression tests.
+
+GHIDRA-A foundation findings:
 
 Covers F-0001 (``remote_exec`` discards trailing expression results),
 F-0002 (call-site indentation reaches the remote interpreter as
@@ -22,18 +24,50 @@ viable boundary: ``remote_exec`` runs the script via :func:`exec`,
 return statement and executing it in the shared globals namespace. This
 is the same boundary the real bridge crosses, so the tests exercise
 the corrected ``_execute_remote`` dispatch path end-to-end.
+
+GHIDRA-B headless launcher and lifecycle findings:
+
+* F-0003 - Bridge script must call ``GhidraBridgeServer.run_server`` (the real
+  upstream API) instead of the non-existent constructor and ``start()``.
+* F-0004 - The deployed script must run ``run_server`` with
+  ``background=False`` so the JVM stays alive after the post-script returns.
+* F-0009 - The bridge script writer must use explicit ``utf-8`` encoding and
+  convert ``OSError`` into ``ToolError``.
+* F-0012 - ``shutdown`` must close the ``ghidra_bridge`` RPC client socket so
+  the connection does not leak.
+* F-0013 - Concurrent ``start_headless`` invocations must not race over a
+  single shared script directory; cleanup must serialise via a global lock.
+* F-0014 - The bridge port wait loop must not deadlock when Ghidra writes more
+  stderr than the OS pipe buffer holds; stderr drain threads must run
+  continuously throughout the wait loop.
+* F-0015 - ``Popen`` must be invoked with ``cwd``, scrubbed environment, and
+  ``creationflags=CREATE_NO_WINDOW`` on Windows.
+* F-0016 - ``analyzeHeadless`` resolution must respect the current platform
+  (``.bat`` on Windows, the POSIX shell variant otherwise).
+* F-0019 - The ``file_written`` log line must only run after the on-disk
+  contents have been verified against the rendered script content.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import os
+import socket
 import sys
+import threading
+import time
 import types
+from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
+from unittest.mock import patch
 
 import pytest
 
+import intellicrack.bridges.ghidra as ghidra_mod
 from intellicrack.bridges.ghidra import GhidraBridge, prepare_remote_script
+from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen
 from intellicrack.core.types import ToolError
 
 
@@ -923,3 +957,592 @@ def test_f0028_decompile_raises_on_function_not_found(
         sys.modules.pop("ghidra.app.decompiler", None)
         sys.modules.pop("ghidra.app", None)
         sys.modules.pop("ghidra", None)
+
+
+def _alloc_port() -> int:
+    """Return an unused TCP port for tests that need a fresh listener.
+
+    Returns:
+        int: An OS-assigned ephemeral port number.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        port = int(sock.getsockname()[1])
+    finally:
+        sock.close()
+    return port
+
+
+def _make_stub_headless(path: Path) -> Path:
+    """Create a tiny platform-appropriate ``analyzeHeadless`` stub.
+
+    The stub stays alive for several seconds, prints diagnostic messages on
+    both stdout and stderr, then exits. Tests can spawn it via the real
+    ``subprocess.Popen`` to exercise the launcher, env scrubbing, drain
+    threads, and shutdown without requiring a full Ghidra install.
+
+    Args:
+        path: Directory in which to create the ``support`` tree.
+
+    Returns:
+        Path: Full path to the stub launcher (``.bat`` on Windows).
+    """
+    support = path / "support"
+    support.mkdir(parents=True, exist_ok=True)
+
+    if os.name == "nt":
+        stub = support / "analyzeHeadless.bat"
+        stub.write_text(
+            "@echo off\r\necho headless-stdout-line\r\necho headless-stderr-line 1>&2\r\nping -n 5 127.0.0.1 >nul\r\nexit /b 0\r\n",
+            encoding="utf-8",
+        )
+    else:
+        stub = support / "analyzeHeadless"
+        stub.write_text(
+            "#!/usr/bin/env bash\necho headless-stdout-line\necho headless-stderr-line 1>&2\nsleep 4\nexit 0\n",
+            encoding="utf-8",
+        )
+        stub.chmod(0o755)
+
+    return stub
+
+
+def _bridge_script_lock() -> threading.Lock:
+    """Return the module-level bridge-script lock used by GhidraBridge.
+
+    Returns:
+        threading.Lock: The lock instance from ``intellicrack.bridges.ghidra``.
+    """
+    return cast("threading.Lock", getattr(ghidra_mod, "_BRIDGE_SCRIPT_LOCK"))
+
+
+def _env_blocklist() -> tuple[str, ...]:
+    """Return the headless env blocklist tuple.
+
+    Returns:
+        tuple[str, ...]: Variables stripped from ``Popen``'s ``env``.
+    """
+    return cast("tuple[str, ...]", getattr(ghidra_mod, "_HEADLESS_ENV_BLOCKLIST"))
+
+
+@pytest.fixture
+def fresh_bridge() -> GhidraBridge:
+    """Return a freshly constructed ``GhidraBridge``.
+
+    Returns:
+        GhidraBridge: A new bridge instance with no active connection.
+    """
+    bridge = GhidraBridge()
+    bridge.set_port(_alloc_port())
+    return bridge
+
+
+def test_create_bridge_script_uses_run_server(fresh_bridge: GhidraBridge, tmp_path: Path) -> None:
+    """F-0003: Deployed script must call ``GhidraBridgeServer.run_server``.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest-provided per-test temp directory.
+    """
+    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+        script_path = fresh_bridge.create_bridge_script()
+
+    text = script_path.read_text(encoding="utf-8")
+    assert "GhidraBridgeServer.run_server" in text, text
+    assert "GhidraBridgeServer(" not in text, "must not invoke non-existent constructor"
+    assert ").start()" not in text, "must not call non-existent start() instance method"
+
+
+def test_create_bridge_script_background_false(fresh_bridge: GhidraBridge, tmp_path: Path) -> None:
+    """F-0004: ``run_server`` must be invoked with ``background=False``.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+        script_path = fresh_bridge.create_bridge_script()
+
+    text = script_path.read_text(encoding="utf-8")
+    assert "background=False" in text, text
+
+
+def test_create_bridge_script_utf8_encoding(fresh_bridge: GhidraBridge, tmp_path: Path) -> None:
+    """F-0009: Script must be written with explicit utf-8 encoding.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+        script_path = fresh_bridge.create_bridge_script()
+
+    raw = script_path.read_bytes()
+    decoded = raw.decode("utf-8")
+    assert "ghidra_bridge_server" in decoded
+    assert raw == decoded.encode("utf-8"), "round-trip via utf-8 must produce byte-identical content"
+
+
+def test_create_bridge_script_oserror_raises_toolerror(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """F-0009: ``OSError`` during write must surface as ``ToolError``.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    real_write_text = Path.write_text
+    failure_msg = "simulated disk full"
+
+    def _failing_write_text(self: Path, data: str, *, encoding: str | None = None, errors: str | None = None) -> int:
+        if self.name == "start_bridge.py":
+            raise OSError(failure_msg)
+        return real_write_text(self, data, encoding=encoding, errors=errors)
+
+    with (
+        patch("tempfile.gettempdir", return_value=str(tmp_path)),
+        patch.object(Path, "write_text", _failing_write_text),
+        pytest.raises(ToolError, match="Failed to write ghidra bridge script"),
+    ):
+        fresh_bridge.create_bridge_script()
+
+
+def test_create_bridge_script_unique_tempdirs(fresh_bridge: GhidraBridge) -> None:
+    """F-0013 / F-0021: Each invocation must get its own tempdir under the lock.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+    """
+    first = fresh_bridge.create_bridge_script()
+    second = fresh_bridge.create_bridge_script()
+
+    try:
+        assert first != second
+        assert first.parent != second.parent
+        assert first.parent.name.startswith("intellicrack_ghidra_")
+        assert second.parent.name.startswith("intellicrack_ghidra_")
+    finally:
+        for p in (first, second):
+            if p.exists():
+                p.unlink()
+            if p.parent.exists():
+                with contextlib.suppress(OSError):
+                    p.parent.rmdir()
+
+
+def test_create_bridge_script_concurrent_no_collisions() -> None:
+    """F-0013: Parallel ``create_bridge_script`` calls must not collide."""
+    bridges = [GhidraBridge() for _ in range(8)]
+    for b in bridges:
+        b.set_port(_alloc_port())
+
+    results: list[Path] = []
+    errors: list[Exception] = []
+    lock = threading.Lock()
+
+    def _runner(b: GhidraBridge) -> None:
+        try:
+            p = b.create_bridge_script()
+        except (ToolError, OSError) as exc:
+            with lock:
+                errors.append(exc)
+        else:
+            with lock:
+                results.append(p)
+
+    threads = [threading.Thread(target=_runner, args=(b,)) for b in bridges]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    try:
+        assert not errors, f"unexpected errors: {errors}"
+        unique_parents = len({p.parent for p in results})
+        assert unique_parents == len(results), "every concurrent invocation must get a unique parent dir"
+    finally:
+        for p in results:
+            if p.exists():
+                p.unlink()
+            with contextlib.suppress(OSError):
+                p.parent.rmdir()
+
+
+def test_create_bridge_script_logs_after_verification(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """F-0019: ``file_written`` must follow successful readback.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    real_write_text = Path.write_text
+
+    def _truncating_write_text(self: Path, data: str, *, encoding: str | None = None, errors: str | None = None) -> int:
+        if self.name == "start_bridge.py":
+            return real_write_text(self, "WRONG", encoding=encoding or "utf-8", errors=errors)
+        return real_write_text(self, data, encoding=encoding, errors=errors)
+
+    with (
+        patch("tempfile.gettempdir", return_value=str(tmp_path)),
+        patch.object(Path, "write_text", _truncating_write_text),
+        pytest.raises(ToolError, match="bridge script verification failed"),
+    ):
+        fresh_bridge.create_bridge_script()
+
+
+def test_close_bridge_client_closes_socket() -> None:
+    """F-0012: ``GhidraBridge`` shutdown closure helper must close the RPC socket."""
+
+    class _DummySock:
+        """Minimal socket stand-in tracking ``close`` calls."""
+
+        def __init__(self) -> None:
+            """Initialize the dummy socket flag tracker."""
+            self.closed: bool = False
+
+        def close(self) -> None:
+            """Mark the dummy socket as closed."""
+            self.closed = True
+
+    class _DummyClient:
+        """Minimal BridgeConn stand-in carrying the socket and comms thread."""
+
+        def __init__(self) -> None:
+            """Initialize sock and a sentinel comms thread reference."""
+            self.sock: _DummySock = _DummySock()
+            self.comms_thread: threading.Thread | None = None
+
+    class _DummyBridge:
+        """Minimal ghidra_bridge.GhidraBridge stand-in exposing ``client``."""
+
+        def __init__(self) -> None:
+            """Initialize the dummy bridge with an attached dummy client."""
+            self.client: _DummyClient = _DummyClient()
+
+    closer = cast("Callable[[object], None]", getattr(GhidraBridge, "_close_bridge_client"))
+    bridge_obj = _DummyBridge()
+    closer(bridge_obj)
+    assert bridge_obj.client.sock.closed is True
+
+
+def test_close_bridge_client_no_client_attr_safe() -> None:
+    """F-0012: Missing ``client`` attribute must not raise."""
+
+    class _Empty:
+        """Bridge stand-in without a ``client`` attribute."""
+
+    closer = cast("Callable[[object], None]", getattr(GhidraBridge, "_close_bridge_client"))
+    closer(_Empty())
+
+
+def test_resolve_headless_executable_platform_specific(tmp_path: Path) -> None:
+    """F-0016: ``analyzeHeadless`` resolution must be platform-aware.
+
+    Args:
+        tmp_path: Pytest temp dir.
+    """
+    resolver = cast("Callable[[Path], Path]", getattr(GhidraBridge, "_resolve_headless_executable"))
+    support = tmp_path / "support"
+    support.mkdir()
+
+    if os.name == "nt":
+        (support / "analyzeHeadless.bat").write_text("@echo off", encoding="utf-8")
+        resolved = resolver(tmp_path)
+        assert resolved.name == "analyzeHeadless.bat"
+
+        wrong = tmp_path.parent / f"wrong_root_{os.getpid()}"
+        (wrong / "support").mkdir(parents=True, exist_ok=True)
+        (wrong / "support" / "analyzeHeadless").write_text(
+            "#!/usr/bin/env bash\n",
+            encoding="utf-8",
+        )
+        try:
+            with pytest.raises(ToolError, match="Ghidra headless script not found"):
+                resolver(wrong)
+        finally:
+            for p in (wrong / "support" / "analyzeHeadless", wrong / "support", wrong):
+                if p.exists():
+                    if p.is_file():
+                        p.unlink()
+                    else:
+                        with contextlib.suppress(OSError):
+                            p.rmdir()
+    else:
+        (support / "analyzeHeadless").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        resolved = resolver(tmp_path)
+        assert resolved.name == "analyzeHeadless"
+
+
+def test_scrubbed_environment_strips_blocklist() -> None:
+    """F-0015: Env scrub must strip every variable in the blocklist."""
+    scrubber = cast("Callable[[], dict[str, str]]", getattr(GhidraBridge, "_scrubbed_environment"))
+    blocklist = _env_blocklist()
+    inserted: list[str] = []
+    for key in blocklist:
+        if key not in os.environ:
+            os.environ[key] = "intellicrack-test-value"
+            inserted.append(key)
+    try:
+        env = scrubber()
+        for key in blocklist:
+            assert key not in env, f"{key} must be stripped"
+        assert "PATH" in env, "PATH must survive scrubbing"
+    finally:
+        for key in inserted:
+            os.environ.pop(key, None)
+
+
+def test_cleanup_bridge_script_removes_files(tmp_path: Path) -> None:
+    """F-0013: cleanup must serialize via lock and remove files.
+
+    Args:
+        tmp_path: Pytest temp dir.
+    """
+    cleanup = cast("Callable[[Path], None]", getattr(GhidraBridge, "_cleanup_bridge_script"))
+    script_dir = tmp_path / "intellicrack_ghidra_unit"
+    script_dir.mkdir()
+    script = script_dir / "start_bridge.py"
+    script.write_text("# stub", encoding="utf-8")
+
+    cleanup(script)
+
+    assert not script.exists()
+    assert not script_dir.exists()
+
+
+def test_cleanup_bridge_script_uses_global_lock(tmp_path: Path) -> None:
+    """F-0013: ``_cleanup_bridge_script`` must hold the bridge-script lock.
+
+    Args:
+        tmp_path: Pytest temp dir.
+    """
+    cleanup = cast("Callable[[Path], None]", getattr(GhidraBridge, "_cleanup_bridge_script"))
+    bridge_lock = _bridge_script_lock()
+    observed: list[bool] = []
+    real_unlink = Path.unlink
+
+    def _spy_unlink(self: Path, *, missing_ok: bool = False) -> None:
+        observed.append(bridge_lock.locked())
+        real_unlink(self, missing_ok=missing_ok)
+
+    with patch.object(Path, "unlink", _spy_unlink):
+        d = tmp_path / f"intellicrack_lock_test_{os.getpid()}"
+        d.mkdir(exist_ok=True)
+        f = d / "start_bridge.py"
+        f.write_text("x", encoding="utf-8")
+        try:
+            cleanup(f)
+        finally:
+            if f.exists():
+                f.unlink()
+            if d.exists():
+                d.rmdir()
+
+    assert observed, "expected at least one unlink call"
+    assert all(observed), "global lock must be held during unlink"
+
+
+_LogLineGetter = Callable[[], list[str]]
+
+
+def _wait_for_log_lines(buf_getter: _LogLineGetter, count: int, timeout: float = 6.0) -> list[str]:
+    """Poll until the bridge stderr buffer has at least ``count`` lines.
+
+    Args:
+        buf_getter: Callable returning the current snapshot of stderr lines.
+        count: Minimum number of lines to wait for.
+        timeout: Maximum seconds to wait.
+
+    Returns:
+        list[str]: The collected stderr lines.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        lines = buf_getter()
+        if len(lines) >= count:
+            return lines
+        time.sleep(0.1)
+    return buf_getter()
+
+
+def test_drain_threads_consume_stderr_in_real_subprocess(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """F-0014: drain threads must consume stderr from a real subprocess.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    stub = _make_stub_headless(tmp_path)
+
+    if os.name == "nt":
+        cmd = ["cmd.exe", "/c", str(stub)]
+        creation_flags = CREATE_NO_WINDOW
+    else:
+        cmd = [str(stub)]
+        creation_flags = 0
+
+    process = Popen(
+        cmd,
+        stdout=PIPE,
+        stderr=PIPE,
+        cwd=str(stub.parent),
+        creationflags=creation_flags,
+    )
+
+    start_drain = cast(
+        "Callable[[Popen[bytes]], None]",
+        getattr(fresh_bridge, "_start_drain_threads"),
+    )
+
+    try:
+        start_drain(process)
+        process.wait(timeout=15)
+
+        buffer_lock = cast("threading.Lock", getattr(fresh_bridge, "_stderr_buffer_lock"))
+
+        def _snapshot() -> list[str]:
+            with buffer_lock:
+                return list(cast("list[str]", getattr(fresh_bridge, "_stderr_buffer")))
+
+        lines = _wait_for_log_lines(_snapshot, 1)
+        assert any("headless-stderr-line" in line for line in lines), lines
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        for thread_attr in ("_stderr_drain_thread", "_stdout_drain_thread"):
+            thread = cast("threading.Thread | None", getattr(fresh_bridge, thread_attr))
+            if thread is not None:
+                thread.join(timeout=2)
+
+
+def test_start_headless_uses_correct_popen_kwargs(
+    fresh_bridge: GhidraBridge,
+    tmp_path: Path,
+) -> None:
+    """F-0015 + F-0016: real Popen invocation must include cwd, env, and creationflags.
+
+    Args:
+        fresh_bridge: Bridge fixture.
+        tmp_path: Pytest temp dir.
+    """
+    _ = _make_stub_headless(tmp_path)
+    fresh_bridge.ghidra_path = tmp_path
+
+    captured: dict[str, Any] = {}
+    real_popen = Popen
+
+    def _spy_popen(
+        cmd: list[str],
+        *,
+        stdout: int | None = None,
+        stderr: int | None = None,
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+        creationflags: int = 0,
+    ) -> Popen[bytes]:
+        captured["cmd"] = cmd
+        captured["kwargs"] = {
+            "stdout": stdout,
+            "stderr": stderr,
+            "cwd": cwd,
+            "env": env,
+            "creationflags": creationflags,
+        }
+        return real_popen(
+            cmd,
+            stdout=stdout,
+            stderr=stderr,
+            cwd=cwd,
+            env=env,
+            creationflags=creationflags,
+        )
+
+    project_dir = tmp_path / "proj"
+
+    async def _run() -> None:
+        try:
+            with patch("intellicrack.bridges.ghidra.Popen", _spy_popen):
+                await asyncio.wait_for(
+                    fresh_bridge.start_headless(project_dir, "intellicrack_test"),
+                    timeout=8,
+                )
+        except (ToolError, TimeoutError):
+            pass
+        finally:
+            running = cast("Popen[bytes] | None", getattr(fresh_bridge, "_process"))
+            if running is not None and running.poll() is None:
+                running.kill()
+                running.wait()
+            await fresh_bridge.shutdown()
+
+    asyncio.run(_run())
+
+    assert "kwargs" in captured, "Popen was not invoked"
+    kwargs = cast("dict[str, Any]", captured["kwargs"])
+    assert kwargs.get("cwd") is not None, "cwd must be set"
+    assert kwargs.get("env") is not None, "env must be passed"
+
+    if os.name == "nt":
+        assert kwargs.get("creationflags") == CREATE_NO_WINDOW, kwargs.get("creationflags")
+    else:
+        assert kwargs.get("creationflags") in {0, None}, kwargs.get("creationflags")
+
+    env = cast("dict[str, str]", kwargs["env"])
+    for key in _env_blocklist():
+        assert key not in env, f"{key} must be scrubbed in Popen env"
+
+    cmd = cast("list[str]", captured["cmd"])
+    if os.name == "nt":
+        assert cmd[0].endswith("analyzeHeadless.bat"), cmd[0]
+    else:
+        assert cmd[0].endswith("analyzeHeadless"), cmd[0]
+
+
+def test_shutdown_closes_bridge_client_socket() -> None:
+    """F-0012: shutdown must close ``self._bridge.client.sock``."""
+
+    class _DummySock:
+        """Socket stand-in for shutdown closure assertion."""
+
+        def __init__(self) -> None:
+            """Initialize closed flag."""
+            self.closed: bool = False
+
+        def close(self) -> None:
+            """Mark socket as closed."""
+            self.closed = True
+
+    class _DummyClient:
+        """BridgeConn stand-in with sock + thread sentinel."""
+
+        def __init__(self) -> None:
+            """Initialize sock and a sentinel thread reference."""
+            self.sock: _DummySock = _DummySock()
+            self.comms_thread: threading.Thread | None = None
+
+    class _DummyBridge:
+        """Bridge stand-in carrying the dummy client."""
+
+        def __init__(self) -> None:
+            """Initialize a dummy bridge with attached dummy client."""
+            self.client: _DummyClient = _DummyClient()
+
+    bridge = GhidraBridge()
+    dummy = _DummyBridge()
+    bridge_attr = "_bridge"
+    setattr(bridge, bridge_attr, dummy)
+
+    asyncio.run(bridge.shutdown())
+
+    assert dummy.client.sock.closed is True
+    assert getattr(bridge, bridge_attr) is None

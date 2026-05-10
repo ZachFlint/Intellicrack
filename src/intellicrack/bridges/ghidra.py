@@ -17,13 +17,15 @@ import importlib
 import importlib.util
 import itertools
 import json
+import os
 import re
 import socket
 import tempfile
 import textwrap
+import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import IO, Any, Literal, cast
 
 from intellicrack.bridges._pe_format import (
     detect_format,
@@ -35,7 +37,7 @@ from intellicrack.bridges.base import (
     DisassemblyLine,
     StaticAnalysisBridge,
 )
-from intellicrack.core._subprocess import PIPE, Popen
+from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import (
@@ -69,6 +71,25 @@ _ARCH_64_POINTER_BYTES = 8
 _RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
 
 _remote_call_counter: itertools.count[int] = itertools.count(1)
+
+_BRIDGE_SCRIPT_LOCK = threading.Lock()
+_BRIDGE_SCRIPT_PREFIX = "intellicrack_ghidra_"
+_BRIDGE_SCRIPT_NAME = "start_bridge.py"
+_HEADLESS_ENV_BLOCKLIST = (
+    "GHIDRA_HOME",
+    "GHIDRA_INSTALL_DIR",
+    "GHIDRA_PROJECT_DIR",
+    "GHIDRA_BRIDGE_PORT",
+    "GHIDRA_BRIDGE_HOST",
+    "JAVA_TOOL_OPTIONS",
+    "_JAVA_OPTIONS",
+    "JAVA_OPTIONS",
+    "MAVEN_OPTS",
+    "PYTHONHOME",
+    "PYTHONSTARTUP",
+    "PYTHONPATH",
+    "PYTHONIOENCODING",
+)
 
 
 def prepare_remote_script(code: str) -> tuple[str, str | None]:
@@ -164,6 +185,10 @@ class GhidraBridge(StaticAnalysisBridge):
         self._decompiler_simplification: str | None = None
         self._decompiler_max_instructions: int | None = None
         self._decompiler_options_extra: dict[str, Any] = {}
+        self._stderr_drain_thread: threading.Thread | None = None
+        self._stdout_drain_thread: threading.Thread | None = None
+        self._stderr_buffer: list[str] = []
+        self._stderr_buffer_lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_decompilation=True,
@@ -1226,7 +1251,17 @@ class GhidraBridge(StaticAnalysisBridge):
             raise ToolError(error_message) from exc
 
     async def shutdown(self) -> None:
-        """Shutdown Ghidra and cleanup resources."""
+        """Shutdown Ghidra and cleanup resources.
+
+        Closes the active ghidra_bridge RPC client (preventing socket leaks),
+        terminates the headless subprocess, joins the stdout/stderr drain
+        threads, and removes the bridge script under a process-wide lock to
+        prevent races with concurrent ``start_headless`` invocations.
+        """
+        if self._bridge is not None:
+            await asyncio.to_thread(self._close_bridge_client, self._bridge)
+            self._bridge = None
+
         if self._process is not None:
             pid = self._process.pid
             process_manager = ProcessManager.get_instance()
@@ -1245,24 +1280,77 @@ class GhidraBridge(StaticAnalysisBridge):
             process_manager.unregister(pid)
             self._process = None
 
+        await self._join_drain_threads()
+
         if self._bridge_script_path is not None:
-            try:
-                if await asyncio.to_thread(self._bridge_script_path.exists):
-                    await asyncio.to_thread(self._bridge_script_path.unlink, missing_ok=True)
-                parent = self._bridge_script_path.parent
-                parent_children = await asyncio.to_thread(lambda: list(parent.iterdir()))
-                if await asyncio.to_thread(parent.exists) and not any(parent_children):
-                    await asyncio.to_thread(parent.rmdir)
-            except OSError:
-                _logger.exception("bridge_script_cleanup_failed")
+            await asyncio.to_thread(self._cleanup_bridge_script, self._bridge_script_path)
             self._bridge_script_path = None
 
-        self._bridge = None
         self._binary_path = None
         project_path_str = str(self._project_path) if self._project_path is not None else None
         self._project_path = None
         await super().shutdown()
         _logger.info("ghidra_bridge_shutdown", bridge="ghidra", project_path=project_path_str)
+
+    async def _join_drain_threads(self, join_seconds: float = 5.0) -> None:
+        """Wait for stdout/stderr drain threads to terminate.
+
+        Args:
+            join_seconds: Maximum seconds to wait per thread.
+        """
+        for attr_name in ("_stderr_drain_thread", "_stdout_drain_thread"):
+            thread: threading.Thread | None = getattr(self, attr_name)
+            if thread is None:
+                continue
+            await asyncio.to_thread(thread.join, join_seconds)
+            setattr(self, attr_name, None)
+
+    @staticmethod
+    def _close_bridge_client(bridge: object) -> None:
+        """Close the active ghidra_bridge RPC client socket.
+
+        Args:
+            bridge: The ``ghidra_bridge.GhidraBridge`` (``BridgeClient``) instance.
+        """
+        client = getattr(bridge, "client", None)
+        if client is None:
+            return
+
+        sock = getattr(client, "sock", None)
+        if sock is not None:
+            try:
+                sock.close()
+            except OSError:
+                _logger.debug("ghidra_bridge_socket_close_failed", exc_info=True)
+
+        comms_thread = getattr(client, "comms_thread", None)
+        if comms_thread is not None:
+            try:
+                comms_thread.join(timeout=2.0)
+            except RuntimeError:
+                _logger.debug("ghidra_bridge_comms_join_failed", exc_info=True)
+
+    @staticmethod
+    def _cleanup_bridge_script(script_path: Path) -> None:
+        """Remove a bridge script and its parent tempdir under a global lock.
+
+        Args:
+            script_path: Path to the deployed bridge script.
+        """
+        with _BRIDGE_SCRIPT_LOCK:
+            try:
+                script_path.unlink(missing_ok=True)
+            except OSError:
+                _logger.exception("bridge_script_unlink_failed")
+                return
+
+            parent = script_path.parent
+            try:
+                parent.rmdir()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                _logger.debug("bridge_script_parent_not_empty", parent=str(parent))
 
     async def is_available(self) -> bool:
         """Check if Ghidra is available.
@@ -1280,31 +1368,38 @@ class GhidraBridge(StaticAnalysisBridge):
         project_dir: Path,
         project_name: str = "intellicrack",
     ) -> None:
-        """Start Ghidra in headless mode with bridge.
+        """Start Ghidra in headless mode with the long-running bridge server.
+
+        The launcher selects the platform-appropriate ``analyzeHeadless`` entry
+        point (``analyzeHeadless.bat`` on Windows, ``analyzeHeadless`` on POSIX),
+        deploys an UTF-8 bridge script under a unique temporary directory, and
+        spawns the JVM with ``cwd`` set to the Ghidra ``support`` directory,
+        ``creationflags=CREATE_NO_WINDOW`` on Windows, and a scrubbed environment
+        that strips Ghidra/Java/Python overrides which can hijack the JVM. The
+        deployed script invokes ``GhidraBridgeServer.run_server`` with
+        ``background=False`` so the JVM is kept alive after the post-script
+        returns. Stdout and stderr are drained continuously by background
+        threads to prevent pipe-buffer deadlock during ``_wait_for_bridge_port``.
 
         Args:
             project_dir: Directory for Ghidra project.
             project_name: Name of the project.
 
         Raises:
-            ToolError: If Ghidra cannot be started.
+            ToolError: If Ghidra cannot be started, the headless script is
+                missing for the current platform, the bridge port never opens,
+                or the RPC client cannot connect.
         """
         if self._ghidra_path is None:
             error_message = "Ghidra path not set"
             raise ToolError(error_message)
 
-        ghidra_run = self._ghidra_path / "support" / "analyzeHeadless.bat"
-        if not await asyncio.to_thread(ghidra_run.exists):
-            ghidra_run = self._ghidra_path / "support" / "analyzeHeadless"
-
-        if not await asyncio.to_thread(ghidra_run.exists):
-            error_message = f"Ghidra headless script not found: {ghidra_run}"
-            raise ToolError(error_message)
+        ghidra_run = await asyncio.to_thread(self._resolve_headless_executable, self._ghidra_path)
 
         await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
         self._project_path = project_dir / project_name
 
-        bridge_script = self._create_bridge_script()
+        bridge_script = await asyncio.to_thread(self._create_bridge_script)
 
         cmd = [
             str(ghidra_run),
@@ -1316,7 +1411,16 @@ class GhidraBridge(StaticAnalysisBridge):
             bridge_script.name,
         ]
 
-        _logger.info("ghidra_headless_starting", command=" ".join(cmd))
+        env = self._scrubbed_environment()
+        cwd = str(ghidra_run.parent)
+        creation_flags = CREATE_NO_WINDOW if os.name == "nt" else 0
+
+        _logger.info(
+            "ghidra_headless_starting",
+            command=" ".join(cmd),
+            cwd=cwd,
+            creation_flags=creation_flags,
+        )
 
         def _start_process() -> Popen[bytes]:
             """Launch the Ghidra headless analyzer subprocess.
@@ -1331,9 +1435,14 @@ class GhidraBridge(StaticAnalysisBridge):
                 cmd,
                 stdout=PIPE,
                 stderr=PIPE,
+                cwd=cwd,
+                env=env,
+                creationflags=creation_flags,
             )
 
         self._process = await asyncio.to_thread(_start_process)
+
+        self._start_drain_threads(self._process)
 
         process_manager = ProcessManager.get_instance()
         process_manager.register(
@@ -1365,12 +1474,150 @@ class GhidraBridge(StaticAnalysisBridge):
             self.state.last_error = error_message
             raise ToolError(error_message) from e
 
+    @staticmethod
+    def _resolve_headless_executable(ghidra_path: Path) -> Path:
+        """Resolve the platform-appropriate ``analyzeHeadless`` executable.
+
+        Args:
+            ghidra_path: Root directory of the Ghidra installation.
+
+        Returns:
+            Path: Path to the resolved ``analyzeHeadless`` launcher.
+
+        Raises:
+            ToolError: If the launcher does not exist for the current platform.
+        """
+        support = ghidra_path / "support"
+        candidate = support / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
+
+        if not candidate.exists():
+            error_message = f"Ghidra headless script not found for this platform: {candidate}"
+            raise ToolError(error_message)
+
+        return candidate
+
+    @staticmethod
+    def _scrubbed_environment() -> dict[str, str]:
+        """Build a copy of the current environment with hijack-prone variables removed.
+
+        Strips Ghidra-specific ``GHIDRA_*`` variables, Java tunables that the
+        JVM honours unconditionally (``JAVA_TOOL_OPTIONS``, ``_JAVA_OPTIONS``),
+        and Python interpreter overrides that can leak into the launched JVM.
+
+        Returns:
+            dict[str, str]: A scrubbed environment dictionary suitable for
+                passing as ``env=`` to ``subprocess.Popen``.
+        """
+        env = dict(os.environ)
+        for key in _HEADLESS_ENV_BLOCKLIST:
+            env.pop(key, None)
+        return env
+
+    def _start_drain_threads(self, process: Popen[bytes]) -> None:
+        """Spawn background threads that drain stdout/stderr to prevent pipe deadlock.
+
+        Args:
+            process: The headless subprocess whose pipes need draining.
+        """
+        with self._stderr_buffer_lock:
+            self._stderr_buffer = []
+
+        if process.stderr is not None:
+            self._stderr_drain_thread = threading.Thread(
+                target=self._drain_stream,
+                args=(process.stderr, "stderr", self._buffer_stderr_line),
+                name="ghidra-stderr-drain",
+                daemon=True,
+            )
+            self._stderr_drain_thread.start()
+
+        if process.stdout is not None:
+            self._stdout_drain_thread = threading.Thread(
+                target=self._drain_stream,
+                args=(process.stdout, "stdout", None),
+                name="ghidra-stdout-drain",
+                daemon=True,
+            )
+            self._stdout_drain_thread.start()
+
+    def _buffer_stderr_line(self, line: str) -> None:
+        """Append one stderr line to the captured buffer under the lock.
+
+        Args:
+            line: Decoded stderr line with trailing whitespace stripped.
+        """
+        with self._stderr_buffer_lock:
+            self._stderr_buffer.append(line)
+
+    @staticmethod
+    def _drain_stream(
+        stream: IO[bytes],
+        stream_name: str,
+        on_line: Callable[[str], None] | None,
+    ) -> None:
+        """Continuously read ``stream`` line-by-line and forward to the debug log.
+
+        Args:
+            stream: The subprocess pipe to drain.
+            stream_name: Stream identifier (``"stderr"`` / ``"stdout"``)
+                attached to log records as a structured field.
+            on_line: Optional callback invoked for each non-empty decoded line
+                (used by the stderr drainer to buffer for diagnostics).
+        """
+        try:
+            for raw_line in iter(stream.readline, b""):
+                line = raw_line.decode("utf-8", errors="replace").rstrip()
+                if not line:
+                    continue
+                if on_line is not None:
+                    on_line(line)
+                _logger.debug("ghidra_headless_pipe_line", stream=stream_name, line=line)
+        except (OSError, ValueError):
+            _logger.debug("ghidra_pipe_drain_terminated", stream=stream_name, exc_info=True)
+        finally:
+            try:
+                stream.close()
+            except OSError:
+                _logger.debug("ghidra_pipe_close_failed", stream=stream_name, exc_info=True)
+
+    def _captured_stderr_tail(self, max_lines: int = 40) -> str:
+        """Return the last ``max_lines`` of buffered stderr output.
+
+        Args:
+            max_lines: Maximum number of trailing lines to return.
+
+        Returns:
+            str: Joined stderr output for diagnostic messages.
+        """
+        with self._stderr_buffer_lock:
+            tail = self._stderr_buffer[-max_lines:]
+        return "\n".join(tail)
+
+    def _format_with_stderr_tail(self, message: str) -> str:
+        """Append the captured stderr tail (if any) to a diagnostic message.
+
+        Args:
+            message: The base diagnostic message.
+
+        Returns:
+            str: ``message`` with the stderr tail appended when output exists.
+        """
+        tail = self._captured_stderr_tail()
+        if not tail:
+            return message
+        return f"{message}\nstderr tail:\n{tail}"
+
     async def _wait_for_bridge_port(
         self,
         timeout_seconds: int = 60,
         poll_interval: float = 2.0,
     ) -> None:
         """Poll until the Ghidra bridge port is accepting connections.
+
+        Concurrent stdout/stderr drain threads spawned by
+        ``_start_drain_threads`` keep the OS pipe buffers from filling, so
+        Ghidra never blocks on a full stderr pipe while we poll. Captured
+        stderr lines are surfaced in raised ``ToolError`` messages.
 
         Args:
             timeout_seconds: Maximum seconds to wait before raising.
@@ -1387,7 +1634,7 @@ class GhidraBridge(StaticAnalysisBridge):
 
             if self._process is not None and self._process.poll() is not None:
                 rc = self._process.returncode
-                msg = f"Ghidra process exited prematurely with code {rc}"
+                msg = self._format_with_stderr_tail(f"Ghidra process exited prematurely with code {rc}")
                 raise ToolError(msg)
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1413,41 +1660,90 @@ class GhidraBridge(StaticAnalysisBridge):
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
 
-        msg = f"Ghidra bridge port {self._port} not ready after {timeout_seconds}s ({attempt} attempts)"
+        msg = self._format_with_stderr_tail(
+            f"Ghidra bridge port {self._port} not ready after {timeout_seconds}s ({attempt} attempts)",
+        )
         raise ToolError(msg)
 
     def _create_bridge_script(self) -> Path:
-        """Create the Ghidra bridge startup script.
+        """Create the Ghidra bridge startup script in a unique temporary directory.
+
+        Writes the bridge script under a per-instance ``tempfile.mkdtemp`` so
+        concurrent ``start_headless`` invocations do not race over a single
+        shared file. The script is written with explicit ``utf-8`` encoding
+        and the write is verified by reading the file back and comparing the
+        on-disk size to the rendered content size before logging success.
+
+        The deployed script invokes ``ghidra_bridge_server.GhidraBridgeServer``
+        ``run_server`` with ``background=False`` (the real upstream API),
+        which keeps the JVM alive after the post-script returns. Calling the
+        non-existent constructor + ``start()`` previously crashed Ghidra at
+        boot with ``TypeError: object() takes no parameters``.
 
         Returns:
-            Path: Path to the created script.
+            Path: Path to the verified-on-disk bridge script.
+
+        Raises:
+            ToolError: If the script directory cannot be created, the script
+                cannot be written, or post-write verification fails.
         """
-        script_content = f"""
-# @category: IntelliCrack
-# Start ghidra_bridge server
-
-import ghidra_bridge_server
-ghidra_bridge_server.GhidraBridgeServer(
-    server_host="127.0.0.1",
-    server_port={self._port},
-).start()
-"""
-        script_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
-        script_dir.mkdir(exist_ok=True)
-
-        script_path = script_dir / "start_bridge.py"
-        _logger.info(
-            "ghidra_bridge_script_writing",
-            script_path=str(script_path),
-            content_size=len(script_content),
+        script_content = (
+            "# @category: IntelliCrack\n"
+            "# Start ghidra_bridge server (long-running) so JVM stays alive\n"
+            "# after analyzeHeadless finishes the post-script.\n"
+            "import ghidra_bridge_server\n"
+            "ghidra_bridge_server.GhidraBridgeServer.run_server(\n"
+            '    server_host="127.0.0.1",\n'
+            f"    server_port={self._port},\n"
+            "    background=False,\n"
+            ")\n"
         )
-        script_path.write_text(script_content)
-        _logger.info(
-            "file_written",
-            path=str(script_path),
-            data_size=len(script_content),
-        )
-        self._bridge_script_path = script_path
+
+        with _BRIDGE_SCRIPT_LOCK:
+            try:
+                script_dir = Path(tempfile.mkdtemp(prefix=_BRIDGE_SCRIPT_PREFIX))
+            except OSError as exc:
+                _logger.exception("ghidra_bridge_script_dir_create_failed")
+                msg = f"Failed to create ghidra bridge script directory: {exc}"
+                raise ToolError(msg) from exc
+
+            script_path = script_dir / _BRIDGE_SCRIPT_NAME
+            _logger.info(
+                "ghidra_bridge_script_writing",
+                script_path=str(script_path),
+                content_size=len(script_content),
+            )
+
+            try:
+                script_path.write_text(script_content, encoding="utf-8")
+            except OSError as exc:
+                _logger.exception("ghidra_bridge_script_write_failed", script_path=str(script_path))
+                msg = f"Failed to write ghidra bridge script {script_path}: {exc}"
+                raise ToolError(msg) from exc
+
+            try:
+                on_disk = script_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                _logger.exception("ghidra_bridge_script_readback_failed", script_path=str(script_path))
+                msg = f"Failed to verify ghidra bridge script {script_path}: {exc}"
+                raise ToolError(msg) from exc
+
+            if on_disk != script_content:
+                _logger.error(
+                    "ghidra_bridge_script_verify_mismatch",
+                    script_path=str(script_path),
+                    expected_size=len(script_content),
+                    actual_size=len(on_disk),
+                )
+                msg = f"Ghidra bridge script verification failed at {script_path}"
+                raise ToolError(msg)
+
+            _logger.info(
+                "file_written",
+                path=str(script_path),
+                data_size=len(on_disk),
+            )
+            self._bridge_script_path = script_path
 
         return script_path
 
