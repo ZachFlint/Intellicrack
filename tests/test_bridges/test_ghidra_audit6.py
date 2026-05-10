@@ -3,7 +3,7 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Audit-6 GHIDRA-A and GHIDRA-B regression tests.
+"""Audit-6 GHIDRA-A, GHIDRA-B, and GHIDRA-C regression tests.
 
 GHIDRA-A foundation findings:
 
@@ -46,6 +46,26 @@ GHIDRA-B headless launcher and lifecycle findings:
   (``.bat`` on Windows, the POSIX shell variant otherwise).
 * F-0019 - The ``file_written`` log line must only run after the on-disk
   contents have been verified against the rendered script content.
+
+GHIDRA-C write-method and analyze findings:
+
+* F-0007 - ``decompile`` raises ``ToolError`` on every real failure mode
+  (function not found, decompiler did not complete) instead of
+  returning the literal sentinel string ``"Decompilation failed"``.
+* F-0008 - ``analyze`` blocks on
+  ``AutoAnalysisManager.waitForAnalysis`` instead of returning the
+  moment ``analyzeAll`` is dispatched.
+* F-0010 - ``search_bytes`` raises ``ToolError`` on malformed hex
+  tokens and on empty hex input rather than silently returning ``[]``.
+* F-0020 - ``set_label`` / ``add_comment`` / ``rename_function`` /
+  ``create_bookmark`` / ``add_reference`` / ``create_equate`` /
+  ``set_program_metadata`` verify the remote-side outcome via
+  ``remote_eval`` readback before returning ``success: True``.
+* F-0024 - ``set_color`` raises ``ToolError`` in headless mode instead
+  of returning fake-success via the ``IntPropertyMap`` fallback.
+* F-0027 - ``analyze`` emits structured logs that distinguish the
+  ``analyzeAll`` start phase from the
+  ``waitForAnalysis``-returned phase.
 """
 
 from __future__ import annotations
@@ -53,6 +73,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import re
 import socket
 import sys
 import threading
@@ -76,6 +97,10 @@ if TYPE_CHECKING:
 
 
 _TEST_ADDRESS: Final[int] = 0x401000
+_TEST_TO_ADDRESS: Final[int] = 0x402000
+_TEST_COLOR_RED: Final[int] = 0xFF0000
+
+_EvalResponder = Callable[[str], object]
 
 
 class _FakeBridgeClient:
@@ -1546,3 +1571,634 @@ def test_shutdown_closes_bridge_client_socket() -> None:
 
     assert dummy.client.sock.closed is True
     assert getattr(bridge, bridge_attr) is None
+
+
+class FakeGhidraBridge:
+    """Test double exposing the subset of ``ghidra_bridge`` GHIDRA-C uses.
+
+    ``GhidraBridge`` accesses two callables on the underlying RPC
+    client: :py:meth:`remote_exec` for statement scripts and
+    :py:meth:`remote_eval` for value-returning expressions. The fake
+    records every script and expression so tests can assert on the
+    exact code sent across the bridge, and lets each test programme a
+    deterministic value to return from ``remote_eval`` (the readback
+    primitive the new readback-verification logic relies on).
+    """
+
+    def __init__(self) -> None:
+        """Initialise empty exec/eval traces and default eval responder."""
+        self.exec_calls: list[str] = []
+        self.eval_calls: list[str] = []
+        self.eval_response: object = None
+        self.exec_response: object = None
+        self._eval_responder: _EvalResponder | None = None
+        self.exec_raises: BaseException | None = None
+        self.eval_raises: BaseException | None = None
+
+    def set_eval_responder(self, responder: _EvalResponder) -> None:
+        """Install a callable computing the eval response from the expression.
+
+        Args:
+            responder: Callable that receives the eval expression string
+                and returns the desired value. Overrides ``eval_response``
+                while installed.
+        """
+        self._eval_responder = responder
+
+    def remote_exec(self, code: str) -> object:
+        """Record the script and optionally raise.
+
+        ``ghidra_bridge.remote_exec`` returns ``None`` because the real
+        runtime swallows trailing-expression results, but tests for
+        scripts that capture their outcome in a trailing dict literal
+        can override this by setting ``exec_response`` on the fake.
+
+        Args:
+            code: The Jython source the bridge would execute remotely.
+
+        Returns:
+            object: ``exec_response`` if set, otherwise ``None``.
+
+        Raises:
+            exc: Re-raised when the caller has set ``exec_raises`` on
+                the fake. ``exc`` is bound to whatever exception
+                instance the caller installed.
+        """
+        self.exec_calls.append(code)
+        exc = self.exec_raises
+        if exc is not None:
+            raise exc
+        return self.exec_response
+
+    def remote_eval(self, expression: str, **_kwargs: object) -> object:
+        """Record the expression and return the programmed value.
+
+        Args:
+            expression: The Jython expression to evaluate.
+            **_kwargs: Ignored eval kwargs accepted to match the real
+                ``jfx_bridge`` signature.
+
+        Returns:
+            object: Either the responder's return value (if a responder
+            was installed) or the static ``eval_response``.
+
+        Raises:
+            exc: Re-raised when the caller has set ``eval_raises`` on
+                the fake. ``exc`` is bound to whatever exception
+                instance the caller installed.
+        """
+        self.eval_calls.append(expression)
+        exc = self.eval_raises
+        if exc is not None:
+            raise exc
+        if self._eval_responder is not None:
+            responder = self._eval_responder
+            return responder(expression)
+        return self.eval_response
+
+
+@pytest.fixture
+def fake_bridge() -> FakeGhidraBridge:
+    """Provide a fresh ``FakeGhidraBridge``.
+
+    Returns:
+        FakeGhidraBridge: A test double with empty traces.
+    """
+    return FakeGhidraBridge()
+
+
+@pytest.fixture
+def bridge(fake_bridge: FakeGhidraBridge) -> GhidraBridge:
+    """Provide a ``GhidraBridge`` whose underlying client is the fake.
+
+    Args:
+        fake_bridge: The fake bridge fixture.
+
+    Returns:
+        GhidraBridge: Connected bridge wired to ``fake_bridge``.
+    """
+    real_bridge = GhidraBridge()
+    setattr(real_bridge, "_bridge", fake_bridge)
+    real_bridge.state.connected = True
+    return real_bridge
+
+
+# ---------------------------------------------------------------------------
+# F-0008 + F-0027: analyze must block on waitForAnalysis and emit phased logs
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_analyze_blocks_on_wait_for_analysis(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0008: analyze must dispatch waitForAnalysis on every successful run.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Recording fake.
+    """
+    await bridge.analyze()
+    assert len(fake_bridge.exec_calls) == 1
+    script = fake_bridge.exec_calls[0]
+    assert "analyzeAll(currentProgram)" in script
+    assert "AutoAnalysisManager" in script
+    assert "waitForAnalysis" in script
+
+
+@pytest.mark.asyncio
+async def test_analyze_logs_distinguish_phases(
+    bridge: GhidraBridge,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """F-0027: analyze emits ``started`` and ``complete`` log records.
+
+    Args:
+        bridge: Connected bridge fixture.
+        capsys: pytest stdout/stderr capture fixture.
+    """
+    await bridge.analyze()
+    captured = capsys.readouterr()
+    output = captured.out + captured.err
+    assert "ghidra_analysis_started" in output
+    assert "ghidra_analysis_complete" in output
+    assert "wait_for_analysis_returned" in output
+
+
+@pytest.mark.asyncio
+async def test_analyze_propagates_remote_failure(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0008: analyze surfaces a ``ToolError`` when wait phase raises.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose ``remote_exec`` raises.
+    """
+    fake_bridge.exec_raises = RuntimeError("monitor cancelled")
+    with pytest.raises(ToolError, match="monitor cancelled"):
+        await bridge.analyze()
+
+
+# ---------------------------------------------------------------------------
+# F-0007: decompile must raise ToolError on every real failure mode
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_decompile_raises_when_function_not_found(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0007: missing function at address must raise instead of returning a string.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake programmed to report ``function_not_found``.
+    """
+    fake_bridge.eval_response = {
+        "status": "function_not_found",
+        "text": "",
+        "error": "",
+    }
+    with pytest.raises(ToolError, match="Function not found"):
+        await bridge.decompile(_TEST_ADDRESS)
+
+
+@pytest.mark.asyncio
+async def test_decompile_raises_when_decompiler_fails(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0007: decompiler-completed=False must raise rather than return sentinel.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake programmed to report ``failed`` status.
+    """
+    fake_bridge.eval_response = {
+        "status": "failed",
+        "text": "",
+        "error": "Out of memory in decompiler",
+    }
+    with pytest.raises(ToolError, match="Out of memory in decompiler"):
+        await bridge.decompile(_TEST_ADDRESS)
+
+
+@pytest.mark.asyncio
+async def test_decompile_returns_pseudocode_on_success(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0007: a successful decompile returns the recovered C source.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake programmed to report ``ok`` status.
+    """
+    fake_bridge.eval_response = {
+        "status": "ok",
+        "code": "void main(void) { return; }",
+        "error": None,
+    }
+    text = await bridge.decompile(_TEST_ADDRESS)
+    assert text == "void main(void) { return; }"
+
+
+# ---------------------------------------------------------------------------
+# F-0010: search_bytes hex validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_search_bytes_rejects_malformed_hex_token(
+    bridge: GhidraBridge,
+) -> None:
+    """F-0010: a non-hex token must raise instead of being silently ignored.
+
+    Args:
+        bridge: Connected bridge fixture.
+    """
+    with pytest.raises(ToolError, match=re.escape("Malformed hex token")):
+        await bridge.search_bytes("ZZ 90 90")
+
+
+@pytest.mark.asyncio
+async def test_search_bytes_rejects_empty_hex_pattern(
+    bridge: GhidraBridge,
+) -> None:
+    """F-0010: empty hex input must raise instead of returning ``[]``.
+
+    Args:
+        bridge: Connected bridge fixture.
+    """
+    with pytest.raises(ToolError, match="empty"):
+        await bridge.search_bytes(hex_pattern="   ")
+
+
+@pytest.mark.asyncio
+async def test_search_bytes_rejects_short_hex_token(
+    bridge: GhidraBridge,
+) -> None:
+    """F-0010: a single-nibble token must raise instead of being parsed.
+
+    Args:
+        bridge: Connected bridge fixture.
+    """
+    with pytest.raises(ToolError, match="Malformed hex token"):
+        await bridge.search_bytes(hex_pattern="48 8")
+
+
+@pytest.mark.asyncio
+async def test_search_bytes_accepts_wildcards_with_valid_bytes(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0010: valid hex with ``??`` wildcards must reach the bridge unchanged.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake recording the dispatched script.
+    """
+    fake_bridge.eval_response = None  # exec only, no eval used
+    addrs = await bridge.search_bytes(hex_pattern="48 8B ?? ??")
+    assert addrs == []
+    assert len(fake_bridge.exec_calls) == 1
+    script = fake_bridge.exec_calls[0]
+    assert "findBytes" in script
+
+
+# ---------------------------------------------------------------------------
+# F-0020: write methods must verify remote outcome via remote_eval readback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_label_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: a successful set_label round-trips the name through readback.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback contains the requested label.
+    """
+    fake_bridge.eval_response = ["my_label", "DEFAULT_LAB_00401000"]
+    info = await bridge.set_label(_TEST_ADDRESS, "my_label")
+    assert info["success"] is True
+    assert any("getSymbols" in expr for expr in fake_bridge.eval_calls)
+
+
+@pytest.mark.asyncio
+async def test_set_label_raises_when_readback_missing_name(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: missing label in readback must raise instead of fake-success.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback omits the requested label.
+    """
+    fake_bridge.eval_response = ["DEFAULT_LAB_00401000"]
+    with pytest.raises(ToolError, match="Label verification failed"):
+        await bridge.set_label(_TEST_ADDRESS, "my_label")
+
+
+@pytest.mark.asyncio
+async def test_add_comment_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: a successful add_comment round-trips through readback.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns the requested comment.
+    """
+    fake_bridge.eval_response = "investigated by analyst"
+    ok = await bridge.add_comment(_TEST_ADDRESS, "investigated by analyst")
+    assert ok is True
+    assert any("getComment" in expr for expr in fake_bridge.eval_calls)
+
+
+@pytest.mark.asyncio
+async def test_add_comment_raises_when_readback_mismatches(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: comment mismatch on readback must raise rather than fake-success.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback differs from the requested comment.
+    """
+    fake_bridge.eval_response = "stale prior comment"
+    with pytest.raises(ToolError, match="Comment verification failed"):
+        await bridge.add_comment(_TEST_ADDRESS, "investigated by analyst")
+
+
+@pytest.mark.asyncio
+async def test_rename_function_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: rename_function returns only when readback confirms the name.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns the new function name.
+    """
+    fake_bridge.eval_response = "decryptor"
+    ok = await bridge.rename_function(_TEST_ADDRESS, "decryptor")
+    assert ok is True
+
+
+@pytest.mark.asyncio
+async def test_rename_function_raises_when_readback_diverges(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: rename_function readback divergence must raise.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns the original name.
+    """
+    fake_bridge.eval_response = "FUN_00401000"
+    with pytest.raises(ToolError, match="Rename verification failed"):
+        await bridge.rename_function(_TEST_ADDRESS, "decryptor")
+
+
+@pytest.mark.asyncio
+async def test_create_bookmark_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: create_bookmark requires the readback to contain the new entry.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback contains the requested pair.
+    """
+    fake_bridge.eval_response = [("analysis", "needs review")]
+    info = await bridge.create_bookmark(
+        _TEST_ADDRESS,
+        category="analysis",
+        comment="needs review",
+        bookmark_type="Note",
+    )
+    assert info["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_bookmark_raises_when_readback_missing_pair(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: create_bookmark fails closed when readback lacks the entry.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback misses the requested bookmark.
+    """
+    fake_bridge.eval_response = [("misc", "unrelated")]
+    with pytest.raises(ToolError, match="Bookmark verification failed"):
+        await bridge.create_bookmark(
+            _TEST_ADDRESS,
+            category="analysis",
+            comment="needs review",
+            bookmark_type="Note",
+        )
+
+
+@pytest.mark.asyncio
+async def test_add_reference_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: add_reference confirms via getReferencesFrom readback.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback contains the new target offset.
+    """
+    fake_bridge.eval_response = [_TEST_TO_ADDRESS]
+    info = await bridge.add_reference(_TEST_ADDRESS, _TEST_TO_ADDRESS, ref_type="DATA")
+    assert info["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_add_reference_raises_when_readback_missing_target(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: add_reference raises when readback does not include the target.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback contains an unrelated target only.
+    """
+    fake_bridge.eval_response = [0xDEADBEEF]
+    with pytest.raises(ToolError, match="Reference verification failed"):
+        await bridge.add_reference(_TEST_ADDRESS, _TEST_TO_ADDRESS, ref_type="DATA")
+
+
+@pytest.mark.asyncio
+async def test_create_equate_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: create_equate confirms via equate-table readback.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback shows the new equate.
+    """
+    fake_bridge.eval_response = {
+        "value": 42,
+        "addresses": [_TEST_ADDRESS],
+    }
+    info = await bridge.create_equate(_TEST_ADDRESS, 42, "ANSWER")
+    assert info["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_equate_raises_when_readback_missing(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: create_equate raises when no equate of that name is present.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns ``None``.
+    """
+    fake_bridge.eval_response = None
+    with pytest.raises(ToolError, match="Equate verification failed"):
+        await bridge.create_equate(_TEST_ADDRESS, 42, "ANSWER")
+
+
+@pytest.mark.asyncio
+async def test_create_equate_raises_when_value_diverges(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: create_equate raises when the readback value differs.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback shows a different stored value.
+    """
+    fake_bridge.eval_response = {
+        "value": 41,
+        "addresses": [_TEST_ADDRESS],
+    }
+    with pytest.raises(ToolError, match="Equate verification failed"):
+        await bridge.create_equate(_TEST_ADDRESS, 42, "ANSWER")
+
+
+@pytest.mark.asyncio
+async def test_set_program_metadata_verifies_via_readback(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: set_program_metadata confirms via program-name/imagebase readback.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns the requested name and base.
+    """
+    fake_bridge.eval_response = {"name": "patched.exe", "image_base": 0x140000000}
+    info = await bridge.set_program_metadata(name="patched.exe", image_base=0x140000000)
+    assert info["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_set_program_metadata_raises_when_name_diverges(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0020: program-metadata raises when readback name differs.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose readback returns a divergent program name.
+    """
+    fake_bridge.eval_response = {"name": "stale.exe", "image_base": 0x140000000}
+    with pytest.raises(ToolError, match="Program name verification failed"):
+        await bridge.set_program_metadata(name="patched.exe", image_base=0x140000000)
+
+
+# ---------------------------------------------------------------------------
+# F-0024: set_color must raise in headless mode when ColorizingService is absent
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_set_color_raises_in_headless_without_service(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0024: headless mode without ColorizingService must raise ``ToolError``.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose script result reports headless and unapplied.
+    """
+    fake_bridge.eval_response = {
+        "applied": False,
+        "backend": "none",
+        "error": (
+            "set_color requires an interactive Ghidra ColorizingService; IntPropertyMap fallback has no visual effect in headless mode"
+        ),
+        "headless": True,
+    }
+    with pytest.raises(ToolError, match="set_color requires an interactive Ghidra"):
+        await bridge.set_color(_TEST_ADDRESS, _TEST_COLOR_RED)
+
+
+@pytest.mark.asyncio
+async def test_set_color_succeeds_when_service_applies(
+    bridge: GhidraBridge,
+    fake_bridge: FakeGhidraBridge,
+) -> None:
+    """F-0024: set_color returns success when ColorizingService applied the color.
+
+    Args:
+        bridge: Connected bridge fixture.
+        fake_bridge: Fake whose script result reports the service backend.
+    """
+    fake_bridge.eval_response = {
+        "applied": True,
+        "backend": "colorizing_service",
+        "error": None,
+        "headless": False,
+    }
+    info = await bridge.set_color(_TEST_ADDRESS, _TEST_COLOR_RED)
+    assert info["success"] is True
+    assert info["backend"] == "colorizing_service"
+
+
+# ---------------------------------------------------------------------------
+# Disconnected guards (sanity)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_disconnected_decompile_raises() -> None:
+    """A disconnected bridge surfaces ``ToolError`` from ``decompile``."""
+    b = GhidraBridge()
+    with pytest.raises(ToolError, match="not connected"):
+        await b.decompile(_TEST_ADDRESS)
+
+
+@pytest.mark.asyncio
+async def test_disconnected_search_bytes_raises() -> None:
+    """A disconnected bridge surfaces ``ToolError`` from ``search_bytes``."""
+    b = GhidraBridge()
+    with pytest.raises(ToolError, match="not connected"):
+        await b.search_bytes(hex_pattern="48 8B")
