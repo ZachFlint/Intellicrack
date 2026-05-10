@@ -233,6 +233,26 @@ class ToolRegistry:
             _logger.debug("bridge_cache_miss", tool_name=name.value)
         return bridge
 
+    def register_bridge(self, name: ToolName, bridge: ToolBridgeBase) -> None:
+        """Register or replace a tool bridge.
+
+        Allows callers to plug in a pre-built bridge supplied by an embedding
+        application or a test harness without going through :meth:`initialize`.
+        Replaces any existing bridge registered under the same name and logs
+        the swap so the change is auditable.
+
+        Args:
+            name: Tool name to register the bridge under.
+            bridge: Bridge instance to register.
+        """
+        previous = self._bridges.get(name)
+        self._bridges[name] = bridge
+        _logger.info(
+            "bridge_registered",
+            tool_name=name.value,
+            replaced_existing=previous is not None,
+        )
+
     def get_process_bridge(self) -> ProcessBridge:
         """Get the process control bridge.
 
