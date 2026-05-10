@@ -54,7 +54,7 @@ def process_manager() -> Generator[ProcessManager]:
     """Provide a fresh ProcessManager for each test.
 
     Yields:
-        ProcessManager: Fresh singleton instance with handlers uninstalled.
+        Generator[ProcessManager]: Fresh singleton instance with handlers uninstalled.
     """
     ProcessManager.reset_instance()
     pm = ProcessManager.get_instance()

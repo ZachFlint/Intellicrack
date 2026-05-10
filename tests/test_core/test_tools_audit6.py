@@ -36,10 +36,13 @@ class _FakeState:
         last_error: Recorded error string.
     """
 
+    connected: bool
+    last_error: str | None
+
     def __init__(self) -> None:
         """Initialise with default disconnected state."""
-        self.connected: bool = False
-        self.last_error: str | None = None
+        self.connected = False
+        self.last_error = None
 
 
 class _FailingBridge:
@@ -54,6 +57,9 @@ class _FailingBridge:
 
     async def is_available(self) -> bool:
         """Always raise to drive the ``except`` branch.
+
+        Returns:
+            bool: Never returns; declared to satisfy the bridge protocol.
 
         Raises:
             RuntimeError: Always raised to simulate a bridge failure.
