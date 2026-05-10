@@ -2930,10 +2930,7 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
         raise FileNotFoundError(error_message)
 
     raw = resolved.read_bytes()
-    hashes = (
-        hashlib.md5(raw, usedforsecurity=False).hexdigest(),
-        hashlib.sha256(raw).hexdigest(),
-    )
+    sha256 = hashlib.sha256(raw).hexdigest()
     lief_parse = cast(
         "Callable[[str], lief.PE.Binary | lief.OAT.Binary | lief.ELF.Binary | lief.MachO.Binary | lief.COFF.Binary | None]",
         vars(lief)["parse"],
@@ -2945,8 +2942,7 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
             path=resolved,
             name=resolved.name,
             size=len(raw),
-            md5=hashes[0],
-            sha256=hashes[1],
+            sha256=sha256,
             file_type="unknown",
             architecture="unknown",
             is_64bit=False,
@@ -2962,8 +2958,7 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
         path=resolved,
         name=resolved.name,
         size=len(raw),
-        md5=hashes[0],
-        sha256=hashes[1],
+        sha256=sha256,
         file_type=meta[0],
         architecture=meta[1],
         is_64bit=meta[2],
