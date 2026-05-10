@@ -41,7 +41,7 @@ from .types import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
 
 _ERR_FILE_NOT_FOUND = "session file not found"
@@ -49,6 +49,7 @@ _ERR_INVALID_FORMAT = "invalid session file format"
 _ERR_SESSION_NOT_FOUND = "session not found"
 _ERR_SESSION_EXISTS = "session already exists"
 _ERR_NO_CURRENT_SESSION = "no current session"
+_ERR_EMPTY_TAG = "session tag must be a non-empty, non-whitespace string"
 
 _logger = get_logger(__name__)
 
@@ -203,6 +204,74 @@ class Session:
         """
         return self.bridge_analyses.get(binary_name)
 
+    def set_tool_state(self, state: ToolState) -> None:
+        """Record or replace the tool bridge state for ``state.tool``.
+
+        This is the canonical writer for ``Session.tool_states``. Bridges call
+        this whenever they connect, attach to a process, or surface an error so
+        the persisted session reflects the current state of every integrated
+        tool.
+
+        Args:
+            state: ToolState describing the bridge's current connection,
+                attachment, target, and last error.
+        """
+        self.tool_states[state.tool] = state
+        self.updated_at = datetime.now(tz=UTC)
+
+    def clear_tool_state(self, tool: ToolName) -> bool:
+        """Remove the recorded state for ``tool`` if present.
+
+        Args:
+            tool: Tool whose state should be cleared.
+
+        Returns:
+            bool: True if a state was removed, False if no state existed.
+        """
+        if tool in self.tool_states:
+            del self.tool_states[tool]
+            self.updated_at = datetime.now(tz=UTC)
+            return True
+        return False
+
+    def add_tag(self, tag: str) -> bool:
+        """Add a tag to the session.
+
+        Args:
+            tag: Non-empty tag string. Whitespace-only tags are rejected.
+
+        Returns:
+            bool: True if the tag was added, False if it was already present.
+
+        Raises:
+            ValueError: If ``tag`` is empty or whitespace-only.
+        """
+        normalised = tag.strip()
+        if not normalised:
+            raise ValueError(_ERR_EMPTY_TAG)
+        if normalised in self.tags:
+            return False
+        self.tags.append(normalised)
+        self.updated_at = datetime.now(tz=UTC)
+        return True
+
+    def remove_tag(self, tag: str) -> bool:
+        """Remove a tag from the session if present.
+
+        Args:
+            tag: Tag string to remove. Leading/trailing whitespace is stripped
+                to match the normalisation performed by ``add_tag``.
+
+        Returns:
+            bool: True if the tag was removed, False if it was not present.
+        """
+        normalised = tag.strip()
+        if normalised in self.tags:
+            self.tags.remove(normalised)
+            self.updated_at = datetime.now(tz=UTC)
+            return True
+        return False
+
 
 class SessionStore:
     """SQLite-based session persistence.
@@ -222,11 +291,12 @@ class SessionStore:
         self._init_database()
 
     @contextmanager
-    def _connection(self) -> Iterator[sqlite3.Connection]:
+    def _connection(self) -> Generator[sqlite3.Connection]:
         """Get a database connection.
 
         Yields:
-            sqlite3.Connection: Active database connection with auto-commit/rollback.
+            Generator[sqlite3.Connection]: Active database connection with
+                auto-commit/rollback.
 
         Raises:
             sqlite3.Error: On database-level errors (re-raised after rollback).
@@ -927,6 +997,11 @@ class SessionManager:
         self.auto_save = auto_save
         self.save_interval = save_interval
         self._save_task: asyncio.Task[None] | None = None
+        # SQLite can corrupt under concurrent writes from a single process; this
+        # lock serialises every SQLite operation routed through the manager so
+        # ``update`` and ``save`` (called from the auto-save loop, the GUI, and
+        # bridges) cannot interleave their transactions.
+        self._db_lock = asyncio.Lock()
         _logger.debug("session_manager_init", auto_save=auto_save, save_interval=save_interval)
 
     @property
@@ -979,7 +1054,8 @@ class SessionManager:
         if self._current is not None:
             await self.save()
 
-        session = self.store.load(session_id)
+        async with self._db_lock:
+            session = await asyncio.to_thread(self.store.load, session_id)
 
         if session is not None:
             self._current = session
@@ -997,23 +1073,38 @@ class SessionManager:
         Returns:
             Session | None: Session instance or None if not found.
         """
-        return self.store.load(session_id)
+        async with self._db_lock:
+            return await asyncio.to_thread(self.store.load, session_id)
 
     async def update(self, session: Session) -> None:
         """Update a session in the store.
 
+        SQLite I/O is offloaded to a worker thread so the event loop is never
+        blocked by disk I/O, and serialised against every other writer through
+        ``self._db_lock`` to keep SQLite from racing with the auto-save loop or
+        concurrent ``update`` callers.
+
         Args:
             session: Session to update.
         """
-        self.store.save(session)
+        async with self._db_lock:
+            await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)
 
     async def save(self) -> None:
-        """Save the current session."""
-        if self._current is not None:
-            self.store.save(self._current)
-            log_session_operation("save", self._current.id)
-            _logger.debug("current_session_saved", session_id=self._current.id)
+        """Save the current session.
+
+        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under
+        the same lock so ``save`` and ``update`` cannot interleave their
+        transactions.
+        """
+        if self._current is None:
+            return
+        current = self._current
+        async with self._db_lock:
+            await asyncio.to_thread(self.store.save, current)
+        log_session_operation("save", current.id)
+        _logger.debug("current_session_saved", session_id=current.id)
 
     async def close(self) -> None:
         """Close the current session."""
@@ -1039,7 +1130,8 @@ class SessionManager:
             await self._stop_auto_save()
             self._current = None
 
-        return self.store.delete(session_id)
+        async with self._db_lock:
+            return await asyncio.to_thread(self.store.delete, session_id)
 
     def list_sessions(self, limit: int = 100) -> list[SessionMetadata]:
         """List all sessions.
@@ -1073,7 +1165,8 @@ class SessionManager:
             int: Number of sessions deleted.
         """
         _logger.info("session_cleanup_requested", days=days)
-        return self.store.cleanup_old(days)
+        async with self._db_lock:
+            return await asyncio.to_thread(self.store.cleanup_old, days)
 
     async def export_json(self, session_id: str, path: Path) -> None:
         """Export a session to a JSON file.
@@ -1086,11 +1179,12 @@ class SessionManager:
             ValueError: If the session is not found.
         """
         _logger.info("session_exporting", session_id=session_id, path=str(path))
-        session = self.store.load(session_id)
+        async with self._db_lock:
+            session = await asyncio.to_thread(self.store.load, session_id)
         if session is None:
             raise ValueError(_ERR_SESSION_NOT_FOUND)
 
-        self.store.export_to_json(session, path)
+        await asyncio.to_thread(self.store.export_to_json, session, path)
 
     async def import_json(self, path: Path, *, replace: bool = False) -> Session:
         """Import a session from a JSON file.
@@ -1105,13 +1199,14 @@ class SessionManager:
         Raises:
             ValueError: If session with same ID already exists and replace=False.
         """
-        session = self.store.import_from_json(path)
+        session = await asyncio.to_thread(self.store.import_from_json, path)
 
-        existing = self.store.load(session.id)
-        if existing is not None and not replace:
-            raise ValueError(_ERR_SESSION_EXISTS)
+        async with self._db_lock:
+            existing = await asyncio.to_thread(self.store.load, session.id)
+            if existing is not None and not replace:
+                raise ValueError(_ERR_SESSION_EXISTS)
 
-        self.store.save(session)
+            await asyncio.to_thread(self.store.save, session)
         return session
 
     async def export_current(self, path: Path) -> None:
@@ -1127,7 +1222,7 @@ class SessionManager:
         if self._current is None:
             raise ValueError(_ERR_NO_CURRENT_SESSION)
 
-        self.store.export_to_json(self._current, path)
+        await asyncio.to_thread(self.store.export_to_json, self._current, path)
 
     async def _start_auto_save(self) -> None:
         """Start the auto-save task."""
@@ -1147,7 +1242,29 @@ class SessionManager:
             self._save_task = None
 
     async def _auto_save_loop(self) -> None:
-        """Auto-save loop."""
+        """Periodically persist the current session.
+
+        The loop is wrapped in a broad exception guard because it has to keep
+        running across transient failure modes (filesystem hiccups, locked
+        SQLite databases, exhausted disk, intermittent permission errors). A
+        single ``raise`` would otherwise terminate the task and silently leave
+        the application without auto-save until restart. ``asyncio.CancelledError``
+        is intentionally re-raised so ``_stop_auto_save`` continues to cancel
+        cleanly.
+
+        Raises:
+            asyncio.CancelledError: Re-raised so ``_stop_auto_save`` can cancel
+                the task without it being swallowed by the broad exception guard.
+        """
         while True:
-            await asyncio.sleep(self.save_interval)
-            await self.save()
+            try:
+                await asyncio.sleep(self.save_interval)
+                await self.save()
+            except asyncio.CancelledError:
+                _logger.debug("autosave_loop_cancelled")
+                raise
+            except Exception:
+                _logger.exception(
+                    "autosave_loop_iteration_failed",
+                    session_id=self._current.id if self._current is not None else None,
+                )

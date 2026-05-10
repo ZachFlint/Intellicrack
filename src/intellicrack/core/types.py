@@ -38,8 +38,7 @@ class HexDocumentLike(Protocol):
         Returns:
             list[int]: List of byte values.
         """
-        _ = (self, offset, length)
-        return []
+        ...  # protocol body
 
     def length(self) -> int:
         """Get the total length of the document in bytes.
@@ -47,8 +46,7 @@ class HexDocumentLike(Protocol):
         Returns:
             int: Document length.
         """
-        _ = self
-        return 0
+        ...  # protocol body
 
 
 @runtime_checkable
@@ -62,7 +60,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
             offset: Byte offset to write at.
             data: Bytes to write.
         """
-        _ = (self, offset, data)
+        ...  # protocol body
 
     def list_templates(self) -> list[tuple[str, str]]:
         """List available templates.
@@ -70,8 +68,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             list[tuple[str, str]]: List of (name, description) tuples.
         """
-        _ = self
-        return []
+        ...  # protocol body
 
     def list_templates_detailed(self) -> list[object]:
         """List templates with full detail objects.
@@ -79,8 +76,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             list[object]: List of template detail objects.
         """
-        _ = self
-        return []
+        ...  # protocol body
 
     def register_json_template(self, name: str, json_str: str) -> None:
         """Register a JSON-defined template.
@@ -89,7 +85,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
             name: Template name.
             json_str: JSON string defining the template.
         """
-        _ = (self, name, json_str)
+        ...  # protocol body
 
     def remove_template(self, name: str) -> None:
         """Remove a registered template.
@@ -97,7 +93,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Args:
             name: Template name to remove.
         """
-        _ = (self, name)
+        ...  # protocol body
 
     def export_template_json(self, name: str) -> str:
         """Export a template as a JSON string.
@@ -108,8 +104,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             str: JSON representation of the template.
         """
-        _ = (self, name)
-        return ""
+        ...  # protocol body
 
     def inspect_at(self, offset: int) -> dict[str, object]:
         """Inspect data at the given offset.
@@ -120,8 +115,7 @@ class HexDocumentFull(HexDocumentLike, Protocol):
         Returns:
             dict[str, object]: Inspection results.
         """
-        _ = (self, offset)
-        return {}
+        ...  # protocol body
 
 
 @runtime_checkable
@@ -197,7 +191,6 @@ __all__: list[str] = [
     "SandboxError",
     "SectionInfo",
     "SegmentInfo",
-    "Session",
     "StalkerEvent",
     "StalkerTrace",
     "StringInfo",
@@ -1336,35 +1329,6 @@ class ToolState:
     process_attached: bool
     target_path: Path | None
     last_error: str | None
-
-
-@dataclass
-class Session:
-    """Complete session state.
-
-    Attributes:
-        id: Unique session identifier.
-        created_at: When session was created.
-        updated_at: When session was last updated.
-        binaries: List of loaded binaries.
-        active_binary_index: Index of currently active binary.
-        provider: Active LLM provider.
-        model: Active model ID.
-        messages: Conversation history.
-        tool_states: State of each tool bridge.
-        patches: List of patches applied or pending.
-    """
-
-    id: str
-    created_at: datetime
-    updated_at: datetime
-    binaries: list[BinaryInfo]
-    active_binary_index: int
-    provider: ProviderName
-    model: str
-    messages: list[Message]
-    tool_states: dict[ToolName, ToolState]
-    patches: list[PatchInfo]
 
 
 @dataclass
