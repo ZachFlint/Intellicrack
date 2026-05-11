@@ -2266,9 +2266,8 @@ class GhidraPanel(AnalysisPanelBase):
     def _on_refresh_labels(self) -> None:
         """Refresh the labels table from bridge.
 
-        Requires a valid address in the label address input. If the input is empty
-        or unparsable, surfaces a UI error and short-circuits without invoking the
-        bridge so the user's intent is never silently changed to address 0.
+        Requires a valid address in the label address input. If the input is empty or unparsable, surfaces a UI error and short-circuits
+        without invoking the bridge so the user's intent is never silently changed to address 0.
         """
         bridge = self._require_connected()
         if bridge is None:

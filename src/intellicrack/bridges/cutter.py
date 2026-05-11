@@ -817,12 +817,9 @@ def _build_tool_functions() -> list[ToolFunction]:
 class CutterBridge(StaticAnalysisBridge):
     """Bridge for Cutter/Rizin reverse engineering framework.
 
-    Provides static analysis, disassembly, and debugging capabilities
-    using the r2pipe interface. Instances own the r2pipe connection,
-    the tracked binary and tool paths, the analysis-state flags, the
-    registered Rizin process identifier, and the declared
-    ``BridgeCapabilities`` that describe the static-analysis features
-    this bridge exposes to the orchestrator.
+    Provides static analysis, disassembly, and debugging capabilities using the r2pipe interface. Instances own the r2pipe connection, the
+    tracked binary and tool paths, the analysis-state flags, the registered Rizin process identifier, and the declared
+    ``BridgeCapabilities`` that describe the static-analysis features this bridge exposes to the orchestrator.
     """
 
     def __init__(self) -> None:
@@ -973,12 +970,9 @@ class CutterBridge(StaticAnalysisBridge):
     async def shutdown(self) -> None:
         """Shutdown Cutter bridge and cleanup resources.
 
-        Wraps every reference-releasing step in ``try/finally`` so
-        ``super().shutdown()`` is guaranteed to run even when an
-        intermediate cleanup step raises. Without the guarantee a
-        ``ProcessManager`` failure would leave the base ``BridgeState``
-        marked ``connected=True`` after the bridge had released its
-        rizin handle, presenting observers with a stuck-alive state.
+        Wraps every reference-releasing step in ``try/finally`` so ``super().shutdown()`` is guaranteed to run even when an intermediate
+        cleanup step raises. Without the guarantee a ``ProcessManager`` failure would leave the base ``BridgeState`` marked
+        ``connected=True`` after the bridge had released its rizin handle, presenting observers with a stuck-alive state.
         """
         try:
             if self._r2 is not None:

@@ -24,10 +24,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from intellicrack.ui.panels.hex_editor._search import SearchMixin
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QApplication
+
+    from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -235,9 +237,7 @@ class TestSearchUsesDocument:
 
         worker = mixin._search_worker
         assert worker is not None, "_on_search must create a GenericCallableWorker"
-        assert worker._args[0] is doc, (
-            "First positional arg to worker must be self.document, not None or a different object"
-        )
+        assert worker._args[0] is doc, "First positional arg to worker must be self.document, not None or a different object"
         worker.quit()
         worker.wait(2000)
 
@@ -288,9 +288,7 @@ class TestSearchUsesDocument:
 
         mixin._on_search()
 
-        assert mixin._search_worker is None, (
-            "_on_search must not create a worker when document is None"
-        )
+        assert mixin._search_worker is None, "_on_search must not create a worker when document is None"
 
     @staticmethod
     def test_dead_class_annotation_removed(qapp: Any) -> None:
@@ -336,9 +334,7 @@ class TestSearchResultsClearedOnModeChange:
         mixin._search_mode_combo.setCurrentText("Hex")
         mixin._on_search_mode_changed("Hex")
 
-        assert mixin._search_results == [], (
-            "_search_results must be cleared when mode changes"
-        )
+        assert mixin._search_results == [], "_search_results must be cleared when mode changes"
         assert mixin._search_index == 0, "_search_index must reset to 0"
 
     @staticmethod
@@ -356,9 +352,7 @@ class TestSearchResultsClearedOnModeChange:
         mixin._search_results = [(0, 3)]
         mixin._on_search_mode_changed("Regex")
 
-        assert "search" in widget.clear_calls, (
-            "clear_highlights('search') must be called on the hex widget when mode changes"
-        )
+        assert "search" in widget.clear_calls, "clear_highlights('search') must be called on the hex widget when mode changes"
 
     @staticmethod
     def test_status_label_cleared_after_mode_change(qapp: Any) -> None:
@@ -376,9 +370,7 @@ class TestSearchResultsClearedOnModeChange:
         mixin._search_status_label.setText("Found 3 results")
         mixin._on_search_mode_changed("Text")
 
-        assert mixin._search_status_label.text() == "", (
-            "Status label must be cleared when mode changes"
-        )
+        assert mixin._search_status_label.text() == "", "Status label must be cleared when mode changes"
 
     @staticmethod
     def test_reset_search_state_clears_all_fields(qapp: Any) -> None:
@@ -426,6 +418,4 @@ class TestSearchResultsClearedOnModeChange:
         assert mixin._search_input is not None
         mixin._search_input.setText("new query")
 
-        assert mixin._search_results == [], (
-            "Changing search input text must clear _search_results"
-        )
+        assert mixin._search_results == [], "Changing search input text must clear _search_results"

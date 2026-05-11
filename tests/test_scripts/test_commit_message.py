@@ -7,10 +7,14 @@ import importlib.util
 import sys
 import time
 from pathlib import Path
-from types import ModuleType
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 def _load_gcm_module() -> ModuleType:

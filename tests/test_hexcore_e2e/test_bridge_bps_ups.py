@@ -11,12 +11,12 @@ from typing import TYPE_CHECKING, TypeVar
 
 import pytest
 
-from intellicrack.bridges.hex_editor import HexEditorBridge
-
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 pytest.importorskip(
@@ -28,7 +28,7 @@ pytest.importorskip(
 _T = TypeVar("_T")
 
 
-def _run(coro: Coroutine[object, object, _T]) -> _T:
+def _run[T](coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously.
 
     Args:

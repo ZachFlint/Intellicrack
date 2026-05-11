@@ -55,8 +55,7 @@ class CredentialLoaderProtocol(Protocol):
 class ProviderRegistry:
     """Registry for all LLM providers.
 
-    Manages provider instances, connections, and provides a unified interface
-    for accessing any configured LLM provider.
+    Manages provider instances, connections, and provides a unified interface for accessing any configured LLM provider.
     """
 
     def __init__(
@@ -437,8 +436,7 @@ def get_provider_registry(
 def reset_provider_registry() -> None:
     """Reset the global provider registry singleton.
 
-    Intended for use by tests that need to rebuild the registry between
-    cases. Production code should not call this.
+    Intended for use by tests that need to rebuild the registry between cases. Production code should not call this.
     """
     with _registry_lock:
         _RegistryHolder.instance = None

@@ -25,7 +25,6 @@ import json
 import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from types import ModuleType
 from typing import TYPE_CHECKING, Any, ClassVar
 from urllib.parse import parse_qs, urlencode
 
@@ -37,6 +36,7 @@ from intellicrack.credentials import oauth as oauth_module
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from types import ModuleType
 
 
 _UNAUTHORIZED = 401

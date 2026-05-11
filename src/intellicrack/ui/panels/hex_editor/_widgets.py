@@ -344,16 +344,12 @@ def _stream_crc_from_source(
 class CustomCrcDialog(QDialog):
     """Dialog for computing a custom parametric CRC.
 
-    Provides input fields for width, polynomial, initial value,
-    reflection options, and XOR-out value, then computes the CRC over
-    the supplied source when the user clicks Calculate.
+    Provides input fields for width, polynomial, initial value, reflection options, and XOR-out value, then computes the CRC over the
+    supplied source when the user clicks Calculate.
 
-    The CRC is always computed on a :class:`GenericCallableWorker`
-    background thread so the UI stays responsive even on
-    multi-hundred-megabyte files. The worker streams from an mmap'd
-    file when the document is file-backed and falls back to chunked
-    ``document.read`` calls otherwise; in both cases the UI thread
-    never holds more than one chunk of the document body.
+    The CRC is always computed on a :class:`GenericCallableWorker` background thread so the UI stays responsive even on multi-hundred-
+    megabyte files. The worker streams from an mmap'd file when the document is file-backed and falls back to chunked ``document.read``
+    calls otherwise; in both cases the UI thread never holds more than one chunk of the document body.
     """
 
     crc_computed = pyqtSignal("PyQt_PyObject")
@@ -509,8 +505,7 @@ _DIGRAM_DIALOG_MIN: int = 600
 class _DigramMatrixWidget(QWidget):
     """Custom widget rendering a 256x256 byte pair frequency heatmap.
 
-    Each pixel at (row, col) represents the frequency of the byte
-    pair ``row -> col`` in the analyzed document.
+    Each pixel at (row, col) represents the frequency of the byte pair ``row -> col`` in the analyzed document.
     """
 
     def __init__(

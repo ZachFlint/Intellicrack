@@ -1616,9 +1616,7 @@ class TestF0006MemConstants:
         named_regions = [r for r in regions if r.module_name]
         assert named_regions, "expected at least one MEM_IMAGE/MEM_MAPPED region with module name"
         for region in named_regions:
-            assert region.type in {"image", "mapped"}, (
-                f"region with module_name must be image or mapped, got type={region.type}"
-            )
+            assert region.type in {"image", "mapped"}, f"region with module_name must be image or mapped, got type={region.type}"
 
     async def test_get_memory_map_no_resolve_skips_names(
         self,
@@ -1689,8 +1687,7 @@ class TestF0007PatternScanContinues:
                 end_address=addr + region_size,
             )
             assert addr + second_chunk_offset in matches, (
-                f"pattern not found in second chunk at "
-                f"{hex(addr + second_chunk_offset)}; matches={[hex(m) for m in matches[:8]]}"
+                f"pattern not found in second chunk at {hex(addr + second_chunk_offset)}; matches={[hex(m) for m in matches[:8]]}"
             )
 
             restore_prot = wintypes.DWORD()

@@ -4,14 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared sandbox log-line helpers for network primitives and YARA matches.
 
-This module exposes the small pure-Python primitives that both
-:mod:`intellicrack.sandbox.windows` and :mod:`intellicrack.sandbox.qemu`
-use while parsing in-guest monitor logs and post-execution YARA results.
+This module exposes the small pure-Python primitives that both :mod:`intellicrack.sandbox.windows` and :mod:`intellicrack.sandbox.qemu` use
+while parsing in-guest monitor logs and post-execution YARA results.
 
-The helpers are deliberately untouched by the per-backend log-parser
-methods (which live in ``sandbox.windows`` and ``sandbox.qemu``); they
-operate purely on strings and YARA match objects so they can be reused
-across both sandbox flavours without dragging any sandbox state.
+The helpers are deliberately untouched by the per-backend log-parser methods (which live in ``sandbox.windows`` and ``sandbox.qemu``); they
+operate purely on strings and YARA match objects so they can be reused across both sandbox flavours without dragging any sandbox state.
 """
 
 from __future__ import annotations
@@ -22,10 +19,8 @@ from typing import Any, Final, Literal
 YARA_MATCH_MIN_FIELDS: Final[int] = 3
 """Minimum tuple length for a usable ``yara.Match`` strings entry.
 
-Each entry is expected to be ``(offset, identifier, data)``; entries
-with fewer than three positional members are skipped.
+Each entry is expected to be ``(offset, identifier, data)``; entries with fewer than three positional members are skipped.
 """
-
 
 def split_addr_port(value: str) -> tuple[str, int]:
     """Split an ``address:port`` literal into its components.

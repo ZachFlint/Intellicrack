@@ -122,10 +122,9 @@ _EOF_TOKEN = Token(TokenType.EOF, "", 0, 0)
 class HexPatAggregateParseError(HexPatParseError):
     """Aggregated parser error produced when recovery collects multiple errors.
 
-    Subclasses :class:`HexPatParseError` so existing handlers continue to catch it.
-    Carries the full list of collected errors via :attr:`errors`, and exposes a
-    summary message that enumerates every error so callers do not silently lose
-    information about secondary failures.
+    Subclasses :class:`HexPatParseError` so existing handlers continue to catch it. Carries the full list of collected errors via
+    :attr:`errors`, and exposes a summary message that enumerates every error so callers do not silently lose information about secondary
+    failures.
     """
 
     def __init__(self, errors: tuple[HexPatParseError, ...]) -> None:
@@ -265,9 +264,8 @@ class HexPatParser:
     def _synchronise(self) -> None:
         """Advance the token cursor past the next top-level statement boundary.
 
-        Consumes tokens until a ``;`` is consumed, a closing ``}`` is consumed
-        at brace depth zero, or EOF is reached. Nested braces are tracked so
-        an unterminated body does not cause spurious early exits.
+        Consumes tokens until a ``;`` is consumed, a closing ``}`` is consumed at brace depth zero, or EOF is reached. Nested braces are
+        tracked so an unterminated body does not cause spurious early exits.
         """
         depth = 0
         while not self._at_end():

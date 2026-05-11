@@ -641,7 +641,6 @@ process. The layout is identical to :class:`CONTEXT32`, so aliasing keeps
 the Win32 types surface minimal while making call sites self-documenting.
 """
 
-
 # ---------------------------------------------------------------------------
 # DbgHelp stack walk structures
 # ---------------------------------------------------------------------------

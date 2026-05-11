@@ -358,9 +358,7 @@ class TestImportRoutesThroughBridge:
         sent_b64, sent_original = bridge.import_calls[0]
         assert sent_original is None, "panel must NOT supply original_path when importing an IPS patch"
         assert base64.b64decode(sent_b64.encode("ascii")) == _PATCH_BYTES, "panel must base64-encode the on-disk patch bytes verbatim"
-        assert harness.hex_widget_update_count_for_test() == 1, (
-            "successful import must repaint the hex widget viewport exactly once"
-        )
+        assert harness.hex_widget_update_count_for_test() == 1, "successful import must repaint the hex widget viewport exactly once"
         assert stub_open_dialog_ips.exists()
 
     @staticmethod

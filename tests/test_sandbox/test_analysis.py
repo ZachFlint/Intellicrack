@@ -17,7 +17,7 @@ Tests validate:
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from intellicrack.sandbox.analysis import (
     detect_c2_patterns,
@@ -41,6 +41,11 @@ from intellicrack.sandbox.base import (
 )
 
 from .conftest import make_sample_report, ts_offset
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 _analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
 _is_private_ip = cast("Callable[[str], bool]", getattr(_analysis_mod, "_is_private_ip"))
@@ -528,7 +533,12 @@ class TestGenerateTimeline:
         report = make_sample_report(
             registry_changes=[
                 RegistryChange(
-                    key="HKLM\\X", value_name="v", operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)
+                    key="HKLM\\X",
+                    value_name="v",
+                    operation="created",
+                    value_type=None,
+                    value_data=None,
+                    timestamp=ts_offset(1),
                 ),
             ],
         )
@@ -587,7 +597,12 @@ class TestGenerateTimeline:
         report = make_sample_report(
             service_changes=[
                 ServiceChange(
-                    service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(1)
+                    service_name="Svc",
+                    display_name="S",
+                    binary_path="x",
+                    start_type="auto",
+                    operation="created",
+                    timestamp=ts_offset(1),
                 ),
             ],
         )
@@ -600,7 +615,12 @@ class TestGenerateTimeline:
         report = make_sample_report(
             kernel_objects=[
                 KernelObjectActivity(
-                    object_type="Mutex", name="M", pid=100, process_name="test.exe", operation="created", timestamp=ts_offset(1)
+                    object_type="Mutex",
+                    name="M",
+                    pid=100,
+                    process_name="test.exe",
+                    operation="created",
+                    timestamp=ts_offset(1),
                 ),
             ],
         )
@@ -678,7 +698,14 @@ class TestGenerateTimeline:
             network_activity=[_net(ts_sec=2)],
             process_activity=[
                 ProcessActivity(
-                    pid=100, name="x", path=None, command_line=None, parent_pid=1, operation="created", exit_code=0, timestamp=ts_offset(3)
+                    pid=100,
+                    name="x",
+                    path=None,
+                    command_line=None,
+                    parent_pid=1,
+                    operation="created",
+                    exit_code=0,
+                    timestamp=ts_offset(3),
                 ),
             ],
         )
@@ -712,7 +739,12 @@ class TestGenerateTimeline:
         report = make_sample_report(
             registry_changes=[
                 RegistryChange(
-                    key="HKLM\\X", value_name=None, operation="created", value_type=None, value_data=None, timestamp=ts_offset(1)
+                    key="HKLM\\X",
+                    value_name=None,
+                    operation="created",
+                    value_type=None,
+                    value_data=None,
+                    timestamp=ts_offset(1),
                 ),
             ],
         )
@@ -747,7 +779,12 @@ class TestMatchBehaviors:
         report = make_sample_report(
             service_changes=[
                 ServiceChange(
-                    service_name="Svc", display_name="S", binary_path="x", start_type="auto", operation="created", timestamp=ts_offset(0)
+                    service_name="Svc",
+                    display_name="S",
+                    binary_path="x",
+                    start_type="auto",
+                    operation="created",
+                    timestamp=ts_offset(0),
                 ),
             ],
         )

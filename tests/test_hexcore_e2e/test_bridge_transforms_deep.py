@@ -35,7 +35,7 @@ _pipeline_available: bool = find_spec("intellicrack.core.transform_pipeline") is
 _T = TypeVar("_T")
 
 
-def _run(coro: Coroutine[object, object, _T]) -> _T:
+def _run[T](coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously.
 
     Args:

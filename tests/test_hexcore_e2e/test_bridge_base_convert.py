@@ -26,7 +26,7 @@ pytest.importorskip(
 _T = TypeVar("_T")
 
 
-def _run(coro: Coroutine[object, object, _T]) -> _T:
+def _run[T](coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously.
 
     Args:

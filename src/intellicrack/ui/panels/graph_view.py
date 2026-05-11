@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Control flow graph view for Cutter/Rizin function analysis.
 
-Provides QGraphicsView-based rendering of function CFGs parsed from
-Cutter/Rizin ``agj`` JSON output with hierarchical block layout, colored
+Provides QGraphicsView-based rendering of function CFGs parsed from Cutter/Rizin ``agj`` JSON output with hierarchical block layout, colored
 edges for branch direction, and interactive block selection.
 """
 

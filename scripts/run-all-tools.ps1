@@ -7,7 +7,30 @@ $ErrorActionPreference = 'SilentlyContinue'
 $skipList = @()
 if ($Flags -match '--skip\s+(\S+)') { $skipList = $matches[1] -split ',' }
 
-$groupAliases = @{ python = 'py'; py = 'py'; rust = 'rs'; rs = 'rs'; dashboard = 'dash'; dash = 'dash' }
+$groupAliases = @{
+    python     = 'py'
+    py         = 'py'
+    rust       = 'rs'
+    rs         = 'rs'
+    toml       = 'toml'
+    json       = 'json'
+    yaml       = 'yaml'
+    yml        = 'yaml'
+    markdown   = 'md'
+    md         = 'md'
+    shell      = 'sh'
+    sh         = 'sh'
+    bash       = 'sh'
+    batch      = 'bat'
+    bat        = 'bat'
+    powershell = 'ps'
+    ps         = 'ps'
+    ps1        = 'ps'
+    text       = 'txt'
+    txt        = 'txt'
+    dashboard  = 'dash'
+    dash       = 'dash'
+}
 $groupFilter = @()
 foreach ($f in ($Flags -split '\s+')) {
     if ($f -ne '' -and $f -notmatch '^--' -and $groupAliases.ContainsKey($f.ToLower())) {
@@ -29,55 +52,67 @@ Write-Host "${e}[38;2;228;0;43m$v${e}[0m     ${e}[1;95mRunning All Dev Tools${e}
 Write-Host "${e}[38;2;228;0;43m$bl$line$br${e}[0m`n"
 
 $tools = @(
-    @{N = 'Ruff Fmt'; R = 'ruff-fmt'; F = $true; G = 'py' },
-    @{N = 'Docformatter'; R = 'docformatter'; F = $true; G = 'py' },
-    @{N = 'TOMLfmt'; R = 'tomlfmt'; F = $true; G = 'py' },
-    @{N = 'JSONfmt'; R = 'jsonfmt'; F = $true; G = 'py' },
-    @{N = 'YAMLfmt'; R = 'yamlfmt'; F = $true; G = 'py' },
-    @{N = 'MDfmt'; R = 'mdfmt'; F = $true; G = 'py' },
-    @{N = 'Ruff'; R = 'ruff'; F = $false; G = 'py' },
-    @{N = 'Flake8'; R = 'flake8'; F = $false; G = 'py' },
-    @{N = 'Wemake'; R = 'wemake'; F = $false; G = 'py' },
-    @{N = 'BasedPyright'; R = 'basedpyright'; F = $false; G = 'py' },
-    @{N = 'Mypy'; R = 'mypy'; F = $false; G = 'py' },
-    @{N = 'Ty'; R = 'ty'; F = $false; G = 'py' },
-    @{N = 'Pydocstyle'; R = 'pydocstyle'; F = $false; G = 'py' },
-    @{N = 'Pydoclint'; R = 'pydoclint'; F = $false; G = 'py' },
-    @{N = 'Interrogate'; R = 'interrogate'; F = $false; G = 'py' },
-    @{N = 'McCabe'; R = 'mccabe'; F = $false; G = 'py' },
-    @{N = 'Radon'; R = 'radon'; F = $false; G = 'py' },
-    @{N = 'Xenon'; R = 'xenon'; F = $false; G = 'py' },
-    @{N = 'Complexipy'; R = 'complexipy'; F = $false; G = 'py' },
-    @{N = 'Skylos'; R = 'skylos'; F = $false; G = 'py' },
-    @{N = 'Vulture'; R = 'vulture'; F = $false; G = 'py' },
-    @{N = 'Dead'; R = 'dead'; F = $false; G = 'py' },
-    @{N = 'Deadcode'; R = 'deadcode'; F = $false; G = 'py' },
-    @{N = 'Uncalled'; R = 'uncalled'; F = $false; G = 'py' },
-    @{N = 'Bandit'; R = 'bandit'; F = $false; G = 'py' },
-    @{N = 'Semgrep'; R = 'semgrep'; F = $false; G = 'py' },
-    @{N = 'Deptry'; R = 'deptry'; F = $false; G = 'py' },
-    @{N = 'Vermin'; R = 'vermin'; F = $false; G = 'py' },
-    @{N = 'JSONLint'; R = 'jsonlint'; F = $false; G = 'py' },
-    @{N = 'Taplo'; R = 'taplo'; F = $false; G = 'py' },
-    @{N = 'Markdown'; R = 'mdlint'; F = $false; G = 'py' },
-    @{N = 'YAML'; R = 'yamllint'; F = $false; G = 'py' },
-    @{N = 'ShellCheck'; R = 'shellcheck'; F = $false; G = 'py' },
-    @{N = 'Blinter'; R = 'blinter'; F = $false; G = 'py' },
-    @{N = 'PSScript'; R = 'psscriptanalyzer'; F = $false; G = 'py' },
-    @{N = 'Codespell'; R = 'codespell'; F = $false; G = 'py' },
-    @{N = 'PreCommitHooks'; R = 'precommit-hooks'; F = $false; G = 'py' },
-    @{N = 'Clippy'; R = 'clippy'; F = $false; G = 'rs' },
-    @{N = 'RustFmt'; R = 'rustfmt'; F = $true; G = 'rs' },
-    @{N = 'CargoDeny'; R = 'cargo-deny'; F = $false; G = 'rs' },
-    @{N = 'Nextest'; R = 'nextest'; F = $false; G = 'rs' },
-    @{N = 'LlvmCov'; R = 'llvm-cov'; F = $false; G = 'rs' },
-    @{N = 'Machete'; R = 'machete'; F = $false; G = 'rs' },
-    @{N = 'RustAnalysis'; R = 'rust-code-analysis'; F = $false; G = 'rs' },
-    @{N = 'Typos'; R = 'typos'; F = $false; G = 'rs' },
-    @{N = 'Dashboard'; R = 'lint-dashboard'; F = $true; G = 'dash' }
+    @{N = 'Ruff Fmt';       R = 'ruff-fmt';           F = $true;  G = 'py' },
+    @{N = 'Docformatter';   R = 'docformatter';       F = $true;  G = 'py' },
+    @{N = 'TOMLfmt';        R = 'tomlfmt';            F = $true;  G = 'toml' },
+    @{N = 'JSONfmt';        R = 'jsonfmt';            F = $true;  G = 'json' },
+    @{N = 'YAMLfmt';        R = 'yamlfmt';            F = $true;  G = 'yaml' },
+    @{N = 'MDfmt';          R = 'mdfmt';              F = $true;  G = 'md' },
+    @{N = 'Ruff';           R = 'ruff';               F = $false; G = 'py' },
+    @{N = 'Flake8';         R = 'flake8';             F = $false; G = 'py' },
+    @{N = 'Wemake';         R = 'wemake';             F = $false; G = 'py' },
+    @{N = 'BasedPyright';   R = 'basedpyright';       F = $false; G = 'py' },
+    @{N = 'Mypy';           R = 'mypy';               F = $false; G = 'py' },
+    @{N = 'Ty';             R = 'ty';                 F = $false; G = 'py' },
+    @{N = 'Pydocstyle';     R = 'pydocstyle';         F = $false; G = 'py' },
+    @{N = 'Pydoclint';      R = 'pydoclint';          F = $false; G = 'py' },
+    @{N = 'Interrogate';    R = 'interrogate';        F = $false; G = 'py' },
+    @{N = 'McCabe';         R = 'mccabe';             F = $false; G = 'py' },
+    @{N = 'Radon';          R = 'radon';              F = $false; G = 'py' },
+    @{N = 'Xenon';          R = 'xenon';              F = $false; G = 'py' },
+    @{N = 'Complexipy';     R = 'complexipy';         F = $false; G = 'py' },
+    @{N = 'Skylos';         R = 'skylos';             F = $false; G = 'py' },
+    @{N = 'Vulture';        R = 'vulture';            F = $false; G = 'py' },
+    @{N = 'Dead';           R = 'dead';               F = $false; G = 'py' },
+    @{N = 'Deadcode';       R = 'deadcode';           F = $false; G = 'py' },
+    @{N = 'Uncalled';       R = 'uncalled';           F = $false; G = 'py' },
+    @{N = 'Bandit';         R = 'bandit';             F = $false; G = 'py' },
+    @{N = 'Semgrep';        R = 'semgrep';            F = $false; G = 'py' },
+    @{N = 'Deptry';         R = 'deptry';             F = $false; G = 'py' },
+    @{N = 'Vermin';         R = 'vermin';             F = $false; G = 'py' },
+    @{N = 'JSONLint';       R = 'jsonlint';           F = $false; G = 'json' },
+    @{N = 'Taplo';          R = 'taplo';              F = $false; G = 'toml' },
+    @{N = 'Markdown';       R = 'mdlint';             F = $false; G = 'md' },
+    @{N = 'YAML';           R = 'yamllint';           F = $false; G = 'yaml' },
+    @{N = 'ShellCheck';     R = 'shellcheck';         F = $false; G = 'sh' },
+    @{N = 'Blinter';        R = 'blinter';            F = $false; G = 'bat' },
+    @{N = 'PSScript';       R = 'psscriptanalyzer';   F = $false; G = 'ps' },
+    @{N = 'Codespell';      R = 'codespell';          F = $false; G = 'txt' },
+    @{N = 'PreCommitHooks'; R = 'precommit-hooks';    F = $false; G = 'txt' },
+    @{N = 'Clippy';         R = 'clippy';             F = $false; G = 'rs' },
+    @{N = 'RustFmt';        R = 'rustfmt';            F = $true;  G = 'rs' },
+    @{N = 'CargoDeny';      R = 'cargo-deny';         F = $false; G = 'rs' },
+    @{N = 'Nextest';        R = 'nextest';            F = $false; G = 'rs' },
+    @{N = 'LlvmCov';        R = 'llvm-cov';           F = $false; G = 'rs' },
+    @{N = 'Machete';        R = 'machete';            F = $false; G = 'rs' },
+    @{N = 'RustAnalysis';   R = 'rust-code-analysis'; F = $false; G = 'rs' },
+    @{N = 'Typos';          R = 'typos';              F = $false; G = 'txt' },
+    @{N = 'Dashboard';      R = 'lint-dashboard';     F = $true;  G = 'dash' }
 )
 
-$gNames = @{ py = 'Python'; rs = 'Rust'; dash = 'Dashboard' }
+$gNames = @{
+    py   = 'Python'
+    rs   = 'Rust'
+    toml = 'TOML'
+    json = 'JSON'
+    yaml = 'YAML'
+    md   = 'Markdown'
+    sh   = 'Shell'
+    bat  = 'Batch'
+    ps   = 'PowerShell'
+    txt  = 'Text'
+    dash = 'Dashboard'
+}
 
 if ($groupFilter.Count -gt 0) {
     $tools = $tools | Where-Object { $groupFilter -contains $_.G }
@@ -106,8 +141,16 @@ $lastGroup = ''
 
 foreach ($tool in $tools) {
     switch ($tool.G) {
-        'py' { $gc = "${e}[36m" }
-        'rs' { $gc = "${e}[38;2;222;120;40m" }
+        'py'   { $gc = "${e}[38;2;55;118;171m" }
+        'rs'   { $gc = "${e}[38;2;222;120;40m" }
+        'toml' { $gc = "${e}[38;2;156;66;33m" }
+        'json' { $gc = "${e}[38;2;218;165;32m" }
+        'yaml' { $gc = "${e}[38;2;203;23;30m" }
+        'md'   { $gc = "${e}[38;2;200;200;205m" }
+        'sh'   { $gc = "${e}[38;2;137;224;81m" }
+        'bat'  { $gc = "${e}[38;2;120;180;230m" }
+        'ps'   { $gc = "${e}[38;2;30;110;200m" }
+        'txt'  { $gc = "${e}[38;2;190;190;190m" }
         'dash' { $gc = "${e}[95m" }
     }
 

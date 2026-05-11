@@ -105,14 +105,15 @@ async def test_chat_stream_yields_text_and_usage(
         live_provider: Per-test connected provider.
     """
     messages = _make_user_messages("Name a color:")
-    chunks: list[str] = []
-    async for chunk in live_provider.chat_stream(
-        messages=messages,
-        model=_LIVE_MODEL_ID,
-        max_tokens=8,
-        temperature=0.0,
-    ):
-        chunks.append(chunk)
+    chunks: list[str] = [
+        chunk
+        async for chunk in live_provider.chat_stream(
+            messages=messages,
+            model=_LIVE_MODEL_ID,
+            max_tokens=8,
+            temperature=0.0,
+        )
+    ]
 
     full_text = "".join(chunks).strip()
     assert len(full_text) > 0

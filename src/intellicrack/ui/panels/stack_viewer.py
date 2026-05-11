@@ -108,11 +108,9 @@ class StackFrame:
 class StackDataSource(Protocol):
     """Protocol for stack frame data sources.
 
-    Implementations provide methods to retrieve current stack frames from
-    debugging sessions. All members are instance methods that dispatch
-    through a concrete bridge attached via ``set_bridge``. The default
-    bodies return empty/disconnected values so that a partially-initialised
-    subclass degrades gracefully.
+    Implementations provide methods to retrieve current stack frames from debugging sessions. All members are instance methods that dispatch
+    through a concrete bridge attached via ``set_bridge``. The default bodies return empty/disconnected values so that a partially-
+    initialised subclass degrades gracefully.
     """
 
     def get_stack_frames(self) -> list[StackFrame]:

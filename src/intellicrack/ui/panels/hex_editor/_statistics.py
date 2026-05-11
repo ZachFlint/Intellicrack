@@ -200,10 +200,8 @@ class StatisticsMixin:
     def _update_statistics(self) -> None:
         """Update the statistics tab with entropy graph, histogram, and byte tree.
 
-        Launches a background worker to compute entropy, byte distribution,
-        byte type distribution, and content classification without blocking
-        the Qt main thread.  UI widgets display "Computing..." status text
-        until the worker completes.
+        Launches a background worker to compute entropy, byte distribution, byte type distribution, and content classification without
+        blocking the Qt main thread.  UI widgets display "Computing..." status text until the worker completes.
         """
         if self.document is None:
             return

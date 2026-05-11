@@ -145,17 +145,12 @@ TOOL_CAPABILITY_MAP: dict[str, str] = {
 }
 """Mapping from bridge tool-function short names to required capability.
 
-Each key is the unqualified method/tool name exposed by a bridge (the
-``name`` field of its ``ToolFunction`` entries with the ``<bridge>.``
-prefix stripped). Each value is the capability name that would appear in
-``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry`` consults
-this mapping in ``execute_tool_call`` to raise ``ToolError`` when a
-bridge is asked to execute a tool whose required capability it does not
-advertise. The mapping lives in ``bridges.base`` so that bridge
-implementations and the registry share a single source of truth, and
-``intellicrack.core.tools`` imports it from here.
+Each key is the unqualified method/tool name exposed by a bridge (the ``name`` field of its ``ToolFunction`` entries with the ``<bridge>.``
+prefix stripped). Each value is the capability name that would appear in ``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry``
+consults this mapping in ``execute_tool_call`` to raise ``ToolError`` when a bridge is asked to execute a tool whose required capability it
+does not advertise. The mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth,
+and ``intellicrack.core.tools`` imports it from here.
 """
-
 
 @dataclass
 class DisassemblyLine:
@@ -421,12 +416,9 @@ class ToolBridgeBase(ABC):
     async def _finalize_shutdown(self) -> None:
         """Run the shared cleanup that every bridge needs at shutdown.
 
-        Logs the bridge-class transition and resets ``_state`` to a
-        fresh :class:`BridgeState` so observers see a clean idle state
-        even when the subclass cleanup raises early. Concrete bridges
-        invoke this through ``await super().shutdown()`` (which calls
-        the abstract method's body) -- callers should not invoke it
-        directly.
+        Logs the bridge-class transition and resets ``_state`` to a fresh :class:`BridgeState` so observers see a clean idle state even when
+        the subclass cleanup raises early. Concrete bridges invoke this through ``await super().shutdown()`` (which calls the abstract
+        method's body) -- callers should not invoke it directly.
         """
         self._logger.info("bridge_shutdown", bridge_class=self.__class__.__name__)
         self._state = BridgeState()

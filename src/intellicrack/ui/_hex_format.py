@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared text-mode hex-dump formatter for UI panels.
 
-Provides a single canonical implementation of the 16-byte-per-line hex
-plus ASCII dump rendering used by the Frida and x64dbg panels for their
-console-style memory readouts. The richer ``HexEditorWidget`` QPainter
-renderer is intentionally untouched because it operates on a different
-domain (live widget painting rather than plain-text output).
+Provides a single canonical implementation of the 16-byte-per-line hex plus ASCII dump rendering used by the Frida and x64dbg panels for
+their console-style memory readouts. The richer ``HexEditorWidget`` QPainter renderer is intentionally untouched because it operates on a
+different domain (live widget painting rather than plain-text output).
 """
 
 from __future__ import annotations

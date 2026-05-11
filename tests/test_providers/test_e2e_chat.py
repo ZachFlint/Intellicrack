@@ -284,13 +284,14 @@ class TestAnthropicE2EChat:
             anthropic_provider: A connected AnthropicProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in anthropic_provider.chat_stream(
-            messages=messages,
-            model=ANTHROPIC_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in anthropic_provider.chat_stream(
+                messages=messages,
+                model=ANTHROPIC_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -411,13 +412,14 @@ class TestOpenAIE2EChat:
             openai_provider: A connected OpenAIProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in openai_provider.chat_stream(
-            messages=messages,
-            model=OPENAI_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in openai_provider.chat_stream(
+                messages=messages,
+                model=OPENAI_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -533,13 +535,14 @@ class TestGoogleE2EChat:
             google_provider: A connected GoogleProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in google_provider.chat_stream(
-            messages=messages,
-            model=GOOGLE_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in google_provider.chat_stream(
+                messages=messages,
+                model=GOOGLE_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -655,13 +658,14 @@ class TestGrokE2EChat:
             grok_provider: A connected GrokProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in grok_provider.chat_stream(
-            messages=messages,
-            model=GROK_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in grok_provider.chat_stream(
+                messages=messages,
+                model=GROK_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -777,13 +781,14 @@ class TestOpenRouterE2EChat:
             openrouter_provider: A connected OpenRouterProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in openrouter_provider.chat_stream(
-            messages=messages,
-            model=OPENROUTER_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in openrouter_provider.chat_stream(
+                messages=messages,
+                model=OPENROUTER_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -899,13 +904,14 @@ class TestHuggingFaceE2EChat:
             huggingface_provider: A connected HuggingFaceProvider instance.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in huggingface_provider.chat_stream(
-            messages=messages,
-            model=HUGGINGFACE_MODEL,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in huggingface_provider.chat_stream(
+                messages=messages,
+                model=HUGGINGFACE_MODEL,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -1025,13 +1031,14 @@ class TestOllamaE2EChat:
             ollama_model: The first available Ollama model ID.
         """
         messages = _make_messages("Say hello briefly.")
-        chunks: list[str] = []
-        async for chunk in ollama_e2e_provider.chat_stream(
-            messages=messages,
-            model=ollama_model,
-            max_tokens=64,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in ollama_e2e_provider.chat_stream(
+                messages=messages,
+                model=ollama_model,
+                max_tokens=64,
+            )
+        ]
 
         assert len(chunks) >= 1
         full_text = "".join(chunks).strip()
@@ -1255,13 +1262,14 @@ class TestCrossProviderConsistency:
         """
         messages = _make_messages("Say hello.")
         for provider_name, model_id, provider in available_providers:
-            chunks: list[str] = []
-            async for chunk in provider.chat_stream(
-                messages=messages,
-                model=model_id,
-                max_tokens=32,
-            ):
-                chunks.append(chunk)
+            chunks: list[str] = [
+                chunk
+                async for chunk in provider.chat_stream(
+                    messages=messages,
+                    model=model_id,
+                    max_tokens=32,
+                )
+            ]
             assert len(chunks) >= 1, f"{provider_name} yielded no chunks"
 
 

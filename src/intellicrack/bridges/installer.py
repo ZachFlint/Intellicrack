@@ -528,8 +528,7 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
 class ToolInstaller:
     """Handles automatic tool detection and installation.
 
-    Records the target directory under which downloaded tools will be
-    laid out, creates it on disk if it is missing, and prepares a lazy
+    Records the target directory under which downloaded tools will be laid out, creates it on disk if it is missing, and prepares a lazy
     ``httpx.AsyncClient`` slot that is instantiated on first download.
     """
 

@@ -36,10 +36,9 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 class _ZlibDecompressor(Protocol):
     """Protocol describing the incremental zlib decompressor surface used here.
 
-    Models the public methods of objects returned by :func:`zlib.decompressobj`
-    that the VNC widget actually consumes. Defined locally to avoid referencing
-    the private ``zlib._Decompress`` runtime alias from typeshed while keeping
-    full type fidelity for the methods used here.
+    Models the public methods of objects returned by :func:`zlib.decompressobj` that the VNC widget actually consumes. Defined locally to
+    avoid referencing the private ``zlib._Decompress`` runtime alias from typeshed while keeping full type fidelity for the methods used
+    here.
     """
 
     def decompress(self, data: bytes, /) -> bytes:
@@ -208,9 +207,8 @@ def _vnc_auth_encrypt(challenge: bytes, password: str) -> bytes:
 class RFBClient:
     """Async RFB (Remote Framebuffer) protocol client.
 
-    Implements a minimal subset of RFC 6143 sufficient for receiving raw
-    framebuffer updates and sending pointer/key events. Supports both the
-    ``None`` (type 1) and VNC-DES (type 2) security handshakes.
+    Implements a minimal subset of RFC 6143 sufficient for receiving raw framebuffer updates and sending pointer/key events. Supports both
+    the ``None`` (type 1) and VNC-DES (type 2) security handshakes.
     """
 
     width: int
@@ -517,10 +515,8 @@ class RFBClient:
     async def _handle_framebuffer_update(self) -> None:
         """Process a FramebufferUpdate message and update the QImage.
 
-        Dispatches each rectangle to the appropriate decoder based on
-        its encoding tag. Supports Raw (0), CopyRect (1), RRE (2),
-        Hextile (5), Tight (7, when Pillow is available for JPEG
-        sub-rectangles) and ZRLE (16) per RFC 6143.
+        Dispatches each rectangle to the appropriate decoder based on its encoding tag. Supports Raw (0), CopyRect (1), RRE (2), Hextile
+        (5), Tight (7, when Pillow is available for JPEG sub-rectangles) and ZRLE (16) per RFC 6143.
         """
         if self._reader is None or self.framebuffer is None:
             return
@@ -1780,10 +1776,8 @@ class VNCWidget(QWidget):
     async def _pump_server(self) -> None:
         """Continuously request and process framebuffer updates.
 
-        Runs on the shared bridge event loop until the client disconnects or
-        the task is cancelled. Emits ``framebuffer_updated`` from the Qt
-        thread whenever the server has mutated the framebuffer, so the
-        widget repaints only when there is something new to show.
+        Runs on the shared bridge event loop until the client disconnects or the task is cancelled. Emits ``framebuffer_updated`` from the
+        Qt thread whenever the server has mutated the framebuffer, so the widget repaints only when there is something new to show.
         """
         self._pump_task_ref = asyncio.current_task()
         try:
@@ -1813,9 +1807,8 @@ class VNCWidget(QWidget):
     def _on_update_tick(self) -> None:
         """Poll connection state and surface disconnects to the Qt layer.
 
-        Actual framebuffer I/O is handled by the background pump task, so
-        this tick only needs to notice when the pump has exited and surface
-        that as a ``connection_status_changed(False)`` signal.
+        Actual framebuffer I/O is handled by the background pump task, so this tick only needs to notice when the pump has exited and
+        surface that as a ``connection_status_changed(False)`` signal.
         """
         if not self.client.connected:
             self.update_timer.stop()

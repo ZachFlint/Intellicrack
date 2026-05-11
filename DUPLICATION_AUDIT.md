@@ -57,6 +57,7 @@ Returning `(arch_str, is_64bit)` — that's the superset of what the three calle
 **Recommendation:** CONSOLIDATE. Add the helper to `_win32_types.py` (or a new `_pe_format.py`); replace the three private methods with delegating calls. ghidra's `_detect_architecture` keeps the multi-format dispatcher (PE/ELF/Mach-O) but the PE branch becomes a one-liner.
 
 **SAFETY (verified second pass):** The PE arch translation actually exists in MORE places than the original three. Second-pass survey found:
+
 - `core/disassembler.py:auto_detect_arch:291-366` — does PE+ELF+Mach-O detection, returns `("x86", "32")`/`("x86", "64")` etc. tuple form (different shape).
 - `bridges/process.py:_machine_to_arch_string:1403-1422` — returns `"x64"` (no underscore).
 - `bridges/x64dbg.py:pe_machine_to_arch:147-175` — returns `("x64", True)` tuple with bool.
@@ -283,6 +284,7 @@ The two parsers parse the same DSL grammar (struct/union/enum/bitfield with the 
 **Authoritative pick:** `core/hexpat/` — modular, has separate AST, type system, and evaluator; supports the full language. The compiler's role (emitting a static JSON template) is legitimate, but it should reuse the lexer + AST and emit JSON from the *shared* AST instead of re-parsing.
 
 **Recommendation:** CONSOLIDATE. Refactor `hexpat_compiler.py` so it:
+
 1. Imports `HexPatLexer`, `HexPatParser`, AST nodes from `core/hexpat/`.
 2. Walks the shared AST and rejects runtime nodes at code-gen time (instead of refusing tokens at parse time).
 3. Reduces to a thin AST→JSON visitor (~300 LOC instead of 1630).
@@ -302,7 +304,7 @@ Format `bytes` as a 16-byte-per-line hex+ASCII dump with addresses.
 | # | path:line | LOC | Status |
 |---|---|---|---|
 | 1 | `src/intellicrack/ui/panels/frida_panel.py:1813-1830` `_format_hex_dump(data, base_address)` | 18 | Duplicate |
-| 2 | `src/intellicrack/ui/panels/x64dbg_panel.py:2594-2612` `_format_hex_dump(address, data)` | 19 | Duplicate (parameter order swapped, output prefix differs: `08X  ` vs `0x08X  `) |
+| 2 | `src/intellicrack/ui/panels/x64dbg_panel.py:2594-2612` `_format_hex_dump(address, data)` | 19 | Duplicate (parameter order swapped, output prefix differs: `08X` vs `0x08X`) |
 
 Same algorithm: 16-byte chunks, `b:02X` hex, ASCII printable filter, `chr(b) if low <= b < high else "."`.
 
@@ -342,6 +344,7 @@ worker.start()
 **Recommendation:** CONSOLIDATE. Replace 8 worker classes with one. **Risk:** low. **Effort:** M.
 
 **SAFETY (verified second pass):** Several workers are NOT thin callable wrappers — they own private compute methods that compose the result:
+
 - `StatisticsWorker._compute` (`_statistics.py:107-133`) calls `_compute_entropy_map`, `_compute_byte_distribution`, `_compute_type_distribution`, `_compute_classification` on itself.
 - `NumericSearchWorker._search_native`/`_search_fallback` (`_search.py:209-270`) — the fallback does its own chunked iteration with struct.unpack and alignment checks.
 
@@ -452,9 +455,9 @@ The byte-read mechanism legitimately differs (async pipe / sync PyO3 / sync PyO3
 
 | Operation | Re-implemented at |
 |---|---|
-| `e_lfanew` from DOS header (offset 0x3C) | x64dbg.py:4021, hex_editor.py:4509, _templates.py:335 |
-| COFF `NumberOfSections` (offset 6) | x64dbg.py:4074, hex_editor.py:4514, _templates.py:373-385 |
-| COFF `SizeOfOptionalHeader` (offset 20) | x64dbg.py:4075, hex_editor.py:4515, _templates.py:356-368 |
+| `e_lfanew` from DOS header (offset 0x3C) | x64dbg.py:4021, hex_editor.py:4509,_templates.py:335 |
+| COFF `NumberOfSections` (offset 6) | x64dbg.py:4074, hex_editor.py:4514,_templates.py:373-385 |
+| COFF `SizeOfOptionalHeader` (offset 20) | x64dbg.py:4075, hex_editor.py:4515,_templates.py:356-368 |
 | COFF `Machine` field (offset 4) → `pe_machine_to_arch` | x64dbg.py:4102, 5483, 5541 (also covered by Group 2) |
 | Section header unpack at offsets 8/12/16/20/36 | x64dbg.py:4044-4047, hex_editor.py:4563-4566 |
 | Data Directory entry offset by `is_pe64` | x64dbg.py:4104, 5485, 5543 (3× in same file) |
@@ -477,9 +480,10 @@ def rva_to_file_offset(sections: list[dict], rva: int) -> int | None
 def unpack_optional_header_image_base(data: bytes, offset: int, *, is_pe64: bool) -> int
 ```
 
-Each call site keeps its own I/O wrapper (async `await self.read_memory(...)` for x64dbg; `self._read_doc_bytes(...)` for hex_editor.py; `self.document.read(...)` for _templates.py) but feeds the resulting `bytes` into the shared helpers.
+Each call site keeps its own I/O wrapper (async `await self.read_memory(...)` for x64dbg; `self._read_doc_bytes(...)` for hex_editor.py; `self.document.read(...)` for_templates.py) but feeds the resulting `bytes` into the shared helpers.
 
 **Recommendation:** CONSOLIDATE. Rough LOC accounting:
+
 - x64dbg.py: 6 functions doing PE parsing → reduce inline parsing by ~80 LOC after delegation.
 - hex_editor.py: 2 functions → reduce by ~30 LOC.
 - _templates.py: stays mostly the same since it uses `int.from_bytes` for bookmark generation (color metadata is the bulk); maybe ~10 LOC saved by replacing the offset-arithmetic helpers.
@@ -552,10 +556,12 @@ Sites 1–2: the hex editor is the user's primary work surface. Routing through 
 Sites 3–5: the hex editor's "Sections / Imports / Exports" tabs show data about the file the user has open. The hex_editor bridge already extracts PE sections natively; the UI should call that bridge method instead of opening the file with `pefile` separately. When a static-analysis tool (Cutter or Ghidra) is connected and has the same file loaded, the bridge layer can opportunistically delegate to it for richer data — today there's no path to do that because the UI hardcodes `pefile`.
 
 **Authoritative pick:**
+
 - For 1, 2: the existing `bridges/hex_editor` methods (`disassemble`, `yara_scan`, `yara_scan_files`).
 - For 3–5: extend `bridges/hex_editor.py` with `get_pe_sections()`/`get_pe_imports()`/`get_pe_exports()` methods that read from the open `HexDocument` and return shape-stable dicts. Internally these can use `pefile` OR the existing native struct.unpack code at `bridges/hex_editor.py:4499-4570` — the public surface is what matters.
 
 **Recommendation:** REFACTOR the UI to invoke the bridge instead of native classes/libraries. Concrete steps:
+
 1. `_disassembly.py:_on_disassemble` — replace `HexDisassembler_cls()` instantiation with `run_bridge_coroutine_async(self.bridge.disassemble(offset, count, arch, mode), on_success=..., on_error=...)`.
 2. `_yara.py:_on_yara_scan` — same pattern, calling `self.bridge.yara_scan(rule_source)` (or `yara_scan_files`).
 3. `_sections.py:_populate_*` — add bridge methods (`get_pe_sections`, `get_pe_imports`, `get_pe_exports`) then route through them. Eliminates the direct `pefile` import from the UI.

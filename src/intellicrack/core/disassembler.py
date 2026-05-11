@@ -52,19 +52,16 @@ _CAPSTONE_ARCH_MODE_MAP: dict[str, tuple[str, str]] = {
 }
 """Map a canonical :func:`detect_format_and_arch` arch string to capstone ``(arch, mode)``.
 
-Capstone's mode field is overloaded: ``"32"`` / ``"64"`` for x86 and MIPS,
-the literal string ``"arm"`` for ARM/AArch64. RISC-V 128-bit is squashed
-to ``"64"`` because capstone has no separate 128-bit mode.
+Capstone's mode field is overloaded: ``"32"`` / ``"64"`` for x86 and MIPS, the literal string ``"arm"`` for ARM/AArch64. RISC-V 128-bit is
+squashed to ``"64"`` because capstone has no separate 128-bit mode.
 """
-
 
 class UnsupportedArchitectureError(ValueError):
     """Raised when an architecture string cannot be mapped to capstone constants.
 
-    Subclass of :class:`ValueError` so callers that catch ``ValueError`` for
-    capstone resolution failures still see this case, while specific handlers
-    can match the narrower type. The offending architecture string is exposed
-    via the :attr:`arch` instance attribute set in :meth:`__init__`.
+    Subclass of :class:`ValueError` so callers that catch ``ValueError`` for capstone resolution failures still see this case, while
+    specific handlers can match the narrower type. The offending architecture string is exposed via the :attr:`arch` instance attribute set
+    in :meth:`__init__`.
     """
 
     arch: str
@@ -127,8 +124,7 @@ def _to_disassembly_line(insn: DisasmInstruction) -> DisassemblyLine:
 class HexDisassembler:
     """Multi-architecture disassembler using capstone.
 
-    Wraps the capstone engine with a unified interface for all supported
-    architectures.  The class handles optional availability of capstone
+    Wraps the capstone engine with a unified interface for all supported architectures.  The class handles optional availability of capstone
     gracefully so callers can query :attr:`available` before use.
     """
 

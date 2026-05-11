@@ -388,8 +388,7 @@ _THREAD_OP_FAILURE_SENTINEL: int = 0xFFFFFFFF
 class PEB64(ctypes.Structure):
     """64-bit Process Environment Block layout through ProcessParameters.
 
-    MS-documented offsets for ntdll!_PEB on amd64/arm64 targets.
-    Fields beyond ProcessParameters are not accessed and are omitted.
+    MS-documented offsets for ntdll!_PEB on amd64/arm64 targets. Fields beyond ProcessParameters are not accessed and are omitted.
     """
 
     _fields_: ClassVar = [
@@ -408,8 +407,7 @@ class PEB64(ctypes.Structure):
 class PEB32(ctypes.Structure):
     """32-bit Process Environment Block layout through ProcessParameters.
 
-    MS-documented offsets for ntdll!_PEB on i386 targets and WOW64.
-    Fields beyond ProcessParameters are not accessed and are omitted.
+    MS-documented offsets for ntdll!_PEB on i386 targets and WOW64. Fields beyond ProcessParameters are not accessed and are omitted.
     """
 
     _fields_: ClassVar = [
@@ -427,10 +425,8 @@ class PEB32(ctypes.Structure):
 class TEB64(ctypes.Structure):
     """64-bit Thread Environment Block layout through TlsExpansionSlots.
 
-    MS-documented offsets for ntdll!_TEB on amd64/arm64 targets.
-    Gaps between named fields are filled with reserved byte arrays so
-    that ctypes.sizeof(TEB64) equals the true in-memory size and buffer
-    allocation covers TlsSlots[64] at +0x1480 and TlsExpansionSlots at
+    MS-documented offsets for ntdll!_TEB on amd64/arm64 targets. Gaps between named fields are filled with reserved byte arrays so that
+    ctypes.sizeof(TEB64) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0x1480 and TlsExpansionSlots at
     +0x1780.
     """
 
@@ -460,10 +456,8 @@ class TEB64(ctypes.Structure):
 class TEB32(ctypes.Structure):
     """32-bit Thread Environment Block layout through TlsSlots[64].
 
-    MS-documented offsets for ntdll!_TEB on i386 targets and WOW64.
-    Gaps between named fields are filled with reserved byte arrays so
-    that ctypes.sizeof(TEB32) equals the true in-memory size and buffer
-    allocation covers TlsSlots[64] at +0xE10.
+    MS-documented offsets for ntdll!_TEB on i386 targets and WOW64. Gaps between named fields are filled with reserved byte arrays so that
+    ctypes.sizeof(TEB32) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0xE10.
     """
 
     _fields_: ClassVar = [
@@ -489,8 +483,7 @@ class TEB32(ctypes.Structure):
 class IMAGEHLP_MODULE64(ctypes.Structure):
     """DbgHelp IMAGEHLP_MODULE64 structure for module information via SymGetModuleInfo64.
 
-    Matches the layout from dbghelp.h. ``SizeOfStruct`` must be set to
-    ``ctypes.sizeof(IMAGEHLP_MODULE64)`` before passing to
+    Matches the layout from dbghelp.h. ``SizeOfStruct`` must be set to ``ctypes.sizeof(IMAGEHLP_MODULE64)`` before passing to
     ``SymGetModuleInfo64``.
     """
 
@@ -977,7 +970,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         name="process.unmap_section",
         description="Unmap a previously mapped section view from the current process and close the section handle if it was created via process.create_section",
         parameters=[
-            ToolParameter(name="base_address", type="integer", description="Mapped base address returned by process.map_section", required=True),
+            ToolParameter(
+                name="base_address",
+                type="integer",
+                description="Mapped base address returned by process.map_section",
+                required=True,
+            ),
         ],
         returns="Success status",
     ),

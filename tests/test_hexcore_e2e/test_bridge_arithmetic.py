@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from intellicrack.bridges.hex_editor import HexEditorBridge
-
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
     from pathlib import Path
+
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 hexcore_mod: Any = pytest.importorskip(

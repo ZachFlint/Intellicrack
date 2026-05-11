@@ -132,11 +132,8 @@ class HashingMixin:
     def _on_custom_crc(self) -> None:
         """Open the custom CRC dialog wired to the streaming worker.
 
-        The dialog never copies the document body onto the UI thread.
-        It receives the file path (when one is resolvable) and the
-        document handle; clicking Calculate spawns a worker that
-        streams the bytes through ``compute_streaming_custom_crc`` in
-        bounded chunks.
+        The dialog never copies the document body onto the UI thread. It receives the file path (when one is resolvable) and the document
+        handle; clicking Calculate spawns a worker that streams the bytes through ``compute_streaming_custom_crc`` in bounded chunks.
         """
         document = self.document
         if document is None:

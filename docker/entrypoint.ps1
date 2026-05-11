@@ -350,11 +350,11 @@ function Invoke-Pytest {
 
     if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
         $cmdArgs = @('run', 'pytest') + $PytestArgs
-        & $PixiExe @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append
+        & $PixiExe @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
     }
     else {
         $cmdArgs = @('-m', 'pytest') + $PytestArgs
-        & $PixiPython @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append
+        & $PixiPython @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
     }
     $exit = $LASTEXITCODE
     if ($null -eq $exit) { $exit = 0 }

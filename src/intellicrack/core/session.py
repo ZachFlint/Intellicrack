@@ -321,33 +321,27 @@ class SessionStore:
         """Initialize the database schema."""
         _logger.debug("database_schema_init_start", db_path=str(self.db_path))
         with self._connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    model TEXT NOT NULL,
-                    active_binary_index INTEGER DEFAULT -1,
-                    notes TEXT DEFAULT '',
-                    data TEXT NOT NULL
-                )
-            """)
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS sessions ( id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT
+                NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_sessions_updated
-                ON sessions (updated_at DESC)
-            """)
+                data TEXT NOT NULL )
+                """
+                            ,
+            )
 
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS session_tags (
-                    session_id TEXT NOT NULL,
-                    tag TEXT NOT NULL,
-                    PRIMARY KEY (session_id, tag),
-                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-                )
-            """)
+            conn.execute(
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
+                                                                                                   ,
+            )
+
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
+
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
+                """
+                   ,
+            )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
 
@@ -382,11 +376,10 @@ class SessionStore:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 conn.execute(
+                    """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """
-                INSERT OR REPLACE INTO sessions
-                (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
+                       ,
                     (
                         session.id,
                         session.name,
@@ -508,12 +501,8 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """
-                SELECT id, name, created_at, updated_at, provider, model, data
-                FROM sessions
-                ORDER BY updated_at DESC
-                LIMIT ?
-            """,
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
+                                                                                                                                   ,
                 (limit,),
             ).fetchall()
 
@@ -1071,6 +1060,7 @@ class SessionManager:
         Returns:
             Session | None: Session instance or None if not found.
         """
+
         async with self._db_lock:
             return await asyncio.to_thread(self.store.load, session_id)
 
@@ -1085,6 +1075,7 @@ class SessionManager:
         Args:
             session: Session to update.
         """
+
         async with self._db_lock:
             await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)
@@ -1092,9 +1083,8 @@ class SessionManager:
     async def save(self) -> None:
         """Save the current session.
 
-        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under
-        the same lock so ``save`` and ``update`` cannot interleave their
-        transactions.
+        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under the same lock so ``save`` and ``update`` cannot interleave
+        their transactions.
         """
         if self._current is None:
             return
@@ -1235,10 +1225,8 @@ class SessionManager:
     async def stop_auto_save(self) -> None:
         """Cancel the auto-save background task.
 
-        Public counterpart to :meth:`_stop_auto_save` for callers (test
-        harnesses, embedding applications) that need to cleanly cancel the
-        background save loop without reaching into private members. No-op
-        when no task is currently running.
+        Public counterpart to :meth:`_stop_auto_save` for callers (test harnesses, embedding applications) that need to cleanly cancel the
+        background save loop without reaching into private members. No-op when no task is currently running.
         """
         await self._stop_auto_save()
 

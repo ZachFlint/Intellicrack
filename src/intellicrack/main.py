@@ -57,9 +57,8 @@ if TYPE_CHECKING:
 class _SetupLoggingFn(Protocol):
     """Callable protocol matching :func:`intellicrack.core.logging.setup_logging`.
 
-    Defined as a Protocol so the ``log_dir`` parameter can be supplied either
-    positionally or via keyword without losing type fidelity at the call site
-    inside :func:`_load_startup_config`.
+    Defined as a Protocol so the ``log_dir`` parameter can be supplied either positionally or via keyword without losing type fidelity at
+    the call site inside :func:`_load_startup_config`.
     """
 
     def __call__(self, config: LogConfig, log_dir: Path | None = ...) -> None:
@@ -71,7 +70,6 @@ class _SetupLoggingFn(Protocol):
                 in which case ``setup_logging`` falls back to its portable
                 default (``Path.cwd() / "logs"``).
         """
-
 
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _APP_VERSION: str = __version__

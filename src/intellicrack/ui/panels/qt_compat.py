@@ -4,14 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Qt method compatibility layer for PyQt6 SIP-generated bindings.
 
-Provides snake_case wrapper functions that delegate to PyQt6 camelCase
-methods via dynamic attribute dispatch. These wrappers exist because the
-basedpyright type checker cannot resolve certain method signatures from
-the auto-generated PyQt6 type definitions. Each function performs a real
-runtime call to the underlying Qt widget method.
+Provides snake_case wrapper functions that delegate to PyQt6 camelCase methods via dynamic attribute dispatch. These wrappers exist because
+the basedpyright type checker cannot resolve certain method signatures from the auto-generated PyQt6 type definitions. Each function
+performs a real runtime call to the underlying Qt widget method.
 
-Every wrapper validates that the target method exists at runtime and
-raises ``AttributeError`` with a clear diagnostic if the method is
+Every wrapper validates that the target method exists at runtime and raises ``AttributeError`` with a clear diagnostic if the method is
 missing, ensuring failures are immediately identifiable.
 """
 

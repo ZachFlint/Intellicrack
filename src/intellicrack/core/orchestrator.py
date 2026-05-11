@@ -188,14 +188,10 @@ class PendingConfirmation:
 DestructiveClassification = Literal["destructive", "read_only", "unknown"]
 """Classification of a tool call's effect on external state.
 
-``destructive`` operations modify external state (memory, files, processes,
-sandboxes) and require confirmation when the orchestrator is configured for
-``ConfirmationLevel.DESTRUCTIVE``. ``read_only`` operations only inspect state
-and never need confirmation. ``unknown`` indicates the bridge is not
-recognised; the orchestrator treats unknown operations as destructive to fail
-safe.
+``destructive`` operations modify external state (memory, files, processes, sandboxes) and require confirmation when the orchestrator is
+configured for ``ConfirmationLevel.DESTRUCTIVE``. ``read_only`` operations only inspect state and never need confirmation. ``unknown``
+indicates the bridge is not recognised; the orchestrator treats unknown operations as destructive to fail safe.
 """
-
 
 _FRIDA_DESTRUCTIVE: frozenset[str] = frozenset(
     {
@@ -263,7 +259,6 @@ _FRIDA_DESTRUCTIVE: frozenset[str] = frozenset(
 )
 """Frida bridge methods that mutate process / runtime state."""
 
-
 _GHIDRA_DESTRUCTIVE: frozenset[str] = frozenset(
     {
         "load_binary",
@@ -310,7 +305,6 @@ _GHIDRA_DESTRUCTIVE: frozenset[str] = frozenset(
     },
 )
 """Ghidra bridge methods that mutate program / project state."""
-
 
 _X64DBG_DESTRUCTIVE: frozenset[str] = frozenset(
     {
@@ -383,8 +377,7 @@ _X64DBG_DESTRUCTIVE: frozenset[str] = frozenset(
         "adjust_privilege",
     },
 )
-"""x64dbg bridge methods that mutate debugger / target state."""
-
+"""X64dbg bridge methods that mutate debugger / target state."""
 
 _SANDBOX_DESTRUCTIVE: frozenset[str] = frozenset(
     {
@@ -409,7 +402,6 @@ _SANDBOX_DESTRUCTIVE: frozenset[str] = frozenset(
     },
 )
 """Sandbox bridge methods that create, mutate, or terminate sandbox instances."""
-
 
 _PROCESS_DESTRUCTIVE: frozenset[str] = frozenset(
     {
@@ -438,7 +430,6 @@ _PROCESS_DESTRUCTIVE: frozenset[str] = frozenset(
     },
 )
 """Process bridge methods that mutate target process state or kernel objects."""
-
 
 _HEX_EDITOR_DESTRUCTIVE: frozenset[str] = frozenset(
     {
@@ -496,7 +487,6 @@ _HEX_EDITOR_DESTRUCTIVE: frozenset[str] = frozenset(
 )
 """Hex editor bridge methods that mutate document / editor state."""
 
-
 _CUTTER_DESTRUCTIVE: frozenset[str] = frozenset(
     {
         "load_binary",
@@ -514,7 +504,6 @@ _CUTTER_DESTRUCTIVE: frozenset[str] = frozenset(
 )
 """Cutter bridge methods that mutate analysis state or invoke r2 commands."""
 
-
 BRIDGE_DESTRUCTIVE_METHODS: dict[ToolName, frozenset[str]] = {
     ToolName.FRIDA: _FRIDA_DESTRUCTIVE,
     ToolName.GHIDRA: _GHIDRA_DESTRUCTIVE,
@@ -526,14 +515,10 @@ BRIDGE_DESTRUCTIVE_METHODS: dict[ToolName, frozenset[str]] = {
 }
 """Per-bridge whitelist of method names that mutate external state.
 
-Each entry maps a :class:`ToolName` to the exact method-name leaves (the part
-after the ``"<tool>."`` prefix) that the orchestrator must classify as
-destructive. Method names not present in the relevant set are read-only.
-Bridges absent from this map default to ``unknown`` classification, which the
-orchestrator treats as destructive so that newly added bridges fail safe until
-their methods are catalogued here.
+Each entry maps a :class:`ToolName` to the exact method-name leaves (the part after the ``"<tool>."`` prefix) that the orchestrator must
+classify as destructive. Method names not present in the relevant set are read-only. Bridges absent from this map default to ``unknown``
+classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
-
 
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
@@ -2485,9 +2470,8 @@ class Orchestrator:
     async def refresh_session_state(self) -> None:
         """Refresh cached bridge analysis for the active session.
 
-        Re-runs :meth:`reanalyze_bridge_analysis` against the current session's active
-        binary so stale bridge results are regenerated. Does not reload the session from
-        disk or refresh any other session state.
+        Re-runs :meth:`reanalyze_bridge_analysis` against the current session's active binary so stale bridge results are regenerated. Does
+        not reload the session from disk or refresh any other session state.
         """
         _logger.debug("session_state_refreshing")
         await self.reanalyze_bridge_analysis()
@@ -2663,7 +2647,6 @@ _MACHO_N_SECT: int = 0x0E
 
 _MACHO_N_UNDF: int = 0x00
 """``n_type & N_TYPE`` value indicating the symbol is undefined (imported)."""
-
 
 _ARCH_KEYWORDS: dict[str, str] = {
     "AMD64": "x86_64",

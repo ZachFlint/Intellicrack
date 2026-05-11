@@ -1219,9 +1219,8 @@ class FridaBridge(InstrumentationBridge):
     async def shutdown(self) -> None:
         """Shutdown Frida and cleanup resources.
 
-        The base class ``_finalize_shutdown`` is invoked from a ``finally``
-        block so the shared ``BridgeState`` reset always runs even when one
-        of the per-resource cleanup steps raises an unexpected error.
+        The base class ``_finalize_shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when
+        one of the per-resource cleanup steps raises an unexpected error.
         """
         try:
             for tid in list(self._stalker_scripts.keys()):
@@ -4027,8 +4026,7 @@ class FridaBridge(InstrumentationBridge):
     def _teardown_crash_handler(self) -> None:
         """Best-effort detach of the crash handler called from :meth:`shutdown`.
 
-        Mirrors :meth:`disable_crash_reporting` but never raises so it does
-        not interrupt the rest of the shutdown sequence.
+        Mirrors :meth:`disable_crash_reporting` but never raises so it does not interrupt the rest of the shutdown sequence.
         """
         try:
             self._detach_crash_handler()
@@ -4038,9 +4036,8 @@ class FridaBridge(InstrumentationBridge):
     def _detach_crash_handler(self) -> None:
         """Drop the registered crash handler if one is currently active.
 
-        Shared core for :meth:`disable_crash_reporting` and
-        :meth:`_teardown_crash_handler`; the public methods differ only in
-        whether errors are surfaced or logged.
+        Shared core for :meth:`disable_crash_reporting` and :meth:`_teardown_crash_handler`; the public methods differ only in whether
+        errors are surfaced or logged.
         """
         if not self._crash_reporting_enabled:
             return

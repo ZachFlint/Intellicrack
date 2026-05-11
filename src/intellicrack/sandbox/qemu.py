@@ -879,8 +879,7 @@ class QEMUSandbox(SandboxBase):
     def enable_vnc_display(self) -> None:
         """Switch display mode to VNC for GUI embedding.
 
-        This must be called before ``start()`` to take effect.
-        If the sandbox is already running, restart is required.
+        This must be called before ``start()`` to take effect. If the sandbox is already running, restart is required.
         """
         self._qemu_config = QEMUConfig(
             guest_os=self._qemu_config.guest_os,
@@ -901,10 +900,8 @@ class QEMUSandbox(SandboxBase):
     def invalidate_accelerator_cache(self) -> None:
         """Invalidate the cached accelerator detection result.
 
-        Forces the next call to ``is_available`` to re-probe the host for
-        hardware virtualisation support. Useful after a system configuration
-        change (e.g. enabling Hyper-V Platform) without restarting the
-        application.
+        Forces the next call to ``is_available`` to re-probe the host for hardware virtualisation support. Useful after a system
+        configuration change (e.g. enabling Hyper-V Platform) without restarting the application.
         """
         self._accelerator_cached = False
         _logger.debug("accelerator_cache_invalidated")

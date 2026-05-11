@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.6
 #
 # Intellicrack Windows test sandbox image.
 #
@@ -30,11 +29,12 @@ RUN $ErrorActionPreference = 'Stop'; \
 RUN choco install -y --no-progress python313 --version=3.13.1 --params='/InstallDir:C:\Python313' ; \
     choco install -y --no-progress git --params='/GitAndUnixToolsOnPath /NoAutoCrlf' ; \
     choco install -y --no-progress 7zip ; \
-    choco install -y --no-progress vcredist140
+    choco install -y --no-progress vcredist140 ; \
+    choco install -y --no-progress powershell-core --install-arguments='ADD_PATH=1'
 
-ENV PATH="C:\\ProgramData\\chocolatey\\bin;C:\\Python313;C:\\Python313\\Scripts;C:\\Program Files\\Git\\cmd;C:\\Program Files\\7-Zip;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH"
+ENV PATH="C:\\Program Files\\PowerShell\\7;C:\\ProgramData\\chocolatey\\bin;C:\\Python313;C:\\Python313\\Scripts;C:\\Program Files\\Git\\cmd;C:\\Program Files\\7-Zip;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0;C:\\Windows\\System32\\OpenSSH"
 
-RUN python --version ; pip --version ; git --version
+RUN python --version ; pip --version ; git --version ; pwsh -NoLogo -NoProfile -Command "$PSVersionTable.PSVersion"
 
 # Stage 2 -- external analysis tools (JDK 21, Ghidra, radare2)
 FROM base AS tools
@@ -88,16 +88,30 @@ ENV GHIDRA_INSTALL_DIR="C:\\tools\\ghidra" \
 
 ENV PATH="C:\\tools\\jdk\\bin;C:\\tools\\ghidra\\support;C:\\tools\\radare2\\bin;${PATH}"
 
+# MSVC Build Tools 2022 -- required so source-only Python sdists (tree-sitter
+# grammars, C extensions) can build during `pixi install`. setuptools locates
+# the toolchain automatically via vswhere.exe; no PATH edits needed.
+RUN $ErrorActionPreference = 'Stop'; \
+    choco install -y --no-progress visualstudio2022buildtools --package-parameters '--quiet --wait --norestart --nocache --add Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --includeRecommended'; \
+    $vswhere = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'; \
+    if (-not (Test-Path $vswhere)) { throw 'vswhere.exe missing after VS Build Tools install' }; \
+    $installPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath; \
+    if (-not $installPath) { throw 'VC Tools workload not found via vswhere' }; \
+    Write-Host "MSVC Build Tools installed at $installPath"
+
 # Stage 3 -- pixi environment. Only invalidates when pixi.lock or pyproject.toml change.
 FROM tools AS pixi-env
 
-ENV PIXI_VERSION="0.67.0"
+ARG PIXI_VERSION
+ENV PIXI_VERSION="${PIXI_VERSION}"
+
+RUN if (-not $env:PIXI_VERSION) { throw 'PIXI_VERSION build-arg is required (pass via docker build --build-arg PIXI_VERSION=<version>)' }
 
 RUN $ErrorActionPreference = 'Stop'; \
     $ProgressPreference = 'SilentlyContinue'; \
     New-Item -ItemType Directory -Force -Path 'C:\Users\ContainerAdministrator\.pixi\bin' | Out-Null; \
     New-Item -ItemType Directory -Force -Path 'C:\temp' | Out-Null; \
-    $pixiUrl = 'https://github.com/prefix-dev/pixi/releases/download/v0.67.0/pixi-x86_64-pc-windows-msvc.zip'; \
+    $pixiUrl = 'https://github.com/prefix-dev/pixi/releases/download/v' + $env:PIXI_VERSION + '/pixi-x86_64-pc-windows-msvc.zip'; \
     $pixiZip = 'C:\temp\pixi.zip'; \
     Write-Host 'Downloading pixi...'; \
     Invoke-WebRequest -Uri $pixiUrl -OutFile $pixiZip -UseBasicParsing; \
@@ -136,5 +150,5 @@ LABEL intellicrack-sandbox=1 \
 
 WORKDIR C:\\app
 
-ENTRYPOINT ["powershell.exe", "-NoProfile", "-NoLogo", "-ExecutionPolicy", "Bypass", "-File", "C:\\app\\docker\\entrypoint.ps1"]
+ENTRYPOINT ["pwsh.exe", "-NoProfile", "-NoLogo", "-ExecutionPolicy", "Bypass", "-File", "C:\\app\\docker\\entrypoint.ps1"]
 CMD ["unit"]

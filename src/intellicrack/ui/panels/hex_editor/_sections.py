@@ -41,7 +41,6 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
 
-
 @runtime_checkable
 class _StringsSource(Protocol):
     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""
@@ -129,10 +128,8 @@ class SectionsMixin:
     def _populate_sections(self) -> None:
         """Populate the sections tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_sections` via
-        :func:`run_bridge_coroutine_async` so the parse runs on the
-        persistent bridge event loop. Bridge results are rendered on
-        the Qt main thread through the success callback.
+        Calls :meth:`HexEditorBridge.get_pe_sections` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge
+        event loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self.sections_tree is None:
             return
@@ -192,10 +189,8 @@ class SectionsMixin:
     def _populate_imports(self) -> None:
         """Populate the imports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_imports` via
-        :func:`run_bridge_coroutine_async` so the parse runs on the
-        persistent bridge event loop. Bridge results are rendered on
-        the Qt main thread through the success callback.
+        Calls :meth:`HexEditorBridge.get_pe_imports` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge event
+        loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._imports_tree is None:
             return
@@ -248,10 +243,8 @@ class SectionsMixin:
     def _populate_exports(self) -> None:
         """Populate the exports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_exports` via
-        :func:`run_bridge_coroutine_async` so the parse runs on the
-        persistent bridge event loop. Bridge results are rendered on
-        the Qt main thread through the success callback.
+        Calls :meth:`HexEditorBridge.get_pe_exports` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge event
+        loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._exports_tree is None:
             return
@@ -304,10 +297,9 @@ class SectionsMixin:
     def _populate_strings(self) -> None:
         """Populate the strings tab asynchronously via a ``GenericCallableWorker``.
 
-        Dispatches the hexcore ``extract_strings`` RPC on a background thread so
-        that very large binaries do not block the Qt event loop while the Rust
-        backend streams matches back. Results are consumed on the UI thread
-        through the worker's ``call_finished`` / ``call_error`` signals.
+        Dispatches the hexcore ``extract_strings`` RPC on a background thread so that very large binaries do not block the Qt event loop
+        while the Rust backend streams matches back. Results are consumed on the UI thread through the worker's ``call_finished`` /
+        ``call_error`` signals.
         """
         if self._strings_tree is None or self.document is None:
             return

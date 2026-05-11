@@ -139,35 +139,37 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "Cutter",
             "extension": ".r2",
             "language": "r2cmd",
-            "template": """# Cutter/Rizin script for license analysis
-# Target: {target}
+            "template": """# Cutter/Rizin script for license analysis # Target: {target}
 
-# Analyze all
-aaa
+                        # Analyze all
+                        aaa
 
-# Find license-related strings
-iz~licen
-iz~serial
-iz~regist
+                        # Find license-related strings
+                        iz~licen
+                        iz~serial
+                        iz~regist
 
-# Find crypto function references
-axt sym.imp.CryptAcquireContextW
+                        # Find crypto function references
+                        axt sym.imp.CryptAcquireContextW
 
-# Seek to main
-s main
+                        # Seek to main
+                        s main
 
-# Print disassembly
-pdf
+                        # Print disassembly
+                        pdf
 
-# Find comparison operations
-/c cmp
-""",
+                        # Find comparison operations
+                        /c cmp
+                        """
+
+                           ,
         },
         "x64dbg": {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template": """// x64dbg script for license bypass
+            "template":\
+                        """// x64dbg script for license bypass
 // Target: {target}
 
 // Set an unconditional breakpoint at the validation function entry
@@ -188,7 +190,8 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template": '''"""
+            "template":\
+                        '''"""
 Python analysis script for license examination.
 Target: {target}
 """
@@ -752,9 +755,8 @@ class ScriptManagerPanel(QWidget):
     def _on_save(self) -> None:
         """Handle save button.
 
-        On successful backend add, detects rename (``current_script_id`` differs
-        from the entered name) and removes the old backend entry and list item
-        so the same script does not appear twice under two identities.
+        On successful backend add, detects rename (``current_script_id`` differs from the entered name) and removes the old backend entry
+        and list item so the same script does not appear twice under two identities.
         """
         name = self._name_edit.text().strip()
         if not name:
@@ -894,12 +896,9 @@ class ScriptManagerPanel(QWidget):
     def _on_execute(self) -> None:
         """Handle execute button.
 
-        Dispatches execution through the injected executor when available
-        (preferred path), otherwise emits the ``script_execute`` signal for
-        an external owner to handle. In both cases the panel enters an
-        "executing" state: the Execute button is disabled, a persistent
-        spinner message is shown on the status bar, and a timeout timer is
-        armed. The state is cleared by ``acknowledge_execution`` or by
+        Dispatches execution through the injected executor when available (preferred path), otherwise emits the ``script_execute`` signal
+        for an external owner to handle. In both cases the panel enters an "executing" state: the Execute button is disabled, a persistent
+        spinner message is shown on the status bar, and a timeout timer is armed. The state is cleared by ``acknowledge_execution`` or by
         timeout, never implicitly.
         """
         if self._execution_in_progress:

@@ -6,8 +6,8 @@
 
 Centralizes XML element construction to a single auditable location. Only generation primitives are re-exported -- this module never parses
 untrusted XML input. Parsing of untrusted XML must use ``defusedxml`` instead. The stdlib element factories (``Element``, ``SubElement``)
-and serialization helpers (``tostring``, ``indent``) are safe for write-side construction because they emit bytes from in-memory trees
-built by trusted callers.
+and serialization helpers (``tostring``, ``indent``) are safe for write-side construction because they emit bytes from in-memory trees built
+by trusted callers.
 """
 
 from __future__ import annotations

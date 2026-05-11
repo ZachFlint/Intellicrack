@@ -1230,12 +1230,9 @@ def _resolve_api_reference(language: ScriptLanguage) -> dict[str, str]:
 class _PrepareAIPromptDescriptor:
     """Descriptor that lets ``prepare_ai_prompt`` work as both bound and unbound.
 
-    Bound to an instance, it forwards the call to the per-instance
-    implementation so the cached API reference is reused. Accessed
-    through the class (``ScriptGenerator.prepare_ai_prompt(...)``), it
-    resolves the API reference fresh for the call so legacy callers
-    that treat the method as a free function still get a complete
-    prompt without leaving a cache entry behind.
+    Bound to an instance, it forwards the call to the per-instance implementation so the cached API reference is reused. Accessed through
+    the class (``ScriptGenerator.prepare_ai_prompt(...)``), it resolves the API reference fresh for the call so legacy callers that treat
+    the method as a free function still get a complete prompt without leaving a cache entry behind.
     """
 
     def __set_name__(self, owner: type, name: str) -> None:
@@ -1406,12 +1403,9 @@ class ScriptGenerator:
     prepare_ai_prompt: ClassVar[_PrepareAIPromptDescriptor] = _PrepareAIPromptDescriptor()
     """Build the AI prompt, dispatching as bound or unbound automatically.
 
-    Calling ``generator.prepare_ai_prompt(context, language)`` consults
-    the instance's API-reference cache. Calling
-    ``ScriptGenerator.prepare_ai_prompt(context, language)`` keeps
-    legacy free-function-style call sites working by resolving the API
-    reference fresh on each invocation. The signature in both cases is
-    ``(context: ScriptContext, language: ScriptLanguage) -> str``.
+    Calling ``generator.prepare_ai_prompt(context, language)`` consults the instance's API-reference cache. Calling
+    ``ScriptGenerator.prepare_ai_prompt(context, language)`` keeps legacy free-function-style call sites working by resolving the API
+    reference fresh on each invocation. The signature in both cases is ``(context: ScriptContext, language: ScriptLanguage) -> str``.
     """
 
     def generate_frida(self, context: ScriptContext) -> str:

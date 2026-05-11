@@ -128,8 +128,7 @@ _DOC_WRITE_METHODS: Final[frozenset[str]] = frozenset({"write", "insert", "delet
 class _SandboxViolationError(PermissionError):
     """Raised when a script attempts an operation forbidden by the sandbox.
 
-    Using a dedicated subclass keeps exception raise sites clean and
-    still presents as ``PermissionError`` to surrounding callers.
+    Using a dedicated subclass keeps exception raise sites clean and still presents as ``PermissionError`` to surrounding callers.
     """
 
     def __init__(self, message: str) -> None:
@@ -663,9 +662,8 @@ class _DocAPI:
 class _ReadOnlyDocAPI:
     """Read-only proxy around ``_DocAPI`` that disables mutating methods.
 
-    Forwards read/search/navigation operations to the underlying API
-    while raising :class:`PermissionError` for any write, insert, or
-    delete request so scripts cannot mutate the document.
+    Forwards read/search/navigation operations to the underlying API while raising :class:`PermissionError` for any write, insert, or delete
+    request so scripts cannot mutate the document.
     """
 
     def __init__(self, inner: _DocAPI) -> None:
@@ -1293,11 +1291,9 @@ class ScriptingMixin:
     def _on_run_script(self) -> None:
         """Execute the script from the editor in a background thread.
 
-        Scans the script for document-mutating calls and, if any are
-        present, shows a modal confirmation dialog before granting
-        write access. When the user declines the dialog, the script
-        still runs but receives a read-only document proxy that
-        rejects ``doc.write``/``doc.insert``/``doc.delete``.
+        Scans the script for document-mutating calls and, if any are present, shows a modal confirmation dialog before granting write
+        access. When the user declines the dialog, the script still runs but receives a read-only document proxy that rejects
+        ``doc.write``/``doc.insert``/``doc.delete``.
         """
         if self._script_editor is None or self.document is None:
             return

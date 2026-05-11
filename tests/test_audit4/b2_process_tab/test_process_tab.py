@@ -223,9 +223,7 @@ class TestF0013InjectRequiresAttachment:
         with patch.object(QMessageBox, "warning", side_effect=_capture_warning):
             tab.invoke_on_inject_dll()
 
-        assert len(warning_calls) > 0, (
-            "_on_inject_dll must show a warning when no process is attached"
-        )
+        assert len(warning_calls) > 0, "_on_inject_dll must show a warning when no process is attached"
 
     def test_inject_does_not_warn_when_attached(self, tab: _TestProcessTab) -> None:
         """When a process is attached, inject must not show the no-attachment warning.
@@ -255,9 +253,7 @@ class TestF0013InjectRequiresAttachment:
         for call_args in warning_calls:
             if len(call_args) >= 2:
                 title = str(call_args[1])
-                assert "not attached" not in title.lower(), (
-                    "_on_inject_dll must not show 'Not Attached' warning when already attached"
-                )
+                assert "not attached" not in title.lower(), "_on_inject_dll must not show 'Not Attached' warning when already attached"
 
 
 # ---------------------------------------------------------------------------
@@ -282,9 +278,7 @@ class TestF0014FilterDebounce:
 
         tab.invoke_on_filter_changed("notepad")
 
-        assert timer.isActive(), (
-            "debounce timer must be active immediately after filter change"
-        )
+        assert timer.isActive(), "debounce timer must be active immediately after filter change"
 
     def test_filter_change_while_in_flight_marks_pending(self, tab: _TestProcessTab) -> None:
         """Filter change during an in-flight refresh must mark pending flag, not start timer.
@@ -302,12 +296,8 @@ class TestF0014FilterDebounce:
 
         tab.invoke_on_filter_changed("calc")
 
-        assert not timer.isActive(), (
-            "debounce timer must NOT be started when a refresh is already in flight"
-        )
-        assert tab.get_filter_refresh_pending(), (
-            "_filter_refresh_pending must be True when filter changes during in-flight refresh"
-        )
+        assert not timer.isActive(), "debounce timer must NOT be started when a refresh is already in flight"
+        assert tab.get_filter_refresh_pending(), "_filter_refresh_pending must be True when filter changes during in-flight refresh"
 
     def test_multiple_filter_changes_keep_timer_active(self, tab: _TestProcessTab) -> None:
         """Rapid keystrokes must keep the debounce timer active (not fire multiple times).
@@ -324,9 +314,7 @@ class TestF0014FilterDebounce:
         tab.invoke_on_filter_changed("ab")
         tab.invoke_on_filter_changed("abc")
 
-        assert timer.isActive(), (
-            "debounce timer must still be active after rapid successive filter changes"
-        )
+        assert timer.isActive(), "debounce timer must still be active after rapid successive filter changes"
 
 
 # ---------------------------------------------------------------------------
@@ -374,9 +362,7 @@ class TestF0015AttachSurfacesFailure:
         ):
             tab.invoke_on_attach()
 
-        assert len(warning_shown) > 0, (
-            "_on_attach error callback must show a QMessageBox warning on failure"
-        )
+        assert len(warning_shown) > 0, "_on_attach error callback must show a QMessageBox warning on failure"
 
     def test_attach_success_sets_attached_pid(self, tab: _TestProcessTab) -> None:
         """When the bridge succeeds, _attached_pid must be set to the target PID.
@@ -405,9 +391,7 @@ class TestF0015AttachSurfacesFailure:
         ):
             tab.invoke_on_attach()
 
-        assert tab.get_attached_pid_state() == target_pid, (
-            "_on_attach success callback must set _attached_pid to the attached PID"
-        )
+        assert tab.get_attached_pid_state() == target_pid, "_on_attach success callback must set _attached_pid to the attached PID"
 
 
 # ---------------------------------------------------------------------------
@@ -449,9 +433,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
         ):
             tab.invoke_on_suspend()
 
-        assert len(warning_shown) > 0, (
-            "_on_suspend must show a warning dialog when the bridge raises"
-        )
+        assert len(warning_shown) > 0, "_on_suspend must show a warning dialog when the bridge raises"
 
     def test_resume_error_callback_shows_warning(self, tab: _TestProcessTab) -> None:
         """_on_resume must pass an error callback that shows a warning dialog.
@@ -484,9 +466,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
         ):
             tab.invoke_on_resume()
 
-        assert len(warning_shown) > 0, (
-            "_on_resume must show a warning dialog when the bridge raises"
-        )
+        assert len(warning_shown) > 0, "_on_resume must show a warning dialog when the bridge raises"
 
 
 # ---------------------------------------------------------------------------
@@ -539,12 +519,8 @@ class TestF0017TerminateRefreshesBothTabs:
         ):
             tab.invoke_on_terminate()
 
-        assert tab.refresh_tracked_calls > before_refresh_tracked, (
-            "_on_terminate success must call _refresh_tracked"
-        )
-        assert tab.on_refresh_calls > before_on_refresh, (
-            "_on_terminate success must call _on_refresh"
-        )
+        assert tab.refresh_tracked_calls > before_refresh_tracked, "_on_terminate success must call _refresh_tracked"
+        assert tab.on_refresh_calls > before_on_refresh, "_on_terminate success must call _on_refresh"
 
 
 # ---------------------------------------------------------------------------
@@ -594,9 +570,7 @@ class TestF0018TerminateDetachesIfAttached:
         ):
             tab.invoke_on_terminate()
 
-        assert tab.get_attached_pid_state() is None, (
-            "_on_terminate must set _attached_pid = None when the attached PID is terminated"
-        )
+        assert tab.get_attached_pid_state() is None, "_on_terminate must set _attached_pid = None when the attached PID is terminated"
 
     def test_terminate_unattached_pid_does_not_clear_attachment(
         self,
@@ -637,6 +611,4 @@ class TestF0018TerminateDetachesIfAttached:
         ):
             tab.invoke_on_terminate()
 
-        assert tab.get_attached_pid_state() == attached_pid, (
-            "_on_terminate must not clear _attached_pid when a different PID is terminated"
-        )
+        assert tab.get_attached_pid_state() == attached_pid, "_on_terminate must not clear _attached_pid when a different PID is terminated"

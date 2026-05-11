@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge analysis panel for displaying aggregated analysis results.
 
-Provides a tabbed UI for displaying real bridge data: strings, imports,
-exports, functions, sections, and analysis notes.
+Provides a tabbed UI for displaying real bridge data: strings, imports, exports, functions, sections, and analysis notes.
 """
 
 from __future__ import annotations

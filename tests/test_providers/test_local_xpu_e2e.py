@@ -13,6 +13,7 @@ provider connection lifecycle, dtype selection, and error recovery.
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
@@ -480,8 +481,7 @@ async def fresh_xpu_provider(
     if not has_xpu_available:
         pytest.skip("XPU not available")
 
-    provider = LocalTransformersProvider(prefer_xpu=True)
-    yield provider
+    yield LocalTransformersProvider(prefer_xpu=True)
 
 
 @pytest.mark.xpu
@@ -763,13 +763,14 @@ class TestStreamingInference:
             tinyllama_model_id: The TinyLlama model identifier.
         """
         messages = _make_messages("Count to five.")
-        chunks: list[str] = []
-        async for chunk in loaded_xpu_provider.chat_stream(
-            messages=messages,
-            model=tinyllama_model_id,
-            max_tokens=32,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in loaded_xpu_provider.chat_stream(
+                messages=messages,
+                model=tinyllama_model_id,
+                max_tokens=32,
+            )
+        ]
 
         assert len(chunks) >= 1
         non_empty = [c for c in chunks if c.strip()]
@@ -787,13 +788,14 @@ class TestStreamingInference:
             tinyllama_model_id: The TinyLlama model identifier.
         """
         messages = _make_messages("What color is the sky?")
-        chunks: list[str] = []
-        async for chunk in loaded_xpu_provider.chat_stream(
-            messages=messages,
-            model=tinyllama_model_id,
-            max_tokens=32,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in loaded_xpu_provider.chat_stream(
+                messages=messages,
+                model=tinyllama_model_id,
+                max_tokens=32,
+            )
+        ]
 
         full_text = "".join(chunks).strip()
         assert len(full_text) > 0
@@ -821,14 +823,15 @@ class TestStreamingInference:
         )
         assert len(response.content) > 0
 
-        chunks: list[str] = []
-        async for chunk in loaded_xpu_provider.chat_stream(
-            messages=messages,
-            model=tinyllama_model_id,
-            max_tokens=16,
-            temperature=0.0,
-        ):
-            chunks.append(chunk)
+        chunks: list[str] = [
+            chunk
+            async for chunk in loaded_xpu_provider.chat_stream(
+                messages=messages,
+                model=tinyllama_model_id,
+                max_tokens=16,
+                temperature=0.0,
+            )
+        ]
 
         stream_text = "".join(chunks).strip()
         assert len(stream_text) > 0
@@ -903,14 +906,7 @@ class TestMultiTurnConversation:
         )
         assert len(response1.content) > 0
 
-        messages.append(response1)
-        messages.append(
-            Message(
-                role="user",
-                content="Tell me something interesting.",
-                timestamp=datetime.now(tz=UTC),
-            ),
-        )
+        messages.extend((response1, Message(role="user", content="Tell me something interesting.", timestamp=datetime.now(tz=UTC))))
         response2, _ = await loaded_xpu_provider.chat(
             messages=messages,
             model=tinyllama_model_id,
@@ -1446,14 +1442,12 @@ class TestErrorRecovery:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        try:
+        with contextlib.suppress(ProviderError, ValueError, RuntimeError, IndexError):
             await loaded_xpu_provider.chat(
                 messages=[],
                 model=tinyllama_model_id,
                 max_tokens=16,
             )
-        except (ProviderError, ValueError, RuntimeError, IndexError):
-            pass
 
     async def test_very_long_input_handled(
         self,

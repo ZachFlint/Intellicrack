@@ -4,12 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Lazy import wiring for the :mod:`intellicrack.bridges` package.
 
-Implements PEP 562 module-level ``__getattr__`` so that importing
-``intellicrack.bridges`` does not transitively load heavy bridge
-submodules (each pulling in optional dependencies such as :mod:`frida`,
-:mod:`r2pipe`, the Win32 ``ctypes`` layer, or the Rust ``hexcore``
-extension). Each lazy class is resolved through :data:`LAZY_EXPORTS`
-and cached on the package module so future look-ups bypass this hook.
+Implements PEP 562 module-level ``__getattr__`` so that importing ``intellicrack.bridges`` does not transitively load heavy bridge
+submodules (each pulling in optional dependencies such as :mod:`frida`, :mod:`r2pipe`, the Win32 ``ctypes`` layer, or the Rust ``hexcore``
+extension). Each lazy class is resolved through :data:`LAZY_EXPORTS` and cached on the package module so future look-ups bypass this hook.
 """
 
 from __future__ import annotations

@@ -61,8 +61,7 @@ if TYPE_CHECKING:
 class _FPDFProtocol(Protocol):
     """Structural interface for the fpdf2 ``FPDF`` class.
 
-    Declares only the methods used by the hex editor PDF export. This
-    avoids a direct ``fpdf`` import so the bridge does not require the
+    Declares only the methods used by the hex editor PDF export. This avoids a direct ``fpdf`` import so the bridge does not require the
     optional fpdf2 dependency at type-check time.
     """
 
@@ -392,15 +391,11 @@ def _is_standard_crc32(
 class HexEditorBridge(ToolBridgeBase):
     """Bridge for the built-in hex editor powered by Rust.
 
-    Wraps the ``intellicrack_hexcore.HexDocument`` class to provide hex
-    editing, searching, hashing, data inspection, template parsing, and
-    binary diffing through the standard bridge interface. Instances own
-    the active document slot, cursor and selection state, the
-    runtime-availability flags for the hexcore, hexpat, interpreter, and
-    pipeline extensions, the hexpat interpreter and pattern-registry
-    caches, the optional shared state holder and tool-registry
-    references, highlighting and display configuration, the transform
-    node cache, and the advertised ``BridgeCapabilities``.
+    Wraps the ``intellicrack_hexcore.HexDocument`` class to provide hex editing, searching, hashing, data inspection, template parsing, and
+    binary diffing through the standard bridge interface. Instances own the active document slot, cursor and selection state, the runtime-
+    availability flags for the hexcore, hexpat, interpreter, and pipeline extensions, the hexpat interpreter and pattern-registry caches,
+    the optional shared state holder and tool-registry references, highlighting and display configuration, the transform node cache, and the
+    advertised ``BridgeCapabilities``.
     """
 
     def __init__(self) -> None:
@@ -1671,12 +1666,9 @@ class HexEditorBridge(ToolBridgeBase):
     async def shutdown(self) -> None:
         """Shutdown the hex editor bridge.
 
-        Mirrors :meth:`close_file`: notify the shared
-        ``HexDocumentState`` that the document is going away
-        (``set_document(None, None)``) before dropping the local
-        reference so downstream observers see a consistent transition,
-        then resets cursor and selection and clears cached highlight
-        rules.
+        Mirrors :meth:`close_file`: notify the shared ``HexDocumentState`` that the document is going away (``set_document(None, None)``)
+        before dropping the local reference so downstream observers see a consistent transition, then resets cursor and selection and clears
+        cached highlight rules.
         """
         if self.state_holder is not None:
             self.state_holder.set_document(None, None, source="bridge")

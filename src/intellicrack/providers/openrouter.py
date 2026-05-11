@@ -761,9 +761,8 @@ class OpenRouterProvider(LLMProviderBase):
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.
 
-        Sets the cancel flag (which streaming loops poll) and cancels
-        the active non-streaming task when one is registered, so both
-        ``chat`` and ``chat_stream`` paths abort cleanly.
+        Sets the cancel flag (which streaming loops poll) and cancels the active non-streaming task when one is registered, so both ``chat``
+        and ``chat_stream`` paths abort cleanly.
         """
         self._cancel_requested = True
         had_active_task = self._current_task is not None and not self._current_task.done()

@@ -111,12 +111,9 @@ class PatchesMixin:
     def _on_export_patches(self) -> None:
         """Export patches via :meth:`HexEditorBridge.export_patches`.
 
-        Routes through the bridge so the GUI, AI tools, and the CLI all
-        produce identical patch wire-format bytes — including the
-        bridge's Python-only fallback for hexcore builds without a
-        native exporter. Panel-side ``document.export_patches_*`` calls
-        bypassed that fallback and returned different bytes when the
-        native build was missing.
+        Routes through the bridge so the GUI, AI tools, and the CLI all produce identical patch wire-format bytes — including the bridge's
+        Python-only fallback for hexcore builds without a native exporter. Panel-side ``document.export_patches_*`` calls bypassed that
+        fallback and returned different bytes when the native build was missing.
         """
         if self._patches_tree is None or self.document is None:
             return
@@ -207,11 +204,9 @@ class PatchesMixin:
     def _on_import_patches(self) -> None:
         """Import patches via :meth:`HexEditorBridge.import_patches`.
 
-        The bridge inspects the patch magic bytes and dispatches to the
-        correct format handler so IPS/IPS32/BPS/UPS all work through one
-        API. For BPS/UPS the bridge requires the original unmodified
-        source file so it can rebuild the target deterministically; the
-        panel passes ``self.file_path`` when available.
+        The bridge inspects the patch magic bytes and dispatches to the correct format handler so IPS/IPS32/BPS/UPS all work through one
+        API. For BPS/UPS the bridge requires the original unmodified source file so it can rebuild the target deterministically; the panel
+        passes ``self.file_path`` when available.
         """
         if self.document is None:
             return

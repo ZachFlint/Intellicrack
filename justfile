@@ -85,7 +85,7 @@ sandbox *ARGS:
 # Build or refresh the Intellicrack Docker sandbox image
 [group('sandbox')]
 build-testing-sandbox *ARGS:
-    @{{ pixi }} python -m scripts.sandbox.docker_sandbox --rebuild --build-only {{ ARGS }}
+    @$env:DOCKER_BUILDKIT='0'; {{ pixi }} python -m scripts.sandbox.docker_sandbox --rebuild --build-only {{ ARGS }}
 
 # Remove cached Intellicrack Docker sandbox images
 [group('sandbox')]

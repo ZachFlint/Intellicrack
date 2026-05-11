@@ -310,8 +310,7 @@ class DataInspectorMixin:
     def _on_decode_text(self) -> None:
         """Decode bytes at the cursor position using the hexcore backend.
 
-        Calls ``document.decode_text`` so the Rust codec registry handles
-        EBCDIC, Shift-JIS, and other encodings that lack a Python stdlib
+        Calls ``document.decode_text`` so the Rust codec registry handles EBCDIC, Shift-JIS, and other encodings that lack a Python stdlib
         codec. The hexcore name is read from the combo's user data.
         """
         if self.document is None or self._decode_output is None:
@@ -345,10 +344,8 @@ class DataInspectorMixin:
     def _on_encode_text(self) -> None:
         """Encode text input to hex using the bridge's encode_text path.
 
-        Routes the encode operation through the bridge so the Rust codec
-        registry handles encodings that lack a Python stdlib codec
-        (e.g. EBCDIC). When no document is open the status label is set
-        to "No document open" and no bytes are produced.
+        Routes the encode operation through the bridge so the Rust codec registry handles encodings that lack a Python stdlib codec (e.g.
+        EBCDIC). When no document is open the status label is set to "No document open" and no bytes are produced.
         """
         if self._encode_input is None or self._encode_output is None:
             return
