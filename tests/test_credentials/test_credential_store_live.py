@@ -28,7 +28,6 @@ import importlib
 import sys
 import threading
 import uuid
-from types import ModuleType
 from typing import TYPE_CHECKING, Protocol, cast
 
 import pytest
@@ -39,6 +38,7 @@ from intellicrack.credentials import store as store_module_original
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from types import ModuleType
 
 
 pytestmark = pytest.mark.skipif(
@@ -116,8 +116,7 @@ def store_module_fresh() -> Iterator[ModuleType]:
     Yields:
         ModuleType: The reloaded ``intellicrack.credentials.store`` module.
     """
-    module = _reload_store()
-    yield module
+    yield _reload_store()
     _reload_store()
 
 
@@ -273,7 +272,8 @@ def test_keyring_error_handled(
     import keyring.errors
 
     def _raise(*_args: object, **_kwargs: object) -> None:
-        raise keyring.errors.InitError("simulated backend failure")
+        msg = "simulated backend failure"
+        raise keyring.errors.InitError(msg)
 
     monkeypatch.setattr(keyring, "set_password", _raise)
 

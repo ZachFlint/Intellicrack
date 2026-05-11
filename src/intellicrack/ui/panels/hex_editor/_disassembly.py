@@ -143,11 +143,8 @@ class DisassemblyMixin:
     def _on_disassemble(self) -> None:
         """Disassemble bytes at the current cursor offset and populate the table.
 
-        Routes the request through :meth:`HexEditorBridge.disassemble` via
-        :func:`run_bridge_coroutine_async` so the operation runs on the
-        persistent bridge event loop and the Qt main thread stays
-        responsive. Results and errors are delivered back via signal
-        callbacks.
+        Routes the request through :meth:`HexEditorBridge.disassemble` via :func:`run_bridge_coroutine_async` so the operation runs on the
+        persistent bridge event loop and the Qt main thread stays responsive. Results and errors are delivered back via signal callbacks.
         """
         if self.document is None or self._disasm_table is None:
             return
@@ -321,8 +318,7 @@ class DisassemblyMixin:
     def _flush_pending_follow_cursor(self) -> None:
         """Re-arm the debounce timer if a newer offset arrived during a bridge call.
 
-        Called from both completion handlers so a follow-cursor request
-        that landed while a disassemble was in flight is not silently
+        Called from both completion handlers so a follow-cursor request that landed while a disassemble was in flight is not silently
         dropped.
         """
         if self._disasm_pending_offset is None:

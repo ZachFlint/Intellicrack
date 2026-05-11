@@ -1330,10 +1330,9 @@ class GhidraBridge(StaticAnalysisBridge):
     async def shutdown(self) -> None:
         """Shutdown Ghidra and cleanup resources.
 
-        Closes the active ghidra_bridge RPC client (preventing socket leaks),
-        terminates the headless subprocess, joins the stdout/stderr drain
-        threads, and removes the bridge script under a process-wide lock to
-        prevent races with concurrent ``start_headless`` invocations.
+        Closes the active ghidra_bridge RPC client (preventing socket leaks), terminates the headless subprocess, joins the stdout/stderr
+        drain threads, and removes the bridge script under a process-wide lock to prevent races with concurrent ``start_headless``
+        invocations.
         """
         if self._bridge is not None:
             await asyncio.to_thread(self._close_bridge_client, self._bridge)
@@ -4344,10 +4343,10 @@ metadata
 
         _logger.debug("undo_requested")
         try:
-            result = await self._execute_remote("""
-                currentProgram.undo()
-                True
-            """)
+            result = await self._execute_remote(
+                """currentProgram.undo() True."""
+                                                 ,
+            )
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
@@ -4370,10 +4369,10 @@ metadata
 
         _logger.debug("redo_requested")
         try:
-            result = await self._execute_remote("""
-                currentProgram.redo()
-                True
-            """)
+            result = await self._execute_remote(
+                """currentProgram.redo() True."""
+                                                 ,
+            )
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
@@ -6088,7 +6087,8 @@ metadata
             raise ToolError(_ERR_NOT_CONNECTED)
 
         try:
-            result = await self._execute_remote("""
+            result = await self._execute_remote(
+                """
                 from ghidra.program.model.listing import ProgramFragment, ProgramModule
 
                 MAX_DEPTH = 64
@@ -6149,7 +6149,8 @@ metadata
                         continue
                     trees.append({'name': tree_name, 'root': build_module(root_module, 0, set())})
                 {'trees': trees}
-            """)
+            """,
+            )
         except ToolError:
             raise
         except Exception as exc:

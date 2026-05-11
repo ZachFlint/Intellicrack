@@ -76,10 +76,8 @@ if sys.platform == "win32":
 class ProcessMemoryDialog(QDialog):
     """Dialog for browsing and opening process memory regions.
 
-    Provides a PID input, region listing, and region selection for
-    loading process memory into the hex editor. After the dialog is
-    accepted, ``region_selected`` holds the chosen ``(pid, base, size)``
-    tuple or ``None`` when no region was picked.
+    Provides a PID input, region listing, and region selection for loading process memory into the hex editor. After the dialog is accepted,
+    ``region_selected`` holds the chosen ``(pid, base, size)`` tuple or ``None`` when no region was picked.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

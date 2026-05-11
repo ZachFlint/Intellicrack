@@ -452,12 +452,9 @@ class HighlightingMixin:
     def refresh_pattern_highlights(self) -> None:
         """Re-resolve offsets for every pattern-type highlight rule.
 
-        Called by the hex editor panel whenever the active document's byte
-        content changes (``HexEditorWidget.data_changed``) so that
-        pattern-based highlight rules stay consistent with the underlying
-        document.  Byte-value and byte-range rules do not need to be
-        refreshed because their match logic is re-evaluated per-paint from
-        the raw byte value.
+        Called by the hex editor panel whenever the active document's byte content changes (``HexEditorWidget.data_changed``) so that
+        pattern-based highlight rules stay consistent with the underlying document.  Byte-value and byte-range rules do not need to be
+        refreshed because their match logic is re-evaluated per-paint from the raw byte value.
         """
         if self._hex_widget is None:
             return

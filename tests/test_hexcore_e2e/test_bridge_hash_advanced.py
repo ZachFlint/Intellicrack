@@ -261,7 +261,7 @@ class TestCalculateHashCustomCrc:
         crc_val: int = binascii.crc32(payload) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = _run(
-            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF),
         )
         assert result.lower() == expected.lower()
 
@@ -278,7 +278,7 @@ class TestCalculateHashCustomCrc:
         crc_val: int = binascii.crc32(payload[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = _run(
-            bridge.calculate_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+            bridge.calculate_hash_custom_crc(start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF),
         )
         assert result.lower() == expected.lower()
 
@@ -305,7 +305,7 @@ class TestCalculateHashCustomCrc:
         """
         _run(bridge.open_file(str(pe_binary)))
         result: str = _run(
-            bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, refin=False, refout=False, xorout=0x0000)
+            bridge.calculate_hash_custom_crc(0, _FIRST_16_BYTES, 0x1021, 0xFFFF, 16, refin=False, refout=False, xorout=0x0000),
         )
         assert isinstance(result, str)
         assert result
@@ -349,7 +349,7 @@ class TestCalculateHashCustomCrc:
         payload = bytes(range(64))
         self._open_payload(bridge, tmp_path, payload, "crc32_len.bin")
         result: str = _run(
-            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF)
+            bridge.calculate_hash_custom_crc(0, len(payload), 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF),
         )
         assert len(result) <= 8
 

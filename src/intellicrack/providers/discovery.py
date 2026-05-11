@@ -89,12 +89,10 @@ class _CacheEntry:
 class DiscoveryCache:
     """TTL-based cache for discovered models.
 
-    Provides per-provider caching of model lists with configurable TTL and
-    optional disk persistence. Disk and asynchronous helpers serialize access
-    through an internal :class:`asyncio.Lock`; the synchronous helpers
-    (:meth:`get`, :meth:`set`, :meth:`invalidate`, :meth:`is_expired`,
-    :meth:`get_all_cached`) are intended to be called from a single asyncio
-    task at a time and are not protected by the lock.
+    Provides per-provider caching of model lists with configurable TTL and optional disk persistence. Disk and asynchronous helpers
+    serialize access through an internal :class:`asyncio.Lock`; the synchronous helpers (:meth:`get`, :meth:`set`, :meth:`invalidate`,
+    :meth:`is_expired`, :meth:`get_all_cached`) are intended to be called from a single asyncio task at a time and are not protected by the
+    lock.
     """
 
     def __init__(self, ttl_seconds: int = 3600) -> None:
@@ -118,6 +116,7 @@ class DiscoveryCache:
         Returns:
             list[ModelInfo] | None: Cached models, or None if missing/expired.
         """
+
         async with self._cache_lock:
             return self._get_locked(provider)
 
@@ -162,6 +161,7 @@ class DiscoveryCache:
             provider: The provider to cache models for.
             models: Models to cache.
         """
+
         async with self._cache_lock:
             self._set_locked(provider, models)
 
@@ -210,6 +210,7 @@ class DiscoveryCache:
         Args:
             provider: Specific provider to invalidate, or None for all.
         """
+
         async with self._cache_lock:
             self._invalidate_locked(provider)
 

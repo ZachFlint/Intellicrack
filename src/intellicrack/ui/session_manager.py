@@ -727,10 +727,8 @@ class SessionManagerDialog(QDialog):
     def _import_session(self) -> None:
         """Import session from file.
 
-        When a session manager is available, the import is routed through
-        ``SessionManager.import_json`` so the imported session lands in the
-        backing ``SessionStore``. Without a manager, the legacy disk-sidecar
-        fallback is used.
+        When a session manager is available, the import is routed through ``SessionManager.import_json`` so the imported session lands in
+        the backing ``SessionStore``. Without a manager, the legacy disk-sidecar fallback is used.
         """
         path_str, _ = QFileDialog.getOpenFileName(
             self,

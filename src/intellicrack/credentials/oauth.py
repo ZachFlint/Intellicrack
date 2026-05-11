@@ -388,9 +388,8 @@ class _OAuthCallbackTCPServer(socketserver.TCPServer):
 class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
     """HTTP request handler for OAuth callbacks.
 
-    Reads CSRF/state context from the ``_OAuthCallbackTCPServer`` instance
-    that owns the handler so concurrent OAuth flows on different ports do
-    not share class-level state.
+    Reads CSRF/state context from the ``_OAuthCallbackTCPServer`` instance that owns the handler so concurrent OAuth flows on different
+    ports do not share class-level state.
     """
 
     def do_GET(self) -> None:
@@ -574,11 +573,9 @@ class OAuthCallbackServer:
     def stop(self) -> None:
         """Stop the callback server and release the bound socket.
 
-        The server thread uses ``handle_request`` (single-shot) rather than
-        ``serve_forever``; therefore ``shutdown`` is not called here — doing so
-        would block on ``__is_shut_down`` which is only set by ``serve_forever``.
-        We close the socket and wake any blocking ``handle_request`` call via
-        ``server_close``.
+        The server thread uses ``handle_request`` (single-shot) rather than ``serve_forever``; therefore ``shutdown`` is not called here —
+        doing so would block on ``__is_shut_down`` which is only set by ``serve_forever``. We close the socket and wake any blocking
+        ``handle_request`` call via ``server_close``.
         """
         server = self._server
         if server is not None:
@@ -782,6 +779,7 @@ class OAuthManager:
             OAuthCallbackError: If state is invalid, expired, or PKCE
                 verifier is missing when required by the flow.
         """
+
         async with self._lock:
             oauth_state = self._pending_states.pop(state, None)
 
@@ -934,6 +932,7 @@ class OAuthManager:
         Returns:
             OAuthToken | None: OAuthToken or None if not found.
         """
+
         async with self._token_cache_lock:
             cached = self._token_cache.get(provider)
         if cached is not None:

@@ -245,7 +245,8 @@ class ChatInput(QFrame):
         self._text_edit.setFont(FontManager.get_instance().get_ui_font(10))
         self._text_edit.setMaximumHeight(_INPUT_MAX_HEIGHT)
         self._text_edit.setPlaceholderText("Type a message...")
-        self._text_edit.setStyleSheet("""
+        self._text_edit.setStyleSheet(
+            """
             QTextEdit {
                 background-color: #2d2d30;
                 border: 1px solid #3e3e42;
@@ -256,13 +257,16 @@ class ChatInput(QFrame):
             QTextEdit:focus {
                 border: 1px solid #007acc;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(self._text_edit)
 
         self._send_button = QPushButton("Send")
         self._send_button.setFont(FontManager.get_instance().get_ui_font_bold(10))
         self._send_button.setFixedSize(_SEND_BTN_WIDTH, _SEND_BTN_HEIGHT)
-        self._send_button.setStyleSheet("""
+        self._send_button.setStyleSheet(
+            """
             QPushButton {
                 background-color: #0e639c;
                 border: none;
@@ -279,16 +283,22 @@ class ChatInput(QFrame):
                 background-color: #3e3e42;
                 color: #888888;
             }
-        """)
+        """
+           ,
+        )
         self._send_button.clicked.connect(self._on_send)
         layout.addWidget(self._send_button)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QFrame {
                 background-color: #252526;
                 border-top: 1px solid #3e3e42;
             }
-        """)
+        """
+
+           ,
+        )
 
     def _on_send(self) -> None:
         """Handle send button click."""
@@ -354,12 +364,15 @@ class ChatPanel(QFrame):
 
         header = QFrame()
         header.setFixedHeight(_HEADER_HEIGHT)
-        header.setStyleSheet("""
+        header.setStyleSheet(
+            """
             QFrame {
                 background-color: #2d2d30;
                 border-bottom: 1px solid #3e3e42;
             }
-        """)
+        """
+           ,
+        )
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)
 

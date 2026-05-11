@@ -150,9 +150,8 @@ def _pid_exists_posix(pid: int) -> bool:
 class ProcessStateError(RuntimeError):
     """Raised when a tracked subprocess finishes in an unexpected state.
 
-    This error surfaces cases where a subprocess wrapped by ``ProcessManager``
-    leaves ``returncode`` unset after ``communicate`` returns, indicating the
-    operating system failed to report the final exit status.
+    This error surfaces cases where a subprocess wrapped by ``ProcessManager`` leaves ``returncode`` unset after ``communicate`` returns,
+    indicating the operating system failed to report the final exit status.
     """
 
     def __init__(self, name: str, pid: int, message: str | None = None) -> None:
@@ -330,11 +329,9 @@ class ProcessManager:
     def install_handlers(self) -> None:
         """Install signal handlers and atexit hook for cleanup.
 
-        This should be called once during application startup, typically in
-        ``main.py`` before any processes are spawned. The atexit hook is
-        registered at most once per Python interpreter — even when
-        :meth:`reset_instance` is invoked between calls — using a
-        module-level guard so cleanup never executes twice on shutdown.
+        This should be called once during application startup, typically in ``main.py`` before any processes are spawned. The atexit hook is
+        registered at most once per Python interpreter — even when :meth:`reset_instance` is invoked between calls — using a module-level
+        guard so cleanup never executes twice on shutdown.
         """
         if self.atexit_registered:
             return
@@ -388,9 +385,8 @@ class ProcessManager:
     def _atexit_cleanup_global() -> None:
         """Global atexit hook that delegates to the active singleton.
 
-        Registered once per interpreter via :meth:`install_handlers`. If no
-        :class:`ProcessManager` singleton exists (because callers reset it),
-        this is a no-op and exit proceeds without spurious work.
+        Registered once per interpreter via :meth:`install_handlers`. If no :class:`ProcessManager` singleton exists (because callers reset
+        it), this is a no-op and exit proceeds without spurious work.
         """
         instance = ProcessManager._instance
         if instance is None:
@@ -400,8 +396,8 @@ class ProcessManager:
     def run_atexit_cleanup(self) -> None:
         """Public entry point that runs the at-exit cleanup once.
 
-        Delegates to :meth:`_atexit_cleanup`; provided so the global hook can
-        invoke instance cleanup without violating member-access lint rules.
+        Delegates to :meth:`_atexit_cleanup`; provided so the global hook can invoke instance cleanup without violating member-access lint
+        rules.
         """
         self._atexit_cleanup()
 
@@ -445,12 +441,9 @@ class ProcessManager:
     def _atexit_cleanup(self) -> None:
         """Cleanup handler for normal program exit.
 
-        Delegates to :meth:`_sync_cleanup`, which terminates every tracked
-        subprocess and external PID along with their descendants in a single
-        pass. The historical implementation invoked
-        :meth:`_terminate_process_sync` for each tracked entry before calling
-        :meth:`_sync_cleanup`, causing every process tree to be walked twice
-        and adding tens of seconds of latency to interpreter shutdown.
+        Delegates to :meth:`_sync_cleanup`, which terminates every tracked subprocess and external PID along with their descendants in a
+        single pass. The historical implementation invoked :meth:`_terminate_process_sync` for each tracked entry before calling
+        :meth:`_sync_cleanup`, causing every process tree to be walked twice and adding tens of seconds of latency to interpreter shutdown.
         """
         if self._cleanup_in_progress:
             return

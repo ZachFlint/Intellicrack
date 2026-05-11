@@ -163,11 +163,9 @@ def dataclass_to_dict(obj: object) -> dict[str, Any]:
 class SandboxBridge(ToolBridgeBase):
     """Bridge for sandbox operations.
 
-    Provides an AI-accessible interface to the ``SandboxManager`` for
-    creating isolated execution environments and running binaries.
-    Instances own a lazy slot for the shared ``SandboxManager``
-    singleton and record the advertised ``BridgeCapabilities``
-    describing the dynamic-analysis features this bridge can provide.
+    Provides an AI-accessible interface to the ``SandboxManager`` for creating isolated execution environments and running binaries.
+    Instances own a lazy slot for the shared ``SandboxManager`` singleton and record the advertised ``BridgeCapabilities`` describing the
+    dynamic-analysis features this bridge can provide.
     """
 
     def __init__(self) -> None:

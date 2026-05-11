@@ -1,5 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "permissions": {
     "allow": [
       "mcp__sequential-thinking__sequentialthinking",
@@ -35,9 +38,6 @@
     ],
     "deny": [],
     "ask": []
-  },
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
@@ -117,8 +117,6 @@
     "type": "command",
     "command": "node D:/Intellicrack/.claude/statusline.cjs"
   },
-  "outputStyle": "Intellicrack-Developer",
-  "enabledPlugins": {
-    "context7@claude-plugins-official": true
-  }
+  "enabledPlugins": {},
+  "outputStyle": "Intellicrack-Developer"
 }

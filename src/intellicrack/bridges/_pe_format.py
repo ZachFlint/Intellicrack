@@ -43,13 +43,11 @@ if TYPE_CHECKING:
 FormatName = Literal["pe", "elf", "macho", "zip", "raw"]
 """Canonical magic-byte file-format names returned by :func:`detect_format`."""
 
-
 type SectionHeaderDict = dict[str, int | str]
 """Shape of dicts returned by :func:`unpack_section_header` and :func:`iterate_section_headers`.
 
 Keys map to either an ``int`` numeric field or the ``str`` ``name`` field.
 """
-
 
 PE_DOS_LFANEW_OFFSET: Final[int] = 0x3C
 """Offset of ``e_lfanew`` (the NT-headers pointer) inside the DOS header."""
@@ -63,8 +61,8 @@ PE_SIGNATURE: Final[bytes] = b"PE\x00\x00"
 PE_SIGNATURE_INT: Final[int] = 0x00004550
 """IMAGE_NT_HEADERS signature as a little-endian ``u32``.
 
-Equal to ``int.from_bytes(PE_SIGNATURE, 'little')``. Use this form when
-comparing against a value already unpacked with ``struct.unpack_from('<I', ...)``.
+Equal to ``int.from_bytes(PE_SIGNATURE, 'little')``. Use this form when comparing against a value already unpacked with
+``struct.unpack_from('<I', ...)``.
 """
 
 PE_DOS_SIGNATURE: Final[bytes] = b"MZ"
@@ -114,7 +112,6 @@ PE_SECTION_CHARACTERISTIC_READ: Final[int] = 0x40000000
 PE_SECTION_CHARACTERISTIC_WRITE: Final[int] = 0x80000000
 """IMAGE_SCN_MEM_WRITE."""
 
-
 PE_MACHINE_I386: Final[int] = 0x014C
 """IMAGE_FILE_MACHINE_I386 (Intel 386)."""
 
@@ -154,7 +151,6 @@ PE_MACHINE_RISCV64: Final[int] = 0x5064
 PE_MACHINE_RISCV128: Final[int] = 0x5128
 """IMAGE_FILE_MACHINE_RISCV128 (RISC-V 128-bit)."""
 
-
 _PE_MACHINE_ARCH_TABLE: Final[dict[int, tuple[str, bool]]] = {
     PE_MACHINE_I386: ("x86", False),
     PE_MACHINE_AMD64: ("x86_64", True),
@@ -181,7 +177,6 @@ Architecture strings follow the canonical convention used by
 Callers that need a different convention (for example ``"x64"`` instead
 of ``"x86_64"``) translate the helper's output at the call site.
 """
-
 
 def pe_machine_to_arch(machine: int) -> tuple[str, bool]:
     """Translate an ``IMAGE_FILE_MACHINE_*`` value to an architecture tuple.
@@ -553,7 +548,6 @@ _FOUR_BYTE_MAGIC_SIZE: Final[int] = 4
 
 _PE_HEADER_AFTER_LFANEW: Final[int] = 6
 """Bytes required after ``e_lfanew`` to read the PE signature plus the Machine field."""
-
 
 _MACHO_CPU_TYPE_ARCH_TABLE: Final[dict[int, tuple[str, bool]]] = {
     MACHO_CPU_TYPE_X86_64: ("x86_64", True),

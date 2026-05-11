@@ -424,12 +424,9 @@ _win32_apis_configured: bool = False
 def _configure_win32_apis() -> None:
     """Configure ``restype``/``argtypes`` for every Win32 API used by this bridge.
 
-    Without explicit ``restype`` / ``argtypes``, ``ctypes`` defaults to
-    ``c_int`` for return values, which silently truncates 64-bit ``HANDLE``
-    pointers on 64-bit Python and corrupts subsequent
-    ``ReadProcessMemory`` / ``CloseHandle`` / ``VirtualQueryEx`` calls.
-    Centralising the declarations guarantees they are configured exactly
-    once and that every call site sees consistent signatures.
+    Without explicit ``restype`` / ``argtypes``, ``ctypes`` defaults to ``c_int`` for return values, which silently truncates 64-bit
+    ``HANDLE`` pointers on 64-bit Python and corrupts subsequent ``ReadProcessMemory`` / ``CloseHandle`` / ``VirtualQueryEx`` calls.
+    Centralising the declarations guarantees they are configured exactly once and that every call site sees consistent signatures.
 
     The function is idempotent and a no-op on non-Windows platforms.
     """
@@ -3579,11 +3576,9 @@ class X64DbgBridge(DebuggerBridge):
     def _release_process_handles(self) -> None:
         """Close and forget every cached process handle.
 
-        Closes every open handle in ``_process_handles`` and clears the
-        cache atomically under ``_handle_cache_lock``. Errors raised by
-        ``CloseHandle`` are logged at ``debug`` so a partial cleanup
-        cannot mask later failures or block teardown. Safe to call when
-        the cache is empty (e.g. on a bridge that never attached).
+        Closes every open handle in ``_process_handles`` and clears the cache atomically under ``_handle_cache_lock``. Errors raised by
+        ``CloseHandle`` are logged at ``debug`` so a partial cleanup cannot mask later failures or block teardown. Safe to call when the
+        cache is empty (e.g. on a bridge that never attached).
         """
         if not _IS_WIN32:
             return
@@ -4297,9 +4292,8 @@ class X64DbgBridge(DebuggerBridge):
         class ThreadEntry32(ctypes.Structure):
             """Windows ``THREADENTRY32`` layout for thread snapshots.
 
-            Populated by ``Thread32First`` / ``Thread32Next`` when
-            enumerating threads that belong to the attached process via
-            a toolhelp snapshot.
+            Populated by ``Thread32First`` / ``Thread32Next`` when enumerating threads that belong to the attached process via a toolhelp
+            snapshot.
             """
 
             _fields_: ClassVar = [
@@ -4542,9 +4536,8 @@ class X64DbgBridge(DebuggerBridge):
         class ModuleEntry32W(ctypes.Structure):
             """Windows ``MODULEENTRY32W`` layout for module snapshots.
 
-            Populated by ``Module32FirstW`` / ``Module32NextW`` when
-            enumerating DLL and executable modules loaded into the
-            attached process via a toolhelp snapshot.
+            Populated by ``Module32FirstW`` / ``Module32NextW`` when enumerating DLL and executable modules loaded into the attached process
+            via a toolhelp snapshot.
             """
 
             _fields_: ClassVar = [
@@ -7453,10 +7446,8 @@ class X64DbgBridge(DebuggerBridge):
                     class LUID(ctypes.Structure):
                         """Windows ``LUID`` structure used for privilege lookup.
 
-                        A locally unique identifier is a 64-bit value that
-                        the OS assigns to privileges and other securable
-                        objects. Declared inline so it can be passed by
-                        reference into ``LookupPrivilegeNameW``.
+                        A locally unique identifier is a 64-bit value that the OS assigns to privileges and other securable objects.
+                        Declared inline so it can be passed by reference into ``LookupPrivilegeNameW``.
                         """
 
                         _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
@@ -7510,9 +7501,8 @@ class X64DbgBridge(DebuggerBridge):
             class TokenPrivileges(ctypes.Structure):
                 """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
 
-                Simplified single-entry variant of the standard Windows
-                structure, which is all ``AdjustTokenPrivileges`` needs
-                when toggling a single privilege at a time.
+                Simplified single-entry variant of the standard Windows structure, which is all ``AdjustTokenPrivileges`` needs when
+                toggling a single privilege at a time.
                 """
 
                 _fields_: ClassVar = [

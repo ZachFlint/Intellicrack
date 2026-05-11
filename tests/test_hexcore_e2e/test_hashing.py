@@ -283,7 +283,14 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(sample_bytes) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            0,
+            doc_length,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -299,7 +306,14 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(sample_bytes[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            start, end, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            start,
+            end,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -316,7 +330,14 @@ class TestCustomCRC:
         crc_val: int = _crc16_arc(sample_bytes)
         expected: str = f"{crc_val:04x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0, doc_length, 0x8005, 0x0000, 16, refin=True, refout=True, xorout=0x0000
+            0,
+            doc_length,
+            0x8005,
+            0x0000,
+            16,
+            refin=True,
+            refout=True,
+            xorout=0x0000,
         )
         assert result.lower() == expected.lower()
 
@@ -342,7 +363,14 @@ class TestCustomCRC:
         """
         doc_length: int = sample_doc_from_bytes.length()
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0, doc_length, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            0,
+            doc_length,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         assert isinstance(result, str)
         assert result
@@ -359,7 +387,14 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(bytes([sample_bytes[offset]])) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            offset, offset + 1, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            offset,
+            offset + 1,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -370,9 +405,23 @@ class TestCustomCRC:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
         """
         crc_a: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0, 64, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            0,
+            64,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         crc_b: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            64, 128, 0x04C11DB7, 0xFFFFFFFF, 32, refin=True, refout=True, xorout=0xFFFFFFFF
+            64,
+            128,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            32,
+            refin=True,
+            refout=True,
+            xorout=0xFFFFFFFF,
         )
         assert crc_a != crc_b

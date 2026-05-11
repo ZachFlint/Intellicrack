@@ -19,10 +19,9 @@ tests/test_providers/test_anthropic_buffers_live.py -x``.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
-
-from pathlib import Path
 
 from intellicrack.core.types import (
     Message,
@@ -198,13 +197,15 @@ async def test_anthropic_chat_and_stream_populate_usage_and_thinking() -> None:
         stream_messages: list[Message] = [Message(role="user", content="Count aloud to three.")]
         collected_chunks: list[str] = []
         try:
-            async for chunk in provider.chat_stream(
-                messages=stream_messages,
-                model=chat_model,
-                max_tokens=64,
-                temperature=0.0,
-            ):
-                collected_chunks.append(chunk)
+            collected_chunks.extend([
+                chunk
+                async for chunk in provider.chat_stream(
+                    messages=stream_messages,
+                    model=chat_model,
+                    max_tokens=64,
+                    temperature=0.0,
+                )
+            ])
         except Exception as exc:
             if _is_credit_error(exc):
                 pytest.skip(_SKIP_REASON_NO_CREDIT)

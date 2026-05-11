@@ -271,7 +271,7 @@ class TestSandboxInstance:
         assert inst.last_used >= before
 
     def test_state_delegates_to_sandbox(self) -> None:
-        """state property delegates to sandbox.state."""
+        """State property delegates to sandbox.state."""
         sb = InMemorySandbox()
         inst = _TestInstance(sb)
         assert inst.state.status == "stopped"
@@ -323,7 +323,7 @@ class TestManagerProperties:
         assert mgr.active_count == 0
 
     def test_instances_returns_copy(self) -> None:
-        """instances property returns a copy, not the internal dict."""
+        """Instances property returns a copy, not the internal dict."""
         mgr = _TestableManager()
         copy = mgr.instances
         assert copy == []

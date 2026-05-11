@@ -27,11 +27,9 @@ _sp = importlib.import_module("sub" + "process")
 class _StartupInfoFallback:
     """Non-Windows fallback for :class:`subprocess.STARTUPINFO`.
 
-    Provides the same public attribute surface as the Windows-only class so
-    cross-platform code can instantiate and configure a startup-info object
-    without conditional branches. The fallback object has no effect when
-    passed to :class:`subprocess.Popen` on non-Windows platforms because the
-    standard library ignores unknown ``startupinfo`` values there.
+    Provides the same public attribute surface as the Windows-only class so cross-platform code can instantiate and configure a startup-info
+    object without conditional branches. The fallback object has no effect when passed to :class:`subprocess.Popen` on non-Windows platforms
+    because the standard library ignores unknown ``startupinfo`` values there.
     """
 
     def __init__(self) -> None:

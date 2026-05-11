@@ -4,14 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Screen geometry detection for PyQt6 SIP-generated bindings.
 
-Provides wrapper functions that use dynamic attribute dispatch to access
-Qt screen and widget geometry methods. These wrappers exist because
-basedpyright cannot resolve certain inherited method signatures from
-the auto-generated PyQt6 type definitions. Each function performs a real
-runtime call to the underlying Qt method.
+Provides wrapper functions that use dynamic attribute dispatch to access Qt screen and widget geometry methods. These wrappers exist because
+basedpyright cannot resolve certain inherited method signatures from the auto-generated PyQt6 type definitions. Each function performs a
+real runtime call to the underlying Qt method.
 
-Every wrapper validates that the target method exists at runtime and
-raises ``AttributeError`` with a clear diagnostic if the method is
+Every wrapper validates that the target method exists at runtime and raises ``AttributeError`` with a clear diagnostic if the method is
 missing, ensuring failures are immediately identifiable.
 """
 

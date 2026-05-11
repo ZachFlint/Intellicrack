@@ -464,13 +464,15 @@ class TestF0004CpuArgNotHostForTCG:
         """
         image = tmp_path / "disk.qcow2"
         image.write_bytes(b"\x00" * 512)
-        sb.set_qemu_config(QEMUConfig(
-            guest_os=GuestOS.WINDOWS,
-            image_path=image,
-            monitor_port=4444,
-            ssh_port=2222,
-            agent_port=4445,
-        ))
+        sb.set_qemu_config(
+            QEMUConfig(
+                guest_os=GuestOS.WINDOWS,
+                image_path=image,
+                monitor_port=4444,
+                ssh_port=2222,
+                agent_port=4445,
+            ),
+        )
         sb.set_qemu_path(Path("qemu-system-x86_64"))
         sb.set_temp_dir(tmp_path)
 
@@ -488,9 +490,7 @@ class TestF0004CpuArgNotHostForTCG:
         cpu_idx = next((i for i, v in enumerate(cmd) if v == "-cpu"), None)
         assert cpu_idx is not None, "No -cpu argument found"
         cpu_value = cmd[cpu_idx + 1]
-        assert "host" not in cpu_value.lower(), (
-            f"'-cpu host' must not appear with TCG; got '-cpu {cpu_value}'"
-        )
+        assert "host" not in cpu_value.lower(), f"'-cpu host' must not appear with TCG; got '-cpu {cpu_value}'"
 
     def test_cpu_host_present_with_kvm(self, tmp_path: Path) -> None:
         """-cpu host is permitted when accel is KVM (hardware virt available).
@@ -504,9 +504,7 @@ class TestF0004CpuArgNotHostForTCG:
         cpu_idx = next((i for i, v in enumerate(cmd) if v == "-cpu"), None)
         assert cpu_idx is not None
         cpu_value = cmd[cpu_idx + 1]
-        assert "host" in cpu_value.lower(), (
-            f"Expected 'host' in -cpu with KVM; got '{cpu_value}'"
-        )
+        assert "host" in cpu_value.lower(), f"Expected 'host' in -cpu with KVM; got '{cpu_value}'"
 
 
 # ---------------------------------------------------------------------------
@@ -566,18 +564,14 @@ class TestF0009AgentScriptNoPsUsing:
     def test_windows_agent_script_has_no_using_scope(self) -> None:
         """$using: must not appear in the Windows guest agent PS1 script."""
         script = _TestQEMUSandbox.windows_agent_script_content_for_test()
-        assert "$using:" not in script, (
-            "Windows agent script contains '$using:' which is invalid in Register-ObjectEvent -Action"
-        )
+        assert "$using:" not in script, "Windows agent script contains '$using:' which is invalid in Register-ObjectEvent -Action"
 
     def test_windows_agent_script_uses_message_data_or_global(self) -> None:
         """Log path must be stored via -MessageData or $Global: in agent script."""
         script = _TestQEMUSandbox.windows_agent_script_content_for_test()
         has_message_data = "-MessageData" in script
         has_global = "$Global:" in script or "$global:" in script
-        assert has_message_data or has_global, (
-            "Agent script must pass the log path via -MessageData or $Global: variable, not $using:"
-        )
+        assert has_message_data or has_global, "Agent script must pass the log path via -MessageData or $Global: variable, not $using:"
 
 
 # ---------------------------------------------------------------------------
@@ -616,9 +610,7 @@ class TestF0016WhpxRequiresHyperV:
                 return await sb.detect_accelerator_for_test()
 
         result = asyncio.get_event_loop().run_until_complete(_run())
-        assert result != AcceleratorType.WHPX, (
-            "_detect_accelerator must not return WHPX when Hyper-V prerequisites are not met"
-        )
+        assert result != AcceleratorType.WHPX, "_detect_accelerator must not return WHPX when Hyper-V prerequisites are not met"
 
     def test_probe_whpx_returns_false_on_non_windows(self) -> None:
         """_probe_whpx_host_prerequisites returns False on non-Windows hosts."""
@@ -650,9 +642,7 @@ class TestF0022F0029AntiEvasion:
             return await sb.apply_anti_evasion(profile="workstation")
 
         result = asyncio.get_event_loop().run_until_complete(_run())
-        assert result["profile"] == "workstation", (
-            f"apply_anti_evasion did not use the profile argument; got {result['profile']}"
-        )
+        assert result["profile"] == "workstation", f"apply_anti_evasion did not use the profile argument; got {result['profile']}"
 
     def test_anti_evasion_different_profiles_produce_different_smbios(self) -> None:
         """Different profiles produce distinguishably different SMBIOS entries.
@@ -677,10 +667,12 @@ class TestF0022F0029AntiEvasion:
         sb = _make_sandbox()
         sb.state.status = "running"
         sb.set_agent(_ConnectableAgent(connected=False))
-        sb.set_qemu_config(QEMUConfig(
-            guest_os=GuestOS.WINDOWS,
-            anti_evasion_profile="laptop",
-        ))
+        sb.set_qemu_config(
+            QEMUConfig(
+                guest_os=GuestOS.WINDOWS,
+                anti_evasion_profile="laptop",
+            ),
+        )
 
         async def _run() -> dict[str, Any]:
             sb.set_qmp(MagicMock())
@@ -688,9 +680,7 @@ class TestF0022F0029AntiEvasion:
 
         result = asyncio.get_event_loop().run_until_complete(_run())
         assert result["profile"] == "laptop"
-        assert any("smbios" in t for t in result["techniques"]), (
-            "Techniques must include SMBIOS entries when profile is applied"
-        )
+        assert any("smbios" in t for t in result["techniques"]), "Techniques must include SMBIOS entries when profile is applied"
 
 
 # ---------------------------------------------------------------------------
@@ -824,9 +814,7 @@ class TestF0025StopClearsCaptures:
 
         asyncio.get_event_loop().run_until_complete(_run())
 
-        assert len(sb.get_active_captures()) == 0, (
-            "stop() must clear _active_captures; resource leak remains if not emptied"
-        )
+        assert len(sb.get_active_captures()) == 0, "stop() must clear _active_captures; resource leak remains if not emptied"
 
 
 # ---------------------------------------------------------------------------
@@ -894,9 +882,7 @@ class TestF0028YaraScanFallback:
         asyncio.get_event_loop().run_until_complete(_run())
 
         for p in scanned_paths:
-            assert "user_submitted" not in p, (
-                f"yara_scan must not scan user input; found '{p}' in scan_files"
-            )
+            assert "user_submitted" not in p, f"yara_scan must not scan user input; found '{p}' in scan_files"
 
     def test_yara_scan_scans_zip_artifacts_when_present(self, tmp_path: Path) -> None:
         """When a dropped-file zip exists, yara_scan uses it not the input dir.
@@ -996,10 +982,7 @@ class TestF0031RunBinaryNoFixedSleep:
                 return time.monotonic() - t0
 
         elapsed = asyncio.get_event_loop().run_until_complete(_run())
-        assert elapsed < 1.5, (
-            f"run_binary without monitoring took {elapsed:.2f}s — "
-            "a hard-coded asyncio.sleep(2) would make this >= 2s"
-        )
+        assert elapsed < 1.5, f"run_binary without monitoring took {elapsed:.2f}s — a hard-coded asyncio.sleep(2) would make this >= 2s"
 
 
 # ---------------------------------------------------------------------------
@@ -1060,9 +1043,7 @@ class TestF0035RunBinarySuccessMatchesExitCode:
             tmp_path: Pytest temp directory.
         """
         result = self._run_with_exit(1, tmp_path)
-        assert result != "success", (
-            "exit_code 1 must NOT produce 'success'; the old bug reported success always"
-        )
+        assert result != "success", "exit_code 1 must NOT produce 'success'; the old bug reported success always"
 
     def test_exit_code_2_result_maps_to_error(self, tmp_path: Path) -> None:
         """exit_code 2 must yield result == 'error' or similar non-success value.
@@ -1071,9 +1052,7 @@ class TestF0035RunBinarySuccessMatchesExitCode:
             tmp_path: Pytest temp directory.
         """
         result = self._run_with_exit(2, tmp_path)
-        assert result in {"error", "failure", "crashed"}, (
-            f"exit_code 2 must map to error/failure; got '{result}'"
-        )
+        assert result in {"error", "failure", "crashed"}, f"exit_code 2 must map to error/failure; got '{result}'"
 
 
 # ---------------------------------------------------------------------------
@@ -1104,9 +1083,7 @@ class TestF0006AgentScriptStartupWired:
         startup_scripts = list(monitor_dir.glob("start_agent.*"))
         agent_scripts = list(monitor_dir.glob("agent.*"))
 
-        assert startup_scripts or agent_scripts, (
-            "No startup or agent script created in monitor dir"
-        )
+        assert startup_scripts or agent_scripts, "No startup or agent script created in monitor dir"
 
     def test_linux_startup_script_created(self, tmp_path: Path) -> None:
         """_create_guest_agent_script must produce start_agent.sh for Linux.
@@ -1160,10 +1137,7 @@ class TestF0015AcceleratorNotRedoneOnStart:
 
         asyncio.get_event_loop().run_until_complete(_run())
 
-        assert detect_call_count == 0, (
-            f"_detect_accelerator was called {detect_call_count} times "
-            "but must be 0 when cache is already valid"
-        )
+        assert detect_call_count == 0, f"_detect_accelerator was called {detect_call_count} times but must be 0 when cache is already valid"
 
 
 # ---------------------------------------------------------------------------

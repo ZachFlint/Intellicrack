@@ -295,13 +295,11 @@ class NamedPipeClient:
     async def close(self) -> None:
         """Close the pipe connection.
 
-        Waits for any in-flight write to release the per-write lock, cancels
-        the background reader task, fails any outstanding response futures
-        with a ``ToolError`` so awaiting ``send_command`` callers do not
-        hang, and then closes the underlying Windows handle on the asyncio
-        thread pool via ``asyncio.to_thread``. Safe to call when the client
-        is not connected.
+        Waits for any in-flight write to release the per-write lock, cancels the background reader task, fails any outstanding response
+        futures with a ``ToolError`` so awaiting ``send_command`` callers do not hang, and then closes the underlying Windows handle on the
+        asyncio thread pool via ``asyncio.to_thread``. Safe to call when the client is not connected.
         """
+
         async with self._close_lock:
             if self._handle is None:
                 return
@@ -414,6 +412,7 @@ class NamedPipeClient:
         Returns:
             int: A positive request id in ``[1, 2 ** 31 - 1]``.
         """
+
         async with self._id_lock:
             self._next_id = (self._next_id % _REQUEST_ID_MAX) + 1
             return self._next_id
@@ -723,11 +722,8 @@ class NamedPipeClient:
     def _close_handle(self) -> None:
         """Close the underlying Windows pipe handle, if any.
 
-        Delegates to :meth:`_close_native_handle` which calls
-        ``CloseHandle``, inspects the BOOL return value, and logs a
-        warning with ``GetLastError`` if the close failed. Does nothing
-        if the client is not currently connected or if the platform is
-        not Windows.
+        Delegates to :meth:`_close_native_handle` which calls ``CloseHandle``, inspects the BOOL return value, and logs a warning with
+        ``GetLastError`` if the close failed. Does nothing if the client is not currently connected or if the platform is not Windows.
         """
         if self._handle is None:
             return
@@ -860,11 +856,9 @@ class NamedPipeClient:
     def _cancel_io(self) -> None:
         """Cancel any in-flight pipe I/O on supported Windows builds.
 
-        Invokes ``CancelIoEx`` against the current pipe handle when the
-        Windows API is available so that a blocked ``ReadFile`` or
-        ``WriteFile`` on another thread unblocks with a cancellation
-        error. Does nothing if the client is not connected or if the
-        API entry point is unavailable.
+        Invokes ``CancelIoEx`` against the current pipe handle when the Windows API is available so that a blocked ``ReadFile`` or
+        ``WriteFile`` on another thread unblocks with a cancellation error. Does nothing if the client is not connected or if the API entry
+        point is unavailable.
         """
         if self._handle is None:
             return

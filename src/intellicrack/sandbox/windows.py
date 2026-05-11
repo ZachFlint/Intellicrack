@@ -838,9 +838,8 @@ class WindowsSandbox(SandboxBase):
     async def _emit_inline_monitors(self) -> None:
         """Write the file, registry, network, and process baseline monitors.
 
-        These cover the core FileChange / RegistryChange / NetworkActivity /
-        ProcessActivity telemetry that the :class:`ExecutionReport` always
-        expects; they complement the external PowerShell monitors.
+        These cover the core FileChange / RegistryChange / NetworkActivity / ProcessActivity telemetry that the :class:`ExecutionReport`
+        always expects; they complement the external PowerShell monitors.
         """
         if self._monitor_folder is None:
             return
@@ -1260,9 +1259,8 @@ class WindowsSandbox(SandboxBase):
     async def _wait_for_monitor_quiescence(self) -> None:
         """Wait until monitor logs stop growing or the maximum wait elapses.
 
-        Polls the host-side logs folder at ``_RESULT_POLL_INTERVAL`` intervals.
-        Returns as soon as the aggregate log size has been stable for one full
-        poll cycle, or after ``_MONITOR_WAIT_SECONDS`` seconds have elapsed.
+        Polls the host-side logs folder at ``_RESULT_POLL_INTERVAL`` intervals. Returns as soon as the aggregate log size has been stable
+        for one full poll cycle, or after ``_MONITOR_WAIT_SECONDS`` seconds have elapsed.
         """
         if self._shared_folder is None:
             return

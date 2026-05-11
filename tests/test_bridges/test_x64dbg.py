@@ -24,10 +24,10 @@ import os
 import sys
 from dataclasses import fields
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from intellicrack.bridges.base import WatchpointInfo
 from intellicrack.bridges.x64dbg import (
     X64DbgBridge,
     get_capstone,
@@ -38,6 +38,10 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.base import WatchpointInfo
 
 
 if sys.platform == "win32":

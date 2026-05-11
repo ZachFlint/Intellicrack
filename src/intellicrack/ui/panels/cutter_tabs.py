@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Tab widget classes for the Cutter/Rizin analysis panel.
 
-Each class provides a self-contained Qt widget that displays data from
-a specific CutterBridge method, with a ``refresh`` method that
+Each class provides a self-contained Qt widget that displays data from a specific CutterBridge method, with a ``refresh`` method that
 asynchronously queries the bridge and populates the view.
 """
 

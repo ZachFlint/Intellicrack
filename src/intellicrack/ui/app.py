@@ -447,7 +447,8 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self._splitter)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QMainWindow {
                 background-color: #1e1e1e;
             }
@@ -477,7 +478,10 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """)
+        """
+
+           ,
+        )
 
     @property
     def hxd_panel(self) -> HxDPanel | None:
@@ -492,10 +496,9 @@ class MainWindow(QMainWindow):
     def _register_hxd_panel_if_available(self) -> None:
         """Register HxDPanel as a docked tab next to HexEditorPanel when HxD.exe is reachable.
 
-        Looks up the HxD executable using the shared finder. If found, instantiates
-        ``HxDPanel`` and attaches it as a tab in the tool panel's ``QTabWidget`` so
-        it sits alongside the built-in hex editor. If HxD is not installed, logs a
-        debug record and returns silently without attaching anything.
+        Looks up the HxD executable using the shared finder. If found, instantiates ``HxDPanel`` and attaches it as a tab in the tool
+        panel's ``QTabWidget`` so it sits alongside the built-in hex editor. If HxD is not installed, logs a debug record and returns
+        silently without attaching anything.
         """
         if find_hxd_executable() is None:
             _logger.debug("hxd_panel_skipped_executable_not_found")
@@ -596,9 +599,8 @@ class MainWindow(QMainWindow):
     def _on_view_scripts(self) -> None:
         """Show the scripts manager panel and surface the current script context.
 
-        After activating the scripts tab, the previously selected script ID and
-        current draft script name (if any) are reported through the application
-        status bar so the user can confirm which script the panel is editing.
+        After activating the scripts tab, the previously selected script ID and current draft script name (if any) are reported through the
+        application status bar so the user can confirm which script the panel is editing.
         """
         self.tool_panel.activate_scripts_tab()
         selected_id, current_script = self.tool_panel.get_script_panel_state()
@@ -894,10 +896,9 @@ class MainWindow(QMainWindow):
     def _refresh_system_status(self) -> None:
         """Periodically refresh the system status display.
 
-        Tracks consecutive failures of the orchestrator status fetch and stops
-        the periodic timer after :data:`_STATUS_REFRESH_FAILURE_THRESHOLD`
-        consecutive errors so the status bar does not silently mask a broken
-        orchestrator with debug logs forever.
+        Tracks consecutive failures of the orchestrator status fetch and stops the periodic timer after
+        :data:`_STATUS_REFRESH_FAILURE_THRESHOLD` consecutive errors so the status bar does not silently mask a broken orchestrator with
+        debug logs forever.
         """
         if self._shutting_down:
             return
@@ -1282,9 +1283,8 @@ class MainWindow(QMainWindow):
     def _on_new_session(self) -> None:
         """Handle new session action.
 
-        Collects optional name and description from ``NewSessionDialog`` and
-        forwards them to :meth:`Orchestrator.start_session`, which persists the
-        name on the new session and stores the description as ``Session.notes``.
+        Collects optional name and description from ``NewSessionDialog`` and forwards them to :meth:`Orchestrator.start_session`, which
+        persists the name on the new session and stores the description as ``Session.notes``.
         """
         session_mgr_mod = importlib.import_module(".session_manager", "intellicrack.ui")
         new_session_cls = getattr(session_mgr_mod, "NewSessionDialog", None)
@@ -1327,11 +1327,9 @@ class MainWindow(QMainWindow):
     def _on_load_session(self) -> None:
         """Handle load session action.
 
-        Connects :attr:`SessionManagerDialog.session_loaded` and
-        :attr:`SessionManagerDialog.session_deleted` to MainWindow handlers so
-        the dialog's load button (which emits ``session_loaded`` and accepts the
-        dialog) and delete button (which emits ``session_deleted`` while keeping
-        the dialog open) both trigger orchestrator-side state changes.
+        Connects :attr:`SessionManagerDialog.session_loaded` and :attr:`SessionManagerDialog.session_deleted` to MainWindow handlers so the
+        dialog's load button (which emits ``session_loaded`` and accepts the dialog) and delete button (which emits ``session_deleted``
+        while keeping the dialog open) both trigger orchestrator-side state changes.
         """
         dialog = SessionManagerDialog(parent=self)
         dialog.session_loaded.connect(self._on_session_load_requested)
@@ -1460,10 +1458,8 @@ class MainWindow(QMainWindow):
     def _on_import_session(self) -> None:
         """Import a session from a JSON file.
 
-        The import coroutine runs on an ``AsyncWorker`` so the success dialog
-        only appears after the import actually completes. Duplicate-session
-        errors surface a replace-and-retry prompt and malformed JSON files
-        surface a friendly parse-error dialog.
+        The import coroutine runs on an ``AsyncWorker`` so the success dialog only appears after the import actually completes. Duplicate-
+        session errors surface a replace-and-retry prompt and malformed JSON files surface a friendly parse-error dialog.
         """
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1567,9 +1563,8 @@ class MainWindow(QMainWindow):
     def _on_save_patched_binary(self) -> None:
         """Save the currently loaded binary with applied patches via the hex editor.
 
-        The hex editor lives in :attr:`ToolOutputPanel.embedded_tools` (registered
-        by :meth:`ToolOutputPanel.add_hex_editor_tab`), not :attr:`panels`, so this
-        method resolves it through :meth:`ToolOutputPanel.get_embedded_tool`.
+        The hex editor lives in :attr:`ToolOutputPanel.embedded_tools` (registered by :meth:`ToolOutputPanel.add_hex_editor_tab`), not
+        :attr:`panels`, so this method resolves it through :meth:`ToolOutputPanel.get_embedded_tool`.
         """
         hex_panel = self.tool_panel.get_embedded_tool("hex_editor")
         if hex_panel is None:
@@ -1625,9 +1620,8 @@ class MainWindow(QMainWindow):
     def _on_tool_status(self) -> None:
         """Handle tool status action.
 
-        Pre-fetches the live tool registry from the orchestrator and threads it
-        through to ``ToolStatusDialog`` so the dialog can render real availability
-        instead of an empty checking-only state.
+        Pre-fetches the live tool registry from the orchestrator and threads it through to ``ToolStatusDialog`` so the dialog can render
+        real availability instead of an empty checking-only state.
         """
         try:
             from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
@@ -1647,12 +1641,9 @@ class MainWindow(QMainWindow):
     def _on_configure_tools(self) -> None:
         """Handle configure tools action.
 
-        Passes the live tool registry from the orchestrator to ``ToolConfigDialog``
-        so per-tool widgets can query real registry state for status checks. Wires
-        :attr:`ToolConfigDialog.tool_updated` and each
-        :attr:`ToolSettingsWidget.status_changed` signal to MainWindow handlers so
-        config saves and per-tool status changes update the application state and
-        status bar in real time.
+        Passes the live tool registry from the orchestrator to ``ToolConfigDialog`` so per-tool widgets can query real registry state for
+        status checks. Wires :attr:`ToolConfigDialog.tool_updated` and each :attr:`ToolSettingsWidget.status_changed` signal to MainWindow
+        handlers so config saves and per-tool status changes update the application state and status bar in real time.
         """
         tool_registry = getattr(self._orchestrator, "_tool_registry", None)
         dialog = ToolConfigDialog(
@@ -2063,10 +2054,9 @@ class MainWindow(QMainWindow):
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action.
 
-        Wires :attr:`SandboxConfigDialog.settings_updated` to
-        :meth:`_on_sandbox_settings_updated` so an Apply press inside the dialog
-        (which fires the signal without dialog acceptance) propagates settings to
-        the runtime sandbox manager just like an OK acceptance does.
+        Wires :attr:`SandboxConfigDialog.settings_updated` to :meth:`_on_sandbox_settings_updated` so an Apply press inside the dialog
+        (which fires the signal without dialog acceptance) propagates settings to the runtime sandbox manager just like an OK acceptance
+        does.
         """
         dialog = SandboxConfigDialog(
             sandbox_manager=self.sandbox_manager,
@@ -2080,10 +2070,9 @@ class MainWindow(QMainWindow):
     def _on_sandbox_settings_updated(self) -> None:
         """Apply runtime sandbox settings when the dialog signals an Apply event.
 
-        ``SandboxConfigDialog.settings_updated`` carries no payload (the dialog
-        already persisted to disk and rebuilt its own ``SandboxConfig``); this
-        slot pulls the dialog's current settings via ``sender()`` and routes them
-        through :meth:`_apply_sandbox_settings`.
+        ``SandboxConfigDialog.settings_updated`` carries no payload (the dialog already persisted to disk and rebuilt its own
+        ``SandboxConfig``); this slot pulls the dialog's current settings via ``sender()`` and routes them through
+        :meth:`_apply_sandbox_settings`.
         """
         sender = self.sender()
         if sender is None:
@@ -2252,12 +2241,10 @@ class MainWindow(QMainWindow):
     def _on_open_sandbox(self) -> None:
         """Handle open sandbox action.
 
-        Routes the availability check through ``SandboxBridge.is_available`` (the
-        same API the dialog ultimately depends on for ``create()``) instead of
-        constructing a throwaway ``SandboxConfigDialog`` purely to call its
-        instance ``is_sandbox_available()``. The bridge is reused for the
-        subsequent ``create()`` call so the availability probe and the create
-        path target the same backend instance.
+        Routes the availability check through ``SandboxBridge.is_available`` (the same API the dialog ultimately depends on for
+        ``create()``) instead of constructing a throwaway ``SandboxConfigDialog`` purely to call its instance ``is_sandbox_available()``.
+        The bridge is reused for the subsequent ``create()`` call so the availability probe and the create path target the same backend
+        instance.
         """
         bridge = self._get_or_create_sandbox_bridge()
 
@@ -2298,10 +2285,9 @@ class MainWindow(QMainWindow):
     def _on_preferences(self) -> None:
         """Handle preferences action.
 
-        Wires :attr:`PreferencesDialog.settings_changed` to
-        :meth:`_on_preferences_changed` so that pressing Apply (which fires the
-        signal without closing the dialog) immediately propagates the new config
-        to MainWindow, instead of only being captured on the OK acceptance path.
+        Wires :attr:`PreferencesDialog.settings_changed` to :meth:`_on_preferences_changed` so that pressing Apply (which fires the signal
+        without closing the dialog) immediately propagates the new config to MainWindow, instead of only being captured on the OK acceptance
+        path.
         """
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
@@ -2425,10 +2411,9 @@ class MainWindow(QMainWindow):
     def on_open_hxd(self) -> None:
         """Open the HxD hex editor panel.
 
-        Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel
-        during MainWindow initialization. If HxD was installed after launch and no
-        panel was pre-registered, attempts late registration via
-        :meth:`_register_hxd_panel_if_available` before opening the tab.
+        Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel during MainWindow initialization. If HxD was installed
+        after launch and no panel was pre-registered, attempts late registration via :meth:`_register_hxd_panel_if_available` before opening
+        the tab.
         """
         try:
             if self._hxd_panel is None:

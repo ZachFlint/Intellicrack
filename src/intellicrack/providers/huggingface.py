@@ -4,10 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """HuggingFace Inference API provider implementation.
 
-This module provides integration with HuggingFace's Inference API using the
-official ``huggingface_hub.AsyncInferenceClient`` and its ``chat_completion``
-method.  The client targets the HuggingFace first-party router endpoint at
-``https://router.huggingface.co/hf-inference`` via the ``provider="hf-inference"``
+This module provides integration with HuggingFace's Inference API using the official ``huggingface_hub.AsyncInferenceClient`` and its
+``chat_completion`` method.  The client targets the HuggingFace first-party router endpoint at
+``https://router.huggingface.co/hf-inference``
+via the ``provider="hf-inference"``
 selector, which replaces the deprecated ``api-inference.huggingface.co`` host
 and provides direct access to HuggingFace-hosted serverless endpoints.
 """

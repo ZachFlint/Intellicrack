@@ -56,7 +56,7 @@ _BM_COLOR: Final[str] = "#FFFF00"
 
 
 @pytest.fixture(scope="module")
-def qapp() -> Generator[QApplication, None, None]:
+def qapp() -> Generator[QApplication]:
     """Provide a process-wide ``QApplication`` for Qt widget construction.
 
     Yields:

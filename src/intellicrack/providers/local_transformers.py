@@ -405,10 +405,8 @@ class LocalTransformersProvider(LLMProviderBase):
     def _release_device_caches(self) -> None:
         """Drop device-side allocator caches and run a GC pass.
 
-        Clears the XPU allocator cache when the selected device is
-        XPU, the CUDA allocator cache when the device is CUDA, and
-        always triggers a ``gc.collect()`` afterwards so KV-cache
-        tensors referenced by Python objects can be freed.
+        Clears the XPU allocator cache when the selected device is XPU, the CUDA allocator cache when the device is CUDA, and always
+        triggers a ``gc.collect()`` afterwards so KV-cache tensors referenced by Python objects can be freed.
         """
         if self._device_type == "xpu":
             clear_xpu_cache()
@@ -1422,10 +1420,8 @@ class LocalTransformersProvider(LLMProviderBase):
     async def unload_model(self) -> None:
         """Unload the currently loaded model to free memory.
 
-        Drops the cached model from the shared ``ModelCache``, clears
-        any device-side KV caches (``torch.xpu.empty_cache`` or
-        ``torch.cuda.empty_cache``), and triggers a GC pass so tensors
-        that still live in Python frames can be reclaimed.
+        Drops the cached model from the shared ``ModelCache``, clears any device-side KV caches (``torch.xpu.empty_cache`` or
+        ``torch.cuda.empty_cache``), and triggers a GC pass so tensors that still live in Python frames can be reclaimed.
         """
         if self._loaded_model is not None:
             model_id = self._loaded_model.model_id

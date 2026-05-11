@@ -19,13 +19,17 @@ The tests cover:
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from intellicrack.sandbox._tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 from intellicrack.sandbox.analysis import extract_iocs
 from intellicrack.sandbox.base import ExecutionReport
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 _analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
@@ -100,9 +104,7 @@ class TestFileExtensionsRejected:
             filename: A filename string whose extension must not be treated as
                 a TLD by _looks_like_domain.
         """
-        assert not _looks_like_domain(filename), (
-            f"{filename!r} was incorrectly matched as a domain hostname"
-        )
+        assert not _looks_like_domain(filename), f"{filename!r} was incorrectly matched as a domain hostname"
 
     @pytest.mark.parametrize(
         "filename",
@@ -124,9 +126,7 @@ class TestFileExtensionsRejected:
             filename: A filename whose extension must appear in FILE_EXTENSION_TLDS.
         """
         ext = filename.rsplit(".", 1)[-1].lower()
-        assert ext in FILE_EXTENSION_TLDS, (
-            f"Extension {ext!r} from {filename!r} is not in FILE_EXTENSION_TLDS"
-        )
+        assert ext in FILE_EXTENSION_TLDS, f"Extension {ext!r} from {filename!r} is not in FILE_EXTENSION_TLDS"
 
 
 class TestRealHostnamesAccepted:
@@ -154,9 +154,7 @@ class TestRealHostnamesAccepted:
             hostname: A genuine hostname string that must be accepted by
                 _looks_like_domain.
         """
-        assert _looks_like_domain(hostname), (
-            f"{hostname!r} was not recognised as a valid domain hostname"
-        )
+        assert _looks_like_domain(hostname), f"{hostname!r} was not recognised as a valid domain hostname"
 
     @pytest.mark.parametrize(
         "tld",
@@ -199,9 +197,7 @@ class TestInternationalizedHostnames:
             hostname: An ACE-encoded hostname string that must be accepted by
                 _looks_like_domain.
         """
-        assert _looks_like_domain(hostname), (
-            f"ACE hostname {hostname!r} was not recognised as a valid domain"
-        )
+        assert _looks_like_domain(hostname), f"ACE hostname {hostname!r} was not recognised as a valid domain"
 
     def test_xn_p1ai_in_tld_allowlist(self) -> None:
         """The xn--p1ai TLD must appear in the KNOWN_TLDS allowlist."""
@@ -228,9 +224,7 @@ class TestAdversarialDoubleExtension:
             hostname: A hostname-shaped string ending in a file-extension label
                 that must not be accepted as a valid domain.
         """
-        assert not _looks_like_domain(hostname), (
-            f"{hostname!r} with file-extension TLD was incorrectly accepted as a domain"
-        )
+        assert not _looks_like_domain(hostname), f"{hostname!r} with file-extension TLD was incorrectly accepted as a domain"
 
 
 class TestHasValidTldFunction:
@@ -289,9 +283,7 @@ class TestExtractIocsIntegration:
         )
         iocs = extract_iocs(report)
         domain_values = [ioc["value"] for ioc in iocs if ioc["ioc_type"] == "domain"]
-        assert "kernel32.dll" not in domain_values, (
-            "kernel32.dll was incorrectly emitted as a domain IOC"
-        )
+        assert "kernel32.dll" not in domain_values, "kernel32.dll was incorrectly emitted as a domain IOC"
 
     def test_exe_path_not_extracted_as_domain(self) -> None:
         """EXE file paths in process_activity must not produce domain IOCs."""
@@ -311,9 +303,7 @@ class TestExtractIocsIntegration:
         )
         iocs = extract_iocs(report)
         domain_values = [ioc["value"] for ioc in iocs if ioc["ioc_type"] == "domain"]
-        assert "payload.exe" not in domain_values, (
-            "payload.exe was incorrectly emitted as a domain IOC"
-        )
+        assert "payload.exe" not in domain_values, "payload.exe was incorrectly emitted as a domain IOC"
 
     def test_real_domain_in_registry_extracted(self) -> None:
         """Genuine domains in registry values must still be extracted as IOCs."""
@@ -331,9 +321,7 @@ class TestExtractIocsIntegration:
         )
         iocs = extract_iocs(report)
         domain_values = [ioc["value"] for ioc in iocs if ioc["ioc_type"] == "domain"]
-        assert "update.example.com" in domain_values, (
-            "update.example.com was not extracted as a domain IOC"
-        )
+        assert "update.example.com" in domain_values, "update.example.com was not extracted as a domain IOC"
 
     def test_txt_filename_in_command_line_not_extracted(self) -> None:
         """Text filenames in command lines must not produce domain IOCs."""
@@ -354,6 +342,4 @@ class TestExtractIocsIntegration:
         iocs = extract_iocs(report)
         domain_values = [ioc["value"] for ioc in iocs if ioc["ioc_type"] == "domain"]
         for bad in ("notes.txt", "data.bin", "out.log"):
-            assert bad not in domain_values, (
-                f"{bad!r} was incorrectly emitted as a domain IOC from command line"
-            )
+            assert bad not in domain_values, f"{bad!r} was incorrectly emitted as a domain IOC from command line"

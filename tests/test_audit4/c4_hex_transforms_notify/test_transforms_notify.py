@@ -201,7 +201,7 @@ def _subscribe(state: HexDocumentState) -> list[tuple[int, int, str]]:
     return captured
 
 
-@pytest.fixture()
+@pytest.fixture
 def doc_state_events() -> tuple[_SpyDoc, HexDocumentState, list[tuple[int, int, str]]]:
     """Create a fresh SpyDoc, HexDocumentState, and capture list.
 

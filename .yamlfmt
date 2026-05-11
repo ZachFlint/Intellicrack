@@ -1,16 +1,23 @@
 doublestar: true
 line_ending: crlf
+gitignore_excludes: true
 include:
-  - "**/*.yml"
-  - "**/*.yaml"
+  - "*.yml"
+  - "*.yaml"
+  - ".github/**/*.yml"
+  - ".github/**/*.yaml"
+  - ".semgrep/**/*.yml"
+  - ".semgrep/**/*.yaml"
+  - ".serena/**/*.yml"
+  - ".serena/**/*.yaml"
+  - "scripts/**/*.yml"
+  - "scripts/**/*.yaml"
+  - "src/**/*.yml"
+  - "src/**/*.yaml"
+  - "tests/**/*.yml"
+  - "tests/**/*.yaml"
+  - "docs/**/*.yml"
+  - "docs/**/*.yaml"
 exclude:
-  - ".pixi/**"
   - ".claude/**"
-  - ".venv*/**"
-  - "build/**"
-  - "dist/**"
-  - "node_modules/**"
-  - "tools/**"
-  - "vendor/**"
-  - "target/**"
   - ".git/**"

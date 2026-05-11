@@ -520,10 +520,7 @@ class StubManager:
         """
         del config, qemu_config
         sandbox: SandboxBase
-        if sandbox_type == "qemu":
-            sandbox = InMemoryQEMUSandbox()
-        else:
-            sandbox = InMemorySandbox()
+        sandbox = InMemoryQEMUSandbox() if sandbox_type == "qemu" else InMemorySandbox()
 
         if auto_start:
             await sandbox.start()
@@ -688,7 +685,7 @@ def make_sample_report(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def in_memory_sandbox() -> InMemorySandbox:
     """Provide a started in-memory sandbox.
 
@@ -700,7 +697,7 @@ def in_memory_sandbox() -> InMemorySandbox:
     return sb
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_network_activity() -> list[NetworkActivity]:
     """Provide network activity covering beaconing, DGA, C2 ports, exfiltration, DoH, and normal traffic.
 
@@ -785,7 +782,7 @@ def sample_network_activity() -> list[NetworkActivity]:
     return [*beaconing, dga, c2_port, exfil, doh, normal]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_file_changes() -> list[FileChange]:
     """Provide sample file changes.
 
@@ -817,7 +814,7 @@ def sample_file_changes() -> list[FileChange]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_registry_changes() -> list[RegistryChange]:
     """Provide sample registry changes including a Run key.
 
@@ -852,7 +849,7 @@ def sample_registry_changes() -> list[RegistryChange]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_process_activity() -> list[ProcessActivity]:
     """Provide sample process activity including discovery tools.
 
@@ -903,7 +900,7 @@ def sample_process_activity() -> list[ProcessActivity]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_api_calls() -> list[ApiCall]:
     """Provide sample API calls including anti-debug and sleep.
 
@@ -941,7 +938,7 @@ def sample_api_calls() -> list[ApiCall]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_service_changes() -> list[ServiceChange]:
     """Provide sample service changes.
 
@@ -960,7 +957,7 @@ def sample_service_changes() -> list[ServiceChange]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_injection_events() -> list[InjectionEvent]:
     """Provide sample injection events.
 
@@ -980,7 +977,7 @@ def sample_injection_events() -> list[InjectionEvent]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_clipboard_events() -> list[ClipboardEvent]:
     """Provide sample clipboard events.
 
@@ -1009,7 +1006,7 @@ def sample_clipboard_events() -> list[ClipboardEvent]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_dll_loads() -> list[DllLoadEvent]:
     """Provide sample DLL load events.
 
@@ -1028,7 +1025,7 @@ def sample_dll_loads() -> list[DllLoadEvent]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_kernel_objects() -> list[KernelObjectActivity]:
     """Provide sample kernel object activity.
 
@@ -1047,7 +1044,7 @@ def sample_kernel_objects() -> list[KernelObjectActivity]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_resource_samples() -> list[ResourceSample]:
     """Provide sample resource usage data.
 
@@ -1067,7 +1064,7 @@ def sample_resource_samples() -> list[ResourceSample]:
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_report(
     sample_network_activity: list[NetworkActivity],
     sample_file_changes: list[FileChange],
@@ -1114,7 +1111,7 @@ def sample_report(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_report() -> ExecutionReport:
     """Provide a minimal report with all lists empty.
 
@@ -1124,7 +1121,7 @@ def empty_report() -> ExecutionReport:
     return make_sample_report()
 
 
-@pytest.fixture()
+@pytest.fixture
 def sandbox_bridge() -> SandboxBridge:
     """Provide a SandboxBridge with pre-populated windows and qemu instances.
 
@@ -1188,7 +1185,7 @@ def sandbox_bridge() -> SandboxBridge:
     return bridge
 
 
-@pytest.fixture()
+@pytest.fixture
 def bridge_no_reports() -> SandboxBridge:
     """Provide a SandboxBridge with instances but no last_report.
 

@@ -496,7 +496,8 @@ class PreferencesDialog(QDialog):
         self._category_list = QListWidget()
         self._category_list.setFixedWidth(160)
         self._category_list.currentRowChanged.connect(self._on_category_changed)
-        self._category_list.setStyleSheet("""
+        self._category_list.setStyleSheet(
+            """
             QListWidget {
                 background-color: #252526;
                 border: none;
@@ -514,7 +515,9 @@ class PreferencesDialog(QDialog):
             QListWidget::item:hover:!selected {
                 background-color: #2a2d2e;
             }
-        """)
+        """
+           ,
+        )
 
         categories = ["General", "Appearance", "Session", "Logging"]
         for category in categories:
@@ -529,7 +532,8 @@ class PreferencesDialog(QDialog):
         right_layout.setSpacing(0)
 
         self._stack = QStackedWidget()
-        self._stack.setStyleSheet("""
+        self._stack.setStyleSheet(
+            """
             QStackedWidget {
                 background-color: #1e1e1e;
             }
@@ -580,7 +584,9 @@ class PreferencesDialog(QDialog):
             QPushButton:pressed {
                 background-color: #0d5a8c;
             }
-        """)
+        """
+           ,
+        )
 
         general_widget = GeneralSettingsWidget(self._config)
         self._stack.addWidget(general_widget)
@@ -601,12 +607,15 @@ class PreferencesDialog(QDialog):
         right_layout.addWidget(self._stack)
 
         button_container = QWidget()
-        button_container.setStyleSheet("""
+        button_container.setStyleSheet(
+            """
             QWidget {
                 background-color: #2d2d30;
                 border-top: 1px solid #3e3e42;
             }
-        """)
+        """
+           ,
+        )
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(16, 12, 16, 12)
 

@@ -39,18 +39,14 @@ _RememberKey = tuple[str, str]
 class ToolConfirmationDialog(QDialog):
     """Dialog for confirming tool calls.
 
-    Displays the tool name, function, and arguments for user review before
-    executing potentially destructive operations.
+    Displays the tool name, function, and arguments for user review before executing potentially destructive operations.
 
-    Emits ``decision_made(approved: bool, remember_similar: bool)`` when the
-    user accepts or rejects the call. Callers may connect to this signal to
-    react to the decision instead of polling properties after ``exec()``.
+    Emits ``decision_made(approved: bool, remember_similar: bool)`` when the user accepts or rejects the call. Callers may connect to this
+    signal to react to the decision instead of polling properties after ``exec()``.
 
-    When the user checks "Remember for similar operations this session", the
-    decision is cached at class scope keyed by ``(tool_name, function_name)``.
-    Subsequent dialog instances for the same tool/function pair short-circuit
-    via :meth:`exec`: they replay the cached decision through ``decision_made``
-    and finish immediately without presenting UI.
+    When the user checks "Remember for similar operations this session", the decision is cached at class scope keyed by ``(tool_name,
+    function_name)``. Subsequent dialog instances for the same tool/function pair short-circuit via :meth:`exec`: they replay the cached
+    decision through ``decision_made`` and finish immediately without presenting UI.
     """
 
     decision_made = pyqtSignal(bool, bool)
@@ -140,17 +136,21 @@ class ToolConfirmationDialog(QDialog):
         layout.setSpacing(16)
 
         header_label = QLabel("AI wants to execute the following tool:")
-        header_label.setStyleSheet("""
+        header_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 14px;
                 font-weight: bold;
                 color: #d4d4d4;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(header_label)
 
         tool_label = QLabel(f"{self._call.tool_name}.{self._call.function_name}")
-        tool_label.setStyleSheet("""
+        tool_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 16px;
                 font-weight: bold;
@@ -159,23 +159,29 @@ class ToolConfirmationDialog(QDialog):
                 background-color: #252526;
                 border-radius: 4px;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(tool_label)
 
         args_label = QLabel("Arguments:")
-        args_label.setStyleSheet("""
+        args_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 12px;
                 color: #d4d4d4;
                 margin-top: 8px;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(args_label)
 
         self._args_text = QTextEdit()
         self._args_text.setReadOnly(True)
         self._args_text.setMinimumHeight(150)
-        self._args_text.setStyleSheet("""
+        self._args_text.setStyleSheet(
+            """
             QTextEdit {
                 background-color: #1e1e1e;
                 color: #ce9178;
@@ -185,7 +191,9 @@ class ToolConfirmationDialog(QDialog):
                 font-size: 12px;
                 padding: 8px;
             }
-        """)
+        """
+           ,
+        )
         try:
             formatted_args = json.dumps(self._call.arguments, indent=2, default=str)
         except (TypeError, ValueError):
@@ -196,7 +204,8 @@ class ToolConfirmationDialog(QDialog):
 
         warning_label = QLabel("This operation may modify data or have side effects. Review the details above before proceeding.")
         warning_label.setWordWrap(True)
-        warning_label.setStyleSheet("""
+        warning_label.setStyleSheet(
+            """
             QLabel {
                 font-size: 11px;
                 color: #ce9178;
@@ -204,11 +213,14 @@ class ToolConfirmationDialog(QDialog):
                 background-color: #332200;
                 border-radius: 4px;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(warning_label)
 
         self._remember_checkbox = QCheckBox("Remember for similar operations this session")
-        self._remember_checkbox.setStyleSheet("""
+        self._remember_checkbox.setStyleSheet(
+            """
             QCheckBox {
                 color: #d4d4d4;
                 font-size: 11px;
@@ -217,7 +229,9 @@ class ToolConfirmationDialog(QDialog):
                 width: 16px;
                 height: 16px;
             }
-        """)
+        """
+           ,
+        )
         layout.addWidget(self._remember_checkbox)
 
         button_layout = QHBoxLayout()
@@ -226,7 +240,8 @@ class ToolConfirmationDialog(QDialog):
 
         deny_btn = QPushButton("Deny")
         deny_btn.setMinimumWidth(100)
-        deny_btn.setStyleSheet("""
+        deny_btn.setStyleSheet(
+            """
             QPushButton {
                 background-color: #6e2e2e;
                 color: white;
@@ -241,13 +256,16 @@ class ToolConfirmationDialog(QDialog):
             QPushButton:pressed {
                 background-color: #5e2e2e;
             }
-        """)
+        """
+           ,
+        )
         deny_btn.clicked.connect(self._on_deny)
         button_layout.addWidget(deny_btn)
 
         approve_btn = QPushButton("Approve")
         approve_btn.setMinimumWidth(100)
-        approve_btn.setStyleSheet("""
+        approve_btn.setStyleSheet(
+            """
             QPushButton {
                 background-color: #0e639c;
                 color: white;
@@ -262,18 +280,23 @@ class ToolConfirmationDialog(QDialog):
             QPushButton:pressed {
                 background-color: #0d5a8c;
             }
-        """)
+        """
+           ,
+        )
         approve_btn.clicked.connect(self._on_approve)
         approve_btn.setDefault(True)
         button_layout.addWidget(approve_btn)
 
         layout.addLayout(button_layout)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QDialog {
                 background-color: #2d2d30;
             }
-        """)
+        """
+           ,
+        )
 
     def exec(self) -> int:
         """Show the dialog modally, honoring any remembered decision.

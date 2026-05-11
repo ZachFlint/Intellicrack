@@ -21,8 +21,6 @@ if TYPE_CHECKING:
 
     from PyQt6.QtWidgets import QApplication
 
-    from tests.test_ui.conftest import SignalRecorder as SignalRecorderType
-
 
 @pytest.fixture
 def panel(qapp: QApplication) -> Generator[ProcessPanel]:
@@ -381,8 +379,5 @@ class TestToolDefinition:
             "process.open": "open_process",
         }
         for func in b.tool_definition.functions:
-            if func.name in renamed:
-                method_name = renamed[func.name]
-            else:
-                method_name = func.name.removeprefix("process.")
+            method_name = renamed[func.name] if func.name in renamed else func.name.removeprefix("process.")
             assert hasattr(b, method_name), f"Missing method: {method_name} for {func.name}"

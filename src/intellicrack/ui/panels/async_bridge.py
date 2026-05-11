@@ -53,11 +53,9 @@ WORKER_DEFAULT_EXCEPTIONS: tuple[type[BaseException], ...] = (
 )
 """Default exception classes caught by ``GenericCallableWorker``.
 
-This tuple is the union of error types currently raised by hex-editor
-mixin callables. Worker callers may pass a narrower or broader tuple
+This tuple is the union of error types currently raised by hex-editor mixin callables. Worker callers may pass a narrower or broader tuple
 via the ``exceptions`` constructor argument.
 """
-
 
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""

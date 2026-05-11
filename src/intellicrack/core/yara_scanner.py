@@ -74,9 +74,8 @@ class YaraMatch:
 class YaraScanner:
     """Thread-safe YARA rule scanner with async support.
 
-    Compilation is not thread-safe; scanning compiled rules objects is.
-    Use separate ``YaraScanner`` instances or external locking when compiling
-    concurrently.
+    Compilation is not thread-safe; scanning compiled rules objects is. Use separate ``YaraScanner`` instances or external locking when
+    compiling concurrently.
     """
 
     def __init__(self, timeout: int = 60) -> None:

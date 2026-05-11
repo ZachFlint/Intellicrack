@@ -71,7 +71,7 @@ _NTDLL_BASE_MIN: Final[int] = 0x70000000
 _T = TypeVar("_T")
 
 
-def _run_async(coro: Coroutine[object, object, _T]) -> _T:
+def _run_async[T](coro: Coroutine[object, object, _T]) -> _T:
     """Run an async coroutine synchronously for test use.
 
     Args:

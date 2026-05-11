@@ -41,8 +41,7 @@ except ImportError:
 class _KeyringFallbackError(Exception):
     """Sentinel exception used when keyring.errors is unavailable.
 
-    This class is never raised. It exists only to provide a concrete
-    exception type for the ``except`` tuples when the optional ``keyring``
+    This class is never raised. It exists only to provide a concrete exception type for the ``except`` tuples when the optional ``keyring``
     dependency is missing, keeping the code paths type-consistent.
     """
 

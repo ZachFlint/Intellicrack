@@ -32,12 +32,9 @@ _logger = get_logger(__name__)
 NOTIFY_MAX_DEPTH: int = 64
 """Maximum number of reentrant ``_notify`` events drained per outer dispatch.
 
-Re-entrant emissions triggered from inside a callback are queued and
-dispatched after the outer dispatch loop finishes (preserving causal
-ordering across observers).  The cap aborts genuinely runaway callback
-chains while still allowing legitimate downstream events to flow.
+Re-entrant emissions triggered from inside a callback are queued and dispatched after the outer dispatch loop finishes (preserving causal
+ordering across observers).  The cap aborts genuinely runaway callback chains while still allowing legitimate downstream events to flow.
 """
-
 
 class HexDocumentEvent(enum.Enum):
     """Event types emitted by HexDocumentState.

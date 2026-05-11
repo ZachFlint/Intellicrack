@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Shared QMessageBox dialog helpers for Intellicrack UI panels.
 
-Provides a single canonical implementation of the error / warning /
-information popup pattern used across the configuration dialogs and
-hex editor panel mixins. Centralising these calls gives every UI
-surface consistent structured logging and a single seam for future
-theming or accessibility tweaks.
+Provides a single canonical implementation of the error / warning / information popup pattern used across the configuration dialogs and hex
+editor panel mixins. Centralising these calls gives every UI surface consistent structured logging and a single seam for future theming or
+accessibility tweaks.
 """
 
 from __future__ import annotations

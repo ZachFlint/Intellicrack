@@ -203,11 +203,9 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
 class TransformNode(abc.ABC):
     """Abstract base class for a single transform step in a pipeline.
 
-    Concrete subclasses must implement ``name``, ``category``, and
-    ``process``. ``name`` identifies the transform, ``category`` groups it
-    for UI presentation, and ``process`` performs the actual byte-level
-    transformation. ``description`` has a default empty implementation and
-    may be overridden to provide human-readable help text.
+    Concrete subclasses must implement ``name``, ``category``, and ``process``. ``name`` identifies the transform, ``category`` groups it
+    for UI presentation, and ``process`` performs the actual byte-level transformation. ``description`` has a default empty implementation
+    and may be overridden to provide human-readable help text.
     """
 
     @property
@@ -727,8 +725,7 @@ class PipelineStep:
 class TransformPipeline:
     """Ordered chain of binary transform operations.
 
-    Steps execute in insertion order, each receiving the output of the
-    previous step as its input. The pipeline accumulates steps via
+    Steps execute in insertion order, each receiving the output of the previous step as its input. The pipeline accumulates steps via
     ``add_step`` and executes them via ``execute`` or ``preview``.
     """
 

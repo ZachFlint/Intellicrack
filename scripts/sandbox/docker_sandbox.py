@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shlex
 import shutil
 import signal
@@ -74,6 +75,8 @@ _DOCKER_DAEMON_POLL_INTERVAL = 3.0
 
 _TIMESTAMP_FORMAT = "%m-%d-%Y_%H-%M"
 
+_PIXI_VERSION_MIN_PARTS = 2
+
 
 class SandboxError(RuntimeError):
     """Raised when the sandbox driver cannot proceed.
@@ -101,6 +104,43 @@ def _docker_binary() -> str:
         return str(default)
     message = "docker CLI not found on PATH or at default Docker Desktop location"
     raise SandboxError(message)
+
+
+def _pixi_version() -> str:
+    """Return the host's pixi version string (e.g. ``0.68.0``).
+
+    The build pipeline forwards this value as a ``--build-arg`` so the
+    container always installs the same pixi version that wrote ``pixi.lock``,
+    preventing lockfile-format mismatches between host and container.
+
+    Returns:
+        str: The version number reported by ``pixi --version``.
+
+    Raises:
+        SandboxError: When pixi is not on ``PATH`` or its version output
+            cannot be parsed.
+    """
+    pixi = shutil.which("pixi")
+    if not pixi:
+        message = "pixi CLI not found on PATH; install pixi or add it to PATH"
+        raise SandboxError(message)
+    proc = subprocess.run(
+        [pixi, "--version"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip()
+        message = f"pixi --version failed (exit {proc.returncode}): {detail}"
+        raise SandboxError(message)
+    parts = proc.stdout.strip().split()
+    if len(parts) < _PIXI_VERSION_MIN_PARTS:
+        message = f"unable to parse pixi version from output: {proc.stdout!r}"
+        raise SandboxError(message)
+    return parts[1]
 
 
 def _docker_desktop_binary() -> Path | None:
@@ -278,6 +318,7 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         return tag
 
     docker = _docker_binary()
+    pixi_version = _pixi_version()
     argv = [
         docker,
         "build",
@@ -287,14 +328,18 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         tag,
         "--label",
         f"{_IMAGE_LABEL}=1",
+        "--build-arg",
+        f"PIXI_VERSION={pixi_version}",
         "--isolation",
         "process",
         str(_PROJECT_ROOT),
     ]
-    _LOGGER.info("sandbox_image_building", tag=tag, dockerfile=str(_DOCKERFILE))
+    _LOGGER.info("sandbox_image_building", tag=tag, dockerfile=str(_DOCKERFILE), pixi_version=pixi_version)
     print(f"[sandbox] Building image {tag} (this may take 10-15 minutes on first run)...", file=sys.stderr)
+    build_env = os.environ.copy()
+    build_env["DOCKER_BUILDKIT"] = "0"
     start = time.monotonic()
-    proc = subprocess.run(argv, check=False)
+    proc = subprocess.run(argv, check=False, env=build_env)
     duration = time.monotonic() - start
     if proc.returncode != 0:
         _LOGGER.error("sandbox_image_build_failed", tag=tag, exit_code=proc.returncode, duration_seconds=round(duration, 1))

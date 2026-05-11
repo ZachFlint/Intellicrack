@@ -49,16 +49,52 @@ BAR_COMPLETE = f"{ESC}[1;92m"
 WHITE_BRIGHT = f"{ESC}[97m"
 
 GROUP_COLORS: dict[str, str] = {
-    "py": f"{ESC}[36m",
+    "py": f"{ESC}[38;2;55;118;171m",
     "rs": f"{ESC}[38;2;222;120;40m",
+    "toml": f"{ESC}[38;2;156;66;33m",
+    "json": f"{ESC}[38;2;218;165;32m",
+    "yaml": f"{ESC}[38;2;203;23;30m",
+    "md": f"{ESC}[38;2;200;200;205m",
+    "sh": f"{ESC}[38;2;137;224;81m",
+    "bat": f"{ESC}[38;2;120;180;230m",
+    "ps": f"{ESC}[38;2;30;110;200m",
+    "txt": f"{ESC}[38;2;190;190;190m",
     "dash": f"{ESC}[95m",
 }
-GROUP_NAMES: dict[str, str] = {"py": "Python", "rs": "Rust", "dash": "Dashboard"}
+GROUP_NAMES: dict[str, str] = {
+    "py": "Python",
+    "rs": "Rust",
+    "toml": "TOML",
+    "json": "JSON",
+    "yaml": "YAML",
+    "md": "Markdown",
+    "sh": "Shell",
+    "bat": "Batch",
+    "ps": "PowerShell",
+    "txt": "Text",
+    "dash": "Dashboard",
+}
 GROUP_ALIASES: dict[str, str] = {
     "python": "py",
     "py": "py",
     "rust": "rs",
     "rs": "rs",
+    "toml": "toml",
+    "json": "json",
+    "yaml": "yaml",
+    "yml": "yaml",
+    "markdown": "md",
+    "md": "md",
+    "shell": "sh",
+    "sh": "sh",
+    "bash": "sh",
+    "batch": "bat",
+    "bat": "bat",
+    "powershell": "ps",
+    "ps": "ps",
+    "ps1": "ps",
+    "text": "txt",
+    "txt": "txt",
     "dashboard": "dash",
     "dash": "dash",
 }
@@ -82,10 +118,10 @@ class Tool(NamedTuple):
 TOOLS: list[Tool] = [
     Tool("Ruff Fmt", "ruff-fmt", is_formatter=True, group="py"),
     Tool("Docformatter", "docformatter", is_formatter=True, group="py"),
-    Tool("TOMLfmt", "tomlfmt", is_formatter=True, group="py"),
-    Tool("JSONfmt", "jsonfmt", is_formatter=True, group="py"),
-    Tool("YAMLfmt", "yamlfmt", is_formatter=True, group="py"),
-    Tool("MDfmt", "mdfmt", is_formatter=True, group="py"),
+    Tool("TOMLfmt", "tomlfmt", is_formatter=True, group="toml"),
+    Tool("JSONfmt", "jsonfmt", is_formatter=True, group="json"),
+    Tool("YAMLfmt", "yamlfmt", is_formatter=True, group="yaml"),
+    Tool("MDfmt", "mdfmt", is_formatter=True, group="md"),
     Tool("Ruff", "ruff", is_formatter=False, group="py"),
     Tool("Flake8", "flake8", is_formatter=False, group="py"),
     Tool("Wemake", "wemake", is_formatter=False, group="py"),
@@ -108,15 +144,15 @@ TOOLS: list[Tool] = [
     Tool("Semgrep", "semgrep", is_formatter=False, group="py"),
     Tool("Deptry", "deptry", is_formatter=False, group="py"),
     Tool("Vermin", "vermin", is_formatter=False, group="py"),
-    Tool("JSONLint", "jsonlint", is_formatter=False, group="py"),
-    Tool("Taplo", "taplo", is_formatter=False, group="py"),
-    Tool("Markdown", "mdlint", is_formatter=False, group="py"),
-    Tool("YAML", "yamllint", is_formatter=False, group="py"),
-    Tool("ShellCheck", "shellcheck", is_formatter=False, group="py"),
-    Tool("Blinter", "blinter", is_formatter=False, group="py"),
-    Tool("PSScript", "psscriptanalyzer", is_formatter=False, group="py"),
-    Tool("Codespell", "codespell", is_formatter=False, group="py"),
-    Tool("PreCommitHooks", "precommit-hooks", is_formatter=False, group="py"),
+    Tool("JSONLint", "jsonlint", is_formatter=False, group="json"),
+    Tool("Taplo", "taplo", is_formatter=False, group="toml"),
+    Tool("Markdown", "mdlint", is_formatter=False, group="md"),
+    Tool("YAML", "yamllint", is_formatter=False, group="yaml"),
+    Tool("ShellCheck", "shellcheck", is_formatter=False, group="sh"),
+    Tool("Blinter", "blinter", is_formatter=False, group="bat"),
+    Tool("PSScript", "psscriptanalyzer", is_formatter=False, group="ps"),
+    Tool("Codespell", "codespell", is_formatter=False, group="txt"),
+    Tool("PreCommitHooks", "precommit-hooks", is_formatter=False, group="txt"),
     Tool("Clippy", "clippy", is_formatter=False, group="rs"),
     Tool("RustFmt", "rustfmt", is_formatter=True, group="rs"),
     Tool("CargoDeny", "cargo-deny", is_formatter=False, group="rs"),
@@ -124,7 +160,7 @@ TOOLS: list[Tool] = [
     Tool("LlvmCov", "llvm-cov", is_formatter=False, group="rs"),
     Tool("Machete", "machete", is_formatter=False, group="rs"),
     Tool("RustAnalysis", "rust-code-analysis", is_formatter=False, group="rs"),
-    Tool("Typos", "typos", is_formatter=False, group="rs"),
+    Tool("Typos", "typos", is_formatter=False, group="txt"),
     Tool("Dashboard", "lint-dashboard", is_formatter=True, group="dash"),
 ]
 
@@ -340,6 +376,13 @@ class ProgressTracker:
         durations: dict[str, float],
         max_workers: int,
     ) -> None:
+        """Initialize tracker state, ticker thread, and ETA bookkeeping.
+
+        Args:
+            total: Total number of tools across all phases.
+            durations: Cached recipe durations used for ETA estimation.
+            max_workers: Worker count used to amortize parallel phases.
+        """
         self._lock = threading.Lock()
         self._completed = 0
         self._total = total
@@ -405,7 +448,7 @@ class ProgressTracker:
         """
         with self._lock:
             self._phase = name
-            self._parallel = name == "Linting"
+            self._parallel = name.startswith("Linting")
 
     def record_start(self) -> None:
         """Increment active worker count for parallel tracking."""
@@ -618,6 +661,9 @@ def _run_phase_parallel(
     tracker: ProgressTracker,
     results: dict[str, ToolResult],
     max_workers: int,
+    *,
+    phase_label: str = "Linting",
+    group_header: str | None = None,
 ) -> None:
     """Run linters concurrently using a thread pool.
 
@@ -626,18 +672,25 @@ def _run_phase_parallel(
         tracker: Progress tracker for output management.
         results: Mutable results dict to update with completions.
         max_workers: Maximum number of concurrent workers.
+        phase_label: Phase label shown in the live progress bar and CI ticks.
+        group_header: Optional group code (``"py"`` / ``"rs"``) to print a
+            colored section header before scheduling the pool.
 
     Raises:
         KeyboardInterrupt: Re-raised after cancelling pending futures.
     """
     if not tools:
         return
+    if group_header is not None:
+        color = GROUP_COLORS.get(group_header, "")
+        title = GROUP_NAMES.get(group_header, group_header)
+        print(f"\n  {color}-- {title} --{RESET}\n")
     if max_workers > 1 and len(tools) > 1:
         print(
             f"  {GRAY}Parallel linting: {len(tools)} tools,"
             f" {max_workers} workers{RESET}\n",
         )
-    tracker.set_phase("Linting")
+    tracker.set_phase(phase_label)
     pool = ThreadPoolExecutor(max_workers=max_workers)
     try:
         future_to_tool: dict[Future[ToolResult], Tool] = {}
@@ -701,7 +754,26 @@ def main() -> None:
     try:
         tracker.start()
         _run_phase_sequential(formatters, tracker, results, "Formatting")
-        _run_phase_parallel(linters, tracker, results, max_workers)
+        non_rust_linters = [t for t in linters if t.group != "rs"]
+        rust_linters = [t for t in linters if t.group == "rs"]
+        if non_rust_linters:
+            print(f"\n  {GRAY}-- Source & Config --{RESET}\n")
+        _run_phase_parallel(
+            non_rust_linters,
+            tracker,
+            results,
+            max_workers,
+            phase_label="Linting Source & Config",
+            group_header=None,
+        )
+        _run_phase_parallel(
+            rust_linters,
+            tracker,
+            results,
+            max_workers,
+            phase_label="Linting Rust",
+            group_header="rs",
+        )
         _run_phase_sequential(dashboard, tracker, results, "Dashboard")
         tracker.stop()
     except KeyboardInterrupt:
