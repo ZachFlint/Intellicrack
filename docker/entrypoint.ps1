@@ -198,7 +198,7 @@ function Resolve-PytestArgList {
 function Invoke-InteractiveShell {
     Write-SandboxLog -Level 'info' -Event 'sandbox_shell_started'
     if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
-        & $PixiExe shell
+        & $PixiExe shell --no-install --frozen
     }
     else {
         & $PixiPython -i
@@ -349,7 +349,7 @@ function Invoke-Pytest {
     Add-Content -Path $LogPath -Value $banner -Encoding utf8
 
     if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
-        $cmdArgs = @('run', 'pytest') + $PytestArgs
+        $cmdArgs = @('run', '--no-install', '--frozen', 'pytest') + $PytestArgs
         & $PixiExe @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
     }
     else {
