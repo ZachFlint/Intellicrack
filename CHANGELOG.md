@@ -9,6 +9,12 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Refactor Windows Docker entrypoint and add audit documentation (`d700210`)
+Implement an entrypoint overlay mechanism for Windows containers to streamline initialization and improve environment parity. This update also includes the latest security audit report documenting the current system state and compliance requirements.
+- Add audit7.md containing the latest security and architectural audit findings.
+- Introduce Dockerfile.windows.entrypoint-overlay for modular entrypoint management.
+- Update entrypoint.ps1 and Dockerfile.windows to support the new overlay structure.
+
 - Implement BitAndZero opcode in hexcore and compiler (`f144be8`)
 Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
 * Implement BitAndZero logic in TemplateEvaluator and ConditionOp
@@ -160,12 +166,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Refactor Windows Docker entrypoint and add audit documentation (``)
-Implement an entrypoint overlay mechanism for Windows containers to streamline initialization and improve environment parity. This update also includes the latest security audit report documenting the current system state and compliance requirements.
-- Add audit7.md containing the latest security and architectural audit findings.
-- Introduce Dockerfile.windows.entrypoint-overlay for modular entrypoint management.
-- Update entrypoint.ps1 and Dockerfile.windows to support the new overlay structure.
 
 
 ### Changed
@@ -616,6 +616,9 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 - Fix docstring findings in tests/test_hexpat + test_scripts  (`09ee9c1`)
 
 - Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
+
+- Remove audit7.md report (``)
+Delete the audit7.md file to clean up the repository. This report is no longer required as the associated audit cycle is complete and all findings have been migrated to the primary issue tracker.
 
 
 ### Fixed
