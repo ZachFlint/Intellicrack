@@ -161,6 +161,12 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- Refactor Windows Docker entrypoint and add audit documentation (``)
+Implement an entrypoint overlay mechanism for Windows containers to streamline initialization and improve environment parity. This update also includes the latest security audit report documenting the current system state and compliance requirements.
+- Add audit7.md containing the latest security and architectural audit findings.
+- Introduce Dockerfile.windows.entrypoint-overlay for modular entrypoint management.
+- Update entrypoint.ps1 and Dockerfile.windows to support the new overlay structure.
+
 
 ### Changed
 

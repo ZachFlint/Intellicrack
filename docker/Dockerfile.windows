@@ -123,11 +123,36 @@ ENV PATH="C:\\Users\\ContainerAdministrator\\.pixi\\bin;${PATH}"
 
 WORKDIR C:\\app
 
-COPY . ./
+# Stage the inputs pixi needs to resolve and install the env so that
+# edits to other files (docker/entrypoint.ps1, scripts, docs, tests)
+# do not invalidate this expensive layer.
+COPY pyproject.toml pixi.lock README.md LICENSE ./
+COPY src/ ./src/
 
 RUN pixi install --frozen
 
 ENV PATH="C:\\app\\.pixi\\envs\\default;C:\\app\\.pixi\\envs\\default\\Scripts;C:\\app\\.pixi\\envs\\default\\Library\\bin;${PATH}"
+
+# Build the Rust native module intellicrack_hexcore into the pixi env so
+# tests/test_bridges/conftest.py can import it. Uses portable defaults
+# (no meteorlake-targeted RUSTFLAGS) so the image runs on any x86_64
+# Windows host. Source is already staged via COPY src/.
+RUN $ErrorActionPreference = 'Stop'; \
+    Set-Location 'C:\app\src\intellicrack-hexcore'; \
+    & 'C:\app\.pixi\envs\default\Scripts\maturin.exe' build --release --interpreter 'C:\app\.pixi\envs\default\python.exe'; \
+    if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }; \
+    $wheel = Get-ChildItem 'C:\app\src\intellicrack-hexcore\target\wheels' -Filter 'intellicrack_hexcore-*.whl' | Select-Object -First 1; \
+    if (-not $wheel) { throw 'intellicrack_hexcore wheel not produced' }; \
+    & 'C:\app\.pixi\envs\default\python.exe' -m pip install --no-deps --force-reinstall $wheel.FullName; \
+    if ($LASTEXITCODE -ne 0) { throw 'wheel install failed' }; \
+    & 'C:\app\.pixi\envs\default\python.exe' -c 'import intellicrack_hexcore, sys; sys.exit(0)'; \
+    if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }; \
+    Remove-Item -Recurse -Force 'C:\app\src\intellicrack-hexcore\target' -ErrorAction SilentlyContinue; \
+    Write-Host 'intellicrack_hexcore native module built and installed.'
+
+# Bring in the rest of the project (docs, scripts, docker/, tests, configs).
+# Changes here do not invalidate the pixi-install / hexcore-build layers above.
+COPY . ./
 
 # Stage 4 -- final image
 FROM pixi-env AS final
