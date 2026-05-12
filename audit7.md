@@ -48,23 +48,6 @@
 >   `[obsolete: <commit-hash>]` inline on its heading line in this file.
 >
 > ---
->
-> ## Provenance
->
-> This file is the **opus-verified actionable subset** of the original
-> 82 non-PASS findings consolidated from audit1.md..audit6.md. After the
-> first haiku second-pass and a second opus second-pass, only the
-> 10 findings below survived as **NEEDS-WORK** — items whose
-> root cause described in `Why this is non-functional` is genuinely
-> still present in current HEAD source. The other 72 findings were
-> either already fixed, referenced removed code (stale), or were
-> cosmetic/low-value. Full per-finding opus verdicts are preserved at
-> `D:\Intellicrack\.audit_review\audit7_opus_{A,B,C}.md`.
->
-> Each finding retains its **original heading, file/line citation,
-> pattern category, code excerpt, and Why-this-is-non-functional text**
-> as authored in the source audit, with `Source audit:` and
-> `Reviewer verdict:` / `Reviewer assessment:` metadata lines.
 
 
 # Findings: bridges-hex (from audit1.md)
