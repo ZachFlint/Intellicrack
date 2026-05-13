@@ -9,36 +9,109 @@ $ErrorActionPreference = 'Stop'
 $startTime = Get-Date
 Write-Banner "Commit"
 
-Write-Step 'GIT' "Running NUL cleanup..." '32'
-try {
-    python scripts/clean_nul.py 2>&1 | Out-Null
-    Write-Success "NUL cleanup complete"
-} catch {
-    Write-Success "NUL cleanup skipped"
+$prepPyCode = @'
+import sys
+import traceback
+from pathlib import Path
+
+_REPO = Path.cwd()
+sys.path.insert(0, str(_REPO / "scripts"))
+sys.path.insert(0, str(_REPO / "scripts" / "knowledge-graph"))
+
+
+def _emit(tag: str, name: str, detail: str = "") -> None:
+    print(f"__STEP_{tag}__:{name}:{detail}", flush=True)
+
+
+def _step(name: str, fn) -> None:
+    _emit("START", name)
+    try:
+        fn()
+    except SystemExit as exc:
+        code = exc.code
+        if code in (None, 0):
+            _emit("OK", name)
+            return
+        _emit("FAIL", name, f"exit code {code}")
+        return
+    except BaseException as exc:
+        _emit("FAIL", name, f"{type(exc).__name__}: {exc}")
+        traceback.print_exc()
+        return
+    _emit("OK", name)
+
+
+def _run_nul() -> None:
+    import clean_nul
+    clean_nul.clean_nul_files()
+
+
+def _run_tree() -> None:
+    import generate_tree
+    root = str(_REPO)
+    generate_tree.generate_hta(root, str(_REPO / "IntellicrackStructure.hta"))
+    generate_tree.generate_txt_tree(root, str(_REPO / "IntellicrackStructure.txt"))
+
+
+def _run_kmap() -> None:
+    import visualize_architecture
+    saved_argv = sys.argv[:]
+    sys.argv = ["visualize_architecture.py", "--layout", "hierarchical"]
+    try:
+        visualize_architecture.main()
+    finally:
+        sys.argv = saved_argv
+
+
+def _run_reqs() -> None:
+    import generate_requirements
+    rc = generate_requirements.generate_requirements()
+    if rc != 0:
+        raise SystemExit(rc)
+
+
+_step("nul", _run_nul)
+_step("tree", _run_tree)
+_step("kmap", _run_kmap)
+_step("reqs", _run_reqs)
+'@
+
+$stepLabels = @{
+    nul  = @{ start = 'Running NUL cleanup...';            ok = 'NUL cleanup complete' }
+    tree = @{ start = 'Generating structure files...';     ok = 'Structure generated' }
+    kmap = @{ start = 'Generating knowledge map...';       ok = 'Knowledge map generated' }
+    reqs = @{ start = 'Generating requirements.txt...';    ok = 'Requirements generated' }
 }
 
-Write-Step 'GIT' "Generating structure files..." '32'
-try {
-    Invoke-Expression "$Pixi python scripts/generate_tree.py 2>&1" | Out-Null
-    Write-Success "Structure generated"
-} catch {
-    Write-Success "Structure generation skipped"
+$pixiParts = @($Pixi -split '\s+' | Where-Object { $_ })
+if ($pixiParts.Count -eq 0) {
+    Write-Fail "Pixi command is empty"
+    exit 1
 }
+$pixiExe = $pixiParts[0]
+$pixiSub = @()
+if ($pixiParts.Count -gt 1) { $pixiSub = @($pixiParts[1..($pixiParts.Count - 1)]) }
 
-Write-Step 'GIT' "Generating knowledge map..." '32'
 try {
-    Invoke-Expression "$Pixi python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical 2>&1" | Out-Null
-    Write-Success "Knowledge map generated"
+    $prepPyCode | & $pixiExe @pixiSub python - 2>&1 | ForEach-Object {
+        $line = "$_"
+        if ($line -match '^__STEP_START__:([^:]+):') {
+            $name = $matches[1]
+            $msg = if ($stepLabels.ContainsKey($name)) { $stepLabels[$name].start } else { "Running $name..." }
+            Write-Step 'GIT' $msg '32'
+        } elseif ($line -match '^__STEP_OK__:([^:]+):') {
+            $name = $matches[1]
+            $msg = if ($stepLabels.ContainsKey($name)) { $stepLabels[$name].ok } else { $name }
+            Write-Success $msg
+        } elseif ($line -match '^__STEP_FAIL__:([^:]+):(.*)$') {
+            $name = $matches[1]
+            $detail = $matches[2]
+            $label = if ($stepLabels.ContainsKey($name)) { $stepLabels[$name].ok } else { $name }
+            Write-Fail "$label failed: $detail"
+        }
+    }
 } catch {
-    Write-Success "Knowledge map skipped"
-}
-
-Write-Step 'GIT' "Generating requirements.txt..." '32'
-try {
-    Invoke-Expression "$Pixi python scripts/generate_requirements.py 2>&1" | Out-Null
-    Write-Success "Requirements generated"
-} catch {
-    Write-Success "Requirements generation skipped"
+    Write-Fail "Prep bundle exception: $($_.Exception.Message)"
 }
 
 Write-Step 'GIT' "Staging changes..." '32'

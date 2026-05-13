@@ -34,10 +34,27 @@
       "mcp__dev-tools__git_diff",
       "mcp__dev-tools__git_log",
       "mcp__Screenshot__capture_window",
-      "mcp__Screenshot__list_windows"
+      "mcp__Screenshot__list_windows",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git checkout:*)",
+      "Bash(git reset:*)",
+      "Bash(git worktree:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [
+      "Bash(git push --force:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git clean -fdx:*)",
+      "Bash(git clean -ffdx:*)",
+      "Bash(git branch -D:*)"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [

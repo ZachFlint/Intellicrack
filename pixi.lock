@@ -2360,6 +2360,7 @@ packages:
   name: numpy
   version: 2.4.4
   sha256: 5c70f1cc1c4efbe316a572e2d8b9b9cc44e89b95f79ca3331553fbb63716e2bf
+  index: https://download.pytorch.org/whl/xpu
   requires_python: '>=3.11'
 - pypi: https://files.pythonhosted.org/packages/5a/9f/e4d4ff45bc63d22fa63c9fc3835c480e3ec6b71009d6338cb603394ef540/blessed-1.39.0-py3-none-any.whl
   name: blessed
@@ -3010,6 +3011,7 @@ packages:
   name: filelock
   version: 3.29.0
   sha256: 96f5f6344709aa1572bbf631c640e4ebeeb519e08da902c39a001882f30ac258
+  index: https://download.pytorch.org/whl/xpu
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/81/db/e655086b7f3a705df045bf0933bdd9c2f79bb3c97bfef1384598bb79a217/keyring-25.7.0-py3-none-any.whl
   name: keyring
@@ -4918,6 +4920,7 @@ packages:
   name: fsspec
   version: 2026.4.0
   sha256: 11ef7bb35dab8a394fde6e608221d5cf3e8499401c249bebaeaad760a1a8dec2
+  index: https://download.pytorch.org/whl/xpu
   requires_dist:
   - adlfs ; extra == 'abfs'
   - adlfs ; extra == 'adl'
