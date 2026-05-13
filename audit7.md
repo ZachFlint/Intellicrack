@@ -116,7 +116,7 @@
 
 ## Findings
 
-#### F-0001 - `SandboxManager.create()` deadlocks on capacity eviction
+#### F-0001 - `SandboxManager.create()` deadlocks on capacity eviction [fixed: audit7/u04-sandbox-deadlock]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL

@@ -288,7 +288,7 @@ class SandboxManager:
             if self.active_count >= self._max_instances:
                 oldest = await self._find_oldest_idle()
                 if oldest is not None:
-                    await self.destroy(oldest.id)
+                    await self._destroy_locked(oldest.id)
                 else:
                     error_message = f"All {self._max_instances} sandboxes busy"
                     _logger.error("sandbox_create_capacity_exhausted", max_instances=self._max_instances)
@@ -347,27 +347,48 @@ class SandboxManager:
     async def destroy(self, instance_id: str) -> None:
         """Destroy a sandbox instance.
 
+        Acquires the manager lock and delegates teardown to
+        :meth:`_destroy_locked`, which performs the sandbox stop, dictionary
+        removal, and structured logging. Any :class:`SandboxError` raised by
+        :meth:`_destroy_locked` (for example when ``instance_id`` is unknown)
+        propagates to the caller unchanged.
+
+        Args:
+            instance_id: Instance identifier.
+        """
+        _logger.info("sandbox_destroy_called", instance_id=instance_id)
+        async with self._lock:
+            await self._destroy_locked(instance_id)
+
+    async def _destroy_locked(self, instance_id: str) -> None:
+        """Destroy a sandbox instance while the manager lock is already held.
+
+        This is the inner implementation of :meth:`destroy`. It assumes the
+        caller already holds ``self._lock`` and therefore must not attempt to
+        re-acquire it. This split exists so that flows already holding the lock
+        (such as capacity eviction inside :meth:`create`) can perform teardown
+        without re-entering the non-reentrant :class:`asyncio.Lock` and
+        deadlocking.
+
         Args:
             instance_id: Instance identifier.
 
         Raises:
             SandboxError: If instance not found.
         """
-        _logger.info("sandbox_destroy_called", instance_id=instance_id)
-        async with self._lock:
-            instance = self._instances.get(instance_id)
-            if instance is None:
-                error_message = f"Sandbox instance not found: {instance_id}"
-                _logger.error("sandbox_destroy_not_found", instance_id=instance_id)
-                raise SandboxError(error_message)
+        instance = self._instances.get(instance_id)
+        if instance is None:
+            error_message = f"Sandbox instance not found: {instance_id}"
+            _logger.error("sandbox_destroy_not_found", instance_id=instance_id)
+            raise SandboxError(error_message)
 
-            try:
-                await instance.sandbox.stop()
-            except (OSError, RuntimeError, SandboxError) as e:
-                _logger.warning("sandbox_stop_error", instance_id=instance_id, error=str(e))
+        try:
+            await instance.sandbox.stop()
+        except (OSError, RuntimeError, SandboxError) as e:
+            _logger.warning("sandbox_stop_error", instance_id=instance_id, error=str(e))
 
-            del self._instances[instance_id]
-            _logger.info("sandbox_instance_destroyed", instance_id=instance_id)
+        del self._instances[instance_id]
+        _logger.info("sandbox_instance_destroyed", instance_id=instance_id)
 
     async def destroy_all(self) -> None:
         """Destroy all sandbox instances."""
