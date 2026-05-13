@@ -140,7 +140,7 @@
 - **Why this is non-functional:** `GuestAgentClient.is_connected` is permanently `False` for the lifetime of the sandbox. Every code path guarded by `self._agent.is_connected` is dead. The "fallback" path in `run_command` writes a script to `<shared>/input/exec_*.cmd` and polls `<shared>/output/result_*.txt`, but nothing in the guest watches the input folder.
 
 ### Category 4 - Wrong Field Returned
-#### F-0006 - No mechanism to start the guest agent script
+#### F-0006 - No mechanism to start the guest agent script [fixed: audit7/u06-guest-agent-bootstrap]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL
