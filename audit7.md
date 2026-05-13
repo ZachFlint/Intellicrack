@@ -193,7 +193,7 @@
 
 ## Findings
 
-#### F-0012 - `ThreadsTab` thread combos only update on explicit Refresh
+#### F-0012 - `ThreadsTab` thread combos only update on explicit Refresh [fixed: audit7/u10-threads-auto-refresh]
 
 - **Source audit:** audit4.md / `ui-panels-process`
 - **Reviewer verdict:** FAIL

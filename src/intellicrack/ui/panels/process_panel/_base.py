@@ -350,6 +350,7 @@ class ProcessPanel(AnalysisPanelBase):
     def _cleanup(self) -> None:
         """Stop timers and cancel pending workers."""
         self._process_tab.cleanup()
+        self._threads_tab.cleanup()
 
     @override
     def start_tool(self) -> bool:
