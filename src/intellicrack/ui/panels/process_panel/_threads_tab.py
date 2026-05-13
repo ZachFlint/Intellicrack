@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, cast
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QComboBox,
     QHeaderView,
@@ -40,6 +40,7 @@ _logger = get_logger(__name__)
 _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
 _TOOLBAR_HEIGHT: Final[int] = 32
+_AUTO_REFRESH_INTERVAL_MS: Final[int] = 3000
 
 
 class ThreadsTab(QWidget):
@@ -59,6 +60,8 @@ class ThreadsTab(QWidget):
         self._attached_pid: int | None = None
         self._threads: list[ThreadInfo] = []
         self._system_tab: SystemTab | None = None
+        self._auto_refresh_timer: QTimer = QTimer(self)
+        self._auto_refresh_timer.timeout.connect(self._refresh_threads)
         self._setup_ui()
 
     def attach_system_tab(self, system_tab: SystemTab) -> None:
@@ -138,6 +141,16 @@ class ThreadsTab(QWidget):
         refresh_btn.setObjectName("tool_button")
         refresh_btn.clicked.connect(self._refresh_threads)
         toolbar.addWidget(refresh_btn)
+
+        self._auto_refresh_btn = QPushButton("Auto-Refresh: OFF")
+        self._auto_refresh_btn.setCheckable(True)
+        self._auto_refresh_btn.setObjectName("toggle_button")
+
+        def _auto_slot(c: int) -> None:
+            self._on_auto_refresh_toggled(checked=bool(c))
+
+        self._auto_refresh_btn.toggled.connect(_auto_slot)
+        toolbar.addWidget(self._auto_refresh_btn)
 
         suspend_btn = QPushButton("Suspend Process")
         suspend_btn.setObjectName("tool_button")
@@ -394,6 +407,23 @@ class ThreadsTab(QWidget):
                 self._system_tab.update_thread_list(thread_list)
 
         run_bridge_coroutine_async(self._bridge.get_threads(self._attached_pid), _on_success, None, self)
+
+    def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
+        """Toggle automatic thread list refresh.
+
+        Args:
+            checked: Whether auto-refresh is enabled.
+        """
+        if checked:
+            self._auto_refresh_btn.setText("Auto-Refresh: ON")
+            self._auto_refresh_timer.start(_AUTO_REFRESH_INTERVAL_MS)
+        else:
+            self._auto_refresh_btn.setText("Auto-Refresh: OFF")
+            self._auto_refresh_timer.stop()
+
+    def cleanup(self) -> None:
+        """Stop the auto-refresh timer on panel teardown."""
+        self._auto_refresh_timer.stop()
 
     def _on_suspend_thread(self) -> None:
         """Suspend every thread in the attached process."""
