@@ -129,6 +129,11 @@ _ERR_PCAP_STOP_FAILED = "packet capture stop failed"
 _ERR_PCAP_NOT_ACTIVE = "no active packet capture with this ID"
 _ERR_SCREENSHOT_FAILED = "screenshot capture failed"
 _ERR_ANTI_EVASION_FAILED = "anti-evasion application failed"
+_ERR_ANTI_EVASION_PROFILE_MISMATCH = (
+    "Cannot apply anti-evasion profile {requested!r} on a sandbox launched with profile "
+    "{current!r}. SMBIOS/CPUID masking is fixed at QEMU launch; set "
+    "QEMUConfig.anti_evasion_profile before launching to use a different profile."
+)
 _ERR_MEMORY_DUMP_FAILED = "memory dump failed"
 _ERR_EXTRACT_FILES_FAILED = "dropped file extraction failed"
 _ERR_YARA_SCAN_FAILED = "YARA scan failed"
@@ -2646,19 +2651,34 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         """Apply guest-side anti-evasion registry patches.
 
         SMBIOS and CPUID masking are applied at VM launch through
-        :meth:`_build_qemu_command`, so this method only performs guest-side
-        registry patches that require the guest agent. The ``profile``
-        argument is retained for reporting consistency; the actual SMBIOS
-        profile is sourced from :class:`QEMUConfig.anti_evasion_profile`.
+        :meth:`_build_qemu_command`; only guest-side registry patches that
+        require the guest agent can be applied post-launch. The launch-time
+        techniques reported in the result are sourced from
+        :attr:`QEMUConfig.anti_evasion_profile`, which is fixed at the time
+        :meth:`start` was called.
+
+        The ``profile`` argument must therefore match the profile the sandbox
+        was launched with. If the caller passes a different profile, this
+        method raises :class:`SandboxError` rather than silently returning a
+        success result whose launch-time techniques do not correspond to the
+        requested profile. To use a different profile, set
+        :attr:`QEMUConfig.anti_evasion_profile` before invoking
+        :meth:`start`.
 
         Args:
-            profile: Anti-evasion profile name reported in the result payload.
+            profile: Anti-evasion profile the caller intends to apply. Must
+                equal :attr:`QEMUConfig.anti_evasion_profile` of the running
+                sandbox.
 
         Returns:
-            dict[str, Any]: Dictionary describing applied techniques.
+            dict[str, Any]: Dictionary describing applied techniques. Contains
+            ``profile`` (the active launch-time profile), ``techniques``
+            (list of technique identifiers actually in effect), and
+            ``count`` (length of ``techniques``).
 
         Raises:
-            SandboxError: If the sandbox is not running or QMP is disconnected.
+            SandboxError: If the sandbox is not running, QMP is disconnected,
+                or ``profile`` does not match the launch-time profile.
         """
         if self.state.status != "running":
             _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
@@ -2668,12 +2688,24 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             _logger.error("anti_evasion_skipped_qmp_not_connected", profile=profile)
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
-        applied: dict[str, Any] = {"profile": profile, "techniques": []}
+        current_profile: str = self._qemu_config.anti_evasion_profile
+        if profile != current_profile:
+            _logger.error(
+                "anti_evasion_profile_mismatch",
+                requested_profile=profile,
+                current_profile=current_profile,
+            )
+            raise SandboxError(
+                _ERR_ANTI_EVASION_PROFILE_MISMATCH.format(
+                    requested=profile,
+                    current=current_profile,
+                ),
+            )
+
+        applied: dict[str, Any] = {"profile": current_profile, "techniques": []}
         techniques: list[str] = []
 
-        techniques.extend(
-            f"smbios_type_{entry['type']}_launch_arg" for entry in self._anti_evasion_smbios_entries(self._qemu_config.anti_evasion_profile)
-        )
+        techniques.extend(f"smbios_type_{entry['type']}_launch_arg" for entry in self._anti_evasion_smbios_entries(current_profile))
         techniques.append("cpuid_hypervisor_mask_launch_arg")
 
         if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
@@ -2764,7 +2796,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         applied["techniques"] = techniques
         applied["count"] = len(techniques)
-        _logger.info("anti_evasion_applied", profile=profile, technique_count=len(techniques))
+        _logger.info("anti_evasion_applied", profile=current_profile, technique_count=len(techniques))
         return applied
 
     async def dump_memory(self, output_path: Path | None = None) -> Path:

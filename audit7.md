@@ -163,7 +163,7 @@
 - **Pattern:** Cat 4, Cat 14
 
 ### Category 21 - Wrong PowerShell Construct
-#### F-0029 - QEMU `apply_anti_evasion(profile=...)` ignores profile parameter
+#### F-0029 - QEMU `apply_anti_evasion(profile=...)` ignores profile parameter [fixed: audit7/u08-anti-evasion-profile]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL

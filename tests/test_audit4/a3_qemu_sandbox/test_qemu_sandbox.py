@@ -629,11 +629,20 @@ class TestF0022F0029AntiEvasion:
     """F-0022 / F-0029: apply_anti_evasion uses profile param and agent allowlist-safe commands."""
 
     def test_anti_evasion_profile_recorded_in_result(self) -> None:
-        """apply_anti_evasion returns a dict whose 'profile' key matches the argument.
+        """apply_anti_evasion returns a dict whose 'profile' key matches the launch profile.
 
         The original bug always hardcoded 'default' regardless of the argument.
+        F-0029 further requires that the argument match the launch-time profile,
+        so this test launches the sandbox with ``workstation`` and asserts the
+        returned profile reflects the active launch-time profile.
         """
         sb = _make_sandbox()
+        sb.set_qemu_config(
+            QEMUConfig(
+                guest_os=GuestOS.WINDOWS,
+                anti_evasion_profile="workstation",
+            ),
+        )
         sb.state.status = "running"
         sb.set_agent(_ConnectableAgent(connected=False))
 
