@@ -116,7 +116,6 @@ class DiscoveryCache:
         Returns:
             list[ModelInfo] | None: Cached models, or None if missing/expired.
         """
-
         async with self._cache_lock:
             return self._get_locked(provider)
 
@@ -161,7 +160,6 @@ class DiscoveryCache:
             provider: The provider to cache models for.
             models: Models to cache.
         """
-
         async with self._cache_lock:
             self._set_locked(provider, models)
 
@@ -210,7 +208,6 @@ class DiscoveryCache:
         Args:
             provider: Specific provider to invalidate, or None for all.
         """
-
         async with self._cache_lock:
             self._invalidate_locked(provider)
 
@@ -692,12 +689,17 @@ class ModelDiscovery:
         tasks = [discover_one(name) for name in registered]
         completed = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for result in completed:
+        for provider_name, result in zip(registered, completed, strict=True):
             if isinstance(result, BaseException):
-                self._logger.error("discovery_task_exception", error=str(result))
+                await self._cache.ainvalidate(provider_name)
+                self._logger.error(
+                    "discovery_task_exception",
+                    provider=provider_name.value,
+                    error=str(result),
+                )
                 continue
-            provider_name, models, event = result
-            results[provider_name] = models
+            result_provider, models, event = result
+            results[result_provider] = models
             self._events.append(event)
 
         self._logger.info(
