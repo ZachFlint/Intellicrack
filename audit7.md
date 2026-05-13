@@ -128,7 +128,7 @@
 - **Why this is non-functional:** `SandboxManager.create()` acquires `self._lock`. Inside the critical section, when at capacity it calls `await self.destroy(oldest.id)`. `destroy()` also does `async with self._lock:` to take the same lock. `asyncio.Lock` is not reentrant, so the second acquisition blocks indefinitely.
 
 ### Category 1 - Empty / Stub Implementations
-#### F-0002 - `QEMUSandbox.start()` instantiates `GuestAgentClient` but never calls `connect`
+#### F-0002 - `QEMUSandbox.start()` instantiates `GuestAgentClient` but never calls `connect` [fixed: audit7/u05-qemu-agent-connect]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL
