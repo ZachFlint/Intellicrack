@@ -46,10 +46,13 @@ _FAST_POLL_INTERVAL_MS: Final[int] = 100
 _SYSTEM_PID: Final[int] = 4
 
 
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="kernel_object_monitor.ps1 targets Windows kernel object APIs",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="kernel_object_monitor.ps1 targets Windows kernel object APIs",
+    ),
+    pytest.mark.slow,
+]
 
 
 def _resolve_pwsh() -> str:

@@ -563,6 +563,9 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 
 ### Documentation
 
+- Remove audit7.md report (`8d62854`)
+Delete the audit7.md file to clean up the repository. This report is no longer required as the associated audit cycle is complete and all findings have been migrated to the primary issue tracker.
+
 - **tests:** Drop orchestration placeholders from live test headers and function names (`76072f0`)
 
 - Fix docstring findings in bridges (non-base)  (`ca08959`)
@@ -617,11 +620,28 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 - Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
 
-- Remove audit7.md report (``)
-Delete the audit7.md file to clean up the repository. This report is no longer required as the associated audit cycle is complete and all findings have been migrated to the primary issue tracker.
-
 
 ### Fixed
+
+- **qemu:** F-0007 wrap extract_dropped_files commands and add host fallback (`185f6d7`)
+
+- **pyproject:** F-0001 prune dev packages from runtime dependencies (`59f2161`)
+
+- **providers:** F-0021 invalidate discovery cache on unexpected exceptions (`d355cd8`)
+
+- **qemu:** F-0006 bootstrap guest agent via qemu-ga guest-exec (`dfebf0d`)
+
+- **qemu:** F-0002 actually connect GuestAgentClient on sandbox start (`52fd8e5`)
+
+- **ui:** F-0012 auto-refresh ThreadsTab combos via QTimer (`5c8e1d8`)
+
+- **qemu:** F-0031 replace 2s sleep with file-stability poller (`d4101e5`)
+
+- **qemu:** F-0029 honor anti_evasion profile parameter (`7f4620a`)
+
+- **sandbox:** F-0001 prevent deadlock in SandboxManager.create eviction (`36a049b`)
+
+- **hex_editor:** F-0040 strict ASCII-printable filter in UTF-16 scanner (`5e165c2`)
 
 - **x64dbg:** Audit6 X64DBG-A — lifecycle/subprocess/platform (7 findings)  (`847750d`)
 Fixes Audit 6 unit X64DBG-A — F-0004, F-0011, F-0013, F-0015, F-0017, F-0018, F-0023.

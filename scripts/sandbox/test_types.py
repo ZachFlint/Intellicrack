@@ -168,9 +168,16 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
 
     match spec.test_type:
         case TestType.UNIT:
-            args = ["tests/", "-m", "not slow and not integration", *base]
+            args = [
+                "tests/",
+                "-m",
+                "not slow and not integration",
+                "--timeout=180",
+                "--timeout-method=thread",
+                *base,
+            ]
         case TestType.ALL:
-            args = ["tests/", *base]
+            args = ["tests/", "--timeout=300", "--timeout-method=thread", *base]
         case TestType.COVERAGE:
             args = [
                 "tests/",
