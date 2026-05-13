@@ -6122,16 +6122,20 @@ class HexEditorBridge(ToolBridgeBase):
         *,
         even: bool,
     ) -> None:
-        """Scan ``data`` for UTF-16LE printable runs from a start parity.
+        """Scan ``data`` for UTF-16LE ASCII-printable runs from a start parity.
 
         Splits the search into even-aligned and odd-aligned passes so
         UTF-16LE strings that begin on a byte that is not 16-bit aligned
-        within the surrounding container are still detected. Each
-        16-bit code unit is decoded with :func:`chr` and tested with
-        :meth:`str.isprintable` plus an explicit allow-list of common
-        whitespace, so non-ASCII printable characters such as
-        ``U+00E9 (é)`` are recognised while non-printable code points
-        such as the BOM, controls, and surrogate halves are not.
+        within the surrounding container are still detected. Each 16-bit
+        code unit is accepted only when it falls inside the strict
+        ASCII-printable range ``0x20`` (space) through ``0x7E`` (tilde),
+        with the additional whitelist of common whitespace controls
+        (``0x09`` tab, ``0x0A`` line feed, ``0x0D`` carriage return).
+        This matches the ``strings(1)`` convention and avoids the high
+        false-positive rate produced by :meth:`str.isprintable`, which
+        accepts superscript digits, mathematical symbols, currency
+        symbols, and foreign-script characters that frequently occur as
+        coincidental noise in random binary data.
 
         Args:
             data: Bytes to scan.
@@ -6146,11 +6150,8 @@ class HexEditorBridge(ToolBridgeBase):
         end_limit = len(data) - 1
         while i < end_limit:
             code_unit = data[i] | (data[i + 1] << 8)
-            try:
-                ch = chr(code_unit)
-            except ValueError:
-                ch = ""
-            if (ch and ch.isprintable()) or code_unit in _WHITESPACE_BYTES:
+            is_ascii_printable = _PRINTABLE_MIN <= code_unit <= _PRINTABLE_MAX
+            if is_ascii_printable or code_unit in _WHITESPACE_BYTES:
                 if run_start < 0:
                     run_start = i
             elif run_start >= 0:

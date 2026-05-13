@@ -58,7 +58,7 @@
 
 ## Findings
 
-#### F-0040 - UTF-16 scanner accepts code units like 0x2070 as printable
+#### F-0040 - UTF-16 scanner accepts code units like 0x2070 as printable [fixed: audit7/u01-utf16-scanner]
 
 - **Source audit:** audit1.md / `bridges-hex`
 - **Reviewer verdict:** UNCLEAR
