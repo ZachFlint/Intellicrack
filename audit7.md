@@ -152,7 +152,7 @@
 - **Why this is non-functional:** `start_agent.cmd` and `start_agent.sh` are written into the shared folder, but nothing in the QEMU launch ever arranges for the guest to execute them.
 
 ### Category 4 - Wrong Implementation
-#### F-0007 - extract_dropped_files won't work if agent disconnected, allowlist mismatch otherwise
+#### F-0007 - extract_dropped_files won't work if agent disconnected, allowlist mismatch otherwise [fixed: audit7/u07-extract-dropped-files]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL

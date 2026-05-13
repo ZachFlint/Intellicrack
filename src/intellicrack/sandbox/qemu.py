@@ -1822,6 +1822,12 @@ if ($shareMapped) {
 $fileLog = Join-Path $logDir 'file_changes.log'
 $netLog = Join-Path $logDir 'network_activity.log'
 $procLog = Join-Path $logDir 'process_activity.log'
+$droppedMirror = 'Z:\output\dropped'
+if ($shareMapped) {
+    if (-not (Test-Path $droppedMirror)) { New-Item -ItemType Directory -Path $droppedMirror -Force | Out-Null }
+}
+$Global:_IC_DroppedMirror = $droppedMirror
+$Global:_IC_DropWatchedRoots = @('C:\Users\Public\Downloads', 'C:\Windows\Temp', 'C:\Users\Default\AppData\Local\Temp')
 
 $monitorScripts = @(
     'api_trace.ps1',
@@ -1848,7 +1854,26 @@ $watcher.EnableRaisingEvents = $true
 $Global:_IC_FileLog = $fileLog
 Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {
     $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    "$ts|created|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $Event.MessageData -Encoding utf8
+    $full = $Event.SourceEventArgs.FullPath
+    "$ts|created|$full" | Out-File -Append $Event.MessageData -Encoding utf8
+    $mirror = $Global:_IC_DroppedMirror
+    if ($mirror -and (Test-Path $mirror)) {
+        foreach ($root in $Global:_IC_DropWatchedRoots) {
+            if ($full.ToLower().StartsWith($root.ToLower())) {
+                try {
+                    if (Test-Path -LiteralPath $full -PathType Leaf) {
+                        $name = [System.IO.Path]::GetFileName($full)
+                        $stamp = (Get-Date).ToString('yyyyMMddHHmmssfff')
+                        $dest = Join-Path $mirror ("${stamp}_${name}")
+                        Copy-Item -LiteralPath $full -Destination $dest -Force -ErrorAction Stop
+                    }
+                } catch {
+                    "$ts|mirror_failed|$full|$($_.Exception.Message)" | Out-File -Append $Event.MessageData -Encoding utf8
+                }
+                break
+            }
+        }
+    }
 } | Out-Null
 Register-ObjectEvent $watcher 'Changed' -MessageData $fileLog -Action {
     $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -2057,6 +2082,8 @@ from pathlib import Path
 from typing import Any
 
 LOG_DIR: Path = Path("/mnt/shared/logs")
+DROPPED_MIRROR_DIR: Path = Path("/mnt/shared/output/dropped")
+DROPPED_WATCH_ROOTS: tuple[str, ...] = ("/tmp", "/var/tmp", "/home")
 PORT: int = 4445
 RECV_BUFFER_SIZE: int = 65536
 DEFAULT_COMMAND_TIMEOUT: int = 30
@@ -2088,18 +2115,48 @@ def file_monitor() -> None:
     try:
         inotify_tree = inotify.adapters.InotifyTree("/")
         _logger.info("file_monitoring_started", extra={"watch_root": "/"})
+        try:
+            DROPPED_MIRROR_DIR.mkdir(parents=True, exist_ok=True)
+        except OSError as mkdir_err:
+            _logger.debug("dropped_mirror_dir_create_failed", extra={"error": str(mkdir_err)})
         for event in inotify_tree.event_gen(yield_nones=False):
             event_header, type_names, watch_path, filename = event
             timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
             operation = type_names[0].lower() if type_names else "unknown"
+            full_path = f"{watch_path}/{filename}" if filename else watch_path
             try:
                 log_path = LOG_DIR / "file_changes.log"
                 with log_path.open("a", encoding="utf-8") as log_file:
-                    log_file.write(f"{timestamp}|{operation}|{watch_path}/{filename}\\n")
+                    log_file.write(f"{timestamp}|{operation}|{full_path}\\n")
             except OSError as write_err:
                 _logger.debug("file_change_log_write_failed", extra={"error": str(write_err)})
+            if operation == "in_create" and filename:
+                _mirror_dropped_file(full_path)
     except OSError as inotify_err:
         _logger.error("inotify_init_failed", extra={"error": str(inotify_err)})
+
+
+def _mirror_dropped_file(full_path: str) -> None:
+    """Copy a newly-created file under watched roots into the dropped mirror.
+
+    Args:
+        full_path: Absolute path of the newly-created file.
+    """
+    for root in DROPPED_WATCH_ROOTS:
+        if not full_path.startswith(root + "/") and full_path != root:
+            continue
+        try:
+            src = Path(full_path)
+            if not src.is_file():
+                return
+            stamp = time.strftime("%Y%m%d%H%M%S")
+            dest = DROPPED_MIRROR_DIR / f"{stamp}_{src.name}"
+            import shutil as _shutil  # noqa: PLC0415
+
+            _shutil.copy2(src, dest)
+        except OSError as copy_err:
+            _logger.debug("dropped_mirror_copy_failed", extra={"src": full_path, "error": str(copy_err)})
+        return
 
 
 def process_monitor() -> None:
@@ -3182,14 +3239,31 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
     async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
         """Extract files created by the binary during execution.
 
+        Tries two extraction paths in order:
+
+        1. Agent path: when the guest agent is connected, dispatches an
+           allowlisted shell wrapper (``cmd.exe /c "xcopy ..."`` on Windows
+           or ``/bin/bash -c "cp -r ..."`` on Linux) for each watched guest
+           directory so the guest copies created files into the per-call
+           staging directory under the shared folder.
+        2. Host fallback: when the agent is unreachable, copies any files
+           the guest's monitor has mirrored under
+           ``<shared>/output/dropped/`` into the staging directory using
+           ``shutil.copy2``.
+
+        After both paths run, the staging directory must contain at least
+        one file or the call is treated as a genuine failure.
+
         Args:
             output_path: Optional path to save the ZIP archive.
 
         Returns:
-            Path: Path to ZIP archive of extracted files.
+            Path: Path to the ZIP archive containing the extracted files.
 
         Raises:
-            SandboxError: If extraction fails.
+            SandboxError: If the sandbox is not running, no shared folder
+                is configured, or neither extraction path produced any
+                files.
         """
         if self.state.status != "running":
             _logger.error("dropped_files_extraction_skipped_not_running", state=self.state.status)
@@ -3219,25 +3293,70 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             ]
             shared_base = self.GUEST_SHARED_PATH_LINUX
 
+        agent_used = False
         if self._agent is not None and self._agent.is_connected:
+            agent_used = True
             for guest_dir in guest_dirs:
                 if self._qemu_config.guest_os == GuestOS.WINDOWS:
-                    copy_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
+                    inner_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
+                    wrapped_command = "cmd.exe"
+                    wrapped_args: list[str] = ["/c", inner_cmd]
                 else:
                     dir_name = Path(guest_dir).name
-                    copy_cmd = f'cp -r "{guest_dir}" "{shared_base}/output/dropped_{extract_id}/{dir_name}" 2>/dev/null'
-                await self._agent.send_command(copy_cmd, time_limit=30.0)
+                    inner_cmd = f'cp -r "{guest_dir}" "{shared_base}/output/dropped_{extract_id}/{dir_name}" 2>/dev/null'
+                    wrapped_command = "/bin/bash"
+                    wrapped_args = ["-c", inner_cmd]
+                exit_code, stdout, stderr = await self._agent.send_command(
+                    wrapped_command,
+                    args=wrapped_args,
+                    time_limit=30.0,
+                )
+                _logger.debug(
+                    "dropped_files_agent_copy_dispatched",
+                    guest_dir=guest_dir,
+                    wrapped_command=wrapped_command,
+                    exit_code=exit_code,
+                    stdout_len=len(stdout),
+                    stderr_len=len(stderr),
+                )
+
+        if not agent_used:
+            await self._host_collect_dropped_files(staging_dir=staging_dir)
+
+        files_collected = await asyncio.to_thread(self._count_files_recursive, staging_dir)
+        _logger.debug(
+            "dropped_files_collected",
+            agent_used=agent_used,
+            files_collected=files_collected,
+            staging_dir=str(staging_dir),
+        )
+
+        if files_collected == 0:
+            try:
+                await asyncio.to_thread(shutil.rmtree, staging_dir, ignore_errors=True)
+            except OSError as cleanup_err:
+                _logger.warning(
+                    "staging_dir_cleanup_failed",
+                    error=str(cleanup_err),
+                    staging_dir=str(staging_dir),
+                )
+            _logger.error(
+                "dropped_files_extract_empty",
+                agent_used=agent_used,
+                shared_folder=str(self._shared_folder),
+            )
+            raise SandboxError(_ERR_EXTRACT_FILES_FAILED)
 
         zip_filename = f"dropped_files_{extract_id}.zip"
         zip_path = self._shared_folder / "output" / zip_filename
 
         def _create_zip() -> None:
+            """Write the staging directory contents into a zip archive at ``zip_path``."""
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-                if staging_dir.exists():
-                    for file_path in staging_dir.rglob("*"):
-                        if file_path.is_file():
-                            arcname = file_path.relative_to(staging_dir)
-                            zf.write(file_path, arcname)
+                for file_path in staging_dir.rglob("*"):
+                    if file_path.is_file():
+                        arcname = file_path.relative_to(staging_dir)
+                        zf.write(file_path, arcname)
 
         await asyncio.to_thread(_create_zip)
 
@@ -3246,7 +3365,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         except OSError as e:
             _logger.warning("staging_dir_cleanup_failed", error=str(e), staging_dir=str(staging_dir))
 
-        _logger.info("dropped_files_extracted", zip_path=str(zip_path))
+        _logger.info("dropped_files_extracted", zip_path=str(zip_path), files=files_collected)
 
         if output_path is not None:
             await asyncio.to_thread(output_path.parent.mkdir, parents=True, exist_ok=True)
@@ -3254,6 +3373,70 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             return output_path
 
         return zip_path
+
+    async def _host_collect_dropped_files(self, staging_dir: Path) -> None:
+        """Copy guest-mirrored dropped files into the staging directory host-side.
+
+        Reads from ``<shared>/output/dropped/`` (populated by the guest agent's
+        file watcher) and copies every regular file beneath it into
+        ``staging_dir``, preserving relative paths. Used as a fallback when the
+        guest agent is disconnected.
+
+        Args:
+            staging_dir: Per-call destination directory under the shared folder.
+        """
+        if self._shared_folder is None:
+            return
+        mirror_dir = self._shared_folder / "output" / "dropped"
+        if not await asyncio.to_thread(mirror_dir.exists):
+            _logger.debug(
+                "dropped_files_mirror_absent",
+                mirror_dir=str(mirror_dir),
+            )
+            return
+
+        def _copy_tree() -> int:
+            """Copy mirror contents into the staging directory.
+
+            Returns:
+                int: Number of files copied.
+            """
+            copied = 0
+            for src in mirror_dir.rglob("*"):
+                if not src.is_file():
+                    continue
+                rel = src.relative_to(mirror_dir)
+                dst = staging_dir / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+                copied += 1
+            return copied
+
+        copied = await asyncio.to_thread(_copy_tree)
+        _logger.info(
+            "dropped_files_host_collected",
+            mirror_dir=str(mirror_dir),
+            files_copied=copied,
+        )
+
+    @staticmethod
+    def _count_files_recursive(directory: Path) -> int:
+        """Count regular files under ``directory`` recursively.
+
+        Args:
+            directory: Root directory to scan.
+
+        Returns:
+            int: Number of regular files found; zero if the directory is
+                missing.
+        """
+        if not directory.exists():
+            return 0
+        count = 0
+        for entry in directory.rglob("*"):
+            if entry.is_file():
+                count += 1
+        return count
 
     async def yara_scan(
         self,

@@ -1155,10 +1155,14 @@ class TestF0015AcceleratorNotRedoneOnStart:
 
 
 class TestF0007ExtractDroppedFiles:
-    """F-0007: extract_dropped_files must produce a valid zip even without agent."""
+    """F-0007: extract_dropped_files must produce a valid zip when files are present."""
 
     def test_extract_produces_zip_without_agent(self, tmp_path: Path) -> None:
-        """extract_dropped_files returns a path to a zip archive even with no agent.
+        """extract_dropped_files uses the host-side dropped mirror when no agent.
+
+        The fixed implementation (audit7 U07) requires the guest's monitor to
+        mirror dropped files to ``<shared>/output/dropped/`` so the host-side
+        fallback can collect them when the agent is disconnected.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1166,6 +1170,9 @@ class TestF0007ExtractDroppedFiles:
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
+        mirror = shared / "output" / "dropped"
+        mirror.mkdir(parents=True)
+        (mirror / "dropped_sample.bin").write_bytes(b"\xde\xad\xbe\xef")
 
         sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
         sb.state.status = "running"
@@ -1178,3 +1185,6 @@ class TestF0007ExtractDroppedFiles:
         assert result.exists(), "extract_dropped_files must return an existing zip path"
         assert result.suffix == ".zip", f"Expected .zip file; got {result.suffix}"
         assert zipfile.is_zipfile(result), "Output file must be a valid zip archive"
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+        assert any(n.endswith("dropped_sample.bin") for n in names), f"Expected dropped_sample.bin in archive, found {names}"
