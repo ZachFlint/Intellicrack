@@ -174,7 +174,7 @@
 - **Pattern:** Cat 21
 
 ### Category 13 - Race Condition / Fixed Sleep
-#### F-0031 - QEMU `run_binary` 2-second sleep
+#### F-0031 - QEMU `run_binary` 2-second sleep [fixed: audit7/u09-logs-stable]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL

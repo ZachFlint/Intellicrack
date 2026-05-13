@@ -96,6 +96,25 @@ _MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
     "resource_monitor.ps1",
     "service_monitor.ps1",
 )
+_MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
+    "file_changes.log",
+    "registry_changes.log",
+    "network_activity.log",
+    "process_activity.log",
+    "api_trace.log",
+    "service_monitor.log",
+    "kernel_object_monitor.log",
+    "dll_monitor.log",
+    "injection_monitor.log",
+    "resource_monitor.log",
+    "clipboard_monitor.log",
+)
+_LOGS_STABLE_POLL_DELAY_S: Final[float] = 0.25
+_LOGS_STABLE_REQUIRED_POLLS: Final[int] = 4
+_LOGS_STABLE_MAX_WAIT_S: Final[float] = 30.0
+_ERR_LOGS_STABLE_POLL_DELAY = "poll_delay must be positive"
+_ERR_LOGS_STABLE_STABLE_POLLS = "stable_polls must be at least 1"
+_ERR_LOGS_STABLE_MAX_WAIT = "max_wait must be non-negative"
 _RETURNCODE_SUCCESS = 0
 
 _ERR_NO_FREE_PORTS = "no free ports"
@@ -2299,7 +2318,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
 
         logs = _MonitoringLogs()
         if monitor:
-            await asyncio.sleep(2)
+            await self._wait_for_logs_stable()
             logs = await self._collect_monitoring_logs()
 
         return ExecutionReport(
@@ -2345,6 +2364,99 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
             resource_samples=await parse_resource_log(shared, "resource_monitor.log"),
             clipboard_events=await parse_clipboard_log(shared, "clipboard_monitor.log"),
         )
+
+    async def _wait_for_logs_stable(
+        self,
+        *,
+        poll_delay: float = _LOGS_STABLE_POLL_DELAY_S,
+        stable_polls: int = _LOGS_STABLE_REQUIRED_POLLS,
+        max_wait: float = _LOGS_STABLE_MAX_WAIT_S,
+    ) -> None:
+        """Wait until all monitoring log files have stopped growing.
+
+        Polls every log file under ``self._shared_folder / "logs"`` and treats
+        the set as stable when each file's size has been unchanged for
+        ``stable_polls`` consecutive polls. Caps total wait at ``max_wait``
+        seconds. The tracked file set is :data:`_MONITORING_LOG_NAMES`; files
+        that do not yet exist are treated as having size ``0`` so that
+        long-quiescent monitors do not block the readiness check.
+
+        File ``stat`` calls are dispatched via :func:`asyncio.to_thread` so
+        the event loop is not blocked. Elapsed time is measured with
+        :func:`time.monotonic`.
+
+        Args:
+            poll_delay: Seconds to sleep between polls. Must be positive.
+            stable_polls: Number of consecutive unchanged polls required to
+                consider a log file stable. Must be at least one.
+            max_wait: Maximum total seconds to wait before returning even if
+                stability has not been reached.
+
+        Raises:
+            ValueError: If ``poll_delay`` is not positive, ``stable_polls``
+                is less than one, or ``max_wait`` is negative.
+            SandboxError: If the shared folder has not been initialized.
+        """
+        if poll_delay <= 0:
+            raise ValueError(_ERR_LOGS_STABLE_POLL_DELAY)
+        if stable_polls < 1:
+            raise ValueError(_ERR_LOGS_STABLE_STABLE_POLLS)
+        if max_wait < 0:
+            raise ValueError(_ERR_LOGS_STABLE_MAX_WAIT)
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+
+        logs_folder = self._shared_folder / "logs"
+        log_paths: tuple[Path, ...] = tuple(logs_folder / name for name in _MONITORING_LOG_NAMES)
+
+        previous_sizes: dict[Path, int] = dict.fromkeys(log_paths, -1)
+        unchanged_counts: dict[Path, int] = dict.fromkeys(log_paths, 0)
+
+        def _stat_size(path: Path) -> int:
+            """Return ``path.stat().st_size``, or ``0`` if the file is absent.
+
+            Args:
+                path: File whose size to read.
+
+            Returns:
+                int: File size in bytes, or ``0`` if the file does not exist.
+            """
+            try:
+                return path.stat().st_size
+            except FileNotFoundError:
+                return 0
+
+        start = time.monotonic()
+        while True:
+            for path in log_paths:
+                current_size = await asyncio.to_thread(_stat_size, path)
+                if current_size == previous_sizes[path]:
+                    unchanged_counts[path] += 1
+                else:
+                    unchanged_counts[path] = 1
+                    previous_sizes[path] = current_size
+
+            if all(count >= stable_polls for count in unchanged_counts.values()):
+                _logger.debug(
+                    "logs_stable_reached",
+                    extra={
+                        "elapsed_seconds": time.monotonic() - start,
+                        "stable_polls": stable_polls,
+                    },
+                )
+                return
+
+            if time.monotonic() - start >= max_wait:
+                _logger.warning(
+                    "logs_stable_max_wait_elapsed",
+                    extra={
+                        "max_wait_seconds": max_wait,
+                        "stable_polls": stable_polls,
+                    },
+                )
+                return
+
+            await asyncio.sleep(poll_delay)
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.
