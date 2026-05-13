@@ -159,6 +159,7 @@ _ERR_YARA_SCAN_FAILED = "YARA scan failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_GUEST_AGENT_NOT_CONNECTED = "Guest agent not connected"
 _ERR_GUEST_SCAN_FAILED = "guest YARA scan failed"
+_ERR_AGENT_CONNECT_FAILED = "guest agent failed to connect within {timeout}s"
 _AGENT_CONNECT_TIMEOUT = 30.0
 _AGENT_CONNECT_RETRY_INTERVAL = 2.0
 _READINESS_POLL_INTERVAL = 0.5
@@ -352,6 +353,9 @@ class QEMUConfig:
         anti_evasion_profile: Anti-evasion profile applied at launch via
             ``-smbios`` / ``-cpu`` command-line arguments. One of
             ``default``, ``workstation``, or ``laptop``.
+        agent_connect_timeout: Total timeout in seconds that ``start()`` will
+            wait for the in-guest agent TCP socket to become reachable before
+            failing the sandbox launch.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -366,6 +370,7 @@ class QEMUConfig:
     snapshot_name: str | None = None
     shared_folder: Path | None = None
     anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
+    agent_connect_timeout: float = 60.0
 
 
 @dataclass
@@ -918,6 +923,7 @@ class QEMUSandbox(SandboxBase):
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._qemu_config.shared_folder,
             anti_evasion_profile=self._qemu_config.anti_evasion_profile,
+            agent_connect_timeout=self._qemu_config.agent_connect_timeout,
         )
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
@@ -1370,6 +1376,7 @@ class QEMUSandbox(SandboxBase):
             snapshot_name=self._qemu_config.snapshot_name,
             shared_folder=self._shared_folder,
             anti_evasion_profile=self._qemu_config.anti_evasion_profile,
+            agent_connect_timeout=self._qemu_config.agent_connect_timeout,
         )
 
         return cmd
@@ -1387,6 +1394,45 @@ class QEMUSandbox(SandboxBase):
         if qemu_pid is None:
             _logger.error("qemu_start_failed_no_pid")
             raise SandboxError(_ERR_QEMU_START)
+
+    @staticmethod
+    async def _ensure_agent_connected(agent: GuestAgentClient, time_limit: float) -> None:
+        """Drive ``GuestAgentClient.connect`` and raise on failure.
+
+        Wraps the connect call so that ``QEMUSandbox.start`` does not raise
+        ``SandboxError`` from inside a ``try`` block (ruff ``TRY301``).
+
+        Args:
+            agent: Guest agent client to connect.
+            time_limit: Total seconds to wait for the agent to become
+                reachable before failing.
+
+        Raises:
+            SandboxError: If the agent socket cannot be reached within
+                ``time_limit`` (either by ``connect`` raising or by it
+                returning ``False``).
+        """
+        connect_error: BaseException | None = None
+        try:
+            connected = await agent.connect(time_limit=time_limit)
+        except (OSError, asyncio.CancelledError, TimeoutError) as agent_error:
+            _logger.warning(
+                "guest_agent_connect_exception",
+                error=str(agent_error),
+                timeout_seconds=time_limit,
+            )
+            connect_error = agent_error
+            connected = False
+
+        if not connected:
+            _logger.warning(
+                "guest_agent_connect_failed",
+                timeout_seconds=time_limit,
+            )
+            error_message = _ERR_AGENT_CONNECT_FAILED.format(timeout=time_limit)
+            if connect_error is not None:
+                raise SandboxError(error_message) from connect_error
+            raise SandboxError(error_message)
 
     async def start(self) -> None:
         """Start the QEMU virtual machine.
@@ -1474,6 +1520,10 @@ class QEMUSandbox(SandboxBase):
             await self._connect_and_verify_qmp()
 
             self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
+            await self._ensure_agent_connected(
+                self._agent,
+                self._qemu_config.agent_connect_timeout,
+            )
 
             self.state.status = "running"
             self.state.started_at = datetime.now(UTC)
