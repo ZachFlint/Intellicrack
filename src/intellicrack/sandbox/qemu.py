@@ -160,11 +160,22 @@ _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_GUEST_AGENT_NOT_CONNECTED = "Guest agent not connected"
 _ERR_GUEST_SCAN_FAILED = "guest YARA scan failed"
 _ERR_AGENT_CONNECT_FAILED = "guest agent failed to connect within {timeout}s"
+_ERR_QEMU_GA_UNREACHABLE = (
+    "qemu-guest-agent did not respond to guest-ping within the configured timeout; "
+    "ensure the guest disk image has qemu-guest-agent installed and enabled at boot"
+)
+_ERR_QEMU_GA_EXEC_FAILED = "qemu-guest-agent guest-exec failed to launch the monitor agent script"
+_ERR_QEMU_GA_EXEC_NO_PID = "qemu-guest-agent guest-exec reply did not include a process id"
 _AGENT_CONNECT_TIMEOUT = 30.0
 _AGENT_CONNECT_RETRY_INTERVAL = 2.0
 _READINESS_POLL_INTERVAL = 0.5
 _READINESS_POLL_TIMEOUT = 60.0
 _RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
+_QEMU_GA_PING_TIMEOUT = 90.0
+_QEMU_GA_PING_INTERVAL = 1.0
+_QEMU_GA_EXEC_TIMEOUT = 10.0
+_GUEST_AGENT_LAUNCH_PATH_WINDOWS = "Z:\\monitor\\start_agent.cmd"
+_GUEST_AGENT_LAUNCH_PATH_LINUX = "/mnt/shared/monitor/start_agent.sh"
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
 _ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
@@ -862,6 +873,7 @@ class QEMUSandbox(SandboxBase):
         self._vnc_port: int | None = None
         self._active_captures: dict[str, Path] = {}
         self._accelerator_cached: bool = False
+        self._agent_guest_pid: int | None = None
         _logger.info(
             "qemu_sandbox_initialized",
             guest_os=self._qemu_config.guest_os.value,
@@ -1226,6 +1238,167 @@ class QEMUSandbox(SandboxBase):
             _logger.warning("vm_status_query_failed", error=status.error)
             raise SandboxError(_ERR_VM_STATUS)
 
+    async def _wait_for_qemu_ga(
+        self,
+        ping_timeout: float = _QEMU_GA_PING_TIMEOUT,
+        poll_interval: float = _QEMU_GA_PING_INTERVAL,
+    ) -> None:
+        """Poll ``guest-ping`` until qemu-guest-agent responds or timeout.
+
+        Args:
+            ping_timeout: Maximum total time in seconds to wait for the
+                qemu-guest-agent to become reachable.
+            poll_interval: Delay in seconds between successive
+                ``guest-ping`` attempts.
+
+        Raises:
+            SandboxError: If the QMP client is not connected, or if
+                ``guest-ping`` never succeeds within ``ping_timeout``.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        deadline = time.monotonic() + ping_timeout
+        last_error: str | None = None
+        while time.monotonic() < deadline:
+            response = await self._qmp.execute_command(
+                {"execute": "guest-ping"},
+                time_limit=_QEMU_GA_EXEC_TIMEOUT,
+            )
+            if response.success:
+                _logger.debug(
+                    "qemu_ga_ping_ok",
+                    monitor_port=self._qemu_config.monitor_port,
+                )
+                return
+            last_error = response.error
+            _logger.debug(
+                "qemu_ga_ping_retry",
+                error=last_error,
+                interval=poll_interval,
+            )
+            await asyncio.sleep(poll_interval)
+
+        _logger.warning(
+            "qemu_ga_unreachable",
+            ping_timeout=ping_timeout,
+            last_error=last_error,
+        )
+        raise SandboxError(_ERR_QEMU_GA_UNREACHABLE)
+
+    async def _qmp_guest_exec(
+        self,
+        path: str,
+        args: list[str],
+        *,
+        capture_output: bool = False,
+    ) -> int:
+        """Invoke ``guest-exec`` via qemu-guest-agent and return the guest PID.
+
+        Args:
+            path: Absolute executable path inside the guest.
+            args: Argument list passed to the executable.
+            capture_output: Whether qemu-guest-agent should buffer
+                stdout/stderr for later retrieval. The monitor bootstrap
+                does not need output capture.
+
+        Returns:
+            int: Guest-side process identifier returned by
+            qemu-guest-agent.
+
+        Raises:
+            SandboxError: If the QMP client is not connected, if the
+                ``guest-exec`` invocation fails, or if the reply does not
+                include a PID.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        command: dict[str, object] = {
+            "execute": "guest-exec",
+            "arguments": {
+                "path": path,
+                "arg": list(args),
+                "capture-output": capture_output,
+            },
+        }
+        response = await self._qmp.execute_command(command, time_limit=_QEMU_GA_EXEC_TIMEOUT)
+        if not response.success:
+            _logger.warning(
+                "qemu_ga_exec_failed",
+                path=path,
+                arg=list(args),
+                error=response.error,
+            )
+            raise SandboxError(_ERR_QEMU_GA_EXEC_FAILED)
+
+        data = response.data
+        if not isinstance(data, dict) or "pid" not in data:
+            _logger.warning(
+                "qemu_ga_exec_no_pid",
+                path=path,
+                arg=list(args),
+                data=data,
+            )
+            raise SandboxError(_ERR_QEMU_GA_EXEC_NO_PID)
+
+        pid_raw = data["pid"]
+        if not isinstance(pid_raw, int):
+            _logger.warning(
+                "qemu_ga_exec_invalid_pid_type",
+                path=path,
+                arg=list(args),
+                pid_type=type(pid_raw).__name__,
+            )
+            raise SandboxError(_ERR_QEMU_GA_EXEC_NO_PID)
+
+        return pid_raw
+
+    async def _bootstrap_guest_agent(self) -> None:
+        """Bootstrap monitor agent script inside the guest via qemu-ga.
+
+        Waits for qemu-guest-agent to be reachable via QMP ``guest-ping``,
+        then invokes ``guest-exec`` to run ``start_agent.cmd`` (Windows) or
+        ``start_agent.sh`` (Linux) inside the guest. The qemu-guest-agent
+        binary must already be installed in the disk image and configured
+        to start at boot; this method is the host-side trigger that runs
+        the Intellicrack monitor scripts using the guest agent channel.
+
+        Raises:
+            SandboxError: If the QMP client is not connected, if the
+                qemu-guest-agent never responds to ``guest-ping`` within
+                the configured timeout, if ``guest-exec`` fails, or if the
+                guest OS is unsupported.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        await self._wait_for_qemu_ga()
+
+        guest_os = self._qemu_config.guest_os
+        if guest_os == GuestOS.WINDOWS:
+            exec_path = "cmd.exe"
+            exec_args: list[str] = ["/c", _GUEST_AGENT_LAUNCH_PATH_WINDOWS]
+        elif guest_os == GuestOS.LINUX:
+            exec_path = "/bin/bash"
+            exec_args = [_GUEST_AGENT_LAUNCH_PATH_LINUX]
+        else:
+            _logger.warning(
+                "bootstrap_guest_agent_unsupported_guest_os",
+                guest_os=str(guest_os),
+            )
+            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+
+        guest_pid = await self._qmp_guest_exec(exec_path, exec_args, capture_output=False)
+        self._agent_guest_pid = guest_pid
+        _logger.info(
+            "guest_agent_bootstrap_launched",
+            guest_os=guest_os.value,
+            guest_pid=guest_pid,
+            path=exec_path,
+            arg=exec_args,
+        )
+
     @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
         """Return SMBIOS entries for the selected anti-evasion profile.
@@ -1518,6 +1691,8 @@ class QEMUSandbox(SandboxBase):
             )
 
             await self._connect_and_verify_qmp()
+
+            await self._bootstrap_guest_agent()
 
             self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
             await self._ensure_agent_connected(
