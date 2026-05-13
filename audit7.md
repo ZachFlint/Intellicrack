@@ -77,7 +77,7 @@
 
 ## Findings
 
-#### F-0021 - `discover_all` records error events but never invalidates the now-known-stale cache entry
+#### F-0021 - `discover_all` records error events but never invalidates the now-known-stale cache entry [fixed: audit7/u02-discover-cache]
 
 - **Source audit:** audit2.md / `providers-meta`
 - **Reviewer verdict:** UNCLEAR
