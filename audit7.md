@@ -96,7 +96,7 @@
 
 ## Findings
 
-#### F-0001 - `pyproject.toml` redundantly declares 95+ dev/test/docs/profile packages as runtime `dependencies`
+#### F-0001 - `pyproject.toml` redundantly declares 95+ dev/test/docs/profile packages as runtime `dependencies` [fixed: audit7/u03-runtime-deps]
 
 - **Source audit:** audit4.md / `config-pyproject`
 - **Reviewer verdict:** FAIL
