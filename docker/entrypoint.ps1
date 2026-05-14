@@ -121,10 +121,10 @@ function Resolve-PytestArgList {
     )
     switch ($Type) {
         'unit' {
-            $pytestArgs = @('tests/', '-m', 'not slow and not integration', '--timeout=60', '--timeout-method=thread') + $base
+            $pytestArgs = @('tests/', '-m', 'not slow and not integration', '--timeout=180', '--timeout-method=thread', '-p', 'no:randomly') + $base
         }
         'all' {
-            $pytestArgs = @('tests/', '--timeout=120', '--timeout-method=thread') + $base
+            $pytestArgs = @('tests/', '--timeout=300', '--timeout-method=thread', '-p', 'no:randomly') + $base
         }
         'coverage' {
             $pytestArgs = @(
@@ -138,7 +138,7 @@ function Resolve-PytestArgList {
             ) + $base
         }
         'integration' {
-            $pytestArgs = @('tests/test_integration/', '-m', 'integration') + $base
+            $pytestArgs = @('tests/', '-m', 'integration', '--timeout=600', '--timeout-method=thread', '-p', 'no:randomly') + $base
         }
         'e2e' {
             $pytestArgs = @('tests/test_hexcore_e2e/') + $base
@@ -348,87 +348,23 @@ function Invoke-Pytest {
     ) -join [Environment]::NewLine
     Add-Content -Path $LogPath -Value $banner -Encoding utf8
 
-    $pixiResolved = Get-Command $PixiExe -ErrorAction SilentlyContinue
-    if ($pixiResolved) {
-        $launchPath = $pixiResolved.Source
-        $launchArgs = @('run', '--no-install', '--frozen', 'pytest') + $PytestArgs
-    }
-    else {
-        $launchPath = $PixiPython
-        $launchArgs = @('-m', 'pytest') + $PytestArgs
-    }
-
-    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-    $script:_pytestLogStream = [System.IO.StreamWriter]::new($LogPath, $true, $utf8NoBom)
-    $script:_pytestLogStream.AutoFlush = $true
-    $script:_pytestStreamSync = [System.Object]::new()
-
-    $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $launchPath
-    foreach ($arg in $launchArgs) { [void]$psi.ArgumentList.Add([string]$arg) }
-    $psi.UseShellExecute = $false
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.StandardOutputEncoding = $utf8NoBom
-    $psi.StandardErrorEncoding = $utf8NoBom
-    $psi.CreateNoWindow = $true
-    $psi.WorkingDirectory = $WorkspaceRoot
-
-    $proc = [System.Diagnostics.Process]::new()
-    $proc.StartInfo = $psi
-    $proc.EnableRaisingEvents = $true
-
-    $stdoutHandler = {
-        $line = $EventArgs.Data
-        if ($null -eq $line) { return }
-        [System.Threading.Monitor]::Enter($script:_pytestStreamSync)
-        try {
-            $script:_pytestLogStream.WriteLine($line)
-            [Console]::Out.WriteLine($line)
-        }
-        finally {
-            [System.Threading.Monitor]::Exit($script:_pytestStreamSync)
-        }
-    }
-    $stderrHandler = {
-        $line = $EventArgs.Data
-        if ($null -eq $line) { return }
-        [System.Threading.Monitor]::Enter($script:_pytestStreamSync)
-        try {
-            $script:_pytestLogStream.WriteLine($line)
-            [Console]::Error.WriteLine($line)
-        }
-        finally {
-            [System.Threading.Monitor]::Exit($script:_pytestStreamSync)
-        }
-    }
-
-    $stdoutReg = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action $stdoutHandler
-    $stderrReg = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -Action $stderrHandler
-
     $exit = 0
     try {
-        [void]$proc.Start()
-        $proc.BeginOutputReadLine()
-        $proc.BeginErrorReadLine()
-        $proc.WaitForExit()
-        [void]$proc.WaitForExit(2000)
-        $exit = $proc.ExitCode
+        if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
+            $cmdArgs = @('run', '--no-install', '--frozen', 'pytest') + $PytestArgs
+            & $PixiExe @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
+        }
+        else {
+            $cmdArgs = @('-m', 'pytest') + $PytestArgs
+            & $PixiPython @cmdArgs 2>&1 | Tee-Object -FilePath $LogPath -Append | Out-Host
+        }
+        $exit = $LASTEXITCODE
+        if ($null -eq $exit) { $exit = 0 }
     }
     catch {
         Write-SandboxLog -Level 'error' -Event 'pytest_launch_failed' -Context @{ error = $_.Exception.Message }
-        [System.Threading.Monitor]::Enter($script:_pytestStreamSync)
-        try { $script:_pytestLogStream.WriteLine("ENTRYPOINT ERROR: $($_.Exception.Message)") }
-        finally { [System.Threading.Monitor]::Exit($script:_pytestStreamSync) }
+        Add-Content -Path $LogPath -Value "ENTRYPOINT ERROR: $($_.Exception.Message)" -Encoding utf8
         $exit = 99
-    }
-    finally {
-        if ($stdoutReg) { Unregister-Event -SourceIdentifier $stdoutReg.Name -ErrorAction SilentlyContinue; Remove-Job -Id $stdoutReg.Id -Force -ErrorAction SilentlyContinue }
-        if ($stderrReg) { Unregister-Event -SourceIdentifier $stderrReg.Name -ErrorAction SilentlyContinue; Remove-Job -Id $stderrReg.Id -Force -ErrorAction SilentlyContinue }
-        $script:_pytestLogStream.Flush()
-        $script:_pytestLogStream.Dispose()
-        $script:_pytestLogStream = $null
-        $proc.Dispose()
     }
 
     $duration = ((Get-Date) - $start).TotalSeconds

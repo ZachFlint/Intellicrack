@@ -379,6 +379,11 @@ def _build_docker_run_argv(
     """
     docker = _docker_binary()
     reports_mount = f"{_REPORTS_ROOT.parent}:{_CONTAINER_REPORTS}"
+    tests_mount = f"{_PROJECT_ROOT / 'tests'}:{_CONTAINER_WORKSPACE}\\tests:ro"
+    docker_mount = (
+        f"{_PROJECT_ROOT / 'docker'}:{_CONTAINER_WORKSPACE}\\docker:ro"
+    )
+    src_mount = f"{_PROJECT_ROOT / 'src'}:{_CONTAINER_WORKSPACE}\\src:ro"
     _ = writable_workspace
 
     container_name = f"intellicrack-sandbox-{spec.test_type.value}"
@@ -399,6 +404,12 @@ def _build_docker_run_argv(
         network,
         "--volume",
         reports_mount,
+        "--volume",
+        tests_mount,
+        "--volume",
+        docker_mount,
+        "--volume",
+        src_mount,
         "--workdir",
         _CONTAINER_WORKSPACE,
         "--env",

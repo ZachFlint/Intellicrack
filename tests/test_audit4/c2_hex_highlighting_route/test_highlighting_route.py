@@ -29,6 +29,9 @@ if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
+pytestmark = pytest.mark.integration
+
+
 class _UpdateCounter:
     """Callable that counts the number of times it is invoked."""
 
