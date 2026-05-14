@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 pytestmark = [
     pytest.mark.skipif(sys.platform != "win32", reason="Windows only"),
     pytest.mark.asyncio,
-    pytest.mark.slow,
+    pytest.mark.integration,
 ]
 
 

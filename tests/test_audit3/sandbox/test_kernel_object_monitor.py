@@ -51,7 +51,7 @@ pytestmark = [
         sys.platform != "win32",
         reason="kernel_object_monitor.ps1 targets Windows kernel object APIs",
     ),
-    pytest.mark.slow,
+    pytest.mark.integration,
 ]
 
 

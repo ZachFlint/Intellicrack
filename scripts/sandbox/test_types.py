@@ -174,10 +174,19 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
                 "not slow and not integration",
                 "--timeout=180",
                 "--timeout-method=thread",
+                "-p",
+                "no:randomly",
                 *base,
             ]
         case TestType.ALL:
-            args = ["tests/", "--timeout=300", "--timeout-method=thread", *base]
+            args = [
+                "tests/",
+                "--timeout=300",
+                "--timeout-method=thread",
+                "-p",
+                "no:randomly",
+                *base,
+            ]
         case TestType.COVERAGE:
             args = [
                 "tests/",
@@ -190,7 +199,16 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
                 *base,
             ]
         case TestType.INTEGRATION:
-            args = ["tests/test_integration/", "-m", "integration", *base]
+            args = [
+                "tests/",
+                "-m",
+                "integration",
+                "--timeout=600",
+                "--timeout-method=thread",
+                "-p",
+                "no:randomly",
+                *base,
+            ]
         case TestType.E2E:
             args = ["tests/test_hexcore_e2e/", *base]
         case TestType.SMOKE:
