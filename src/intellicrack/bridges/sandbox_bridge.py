@@ -41,6 +41,8 @@ from intellicrack.sandbox import (
 
 if TYPE_CHECKING:
     import types
+    from collections.abc import Callable
+    from types import TracebackType
 
     from intellicrack.sandbox import ExecutionReport
 
@@ -160,6 +162,77 @@ def dataclass_to_dict(obj: object) -> dict[str, Any]:
     return cast("dict[str, Any]", safe)
 
 
+class _StateTracker:
+    """Async context manager that maintains ``BridgeState.last_error`` lifecycle.
+
+    Wrapping a bridge operation in :class:`_StateTracker` ensures that
+    ``last_error`` is cleared on success and set to the failing exception's
+    text on failure, while preserving the rest of ``BridgeState``
+    (``connected``, ``tool_running``, ``binary_loaded``, ``process_attached``,
+    ``target_path``, ``target_pid``). This eliminates stale ``last_error``
+    readings after a successful operation following a prior failure.
+
+    The tracker re-raises the original exception unchanged so callers can
+    convert ``SandboxError`` to ``ToolError`` (or any other transformation)
+    in the normal ``except``/``raise from`` flow. See :meth:`__init__` for
+    constructor arguments.
+    """
+
+    __slots__ = ("apply_outcome", "operation")
+
+    def __init__(
+        self,
+        apply_outcome: Callable[[str | None], None],
+        operation: str,
+    ) -> None:
+        """Initialize the tracker.
+
+        Args:
+            apply_outcome: Callable invoked with ``None`` on success or
+                the exception text on failure to update bridge state.
+            operation: Short operation label (e.g. ``"copy_to"``) recorded
+                in the failure log line emitted by :meth:`__aexit__`.
+        """
+        self.apply_outcome: Callable[[str | None], None] = apply_outcome
+        self.operation: str = operation
+
+    async def __aenter__(self) -> None:
+        """Enter the context.
+
+        Returns:
+            None: The tracker does not expose any value to the ``async
+            with`` block; only the exit-side state update matters.
+        """
+        return
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Update ``BridgeState.last_error`` based on operation outcome.
+
+        Args:
+            exc_type: Exception type raised inside the context, or ``None``
+                if the block exited normally.
+            exc: Exception instance raised inside the context, or ``None``
+                if the block exited normally.
+            traceback: Traceback associated with ``exc``. Unused but
+                required by the async context-manager protocol.
+
+        Returns:
+            None: Never suppresses the exception; ``None`` propagates the
+            original raise.
+        """
+        del exc_type, traceback
+        if exc is None:
+            self.apply_outcome(None)
+        else:
+            _logger.debug("state_tracker_failure", operation=self.operation, error=str(exc))
+            self.apply_outcome(str(exc))
+
+
 class SandboxBridge(ToolBridgeBase):
     """Bridge for sandbox operations.
 
@@ -181,6 +254,46 @@ class SandboxBridge(ToolBridgeBase):
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe", "elf"],
         )
+
+    def _set_state_outcome(self, error: str | None) -> None:
+        """Update ``BridgeState.last_error`` while preserving other fields.
+
+        Used by :class:`_StateTracker` to keep ``last_error`` symmetric:
+        cleared on success, populated on failure. Other state fields
+        (``connected``, ``tool_running``, ``binary_loaded``,
+        ``process_attached``, ``target_path``, ``target_pid``) are
+        copied through unchanged so callers that already wrote them
+        (``create``, ``run_binary``) do not see those values reset.
+
+        The new state is assigned via the ``state`` property setter so
+        the base ``ToolBridgeBase`` ``bridge_state_changed`` log record
+        is emitted consistently with every other state transition.
+
+        Args:
+            error: Exception text to record, or ``None`` to clear the
+                ``last_error`` field after a successful operation.
+        """
+        current = self._state
+        if current.last_error == error:
+            return
+        self.state = dataclasses.replace(current, last_error=error)
+
+    def _track_state(self, operation: str) -> _StateTracker:
+        """Return an async context manager that maintains state lifecycle.
+
+        The returned context manager clears ``BridgeState.last_error`` on
+        successful completion of the wrapped block and records the
+        exception text on failure. Other state fields are preserved.
+
+        Args:
+            operation: Short operation label (e.g. ``"copy_to"``) used by
+                the tracker for structured logging context.
+
+        Returns:
+            _StateTracker: Async context manager to use in
+            ``async with self._track_state("op"):`` blocks.
+        """
+        return _StateTracker(self._set_state_outcome, operation)
 
     @property
     def manager(self) -> SandboxManager | None:
@@ -1168,33 +1281,34 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("copy_to"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        source_path = Path(source)
-        if not await asyncio.to_thread(source_path.exists):
-            msg = f"{_ERR_SRC_NOT_FOUND}: {source}"
-            raise ToolError(msg)
+            source_path = Path(source)
+            if not await asyncio.to_thread(source_path.exists):
+                msg = f"{_ERR_SRC_NOT_FOUND}: {source}"
+                raise ToolError(msg)
 
-        try:
-            await instance.sandbox.copy_to_sandbox(source_path, dest)
-            instance.touch()
-            _logger.info("file_copied_to_sandbox", source=source, instance_id=instance_id, dest=dest)
-        except SandboxError as e:
-            _logger.warning("copy_to_sandbox_failed", error=str(e))
-            msg = f"{_ERR_COPY_TO_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "success": True,
-                "source": source,
-                "dest": dest,
-                "instance_id": instance_id,
-            }
+            try:
+                await instance.sandbox.copy_to_sandbox(source_path, dest)
+                instance.touch()
+                _logger.info("file_copied_to_sandbox", source=source, instance_id=instance_id, dest=dest)
+            except SandboxError as e:
+                _logger.warning("copy_to_sandbox_failed", error=str(e))
+                msg = f"{_ERR_COPY_TO_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "success": True,
+                    "source": source,
+                    "dest": dest,
+                    "instance_id": instance_id,
+                }
 
     async def copy_from(
         self,
@@ -1215,30 +1329,31 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("copy_from"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        dest_path = Path(dest)
+            dest_path = Path(dest)
 
-        try:
-            await instance.sandbox.copy_from_sandbox(source, dest_path)
-            instance.touch()
-            _logger.info("file_copied_from_sandbox", instance_id=instance_id, source=source, dest=dest)
-        except SandboxError as e:
-            _logger.warning("copy_from_sandbox_failed", error=str(e))
-            msg = f"{_ERR_COPY_FROM_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "success": True,
-                "source": source,
-                "dest": dest,
-                "instance_id": instance_id,
-            }
+            try:
+                await instance.sandbox.copy_from_sandbox(source, dest_path)
+                instance.touch()
+                _logger.info("file_copied_from_sandbox", instance_id=instance_id, source=source, dest=dest)
+            except SandboxError as e:
+                _logger.warning("copy_from_sandbox_failed", error=str(e))
+                msg = f"{_ERR_COPY_FROM_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "success": True,
+                    "source": source,
+                    "dest": dest,
+                    "instance_id": instance_id,
+                }
 
     async def status(self) -> dict[str, Any]:
         """Get sandbox manager status.
@@ -1286,30 +1401,31 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If snapshot fails or not supported.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("snapshot_create"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            raise ToolError(_ERR_QEMU_ONLY)
+            if instance.sandbox_type != "qemu":
+                raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            snapshot_id = await instance.sandbox.take_snapshot(name)
-            instance.touch()
-            _logger.info("snapshot_created", snapshot_name=name, instance_id=instance_id, snapshot_id=snapshot_id)
-        except SandboxError as e:
-            _logger.warning("snapshot_creation_failed", error=str(e))
-            msg = f"{_ERR_SNAPSHOT_CREATE_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "snapshot_id": snapshot_id,
-                "name": name,
-                "instance_id": instance_id,
-            }
+            try:
+                snapshot_id = await instance.sandbox.take_snapshot(name)
+                instance.touch()
+                _logger.info("snapshot_created", snapshot_name=name, instance_id=instance_id, snapshot_id=snapshot_id)
+            except SandboxError as e:
+                _logger.warning("snapshot_creation_failed", error=str(e))
+                msg = f"{_ERR_SNAPSHOT_CREATE_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "snapshot_id": snapshot_id,
+                    "name": name,
+                    "instance_id": instance_id,
+                }
 
     async def snapshot_restore(
         self,
@@ -1328,30 +1444,31 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If restore fails or not supported.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("snapshot_restore"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            raise ToolError(_ERR_QEMU_ONLY)
+            if instance.sandbox_type != "qemu":
+                raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            await instance.sandbox.restore_snapshot(snapshot_id)
-            instance.touch()
-            _logger.info("snapshot_restored", instance_id=instance_id, snapshot_id=snapshot_id)
-        except SandboxError as e:
-            _logger.warning("snapshot_restore_failed", error=str(e))
-            msg = f"{_ERR_SNAPSHOT_RESTORE_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "success": True,
-                "instance_id": instance_id,
-                "snapshot_id": snapshot_id,
-            }
+            try:
+                await instance.sandbox.restore_snapshot(snapshot_id)
+                instance.touch()
+                _logger.info("snapshot_restored", instance_id=instance_id, snapshot_id=snapshot_id)
+            except SandboxError as e:
+                _logger.warning("snapshot_restore_failed", error=str(e))
+                msg = f"{_ERR_SNAPSHOT_RESTORE_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "success": True,
+                    "instance_id": instance_id,
+                    "snapshot_id": snapshot_id,
+                }
 
     async def snapshot_list(
         self,
@@ -1368,33 +1485,34 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If listing fails or not supported.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("snapshot_list"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            raise ToolError(_ERR_QEMU_ONLY)
+            if instance.sandbox_type != "qemu":
+                raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            snapshots = await instance.sandbox.list_snapshots()
-            _logger.info(
-                "snapshots_listed",
-                instance_id=instance_id,
-                count=len(snapshots),
-            )
-        except SandboxError as e:
-            _logger.warning("snapshot_list_failed", error=str(e))
-            msg = f"{_ERR_SNAPSHOT_LIST_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "snapshots": snapshots,
-                "count": len(snapshots),
-            }
+            try:
+                snapshots = await instance.sandbox.list_snapshots()
+                _logger.info(
+                    "snapshots_listed",
+                    instance_id=instance_id,
+                    count=len(snapshots),
+                )
+            except SandboxError as e:
+                _logger.warning("snapshot_list_failed", error=str(e))
+                msg = f"{_ERR_SNAPSHOT_LIST_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "snapshots": snapshots,
+                    "count": len(snapshots),
+                }
 
     async def snapshot_delete(
         self,
@@ -1413,34 +1531,35 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If deletion fails or not supported.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("snapshot_delete"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            raise ToolError(_ERR_QEMU_ONLY)
+            if instance.sandbox_type != "qemu":
+                raise ToolError(_ERR_QEMU_ONLY)
 
-        try:
-            await instance.sandbox.delete_snapshot(name)
-            instance.touch()
-            _logger.info(
-                "snapshot_deleted",
-                instance_id=instance_id,
-                snapshot_name=name,
-            )
-        except SandboxError as e:
-            _logger.warning("snapshot_delete_failed", error=str(e))
-            msg = f"{_ERR_SNAPSHOT_DELETE_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "success": True,
-                "instance_id": instance_id,
-                "name": name,
-            }
+            try:
+                await instance.sandbox.delete_snapshot(name)
+                instance.touch()
+                _logger.info(
+                    "snapshot_deleted",
+                    instance_id=instance_id,
+                    snapshot_name=name,
+                )
+            except SandboxError as e:
+                _logger.warning("snapshot_delete_failed", error=str(e))
+                msg = f"{_ERR_SNAPSHOT_DELETE_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "success": True,
+                    "instance_id": instance_id,
+                    "name": name,
+                }
 
     async def cont(
         self,
@@ -1566,31 +1685,32 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be started or sandbox is not QEMU.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("pcap_start"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            msg = f"{_ERR_PCAP_START_FAILED}: {_ERR_QEMU_REQUIRED}"
-            raise ToolError(msg)
+            if instance.sandbox_type != "qemu":
+                msg = f"{_ERR_PCAP_START_FAILED}: {_ERR_QEMU_REQUIRED}"
+                raise ToolError(msg)
 
-        try:
-            capture_id = await instance.sandbox.start_pcap_capture()
-            instance.touch()
-            _logger.info("pcap_capture_started", instance_id=instance_id, capture_id=capture_id)
-        except SandboxError as e:
-            _logger.warning("pcap_start_failed", error=str(e))
-            msg = f"{_ERR_PCAP_START_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            self._active_pcap_captures[instance_id] = capture_id
-            return {
-                "instance_id": instance_id,
-                "capture_id": capture_id,
-            }
+            try:
+                capture_id = await instance.sandbox.start_pcap_capture()
+                instance.touch()
+                _logger.info("pcap_capture_started", instance_id=instance_id, capture_id=capture_id)
+            except SandboxError as e:
+                _logger.warning("pcap_start_failed", error=str(e))
+                msg = f"{_ERR_PCAP_START_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                self._active_pcap_captures[instance_id] = capture_id
+                return {
+                    "instance_id": instance_id,
+                    "capture_id": capture_id,
+                }
 
     async def pcap_stop(
         self,
@@ -1611,32 +1731,33 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be stopped.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("pcap_stop"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        out = Path(output_path) if output_path else None
+            out = Path(output_path) if output_path else None
 
-        try:
-            pcap_path = await instance.sandbox.stop_pcap_capture(capture_id, out)
-            instance.touch()
-            _logger.info("pcap_capture_stopped", instance_id=instance_id, path=str(pcap_path))
-        except SandboxError as e:
-            _logger.warning("pcap_stop_failed", error=str(e))
-            msg = f"{_ERR_PCAP_STOP_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            tracked = self._active_pcap_captures.get(instance_id)
-            if tracked == capture_id:
-                del self._active_pcap_captures[instance_id]
-            return {
-                "instance_id": instance_id,
-                "capture_id": capture_id,
-                "pcap_path": str(pcap_path),
-            }
+            try:
+                pcap_path = await instance.sandbox.stop_pcap_capture(capture_id, out)
+                instance.touch()
+                _logger.info("pcap_capture_stopped", instance_id=instance_id, path=str(pcap_path))
+            except SandboxError as e:
+                _logger.warning("pcap_stop_failed", error=str(e))
+                msg = f"{_ERR_PCAP_STOP_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                tracked = self._active_pcap_captures.get(instance_id)
+                if tracked == capture_id:
+                    del self._active_pcap_captures[instance_id]
+                return {
+                    "instance_id": instance_id,
+                    "capture_id": capture_id,
+                    "pcap_path": str(pcap_path),
+                }
 
     async def stop_pcap(self, instance_id: str) -> dict[str, Any]:
         """Stop any active PCAP capture for the given sandbox instance.
@@ -1738,32 +1859,33 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If screenshot cannot be captured or sandbox is not QEMU.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("screenshot"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            msg = f"{_ERR_SCREENSHOT_FAILED}: {_ERR_QEMU_REQUIRED}"
-            raise ToolError(msg)
+            if instance.sandbox_type != "qemu":
+                msg = f"{_ERR_SCREENSHOT_FAILED}: {_ERR_QEMU_REQUIRED}"
+                raise ToolError(msg)
 
-        out = Path(output_path) if output_path else None
+            out = Path(output_path) if output_path else None
 
-        try:
-            screenshot_path = await instance.sandbox.capture_screenshot(out)
-            instance.touch()
-            _logger.info("screenshot_captured", instance_id=instance_id, path=str(screenshot_path))
-        except SandboxError as e:
-            _logger.warning("screenshot_failed", error=str(e))
-            msg = f"{_ERR_SCREENSHOT_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "screenshot_path": str(screenshot_path),
-            }
+            try:
+                screenshot_path = await instance.sandbox.capture_screenshot(out)
+                instance.touch()
+                _logger.info("screenshot_captured", instance_id=instance_id, path=str(screenshot_path))
+            except SandboxError as e:
+                _logger.warning("screenshot_failed", error=str(e))
+                msg = f"{_ERR_SCREENSHOT_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "screenshot_path": str(screenshot_path),
+                }
 
     async def anti_evasion(
         self,
@@ -1782,31 +1904,32 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If anti-evasion cannot be applied or sandbox is not QEMU.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("anti_evasion"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            msg = f"{_ERR_ANTI_EVASION_FAILED}: {_ERR_QEMU_REQUIRED}"
-            raise ToolError(msg)
+            if instance.sandbox_type != "qemu":
+                msg = f"{_ERR_ANTI_EVASION_FAILED}: {_ERR_QEMU_REQUIRED}"
+                raise ToolError(msg)
 
-        try:
-            result = await instance.sandbox.apply_anti_evasion(profile)
-            instance.touch()
-            _logger.info("anti_evasion_applied", instance_id=instance_id, profile=profile)
-        except SandboxError as e:
-            _logger.warning("anti_evasion_failed", error=str(e))
-            msg = f"{_ERR_ANTI_EVASION_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "profile": profile,
-                "techniques": result,
-            }
+            try:
+                result = await instance.sandbox.apply_anti_evasion(profile)
+                instance.touch()
+                _logger.info("anti_evasion_applied", instance_id=instance_id, profile=profile)
+            except SandboxError as e:
+                _logger.warning("anti_evasion_failed", error=str(e))
+                msg = f"{_ERR_ANTI_EVASION_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "profile": profile,
+                    "techniques": result,
+                }
 
     async def memory_dump(
         self,
@@ -1825,32 +1948,33 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If memory dump fails or sandbox is not QEMU.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("memory_dump"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            msg = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_QEMU_REQUIRED}"
-            raise ToolError(msg)
+            if instance.sandbox_type != "qemu":
+                msg = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_QEMU_REQUIRED}"
+                raise ToolError(msg)
 
-        out = Path(output_path) if output_path else None
+            out = Path(output_path) if output_path else None
 
-        try:
-            dump_path = await instance.sandbox.dump_memory(out)
-            instance.touch()
-            _logger.info("memory_dumped", instance_id=instance_id, path=str(dump_path))
-        except SandboxError as e:
-            _logger.warning("memory_dump_failed", error=str(e))
-            msg = f"{_ERR_MEMORY_DUMP_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "dump_path": str(dump_path),
-            }
+            try:
+                dump_path = await instance.sandbox.dump_memory(out)
+                instance.touch()
+                _logger.info("memory_dumped", instance_id=instance_id, path=str(dump_path))
+            except SandboxError as e:
+                _logger.warning("memory_dump_failed", error=str(e))
+                msg = f"{_ERR_MEMORY_DUMP_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "dump_path": str(dump_path),
+                }
 
     async def extract_dropped_files(
         self,
@@ -1869,32 +1993,33 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If extraction fails or sandbox is not QEMU.
         """
-        manager = self.ensure_manager()
+        async with self._track_state("extract_dropped_files"):
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.sandbox_type != "qemu":
-            msg = f"{_ERR_EXTRACT_FILES_FAILED}: {_ERR_QEMU_REQUIRED}"
-            raise ToolError(msg)
+            if instance.sandbox_type != "qemu":
+                msg = f"{_ERR_EXTRACT_FILES_FAILED}: {_ERR_QEMU_REQUIRED}"
+                raise ToolError(msg)
 
-        out = Path(output_path) if output_path else None
+            out = Path(output_path) if output_path else None
 
-        try:
-            zip_path = await instance.sandbox.extract_dropped_files(out)
-            instance.touch()
-            _logger.info("dropped_files_extracted", instance_id=instance_id, path=str(zip_path))
-        except SandboxError as e:
-            _logger.warning("extract_dropped_files_failed", error=str(e))
-            msg = f"{_ERR_EXTRACT_FILES_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "zip_path": str(zip_path),
-            }
+            try:
+                zip_path = await instance.sandbox.extract_dropped_files(out)
+                instance.touch()
+                _logger.info("dropped_files_extracted", instance_id=instance_id, path=str(zip_path))
+            except SandboxError as e:
+                _logger.warning("extract_dropped_files_failed", error=str(e))
+                msg = f"{_ERR_EXTRACT_FILES_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "zip_path": str(zip_path),
+                }
 
     async def yara_scan(
         self,
@@ -1915,31 +2040,32 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If scan_target is invalid or scan fails.
         """
-        if scan_target not in _VALID_YARA_MODES:
-            msg = f"{_ERR_YARA_INVALID_MODE}: {scan_target!r}"
-            raise ToolError(msg)
+        async with self._track_state("yara_scan"):
+            if scan_target not in _VALID_YARA_MODES:
+                msg = f"{_ERR_YARA_INVALID_MODE}: {scan_target!r}"
+                raise ToolError(msg)
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        try:
-            matches = await instance.sandbox.yara_scan(rules_path, scan_target)
-            instance.touch()
-            _logger.info("yara_scan_completed", instance_id=instance_id, match_count=len(matches))
-        except SandboxError as e:
-            _logger.warning("yara_scan_failed", error=str(e))
-            msg = f"{_ERR_YARA_SCAN_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "matches": matches,
-                "match_count": len(matches),
-            }
+            try:
+                matches = await instance.sandbox.yara_scan(rules_path, scan_target)
+                instance.touch()
+                _logger.info("yara_scan_completed", instance_id=instance_id, match_count=len(matches))
+            except SandboxError as e:
+                _logger.warning("yara_scan_failed", error=str(e))
+                msg = f"{_ERR_YARA_SCAN_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "matches": matches,
+                    "match_count": len(matches),
+                }
 
     async def extract_iocs(self, instance_id: str) -> dict[str, Any]:
         """Extract IOCs from the last execution report.
@@ -1953,36 +2079,37 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If extraction fails or no report available.
         """
-        analysis = _get_analysis_module()
-        extract_fn = analysis.extract_iocs
+        async with self._track_state("extract_iocs"):
+            analysis = _get_analysis_module()
+            extract_fn = analysis.extract_iocs
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.last_report is None:
-            raise ToolError(_ERR_NO_REPORT)
+            if instance.last_report is None:
+                raise ToolError(_ERR_NO_REPORT)
 
-        try:
-            raw_iocs: list[dict[str, Any]] = extract_fn(instance.last_report)
-            _logger.info("iocs_extracted", instance_id=instance_id, count=len(raw_iocs))
-        except (ValueError, KeyError, TypeError) as e:
-            _logger.warning("ioc_extraction_failed", error=str(e))
-            msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
-            raise ToolError(msg) from e
-        except Exception as e:
-            _logger.warning("ioc_extraction_unexpected_error", error=str(e))
-            msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "iocs": [dict(ioc) for ioc in raw_iocs],
-                "count": len(raw_iocs),
-            }
+            try:
+                raw_iocs: list[dict[str, Any]] = extract_fn(instance.last_report)
+                _logger.info("iocs_extracted", instance_id=instance_id, count=len(raw_iocs))
+            except (ValueError, KeyError, TypeError) as e:
+                _logger.warning("ioc_extraction_failed", error=str(e))
+                msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
+                raise ToolError(msg) from e
+            except Exception as e:
+                _logger.warning("ioc_extraction_unexpected_error", error=str(e))
+                msg = f"{_ERR_IOC_EXTRACT_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "iocs": [dict(ioc) for ioc in raw_iocs],
+                    "count": len(raw_iocs),
+                }
 
     async def timeline(
         self,
@@ -2001,36 +2128,37 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If timeline generation fails or no report available.
         """
-        analysis = _get_analysis_module()
-        timeline_fn = analysis.generate_timeline
+        async with self._track_state("timeline"):
+            analysis = _get_analysis_module()
+            timeline_fn = analysis.generate_timeline
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.last_report is None:
-            raise ToolError(_ERR_NO_REPORT)
+            if instance.last_report is None:
+                raise ToolError(_ERR_NO_REPORT)
 
-        try:
-            raw_events: list[dict[str, Any]] = timeline_fn(instance.last_report, categories)
-            _logger.info("timeline_generated", instance_id=instance_id, event_count=len(raw_events))
-        except (ValueError, KeyError, TypeError) as e:
-            _logger.warning("timeline_generation_failed", error=str(e))
-            msg = f"{_ERR_TIMELINE_FAILED}: {e}"
-            raise ToolError(msg) from e
-        except Exception as e:
-            _logger.warning("timeline_unexpected_error", error=str(e))
-            msg = f"{_ERR_TIMELINE_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "events": [dict(ev) for ev in raw_events],
-                "count": len(raw_events),
-            }
+            try:
+                raw_events: list[dict[str, Any]] = timeline_fn(instance.last_report, categories)
+                _logger.info("timeline_generated", instance_id=instance_id, event_count=len(raw_events))
+            except (ValueError, KeyError, TypeError) as e:
+                _logger.warning("timeline_generation_failed", error=str(e))
+                msg = f"{_ERR_TIMELINE_FAILED}: {e}"
+                raise ToolError(msg) from e
+            except Exception as e:
+                _logger.warning("timeline_unexpected_error", error=str(e))
+                msg = f"{_ERR_TIMELINE_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "events": [dict(ev) for ev in raw_events],
+                    "count": len(raw_events),
+                }
 
     async def detect_behaviors(
         self,
@@ -2056,56 +2184,57 @@ class SandboxBridge(ToolBridgeBase):
                 is not valid YAML, the YAML top-level is not a list,
                 detection fails, or no report is available.
         """
-        analysis = _get_analysis_module()
-        behaviors_fn = analysis.match_behaviors
+        async with self._track_state("detect_behaviors"):
+            analysis = _get_analysis_module()
+            behaviors_fn = analysis.match_behaviors
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
-
-        if instance.last_report is None:
-            raise ToolError(_ERR_NO_REPORT)
-
-        custom_rules: list[dict[str, Any]] | None = None
-        if custom_rules_path is not None:
-            rules_file = Path(custom_rules_path)
-            if not await asyncio.to_thread(rules_file.exists):
-                msg = f"{_ERR_RULES_NOT_FOUND}: {custom_rules_path}"
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
                 raise ToolError(msg)
 
-            raw_text = await asyncio.to_thread(rules_file.read_text, encoding="utf-8")
+            if instance.last_report is None:
+                raise ToolError(_ERR_NO_REPORT)
+
+            custom_rules: list[dict[str, Any]] | None = None
+            if custom_rules_path is not None:
+                rules_file = Path(custom_rules_path)
+                if not await asyncio.to_thread(rules_file.exists):
+                    msg = f"{_ERR_RULES_NOT_FOUND}: {custom_rules_path}"
+                    raise ToolError(msg)
+
+                raw_text = await asyncio.to_thread(rules_file.read_text, encoding="utf-8")
+                try:
+                    loaded: Any = yaml.safe_load(raw_text)
+                except yaml.YAMLError as e:
+                    msg = f"{_ERR_RULES_INVALID}: {e}"
+                    raise ToolError(msg) from e
+
+                if not isinstance(loaded, list):
+                    msg = f"{_ERR_RULES_INVALID}: expected a list, got {type(loaded).__name__}"
+                    raise ToolError(msg)
+
+                custom_rules = cast("list[dict[str, Any]]", loaded)
+
             try:
-                loaded: Any = yaml.safe_load(raw_text)
-            except yaml.YAMLError as e:
-                msg = f"{_ERR_RULES_INVALID}: {e}"
+                raw_matches: list[dict[str, Any]] = behaviors_fn(instance.last_report, custom_rules)
+                _logger.info("behaviors_detected", instance_id=instance_id, match_count=len(raw_matches))
+            except (ValueError, KeyError, TypeError) as e:
+                _logger.warning("behavior_detection_failed", error=str(e))
+                msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
                 raise ToolError(msg) from e
-
-            if not isinstance(loaded, list):
-                msg = f"{_ERR_RULES_INVALID}: expected a list, got {type(loaded).__name__}"
-                raise ToolError(msg)
-
-            custom_rules = cast("list[dict[str, Any]]", loaded)
-
-        try:
-            raw_matches: list[dict[str, Any]] = behaviors_fn(instance.last_report, custom_rules)
-            _logger.info("behaviors_detected", instance_id=instance_id, match_count=len(raw_matches))
-        except (ValueError, KeyError, TypeError) as e:
-            _logger.warning("behavior_detection_failed", error=str(e))
-            msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
-            raise ToolError(msg) from e
-        except Exception as e:
-            _logger.warning("behavior_detection_unexpected_error", error=str(e))
-            msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "matches": [dict(m) for m in raw_matches],
-                "count": len(raw_matches),
-            }
+            except Exception as e:
+                _logger.warning("behavior_detection_unexpected_error", error=str(e))
+                msg = f"{_ERR_BEHAVIOR_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "matches": [dict(m) for m in raw_matches],
+                    "count": len(raw_matches),
+                }
 
     async def detect_c2(self, instance_id: str) -> dict[str, Any]:
         """Detect C2 communication patterns in the last execution report.
@@ -2119,36 +2248,37 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If detection fails or no report available.
         """
-        analysis = _get_analysis_module()
-        c2_fn = analysis.detect_c2_patterns
+        async with self._track_state("detect_c2"):
+            analysis = _get_analysis_module()
+            c2_fn = analysis.detect_c2_patterns
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance = await manager.get(instance_id)
-        if instance is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
-            raise ToolError(msg)
+            instance = await manager.get(instance_id)
+            if instance is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+                raise ToolError(msg)
 
-        if instance.last_report is None:
-            raise ToolError(_ERR_NO_REPORT)
+            if instance.last_report is None:
+                raise ToolError(_ERR_NO_REPORT)
 
-        try:
-            patterns: list[dict[str, Any]] = c2_fn(instance.last_report.network_activity)
-            _logger.info("c2_patterns_detected", instance_id=instance_id, pattern_count=len(patterns))
-        except (ValueError, KeyError, TypeError) as e:
-            _logger.warning("c2_detection_failed", error=str(e))
-            msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
-            raise ToolError(msg) from e
-        except Exception as e:
-            _logger.warning("c2_detection_unexpected_error", error=str(e))
-            msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id": instance_id,
-                "patterns": patterns,
-                "count": len(patterns),
-            }
+            try:
+                patterns: list[dict[str, Any]] = c2_fn(instance.last_report.network_activity)
+                _logger.info("c2_patterns_detected", instance_id=instance_id, pattern_count=len(patterns))
+            except (ValueError, KeyError, TypeError) as e:
+                _logger.warning("c2_detection_failed", error=str(e))
+                msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
+                raise ToolError(msg) from e
+            except Exception as e:
+                _logger.warning("c2_detection_unexpected_error", error=str(e))
+                msg = f"{_ERR_C2_DETECT_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id": instance_id,
+                    "patterns": patterns,
+                    "count": len(patterns),
+                }
 
     async def diff(
         self,
@@ -2167,46 +2297,47 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If comparison fails or reports unavailable.
         """
-        analysis = _get_analysis_module()
-        diff_fn = analysis.diff_reports
+        async with self._track_state("diff"):
+            analysis = _get_analysis_module()
+            diff_fn = analysis.diff_reports
 
-        manager = self.ensure_manager()
+            manager = self.ensure_manager()
 
-        instance_a = await manager.get(instance_id_a)
-        if instance_a is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_a}"
-            raise ToolError(msg)
+            instance_a = await manager.get(instance_id_a)
+            if instance_a is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_a}"
+                raise ToolError(msg)
 
-        instance_b = await manager.get(instance_id_b)
-        if instance_b is None:
-            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_b}"
-            raise ToolError(msg)
+            instance_b = await manager.get(instance_id_b)
+            if instance_b is None:
+                msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id_b}"
+                raise ToolError(msg)
 
-        if instance_a.last_report is None:
-            msg = f"{_ERR_NO_REPORT} (instance {instance_id_a})"
-            raise ToolError(msg)
+            if instance_a.last_report is None:
+                msg = f"{_ERR_NO_REPORT} (instance {instance_id_a})"
+                raise ToolError(msg)
 
-        if instance_b.last_report is None:
-            msg = f"{_ERR_NO_REPORT} (instance {instance_id_b})"
-            raise ToolError(msg)
+            if instance_b.last_report is None:
+                msg = f"{_ERR_NO_REPORT} (instance {instance_id_b})"
+                raise ToolError(msg)
 
-        try:
-            result: dict[str, Any] = diff_fn(instance_a.last_report, instance_b.last_report)
-            _logger.info("reports_diffed", instance_a=instance_id_a, instance_b=instance_id_b)
-        except (ValueError, KeyError, TypeError) as e:
-            _logger.warning("diff_failed", error=str(e))
-            msg = f"{_ERR_DIFF_FAILED}: {e}"
-            raise ToolError(msg) from e
-        except Exception as e:
-            _logger.warning("diff_unexpected_error", error=str(e))
-            msg = f"{_ERR_DIFF_FAILED}: {e}"
-            raise ToolError(msg) from e
-        else:
-            return {
-                "instance_id_a": instance_id_a,
-                "instance_id_b": instance_id_b,
-                "diff": result,
-            }
+            try:
+                result: dict[str, Any] = diff_fn(instance_a.last_report, instance_b.last_report)
+                _logger.info("reports_diffed", instance_a=instance_id_a, instance_b=instance_id_b)
+            except (ValueError, KeyError, TypeError) as e:
+                _logger.warning("diff_failed", error=str(e))
+                msg = f"{_ERR_DIFF_FAILED}: {e}"
+                raise ToolError(msg) from e
+            except Exception as e:
+                _logger.warning("diff_unexpected_error", error=str(e))
+                msg = f"{_ERR_DIFF_FAILED}: {e}"
+                raise ToolError(msg) from e
+            else:
+                return {
+                    "instance_id_a": instance_id_a,
+                    "instance_id_b": instance_id_b,
+                    "diff": result,
+                }
 
     async def get_vnc_port(self, instance_id: str) -> int:
         """Get the VNC port for a QEMU sandbox instance.

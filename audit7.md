@@ -202,3 +202,25 @@
 - **File:** `src/intellicrack/ui/panels/process_panel/_threads_tab.py`
 - **Lines:** 96-106, 353-384
 - **Pattern:** Cat 11
+
+
+# Findings: bridges-sandbox (from audit2.md)
+
+## Summary
+
+1 verifier-confirmed PARTIAL finding from audit2.md / section `bridges-sandbox`.
+
+## Findings
+
+### Category 5 - State Drift
+
+#### F-0010 - `BridgeState` updated by only 4 methods; `last_error` stays stale across the rest [fixed: audit7/u11-state-tracker]
+
+- **Source audit:** audit2.md / `bridges-sandbox`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/sandbox_bridge.py`
+- **Lines:** entire bridge class
+- **Pattern:** Cat 5
+- **Why this is non-functional:** `BridgeState` was updated in exactly four methods: `initialize`, `create`, `run_binary`, `execute`. Fifteen-plus other bridge methods (`copy_to`, `copy_from`, `snapshot_create/restore/list/delete`, `pcap_start/stop`, `screenshot`, `anti_evasion`, `memory_dump`, `extract_dropped_files`, `yara_scan`, `extract_iocs`, `timeline`, `detect_behaviors`, `detect_c2`, `diff`) did not touch `BridgeState`. `last_error` was never cleared on success in those paths, so GUI / orchestrator consumers reading `bridge.state.last_error` after a successful op could see whatever the previous error was.
+- **Suggested remediation summary:** Wrap each public bridge method's success path with `self._state.last_error = None` (or use a shared decorator / context manager that sets `last_error` to the exception text on failure and clears it on success). Update `target_path`, `binary_loaded`, and `target_pid` consistently from every method that changes those fields.
+- **Fix:** Introduced `_StateTracker` async context manager and `_set_state_outcome` helper. Each affected method is wrapped in `async with self._track_state("op"):` so `last_error` is cleared on success and set to the exception text on failure, while preserving the rest of ``BridgeState`` (``connected``, ``tool_running``, ``binary_loaded``, ``process_attached``, ``target_path``, ``target_pid``). Regression coverage in `tests/test_bridges/test_sandbox_bridge.py::TestF0010LastErrorLifecycleSymmetric` drives a failing op then a passing op for every wrapped method and asserts `last_error` is set then cleared.

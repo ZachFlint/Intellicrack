@@ -27,6 +27,7 @@ from intellicrack.core.types import SandboxError, ToolError
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from pathlib import Path
 
 
@@ -783,6 +784,614 @@ class TestF0010BridgeStateUpdates:
 
         asyncio.run(run())
         assert bridge.state.last_error is not None
+
+
+class TestF0010LastErrorLifecycleSymmetric:
+    """F-0010: last_error must be cleared on success across every wrapped method.
+
+    Regression suite covering the asymmetric ``BridgeState.last_error``
+    defect. For each public bridge method listed in the audit finding,
+    the suite drives a failing call (which should set ``last_error``),
+    then a passing call (which should clear it). On main the second
+    assertion fails because ``last_error`` is never reset; on the branch
+    introducing the state tracker both assertions pass.
+    """
+
+    @staticmethod
+    def _make_mock_instance(sandbox_type: str = "qemu", *, with_report: bool = False) -> MagicMock:
+        """Build a stand-in :class:`SandboxInstance` for bridge calls.
+
+        Args:
+            sandbox_type: Value to expose on the ``sandbox_type`` attribute.
+            with_report: Whether to attach a non-``None`` ``last_report``
+                so analysis methods proceed past the report-presence
+                guard clause.
+
+        Returns:
+            MagicMock: Mock instance with all sandbox attributes pre-wired
+            as ``AsyncMock`` coroutines so any awaited call resolves.
+        """
+        instance = MagicMock()
+        instance.sandbox_type = sandbox_type
+        instance.touch = MagicMock()
+        if with_report:
+            instance.last_report = MagicMock()
+            instance.last_report.network_activity = []
+        else:
+            instance.last_report = None
+        return instance
+
+    @staticmethod
+    def _run_failure_then_success(
+        bridge: SandboxBridge,
+        failure_setup: Callable[[AsyncMock], None],
+        success_setup: Callable[[AsyncMock], None],
+        failure_call: Callable[[SandboxBridge], Awaitable[object]],
+        success_call: Callable[[SandboxBridge], Awaitable[object]],
+        failure_substring: str,
+    ) -> None:
+        """Drive a failing op followed by a passing op and assert symmetry.
+
+        Args:
+            bridge: The bridge under test.
+            failure_setup: Callable taking the patched manager and configuring
+                it for the failure path.
+            success_setup: Callable taking the patched manager and configuring
+                it for the success path.
+            failure_call: Async callable that invokes the failing bridge method.
+            success_call: Async callable that invokes the succeeding bridge method.
+            failure_substring: Substring expected inside ``state.last_error``
+                after the failing call.
+        """
+
+        async def fail_then_recover() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                failure_setup(manager)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError):
+                    await failure_call(bridge)
+
+            assert bridge.state.last_error is not None
+            assert failure_substring in bridge.state.last_error, bridge.state.last_error
+
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                success_setup(manager)
+                mock_mgr.return_value = manager
+                await success_call(bridge)
+
+            assert bridge.state.last_error is None, f"last_error not cleared after successful call (was: {bridge.state.last_error!r})"
+
+        asyncio.run(fail_then_recover())
+
+    def test_copy_to_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Copy_to clears last_error after a successful call following a failure."""
+        bridge = SandboxBridge()
+
+        source = tmp_path / "file.bin"
+        source.write_bytes(b"data")
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.copy_to_sandbox = AsyncMock(side_effect=SandboxError("copy failed"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.copy_to_sandbox = AsyncMock(return_value=None)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.copy_to("inst", str(source), "/dest"),
+            lambda b: b.copy_to("inst", str(source), "/dest"),
+            "copy failed",
+        )
+
+    def test_copy_from_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Copy_from clears last_error after a successful call following a failure."""
+        bridge = SandboxBridge()
+        dest = tmp_path / "out.bin"
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.copy_from_sandbox = AsyncMock(side_effect=SandboxError("read failed"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.copy_from_sandbox = AsyncMock(return_value=None)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.copy_from("inst", "/src", str(dest)),
+            lambda b: b.copy_from("inst", "/src", str(dest)),
+            "read failed",
+        )
+
+    def test_snapshot_create_clears_last_error_on_success(self) -> None:
+        """Snapshot_create clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.take_snapshot = AsyncMock(side_effect=SandboxError("snap fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.take_snapshot = AsyncMock(return_value="snap-1")
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.snapshot_create("inst", "snap"),
+            lambda b: b.snapshot_create("inst", "snap"),
+            "snap fail",
+        )
+
+    def test_snapshot_restore_clears_last_error_on_success(self) -> None:
+        """Snapshot_restore clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.restore_snapshot = AsyncMock(side_effect=SandboxError("restore fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.restore_snapshot = AsyncMock(return_value=None)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.snapshot_restore("inst", "snap-1"),
+            lambda b: b.snapshot_restore("inst", "snap-1"),
+            "restore fail",
+        )
+
+    def test_snapshot_list_clears_last_error_on_success(self) -> None:
+        """Snapshot_list clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.list_snapshots = AsyncMock(side_effect=SandboxError("list fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.list_snapshots = AsyncMock(return_value=[])
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.snapshot_list("inst"),
+            lambda b: b.snapshot_list("inst"),
+            "list fail",
+        )
+
+    def test_snapshot_delete_clears_last_error_on_success(self) -> None:
+        """Snapshot_delete clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.delete_snapshot = AsyncMock(side_effect=SandboxError("del fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.delete_snapshot = AsyncMock(return_value=None)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.snapshot_delete("inst", "snap"),
+            lambda b: b.snapshot_delete("inst", "snap"),
+            "del fail",
+        )
+
+    def test_pcap_start_clears_last_error_on_success(self) -> None:
+        """Pcap_start clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.start_pcap_capture = AsyncMock(side_effect=SandboxError("pcap fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.start_pcap_capture = AsyncMock(return_value="cap-1")
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.pcap_start("inst"),
+            lambda b: b.pcap_start("inst"),
+            "pcap fail",
+        )
+
+    def test_pcap_stop_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Pcap_stop clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+        out = tmp_path / "cap.pcap"
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.stop_pcap_capture = AsyncMock(side_effect=SandboxError("stop fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.stop_pcap_capture = AsyncMock(return_value=out)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.pcap_stop("inst", "cap-1"),
+            lambda b: b.pcap_stop("inst", "cap-1"),
+            "stop fail",
+        )
+
+    def test_screenshot_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Screenshot clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+        out = tmp_path / "shot.png"
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.capture_screenshot = AsyncMock(side_effect=SandboxError("shot fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.capture_screenshot = AsyncMock(return_value=out)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.screenshot("inst"),
+            lambda b: b.screenshot("inst"),
+            "shot fail",
+        )
+
+    def test_anti_evasion_clears_last_error_on_success(self) -> None:
+        """Anti_evasion clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.apply_anti_evasion = AsyncMock(side_effect=SandboxError("evasion fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.apply_anti_evasion = AsyncMock(return_value={"applied": True})
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.anti_evasion("inst"),
+            lambda b: b.anti_evasion("inst"),
+            "evasion fail",
+        )
+
+    def test_memory_dump_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Memory_dump clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+        out = tmp_path / "mem.dmp"
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.dump_memory = AsyncMock(side_effect=SandboxError("dump fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.dump_memory = AsyncMock(return_value=out)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.memory_dump("inst"),
+            lambda b: b.memory_dump("inst"),
+            "dump fail",
+        )
+
+    def test_extract_dropped_files_clears_last_error_on_success(self, tmp_path: Path) -> None:
+        """Extract_dropped_files clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+        zip_out = tmp_path / "dropped.zip"
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.extract_dropped_files = AsyncMock(side_effect=SandboxError("zip fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.extract_dropped_files = AsyncMock(return_value=zip_out)
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.extract_dropped_files("inst"),
+            lambda b: b.extract_dropped_files("inst"),
+            "zip fail",
+        )
+
+    def test_yara_scan_clears_last_error_on_success(self) -> None:
+        """Yara_scan clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        def fail(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.yara_scan = AsyncMock(side_effect=SandboxError("yara fail"))
+            manager.get = AsyncMock(return_value=instance)
+
+        def ok(manager: AsyncMock) -> None:
+            instance = self._make_mock_instance()
+            instance.sandbox.yara_scan = AsyncMock(return_value=[])
+            manager.get = AsyncMock(return_value=instance)
+
+        self._run_failure_then_success(
+            bridge,
+            fail,
+            ok,
+            lambda b: b.yara_scan("inst"),
+            lambda b: b.yara_scan("inst"),
+            "yara fail",
+        )
+
+    def test_extract_iocs_clears_last_error_on_success(self) -> None:
+        """Extract_iocs clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        async def fail_then_recover() -> None:
+            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "extract_iocs", side_effect=ValueError("ioc fail")),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError, match="ioc fail"):
+                    await bridge.extract_iocs("inst")
+
+            assert bridge.state.last_error is not None
+            assert "ioc fail" in bridge.state.last_error
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "extract_iocs", return_value=[]),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                await bridge.extract_iocs("inst")
+
+            assert bridge.state.last_error is None, bridge.state.last_error
+
+        asyncio.run(fail_then_recover())
+
+    def test_timeline_clears_last_error_on_success(self) -> None:
+        """Timeline clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        async def fail_then_recover() -> None:
+            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "generate_timeline", side_effect=ValueError("tl fail")),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError, match="tl fail"):
+                    await bridge.timeline("inst")
+
+            assert bridge.state.last_error is not None
+            assert "tl fail" in bridge.state.last_error
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "generate_timeline", return_value=[]),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                await bridge.timeline("inst")
+
+            assert bridge.state.last_error is None
+
+        asyncio.run(fail_then_recover())
+
+    def test_detect_behaviors_clears_last_error_on_success(self) -> None:
+        """Detect_behaviors clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        async def fail_then_recover() -> None:
+            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "match_behaviors", side_effect=ValueError("beh fail")),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError, match="beh fail"):
+                    await bridge.detect_behaviors("inst")
+
+            assert bridge.state.last_error is not None
+            assert "beh fail" in bridge.state.last_error
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "match_behaviors", return_value=[]),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                await bridge.detect_behaviors("inst")
+
+            assert bridge.state.last_error is None
+
+        asyncio.run(fail_then_recover())
+
+    def test_detect_c2_clears_last_error_on_success(self) -> None:
+        """Detect_c2 clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        async def fail_then_recover() -> None:
+            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "detect_c2_patterns", side_effect=ValueError("c2 fail")),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError, match="c2 fail"):
+                    await bridge.detect_c2("inst")
+
+            assert bridge.state.last_error is not None
+            assert "c2 fail" in bridge.state.last_error
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "detect_c2_patterns", return_value=[]),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=self._make_mock_instance(with_report=True))
+                mock_mgr.return_value = manager
+                await bridge.detect_c2("inst")
+
+            assert bridge.state.last_error is None
+
+        asyncio.run(fail_then_recover())
+
+    def test_diff_clears_last_error_on_success(self) -> None:
+        """Diff clears last_error after success following a failure."""
+        bridge = SandboxBridge()
+
+        async def fail_then_recover() -> None:
+            analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
+            inst_a = self._make_mock_instance(with_report=True)
+            inst_b = self._make_mock_instance(with_report=True)
+
+            def get_side_effect(instance_id: str) -> MagicMock:
+                return inst_a if instance_id == "a" else inst_b
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "diff_reports", side_effect=ValueError("diff fail")),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(side_effect=get_side_effect)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError, match="diff fail"):
+                    await bridge.diff("a", "b")
+
+            assert bridge.state.last_error is not None
+            assert "diff fail" in bridge.state.last_error
+
+            with (
+                patch.object(bridge, "ensure_manager") as mock_mgr,
+                patch.object(analysis_mod, "diff_reports", return_value={}),
+            ):
+                manager = AsyncMock()
+                manager.get = AsyncMock(side_effect=get_side_effect)
+                mock_mgr.return_value = manager
+                await bridge.diff("a", "b")
+
+            assert bridge.state.last_error is None
+
+        asyncio.run(fail_then_recover())
+
+    def test_state_preserves_target_path_across_recovery(self, tmp_path: Path) -> None:
+        """A successful op after run_binary preserves target_path / binary_loaded."""
+        bridge = SandboxBridge()
+        binary = tmp_path / "tracked.exe"
+        binary.write_bytes(b"MZ" + b"\x00" * 62)
+
+        mock_instance = MagicMock()
+        mock_instance.id = "rb-id"
+        mock_report = MagicMock()
+        mock_report.result = "success"
+        mock_report.exit_code = 0
+        mock_report.stdout = ""
+        mock_report.stderr = ""
+        mock_report.duration_seconds = 1.0
+        for attr in [
+            "file_changes",
+            "registry_changes",
+            "network_activity",
+            "process_activity",
+            "api_calls",
+            "service_changes",
+            "kernel_objects",
+            "dll_loads",
+            "injection_events",
+            "resource_samples",
+            "clipboard_events",
+        ]:
+            setattr(mock_report, attr, [])
+
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.run_binary = AsyncMock(return_value=(mock_instance, mock_report))
+                mock_mgr.return_value = manager
+                await bridge.run_binary(str(binary))
+
+            assert bridge.state.binary_loaded is True
+            assert bridge.state.target_path is not None
+
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                inst = MagicMock()
+                inst.sandbox_type = "qemu"
+                inst.touch = MagicMock()
+                inst.sandbox.take_snapshot = AsyncMock(return_value="snap-id")
+                manager.get = AsyncMock(return_value=inst)
+                mock_mgr.return_value = manager
+                await bridge.snapshot_create("inst", "snap")
+
+            assert bridge.state.binary_loaded is True
+            assert bridge.state.target_path is not None
+            assert bridge.state.last_error is None
+
+        asyncio.run(run())
 
 
 class TestF0011ToolDefDefaults:
