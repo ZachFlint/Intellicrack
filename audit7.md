@@ -139,6 +139,16 @@
 - **Pattern:** Cat 1
 - **Why this is non-functional:** `GuestAgentClient.is_connected` is permanently `False` for the lifetime of the sandbox. Every code path guarded by `self._agent.is_connected` is dead. The "fallback" path in `run_command` writes a script to `<shared>/input/exec_*.cmd` and polls `<shared>/output/result_*.txt`, but nothing in the guest watches the input folder.
 
+#### F-0003 - `_poll_for_result` fallback returns empty stdout/stderr [fixed: audit7/u08-qemu-poll-sidecars]
+
+- **Source audit:** audit4.md / `sandbox-py`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/sandbox/qemu.py`
+- **Lines:** ~2490-2525 (`_poll_for_result`); ~2467-2488 (`_generate_execution_script`)
+- **Pattern:** Cat 11
+- **Why this is non-functional:** When the guest agent is unreachable, `run_command` falls back to a file-polling path: writes a script and watches a result file. The generated execution script only writes the exit code to the result file. `_poll_for_result` returns `(exit_code, "", "")`. Any command run through the fallback path returns meaningless empty stdout and stderr — callers cannot diagnose failures or capture analysis output.
+- **Remediation:** `_generate_execution_script` now redirects stdout and stderr to per-invocation sidecar files (`<id>.stdout`, `<id>.stderr`) under the guest's shared `output` folder before writing the exit-code sentinel. `_poll_for_result` now reads both sidecars (via `_read_sidecar`) once the exit-code file appears and returns their content. `_cleanup_result_artifacts` removes the script, result, and sidecar files after a successful read so the shared folder does not accumulate per-invocation artefacts.
+
 ### Category 4 - Wrong Field Returned
 #### F-0006 - No mechanism to start the guest agent script [fixed: audit7/u06-guest-agent-bootstrap]
 
