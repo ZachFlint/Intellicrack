@@ -18,6 +18,7 @@ import sys
 import tempfile
 import time
 import zipfile
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, cast
@@ -101,12 +102,234 @@ _ERR_PCAP_NOT_ACTIVE = "No active packet capture with this ID"
 _ERR_SCREENSHOT_FAILED = "Screenshot capture failed"
 _ERR_MEMORY_DUMP_FAILED = "Memory dump failed"
 _ERR_MEMORY_DUMP_NOT_WINDOWS = "Memory dump is only supported on Windows"
+_ERR_MEMORY_DUMP_TARGET_PID_REQUIRED = (
+    "target_pid is required for Windows Sandbox memory_dump: MiniDumpWriteDump must target a specific guest process"
+)
+_ERR_MEMORY_DUMP_TARGET_PID_INVALID = "target_pid must be a positive integer guest PID"
 _ERR_EXTRACT_FILES_FAILED = "Dropped file extraction failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_DISPATCHER_NOT_READY = "Sandbox dispatcher did not signal ready"
 _ERR_SCRIPTS_NOT_FOUND = "Sandbox monitor scripts directory not found"
+_ERR_WMI_HIJACK_COMPILE_FAILED = "Failed to compile anti-evasion MOF via mofcomp"
+_ERR_WMI_HIJACK_VERIFY_FAILED = "WMI hijack verification did not return spoofed values"
+_ERR_WMI_HIJACK_NO_SHARED = "Cannot stage anti-evasion MOF: shared folder not initialized"
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent / "scripts"
+
+
+@dataclass(frozen=True)
+class _AntiEvasionProfile:
+    """Spoofed hardware identity values for a single anti-evasion profile.
+
+    Attributes:
+        name: Profile identifier.
+        manufacturer: Win32_ComputerSystem.Manufacturer value (also used as
+            Win32_ComputerSystemProduct.Vendor via the :attr:`vendor` property).
+        model: Win32_ComputerSystem.Model value.
+        product_name: Win32_ComputerSystemProduct.Name value.
+        identifying_number: Win32_ComputerSystemProduct.IdentifyingNumber value (chassis serial).
+        bios_vendor: Spoofed BIOS vendor reported by Win32_BIOS.
+        bios_version: Spoofed BIOS version string.
+        domain: Win32_ComputerSystem.Domain (typically WORKGROUP for sandboxes).
+        number_of_processors: Win32_ComputerSystem.NumberOfProcessors.
+        number_of_logical_processors: Win32_ComputerSystem.NumberOfLogicalProcessors.
+        total_physical_memory: Win32_ComputerSystem.TotalPhysicalMemory in bytes.
+    """
+
+    name: str
+    manufacturer: str
+    model: str
+    product_name: str
+    identifying_number: str
+    bios_vendor: str
+    bios_version: str
+    domain: str = "WORKGROUP"
+    number_of_processors: int = 1
+    number_of_logical_processors: int = 4
+    total_physical_memory: int = 17_179_869_184
+
+    @property
+    def vendor(self) -> str:
+        """Return the Win32_ComputerSystemProduct.Vendor spoofed value.
+
+        Returns:
+            str: For the built-in profiles this mirrors :attr:`manufacturer`.
+        """
+        return self.manufacturer
+
+
+def resolve_anti_evasion_profile(profile: str) -> _AntiEvasionProfile:
+    """Return spoofed hardware identity values for ``profile``.
+
+    Args:
+        profile: Profile name (``default``, ``workstation``, or ``laptop``).
+            Unknown values fall back to ``default``.
+
+    Returns:
+        _AntiEvasionProfile: Populated profile values used to drive WMI hijacking.
+    """
+    bios_major = secrets.randbelow(30) + 1
+    bios_minor = secrets.randbelow(10)
+    bios_version = f"A{bios_major}.{bios_minor}"
+    bios_vendor = "American Megatrends Inc."
+
+    if profile == "workstation":
+        return _AntiEvasionProfile(
+            name="workstation",
+            manufacturer="Dell Inc.",
+            model="OptiPlex 7090",
+            product_name="OptiPlex 7090",
+            identifying_number=f"SVC{secrets.token_hex(5).upper()}",
+            bios_vendor=bios_vendor,
+            bios_version=bios_version,
+        )
+    if profile == "laptop":
+        return _AntiEvasionProfile(
+            name="laptop",
+            manufacturer="Lenovo",
+            model="ThinkPad T14 Gen 3",
+            product_name="ThinkPad T14 Gen 3",
+            identifying_number=f"PF{secrets.token_hex(5).upper()}",
+            bios_vendor=bios_vendor,
+            bios_version=bios_version,
+        )
+    return _AntiEvasionProfile(
+        name="default",
+        manufacturer="HP",
+        model="HP EliteDesk 800 G6",
+        product_name="HP EliteDesk 800 G6",
+        identifying_number=f"MXL{secrets.token_hex(5).upper()}",
+        bios_vendor=bios_vendor,
+        bios_version=bios_version,
+    )
+
+
+def build_anti_evasion_mof(profile: _AntiEvasionProfile, machine_name: str) -> str:
+    """Build a MOF document that hijacks WMI hardware identity classes.
+
+    The MOF redefines ``Win32_ComputerSystem`` and
+    ``Win32_ComputerSystemProduct`` as static classes (``[Static]`` qualifier)
+    overriding the dynamic CIMV2 provider classes so the spoofed instance values
+    are returned to queries such as ``Get-CimInstance Win32_ComputerSystem``.
+
+    Args:
+        profile: Anti-evasion profile providing spoofed identity values.
+        machine_name: ``ComputerSystem.Name`` value (typically the spoofed hostname).
+
+    Returns:
+        str: MOF source text suitable for ``mofcomp.exe``.
+    """
+    cs_props = (
+        f'    [Key] string Name = "{machine_name}";\n'
+        f'    string Manufacturer = "{profile.manufacturer}";\n'
+        f'    string Model = "{profile.model}";\n'
+        f'    string Domain = "{profile.domain}";\n'
+        '    string SystemType = "x64-based PC";\n'
+        "    string DNSHostName;\n"
+        f"    uint32 NumberOfProcessors = {profile.number_of_processors};\n"
+        f"    uint32 NumberOfLogicalProcessors = {profile.number_of_logical_processors};\n"
+        f"    uint64 TotalPhysicalMemory = {profile.total_physical_memory};\n"
+        "    boolean PartOfDomain = FALSE;\n"
+    )
+    csp_props = (
+        f'    [Key] string IdentifyingNumber = "{profile.identifying_number}";\n'
+        f'    [Key] string Name = "{profile.product_name}";\n'
+        '    [Key] string Version = "1.0";\n'
+        f'    string Vendor = "{profile.vendor}";\n'
+        f'    string UUID = "{secrets.token_hex(4)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(6)}";\n'
+    )
+    bios_props = (
+        f'    [Key] string Name = "{profile.bios_version}";\n'
+        f'    [Key] string SoftwareElementID = "{profile.bios_version}";\n'
+        "    [Key] uint16 SoftwareElementState = 3;\n"
+        '    [Key] string TargetOperatingSystem = "0";\n'
+        f'    [Key] string Version = "{profile.bios_version}";\n'
+        f'    string Manufacturer = "{profile.bios_vendor}";\n'
+        f'    string SMBIOSBIOSVersion = "{profile.bios_version}";\n'
+        "    boolean PrimaryBIOS = TRUE;\n"
+    )
+
+    return (
+        "#pragma autorecover\n"
+        '#pragma namespace("\\\\\\\\.\\\\root\\\\cimv2")\n'
+        "\n"
+        '#pragma deleteclass("Win32_ComputerSystem", NOFAIL)\n'
+        "[Static, dynamic: ToInstance ToSubClass DisableOverride]\n"
+        "class Win32_ComputerSystem {\n"
+        f"{cs_props}"
+        "};\n"
+        "instance of Win32_ComputerSystem {\n"
+        f'    Name = "{machine_name}";\n'
+        f'    Manufacturer = "{profile.manufacturer}";\n'
+        f'    Model = "{profile.model}";\n'
+        f'    Domain = "{profile.domain}";\n'
+        '    SystemType = "x64-based PC";\n'
+        f"    NumberOfProcessors = {profile.number_of_processors};\n"
+        f"    NumberOfLogicalProcessors = {profile.number_of_logical_processors};\n"
+        f"    TotalPhysicalMemory = {profile.total_physical_memory};\n"
+        "    PartOfDomain = FALSE;\n"
+        "};\n"
+        "\n"
+        '#pragma deleteclass("Win32_ComputerSystemProduct", NOFAIL)\n'
+        "[Static, dynamic: ToInstance ToSubClass DisableOverride]\n"
+        "class Win32_ComputerSystemProduct {\n"
+        f"{csp_props}"
+        "};\n"
+        "instance of Win32_ComputerSystemProduct {\n"
+        f'    IdentifyingNumber = "{profile.identifying_number}";\n'
+        f'    Name = "{profile.product_name}";\n'
+        '    Version = "1.0";\n'
+        f'    Vendor = "{profile.vendor}";\n'
+        "};\n"
+        "\n"
+        '#pragma deleteclass("Win32_BIOS", NOFAIL)\n'
+        "[Static, dynamic: ToInstance ToSubClass DisableOverride]\n"
+        "class Win32_BIOS {\n"
+        f"{bios_props}"
+        "};\n"
+        "instance of Win32_BIOS {\n"
+        f'    Name = "{profile.bios_version}";\n'
+        f'    SoftwareElementID = "{profile.bios_version}";\n'
+        "    SoftwareElementState = 3;\n"
+        "    TargetOperatingSystem = 0;\n"
+        f'    Version = "{profile.bios_version}";\n'
+        f'    Manufacturer = "{profile.bios_vendor}";\n'
+        f'    SMBIOSBIOSVersion = "{profile.bios_version}";\n'
+        "    PrimaryBIOS = TRUE;\n"
+        "};\n"
+    )
+
+
+def _assert_wmi_hijack_matches(
+    observed: dict[str, str],
+    evasion_profile: _AntiEvasionProfile,
+) -> None:
+    """Raise :class:`SandboxError` if any observed value disagrees with the profile.
+
+    Args:
+        observed: Dictionary returned by :meth:`WindowsSandbox._query_wmi_identity`.
+        evasion_profile: Expected anti-evasion profile values.
+
+    Raises:
+        SandboxError: If one or more identity fields do not match the profile.
+    """
+    expected: dict[str, str] = {
+        "Manufacturer": evasion_profile.manufacturer,
+        "Model": evasion_profile.model,
+        "ProductName": evasion_profile.product_name,
+        "BIOSVendor": evasion_profile.bios_vendor,
+        "BIOSVersion": evasion_profile.bios_version,
+    }
+    mismatches: list[str] = [
+        f"{key.lower()}={observed.get(key, '')!r}!={expected_value!r}"
+        for key, expected_value in expected.items()
+        if observed.get(key, "") != expected_value
+    ]
+    if mismatches:
+        _logger.warning("wmi_hijack_verification_value_mismatch", mismatches=mismatches)
+        mismatch_summary = "; ".join(mismatches)
+        err_msg = f"{_ERR_WMI_HIJACK_VERIFY_FAILED}: {mismatch_summary}"
+        raise SandboxError(err_msg)
 
 
 class WindowsSandbox(SandboxBase):
@@ -1501,7 +1724,15 @@ class WindowsSandbox(SandboxBase):
         return screenshot_path
 
     async def apply_anti_evasion(self, profile: str = "default") -> dict[str, Any]:
-        """Apply anti-evasion techniques to make the sandbox less detectable.
+        r"""Apply anti-evasion techniques to make the sandbox less detectable.
+
+        Drops the previous volatile ``HKLM:\HARDWARE\DESCRIPTION\*`` registry
+        writes (audit7 F-0013): those keys live in a volatile hive that the
+        kernel rebuilds at boot, so the writes never reach evasive samples that
+        actually query ``Get-CimInstance Win32_ComputerSystem`` / ``Win32_BIOS``.
+        Instead a MOF file is generated from the active anti-evasion profile,
+        compiled into the CIMV2 namespace with ``mofcomp.exe``, and verified
+        with ``Get-CimInstance`` to confirm the spoofed values are now returned.
 
         Args:
             profile: Anti-evasion profile name.
@@ -1515,64 +1746,26 @@ class WindowsSandbox(SandboxBase):
         if self.state.status != "running":
             _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
+        if self._shared_folder is None:
+            _logger.error("anti_evasion_skipped_shared_folder_not_init")
+            raise SandboxError(_ERR_WMI_HIJACK_NO_SHARED)
 
         applied: dict[str, Any] = {"profile": profile, "techniques": []}
         techniques: list[str] = []
 
-        manufacturer: str
-        product_name: str
-        if profile == "workstation":
-            manufacturer = "Dell Inc."
-            product_name = "OptiPlex 7090"
-        elif profile == "laptop":
-            manufacturer = "Lenovo"
-            product_name = "ThinkPad T14 Gen 3"
-        else:
-            manufacturer = "HP"
-            product_name = "HP EliteDesk 800 G6"
+        evasion_profile = resolve_anti_evasion_profile(profile)
+        machine_name = f"DESKTOP-{secrets.token_hex(3).upper()}"
 
-        hardware_id = (
-            f"{{{secrets.token_hex(4)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(2)}-{secrets.token_hex(6)}}}"
-        )
-        registry_patches: list[tuple[str, str, str, str]] = [
-            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemManufacturer", "String", manufacturer),
-            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "SystemProductName", "String", product_name),
-            ("HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS", "BIOSVendor", "String", "American Megatrends Inc."),
-            (
-                "HKLM:\\HARDWARE\\DESCRIPTION\\System\\BIOS",
-                "BIOSVersion",
-                "String",
-                f"A{secrets.randbelow(30) + 1}.{secrets.randbelow(10)}",
-            ),
-            ("HKLM:\\SYSTEM\\ControlSet001\\Services\\Disk\\Enum", "0", "String", "WDC WD10EZEX-00BBHA0"),
-            (
-                "HKLM:\\SYSTEM\\ControlSet001\\Control\\SystemInformation",
-                "ComputerHardwareId",
-                "String",
-                hardware_id,
-            ),
-        ]
+        wmi_result = await self._apply_wmi_hijack(evasion_profile, machine_name)
+        if wmi_result["status"] == "verified":
+            techniques.extend([
+                "wmi_hijack_win32_computersystem",
+                "wmi_hijack_win32_computersystemproduct",
+                "wmi_hijack_win32_bios",
+            ])
+        applied["wmi_hijack"] = wmi_result
 
-        for reg_path, reg_name, reg_type, reg_value in registry_patches:
-            ensure_cmd = (
-                'powershell -Command "'
-                f"if (-not (Test-Path -LiteralPath '{reg_path}')) "
-                f"{{ New-Item -Path '{reg_path}' -Force -ErrorAction SilentlyContinue | Out-Null }}\""
-            )
-            await self.run_command(ensure_cmd)
-            cmd = (
-                'powershell -Command "'
-                f"Set-ItemProperty -Path '{reg_path}' -Name '{reg_name}' "
-                f"-Value '{reg_value}' -Type {reg_type} -Force -ErrorAction SilentlyContinue\""
-            )
-            exit_code, _, _ = await self.run_command(cmd)
-            if exit_code == _RETURNCODE_SUCCESS:
-                techniques.append(f"registry_{reg_name}")
-
-        hostname_cmd = (
-            'powershell -Command "'
-            f"Rename-Computer -NewName 'DESKTOP-{secrets.token_hex(3).upper()}' -Force -ErrorAction SilentlyContinue\""
-        )
+        hostname_cmd = f"powershell -Command \"Rename-Computer -NewName '{machine_name}' -Force -ErrorAction SilentlyContinue\""
         exit_code, _, _ = await self.run_command(hostname_cmd)
         if exit_code == _RETURNCODE_SUCCESS:
             techniques.append("hostname_change")
@@ -1597,15 +1790,143 @@ class WindowsSandbox(SandboxBase):
 
         applied["techniques"] = techniques
         applied["count"] = len(techniques)
+        applied["spoofed_manufacturer"] = evasion_profile.manufacturer
+        applied["spoofed_model"] = evasion_profile.model
+        applied["spoofed_product_name"] = evasion_profile.product_name
+        applied["spoofed_bios_vendor"] = evasion_profile.bios_vendor
+        applied["spoofed_bios_version"] = evasion_profile.bios_version
+        applied["spoofed_hostname"] = machine_name
         _logger.info(
             "anti_evasion_applied",
             profile=profile,
             technique_count=len(techniques),
+            wmi_hijack_status=wmi_result["status"],
         )
         return applied
 
-    async def dump_memory(self, output_path: Path | None = None) -> Path:
-        """Dump sandbox guest memory by running a minidump inside the guest.
+    async def _apply_wmi_hijack(
+        self,
+        evasion_profile: _AntiEvasionProfile,
+        machine_name: str,
+    ) -> dict[str, Any]:
+        """Compile a MOF that hijacks Win32_ComputerSystem*/Win32_BIOS and verify it.
+
+        Stages the MOF file into the shared folder so it is reachable from the
+        guest, invokes ``mofcomp.exe`` inside the sandbox to register the
+        static class definitions and spoofed instances, then runs
+        ``Get-CimInstance`` to confirm the spoofed manufacturer/model values
+        come back. Raises :class:`SandboxError` if either step fails.
+
+        Args:
+            evasion_profile: Resolved anti-evasion profile to materialise.
+            machine_name: ``Win32_ComputerSystem.Name`` value to inject.
+
+        Returns:
+            dict[str, Any]: Result mapping with keys ``status`` (``verified``),
+            ``mof_path`` (host-side path), ``observed_manufacturer``,
+            ``observed_model``, ``observed_product_name``, and
+            ``observed_bios_vendor``.
+
+        Raises:
+            SandboxError: If MOF compilation fails or the verification query
+                does not return the spoofed values.
+        """
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_WMI_HIJACK_NO_SHARED)
+
+        mof_filename = f"intellicrack_antievasion_{secrets.token_hex(6)}.mof"
+        mof_host_path = self._shared_folder / "input" / mof_filename
+        await asyncio.to_thread(mof_host_path.parent.mkdir, parents=True, exist_ok=True)
+
+        mof_text = build_anti_evasion_mof(evasion_profile, machine_name)
+        await asyncio.to_thread(mof_host_path.write_text, mof_text, encoding="utf-8")
+
+        mof_guest_path = rf"{self.SANDBOX_SHARED_PATH}\input\{mof_filename}"
+        mofcomp_cmd = f'mofcomp.exe -N:root\\cimv2 "{mof_guest_path}"'
+        compile_exit, compile_out, compile_err = await self.run_command(mofcomp_cmd)
+        if compile_exit != _RETURNCODE_SUCCESS:
+            _logger.warning(
+                "wmi_hijack_mofcomp_failed",
+                exit_code=compile_exit,
+                stdout=compile_out[:500],
+                stderr=compile_err[:500],
+                mof_path=str(mof_host_path),
+            )
+            raise SandboxError(_ERR_WMI_HIJACK_COMPILE_FAILED)
+
+        observed = await self._query_wmi_identity()
+        _assert_wmi_hijack_matches(observed, evasion_profile)
+
+        return {
+            "status": "verified",
+            "mof_path": str(mof_host_path),
+            "observed_manufacturer": observed["Manufacturer"],
+            "observed_model": observed["Model"],
+            "observed_product_name": observed["ProductName"],
+            "observed_bios_vendor": observed["BIOSVendor"],
+            "observed_bios_version": observed["BIOSVersion"],
+        }
+
+    async def _query_wmi_identity(self) -> dict[str, str]:
+        """Query the spoofed identity values via ``Get-CimInstance``.
+
+        Returns:
+            dict[str, str]: Mapping with keys ``Manufacturer``, ``Model``,
+            ``ProductName``, ``ProductVendor``, ``BIOSVendor``, ``BIOSVersion``.
+
+        Raises:
+            SandboxError: If the dispatched query fails or the JSON payload is malformed.
+        """
+        verify_script = (
+            "$cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop;"
+            " $csp = Get-CimInstance -ClassName Win32_ComputerSystemProduct -ErrorAction Stop;"
+            " $bios = Get-CimInstance -ClassName Win32_BIOS -ErrorAction Stop;"
+            " $payload = [pscustomobject]@{"
+            " Manufacturer=$cs.Manufacturer; Model=$cs.Model;"
+            " ProductName=$csp.Name; ProductVendor=$csp.Vendor;"
+            " BIOSVendor=$bios.Manufacturer; BIOSVersion=$bios.SMBIOSBIOSVersion"
+            " };"
+            " $payload | ConvertTo-Json -Compress"
+        )
+        verify_cmd = f'powershell -NoProfile -NonInteractive -Command "{verify_script}"'
+        verify_exit, verify_out, verify_err = await self.run_command(verify_cmd)
+        if verify_exit != _RETURNCODE_SUCCESS:
+            _logger.warning(
+                "wmi_hijack_verification_query_failed",
+                exit_code=verify_exit,
+                stderr=verify_err[:500],
+            )
+            raise SandboxError(_ERR_WMI_HIJACK_VERIFY_FAILED)
+
+        try:
+            parsed_obj: object = json.loads(verify_out.strip())
+        except (ValueError, json.JSONDecodeError) as parse_err:
+            _logger.warning(
+                "wmi_hijack_verification_parse_failed",
+                error=str(parse_err),
+                stdout=verify_out[:500],
+            )
+            raise SandboxError(_ERR_WMI_HIJACK_VERIFY_FAILED) from parse_err
+        if not isinstance(parsed_obj, dict):
+            _logger.warning("wmi_hijack_verification_unexpected_payload", payload=str(parsed_obj)[:500])
+            raise SandboxError(_ERR_WMI_HIJACK_VERIFY_FAILED)
+
+        observed = cast("dict[str, Any]", parsed_obj)
+        return {
+            "Manufacturer": str(observed.get("Manufacturer", "")),
+            "Model": str(observed.get("Model", "")),
+            "ProductName": str(observed.get("ProductName", "")),
+            "ProductVendor": str(observed.get("ProductVendor", "")),
+            "BIOSVendor": str(observed.get("BIOSVendor", "")),
+            "BIOSVersion": str(observed.get("BIOSVersion", "")),
+        }
+
+    async def dump_memory(
+        self,
+        output_path: Path | None = None,
+        target_pid: int | None = None,
+    ) -> Path:
+        """Dump a guest process by running ``MiniDumpWriteDump`` inside the guest.
 
         The Windows Sandbox worker process (``vmwp.exe``) is a Protected Process
         Light (PPL). ``OpenProcess(PROCESS_VM_READ)`` from the host always returns
@@ -1613,17 +1934,27 @@ class WindowsSandbox(SandboxBase):
         approaches (``dbghelp``, ``procdump``) cannot succeed against it.
 
         This implementation requests the dump from inside the guest by running
-        a PowerShell ``MiniDumpWriteDump`` script via the dispatcher and then
-        copying the resulting file back to the host via the shared folder.
+        a PowerShell ``MiniDumpWriteDump`` script via the dispatcher. The
+        dispatcher's PowerShell host opens the **target** process via
+        ``OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, $targetPid)``
+        and passes that handle (not ``GetCurrentProcess()``) to
+        ``MiniDumpWriteDump`` so the resulting dump describes the sample under
+        analysis instead of the PowerShell host itself (audit7 F-0021). The
+        process handle is always closed in the PowerShell ``finally`` block.
+        The dump file is then copied back to the host via the shared folder.
 
         Args:
             output_path: Optional path to save the memory dump.
+            target_pid: Guest-side PID of the process to dump. Required for
+                Windows Sandbox because ``MiniDumpWriteDump`` must target a
+                specific process; passing ``None`` would (incorrectly) dump
+                the PowerShell host.
 
         Returns:
             Path: Path to the saved memory dump file.
 
         Raises:
-            SandboxError: If memory dump fails.
+            SandboxError: If memory dump fails or ``target_pid`` is missing/invalid.
         """
         if sys.platform != "win32":
             raise SandboxError(_ERR_MEMORY_DUMP_NOT_WINDOWS)
@@ -1631,30 +1962,49 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
         if self._shared_folder is None:
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
+        if target_pid is None:
+            _logger.error("memory_dump_missing_target_pid")
+            raise SandboxError(_ERR_MEMORY_DUMP_TARGET_PID_REQUIRED)
+        if target_pid <= 0:
+            _logger.error("memory_dump_invalid_target_pid", target_pid=target_pid)
+            raise SandboxError(_ERR_MEMORY_DUMP_TARGET_PID_INVALID)
 
-        dump_filename = f"memdump_{secrets.token_hex(8)}.dmp"
+        dump_filename = f"memdump_pid{target_pid}_{secrets.token_hex(8)}.dmp"
         sandbox_dump_path = rf"{self.SANDBOX_SHARED_PATH}\output\{dump_filename}"
 
         ps_script = (
-            'Add-Type -TypeDefinition @"\n'
+            f"$targetPid = {target_pid};"
+            ' Add-Type -TypeDefinition @"\n'
             "using System;\n"
             "using System.Runtime.InteropServices;\n"
             "public class MiniDumper {\n"
-            '    [DllImport("dbghelp.dll")] public static extern bool MiniDumpWriteDump(\n'
+            '    [DllImport("dbghelp.dll", SetLastError=true)] public static extern bool MiniDumpWriteDump(\n'
             "        IntPtr hProcess, uint ProcessId, IntPtr hFile, uint DumpType,\n"
             "        IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);\n"
-            '    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();\n'
-            '    [DllImport("kernel32.dll")] public static extern uint GetCurrentProcessId();\n'
+            '    [DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr OpenProcess(\n'
+            "        uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);\n"
+            '    [DllImport("kernel32.dll", SetLastError=true)] public static extern bool CloseHandle(IntPtr hObject);\n'
             '}"@ -ErrorAction Stop;\n'
+            f"$access = {_PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ};\n"
+            "$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);\n"
+            "if ($handle -eq [IntPtr]::Zero) {\n"
+            "    $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error();\n"
+            "    throw ('OpenProcess failed for target_pid=' + $targetPid + ' err=' + $err)\n"
+            "}\n"
             f"$fs = [System.IO.File]::Create('{sandbox_dump_path}');\n"
             "try {\n"
             "    $ok = [MiniDumper]::MiniDumpWriteDump(\n"
-            "        [MiniDumper]::GetCurrentProcess(),\n"
-            "        [MiniDumper]::GetCurrentProcessId(),\n"
+            "        $handle, $targetPid,\n"
             "        $fs.SafeFileHandle.DangerousGetHandle(),\n"
             "        2, [IntPtr]::Zero, [IntPtr]::Zero, [IntPtr]::Zero);\n"
-            "    if (-not $ok) { throw 'MiniDumpWriteDump returned false' }\n"
-            "} finally { $fs.Close() }"
+            "    if (-not $ok) {\n"
+            "        $err = [Runtime.InteropServices.Marshal]::GetLastWin32Error();\n"
+            "        throw ('MiniDumpWriteDump returned false err=' + $err)\n"
+            "    }\n"
+            "} finally {\n"
+            "    $fs.Close();\n"
+            "    [void][MiniDumper]::CloseHandle($handle)\n"
+            "}"
         )
         exit_code, _, stderr = await self.run_command(f'powershell -Command "{ps_script}"')
         if exit_code != _RETURNCODE_SUCCESS:
