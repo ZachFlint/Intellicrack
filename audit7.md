@@ -263,6 +263,44 @@
 - **Pattern:** Cat 11
 
 
+# Findings: ui-panels-hex_editor (from audit4.md / audit5.md)
+
+## Summary
+
+2 opus-confirmed NEEDS-WORK findings from audit4.md / audit5.md — both
+remediated together as audit7 unit 11 (hex-panel template notifications).
+
+## Findings
+
+#### F-0012 - `_templates._on_apply_template` only fires `notify_pattern_executed`, not `notify_template_registered` [fixed: audit7/u11-hex-template-notify]
+
+- **Source audit:** audit4.md / audit5.md / `ui-panels-hex_editor`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** Applying a template through the panel emits
+  `PATTERN_EXECUTED` but skips the matching `TEMPLATE_REGISTERED`
+  event the compile-register-apply branch emits in
+  `PatternEditorMixin._on_pattern_apply`. AI / CLI subscribers that
+  listen for `TEMPLATE_REGISTERED` to refresh their registries miss
+  every GUI apply.
+
+- **File:** `src/intellicrack/ui/panels/hex_editor/_templates.py`
+- **Lines:** 133-166
+- **Pattern:** Cat 4
+
+#### F-0017 - `_pattern_editor._apply_via_interpreter` only fires `notify_pattern_executed`, not `notify_template_registered` [fixed: audit7/u11-hex-template-notify]
+
+- **Source audit:** audit4.md / audit5.md / `ui-panels-hex_editor`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** The interpreter branch of the pattern
+  editor emits `PATTERN_EXECUTED` for the inline `"<inline>"` pattern
+  but skips the matching `TEMPLATE_REGISTERED` event the
+  compile-register-apply branch emits at lines 288-298. Subscribers
+  treating inline runs identically to compile-register-apply runs
+  miss the registration event entirely.
+
+- **File:** `src/intellicrack/ui/panels/hex_editor/_pattern_editor.py`
+- **Lines:** 344-355
+- **Pattern:** Cat 4
 # Findings: core-orchestration (from audit/17)
 
 ## Summary

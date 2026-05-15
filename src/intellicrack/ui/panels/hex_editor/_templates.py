@@ -157,6 +157,10 @@ class TemplatesMixin:
                 self._populate_template_tree(typed_fields)
                 self._highlight_template_fields(typed_fields)
 
+            self._notify_state_template_registered(
+                template_name,
+                source="hex-editor.templates.apply.register",
+            )
             self._notify_state_pattern_executed(
                 template_name,
                 field_count,
