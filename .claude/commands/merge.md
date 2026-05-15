@@ -1,7 +1,7 @@
 ---
 description: Review, merge, and clean up worktrees produced by the /batch skill. Invoke with /merge.
 argument-hint: [branch-glob...] [--dry-run]
-allowed-tools: Read, Glob, Grep, Bash, Agent, AskUserQuestion
+allowed-tools: Read, Glob, Grep, PowerShell, Bash, Agent, AskUserQuestion
 ---
 
 You review, merge, and clean up the git worktrees that `/batch` produced. Work autonomously. Only escalate via `AskUserQuestion` on scope drift or unresolvable review failures.
@@ -73,11 +73,13 @@ If `--dry-run`: print `WOULD MERGE: <branch>` for each, skip.
 Otherwise, for each queued worktree:
 1. `git -C <worktree_path> fetch origin main`
 2. `git -C <worktree_path> rebase origin/main` — on conflict, `git rebase --abort` and flag as MANUAL_REVIEW_CONFLICT, continue.
-3. If `pr_number` is open: `gh pr merge <pr_number> --squash --delete-branch --admin`
+3. If `pr_number` is open: `gh pr merge <pr_number> --squash --delete-branch --admin` (GitHub handles the server-side rebase; if it reports "not mergeable", flag as MANUAL_REVIEW_PR_NOT_MERGEABLE and continue).
 4. Else, from the primary repo on `main`:
+   - `git fetch origin main` — refresh remote ref (origin/main may have advanced since Preflight, especially across sequential merges in this same run).
+   - `git rebase origin/main` — fast-forward local `main` to match remote. If the local `main` has diverged (shouldn't happen on a clean checkout, but defensive), `git rebase --abort` and flag as MANUAL_REVIEW_MAIN_DIVERGED, continue.
    - `git merge --squash <branch>`
    - `git -c core.hooksPath=/dev/null commit --no-verify -m "<squashed subject>"` (user has opted out of pre-commit hooks for this pipeline)
-   - `git push origin main`
+   - `git push origin main` — on non-fast-forward rejection, run `git fetch origin main && git rebase origin/main` (the rebase replays the squash commit on top of any newly-merged upstream commits; on conflict `git rebase --abort`, undo the squash with `git reset --hard origin/main`, and flag as MANUAL_REVIEW_PUSH_CONFLICT). Retry `git push origin main` once. If the retry also fails, flag as MANUAL_REVIEW_PUSH_REJECTED, leave local `main` ahead, and continue with remaining worktrees.
    - `git push origin --delete <branch>` if the branch exists on the remote
 
 ## Cleanup (physical disk removal)
