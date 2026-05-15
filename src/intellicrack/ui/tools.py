@@ -9,6 +9,11 @@ This module provides the tool output display panel showing
 decompiled code, disassembly, and analysis results from tools,
 as well as native analysis panels (Ghidra, x64dbg, Cutter,
 Frida, Binary) and specialized panels (Licensing, Scripts, Stack).
+
+External sandbox backends constructed by plugins, CLI bootstraps,
+or the application startup path are injected through
+:meth:`MainWindow.wire_sandbox_backend` (in ``intellicrack.ui.app``)
+which forwards to :meth:`ToolOutputPanel.wire_sandbox_backend` here.
 """
 
 from __future__ import annotations
@@ -2061,12 +2066,21 @@ class ToolOutputPanel(QFrame):
     def get_sandbox_bridge(self) -> SandboxBridge | None:
         """Get the sandbox bridge from the sandbox panel.
 
+        Returns the panel-attached bridge when the sandbox tab has been
+        opened. When the panel has not yet been created, returns the
+        deferred bridge stashed by ``wire_sandbox_bridge``/
+        ``wire_sandbox_backend`` so callers can reach the injected
+        backend before the user opens the panel.
+
         Returns:
             SandboxBridge | None: Sandbox bridge or None.
         """
         if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_bridge"):
             return self.sandbox_panel.get_bridge()
-        return None
+        pending = self._pending_sandbox_bridge
+        if pending is None:
+            return None
+        return cast("SandboxBridge", pending)
 
     def get_sandbox_backend(self) -> SandboxBase | None:
         """Get the sandbox backend from the sandbox panel (deprecated).
