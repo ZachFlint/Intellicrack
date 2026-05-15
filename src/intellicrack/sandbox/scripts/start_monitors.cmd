@@ -60,6 +60,9 @@ exit /b 0
 :launch_one
 set "SCRIPT_PATH=%~1"
 set "SCRIPT_NAME=%~2"
+rem Skip helper / underscore-prefixed scripts: they are utilities consumed
+rem by start_monitors / stop_monitors themselves, not standalone monitors.
+if "%SCRIPT_NAME:~0,1%"=="_" goto :eof
 set "CHILD_PID="
 set /a LAUNCH_COUNT+=1
 

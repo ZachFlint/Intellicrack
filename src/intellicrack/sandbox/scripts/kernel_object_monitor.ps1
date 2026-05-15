@@ -10,6 +10,62 @@ if (-not (Test-Path -LiteralPath $LogDir)) {
 }
 $logPath = Join-Path -Path $LogDir -ChildPath 'kernel_object_monitor.log'
 $errorLogPath = Join-Path -Path $LogDir -ChildPath 'kernel_object_monitor.errors.log'
+$lifecyclePath = Join-Path -Path $LogDir -ChildPath 'kernel_object_monitor.lifecycle.log'
+$script:StopEventName = 'IntellicrackMonitorStop'
+$script:StopEvent = $null
+
+function Open-MonitorStopEvent {
+    [CmdletBinding()]
+    [OutputType([System.Threading.EventWaitHandle])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+    $createdNew = $false
+    try {
+        $handle = [System.Threading.EventWaitHandle]::new(
+            $false,
+            [System.Threading.EventResetMode]::ManualReset,
+            $Name,
+            [ref]$createdNew)
+        return $handle
+    } catch [System.UnauthorizedAccessException] {
+        try {
+            return [System.Threading.EventWaitHandle]::OpenExisting($Name)
+        } catch {
+            return $null
+        }
+    } catch {
+        return $null
+    }
+}
+
+function Test-MonitorStopRequested {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+    if ($null -eq $script:StopEvent) { return $false }
+    try {
+        return $script:StopEvent.WaitOne(0)
+    } catch {
+        return $false
+    }
+}
+
+function Write-KernelLifecycle {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$State,
+        [Parameter(Mandatory = $false)][string]$Detail = ''
+    )
+    $ts = (Get-Date).ToString('o')
+    $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
+    $line = "$ts|kernel_object_monitor|$State|$safeDetail"
+    try {
+        Add-Content -LiteralPath $lifecyclePath -Value $line -Encoding utf8
+    } catch {
+        $null = $_
+    }
+}
 
 # Polling cadence trade-off:
 #
@@ -484,19 +540,36 @@ function Invoke-MonitorSweep {
     }
 }
 
-while ($true) {
-    try {
-        Invoke-MonitorSweep
-    } catch {
-        Write-MonitorError -Stage 'Invoke-MonitorSweep' -Detail $_.Exception.Message
-    }
+$script:StopEvent = Open-MonitorStopEvent -Name $script:StopEventName
+Write-KernelLifecycle -State 'started' -Detail "poll_interval_ms=$PollIntervalMilliseconds stop_event=$script:StopEventName"
 
-    if ($processNameCache.Count -gt 4096) {
-        $processNameCache.Clear()
-    }
-    if ($openProcessFailures.Count -gt 4096) {
-        $openProcessFailures.Clear()
-    }
+try {
+    while ($true) {
+        if (Test-MonitorStopRequested) { break }
 
-    Start-Sleep -Milliseconds $PollIntervalMilliseconds
+        try {
+            Invoke-MonitorSweep
+        } catch {
+            Write-MonitorError -Stage 'Invoke-MonitorSweep' -Detail $_.Exception.Message
+        }
+
+        if ($processNameCache.Count -gt 4096) {
+            $processNameCache.Clear()
+        }
+        if ($openProcessFailures.Count -gt 4096) {
+            $openProcessFailures.Clear()
+        }
+
+        if ($null -ne $script:StopEvent) {
+            if ($script:StopEvent.WaitOne($PollIntervalMilliseconds)) { break }
+        } else {
+            Start-Sleep -Milliseconds $PollIntervalMilliseconds
+        }
+    }
+} finally {
+    Write-KernelLifecycle -State 'stopped' -Detail "stop_requested=$(Test-MonitorStopRequested)"
+    if ($null -ne $script:StopEvent) {
+        try { $script:StopEvent.Dispose() } catch { $null = $_ }
+        $script:StopEvent = $null
+    }
 }
