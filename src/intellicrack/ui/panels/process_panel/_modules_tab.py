@@ -216,7 +216,7 @@ class ModulesTab(QWidget):
 
         tab_layout.addWidget(toolbar)
 
-        columns = ["Handle Value", "Type Index", "Granted Access", "Object Address"]
+        columns = ["Handle Value", "Type", "Granted Access", "Object Address"]
         self._handle_table = QTableWidget(0, len(columns))
         self._handle_table.setHorizontalHeaderLabels(columns)
         self._handle_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -387,7 +387,9 @@ class ModulesTab(QWidget):
                 hv_raw = typed_h.get("handle_value", 0)
                 hv = hv_raw if isinstance(hv_raw, int) else 0
                 self._handle_table.setItem(row, 0, QTableWidgetItem(f"0x{hv:X}"))
-                self._handle_table.setItem(row, 1, QTableWidgetItem(str(typed_h.get("type_index", 0))))
+                type_name_raw = typed_h.get("type_name")
+                type_label = type_name_raw if isinstance(type_name_raw, str) and type_name_raw else str(typed_h.get("type_index", 0))
+                self._handle_table.setItem(row, 1, QTableWidgetItem(type_label))
                 ga_raw = typed_h.get("granted_access", 0)
                 ga = ga_raw if isinstance(ga_raw, int) else 0
                 self._handle_table.setItem(row, 2, QTableWidgetItem(f"0x{ga:X}"))
