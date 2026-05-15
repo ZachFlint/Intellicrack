@@ -220,6 +220,39 @@ def test_script_logs_unparsed_events_instead_of_silently_returning() -> None:
     assert "Write-DllDiagnostic" in text, "expected Write-DllDiagnostic helper after F-0019"
 
 
+def test_script_emits_structured_unparsed_record_to_main_log() -> None:
+    """F-0019 (audit7): unparsed events must reach the main log too.
+
+    The remediated handler does not stop at a diagnostic-log entry.
+    When the payload schema is unrecognised it now also writes a
+    structured record to ``dll_monitor.log`` with ``image_path=`` empty,
+    the raw ``event_id``, and the observed ``payload_schema`` so the
+    report consumer can see the dropped event.
+    """
+    text = _SCRIPT_PATH.read_text(encoding="utf-8")
+    assert "-EventId $eventIdValue -PayloadSchema $fields" in text, (
+        "unparsed branch must call Write-DllRecord with EventId and PayloadSchema"
+    )
+    assert "-ImagePath ''" in text, "unparsed records must use empty image path"
+    assert "PayloadSchema" in text, "Write-DllRecord must accept PayloadSchema"
+    assert "EventId" in text, "Write-DllRecord must accept EventId"
+
+
+def test_script_auto_extends_payload_field_candidates() -> None:
+    """F-0019 (audit7): observed payload fields must be auto-cached.
+
+    The handler must dynamically extend the candidate field name lists
+    so subsequent events with non-default payload schemas are parsed
+    correctly. The implementation registers the new names against the
+    ``ImagePathFieldNames`` / ``ImageBaseFieldNames`` / ``ImageSizeFieldNames``
+    script-scope collections.
+    """
+    text = _SCRIPT_PATH.read_text(encoding="utf-8")
+    assert "Sync-PayloadFieldCandidate" in text, "expected Sync-PayloadFieldCandidate helper"
+    assert "script:ImagePathFieldNames.Add" in text, "auto-extension must mutate the path field list"
+    assert "Import-ProviderManifestField" in text, "expected manifest-driven field bootstrap helper"
+
+
 def test_script_logs_etw_fallback_warning() -> None:
     """F-0020: the WMI fallback must surface a structured warning.
 

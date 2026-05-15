@@ -41,6 +41,7 @@ _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 _SCRIPTS_DIR: Final[Path] = _REPO_ROOT / "src" / "intellicrack" / "sandbox" / "scripts"
 _START_SCRIPT: Final[Path] = _SCRIPTS_DIR / "start_monitors.cmd"
 _STOP_SCRIPT: Final[Path] = _SCRIPTS_DIR / "stop_monitors.cmd"
+_STOP_HELPER_SCRIPT: Final[Path] = _SCRIPTS_DIR / "_stop_monitors_helper.ps1"
 _PID_FILE_NAME: Final[str] = "monitors.pids"
 _START_TIMEOUT_SEC: Final[float] = 90.0
 _STOP_TIMEOUT_SEC: Final[float] = 30.0
@@ -237,6 +238,11 @@ def _build_scratch_scripts_dir(scratch_root: Path, monitor_count: int) -> Path:
     stopper = scripts_dir / "stop_monitors.cmd"
     stopper.write_text(
         _STOP_SCRIPT.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    helper = scripts_dir / _STOP_HELPER_SCRIPT.name
+    helper.write_text(
+        _STOP_HELPER_SCRIPT.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     for idx in range(monitor_count):
