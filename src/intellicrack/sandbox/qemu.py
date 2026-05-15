@@ -176,6 +176,8 @@ _QEMU_GA_PING_INTERVAL = 1.0
 _QEMU_GA_EXEC_TIMEOUT = 10.0
 _GUEST_AGENT_LAUNCH_PATH_WINDOWS = "Z:\\monitor\\start_agent.cmd"
 _GUEST_AGENT_LAUNCH_PATH_LINUX = "/mnt/shared/monitor/start_agent.sh"
+_WINDOWS_REG_EXE_PATH = "C:\\Windows\\System32\\reg.exe"
+WINDOWS_REG_EXE_PATH: str = _WINDOWS_REG_EXE_PATH
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
 _ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
@@ -1400,8 +1402,85 @@ class QEMUSandbox(SandboxBase):
         )
 
     @staticmethod
+    def _anti_evasion_identity(profile: str) -> tuple[str, str]:
+        """Return the manufacturer/product identity strings for an anti-evasion profile.
+
+        Single source of truth for vendor and product strings written by
+        :meth:`_anti_evasion_smbios_entries` (SMBIOS launch arguments) and by
+        :meth:`apply_anti_evasion` (Windows registry patches). Keeping both
+        paths driven by the same mapping prevents the detectable inconsistency
+        described in audit finding F-0029, where SMBIOS reported one vendor and
+        the registry advertised another.
+
+        Args:
+            profile: Profile name (``default``, ``workstation``, or ``laptop``).
+
+        Returns:
+            tuple[str, str]: ``(manufacturer, product)`` pair. ``manufacturer``
+            is the canonical short vendor name (e.g. ``"HP"`` or ``"Dell Inc."``),
+            and ``product`` is the consumer-visible product model
+            (e.g. ``"HP EliteDesk 800 G6"``).
+        """
+        if profile == "workstation":
+            return ("Dell Inc.", "OptiPlex 7090")
+        if profile == "laptop":
+            return ("Lenovo", "ThinkPad T14 Gen 3")
+        return ("HP", "HP EliteDesk 800 G6")
+
+    @staticmethod
+    def _anti_evasion_registry_commands(profile: str, product_id: str) -> list[tuple[str, list[str]]]:
+        r"""Return the Windows registry-patch commands for an anti-evasion profile.
+
+        The returned list is consumed by :meth:`apply_anti_evasion` to dispatch
+        ``reg.exe add`` invocations through the guest agent. Each command uses
+        the absolute Windows System32 path for ``reg.exe`` so that the in-guest
+        :func:`Test-AllowedCommand` allowlist accepts the invocation (audit
+        finding F-0022). Manufacturer and product strings come from
+        :meth:`_anti_evasion_identity` so they agree with the SMBIOS launch
+        arguments (audit finding F-0029).
+
+        Args:
+            profile: Anti-evasion profile name (``default``, ``workstation``,
+                or ``laptop``).
+            product_id: Randomised product identifier written to
+                ``HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ProductId``.
+
+        Returns:
+            list[tuple[str, list[str]]]: Ordered list of ``(executable, argv)``
+            pairs. ``executable`` is always :data:`_WINDOWS_REG_EXE_PATH`.
+        """
+        sep = "\\"
+        bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
+        current_version_key = sep.join(["HKLM", "SOFTWARE", "Microsoft", "Windows", "CurrentVersion"])
+        disk_enum_key = sep.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", "Disk", "Enum"])
+        identity_manufacturer, identity_product = QEMUSandbox._anti_evasion_identity(profile)
+        return [
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", bios_key, "/v", "SystemManufacturer", "/t", "REG_SZ", "/d", identity_manufacturer, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", bios_key, "/v", "SystemProductName", "/t", "REG_SZ", "/d", identity_product, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", current_version_key, "/v", "ProductId", "/t", "REG_SZ", "/d", product_id, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", disk_enum_key, "/v", "0", "/t", "REG_SZ", "/d", "WDC WD10EZEX-00BBHA0", "/f"],
+            ),
+        ]
+
+    @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
         """Return SMBIOS entries for the selected anti-evasion profile.
+
+        Manufacturer and product strings come from
+        :meth:`_anti_evasion_identity` so that the SMBIOS launch arguments
+        agree with the Windows registry writes performed in
+        :meth:`apply_anti_evasion`.
 
         Args:
             profile: Profile name (``default``, ``workstation``, or ``laptop``).
@@ -1409,22 +1488,23 @@ class QEMUSandbox(SandboxBase):
         Returns:
             list[dict[str, str]]: SMBIOS entries suitable for ``-smbios`` argv.
         """
+        manufacturer, product = QEMUSandbox._anti_evasion_identity(profile)
         if profile == "workstation":
             return [
-                {"type": "1", "manufacturer": "Dell Inc.", "product": "OptiPlex 7090", "serial": f"SVC{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Dell Inc.", "product": "0WN7Y6"},
-                {"type": "3", "manufacturer": "Dell Inc.", "chassis-type": "3"},
+                {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"SVC{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": manufacturer, "product": "0WN7Y6"},
+                {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
             ]
         if profile == "laptop":
             return [
-                {"type": "1", "manufacturer": "Lenovo", "product": "ThinkPad T14 Gen 3", "serial": f"PF{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Lenovo", "product": "21AHS00000"},
-                {"type": "3", "manufacturer": "Lenovo", "chassis-type": "10"},
+                {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"PF{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": manufacturer, "product": "21AHS00000"},
+                {"type": "3", "manufacturer": manufacturer, "chassis-type": "10"},
             ]
         return [
-            {"type": "1", "manufacturer": "HP", "product": "HP EliteDesk 800 G6", "serial": f"MXL{secrets.token_hex(5).upper()}"},
-            {"type": "2", "manufacturer": "HP", "product": "8767"},
-            {"type": "3", "manufacturer": "HP", "chassis-type": "3"},
+            {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"MXL{secrets.token_hex(5).upper()}"},
+            {"type": "2", "manufacturer": manufacturer, "product": "8767"},
+            {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
         ]
 
     async def _build_qemu_command(self) -> list[str]:
@@ -3215,69 +3295,7 @@ python3 /mnt/shared/monitor/agent.py &
         techniques.append("cpuid_hypervisor_mask_launch_arg")
 
         if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
-            product_id = secrets.token_hex(8).upper()
-            sep = "\\"
-            bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
-            current_version_key = sep.join(["HKLM", "SOFTWARE", "Microsoft", "Windows", "CurrentVersion"])
-            disk_enum_key = sep.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", "Disk", "Enum"])
-            registry_commands: list[tuple[str, list[str]]] = [
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        bios_key,
-                        "/v",
-                        "SystemManufacturer",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "HP",
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        bios_key,
-                        "/v",
-                        "SystemProductName",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "HP EliteDesk 800 G6",
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        current_version_key,
-                        "/v",
-                        "ProductId",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        product_id,
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        disk_enum_key,
-                        "/v",
-                        "0",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "WDC WD10EZEX-00BBHA0",
-                        "/f",
-                    ],
-                ),
-            ]
+            registry_commands = self._anti_evasion_registry_commands(current_profile, secrets.token_hex(8).upper())
             for cmd_name, cmd_args in registry_commands:
                 exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
                 if exit_code == 0:
