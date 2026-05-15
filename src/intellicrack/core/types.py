@@ -138,8 +138,7 @@ class CompiledYaraRules(Protocol):
         Returns:
             list[object]: List of match result objects.
         """
-        _ = (self, data, filepath, timeout)
-        return []
+        ...  # protocol body
 
 
 __all__: list[str] = [

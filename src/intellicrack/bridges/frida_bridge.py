@@ -1214,6 +1214,7 @@ class FridaBridge(InstrumentationBridge):
             self.state.connected = False
             self.state.tool_running = False
             self.state.last_error = str(e)
+            self._publish_tool_state()
             raise ToolError(_ERR_INIT_FAILED) from e
 
     async def shutdown(self) -> None:
@@ -1367,10 +1368,13 @@ class FridaBridge(InstrumentationBridge):
             self.state.tool_running = True
             self.state.process_attached = True
             self.state.target_pid = pid
+            self._publish_tool_state()
 
             _logger.info("process_attached", pid=pid)
         except frida.ProcessNotFoundError as e:
             _logger.warning("frida_process_not_found", pid=pid, error=str(e))
+            self.state.last_error = str(e)
+            self._publish_tool_state()
             raise ToolError(
                 _ERR_PROCESS_NOT_FOUND,
                 details=self._frida_error_details(e, pid=pid),
@@ -1382,6 +1386,8 @@ class FridaBridge(InstrumentationBridge):
                 error=str(e),
                 error_type=type(e).__name__,
             )
+            self.state.last_error = str(e)
+            self._publish_tool_state()
             raise ToolError(
                 _ERR_ATTACH_FAILED,
                 details=self._frida_error_details(e, pid=pid),
@@ -1462,6 +1468,7 @@ class FridaBridge(InstrumentationBridge):
         self.state.tool_running = True
         self.state.process_attached = True
         self.state.target_pid = self._pid
+        self._publish_tool_state()
 
         _logger.info("process_attached_by_name", process_name=name, pid=self._pid)
 
@@ -1551,6 +1558,7 @@ class FridaBridge(InstrumentationBridge):
             self.state.process_attached = True
             self.state.target_path = path
             self.state.target_pid = pid
+            self._publish_tool_state()
 
             _logger.info("process_spawned", process_name=path.name, pid=pid)
         except (OSError, RuntimeError, frida.TransportError) as e:
@@ -1631,6 +1639,7 @@ class FridaBridge(InstrumentationBridge):
             self.state.tool_running = True
             self.state.process_attached = False
             self.state.target_pid = None
+            self._publish_tool_state()
 
             _logger.info("process_detached", bridge="frida")
         except (frida.InvalidOperationError, frida.TransportError, OSError) as e:
@@ -1639,6 +1648,8 @@ class FridaBridge(InstrumentationBridge):
                 error=str(e),
                 error_type=type(e).__name__,
             )
+            self.state.last_error = str(e)
+            self._publish_tool_state()
             raise ToolError(
                 _ERR_DETACH_FAILED,
                 details=self._frida_error_details(e),
@@ -4124,6 +4135,7 @@ class FridaBridge(InstrumentationBridge):
         self._device = device
         self.state.connected = True
         self.state.tool_running = True
+        self._publish_tool_state()
 
         _logger.info("device_connected", device_type=device_type, device_id=str(device.id))
 
