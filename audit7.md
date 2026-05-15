@@ -263,6 +263,49 @@
 - **Pattern:** Cat 11
 
 
+# Findings: core-hexpat (from audit5.md)
+
+## Summary
+
+1 opus-confirmed NEEDS-WORK finding from audit5.md / section `core-hexpat`.
+
+## Findings
+
+#### F-0007 - `set_print_sink` is dead code: never called from any consumer [fixed: audit7/u12-hexpat-print-sink]
+
+- **Source audit:** audit5.md / `core-hexpat`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** Neither the hex-editor UI panel nor the
+  ``HexEditorBridge`` ever installed a ``std::print`` sink on the
+  ``HexPatInterpreter``. ``set_print_sink`` was reachable only from the
+  interpreter's own ``_wire_stdlib_to_evaluator`` and from the audit5 u3 unit
+  tests, leaving the standard-library ``std::print`` builtin unobservable from
+  the GUI and from AI / CLI tool calls.
+
+- **Files:**
+  - `src/intellicrack/ui/panels/hex_editor/_pattern_editor.py`
+  - `src/intellicrack/bridges/hex_editor.py`
+- **Pattern:** Cat 20
+- **Why this is non-functional:** The pattern editor instantiated
+  ``HexPatInterpreter_cls()`` without ``print_sink=`` and the bridge's
+  ``_get_interpreter`` did the same. With no sink installed, ``_io_print``
+  only emitted a structured log entry, and the user never saw print output
+  in the hex-editor UI panel or in the bridge response payload.
+- **Remediation:**
+  - The pattern editor now constructs the interpreter with
+    ``print_sink=self._append_pattern_print_line`` (and reinstalls the sink
+    via ``set_print_sink`` for cached interpreters) so ``std::print`` output
+    surfaces in a dedicated ``_pattern_print_output`` widget. The widget is
+    cleared on every apply, new, or library load.
+  - ``HexEditorBridge._get_interpreter`` accepts an optional ``print_sink``
+    callable and forwards it to ``HexPatInterpreter`` (via constructor on
+    first call, via ``set_print_sink`` on subsequent calls).
+  - ``execute_pattern`` and ``execute_pattern_file`` accept an optional
+    ``print_sink`` for Python callers, and new
+    ``execute_pattern_with_output`` / ``execute_pattern_file_with_output``
+    tool methods capture ``std::print`` into an in-memory sink and return
+    ``{"fields": [...], "hexpat_print": "..."}`` so AI / CLI callers see the
+    captured text in the response payload.
 # Findings: bridges-process (from audit2.md)
 
 ## Summary
