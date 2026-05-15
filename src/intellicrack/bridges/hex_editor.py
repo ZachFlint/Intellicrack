@@ -50,7 +50,7 @@ from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, Too
 
 
 if TYPE_CHECKING:
-    from collections.abc import Buffer, Generator
+    from collections.abc import Buffer, Callable, Generator
 
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.disassembler import HexDisassembler
@@ -668,6 +668,30 @@ class HexEditorBridge(ToolBridgeBase):
                         ToolParameter(name="offset", type="integer", description="Base offset.", required=False, default=0),
                     ],
                     returns="List of parsed field dicts",
+                ),
+                ToolFunction(
+                    name="hex_editor.execute_pattern_with_output",
+                    description=(
+                        "Execute .hexpat pattern source against the open document and capture "
+                        "any std::print output. Returns both the parsed fields and the captured text."
+                    ),
+                    parameters=[
+                        ToolParameter(name="source", type="string", description="HexPat source code."),
+                        ToolParameter(name="offset", type="integer", description="Base offset.", required=False, default=0),
+                    ],
+                    returns=("Dict with 'fields' (list of parsed field dicts) and 'hexpat_print' (newline-joined std::print output)."),
+                ),
+                ToolFunction(
+                    name="hex_editor.execute_pattern_file_with_output",
+                    description=(
+                        "Execute a .hexpat pattern file against the open document and capture "
+                        "any std::print output. Returns both the parsed fields and the captured text."
+                    ),
+                    parameters=[
+                        ToolParameter(name="pattern_path", type="string", description="Path to the .hexpat file."),
+                        ToolParameter(name="offset", type="integer", description="Base offset.", required=False, default=0),
+                    ],
+                    returns=("Dict with 'fields' (list of parsed field dicts) and 'hexpat_print' (newline-joined std::print output)."),
                 ),
                 ToolFunction(
                     name="hex_editor.list_hexpat_patterns",
@@ -2381,8 +2405,23 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"compilation error at line {exc.line}, column {exc.column}: {exc.message}"
             raise ValueError(msg) from exc
 
-    def _get_interpreter(self) -> HexPatInterpreter:
+    def _get_interpreter(
+        self,
+        print_sink: Callable[[str], None] | None = None,
+    ) -> HexPatInterpreter:
         """Get or create the HexPat interpreter instance.
+
+        The interpreter is cached for the lifetime of the bridge. When a
+        ``print_sink`` argument is supplied it is installed on the cached
+        instance via :meth:`HexPatInterpreter.set_print_sink` so the very
+        next ``execute*`` call routes ``std::print`` output to the supplied
+        callback. Passing ``None`` does not clear an already-installed sink,
+        allowing UI / AI callers to layer their own sinks on top of a
+        long-lived interpreter without disturbing each other's wiring.
+
+        Args:
+            print_sink: Optional callback that receives every formatted
+                ``std::print`` payload produced by the next execution.
 
         Returns:
             HexPatInterpreter: A HexPatInterpreter instance.
@@ -2390,13 +2429,16 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If the interpreter module is not available.
         """
-        if self._interpreter is not None:
-            return cast("HexPatInterpreter", self._interpreter)
-        if not self._hexpat_interpreter_available or _HexPatInterpreter is None:
-            _logger.error("get_interpreter_failed_unavailable")
-            msg = "hexpat interpreter not available"
-            raise RuntimeError(msg)
-        self._interpreter = _HexPatInterpreter()
+        if self._interpreter is None:
+            if not self._hexpat_interpreter_available or _HexPatInterpreter is None:
+                _logger.error("get_interpreter_failed_unavailable")
+                msg = "hexpat interpreter not available"
+                raise RuntimeError(msg)
+            self._interpreter = _HexPatInterpreter(print_sink=print_sink)
+        elif print_sink is not None:
+            set_sink = getattr(self._interpreter, "set_print_sink", None)
+            if callable(set_sink):
+                set_sink(print_sink)
         return cast("HexPatInterpreter", self._interpreter)
 
     def _get_pattern_registry(self) -> PatternRegistry:
@@ -2426,12 +2468,18 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         source: str,
         offset: int = 0,
+        print_sink: Callable[[str], None] | None = None,
     ) -> list[dict[str, Any]]:
         """Execute .hexpat pattern source against the open document.
 
         Args:
             source: HexPat source code string.
             offset: Base offset in the binary data.
+            print_sink: Optional callable invoked with each formatted
+                ``std::print`` message produced by the pattern. When
+                supplied, the sink is installed on the cached interpreter
+                via :meth:`HexPatInterpreter.set_print_sink` immediately
+                before evaluation.
 
         Returns:
             list[dict[str, Any]]: List of parsed field dicts with name,
@@ -2445,7 +2493,7 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        interpreter = self._get_interpreter()
+        interpreter = self._get_interpreter(print_sink=print_sink)
         fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset)
         _logger.info("pattern_executed", field_count=len(fields), offset=offset)
         if self.state_holder is not None:
@@ -2456,12 +2504,18 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         pattern_path: str,
         offset: int = 0,
+        print_sink: Callable[[str], None] | None = None,
     ) -> list[dict[str, Any]]:
         """Execute a .hexpat pattern file against the open document.
 
         Args:
             pattern_path: Filesystem path to the .hexpat file.
             offset: Base offset in the binary data.
+            print_sink: Optional callable invoked with each formatted
+                ``std::print`` message produced by the pattern. When
+                supplied, the sink is installed on the cached interpreter
+                via :meth:`HexPatInterpreter.set_print_sink` immediately
+                before evaluation.
 
         Returns:
             list[dict[str, Any]]: List of parsed field dicts.
@@ -2480,7 +2534,7 @@ class HexEditorBridge(ToolBridgeBase):
             msg = f"pattern file not found: {pattern_path}"
             raise FileNotFoundError(msg)
 
-        interpreter = self._get_interpreter()
+        interpreter = self._get_interpreter(print_sink=print_sink)
         fields: list[dict[str, Any]] = interpreter.execute_file(path, self.document, offset)
         _logger.info(
             "pattern_file_executed",
@@ -2491,6 +2545,79 @@ class HexEditorBridge(ToolBridgeBase):
         if self.state_holder is not None:
             self.state_holder.notify_pattern_executed(path.stem, len(fields), source="bridge")
         return fields
+
+    async def execute_pattern_with_output(
+        self,
+        source: str,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Execute a .hexpat pattern and capture ``std::print`` output.
+
+        Wraps :meth:`execute_pattern` with an in-memory sink so AI / CLI
+        callers receive both the parsed structure and any text the
+        pattern emitted via ``std::print``. Captured lines are returned
+        as a single newline-joined string under the ``hexpat_print`` key.
+
+        Args:
+            source: HexPat source code string.
+            offset: Base offset in the binary data.
+
+        Returns:
+            dict[str, Any]: Mapping with two keys:
+
+                * ``fields`` (``list[dict[str, Any]]``): the parsed field
+                  dicts returned by :meth:`execute_pattern`.
+                * ``hexpat_print`` (``str``): newline-joined text captured
+                  from every ``std::print`` invocation during evaluation,
+                  or the empty string if the pattern did not call
+                  ``std::print``.
+
+        Raises:
+            RuntimeError: If no document is open or the interpreter
+                module is unavailable.
+        """
+        captured: list[str] = []
+        fields: list[dict[str, Any]] = await self.execute_pattern(source, offset, print_sink=captured.append)
+        return {"fields": fields, "hexpat_print": "\n".join(captured)}
+
+    async def execute_pattern_file_with_output(
+        self,
+        pattern_path: str,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Execute a .hexpat pattern file and capture ``std::print`` output.
+
+        Wraps :meth:`execute_pattern_file` with an in-memory sink so AI /
+        CLI callers receive both the parsed structure and any text the
+        pattern emitted via ``std::print``. Captured lines are returned
+        as a single newline-joined string under the ``hexpat_print`` key.
+
+        Args:
+            pattern_path: Filesystem path to the ``.hexpat`` file.
+            offset: Base offset in the binary data.
+
+        Returns:
+            dict[str, Any]: Mapping with two keys:
+
+                * ``fields`` (``list[dict[str, Any]]``): the parsed field
+                  dicts returned by :meth:`execute_pattern_file`.
+                * ``hexpat_print`` (``str``): newline-joined text captured
+                  from every ``std::print`` invocation during evaluation,
+                  or the empty string if the pattern did not call
+                  ``std::print``.
+
+        Raises:
+            RuntimeError: If no document is open or the interpreter
+                module is unavailable.
+            FileNotFoundError: If the pattern file does not exist.
+        """
+        captured: list[str] = []
+        fields: list[dict[str, Any]] = await self.execute_pattern_file(
+            pattern_path,
+            offset,
+            print_sink=captured.append,
+        )
+        return {"fields": fields, "hexpat_print": "\n".join(captured)}
 
     async def list_hexpat_patterns(self) -> list[dict[str, str]]:
         """List all available .hexpat community patterns.

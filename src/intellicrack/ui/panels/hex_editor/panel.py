@@ -178,6 +178,7 @@ class HexEditorPanel(
         self._pattern_json_preview: QPlainTextEdit | None = None
         self._pattern_library_tree: QTreeWidget | None = None
         self._pattern_error_display: QPlainTextEdit | None = None
+        self._pattern_print_output: QPlainTextEdit | None = None
         self._pattern_status_label: QLabel | None = None
         self._pattern_visible: bool = False
         self._compiled_json: str = ""
