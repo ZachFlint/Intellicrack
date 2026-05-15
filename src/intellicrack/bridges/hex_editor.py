@@ -1637,10 +1637,13 @@ class HexEditorBridge(ToolBridgeBase):
             if _hexcore_mod is None or not hasattr(_hexcore_mod, "HexDocument"):
                 self._state.connected = False
                 self._state.tool_running = False
+                self._state.last_error = "hex_editor backend probe failed"
+                self._publish_tool_state()
                 _logger.warning("hex_editor_probe_failed", backend="intellicrack_hexcore")
                 return
             self._state.connected = True
             self._state.tool_running = True
+            self._publish_tool_state()
             if self.state_holder is not None:
                 holder_rules = self.state_holder.get_highlight_rules()
                 merged_rules: dict[str, dict[str, Any]] = dict(holder_rules)
@@ -1652,6 +1655,8 @@ class HexEditorBridge(ToolBridgeBase):
         else:
             self._state.connected = False
             self._state.tool_running = False
+            self._state.last_error = "intellicrack_hexcore backend unavailable"
+            self._publish_tool_state()
             _logger.warning("hex_editor_backend_unavailable", backend="intellicrack_hexcore")
 
     async def is_available(self) -> bool:
@@ -1719,6 +1724,7 @@ class HexEditorBridge(ToolBridgeBase):
             self._selection = None
             self._state.binary_loaded = True
             self._state.target_path = canonical_path
+        self._publish_tool_state()
 
         doc_len: int = new_doc.length()
         _logger.info("file_opened", path=str(canonical_path), size=doc_len)
@@ -1751,6 +1757,7 @@ class HexEditorBridge(ToolBridgeBase):
             self._selection = None
             self._state.binary_loaded = False
             self._state.target_path = None
+        self._publish_tool_state()
         if self.state_holder is not None:
             self.state_holder.set_document(None, None, source="bridge")
         _logger.info("file_closed")
@@ -2814,6 +2821,7 @@ class HexEditorBridge(ToolBridgeBase):
         previous_path = self._state.target_path
         if previous_path is None or Path(previous_path) != canonical_saved_path:
             self._state.target_path = canonical_saved_path
+            self._publish_tool_state()
             if self.state_holder is not None:
                 self.state_holder.set_document(self.document, canonical_saved_path, source="bridge")
 
@@ -5052,6 +5060,7 @@ class HexEditorBridge(ToolBridgeBase):
             self._selection = None
             self._state.binary_loaded = False
             self._state.target_path = None
+            self._publish_tool_state()
             if self.state_holder is not None:
                 self.state_holder.set_document(None, None, source="bridge")
 
@@ -5059,6 +5068,9 @@ class HexEditorBridge(ToolBridgeBase):
         self._cursor_offset = 0
         self._selection = None
         self._state.binary_loaded = True
+        self._state.process_attached = True
+        self._state.target_pid = pid
+        self._publish_tool_state()
         _logger.info("process_memory_opened", pid=pid, address=hex(address), size=size)
 
         if self.state_holder is not None:

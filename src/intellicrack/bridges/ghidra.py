@@ -1308,6 +1308,7 @@ class GhidraBridge(StaticAnalysisBridge):
             )
             self.state.connected = True
             self.state.tool_running = True
+            self._publish_tool_state()
             _logger.info("ghidra_bridge_connected", port=self._port)
 
         except ImportError as imp_err:
@@ -1315,6 +1316,8 @@ class GhidraBridge(StaticAnalysisBridge):
             self._bridge = None
             self.state.connected = False
             self.state.tool_running = False
+            self.state.last_error = "ghidra_bridge package not installed"
+            self._publish_tool_state()
             error_message = "ghidra_bridge package not installed"
             raise ToolError(error_message) from imp_err
 
@@ -1324,6 +1327,7 @@ class GhidraBridge(StaticAnalysisBridge):
             self.state.connected = False
             self.state.tool_running = False
             self.state.last_error = str(exc)
+            self._publish_tool_state()
             error_message = f"Failed to connect to Ghidra: {exc}"
             raise ToolError(error_message) from exc
 
@@ -4344,8 +4348,7 @@ metadata
         _logger.debug("undo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.undo() True."""
-                                                 ,
+                """currentProgram.undo() True.""",
             )
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
@@ -4370,8 +4373,7 @@ metadata
         _logger.debug("redo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.redo() True."""
-                                                 ,
+                """currentProgram.redo() True.""",
             )
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
