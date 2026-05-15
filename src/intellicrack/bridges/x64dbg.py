@@ -758,6 +758,14 @@ class X64DbgBridge(DebuggerBridge):
             ``run_to`` target before treating the command as failed.
         RUN_TO_POLL_INTERVAL: Seconds between successive ``reg_get rip``
             polls during a ``run_to`` verification wait.
+        VERIFY_TIMEOUT: Maximum seconds to poll a post-condition (label
+            or comment readback, breakpoint enable/disable state,
+            thread state transition, trace/animate ``is_running``
+            flip, script error register, plugin presence) before
+            raising ``ToolError`` from the F-0001 fire-and-forget
+            wrappers (audit7.md F-0001).
+        VERIFY_POLL_INTERVAL: Seconds between successive post-condition
+            polls during a F-0001 verification wait.
         STEP_TIMEOUT_SECONDS: Maximum seconds to wait for the plugin's
             paused-event reply before a step coroutine times out (the
             audit6 F-0004 bound that replaces the legacy fixed sleep).
@@ -770,6 +778,8 @@ class X64DbgBridge(DebuggerBridge):
     COMMAND_TIMEOUT = 10.0
     RUN_TO_TIMEOUT = 30.0
     RUN_TO_POLL_INTERVAL = 0.05
+    VERIFY_TIMEOUT = 5.0
+    VERIFY_POLL_INTERVAL = 0.05
 
     def __init__(self) -> None:
         """Initialize the X64DbgBridge instance."""
@@ -2033,7 +2043,7 @@ class X64DbgBridge(DebuggerBridge):
             tool_path: Path to x64dbg installation.
         """
         self._x64dbg_path = tool_path
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=False,
             tool_running=False,
             binary_loaded=False,
@@ -2049,6 +2059,7 @@ class X64DbgBridge(DebuggerBridge):
 
             if x64_exe.exists() or x32_exe.exists():
                 self._state.connected = True
+                self._publish_tool_state()
                 _logger.info("x64dbg_found", path=str(tool_path))
                 self._plugin_deployed = deploy_x64dbg_plugin(
                     tool_path,
@@ -2307,6 +2318,7 @@ class X64DbgBridge(DebuggerBridge):
         await self._wait_for_pipe_ready()
         self._state.connected = True
         self._state.tool_running = True
+        self._publish_tool_state()
 
     _PIPE_READY_TIMEOUT_SECONDS: float = 15.0
     _PIPE_READY_POLL_MS: int = 500
@@ -2751,6 +2763,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.binary_loaded = True
         self._state.target_path = self._binary_path
+        self._publish_tool_state()
 
         _logger.info("x64dbg_binary_loaded", path=path.name)
 
@@ -2857,6 +2870,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.process_attached = True
         self._state.target_pid = pid
+        self._publish_tool_state()
         _logger.info("x64dbg_attached", pid=pid)
 
     @staticmethod
@@ -2922,6 +2936,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.process_attached = False
         self._state.target_pid = None
+        self._publish_tool_state()
 
         _logger.info("x64dbg_process_detached", bridge="x64dbg")
 
@@ -5028,6 +5043,386 @@ class X64DbgBridge(DebuggerBridge):
                 return last_ip
             await asyncio.sleep(self.RUN_TO_POLL_INTERVAL)
 
+    async def _lookup_annotation_text(self, rpc: str, address: int) -> str | None:
+        """Read the label/comment text at ``address`` via the given list RPC.
+
+        Shared backend for :meth:`_lookup_label_text` (``lbl_list``)
+        and :meth:`_lookup_comment_text` (``cmt_list``). Returns
+        ``None`` when the plugin reports the RPC is unknown so callers
+        can flag the verification as unavailable rather than synthesise
+        success.
+
+        Args:
+            rpc: ``"lbl_list"`` or ``"cmt_list"``.
+            address: Address whose annotation should be read.
+
+        Returns:
+            str | None: The annotation text at ``address`` (empty
+            string when no annotation exists), or ``None`` when the
+            plugin lacks the requested RPC.
+
+        Raises:
+            ToolError: If ``rpc`` fails with any code other than
+                ``unknown_command``.
+        """
+        try:
+            result = await self._send_pipe_command(rpc, {"start": address, "end": address})
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                return None
+            raise
+        if not isinstance(result, list):
+            return ""
+        for entry in result:
+            if not _is_str_obj_dict(entry):
+                continue
+            raw_addr = entry.get("address")
+            raw_text = entry.get("text")
+            addr_str = raw_addr if isinstance(raw_addr, str) else ""
+            text = raw_text if isinstance(raw_text, str) else ""
+            try:
+                addr_val = int(addr_str, 0)
+            except ValueError:
+                continue
+            if addr_val == address:
+                return text
+        return ""
+
+    async def _lookup_label_text(self, address: int) -> str | None:
+        """Read the label currently assigned to ``address`` via ``lbl_list``.
+
+        Used by :meth:`set_label` to confirm the plugin actually wrote
+        the requested label (audit7.md F-0001). Propagates any
+        ``ToolError`` raised by :meth:`_lookup_annotation_text` other
+        than the recoverable ``unknown_command`` code.
+
+        Args:
+            address: Address whose label should be read.
+
+        Returns:
+            str | None: The label text at ``address`` (empty string
+            when the address has no label), or ``None`` when the
+            plugin lacks ``lbl_list`` support.
+        """
+        return await self._lookup_annotation_text("lbl_list", address)
+
+    async def _lookup_comment_text(self, address: int) -> str | None:
+        """Read the comment currently assigned to ``address`` via ``cmt_list``.
+
+        Used by :meth:`set_comment` to confirm the plugin actually wrote
+        the requested comment (audit7.md F-0001). Propagates any
+        ``ToolError`` raised by :meth:`_lookup_annotation_text` other
+        than the recoverable ``unknown_command`` code.
+
+        Args:
+            address: Address whose comment should be read.
+
+        Returns:
+            str | None: The comment text at ``address`` (empty string
+            when the address has no comment), or ``None`` when the
+            plugin lacks ``cmt_list`` support.
+        """
+        return await self._lookup_annotation_text("cmt_list", address)
+
+    async def _query_bp_list(self) -> list[object] | None:
+        """Fetch the breakpoint list, or ``None`` when the RPC is unknown.
+
+        Returns:
+            list[object] | None: The raw ``bp_list`` payload as a list,
+            or ``None`` when the plugin reports ``unknown_command``.
+
+        Raises:
+            ToolError: If ``bp_list`` fails with any code other than
+                ``unknown_command``.
+        """
+        try:
+            result = await self._send_pipe_command("bp_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                return None
+            raise
+        if isinstance(result, list):
+            return result
+        return []
+
+    @staticmethod
+    def _find_bp_enabled(entries: list[object], address: int) -> bool | None:
+        """Extract the ``enabled`` flag for ``address`` from a ``bp_list`` payload.
+
+        Args:
+            entries: Raw entries returned by the plugin.
+            address: Breakpoint address to find.
+
+        Returns:
+            bool | None: The ``enabled`` flag for the matched
+            breakpoint, or ``None`` when no entry matched.
+        """
+        for entry in entries:
+            if not _is_str_obj_dict(entry):
+                continue
+            entry_addr = _coerce_address(entry.get("address"))
+            if entry_addr != address:
+                continue
+            enabled_raw = entry.get("enabled")
+            if isinstance(enabled_raw, bool):
+                return enabled_raw
+            return None
+        return None
+
+    async def _wait_for_breakpoint_enabled_state(
+        self,
+        address: int,
+        *,
+        expected: bool,
+    ) -> tuple[bool | None, bool]:
+        """Poll ``bp_list`` until a breakpoint's enabled flag matches ``expected``.
+
+        Propagates any ``ToolError`` raised by ``_query_bp_list`` (i.e.
+        any ``bp_list`` failure that is not the recoverable
+        ``unknown_command`` code).
+
+        Args:
+            address: Breakpoint address.
+            expected: Expected ``enabled`` flag value.
+
+        Returns:
+            tuple[bool | None, bool]: ``(observed, rpc_available)``.
+            ``observed`` is the most recent ``enabled`` value (``True``
+            or ``False``) when the breakpoint appeared in ``bp_list``
+            at least once, otherwise ``None``. ``rpc_available`` is
+            ``True`` when the plugin answered ``bp_list`` at any poll
+            (even with no matching entry), ``False`` when the RPC was
+            reported unknown for every attempt.
+        """
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        last_state: bool | None = None
+        rpc_available = False
+        while True:
+            entries = await self._query_bp_list()
+            if entries is None:
+                if asyncio.get_running_loop().time() >= deadline:
+                    return last_state, rpc_available
+            else:
+                rpc_available = True
+                current = self._find_bp_enabled(entries, address)
+                if current is not None:
+                    last_state = current
+                    if current == expected:
+                        return current, rpc_available
+                if asyncio.get_running_loop().time() >= deadline:
+                    return last_state, rpc_available
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+
+    async def _query_thread_details(self) -> list[dict[str, Any]] | None:
+        """Fetch the full thread detail list from the plugin.
+
+        Returns:
+            list[dict[str, Any]] | None: The list of per-thread record
+            dicts, or ``None`` when the plugin reports
+            ``unknown_command`` for ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` fails with any code other
+                than ``unknown_command``.
+        """
+        try:
+            result = await self._send_pipe_command("thread_detail")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                return None
+            raise
+        if not isinstance(result, list):
+            return []
+        return [dict(entry) for entry in result if _is_str_obj_dict(entry)]
+
+    @staticmethod
+    def _find_thread_record(entries: list[dict[str, Any]], tid: int) -> dict[str, Any] | None:
+        """Locate the per-thread record with the given thread id.
+
+        Args:
+            entries: Records returned by ``thread_detail``.
+            tid: Thread identifier to find.
+
+        Returns:
+            dict[str, Any] | None: The matched record, or ``None``.
+        """
+        for entry in entries:
+            raw_id = entry.get("threadId")
+            if isinstance(raw_id, int) and raw_id == tid:
+                return entry
+        return None
+
+    async def _wait_for_thread_state(
+        self,
+        tid: int,
+        *,
+        predicate: Callable[[dict[str, Any]], bool],
+    ) -> tuple[dict[str, Any] | None, bool]:
+        """Poll ``thread_detail`` until ``predicate`` evaluates true.
+
+        Propagates any ``ToolError`` raised by ``_query_thread_details``
+        (i.e. any ``thread_detail`` failure that is not the recoverable
+        ``unknown_command`` code).
+
+        Args:
+            tid: Thread identifier.
+            predicate: Callable that returns ``True`` once the thread's
+                observed state satisfies the wrapper's post-condition.
+
+        Returns:
+            tuple[dict[str, Any] | None, bool]: ``(record,
+            rpc_available)``. ``record`` is the matched thread record
+            once ``predicate`` was satisfied, the last observed record
+            if the deadline elapsed, or ``None`` when the thread never
+            appeared in any successful poll. ``rpc_available`` is
+            ``True`` when ``thread_detail`` answered at least once,
+            ``False`` when the RPC was reported unknown for every
+            attempt.
+        """
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        last_record: dict[str, Any] | None = None
+        rpc_available = False
+        while True:
+            entries = await self._query_thread_details()
+            if entries is None:
+                if asyncio.get_running_loop().time() >= deadline:
+                    return last_record, rpc_available
+            else:
+                rpc_available = True
+                record = self._find_thread_record(entries, tid)
+                if record is not None:
+                    last_record = record
+                    if predicate(record):
+                        return record, rpc_available
+                if asyncio.get_running_loop().time() >= deadline:
+                    return last_record, rpc_available
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+
+    async def _wait_for_running_state(
+        self,
+        *,
+        expected: bool,
+    ) -> tuple[bool | None, bool]:
+        """Poll ``status`` until the debugger's running flag matches ``expected``.
+
+        Args:
+            expected: ``True`` to wait until the debugger is running,
+                ``False`` to wait until it is paused.
+
+        Returns:
+            tuple[bool | None, bool]: ``(observed, rpc_available)``.
+            ``observed`` is the most recent ``is_running`` value
+            sampled from ``status`` (``True``=running, ``False``=paused)
+            when ``status`` answered at least once, otherwise ``None``.
+            ``rpc_available`` is ``True`` when ``status`` answered at
+            any poll, ``False`` when the RPC was reported unknown for
+            every attempt.
+
+        Raises:
+            ToolError: If ``status`` fails with any code other than
+                ``unknown_command``.
+        """
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        last_state: bool | None = None
+        rpc_available = False
+        while True:
+            try:
+                result = await self._send_pipe_command("status")
+            except ToolError as exc:
+                if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                    if asyncio.get_running_loop().time() >= deadline:
+                        return last_state, rpc_available
+                    await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+                    continue
+                raise
+            rpc_available = True
+            current: bool | None = None
+            if _is_str_obj_dict(result):
+                paused_raw = result.get("paused")
+                debugging_raw = result.get("debugging")
+                if isinstance(paused_raw, bool) and isinstance(debugging_raw, bool):
+                    current = debugging_raw and not paused_raw
+                elif isinstance(paused_raw, bool):
+                    current = not paused_raw
+            if current is not None:
+                last_state = current
+                if current == expected:
+                    return current, rpc_available
+            if asyncio.get_running_loop().time() >= deadline:
+                return last_state, rpc_available
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+
+    async def _query_script_error(self) -> bool | None:
+        """Query the script-error register via the x64dbg expression evaluator.
+
+        x64dbg exposes ``script.iserror()`` which returns 1 when the
+        most recently executed script command raised an error. Used to
+        verify :meth:`script_load`, :meth:`script_run`,
+        :meth:`script_cmd`, and :meth:`script_abort` (audit7.md F-0001).
+
+        Returns:
+            bool | None: ``True`` when the script error flag is set,
+            ``False`` when it is clear, or ``None`` when neither the
+            expression evaluator nor the ``script.iserror()`` symbol
+            is available on the current plugin/x64dbg build.
+
+        Raises:
+            ToolError: If ``eval`` fails with any code other than
+                ``unknown_command``.
+        """
+        try:
+            value = await self.evaluate_expression("script.iserror()")
+        except ToolError as exc:
+            code = _x64dbg_error_code(exc)
+            if code == _X64DBG_ERR_UNKNOWN_COMMAND:
+                return None
+            raise
+        return bool(value)
+
+    async def _query_plugin_present(self, name: str) -> bool | None:
+        """Check whether a plugin called ``name`` is loaded.
+
+        First attempts the structured ``plugin_list`` RPC and inspects
+        any returned dict entries for a matching plugin name. Falls
+        back to ``plugin.find(<name>)`` via the expression evaluator
+        which x64dbg implements to return a non-zero plugin handle when
+        the plugin is loaded.
+
+        Args:
+            name: Plugin display name (without ``.dp64`` extension).
+
+        Returns:
+            bool | None: ``True`` if the plugin is present, ``False``
+            if absent, or ``None`` when neither verification path is
+            available on the current plugin build.
+
+        Raises:
+            ToolError: If either underlying RPC fails with any code
+                other than ``unknown_command``.
+        """
+        list_result: object | None = None
+        try:
+            list_result = await self._send_pipe_command("plugin_list")
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) != _X64DBG_ERR_UNKNOWN_COMMAND:
+                raise
+        if isinstance(list_result, list):
+            needle = name.lower()
+            for entry in list_result:
+                if not _is_str_obj_dict(entry):
+                    continue
+                raw_name = entry.get("name") or entry.get("plugName") or entry.get("pluginName")
+                if isinstance(raw_name, str) and raw_name.lower() == needle:
+                    return True
+            return False
+        try:
+            handle = await self.evaluate_expression(f'plugin.find("{name}")')
+        except ToolError as exc:
+            if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
+                return None
+            raise
+        return handle != 0
+
     async def execute_til_return(self) -> dict[str, Any]:
         """Execute until the current function returns.
 
@@ -5085,18 +5480,48 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "instruction_pointer": hex(address)}
 
     async def set_label(self, address: int, text: str) -> dict[str, Any]:
-        """Set a debug label at an address.
+        """Set a debug label at an address and verify the label was applied.
+
+        After queuing the ``lblset`` console command, reads the label
+        back via the ``lbl_list`` plugin RPC and compares it against
+        ``text``. The wrapper used to claim ``success: True`` without
+        inspecting the result of the queued console command
+        (audit7.md F-0001).
 
         Args:
             address: Address for the label.
             text: Label text.
 
         Returns:
-            dict[str, Any]: Dict with address, text, and success status.
+            dict[str, Any]: Dict with ``success``, ``address``,
+            ``text``, and ``verified``. ``verified`` is ``True`` when
+            the plugin readback observed ``text`` at ``address``;
+            ``False`` only when the plugin lacks ``lbl_list`` so a
+            readback cannot be performed.
+
+        Raises:
+            ToolError: If the readback observes a different label
+                (or no label) at ``address`` after the verification
+                window elapses.
         """
-        _logger.debug("label_setting", address=hex(address), label_text=text)
+        _logger.debug("x64dbg_command_queued", command="lblset", address=hex(address), label_text=text)
         await self._send_pipe_command("exec", {"command": f"lblset {hex(address)}, {text}"})
-        return {"address": hex(address), "text": text, "success": True}
+        observed = await self._lookup_label_text(address)
+        if observed is None:
+            return {"address": hex(address), "text": text, "success": True, "verified": False}
+        if observed != text:
+            msg = f"set_label verification failed: label at {hex(address)} is {observed!r} after lblset, expected {text!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "expected": text,
+                    "observed": observed,
+                },
+            )
+        return {"address": hex(address), "text": text, "success": True, "verified": True}
 
     async def get_labels(self, start: int, end: int) -> list[dict[str, Any]]:
         """Get debug labels in an address range.
@@ -5134,18 +5559,48 @@ class X64DbgBridge(DebuggerBridge):
         return labels
 
     async def set_comment(self, address: int, text: str) -> dict[str, Any]:
-        """Set a debug comment at an address.
+        """Set a debug comment at an address and verify the comment was applied.
+
+        After queuing the ``cmtset`` console command, reads the comment
+        back via the ``cmt_list`` plugin RPC and compares it against
+        ``text``. The wrapper used to claim ``success: True`` without
+        inspecting the result of the queued console command
+        (audit7.md F-0001).
 
         Args:
             address: Address for the comment.
             text: Comment text.
 
         Returns:
-            dict[str, Any]: Dict with address, text, and success status.
+            dict[str, Any]: Dict with ``success``, ``address``,
+            ``text``, and ``verified``. ``verified`` is ``True`` when
+            the plugin readback observed ``text`` at ``address``;
+            ``False`` only when the plugin lacks ``cmt_list`` so a
+            readback cannot be performed.
+
+        Raises:
+            ToolError: If the readback observes a different comment
+                (or no comment) at ``address`` after the verification
+                window elapses.
         """
-        _logger.debug("comment_setting", address=hex(address))
+        _logger.debug("x64dbg_command_queued", command="cmtset", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"cmtset {hex(address)}, {text}"})
-        return {"address": hex(address), "text": text, "success": True}
+        observed = await self._lookup_comment_text(address)
+        if observed is None:
+            return {"address": hex(address), "text": text, "success": True, "verified": False}
+        if observed != text:
+            msg = f"set_comment verification failed: comment at {hex(address)} is {observed!r} after cmtset, expected {text!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "expected": text,
+                    "observed": observed,
+                },
+            )
+        return {"address": hex(address), "text": text, "success": True, "verified": True}
 
     async def get_comments(self, start: int, end: int) -> list[dict[str, Any]]:
         """Get debug comments in an address range.
@@ -5183,16 +5638,55 @@ class X64DbgBridge(DebuggerBridge):
         return comments
 
     async def enable_breakpoint(self, address: int) -> dict[str, Any]:
-        """Enable a breakpoint at an address.
+        """Enable a breakpoint at an address and verify the debugger applied it.
+
+        After queuing the ``be`` console command, polls ``bp_list`` and
+        confirms the breakpoint at ``address`` is reported with
+        ``enabled=True``. The wrapper used to claim ``success: True``
+        and update the local ``_breakpoints`` mirror without inspecting
+        the debugger's authoritative state (audit7.md F-0001).
 
         Args:
             address: Breakpoint address.
 
         Returns:
-            dict[str, Any]: Dict with address and success status.
+            dict[str, Any]: Dict with ``success``, ``address``, and
+            ``verified``. ``verified`` is ``True`` when ``bp_list``
+            reports ``enabled=True`` for the address; ``False`` only
+            when the plugin lacks ``bp_list``.
+
+        Raises:
+            ToolError: If the debugger continues to report
+                ``enabled=False`` (or no entry at all) at ``address``
+                after the verification window elapses.
         """
-        _logger.debug("breakpoint_enabling", address=hex(address))
+        _logger.debug("x64dbg_command_queued", command="be", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"be {hex(address)}"})
+        observed, rpc_available = await self._wait_for_breakpoint_enabled_state(address, expected=True)
+        if observed is False:
+            msg = f"enable_breakpoint verification failed: bp_list reports enabled=False for {hex(address)}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "expected_enabled": True,
+                    "observed_enabled": False,
+                },
+            )
+        if observed is None and rpc_available:
+            msg = f"enable_breakpoint verification failed: bp_list returned no entry for {hex(address)} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "address": hex(address),
+                    "expected_enabled": True,
+                },
+            )
+        verified = observed is True
         with self._state_lock:
             bp = self._breakpoints.get(address)
             if bp is not None:
@@ -5204,19 +5698,58 @@ class X64DbgBridge(DebuggerBridge):
                     hit_count=bp.hit_count,
                     condition=bp.condition,
                 )
-        return {"address": hex(address), "success": True}
+        return {"address": hex(address), "success": True, "verified": verified}
 
     async def disable_breakpoint(self, address: int) -> dict[str, Any]:
-        """Disable a breakpoint at an address.
+        """Disable a breakpoint at an address and verify the debugger applied it.
+
+        After queuing the ``bd`` console command, polls ``bp_list`` and
+        confirms the breakpoint at ``address`` is reported with
+        ``enabled=False``. The wrapper used to claim ``success: True``
+        and update the local ``_breakpoints`` mirror without inspecting
+        the debugger's authoritative state (audit7.md F-0001).
 
         Args:
             address: Breakpoint address.
 
         Returns:
-            dict[str, Any]: Dict with address and success status.
+            dict[str, Any]: Dict with ``success``, ``address``, and
+            ``verified``. ``verified`` is ``True`` when ``bp_list``
+            reports ``enabled=False`` for the address; ``False`` only
+            when the plugin lacks ``bp_list``.
+
+        Raises:
+            ToolError: If the debugger continues to report
+                ``enabled=True`` (or no entry at all) at ``address``
+                after the verification window elapses.
         """
-        _logger.debug("breakpoint_disabling", address=hex(address))
+        _logger.debug("x64dbg_command_queued", command="bd", address=hex(address))
         await self._send_pipe_command("exec", {"command": f"bd {hex(address)}"})
+        observed, rpc_available = await self._wait_for_breakpoint_enabled_state(address, expected=False)
+        if observed is True:
+            msg = f"disable_breakpoint verification failed: bp_list reports enabled=True for {hex(address)}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "expected_enabled": False,
+                    "observed_enabled": True,
+                },
+            )
+        if observed is None and rpc_available:
+            msg = f"disable_breakpoint verification failed: bp_list returned no entry for {hex(address)} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "address": hex(address),
+                    "expected_enabled": False,
+                },
+            )
+        verified = observed is False
         with self._state_lock:
             bp = self._breakpoints.get(address)
             if bp is not None:
@@ -5228,7 +5761,7 @@ class X64DbgBridge(DebuggerBridge):
                     hit_count=bp.hit_count,
                     condition=bp.condition,
                 )
-        return {"address": hex(address), "success": True}
+        return {"address": hex(address), "success": True, "verified": verified}
 
     async def set_breakpoint_on_api(self, module: str, function: str) -> dict[str, Any]:
         """Set a breakpoint on an imported API function.
@@ -6075,57 +6608,218 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "path": path}
 
     async def suspend_thread(self, tid: int) -> dict[str, Any]:
-        """Suspend a thread.
+        """Suspend a thread and verify the suspend transition was observed.
+
+        After queuing ``suspendthread``, polls ``thread_detail`` for
+        the thread record matching ``tid`` and waits until the
+        ``suspended`` flag is ``True``. The wrapper used to claim
+        ``success: True`` without observing the actual thread state
+        (audit7.md F-0001).
 
         Args:
             tid: Thread ID.
 
         Returns:
-            dict[str, Any]: Dict with success status and tid.
+            dict[str, Any]: Dict with ``success``, ``tid``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` reported ``suspended=True``; ``False``
+            only when the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` continues to report
+                ``suspended=False`` (or no entry at all) for ``tid``
+                after the verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="suspendthread", tid=tid)
         await self._send_command(f"suspendthread {tid}")
-        return {"success": True, "tid": tid}
+        record, rpc_available = await self._wait_for_thread_state(
+            tid,
+            predicate=lambda entry: entry.get("suspended") is True,
+        )
+        if not rpc_available:
+            return {"success": True, "tid": tid, "verified": False}
+        if record is None:
+            msg = f"suspend_thread verification failed: thread_detail returned no entry for tid={tid} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "tid": tid,
+                    "expected_suspended": True,
+                },
+            )
+        if record.get("suspended") is not True:
+            msg = (
+                f"suspend_thread verification failed: thread {tid} still reports suspended={record.get('suspended')!r} after suspendthread"
+            )
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "tid": tid,
+                    "expected_suspended": True,
+                    "observed_suspended": record.get("suspended"),
+                },
+            )
+        return {"success": True, "tid": tid, "verified": True}
 
     async def resume_thread(self, tid: int) -> dict[str, Any]:
-        """Resume a suspended thread.
+        """Resume a suspended thread and verify the resume was observed.
+
+        After queuing ``resumethread``, polls ``thread_detail`` for
+        the thread record matching ``tid`` and waits until the
+        ``suspended`` flag is ``False``. The wrapper used to claim
+        ``success: True`` without observing the actual thread state
+        (audit7.md F-0001).
 
         Args:
             tid: Thread ID.
 
         Returns:
-            dict[str, Any]: Dict with success status and tid.
+            dict[str, Any]: Dict with ``success``, ``tid``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` reported ``suspended=False``; ``False``
+            only when the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` continues to report
+                ``suspended=True`` (or no entry at all) for ``tid``
+                after the verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="resumethread", tid=tid)
         await self._send_command(f"resumethread {tid}")
-        return {"success": True, "tid": tid}
+        record, rpc_available = await self._wait_for_thread_state(
+            tid,
+            predicate=lambda entry: entry.get("suspended") is False,
+        )
+        if not rpc_available:
+            return {"success": True, "tid": tid, "verified": False}
+        if record is None:
+            msg = f"resume_thread verification failed: thread_detail returned no entry for tid={tid} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "tid": tid,
+                    "expected_suspended": False,
+                },
+            )
+        if record.get("suspended") is not False:
+            msg = f"resume_thread verification failed: thread {tid} still reports suspended={record.get('suspended')!r} after resumethread"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "tid": tid,
+                    "expected_suspended": False,
+                    "observed_suspended": record.get("suspended"),
+                },
+            )
+        return {"success": True, "tid": tid, "verified": True}
 
     async def switch_thread(self, tid: int) -> dict[str, Any]:
-        """Switch the active debugger thread.
+        """Switch the active debugger thread and verify the switch occurred.
+
+        After queuing ``switchthread``, polls ``thread_detail`` to
+        confirm the requested thread is present in the listing. The
+        wrapper used to claim ``success: True`` without observing the
+        debugger's actual thread state (audit7.md F-0001).
 
         Args:
             tid: Thread ID to switch to.
 
         Returns:
-            dict[str, Any]: Dict with success status and tid.
+            dict[str, Any]: Dict with ``success``, ``tid``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` listed the thread (i.e. it exists in the
+            target process and can be the active thread); ``False``
+            only when the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` does not list ``tid`` at
+                all after the verification window elapses (switch
+                target gone or never existed).
         """
         _logger.debug("x64dbg_command_queued", command="switchthread", tid=tid)
         await self._send_command(f"switchthread {tid}")
-        return {"success": True, "tid": tid}
+        record, rpc_available = await self._wait_for_thread_state(
+            tid,
+            predicate=lambda _entry: True,
+        )
+        if not rpc_available:
+            return {"success": True, "tid": tid, "verified": False}
+        if record is None:
+            msg = f"switch_thread verification failed: thread_detail returned no entry for tid={tid} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "tid": tid,
+                },
+            )
+        return {"success": True, "tid": tid, "verified": True}
 
     async def set_thread_name(self, tid: int, name: str) -> dict[str, Any]:
-        """Set a thread's name.
+        """Set a thread's display name and verify the new name was applied.
+
+        After queuing ``setthreadname``, polls ``thread_detail`` until
+        the matching thread record reports ``name == name``. The
+        wrapper used to claim ``success: True`` without inspecting the
+        actual thread metadata (audit7.md F-0001).
 
         Args:
             tid: Thread ID.
             name: Display name for the thread.
 
         Returns:
-            dict[str, Any]: Dict with success status, tid, and name.
+            dict[str, Any]: Dict with ``success``, ``tid``, ``name``,
+            and ``verified``. ``verified`` is ``True`` when
+            ``thread_detail`` reported the matching name; ``False``
+            only when the plugin lacks ``thread_detail``.
+
+        Raises:
+            ToolError: If ``thread_detail`` does not report the
+                requested name (or no entry at all) after the
+                verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="setthreadname", tid=tid)
         await self._send_command(f'setthreadname {tid}, "{name}"')
-        return {"success": True, "tid": tid, "name": name}
+        record, rpc_available = await self._wait_for_thread_state(
+            tid,
+            predicate=lambda entry: entry.get("name") == name,
+        )
+        if not rpc_available:
+            return {"success": True, "tid": tid, "name": name, "verified": False}
+        if record is None:
+            msg = f"set_thread_name verification failed: thread_detail returned no entry for tid={tid} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "tid": tid,
+                    "expected_name": name,
+                },
+            )
+        observed_name = record.get("name")
+        if observed_name != name:
+            msg = f"set_thread_name verification failed: thread {tid} reports name={observed_name!r} after setthreadname, expected {name!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "tid": tid,
+                    "expected_name": name,
+                    "observed_name": observed_name,
+                },
+            )
+        return {"success": True, "tid": tid, "name": name, "verified": True}
 
     async def get_seh_chain(self) -> list[dict[str, Any]]:
         """Get the structured exception handler chain.
@@ -6362,38 +7056,97 @@ class X64DbgBridge(DebuggerBridge):
         return {"success": True, "dll_name": dll_name, "event": event}
 
     async def trace_into(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
-        """Trace into with optional condition.
+        """Trace into with optional condition and verify the debugger started running.
+
+        After queuing ``TraceIntoConditional``, polls ``status`` and
+        waits for the debugger's ``is_running`` flag to flip to
+        ``True`` (paused -> running, which is what a successful trace
+        start looks like before the condition fires). The wrapper used
+        to claim ``success: True`` without inspecting the debugger
+        state at all (audit7.md F-0001).
 
         Args:
             condition: Trace break condition expression.
             max_steps: Maximum number of steps.
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when ``status``
+            reported the debugger as running (or transitioning back to
+            paused after the trace already finished); ``False`` only
+            when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If ``status`` reports the debugger never
+                started running and remained paused after the
+                verification window elapses (real trace failure).
         """
         _logger.debug("x64dbg_command_queued", command="trace_into", max_steps=max_steps)
         cmd = f"TraceIntoConditional {max_steps}"
         if condition:
             cmd += f', "{condition}"'
         await self._send_command(cmd)
-        return {"success": True, "max_steps": max_steps}
+        observed, rpc_available = await self._wait_for_running_state(expected=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_into verification failed: debugger never entered running state after TraceIntoConditional within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
 
     async def trace_over(self, condition: str | None = None, max_steps: int = 50000) -> dict[str, Any]:
-        """Trace over with optional condition.
+        """Trace over with optional condition and verify the debugger started running.
+
+        After queuing ``TraceOverConditional``, polls ``status`` and
+        waits for the debugger's ``is_running`` flag to flip to
+        ``True``. The wrapper used to claim ``success: True`` without
+        inspecting the debugger state at all (audit7.md F-0001).
 
         Args:
             condition: Trace break condition expression.
             max_steps: Maximum number of steps.
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success``, ``max_steps``, and
+            ``verified``. ``verified`` is ``True`` when ``status``
+            reported the debugger as running; ``False`` only when the
+            plugin lacks ``status``.
+
+        Raises:
+            ToolError: If ``status`` reports the debugger never
+                started running and remained paused after the
+                verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="trace_over", max_steps=max_steps)
         cmd = f"TraceOverConditional {max_steps}"
         if condition:
             cmd += f', "{condition}"'
         await self._send_command(cmd)
-        return {"success": True, "max_steps": max_steps}
+        observed, rpc_available = await self._wait_for_running_state(expected=True)
+        if not rpc_available:
+            return {"success": True, "max_steps": max_steps, "verified": False}
+        if observed is False:
+            msg = f"trace_over verification failed: debugger never entered running state after TraceOverConditional within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "max_steps": max_steps,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "max_steps": max_steps, "verified": True}
 
     async def get_trace_record(self, address: int, size: int = 1) -> dict[str, Any]:
         """Get trace record hit count at an address.
@@ -6421,43 +7174,133 @@ class X64DbgBridge(DebuggerBridge):
         return {"address": hex(address), "hitCount": 0}
 
     async def step_count(self, count: int, step_type: str = "into") -> dict[str, Any]:
-        """Execute a specific number of steps.
+        """Execute ``count`` steps and verify the debugger pauses again afterwards.
+
+        Sends ``tic`` (into) or ``toc`` (over) with the requested step
+        count. The console commands block the debugger until the step
+        budget is exhausted; this wrapper then waits for the debugger
+        to return to a paused state via ``status``. The previous
+        implementation returned ``success: True`` immediately and
+        offered the caller no way to distinguish "step issued" from
+        "step completed" (audit7.md F-0001).
 
         Args:
             count: Number of steps to execute.
             step_type: Step type ('into' or 'over').
 
         Returns:
-            dict[str, Any]: Dict with success status, count, and step_type.
+            dict[str, Any]: Dict with ``success``, ``count``,
+            ``step_type``, and ``verified``. ``verified`` is ``True``
+            when ``status`` reported the debugger as paused after the
+            step budget; ``False`` only when the plugin lacks
+            ``status``.
+
+        Raises:
+            ToolError: If ``status`` reports the debugger remained
+                running and never returned to a paused state after the
+                verification window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="step_count", count=count, step_type=step_type)
         cmd = f"tic 0, {count}" if step_type == "into" else f"toc 0, {count}"
         await self._send_command(cmd)
-        return {"success": True, "count": count, "step_type": step_type}
+        observed, rpc_available = await self._wait_for_running_state(expected=False)
+        if not rpc_available:
+            return {"success": True, "count": count, "step_type": step_type, "verified": False}
+        if observed is True:
+            msg = f"step_count verification failed: debugger still running after {step_type} step budget {count}, never returned to paused within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "count": count,
+                    "step_type": step_type,
+                    "expected_running": False,
+                    "observed_running": True,
+                },
+            )
+        return {"success": True, "count": count, "step_type": step_type, "verified": True}
 
     async def animate_start(self, step_type: str = "into") -> dict[str, Any]:
-        """Start animation (visual step execution).
+        """Start animation (visual step execution) and verify the debugger started.
+
+        After queuing ``AnimateInto`` or ``AnimateOver``, polls
+        ``status`` and waits for the debugger's ``is_running`` flag to
+        flip to ``True`` (animation kicks the debugger into a
+        continuous step loop). The wrapper used to claim
+        ``success: True`` without observing the actual debugger state
+        (audit7.md F-0001).
 
         Args:
             step_type: Step type ('into' or 'over').
 
         Returns:
-            dict[str, Any]: Dict with success status and step_type.
+            dict[str, Any]: Dict with ``success``, ``step_type``, and
+            ``verified``. ``verified`` is ``True`` when ``status``
+            reported the debugger as running; ``False`` only when the
+            plugin lacks ``status``.
+
+        Raises:
+            ToolError: If ``status`` reports the debugger never
+                entered the running state after the verification
+                window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="animate_start", step_type=step_type)
         cmd = "AnimateInto" if step_type == "into" else "AnimateOver"
         await self._send_command(cmd)
-        return {"success": True, "step_type": step_type}
+        observed, rpc_available = await self._wait_for_running_state(expected=True)
+        if not rpc_available:
+            return {"success": True, "step_type": step_type, "verified": False}
+        if observed is False:
+            msg = f"animate_start verification failed: debugger never entered running state after {cmd} within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "step_type": step_type,
+                    "expected_running": True,
+                    "observed_running": False,
+                },
+            )
+        return {"success": True, "step_type": step_type, "verified": True}
 
     async def animate_stop(self) -> dict[str, Any]:
-        """Stop animation.
+        """Stop animation and verify the debugger paused.
+
+        After queuing ``AnimateStop``, polls ``status`` and waits for
+        the debugger's ``is_running`` flag to flip to ``False``. The
+        wrapper used to claim ``success: True`` without observing the
+        actual debugger state (audit7.md F-0001).
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success`` and ``verified``.
+            ``verified`` is ``True`` when ``status`` reported the
+            debugger as paused after the stop command; ``False`` only
+            when the plugin lacks ``status``.
+
+        Raises:
+            ToolError: If ``status`` reports the debugger remained
+                running and never paused after the verification
+                window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="animate_stop")
         await self._send_command("AnimateStop")
-        return {"success": True}
+        observed, rpc_available = await self._wait_for_running_state(expected=False)
+        if not rpc_available:
+            return {"success": True, "verified": False}
+        if observed is True:
+            msg = f"animate_stop verification failed: debugger still running after AnimateStop within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "expected_running": False,
+                    "observed_running": True,
+                },
+            )
+        return {"success": True, "verified": True}
 
     async def analyze_entropy(self, address: int, size: int, block_size: int = 256) -> list[dict[str, Any]]:
         """Analyze Shannon entropy of a memory region.
@@ -6647,76 +7490,244 @@ class X64DbgBridge(DebuggerBridge):
         return results
 
     async def script_load(self, path: str) -> dict[str, Any]:
-        """Load an x64dbg script file.
+        """Load an x64dbg script file and verify the load did not raise a script error.
+
+        After queuing ``scriptload``, queries the
+        ``script.iserror()`` register via the expression evaluator and
+        raises ``ToolError`` when it is set. The wrapper used to claim
+        ``success: True`` without inspecting the script error register
+        (audit7.md F-0001).
 
         Args:
             path: Path to script file.
 
         Returns:
-            dict[str, Any]: Dict with success status and path.
+            dict[str, Any]: Dict with ``success``, ``path``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``script.iserror()`` returned ``0`` (no error); ``False``
+            only when the expression evaluator is unavailable.
+
+        Raises:
+            ToolError: If ``script.iserror()`` reports a non-zero
+                value (the load failed inside x64dbg's script
+                interpreter).
         """
         _logger.debug("x64dbg_command_queued", command="scriptload", path=path)
         await self._send_command(f'scriptload "{path}"')
-        return {"success": True, "path": path}
+        error_flag = await self._query_script_error()
+        if error_flag is None:
+            return {"success": True, "path": path, "verified": False}
+        if error_flag:
+            msg = f"script_load verification failed: script.iserror() is set after scriptload {path!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "path": path,
+                    "script_iserror": True,
+                },
+            )
+        return {"success": True, "path": path, "verified": True}
 
     async def script_run(self) -> dict[str, Any]:
-        """Run the currently loaded script.
+        """Run the currently loaded script and verify it ran without a script error.
+
+        After queuing ``scriptrun``, queries the
+        ``script.iserror()`` register via the expression evaluator and
+        raises ``ToolError`` when it is set. The wrapper used to claim
+        ``success: True`` without inspecting the script error register
+        (audit7.md F-0001).
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success`` and ``verified``.
+            ``verified`` is ``True`` when ``script.iserror()`` returned
+            ``0``; ``False`` only when the expression evaluator is
+            unavailable.
+
+        Raises:
+            ToolError: If ``script.iserror()`` reports a non-zero
+                value (the script raised an error during execution).
         """
         _logger.debug("x64dbg_command_queued", command="scriptrun")
         await self._send_command("scriptrun")
-        return {"success": True}
+        error_flag = await self._query_script_error()
+        if error_flag is None:
+            return {"success": True, "verified": False}
+        if error_flag:
+            msg = "script_run verification failed: script.iserror() is set after scriptrun"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "script_iserror": True,
+                },
+            )
+        return {"success": True, "verified": True}
 
     async def script_cmd(self, line: str) -> dict[str, Any]:
-        """Execute a single script command.
+        """Execute a single script command and verify it ran without a script error.
+
+        After queuing ``scriptcmd``, queries the
+        ``script.iserror()`` register via the expression evaluator and
+        raises ``ToolError`` when it is set. The wrapper used to claim
+        ``success: True`` without inspecting the script error register
+        (audit7.md F-0001).
 
         Args:
             line: Script command line.
 
         Returns:
-            dict[str, Any]: Dict with success status and line.
+            dict[str, Any]: Dict with ``success``, ``line``, and
+            ``verified``. ``verified`` is ``True`` when
+            ``script.iserror()`` returned ``0``; ``False`` only when
+            the expression evaluator is unavailable.
+
+        Raises:
+            ToolError: If ``script.iserror()`` reports a non-zero
+                value (the script command raised an error).
         """
         _logger.debug("x64dbg_command_queued", command="scriptcmd", line=line)
         await self._send_command(f'scriptcmd "{line}"')
-        return {"success": True, "line": line}
+        error_flag = await self._query_script_error()
+        if error_flag is None:
+            return {"success": True, "line": line, "verified": False}
+        if error_flag:
+            msg = f"script_cmd verification failed: script.iserror() is set after scriptcmd {line!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "line": line,
+                    "script_iserror": True,
+                },
+            )
+        return {"success": True, "line": line, "verified": True}
 
     async def script_abort(self) -> dict[str, Any]:
-        """Abort the running script.
+        """Abort the running script and verify the abort did not raise a script error.
+
+        After queuing ``scriptabort``, queries the
+        ``script.iserror()`` register via the expression evaluator and
+        raises ``ToolError`` when it is set. The wrapper used to claim
+        ``success: True`` without inspecting the script error register
+        (audit7.md F-0001).
 
         Returns:
-            dict[str, Any]: Dict with success status.
+            dict[str, Any]: Dict with ``success`` and ``verified``.
+            ``verified`` is ``True`` when ``script.iserror()`` returned
+            ``0``; ``False`` only when the expression evaluator is
+            unavailable.
+
+        Raises:
+            ToolError: If ``script.iserror()`` reports a non-zero
+                value (the abort raised an error inside the script
+                interpreter).
         """
         _logger.debug("x64dbg_command_queued", command="scriptabort")
         await self._send_command("scriptabort")
-        return {"success": True}
+        error_flag = await self._query_script_error()
+        if error_flag is None:
+            return {"success": True, "verified": False}
+        if error_flag:
+            msg = "script_abort verification failed: script.iserror() is set after scriptabort"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "script_iserror": True,
+                },
+            )
+        return {"success": True, "verified": True}
 
     async def plugin_load(self, path: str) -> dict[str, Any]:
-        """Load a plugin.
+        """Load a plugin and verify it is present in the loaded plugin list.
+
+        After queuing ``plugload``, checks ``plugin_list`` (preferred)
+        or ``plugin.find(<name>)`` via the expression evaluator and
+        raises ``ToolError`` when the plugin is absent. The wrapper
+        used to claim ``success: True`` without observing the actual
+        plugin manager state (audit7.md F-0001).
 
         Args:
             path: Path to plugin DLL.
 
         Returns:
-            dict[str, Any]: Dict with success status and path.
+            dict[str, Any]: Dict with ``success``, ``path``, and
+            ``verified``. ``verified`` is ``True`` when the readback
+            confirmed the plugin is present; ``False`` only when the
+            plugin lacks both ``plugin_list`` and the
+            ``plugin.find()`` expression.
+
+        Raises:
+            ToolError: If neither verification path reports the
+                plugin as present (real load failure).
         """
         _logger.debug("x64dbg_command_queued", command="plugload", path=path)
         await self._send_command(f'plugload "{path}"')
-        return {"success": True, "path": path}
+        plugin_name = Path(path).stem
+        present = await self._query_plugin_present(plugin_name)
+        if present is None:
+            return {"success": True, "path": path, "verified": False}
+        if not present:
+            msg = f"plugin_load verification failed: plugin {plugin_name!r} not present after plugload {path!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "path": path,
+                    "plugin_name": plugin_name,
+                    "expected_present": True,
+                    "observed_present": False,
+                },
+            )
+        return {"success": True, "path": path, "verified": True}
 
     async def plugin_unload(self, name: str) -> dict[str, Any]:
-        """Unload a plugin.
+        """Unload a plugin and verify it is no longer present in the plugin list.
+
+        After queuing ``plugunload``, checks ``plugin_list``
+        (preferred) or ``plugin.find(<name>)`` via the expression
+        evaluator and raises ``ToolError`` when the plugin is still
+        loaded. The wrapper used to claim ``success: True`` without
+        observing the actual plugin manager state (audit7.md F-0001).
 
         Args:
             name: Plugin name.
 
         Returns:
-            dict[str, Any]: Dict with success status and name.
+            dict[str, Any]: Dict with ``success``, ``name``, and
+            ``verified``. ``verified`` is ``True`` when the readback
+            confirmed the plugin is absent; ``False`` only when the
+            plugin lacks both ``plugin_list`` and the
+            ``plugin.find()`` expression.
+
+        Raises:
+            ToolError: If both verification paths still report the
+                plugin as present (real unload failure).
         """
         _logger.debug("x64dbg_command_queued", command="plugunload", plugin_name=name)
         await self._send_command(f'plugunload "{name}"')
-        return {"success": True, "name": name}
+        present = await self._query_plugin_present(name)
+        if present is None:
+            return {"success": True, "name": name, "verified": False}
+        if present:
+            msg = f"plugin_unload verification failed: plugin {name!r} still present after plugunload"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "plugin_name": name,
+                    "expected_present": False,
+                    "observed_present": True,
+                },
+            )
+        return {"success": True, "name": name, "verified": True}
 
     async def plugin_list(self) -> list[dict[str, Any]]:
         """List loaded plugins.

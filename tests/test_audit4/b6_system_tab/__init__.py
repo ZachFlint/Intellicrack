@@ -2,3 +2,4 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
+"""Audit4 B6 SystemTab tests."""

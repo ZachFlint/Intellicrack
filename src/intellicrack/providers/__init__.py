@@ -19,16 +19,14 @@ from intellicrack.providers.base import (
     create_google_tool_schema,
     create_openai_tool_schema,
 )
-from intellicrack.providers.discovery import DiscoveryCache, DiscoveryEvent, DiscoveryFilter, ModelDiscovery
+from intellicrack.providers.discovery import DiscoveryCache, DiscoveryFilter, ModelDiscovery
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
 from intellicrack.providers.huggingface import HuggingFaceProvider
 from intellicrack.providers.local_transformers import LocalTransformersProvider
 from intellicrack.providers.model_loader import (
-    DtypeOption,
     LoadedModel,
     ModelCache,
-    ModelConfig,
     clear_global_cache,
     estimate_model_memory,
     get_global_model_cache,
@@ -63,9 +61,7 @@ __all__: list[str] = [
     "AnthropicProvider",
     "CredentialLoaderProtocol",
     "DiscoveryCache",
-    "DiscoveryEvent",
     "DiscoveryFilter",
-    "DtypeOption",
     "GoogleProvider",
     "GrokProvider",
     "HuggingFaceProvider",
@@ -74,7 +70,6 @@ __all__: list[str] = [
     "LoadedModel",
     "LocalTransformersProvider",
     "ModelCache",
-    "ModelConfig",
     "ModelDiscovery",
     "OllamaProvider",
     "OpenAIProvider",

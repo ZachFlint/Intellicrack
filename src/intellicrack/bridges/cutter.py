@@ -1150,6 +1150,7 @@ class CutterBridge(StaticAnalysisBridge):
             self.state.tool_running = True
             self.state.binary_loaded = True
             self.state.target_path = self._binary_path
+            self._publish_tool_state()
 
             _logger.info("binary_loaded", path=path.name, file_type=file_type, arch=arch, bits=bits)
 

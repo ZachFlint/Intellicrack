@@ -122,7 +122,71 @@ function Resolve-PayloadField {
 
 $script:Session = $null
 $script:Timer = $null
+$script:StopWatchTimer = $null
+$script:StopWatchSubscriberId = $null
+$script:StopWatchJob = $null
+$script:DurationStopSubscriberId = $null
+$script:DurationStopJob = $null
 $script:ExitCode = 0
+$script:StopEventName = 'IntellicrackMonitorStop'
+$script:StopEvent = $null
+$script:StopPollIntervalMs = 250
+$script:LifecyclePath = Join-Path -Path $LogDir -ChildPath 'api_trace.lifecycle.log'
+
+function Open-MonitorStopEvent {
+    [CmdletBinding()]
+    [OutputType([System.Threading.EventWaitHandle])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    $createdNew = $false
+    try {
+        $handle = [System.Threading.EventWaitHandle]::new(
+            $false,
+            [System.Threading.EventResetMode]::ManualReset,
+            $Name,
+            [ref]$createdNew)
+        return $handle
+    } catch [System.UnauthorizedAccessException] {
+        try {
+            return [System.Threading.EventWaitHandle]::OpenExisting($Name)
+        } catch {
+            return $null
+        }
+    } catch {
+        return $null
+    }
+}
+
+function Test-MonitorStopRequested {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+    if ($null -eq $script:StopEvent) { return $false }
+    try {
+        return $script:StopEvent.WaitOne(0)
+    } catch {
+        return $false
+    }
+}
+
+function Write-TraceLifecycle {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$State,
+        [Parameter(Mandatory = $false)][string]$Detail = ''
+    )
+
+    $ts = (Get-Date).ToString('o')
+    $safeDetail = (Format-TraceField -Value $Detail)
+    $line = "$ts|api_trace|$State|$safeDetail"
+    try {
+        Add-Content -LiteralPath $script:LifecyclePath -Value $line -Encoding utf8
+    } catch {
+        $null = $_
+    }
+}
 
 function Write-TraceFatal {
     [CmdletBinding()]
@@ -269,9 +333,35 @@ function Invoke-ApiTrace {
                 Write-TraceError -Stage 'timer_stop_processing' -Message $_.Exception.Message
             }
         }
-        Register-ObjectEvent -InputObject $script:Timer -EventName Elapsed -Action $stopAction | Out-Null
+        $script:DurationStopSubscriberId = 'IntApiTraceDurationTimer'
+        try { Unregister-Event -SourceIdentifier $script:DurationStopSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:DurationStopJob = Register-ObjectEvent -InputObject $script:Timer -EventName Elapsed `
+            -SourceIdentifier $script:DurationStopSubscriberId -Action $stopAction
         $script:Timer.Start()
     }
+
+    $script:StopWatchTimer = New-Object System.Timers.Timer
+    $script:StopWatchTimer.Interval = [double]$script:StopPollIntervalMs
+    $script:StopWatchTimer.AutoReset = $true
+    $stopWatchAction = {
+        try {
+            if ($null -eq $script:StopEvent) { return }
+            if (-not $script:StopEvent.WaitOne(0)) { return }
+            if ($null -ne $script:Session -and $null -ne $script:Session.Source) {
+                try { $script:Session.Source.StopProcessing() } catch { $null = $_ }
+            }
+            if ($null -ne $script:StopWatchTimer) {
+                try { $script:StopWatchTimer.Stop() } catch { $null = $_ }
+            }
+        } catch {
+            $null = $_
+        }
+    }
+    $script:StopWatchSubscriberId = 'IntApiTraceStopWatcher'
+    try { Unregister-Event -SourceIdentifier $script:StopWatchSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+    $script:StopWatchJob = Register-ObjectEvent -InputObject $script:StopWatchTimer -EventName Elapsed `
+        -SourceIdentifier $script:StopWatchSubscriberId -Action $stopWatchAction
+    $script:StopWatchTimer.Start()
 
     try {
         $source.Process() | Out-Null
@@ -279,6 +369,9 @@ function Invoke-ApiTrace {
         Write-TraceFatal -Code 5 -Stage 'process' -Message $_.Exception.Message
     }
 }
+
+$script:StopEvent = Open-MonitorStopEvent -Name $script:StopEventName
+Write-TraceLifecycle -State 'started' -Detail "pid_filter=$TargetPid duration=$DurationSeconds stop_event=$script:StopEventName"
 
 try {
     Invoke-ApiTrace -FilterPid $TargetPid -DurationSeconds $DurationSeconds
@@ -288,6 +381,27 @@ try {
     if ($null -ne $script:Timer) {
         try { $script:Timer.Stop() } catch { Write-TraceError -Stage 'timer_stop' -Message $_.Exception.Message }
         try { $script:Timer.Dispose() } catch { Write-TraceError -Stage 'timer_dispose' -Message $_.Exception.Message }
+    }
+    if ($null -ne $script:DurationStopSubscriberId) {
+        try { Unregister-Event -SourceIdentifier $script:DurationStopSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:DurationStopSubscriberId = $null
+    }
+    if ($null -ne $script:DurationStopJob) {
+        try { Remove-Job -Job $script:DurationStopJob -Force -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:DurationStopJob = $null
+    }
+    if ($null -ne $script:StopWatchTimer) {
+        try { $script:StopWatchTimer.Stop() } catch { Write-TraceError -Stage 'stop_watch_timer_stop' -Message $_.Exception.Message }
+        try { $script:StopWatchTimer.Dispose() } catch { Write-TraceError -Stage 'stop_watch_timer_dispose' -Message $_.Exception.Message }
+        $script:StopWatchTimer = $null
+    }
+    if ($null -ne $script:StopWatchSubscriberId) {
+        try { Unregister-Event -SourceIdentifier $script:StopWatchSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:StopWatchSubscriberId = $null
+    }
+    if ($null -ne $script:StopWatchJob) {
+        try { Remove-Job -Job $script:StopWatchJob -Force -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:StopWatchJob = $null
     }
     if ($null -ne $script:Session) {
         try {
@@ -299,6 +413,11 @@ try {
     }
     $tsStop = Get-Date -Format 'o'
     Write-TraceLine -Line "$tsStop|tracer|0|STOP|IntApiTrace||$($script:ExitCode)"
+    Write-TraceLifecycle -State 'stopped' -Detail "exit_code=$($script:ExitCode) stop_requested=$(Test-MonitorStopRequested)"
+    if ($null -ne $script:StopEvent) {
+        try { $script:StopEvent.Dispose() } catch { $null = $_ }
+        $script:StopEvent = $null
+    }
 }
 
 exit $script:ExitCode

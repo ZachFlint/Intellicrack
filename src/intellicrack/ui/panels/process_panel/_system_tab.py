@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
@@ -98,6 +99,44 @@ class SystemTab(QWidget):
         self._teb_combo.clear()
         for t in threads:
             self._teb_combo.addItem(f"TID {t.tid}", t.tid)
+
+    def _require_attached_pid(self, action: str) -> int | None:
+        """Return the attached PID, surfacing a user-visible notice when unattached.
+
+        Centralises the guard pattern used by every PID-dependent action so future
+        methods cannot silently fail when no process is attached.
+
+        Args:
+            action: Short identifier of the calling action used for structured logging
+                and for the title of the user-visible warning dialog.
+
+        Returns:
+            int | None: The attached PID, or None if no process is currently attached.
+                When None is returned, a warning dialog has already been shown and the
+                raw-output widget has been updated with the not-attached notice.
+        """
+        if self._attached_pid is None:
+            _logger.warning("system_tab_action_without_pid", action=action)
+            self._raw_output.setPlainText(_NOT_ATTACHED_MSG)
+            QMessageBox.warning(self, action, _NOT_ATTACHED_MSG)
+            return None
+        return self._attached_pid
+
+    def _show_error(self, title: str, exc: object, *, log_event: str) -> None:
+        """Surface a bridge error to the user via a warning dialog and structured log.
+
+        Mirrors the user-facing error-handling pattern used by ``ModulesTab`` so the
+        operator sees failures rather than having them silently dropped into the log.
+
+        Args:
+            title: Title for the warning dialog, also used to convey the action context
+                to the user (for example, ``"Query Mitigations"``).
+            exc: The exception or error object reported by the bridge layer.
+            log_event: Structured log event name identifying the failing action.
+        """
+        message = str(exc)
+        _logger.warning(log_event, exc=message)
+        QMessageBox.warning(self, title, message)
 
     def _setup_ui(self) -> None:
         """Build the system tab layout."""
@@ -474,9 +513,8 @@ class SystemTab(QWidget):
         """Query token privileges for the attached process."""
         if self._bridge is None:
             return
-        if self._attached_pid is None:
-            _logger.warning("system_tab_action_without_pid", action="get_token_privileges")
-            self._raw_output.setPlainText(_NOT_ATTACHED_MSG)
+        pid = self._require_attached_pid("Query Privileges")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -500,10 +538,10 @@ class SystemTab(QWidget):
                 self._priv_table.setItem(row, 3, QTableWidgetItem(str(typed_priv.get("attributes", 0))))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_privileges_failed", exc=str(exc))
+            self._show_error("Query Privileges Error", exc, log_event="system_tab_privileges_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.get_token_privileges(self._attached_pid),
+            self._bridge.get_token_privileges(pid),
             _on_success,
             _on_error,
             self,
@@ -513,16 +551,15 @@ class SystemTab(QWidget):
         """Enable SeDebugPrivilege on the attached process."""
         if self._bridge is None:
             return
-        if self._attached_pid is None:
-            _logger.warning("system_tab_action_without_pid", action="adjust_token_privilege")
-            self._raw_output.setPlainText(_NOT_ATTACHED_MSG)
+        pid = self._require_attached_pid("Enable Debug Privilege")
+        if pid is None:
             return
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_enable_debug_failed", exc=str(exc))
+            self._show_error("Enable Debug Privilege Error", exc, log_event="system_tab_enable_debug_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.adjust_token_privilege("SeDebugPrivilege", enable=True, pid=self._attached_pid),
+            self._bridge.adjust_token_privilege("SeDebugPrivilege", enable=True, pid=pid),
             None,
             _on_error,
             self,
@@ -530,7 +567,10 @@ class SystemTab(QWidget):
 
     def _refresh_windows(self) -> None:
         """Enumerate windows for the attached process."""
-        if self._bridge is None or self._attached_pid is None:
+        if self._bridge is None:
+            return
+        pid = self._require_attached_pid("Enumerate Windows")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -551,17 +591,16 @@ class SystemTab(QWidget):
                 self._win_table.setItem(row, 3, QTableWidgetItem("Yes" if typed_win.get("visible") else "No"))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_windows_failed", exc=str(exc))
+            self._show_error("Enumerate Windows Error", exc, log_event="system_tab_windows_failed")
 
-        run_bridge_coroutine_async(self._bridge.get_windows(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_async(self._bridge.get_windows(pid), _on_success, _on_error, self)
 
     def _refresh_services(self) -> None:
         """Enumerate services for the attached process."""
         if self._bridge is None:
             return
-        if self._attached_pid is None:
-            _logger.warning("system_tab_action_without_pid", action="list_services")
-            self._raw_output.setPlainText(_NOT_ATTACHED_MSG)
+        pid = self._require_attached_pid("Enumerate Services")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -581,10 +620,10 @@ class SystemTab(QWidget):
                 self._svc_table.setItem(row, 4, QTableWidgetItem(str(typed_svc.get("service_type", 0))))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_services_failed", exc=str(exc))
+            self._show_error("Enumerate Services Error", exc, log_event="system_tab_services_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.list_services(self._attached_pid),
+            self._bridge.list_services(pid),
             _on_success,
             _on_error,
             self,
@@ -594,9 +633,8 @@ class SystemTab(QWidget):
         """Read PEB for the attached process."""
         if self._bridge is None:
             return
-        if self._attached_pid is None:
-            _logger.warning("system_tab_action_without_pid", action="read_peb")
-            self._raw_output.setPlainText(_NOT_ATTACHED_MSG)
+        pid = self._require_attached_pid("Read PEB")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -609,10 +647,10 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._peb_tree, [str(key), val_str])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_read_peb_failed", exc=str(exc))
+            self._show_error("Read PEB Error", exc, log_event="system_tab_read_peb_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.read_peb(self._attached_pid),
+            self._bridge.read_peb(pid),
             _on_success,
             _on_error,
             self,
@@ -624,6 +662,7 @@ class SystemTab(QWidget):
             return
         tid = self._teb_combo.currentData()
         if not isinstance(tid, int):
+            QMessageBox.warning(self, "Read TEB", "No thread selected")
             return
 
         def _on_success(result: object) -> None:
@@ -636,7 +675,7 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._peb_tree, [str(key), val_str])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_read_teb_failed", exc=str(exc))
+            self._show_error("Read TEB Error", exc, log_event="system_tab_read_teb_failed")
 
         run_bridge_coroutine_async(self._bridge.read_teb(tid), _on_success, _on_error, self)
 
@@ -646,6 +685,7 @@ class SystemTab(QWidget):
             return
         name = self._pipe_name.text().strip()
         if not name:
+            QMessageBox.warning(self, "Connect Pipe", "Pipe name is required")
             return
 
         def _on_success(result: object) -> None:
@@ -658,7 +698,7 @@ class SystemTab(QWidget):
             self._pipe_table.setItem(row, 1, QTableWidgetItem(f"0x{result:X}"))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_pipe_connect_failed", exc=str(exc))
+            self._show_error("Connect Pipe Error", exc, log_event="system_tab_pipe_connect_failed")
 
         run_bridge_coroutine_async(self._bridge.pipe_connect(name), _on_success, _on_error, self)
 
@@ -693,13 +733,18 @@ class SystemTab(QWidget):
                 self._pipe_table.removeRow(target_row)
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_pipe_close_failed", pipe=pipe_name, exc=str(exc))
+            message = str(exc)
+            _logger.warning("system_tab_pipe_close_failed", pipe=pipe_name, exc=message)
+            QMessageBox.warning(self, "Close Pipe Error", f"{pipe_name}: {message}")
 
         run_bridge_coroutine_async(self._bridge.pipe_close(handle), _on_success, _on_error, self)
 
     def _refresh_mitigations(self) -> None:
         """Query mitigation policies for the attached process."""
         if self._bridge is None:
+            return
+        pid = self._require_attached_pid("Query Mitigations")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -719,10 +764,10 @@ class SystemTab(QWidget):
                     self._mit_table.setItem(row, 1, QTableWidgetItem(str(val)))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_mitigations_failed", exc=str(exc))
+            self._show_error("Query Mitigations Error", exc, log_event="system_tab_mitigations_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.get_mitigation_policies(self._attached_pid),
+            self._bridge.get_mitigation_policies(pid),
             _on_success,
             _on_error,
             self,
@@ -735,6 +780,7 @@ class SystemTab(QWidget):
         key = self._reg_key.text().strip()
         name = self._reg_value_name.text().strip()
         if not key or not name:
+            QMessageBox.warning(self, "Read Registry Value", "Registry key and value name are required")
             return
 
         def _on_success(result: object) -> None:
@@ -746,7 +792,7 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_reg_read_failed", exc=str(exc))
+            self._show_error("Read Registry Value Error", exc, log_event="system_tab_reg_read_failed")
 
         run_bridge_coroutine_async(self._bridge.reg_read_value(key, name), _on_success, _on_error, self)
 
@@ -756,6 +802,7 @@ class SystemTab(QWidget):
             return
         key = self._reg_key.text().strip()
         if not key:
+            QMessageBox.warning(self, "Enumerate Registry Keys", "Registry key path is required")
             return
 
         def _on_success(result: object) -> None:
@@ -766,7 +813,7 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(subkey), ""])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_reg_enum_keys_failed", exc=str(exc))
+            self._show_error("Enumerate Registry Keys Error", exc, log_event="system_tab_reg_enum_keys_failed")
 
         run_bridge_coroutine_async(self._bridge.reg_enum_keys(key), _on_success, _on_error, self)
 
@@ -776,6 +823,7 @@ class SystemTab(QWidget):
             return
         key = self._reg_key.text().strip()
         if not key:
+            QMessageBox.warning(self, "Enumerate Registry Values", "Registry key path is required")
             return
 
         def _on_success(result: object) -> None:
@@ -786,13 +834,16 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(val_name), ""])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_reg_enum_values_failed", exc=str(exc))
+            self._show_error("Enumerate Registry Values Error", exc, log_event="system_tab_reg_enum_values_failed")
 
         run_bridge_coroutine_async(self._bridge.reg_enum_values(key), _on_success, _on_error, self)
 
     def _on_gui_resources(self) -> None:
         """Query GUI resource counts."""
         if self._bridge is None:
+            return
+        pid = self._require_attached_pid("Get GUI Resources")
+        if pid is None:
             return
 
         def _on_success(result: object) -> None:
@@ -804,10 +855,10 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._res_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_gui_resources_failed", exc=str(exc))
+            self._show_error("Get GUI Resources Error", exc, log_event="system_tab_gui_resources_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.get_gui_resources(self._attached_pid),
+            self._bridge.get_gui_resources(pid),
             _on_success,
             _on_error,
             self,
@@ -817,6 +868,9 @@ class SystemTab(QWidget):
         """Query job object info."""
         if self._bridge is None:
             return
+        pid = self._require_attached_pid("Get Job Info")
+        if pid is None:
+            return
 
         def _on_success(result: object) -> None:
             if not isinstance(result, dict):
@@ -827,10 +881,10 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._res_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_job_info_failed", exc=str(exc))
+            self._show_error("Get Job Info Error", exc, log_event="system_tab_job_info_failed")
 
         run_bridge_coroutine_async(
-            self._bridge.get_job_info(self._attached_pid),
+            self._bridge.get_job_info(pid),
             _on_success,
             _on_error,
             self,
@@ -864,7 +918,7 @@ class SystemTab(QWidget):
             self._raw_output.setPlainText("\n".join(hex_lines))
 
         def _on_error(exc: object) -> None:
-            _logger.warning("system_tab_raw_query_failed", exc=str(exc))
+            self._show_error("Raw Query Error", exc, log_event="system_tab_raw_query_failed")
 
         run_bridge_coroutine_async(
             self._bridge.query_system_info(info_class, buf_size),

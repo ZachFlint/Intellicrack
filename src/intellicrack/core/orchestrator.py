@@ -520,6 +520,7 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
+
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -849,6 +850,55 @@ class Orchestrator:
         """
         self._script_manager = manager
 
+    def tag_current_session(self, tag: str) -> bool:
+        """Add a tag to the current session.
+
+        CLI-friendly companion to the tag-chips widget in the session
+        manager dialog. Delegates to :meth:`Session.add_tag`, which
+        normalises whitespace and rejects empty tags.
+
+        Args:
+            tag: Non-empty tag string to add.
+
+        Returns:
+            bool: True if the tag was newly added, False if it was
+            already present on the session.
+
+        Raises:
+            RuntimeError: If no session is currently active.
+            ValueError: If ``tag`` is empty or whitespace-only (raised
+                by :meth:`Session.add_tag`).
+        """
+        if self._current_session is None:
+            error_message = "No active session"
+            _logger.error("tag_current_session_no_active_session", tag=tag)
+            raise RuntimeError(error_message)
+        return self._current_session.add_tag(tag)
+
+    def untag_current_session(self, tag: str) -> bool:
+        """Remove a tag from the current session.
+
+        CLI-friendly companion to the tag-chips widget in the session
+        manager dialog. Delegates to :meth:`Session.remove_tag`.
+
+        Args:
+            tag: Tag string to remove. Leading/trailing whitespace is
+                stripped to match the normalisation performed by
+                :meth:`Session.add_tag`.
+
+        Returns:
+            bool: True if the tag was removed, False if it was not
+            present on the session.
+
+        Raises:
+            RuntimeError: If no session is currently active.
+        """
+        if self._current_session is None:
+            error_message = "No active session"
+            _logger.error("untag_current_session_no_active_session", tag=tag)
+            raise RuntimeError(error_message)
+        return self._current_session.remove_tag(tag)
+
     async def start_session(
         self,
         provider: str | ProviderName,
@@ -900,6 +950,7 @@ class Orchestrator:
             session.active_binary_index = 0
 
         self._current_session = session
+        self._tools.set_session(session)
         self._state = "idle"
 
         structlog.contextvars.bind_contextvars(
@@ -940,6 +991,7 @@ class Orchestrator:
             raise ValueError(error_message)
 
         self._current_session = session
+        self._tools.set_session(session)
         self._state = "idle"
 
         structlog.contextvars.bind_contextvars(

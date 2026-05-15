@@ -12,23 +12,28 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLayout,
+    QLayoutItem,
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSplitter,
+    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -51,9 +56,373 @@ _CONFIRM_DIALOG_WIDTH: Final[int] = 400
 _CONFIRM_DIALOG_HEIGHT: Final[int] = 200
 
 if TYPE_CHECKING:
-    from intellicrack.core.session import SessionManager, SessionMetadata
+    from intellicrack.core.session import Session, SessionManager, SessionMetadata
 
 MESSAGE_PREVIEW_MAX_LENGTH = 100
+
+
+class _FlowLayout(QLayout):
+    """Simple horizontal flow layout used to lay out tag chips.
+
+    Qt does not ship a flow layout out of the box; this implementation
+    wraps child widgets onto additional rows when the available width is
+    exceeded so a long list of tag chips renders cleanly inside the
+    session manager dialog without horizontal scrolling.
+
+    Attributes:
+        _items: Internal list of ``QLayoutItem`` widgets managed by the
+            layout.
+        _horizontal_spacing: Horizontal gap between chips, in pixels.
+        _vertical_spacing: Vertical gap between rows of chips, in
+            pixels.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        margin: int = 0,
+        horizontal_spacing: int = 6,
+        vertical_spacing: int = 6,
+    ) -> None:
+        """Initialize the flow layout.
+
+        Args:
+            parent: Parent widget owning the layout, if any.
+            margin: Outer margin in pixels applied uniformly on all
+                sides.
+            horizontal_spacing: Horizontal gap between adjacent items.
+            vertical_spacing: Vertical gap between adjacent rows.
+        """
+        super().__init__(parent)
+        self.setContentsMargins(margin, margin, margin, margin)
+        self._items: list[QLayoutItem] = []
+        self._horizontal_spacing: int = horizontal_spacing
+        self._vertical_spacing: int = vertical_spacing
+
+    @override
+    def addItem(self, a0: QLayoutItem | None) -> None:
+        """Append a layout item to the flow.
+
+        Args:
+            a0: ``QLayoutItem`` to append. ``None`` is ignored.
+        """
+        if a0 is None:
+            return
+        self._items.append(a0)
+
+    @override
+    def count(self) -> int:
+        """Return the number of items currently managed by the layout.
+
+        Returns:
+            int: Item count.
+        """
+        return len(self._items)
+
+    @override
+    def itemAt(self, index: int) -> QLayoutItem | None:
+        """Return the item at ``index``.
+
+        Args:
+            index: Zero-based item index.
+
+        Returns:
+            QLayoutItem | None: Item at ``index`` or ``None`` when the
+            index is out of range.
+        """
+        if 0 <= index < len(self._items):
+            return self._items[index]
+        return None
+
+    @override
+    def takeAt(self, index: int) -> QLayoutItem | None:
+        """Remove and return the item at ``index``.
+
+        Args:
+            index: Zero-based item index.
+
+        Returns:
+            QLayoutItem | None: The removed item, or ``None`` when the
+            index is out of range.
+        """
+        if 0 <= index < len(self._items):
+            return self._items.pop(index)
+        return None
+
+    @override
+    def expandingDirections(self) -> Qt.Orientation:
+        """Indicate that the layout does not expand in any direction.
+
+        Returns:
+            Qt.Orientation: Empty orientation flag set.
+        """
+        return Qt.Orientation(0)
+
+    @override
+    def hasHeightForWidth(self) -> bool:
+        """Report that height depends on width.
+
+        Returns:
+            bool: Always ``True``.
+        """
+        return True
+
+    @override
+    def heightForWidth(self, a0: int) -> int:
+        """Compute the height needed when the layout is constrained to ``a0``.
+
+        Args:
+            a0: Width budget, in pixels.
+
+        Returns:
+            int: Height required to fit every chip given ``a0``.
+        """
+        return self._do_layout(QRect(0, 0, a0, 0), test_only=True)
+
+    @override
+    def setGeometry(self, a0: QRect) -> None:
+        """Apply ``a0`` as the layout area and place every child item.
+
+        Args:
+            a0: Rectangle to lay items out within.
+        """
+        super().setGeometry(a0)
+        self._do_layout(a0, test_only=False)
+
+    @override
+    def sizeHint(self) -> QSize:
+        """Return the preferred size of the layout.
+
+        Returns:
+            QSize: Minimum size that fits every chip.
+        """
+        return self.minimumSize()
+
+    @override
+    def minimumSize(self) -> QSize:
+        """Return the minimum size required to fit every chip.
+
+        Returns:
+            QSize: Bounding size of all chip items including margins.
+        """
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        margins = self.contentsMargins()
+        size += QSize(margins.left() + margins.right(), margins.top() + margins.bottom())
+        return size
+
+    def _do_layout(self, rect: QRect, *, test_only: bool) -> int:
+        """Lay out child items inside ``rect``.
+
+        Args:
+            rect: Available rectangle.
+            test_only: When ``True``, geometry is not assigned; only
+                the resulting height is computed.
+
+        Returns:
+            int: Height (in pixels) consumed by the laid-out items.
+        """
+        margins = self.contentsMargins()
+        effective_rect = rect.adjusted(margins.left(), margins.top(), -margins.right(), -margins.bottom())
+        x = effective_rect.x()
+        y = effective_rect.y()
+        line_height = 0
+
+        for item in self._items:
+            widget = item.widget()
+            if widget is None:
+                continue
+            item_size = item.sizeHint()
+            next_x = x + item_size.width() + self._horizontal_spacing
+            if next_x - self._horizontal_spacing > effective_rect.right() and line_height > 0:
+                x = effective_rect.x()
+                y = y + line_height + self._vertical_spacing
+                next_x = x + item_size.width() + self._horizontal_spacing
+                line_height = 0
+            if not test_only:
+                item.setGeometry(QRect(x, y, item_size.width(), item_size.height()))
+            x = next_x
+            line_height = max(line_height, item_size.height())
+
+        return y + line_height - rect.y() + margins.bottom()
+
+
+class TagChipsWidget(QWidget):
+    """Widget that renders session tags as click-to-remove chips.
+
+    Provides an inline editor for adding new tags and exposes signals so
+    callers can react to tag changes (for example, to persist the
+    session). Each tag renders as a horizontal pill containing the tag
+    text and a small "x" button that removes the tag.
+
+    Attributes:
+        tag_added: Signal emitted with the new tag string after a tag
+            has been added to the wired session.
+        tag_removed: Signal emitted with the tag string after a tag has
+            been removed from the wired session.
+        tags_changed: Convenience signal emitted with the full list of
+            current tags whenever a tag is added or removed.
+    """
+
+    tag_added: ClassVar[pyqtSignal] = pyqtSignal(str)
+    tag_removed: ClassVar[pyqtSignal] = pyqtSignal(str)
+    tags_changed: ClassVar[pyqtSignal] = pyqtSignal(list)
+
+    def __init__(
+        self,
+        session: Session | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
+        """Initialize the tag chips widget.
+
+        Args:
+            session: Optional ``Session`` whose tags will be rendered
+                and mutated. When ``None`` the widget renders an empty
+                state until :meth:`set_session` is called.
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self._session: Session | None = session
+        self._chip_buttons: dict[str, QPushButton] = {}
+        self._setup_ui()
+        self.refresh()
+
+    def _setup_ui(self) -> None:
+        """Construct the chip flow area and the inline add-tag editor."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        chips_frame = QFrame()
+        chips_frame.setObjectName("tagChipsFrame")
+        chips_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        chips_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        self._chips_layout = _FlowLayout(chips_frame, margin=4)
+        chips_frame.setLayout(self._chips_layout)
+        self._chips_frame = chips_frame
+        layout.addWidget(chips_frame)
+
+        self._empty_label = QLabel("No tags. Add one below.")
+        self._empty_label.setStyleSheet("color: palette(mid); font-style: italic;")
+        layout.addWidget(self._empty_label)
+
+        editor_row = QHBoxLayout()
+        editor_row.setContentsMargins(0, 0, 0, 0)
+        editor_row.setSpacing(6)
+        self._tag_input = QLineEdit()
+        self._tag_input.setPlaceholderText("Add tag…")
+        self._tag_input.returnPressed.connect(self._on_add_clicked)
+        editor_row.addWidget(self._tag_input)
+        self._add_btn = QPushButton("Add Tag")
+        self._add_btn.clicked.connect(self._on_add_clicked)
+        editor_row.addWidget(self._add_btn)
+        layout.addLayout(editor_row)
+
+    def set_session(self, session: Session | None) -> None:
+        """Wire this widget to a different ``Session`` instance.
+
+        Args:
+            session: Session whose tags should be rendered, or ``None``
+                to clear the widget.
+        """
+        self._session = session
+        self.refresh()
+
+    def session(self) -> Session | None:
+        """Return the currently wired session.
+
+        Returns:
+            Session | None: The session this widget mutates, or ``None``
+            when no session is wired.
+        """
+        return self._session
+
+    def refresh(self) -> None:
+        """Rebuild the chip layout from the wired session's tags."""
+        for chip_btn in list(self._chip_buttons.values()):
+            self._chips_layout.removeWidget(chip_btn)
+            chip_btn.setParent(None)
+            chip_btn.deleteLater()
+        self._chip_buttons.clear()
+
+        tags: list[str] = list(self._session.tags) if self._session is not None else []
+        for tag in tags:
+            self._add_chip(tag)
+
+        self._empty_label.setVisible(not tags)
+        self._add_btn.setEnabled(self._session is not None)
+        self._tag_input.setEnabled(self._session is not None)
+
+    def _add_chip(self, tag: str) -> None:
+        """Create and insert a chip button for ``tag``.
+
+        Args:
+            tag: Tag value to display.
+        """
+        chip = QPushButton()
+        style = self.style()
+        if style is not None:
+            chip.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogCloseButton))
+        chip.setText(f" {tag} ")
+        chip.setObjectName("tagChip")
+        chip.setProperty("tag", tag)
+        chip.setCursor(Qt.CursorShape.PointingHandCursor)
+        chip.setToolTip(f"Remove tag '{tag}'")
+        chip.setStyleSheet(
+            "QPushButton#tagChip { "
+            "padding: 2px 8px; "
+            "border: 1px solid palette(mid); "
+            "border-radius: 10px; "
+            "background: palette(button); "
+            "}"
+            "QPushButton#tagChip:hover { background: palette(highlight); color: palette(highlighted-text); }",
+        )
+        chip.clicked.connect(lambda _checked=False, t=tag: self._on_chip_clicked(t))
+        self._chips_layout.addWidget(chip)
+        self._chip_buttons[tag] = chip
+
+    def _on_add_clicked(self) -> None:
+        """Add the text in the input box as a new tag on the session."""
+        raw_text = self._tag_input.text()
+        text = raw_text.strip()
+        if not text or self._session is None:
+            return
+        try:
+            added = self._session.add_tag(text)
+        except ValueError as exc:
+            _logger.warning("tag_add_rejected", tag=raw_text, error=str(exc))
+            QMessageBox.warning(self, "Invalid Tag", str(exc))
+            return
+        self._tag_input.clear()
+        if added:
+            self._add_chip(text)
+            self._empty_label.setVisible(False)
+            self.tag_added.emit(text)
+            self.tags_changed.emit(list(self._session.tags))
+            _logger.debug("tag_added", tag=text, session_id=self._session.id)
+
+    def _on_chip_clicked(self, tag: str) -> None:
+        """Remove ``tag`` from the wired session and update the chips.
+
+        Args:
+            tag: Tag whose chip was clicked.
+        """
+        if self._session is None:
+            return
+        removed = self._session.remove_tag(tag)
+        if not removed:
+            return
+        chip_btn = self._chip_buttons.pop(tag, None)
+        if chip_btn is not None:
+            self._chips_layout.removeWidget(chip_btn)
+            chip_btn.setParent(None)
+            chip_btn.deleteLater()
+        self._empty_label.setVisible(not self._session.tags)
+        self.tag_removed.emit(tag)
+        self.tags_changed.emit(list(self._session.tags))
+        _logger.debug("tag_removed", tag=tag, session_id=self._session.id)
 
 
 class SessionManagerDialog(QDialog):
@@ -82,6 +451,7 @@ class SessionManagerDialog(QDialog):
         session_manager: SessionManager | None = None,
         current_session_id: str | None = None,
         parent: QWidget | None = None,
+        current_session: Session | None = None,
     ) -> None:
         """Initialize the SessionManagerDialog with session state.
 
@@ -89,10 +459,15 @@ class SessionManagerDialog(QDialog):
             session_manager: Session manager for loading and saving sessions.
             current_session_id: ID of the currently active session.
             parent: Parent widget.
+            current_session: Currently active in-memory ``Session``
+                instance, when known. When supplied, the tag chips
+                widget is wired directly to this session so add/remove
+                operations mutate the live session object.
         """
         super().__init__(parent)
         self._manager = session_manager
         self._current_session_id = current_session_id
+        self._current_session = current_session
         self._sessions: list[dict[str, object]] = []
 
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -175,8 +550,44 @@ class SessionManagerDialog(QDialog):
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.addWidget(self._create_details_group())
+        panel_layout.addWidget(self._create_tags_group())
         panel_layout.addWidget(self._create_preview_group())
         return panel
+
+    def _create_tags_group(self) -> QGroupBox:
+        """Create the tags group box backed by ``TagChipsWidget``.
+
+        Returns:
+            QGroupBox: Group box containing the tag chips widget.
+        """
+        group = QGroupBox("Tags")
+        layout = QVBoxLayout()
+        self._tag_chips = TagChipsWidget(self._current_session)
+        self._tag_chips.tags_changed.connect(self._on_tags_changed)
+        layout.addWidget(self._tag_chips)
+        group.setLayout(layout)
+        return group
+
+    def _on_tags_changed(self, _tags: list[str]) -> None:
+        """Persist the current session after a tag was added/removed.
+
+        Args:
+            _tags: New list of tags on the wired session (unused; the
+                widget exposes it for consumers that want to mirror the
+                state).
+        """
+        manager = self._manager
+        session = self._current_session
+        if manager is None or session is None:
+            return
+        try:
+            run_bridge_coroutine(manager.update(session))
+        except (OSError, RuntimeError) as exc:
+            _logger.warning(
+                "session_tag_persist_failed",
+                session_id=session.id,
+                error=str(exc),
+            )
 
     def _create_details_group(self) -> QGroupBox:
         """Create the session details group box.

@@ -342,6 +342,12 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText(f"Executed at offset {offset} ({len(fields)} fields)")
 
             if self.state_holder is not None:
+                register_fn = getattr(self.state_holder, "notify_template_registered", None)
+                if callable(register_fn):
+                    register_fn(
+                        "<inline>",
+                        source="hex-editor.pattern_editor.apply.interpreter.register",
+                    )
                 pattern_executed = getattr(self.state_holder, "notify_pattern_executed", None)
                 if callable(pattern_executed):
                     pattern_executed(

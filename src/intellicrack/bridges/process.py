@@ -1963,6 +1963,7 @@ class ProcessBridge(ToolBridgeBase):
         self.state.tool_running = True
         self.state.process_attached = True
         self.state.target_pid = pid
+        self._publish_tool_state()
 
         _logger.info("process_opened", pid=pid, access=access)
         return True
@@ -1983,6 +1984,7 @@ class ProcessBridge(ToolBridgeBase):
         self.state.tool_running = True
         self.state.process_attached = False
         self.state.target_pid = None
+        self._publish_tool_state()
 
         return True
 
