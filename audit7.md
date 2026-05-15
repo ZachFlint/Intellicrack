@@ -54,9 +54,20 @@
 
 ## Summary
 
-1 opus-confirmed NEEDS-WORK finding from audit1.md / section `bridges-hex`.
+2 opus-confirmed NEEDS-WORK findings from audit1.md / section `bridges-hex`.
 
 ## Findings
+
+#### F-0042 - BPS/UPS export loads original + current docs simultaneously [fixed: audit7/u-f0042-bps-ups-streaming]
+
+- **Source audit:** audit1.md / `bridges-hex`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/hex_editor.py`
+- **Lines:** ~7742 (`_export_patches_bps_via_backend`, `_load_source_via_mmap`, `export_patches`)
+- **Pattern:** Cat 9
+- **Why this is non-functional:** Even the Rust-backed path materialises the entire source document with `_load_source_via_mmap()` returning `bytes(mm)` before handing it to the Rust backend, so the Rust path holds one full file in Python `bytes` (source) while the Python fallback path holds two (source + target). On very large files when the Rust backend lacks `export_patches_bps`/`export_patches_ups`, the Python fallback can OOM. The audit's concern that BPS/UPS export simultaneously materialises both documents is only partially mitigated.
+- **Suggested remediation summary:** Stream the source from the on-disk mmap directly to the Rust BPS/UPS encoder (zero-copy via memoryview / buffer protocol), and replace the Python fallback's `bytes(...)` materialisation with chunked streaming that consumes source and target in matched offset windows. The Rust backend signature should accept a length-bounded readable handle so neither side is forced into a full-file `bytes` allocation.
+- **Remediation:** Rust gains `HexDocument::export_patches_bps_from_path` and `export_patches_ups_from_path` (in `src/intellicrack-hexcore/src/lib.rs`) which open the source via `memmap2::Mmap` inside Rust and feed the slice directly to `bps_ups::export_bps` / `bps_ups::export_ups`; both methods share a single private `export_patch_from_path_inner` helper. The Python bridge gains `HexEditorBridge._open_source_mmap`, a `contextlib.contextmanager` that yields the source as an `mmap.mmap` view; `_export_patches_bps_via_backend` / `_export_patches_ups_via_backend` prefer the path-based binding and fall through to handing the mmap view to the legacy byte-slice backend via the buffer protocol; `_export_patches_bps_pyfallback` / `_export_patches_ups_pyfallback` now walk the source through that mmap view rather than calling `bytes(mm)`. The BPS / UPS encoder helpers (`_build_bps_patch`, `_build_ups_patch`, and their callees) are typed against a new `_BPSBuffer = bytes | mmap.mmap` alias so the buffer-protocol path is type-correct. `_load_source_via_mmap` is retained as a deprecated compatibility shim. Tests live in `tests/test_audit7/bridges_hex/test_bps_streaming_export.py` and pin: (a) the pyfallback hands `mmap.mmap` to the encoder, not `bytes`; (b) the source-handoff phase against a 2 GiB sparse source keeps tracemalloc peak under 64 MiB; (c) the legacy byte-slice backend path also receives `mmap.mmap`; (d) the new `export_patches_*_from_path` Rust bindings produce valid BPS1 / UPS1 patches that roundtrip.
 
 #### F-0040 - UTF-16 scanner accepts code units like 0x2070 as printable [fixed: audit7/u01-utf16-scanner]
 
