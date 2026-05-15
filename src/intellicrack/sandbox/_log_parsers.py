@@ -82,6 +82,8 @@ _PROCESS_LOG_PATH_IDX = 4
 _PROCESS_LOG_CMD_IDX = 5
 _PROCESS_LOG_PPID_IDX = 6
 _PROCESS_LOG_EXIT_IDX = 7
+_DLL_LOG_EVENT_ID_IDX = 6
+_DLL_LOG_PAYLOAD_SCHEMA_IDX = 7
 
 
 async def read_log_lines(shared_folder: Path | None, name: str) -> list[str]:
@@ -364,8 +366,16 @@ async def parse_dll_log(
 ) -> list[DllLoadEvent]:
     """Parse a DLL-monitor log into :class:`DllLoadEvent` records.
 
-    Log format:
-    ``timestamp|pid|process_name|dll_path|base_address|size``.
+    Log format (legacy 6-column): ``timestamp|pid|process_name|dll_path|base_address|size``.
+
+    Log format (extended 8-column): ``timestamp|pid|process_name|dll_path|base_address|size|event_id|payload_schema``.
+
+    The trailing ``event_id`` and ``payload_schema`` columns are populated by
+    F-0019: when the image-load handler cannot resolve an image path from the
+    payload field set, it emits a record with ``dll_path`` empty, the raw
+    ETW event id, and the observed payload field names. Older monitor builds
+    emit only the legacy 6 columns and both extension fields default to 0 /
+    empty string.
 
     Args:
         shared_folder: Sandbox shared folder root.
@@ -379,16 +389,19 @@ async def parse_dll_log(
         parts = line.split("|")
         if len(parts) < DLL_LOG_MIN_PARTS:
             continue
-        out.append(
-            DllLoadEvent(
-                timestamp=parts[0],
-                pid=safe_int(parts[1]),
-                process_name=parts[2],
-                dll_path=parts[3],
-                base_address=parts[4],
-                size=safe_int(parts[5]),
-            ),
-        )
+        event_id_raw = parts[_DLL_LOG_EVENT_ID_IDX] if len(parts) > _DLL_LOG_EVENT_ID_IDX else ""
+        payload_schema = parts[_DLL_LOG_PAYLOAD_SCHEMA_IDX] if len(parts) > _DLL_LOG_PAYLOAD_SCHEMA_IDX else ""
+        event: DllLoadEvent = {
+            "timestamp": parts[0],
+            "pid": safe_int(parts[1]),
+            "process_name": parts[2],
+            "dll_path": parts[3],
+            "base_address": parts[4],
+            "size": safe_int(parts[5]),
+            "event_id": safe_int(event_id_raw),
+            "payload_schema": payload_schema,
+        }
+        out.append(event)
     return out
 
 

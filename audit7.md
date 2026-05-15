@@ -291,6 +291,95 @@
 - **File:** `src/intellicrack/core/types.py`
 - **Pattern:** Cat 8, Cat 21
 - **Resolution:** Replaced the fake `_ = (self, ...); return []` body in `CompiledYaraRules.match` with the Protocol convention `...` so structural typing is preserved and no shadow fake-success value is returned from the Protocol method body.
+# Findings: bridges-x64dbg (from audit/07_findings_bridges-x64dbg.md)
+
+## Summary
+
+1 audit-confirmed Cat 2 finding from `audit/07_findings_bridges-x64dbg.md`
+covering 19 fire-and-forget x64dbg wrappers that returned hardcoded
+``{"success": True}`` without verifying the underlying operation.
+
+## Findings
+
+#### F-0001 - 19 x64dbg fire-and-forget wrappers return hardcoded `{"success": True}` without verification [fixed: audit7/f0001-x64dbg-wrappers]
+
+- **Source audit:** audit/07_findings_bridges-x64dbg.md / `bridges-x64dbg`
+- **Reviewer verdict:** FAIL (now FIXED)
+- **File:** `src/intellicrack/bridges/x64dbg.py`
+- **Wrappers covered (19):** `set_label`, `set_comment`,
+  `enable_breakpoint`, `disable_breakpoint`, `suspend_thread`,
+  `resume_thread`, `switch_thread`, `set_thread_name`, `trace_into`,
+  `trace_over`, `step_count`, `animate_start`, `animate_stop`,
+  `script_load`, `script_run`, `script_cmd`, `script_abort`,
+  `plugin_load`, `plugin_unload`.
+- **Pattern:** Cat 2 (hardcoded return / fake success)
+- **Why this was non-functional:** `_send_pipe_command` only raises
+  when the response includes ``success=False``. Each wrapper above
+  forwards a textual x64dbg console command via the ``exec`` /
+  ``_send_command`` path. x64dbg's interpreter parses the command and
+  dispatches it asynchronously, then reports success only that the
+  command parsed - never that the underlying state changed. So
+  ``be 0x...`` parses fine but the breakpoint may never actually be
+  enabled; ``setthreadname 0x123, "foo"`` parses fine for any TID but
+  silently fails for invalid TIDs; ``AnimateInto`` parses fine but the
+  debugger may stay paused; ``scriptrun`` parses fine even when the
+  script raises a runtime error; ``plugload`` parses fine even when
+  the DLL never loads. Each wrapper synthesised
+  ``{"success": True, ...}`` regardless of debugger state.
+- **Fix:** Per-wrapper post-condition verification appropriate to the
+  operation. ``set_label`` / ``set_comment`` read the annotation back
+  via ``lbl_list`` / ``cmt_list`` and compare. ``enable_breakpoint`` /
+  ``disable_breakpoint`` poll ``bp_list`` until the breakpoint's
+  ``enabled`` flag matches expectation. The thread wrappers poll
+  ``thread_detail`` until the matching record reports the expected
+  ``suspended`` flag (suspend / resume), is listed at all (switch),
+  or reports the expected ``name`` (rename). The trace and animate
+  wrappers poll ``status`` until the debugger's ``is_running`` flag
+  flips to the expected value. The script wrappers query the
+  ``script.iserror()`` register via the expression evaluator. The
+  plugin wrappers check ``plugin_list`` (preferred) with a
+  ``plugin.find()`` fallback via the expression evaluator. Each
+  wrapper raises ``ToolError`` on verification failure and never
+  returns ``{"success": False}`` — the audit explicitly forbids that.
+  Class-level ``VERIFY_TIMEOUT`` and ``VERIFY_POLL_INTERVAL`` knobs
+  bound the polling. When the plugin lacks a verification RPC (older
+  builds), wrappers surface ``verified=False`` so callers can detect
+  the unverified case rather than receive a fake-success status.
+- **Tests:** `tests/test_bridges/test_x64dbg_audit7_f0001.py` (42
+  tests) covers happy path + failure path for every wrapper. The
+  failure-path tests fail on main (which returns fake success) and
+  pass on this branch.
+# Findings: sandbox-scripts (from audit3.md)
+
+## Summary
+
+2 opus-confirmed NEEDS-WORK findings from audit3.md / section `sandbox-scripts`.
+
+## Findings
+
+#### F-0019 - `dll_monitor.ps1` payload-name brute force followed by silent `return` loses every event the heuristic misses [fixed: audit7/u11-dll-monitor-unparsed]
+
+- **Source audit:** audit3.md / `sandbox-scripts`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** The image-load handler at lines 177-182 previously emitted a `dll_event_unparsed` diagnostic record then silently `return`ed when the payload field set did not match the well-known image-path field list. The event was permanently dropped from the report consumer's view even though the ETW event was real.
+
+- **File:** `src/intellicrack/sandbox/scripts/dll_monitor.ps1`
+- **Lines:** 177-182
+- **Pattern:** Cat 19
+- **Why this is non-functional:** The bridge was lossy: any ETW image-load event from a provider whose payload schema differs from the curated list (`ImageName`, `FileName`, `ImageFileName`) was completely invisible to downstream consumers, so the AI and the user had no way to see that an event occurred or to tune the field list.
+- **Suggested remediation summary:** On payload-mismatch, write a structured record to the main monitor log with `image_path` empty plus the observed `payload_schema` and the raw `event_id`. Auto-extend the candidate field name list at runtime from observed events (and from the provider manifest at startup where possible) so subsequent events with the same schema are parsed correctly.
+
+#### F-0025 - `start_monitors.cmd` PowerShell processes spawned with no shutdown coordination [fixed: audit7/u12-monitor-stop-event]
+
+- **Source audit:** audit3.md / `sandbox-scripts`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** Monitor processes spawned by `start_monitors.cmd` had no graceful-stop mechanism. The companion `stop_monitors.cmd` went straight to `taskkill /F /T`, which never invokes each monitor's `finally` clauses, so monitor sessions could not flush a STOP record (or otherwise clean up ETW sessions, WMI subscriptions, and named handles) before being terminated.
+
+- **File:** `src/intellicrack/sandbox/scripts/stop_monitors.cmd`, `src/intellicrack/sandbox/scripts/dll_monitor.ps1`, `src/intellicrack/sandbox/scripts/api_trace.ps1`, `src/intellicrack/sandbox/scripts/injection_monitor.ps1`, `src/intellicrack/sandbox/scripts/kernel_object_monitor.ps1`
+- **Lines:** 22-27 (stop_monitors.cmd)
+- **Pattern:** Cat 9
+- **Why this is non-functional:** `taskkill /F /T` short-circuits each monitor's `finally` cleanup, so STOP telemetry never reaches its lifecycle log, the realtime `TraceEventSession` is leaked, and the WMI subscription leaks into the next sandbox session. The shutdown driver loses every monitor's "I exited cleanly" signal.
+- **Suggested remediation summary:** Introduce a named manual-reset event `IntellicrackMonitorStop`. Each of the four monitor PS1s (`dll_monitor`, `api_trace`, `injection_monitor`, `kernel_object_monitor`) opens the event at startup, polls `WaitHandle.WaitOne(0)` non-blocking in its main loop, and breaks out so the `finally` clause runs and writes a STOP record to a per-monitor `*.lifecycle.log`. `stop_monitors.cmd` signals the event via `_stop_monitors_helper.ps1` first, waits up to a configurable grace window (default 10s) per tracked PID, then escalates only the stragglers to `taskkill /F /T`.
 # Findings: ui-app-core (from audit5.md)
 
 ## Summary
