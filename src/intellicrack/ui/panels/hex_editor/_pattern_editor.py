@@ -60,6 +60,7 @@ class PatternEditorMixin:
     _pattern_json_preview: QPlainTextEdit | None
     _pattern_library_tree: QTreeWidget | None
     _pattern_error_display: QPlainTextEdit | None
+    _pattern_print_output: QPlainTextEdit | None
     _pattern_status_label: QLabel | None
     _pattern_visible: bool
     _compiled_json: str
@@ -156,6 +157,15 @@ class PatternEditorMixin:
         self._pattern_error_display.setReadOnly(ro=True)
         self._pattern_error_display.setMaximumHeight(60)
         right_layout.addWidget(self._pattern_error_display)
+
+        print_label = QLabel("std::print output")
+        right_layout.addWidget(print_label)
+
+        self._pattern_print_output = QPlainTextEdit()
+        self._pattern_print_output.setReadOnly(ro=True)
+        self._pattern_print_output.setMaximumHeight(100)
+        self._pattern_print_output.setFont(font)
+        right_layout.addWidget(self._pattern_print_output)
 
         editor_splitter.addWidget(right_area)
         editor_splitter.setStretchFactor(0, 1)
@@ -299,6 +309,20 @@ class PatternEditorMixin:
 
             _logger.info("pattern_applied", template_name=name, offset=cursor_offset)
 
+    def _append_pattern_print_line(self, line: str) -> None:
+        """Append a single ``std::print`` line to the pattern editor's print output.
+
+        The interpreter installs this method as its ``print_sink`` so output
+        produced by ``std::print`` inside a pattern surfaces in the UI panel
+        rather than only landing in the structured log.
+
+        Args:
+            line: Formatted message emitted by ``std::print``.
+        """
+        if self._pattern_print_output is None:
+            return
+        self._pattern_print_output.appendPlainText(line)
+
     def _apply_via_interpreter(self, source: str, offset: int) -> None:
         """Execute HexPat source directly via the interpreter.
 
@@ -309,8 +333,15 @@ class PatternEditorMixin:
         if self.document is None or HexPatInterpreter_cls is None:
             return
 
+        if self._pattern_print_output is not None:
+            self._pattern_print_output.clear()
+
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls()
+            self._interpreter = HexPatInterpreter_cls(print_sink=self._append_pattern_print_line)
+        else:
+            set_sink = getattr(self._interpreter, "set_print_sink", None)
+            if callable(set_sink):
+                set_sink(self._append_pattern_print_line)
         interpreter = self._interpreter
         if interpreter is None:
             return
@@ -437,6 +468,8 @@ class PatternEditorMixin:
             self._pattern_json_preview.clear()
         if self._pattern_error_display is not None:
             self._pattern_error_display.clear()
+        if self._pattern_print_output is not None:
+            self._pattern_print_output.clear()
         self._compiled_json = ""
         if self._pattern_status_label is not None:
             self._pattern_status_label.setText("New pattern")
@@ -499,6 +532,8 @@ class PatternEditorMixin:
             self._pattern_json_preview.clear()
         if self._pattern_error_display is not None:
             self._pattern_error_display.clear()
+        if self._pattern_print_output is not None:
+            self._pattern_print_output.clear()
         if self._pattern_status_label is not None:
             self._pattern_status_label.setText(f"Loaded: {name}")
 
