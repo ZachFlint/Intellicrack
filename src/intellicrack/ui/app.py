@@ -58,7 +58,7 @@ from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDi
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog
 from intellicrack.ui.session_manager import SessionManagerDialog
-from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog
+from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog, ToolStatusEntry
 from intellicrack.ui.tools import ToolOutputPanel
 
 
@@ -478,9 +478,7 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """
-
-           ,
+        """,
         )
 
     @property
@@ -1043,18 +1041,36 @@ class MainWindow(QMainWindow):
         except OSError:
             _logger.warning("tool_installer_init_skipped")
 
-    async def _refresh_tool_status(self) -> dict[str, object]:
+    async def _refresh_tool_status(self) -> dict[str, ToolStatusEntry]:
         """Refresh tool installation status asynchronously.
 
+        Builds a snapshot of every tool's current availability suitable for
+        feeding directly into :class:`ToolStatusDialog` (and any future
+        prefetch-aware consumer). Keys are the lowercase ``ToolName.value``
+        identifiers used elsewhere in the UI (``"ghidra"``, ``"x64dbg"``,
+        ``"frida"``, ``"cutter"``, ``"process"``, ``"sandbox"``,
+        ``"hex_editor"``).
+
         Returns:
-            dict[str, object]: Dictionary mapping tool names to (available, path) tuples.
+            dict[str, ToolStatusEntry]: Mapping of tool IDs to typed status
+            payloads with ``available``, ``path`` and ``message`` fields.
+            An empty dict is returned when the installer is unavailable.
         """
         installer = getattr(self, "_tool_installer", None)
         if installer is None:
             return {}
 
         statuses = await installer.get_all_tool_status()
-        result = {str(k): v for k, v in statuses.items()}
+        result: dict[str, ToolStatusEntry] = {}
+        for tool_name, (available, path) in statuses.items():
+            tool_id = tool_name.value if isinstance(tool_name, ToolName) else str(tool_name)
+            message = (f"Installed at {path}" if path is not None else "Available") if available else "Not installed"
+            entry: ToolStatusEntry = {
+                "available": bool(available),
+                "path": str(path) if path is not None else None,
+                "message": message,
+            }
+            result[tool_id] = entry
         _logger.info(
             "tool_status_refreshed",
             tool_count=len(result),
@@ -1620,22 +1636,30 @@ class MainWindow(QMainWindow):
     def _on_tool_status(self) -> None:
         """Handle tool status action.
 
-        Pre-fetches the live tool registry from the orchestrator and threads it through to ``ToolStatusDialog`` so the dialog can render
-        real availability instead of an empty checking-only state.
+        Pre-fetches the live tool availability snapshot from the installer and
+        forwards it to :class:`ToolStatusDialog` via its ``tool_statuses``
+        parameter so the dialog can render the result immediately without
+        spawning a second wave of background status-check workers. If the
+        pre-fetch fails the dialog falls back to its own worker-driven path.
         """
+        prefetched: dict[str, ToolStatusEntry] | None = None
         try:
             from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
-            tool_statuses = run_bridge_coroutine(self._refresh_tool_status())
+            prefetched = run_bridge_coroutine(self._refresh_tool_status())
             _logger.info(
                 "tool_status_dialog_opened",
-                tool_count=len(tool_statuses) if tool_statuses is not None else 0,
+                tool_count=len(prefetched) if prefetched is not None else 0,
             )
         except (RuntimeError, AttributeError, OSError):
             _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
 
         tool_registry = getattr(self._orchestrator, "_tool_registry", None)
-        dialog = ToolStatusDialog(tool_registry=tool_registry, parent=self)
+        dialog = ToolStatusDialog(
+            tool_registry=tool_registry,
+            parent=self,
+            tool_statuses=prefetched,
+        )
         dialog.exec()
 
     def _on_configure_tools(self) -> None:
