@@ -1331,14 +1331,21 @@ class TestLoggingDowngrade:
         Args:
             bridge: Fixture bridge instance.
         """
+        tid = 0x123
 
-        def responder(_command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
+        def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
+            if command == "thread_detail":
+                return {
+                    "id": 1,
+                    "success": True,
+                    "result": [{"threadId": tid, "suspended": True, "name": ""}],
+                }
             return {"id": 1, "success": True, "result": None}
 
         _install_fake_pipe(bridge, responder)
         events = _capture_logger_events()
         with events.recording():
-            await bridge.suspend_thread(0x123)
+            await bridge.suspend_thread(tid)
         assert any(name == "x64dbg_command_queued" for name, _level, _ in events.records)
         assert not any(name == "thread_suspending" for name, _level, _ in events.records)
 
@@ -1352,7 +1359,9 @@ class TestLoggingDowngrade:
             bridge: Fixture bridge instance.
         """
 
-        def responder(_command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
+        def responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
+            if command == "eval":
+                return {"id": 1, "success": True, "result": 0}
             return {"id": 1, "success": True, "result": None}
 
         _install_fake_pipe(bridge, responder)
