@@ -150,17 +150,66 @@ class _TestQEMUSandbox(QEMUSandbox):
         """
         return await self._build_qemu_command()
 
-    async def poll_for_result_for_test(self, result_path: Path, time_limit: int) -> tuple[int, str, str]:
+    async def poll_for_result_for_test(
+        self,
+        result_path: Path,
+        time_limit: int,
+        *,
+        stdout_path: Path | None = None,
+        stderr_path: Path | None = None,
+        script_path: Path | None = None,
+    ) -> tuple[int, str, str]:
         """Expose _poll_for_result for test introspection.
 
         Args:
             result_path: Path to the result file.
             time_limit: Timeout in seconds.
+            stdout_path: Optional stdout sidecar path.
+            stderr_path: Optional stderr sidecar path.
+            script_path: Optional script path for cleanup.
 
         Returns:
             tuple[int, str, str]: (exit_code, stdout, stderr).
         """
-        return await self._poll_for_result(result_path=result_path, time_limit=time_limit)
+        return await self._poll_for_result(
+            result_path=result_path,
+            time_limit=time_limit,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            script_path=script_path,
+        )
+
+    def generate_execution_script_for_test(
+        self,
+        *,
+        command: str,
+        working_directory: str | None,
+        script_id: str,
+        result_name: str,
+        stdout_name: str,
+        stderr_name: str,
+    ) -> tuple[str, str]:
+        """Expose _generate_execution_script for test introspection.
+
+        Args:
+            command: Command to execute.
+            working_directory: Optional working directory.
+            script_id: Script identifier.
+            result_name: Result file name.
+            stdout_name: Stdout sidecar name.
+            stderr_name: Stderr sidecar name.
+
+        Returns:
+            tuple[str, str]: (script_filename, script_content).
+        """
+        return self._generate_execution_script(
+            command=command,
+            working_directory=working_directory,
+            script_id=script_id,
+            result_name=result_name,
+            stdout_name=stdout_name,
+            stderr_name=stderr_name,
+        )
 
     async def create_agent_script_for_test(self) -> None:
         """Expose _create_guest_agent_script for test introspection."""
@@ -442,6 +491,142 @@ class TestF0003PollForResult:
 
         exit_code, _stdout, _stderr = asyncio.get_event_loop().run_until_complete(_run())
         assert exit_code == 1, f"Expected exit code 1, got {exit_code}"
+
+    def test_poll_returns_stdout_and_stderr_from_sidecars(self, tmp_path: Path) -> None:
+        """_poll_for_result returns stdout/stderr content from sidecar files.
+
+        Simulates a guest command that emitted both stdout and stderr by
+        writing the sidecar files alongside the result file. On the unfixed
+        ``main`` branch the function returns empty stdout/stderr regardless;
+        on the fixed branch both streams must come back to the caller.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        result_file = tmp_path / "result_xyz.txt"
+        stdout_file = tmp_path / "xyz.stdout"
+        stderr_file = tmp_path / "xyz.stderr"
+        script_file = tmp_path / "exec_xyz.cmd"
+        script_file.write_text("@echo off\r\n", encoding="utf-8")
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text("0\n", encoding="utf-8")
+            stdout_file.write_text("hello-out\n", encoding="utf-8")
+            stderr_file.write_text("hello-err\n", encoding="utf-8")
+            return await sb.poll_for_result_for_test(
+                result_file,
+                5,
+                stdout_path=stdout_file,
+                stderr_path=stderr_file,
+                script_path=script_file,
+            )
+
+        exit_code, stdout, stderr = asyncio.get_event_loop().run_until_complete(_run())
+        assert exit_code == 0, f"Expected exit code 0, got {exit_code}"
+        assert "hello-out" in stdout, f"stdout sidecar content missing; got {stdout!r}"
+        assert "hello-err" in stderr, f"stderr sidecar content missing; got {stderr!r}"
+
+    def test_poll_returns_empty_when_sidecar_missing(self, tmp_path: Path) -> None:
+        """Missing sidecars yield empty strings without raising.
+
+        The fix must distinguish ``sidecar absent`` from ``sidecar contains
+        empty string`` only by returning ``""`` either way; it must not raise
+        FileNotFoundError or leak the missing-path exception to the caller.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        result_file = tmp_path / "result_only.txt"
+        absent_stdout = tmp_path / "missing.stdout"
+        absent_stderr = tmp_path / "missing.stderr"
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text("0\n", encoding="utf-8")
+            return await sb.poll_for_result_for_test(
+                result_file,
+                5,
+                stdout_path=absent_stdout,
+                stderr_path=absent_stderr,
+            )
+
+        exit_code, stdout, stderr = asyncio.get_event_loop().run_until_complete(_run())
+        assert exit_code == 0
+        assert not stdout, f"Expected empty stdout when sidecar missing; got {stdout!r}"
+        assert not stderr, f"Expected empty stderr when sidecar missing; got {stderr!r}"
+
+    def test_poll_cleans_up_result_and_sidecar_files(self, tmp_path: Path) -> None:
+        """After polling succeeds, result/sidecar/script files must be removed.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        result_file = tmp_path / "result_cleanup.txt"
+        stdout_file = tmp_path / "cleanup.stdout"
+        stderr_file = tmp_path / "cleanup.stderr"
+        script_file = tmp_path / "exec_cleanup.cmd"
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text("0\n", encoding="utf-8")
+            stdout_file.write_text("o", encoding="utf-8")
+            stderr_file.write_text("e", encoding="utf-8")
+            script_file.write_text("@echo off\r\n", encoding="utf-8")
+            return await sb.poll_for_result_for_test(
+                result_file,
+                5,
+                stdout_path=stdout_file,
+                stderr_path=stderr_file,
+                script_path=script_file,
+            )
+
+        asyncio.get_event_loop().run_until_complete(_run())
+
+        assert not result_file.exists(), "result file should be cleaned up after poll"
+        assert not stdout_file.exists(), "stdout sidecar should be cleaned up"
+        assert not stderr_file.exists(), "stderr sidecar should be cleaned up"
+        assert not script_file.exists(), "script file should be cleaned up"
+
+    def test_generated_windows_script_redirects_stdout_and_stderr(self) -> None:
+        """Windows script must redirect stdout/stderr to per-id sidecar files.
+
+        Confirms that the generated guest script references both sidecar
+        files in its redirection. Without the fix, only the exit code would
+        be emitted.
+        """
+        sb = _make_sandbox(guest_os=GuestOS.WINDOWS)
+        script_name, script_content = sb.generate_execution_script_for_test(
+            command='powershell -Command "Write-Host out; Write-Error err"',
+            working_directory=None,
+            script_id="deadbeef",
+            result_name="result_deadbeef.txt",
+            stdout_name="deadbeef.stdout",
+            stderr_name="deadbeef.stderr",
+        )
+
+        assert script_name.endswith(".cmd")
+        assert "deadbeef.stdout" in script_content, "Windows script must redirect stdout to deadbeef.stdout"
+        assert "deadbeef.stderr" in script_content, "Windows script must redirect stderr to deadbeef.stderr"
+        assert "1>" in script_content or "1> " in script_content, "Script must redirect file descriptor 1 to stdout sidecar"
+        assert "2>" in script_content, "Script must redirect file descriptor 2 to stderr sidecar"
+
+    def test_generated_linux_script_redirects_stdout_and_stderr(self) -> None:
+        """Linux script must redirect stdout/stderr to per-id sidecar files."""
+        sb = _make_sandbox(guest_os=GuestOS.LINUX)
+        script_name, script_content = sb.generate_execution_script_for_test(
+            command="echo out; >&2 echo err",
+            working_directory=None,
+            script_id="cafebabe",
+            result_name="result_cafebabe.txt",
+            stdout_name="cafebabe.stdout",
+            stderr_name="cafebabe.stderr",
+        )
+
+        assert script_name.endswith(".sh")
+        assert "cafebabe.stdout" in script_content
+        assert "cafebabe.stderr" in script_content
+        assert "2>" in script_content, "Linux script must redirect fd 2 to stderr sidecar"
 
 
 # ---------------------------------------------------------------------------
