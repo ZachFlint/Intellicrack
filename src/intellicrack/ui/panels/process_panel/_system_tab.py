@@ -844,15 +844,24 @@ class SystemTab(QWidget):
         buf_size = self._raw_buf_size.value()
 
         def _on_success(result: object) -> None:
-            if isinstance(result, (bytes, bytearray)):
-                hex_lines: list[str] = []
-                for i in range(0, len(result), 16):
-                    chunk = result[i : i + 16]
-                    hex_str = " ".join(f"{b:02X}" for b in chunk)
-                    hex_lines.append(f"{i:08X}  {hex_str}")
-                self._raw_output.setPlainText("\n".join(hex_lines))
-            else:
+            data: bytes | None = None
+            if isinstance(result, str):
+                try:
+                    data = bytes.fromhex(result)
+                except ValueError:
+                    self._raw_output.setPlainText(result)
+                    return
+            elif isinstance(result, (bytes, bytearray)):
+                data = bytes(result)
+            if data is None:
                 self._raw_output.setPlainText(str(result))
+                return
+            hex_lines: list[str] = []
+            for i in range(0, len(data), 16):
+                chunk = data[i : i + 16]
+                hex_str = " ".join(f"{b:02X}" for b in chunk)
+                hex_lines.append(f"{i:08X}  {hex_str}")
+            self._raw_output.setPlainText("\n".join(hex_lines))
 
         def _on_error(exc: object) -> None:
             _logger.warning("system_tab_raw_query_failed", exc=str(exc))

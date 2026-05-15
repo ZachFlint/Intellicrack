@@ -251,6 +251,7 @@ _STILL_ACTIVE = 259
 _NTQUERY_BUF_MAX = 0x40000000
 _STATUS_INFO_LENGTH_MISMATCH = -1073741820
 _PTR_SIZE_64 = 8
+_PTR_SIZE_32 = 4
 _SEH_TERMINAL_32 = 0xFFFFFFFF
 _SEH_TERMINAL_64 = 0xFFFFFFFFFFFFFFFF
 _REG_TYPE_DWORD = 4
@@ -738,7 +739,7 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
         ],
-        returns="List of handle dicts with value, type_index, access fields",
+        returns="List of handle dicts with handle_value, type_index, type_name, granted_access, object_address fields",
     ),
     ToolFunction(
         name="process.get_windows",
@@ -2360,7 +2361,10 @@ class ProcessBridge(ToolBridgeBase):
         Scans each readable memory region in chunks of
         ``_SEARCH_CHUNK_SIZE`` bytes. Each subsequent chunk overlaps the
         previous one by ``len(pattern) - 1`` bytes so matches that
-        straddle chunk boundaries are still detected.
+        straddle chunk boundaries are still detected. Every per-region
+        scan is dispatched through :func:`asyncio.to_thread` so the
+        event loop remains responsive while large processes are
+        searched.
 
         Args:
             pattern: Hex pattern with wildcards (e.g., "48 8B ?? ??").
@@ -2406,13 +2410,15 @@ class ProcessBridge(ToolBridgeBase):
             if scan_size < pattern_len:
                 continue
 
-            self._scan_region_pattern(
+            await asyncio.to_thread(
+                self._scan_region_pattern,
                 scan_base,
                 scan_size,
                 pattern_bytes,
                 overlap,
                 matches,
             )
+            await asyncio.sleep(0)
 
         return matches
 
@@ -3396,11 +3402,19 @@ class ProcessBridge(ToolBridgeBase):
     async def get_handles(self, pid: int | None = None) -> list[dict[str, object]]:
         """Enumerate open handles for a process using NtQuerySystemInformation.
 
+        Each returned handle includes the resolved ``type_name`` string
+        (e.g. ``"Process"``, ``"File"``, ``"Event"``) alongside the raw
+        ``type_index`` integer. The kernel object-type table is queried
+        once via ``NtQueryObject(ObjectAllTypesInformation)`` and cached
+        on the bridge for the remainder of the session.
+
         Args:
             pid: Process ID (uses current if not specified).
 
         Returns:
-            list[dict[str, object]]: List of handle dicts.
+            list[dict[str, object]]: List of handle dicts with keys
+            ``handle_value``, ``type_index``, ``type_name``,
+            ``granted_access``, ``object_address``.
 
         Raises:
             ToolError: If operation fails.
@@ -3411,6 +3425,9 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("no_process_specified", operation="get_handles")
             raise ToolError(_ERR_NO_PROCESS)
 
+        if not self._handle_type_cache:
+            self._build_handle_type_map()
+
         return await asyncio.to_thread(self._sync_iterate_handles_for_pid, target_pid)
 
     def _sync_iterate_handles_for_pid(self, target_pid: int) -> list[dict[str, object]]:
@@ -3420,14 +3437,18 @@ class ProcessBridge(ToolBridgeBase):
         iteration over tens of thousands of handle entries can be
         dispatched off the asyncio event loop via
         :func:`asyncio.to_thread`. Performs the same per-entry
-        validation and dict construction as the inline loop did.
+        validation and dict construction as the inline loop did, and
+        resolves each entry's ``ObjectTypeIndex`` to the human-readable
+        type name string via the cached
+        ``NtQueryObject(ObjectAllTypesInformation)`` map.
 
         Args:
             target_pid: PID to filter handle entries on.
 
         Returns:
             list[dict[str, object]]: List of handle dicts matching
-            ``target_pid``.
+            ``target_pid`` with keys ``handle_value``, ``type_index``,
+            ``type_name``, ``granted_access``, ``object_address``.
 
         Raises:
             ToolError: If ntdll is unavailable or
@@ -3438,6 +3459,7 @@ class ProcessBridge(ToolBridgeBase):
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         header_size = ctypes.sizeof(ctypes.c_void_p) * 2
         handles: list[dict[str, object]] = []
+        type_map = self._handle_type_cache
 
         for i in range(num_handles):
             entry_ptr = ctypes.cast(
@@ -3448,9 +3470,12 @@ class ProcessBridge(ToolBridgeBase):
 
             entry_pid = entry.UniqueProcessId
             if isinstance(entry_pid, int) and entry_pid == target_pid:
+                type_index = entry.ObjectTypeIndex
+                type_name: str = type_map.get(type_index, f"type_{type_index}")
                 handles.append({
                     "handle_value": entry.HandleValue or 0,
-                    "type_index": entry.ObjectTypeIndex,
+                    "type_index": type_index,
+                    "type_name": type_name,
                     "granted_access": entry.GrantedAccess,
                     "object_address": entry.Object or 0,
                 })
@@ -4981,7 +5006,8 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("process_not_attached", operation="get_seh_chain")
             raise ToolError(_ERR_NOT_ATTACHED)
 
-        if not self._target_is_wow64() and self._kernel32 is not None:
+        target_is_wow64 = self._target_is_wow64()
+        if not target_is_wow64 and self._kernel32 is not None:
             target_is_64bit = self._target_is_64bit(self._process_handle)
             if target_is_64bit:
                 raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
@@ -4993,7 +5019,7 @@ class ProcessBridge(ToolBridgeBase):
 
         chain: list[dict[str, object]] = []
         current = seh_frame_addr
-        ptr_size = struct.calcsize("P")
+        ptr_size = _PTR_SIZE_32 if target_is_wow64 else struct.calcsize("P")
         max_depth = 256
 
         for _ in range(max_depth):
@@ -5999,6 +6025,7 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("pipe_connect_failed", pipe_name=pipe_name)
             raise ToolError(_ERR_PIPE_CONNECT_FAILED)
 
+        self._pipe_handles[handle] = pipe_name
         _logger.info("pipe_connected", pipe_name=pipe_name, handle=handle)
         return handle
 
@@ -6075,6 +6102,7 @@ class ProcessBridge(ToolBridgeBase):
         if not result:
             _logger.error("pipe_close_failed", handle=handle)
             raise ToolError(_ERR_PIPE_CLOSE_FAILED)
+        self._pipe_handles.pop(handle, None)
         return True
 
     # ------------------------------------------------------------------
@@ -6584,6 +6612,7 @@ class ProcessBridge(ToolBridgeBase):
             _logger.error("device_open_failed", device_path=device_path)
             raise ToolError(_ERR_DEVICE_OPEN_FAILED)
 
+        self._device_handles[handle] = device_path
         _logger.info("device_opened", device_path=device_path, handle=handle)
         return handle
 
@@ -6669,6 +6698,7 @@ class ProcessBridge(ToolBridgeBase):
         if not result:
             _logger.error("device_close_failed", handle=handle)
             raise ToolError(_ERR_DEVICE_CLOSE_FAILED)
+        self._device_handles.pop(handle, None)
         return True
 
     # ------------------------------------------------------------------
@@ -7649,7 +7679,7 @@ class ProcessBridge(ToolBridgeBase):
     # NtQuerySystemInformation bridge
     # ------------------------------------------------------------------
 
-    async def query_system_info(self, info_class: int, buffer_size: int = 65536) -> bytes:
+    async def query_system_info(self, info_class: int, buffer_size: int = 65536) -> str:
         """Raw NtQuerySystemInformation bridge with auto-growing buffer.
 
         Args:
@@ -7657,7 +7687,8 @@ class ProcessBridge(ToolBridgeBase):
             buffer_size: Initial buffer size.
 
         Returns:
-            bytes: Raw output buffer.
+            str: Hex string of the raw output buffer truncated to the
+            kernel-reported return length.
 
         Raises:
             ToolError: If operation fails.
@@ -7697,7 +7728,7 @@ class ProcessBridge(ToolBridgeBase):
                 msg = _ERR_NTQUERY_SYS + f"{status & 0xFFFFFFFF:08X}"
                 raise ToolError(msg)
 
-            return buffer.raw[: return_length.value]
+            return buffer.raw[: return_length.value].hex()
 
         raise ToolError(_ERR_NTQUERY_SYS_BUF_MAX)
 

@@ -1256,13 +1256,16 @@ class TestNtQuerySystemInformation:
     """Verify raw NtQuerySystemInformation bridge."""
 
     async def test_query_system_info_process_info(self, process_bridge: ProcessBridge) -> None:
-        """Verify SystemProcessInformation (class 5) returns non-empty bytes.
+        """Verify SystemProcessInformation (class 5) returns a non-empty hex string.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         result = await process_bridge.query_system_info(5)
+        assert isinstance(result, str)
         assert len(result) > 0
+        assert all(c in "0123456789abcdef" for c in result)
+        assert len(result) % 2 == 0
 
 
 class TestSehFiberTls:
@@ -3521,8 +3524,11 @@ class TestF0043QuerySystemInfoRetries:
             system_handle_information,
             buffer_size=1024,
         )
-        assert isinstance(result, bytes)
+        assert isinstance(result, str)
         assert len(result) > 0
+        assert all(c in "0123456789abcdef" for c in result)
+        assert len(result) % 2 == 0
+        assert len(bytes.fromhex(result)) > 0
 
 
 class TestF0027MitigationBitfields:
