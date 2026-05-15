@@ -184,6 +184,32 @@
 - **Lines:** 2152-2156
 - **Pattern:** Cat 13
 
+### Category 4 - Cosmetic, Ineffective
+#### F-0013 - `apply_anti_evasion` patches volatile registry hive [fixed: audit7/u11-anti-evasion-wmi-hijack]
+
+- **Source audit:** audit4.md / `sandbox-py`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** `apply_anti_evasion` writes spoofed manufacturer / product / BIOS strings to `HKLM:\HARDWARE\DESCRIPTION\System\BIOS` and sibling keys. That hive is volatile — rebuilt by the kernel at every boot from PnP enumeration — so the writes vanish before evasive samples can observe them. In any case, malware that queries hardware identity goes through WMI (`Win32_ComputerSystem`, `Win32_ComputerSystemProduct`, `Win32_BIOS`), not the raw hive, so even a persistent write would not reach the evasion check.
+
+- **File:** `src/intellicrack/sandbox/windows.py`
+- **Lines:** 1417-1510
+- **Pattern:** Cat 4
+- **Why this is non-functional:** Writes target volatile registry data; evasive malware queries WMI providers that are not affected by `HKLM:\HARDWARE\DESCRIPTION` writes.
+- **Suggested remediation summary:** Drop every `HKLM:\HARDWARE\DESCRIPTION` write. Generate a MOF file from the active anti-evasion profile that redefines `Win32_ComputerSystem`, `Win32_ComputerSystemProduct`, and `Win32_BIOS` as `[Static]` classes with the spoofed instance values, compile it via `mofcomp.exe -N:root\cimv2 <mof>`, then verify with `Get-CimInstance` that the spoofed values are now returned.
+
+### Category 21 - Targets PPL
+#### F-0021 - `dump_memory` cannot succeed against vmwp.exe [fixed: audit7/u11-minidump-target-pid]
+
+- **Source audit:** audit4.md / `sandbox-py`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** The in-guest PowerShell helper calls `MiniDumpWriteDump` with `GetCurrentProcess()`, dumping the PowerShell host that the dispatcher spawned — never the analysis target. A separate host-side fallback tries to open the sandbox worker `vmwp.exe` (a Protected Process Light) which is unreachable from any caller including SYSTEM. Either way the produced minidump describes the wrong process.
+
+- **File:** `src/intellicrack/sandbox/windows.py`
+- **Lines:** 1512-1588 + 1890-1968
+- **Pattern:** Cat 21, Cat 4
+- **Why this is non-functional:** `MiniDumpWriteDump(GetCurrentProcess(), ...)` captures the PowerShell host instead of the sample under analysis; the resulting dump has none of the binary's state.
+- **Suggested remediation summary:** Thread a required `target_pid` argument through `WindowsSandbox.dump_memory` (and the matching `SandboxBridge.memory_dump` surface) into the in-guest PowerShell. Use `OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, $targetPid)` and pass that handle to `MiniDumpWriteDump`. Close the handle in `finally`. Reject calls missing or having non-positive `target_pid`.
+
 
 # Findings: ui-panels-process (from audit4.md)
 

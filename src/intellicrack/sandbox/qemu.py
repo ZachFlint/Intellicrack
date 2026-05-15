@@ -3193,11 +3193,22 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         _logger.info("anti_evasion_applied", profile=current_profile, technique_count=len(techniques))
         return applied
 
-    async def dump_memory(self, output_path: Path | None = None) -> Path:
+    async def dump_memory(
+        self,
+        output_path: Path | None = None,
+        target_pid: int | None = None,
+    ) -> Path:
         """Dump guest memory to a file.
+
+        QEMU dumps the entire VM via the ``dump-guest-memory`` QMP command, so
+        ``target_pid`` is accepted for interface parity with
+        :meth:`WindowsSandbox.dump_memory` but is not used to filter the dump.
+        The value is recorded in the debug log for traceability.
 
         Args:
             output_path: Optional path to save the memory dump.
+            target_pid: Ignored for QEMU. Accepted for interface parity with
+                Windows Sandbox where it selects the process to dump.
 
         Returns:
             Path: Path to the saved memory dump file.
@@ -3205,6 +3216,8 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         Raises:
             SandboxError: If memory dump fails.
         """
+        if target_pid is not None:
+            _logger.debug("qemu_dump_memory_ignoring_target_pid", target_pid=target_pid)
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
