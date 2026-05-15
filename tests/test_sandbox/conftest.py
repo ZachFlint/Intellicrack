@@ -11,6 +11,7 @@ pre-built sample data fixtures that other test modules depend on.
 
 from __future__ import annotations
 
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
@@ -34,6 +35,7 @@ from intellicrack.sandbox.base import (
     SandboxBase,
     SandboxConfig,
     SandboxError,
+    SandboxState,
     ServiceChange,
 )
 
@@ -44,6 +46,7 @@ _DEFAULT_PCAP_ID: Final[str] = "cap-001"
 _SAMPLE_BINARY_SIZE: Final[int] = 4096
 _SAMPLE_DLL_SIZE: Final[int] = 65536
 _SAMPLE_CLIPBOARD_SIZE: Final[int] = 42
+_TMPDIR: Final[Path] = Path(tempfile.gettempdir())
 
 
 def ts_offset(second: int) -> str:
@@ -64,10 +67,6 @@ class QMPResponse:
     Attributes:
         success: Whether the command succeeded.
         data: Response payload.
-
-    Args:
-        success: Whether the command succeeded.
-        data: Response payload.
     """
 
     success: bool
@@ -79,6 +78,12 @@ class QMPResponse:
         success: bool = True,
         data: dict[str, Any] | None = None,
     ) -> None:
+        """Initialise a QMP response.
+
+        Args:
+            success: Whether the command succeeded.
+            data: Response payload (defaults to empty dict).
+        """
         self.success = success
         self.data = data or {}
 
@@ -101,16 +106,18 @@ class AgentMessage:
     Attributes:
         msg_type: Message type identifier.
         data: Message payload.
-
-    Args:
-        msg_type: Message type identifier.
-        data: Message payload.
     """
 
     msg_type: str
     data: dict[str, Any]
 
     def __init__(self, msg_type: str, data: dict[str, Any] | None = None) -> None:
+        """Initialise an agent message.
+
+        Args:
+            msg_type: Message type identifier.
+            data: Message payload (defaults to empty dict).
+        """
         self.msg_type = msg_type
         self.data = data or {}
 
@@ -132,12 +139,14 @@ class InMemorySandbox(SandboxBase):
 
     Stores files, snapshots, and captures in memory for testing
     without any external sandbox dependencies.
-
-    Args:
-        config: Optional sandbox configuration.
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
+        """Initialise the in-memory sandbox.
+
+        Args:
+            config: Optional sandbox configuration.
+        """
         super().__init__(config)
         self._files: dict[str, bytes] = {}
         self._snapshots: dict[str, dict[str, bytes]] = {}
@@ -252,8 +261,9 @@ class InMemorySandbox(SandboxBase):
 
         Args:
             source: Source path in sandbox.
-            dest: Local destination path.
+            dest: Local destination path (unused; the in-memory backend has no real filesystem export).
         """
+        del dest
         _ = self._files.get(source, b"")
 
     async def take_snapshot(self, name: str) -> str:
@@ -330,7 +340,7 @@ class InMemorySandbox(SandboxBase):
             Path: Path to the PCAP file.
         """
         del capture_id
-        return output_path or Path("/tmp/capture.pcap")
+        return output_path or (_TMPDIR / "capture.pcap")
 
     async def capture_screenshot(
         self,
@@ -344,7 +354,7 @@ class InMemorySandbox(SandboxBase):
         Returns:
             Path: Path to the screenshot file.
         """
-        return output_path or Path("/tmp/screenshot.png")
+        return output_path or (_TMPDIR / "screenshot.png")
 
     async def apply_anti_evasion(
         self,
@@ -363,16 +373,19 @@ class InMemorySandbox(SandboxBase):
     async def dump_memory(
         self,
         output_path: Path | None = None,
+        target_pid: int | None = None,
     ) -> Path:
         """Dump guest memory.
 
         Args:
             output_path: Optional output path.
+            target_pid: Optional guest-side target PID (recorded for assertions).
 
         Returns:
             Path: Path to the memory dump file.
         """
-        return output_path or Path("/tmp/memdump.raw")
+        del target_pid
+        return output_path or (_TMPDIR / "memdump.raw")
 
     async def extract_dropped_files(
         self,
@@ -386,7 +399,7 @@ class InMemorySandbox(SandboxBase):
         Returns:
             Path: Path to the ZIP archive.
         """
-        return output_path or Path("/tmp/dropped.zip")
+        return output_path or (_TMPDIR / "dropped.zip")
 
     async def yara_scan(
         self,
@@ -418,25 +431,21 @@ class InMemoryQEMUSandbox(InMemorySandbox):
     Exposes public ``qmp`` and ``agent`` attributes that match the public
     property accessors on the real ``QEMUSandbox`` class so bridge code that
     reads them via ``getattr()`` finds working stubs.
-
-    Args:
-        config: Optional sandbox configuration.
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
+        """Initialise the in-memory QEMU sandbox.
+
+        Args:
+            config: Optional sandbox configuration.
+        """
         super().__init__(config)
         self.qmp = StubQMP()
         self.agent = StubAgent()
 
 
 class StubInstance:
-    """Minimal sandbox instance compatible with SandboxBridge expectations.
-
-    Args:
-        sandbox: The sandbox implementation.
-        sandbox_type: Type of sandbox ('windows' or 'qemu').
-        instance_id: Optional fixed instance ID.
-    """
+    """Minimal sandbox instance compatible with SandboxBridge expectations."""
 
     def __init__(
         self,
@@ -444,6 +453,13 @@ class StubInstance:
         sandbox_type: str,
         instance_id: str | None = None,
     ) -> None:
+        """Initialise the stub instance.
+
+        Args:
+            sandbox: The sandbox implementation.
+            sandbox_type: Type of sandbox ('windows' or 'qemu').
+            instance_id: Optional fixed instance ID; a UUID is generated when omitted.
+        """
         self.id = instance_id or str(uuid4())
         self.sandbox_type = sandbox_type
         self.sandbox = sandbox
@@ -453,11 +469,11 @@ class StubInstance:
         self.last_report: ExecutionReport | None = None
 
     @property
-    def state(self) -> Any:
+    def state(self) -> SandboxState:
         """Get sandbox state.
 
         Returns:
-            Any: The sandbox's internal state object.
+            SandboxState: The sandbox's internal state object.
         """
         return self.sandbox.state
 
@@ -467,16 +483,17 @@ class StubInstance:
 
 
 class StubManager:
-    """Stand-in for SandboxManager with pre-populated instances.
-
-    Args:
-        instances: Optional pre-populated instance dict.
-    """
+    """Stand-in for SandboxManager with pre-populated instances."""
 
     def __init__(
         self,
         instances: dict[str, StubInstance] | None = None,
     ) -> None:
+        """Initialise the stub manager.
+
+        Args:
+            instances: Optional pre-populated instance dict.
+        """
         self._instances: dict[str, StubInstance] = instances or {}
 
     @property
@@ -500,9 +517,9 @@ class StubManager:
     async def create(
         self,
         sandbox_type: str = "windows",
-        config: Any = None,
-        binary_path: Any = None,
-        qemu_config: Any = None,
+        config: SandboxConfig | None = None,
+        binary_path: Path | None = None,
+        qemu_config: object = None,
         *,
         auto_start: bool = True,
     ) -> StubInstance:
@@ -512,7 +529,8 @@ class StubManager:
             sandbox_type: Type of sandbox.
             config: Optional configuration.
             binary_path: Optional binary path.
-            qemu_config: Optional QEMU config.
+            qemu_config: Optional QEMU config (kept as ``object`` for compatibility
+                with callers that import ``QEMUConfig`` from sandbox.qemu).
             auto_start: Whether to auto-start.
 
         Returns:
@@ -567,9 +585,9 @@ class StubManager:
         binary_path: Path,
         args: list[str] | None = None,
         sandbox_type: str = "windows",
-        config: Any = None,
+        config: SandboxConfig | None = None,
         time_limit: int | None = None,
-        qemu_config: Any = None,
+        qemu_config: object = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -582,7 +600,8 @@ class StubManager:
             sandbox_type: Type of sandbox.
             config: Optional configuration.
             time_limit: Optional timeout.
-            qemu_config: Optional QEMU config.
+            qemu_config: Optional QEMU config (kept as ``object`` for compatibility
+                with callers that import ``QEMUConfig`` from sandbox.qemu).
             monitor: Whether to monitor.
             reuse_instance: Whether to reuse an existing instance.
 
