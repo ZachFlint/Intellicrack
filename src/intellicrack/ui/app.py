@@ -83,6 +83,7 @@ if TYPE_CHECKING:
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.template_manager import TemplateManager
+    from intellicrack.sandbox.base import SandboxBase
 
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
@@ -377,6 +378,36 @@ class MainWindow(QMainWindow):
         self.tool_panel.wire_script_backend(manager, validator)
         _logger.debug("script_manager_wired")
 
+    def wire_sandbox_backend(self, sandbox: SandboxBase, manager: SandboxManager | None = None) -> None:
+        """Inject an externally constructed sandbox backend into the UI.
+
+        Public entry point used by plugins, CLI bootstraps, and the
+        application startup path to register a pre-existing ``SandboxBase``
+        (and optional ``SandboxManager``) so the sandbox tab, chat workflow,
+        and AI bridges can drive it. When ``manager`` is supplied it
+        replaces the lazy manager on the resulting ``SandboxBridge``;
+        otherwise the bridge constructs its own. The supplied manager (or
+        the bridge's lazily created one) is also installed on the window
+        as :attr:`sandbox_manager` so the sandbox configuration dialog and
+        teardown paths see the same instance the panel sees.
+
+        Args:
+            sandbox: Pre-constructed ``SandboxBase`` implementation.
+            manager: Optional pre-constructed ``SandboxManager`` to install
+                on the resulting bridge. When ``None`` the bridge's lazy
+                manager is used.
+        """
+        self.tool_panel.wire_sandbox_backend(sandbox, manager)
+        wired_bridge = self.tool_panel.get_sandbox_bridge()
+        wired_manager = getattr(wired_bridge, "manager", None)
+        if isinstance(wired_manager, SandboxManager):
+            self.sandbox_manager = wired_manager
+        _logger.info(
+            "main_window_sandbox_backend_wired",
+            sandbox_type=type(sandbox).__name__,
+            had_manager=manager is not None,
+        )
+
     def set_script_generator(self, generator: ScriptGenerator) -> None:
         """Persist the application-scoped ScriptGenerator instance.
 
@@ -478,9 +509,7 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """
-
-           ,
+        """,
         )
 
     @property
