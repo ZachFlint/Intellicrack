@@ -620,8 +620,231 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 - Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
 
+- Refine merge command execution parameters (``)
+Update the merge command specification to improve the precision of automated branch integrations. These changes clarify the expected behavior and validation steps required during the merge workflow.
+
 
 ### Fixed
+
+- **sandbox-bridge:** F-0010 symmetric BridgeState.last_error lifecycle  (`d4e2434`)
+Introduces an async context manager (_StateTracker) wrapping every
+public sandbox bridge method that previously did not maintain
+BridgeState.last_error. The tracker clears last_error on success
+and records the exception text on failure while preserving the
+rest of the state fields (connected, tool_running, binary_loaded,
+process_attached, target_path, target_pid). State is assigned via
+the existing state property setter so bridge_state_changed log
+records continue to fire on every transition.
+Applied to: copy_to, copy_from, snapshot_create, snapshot_restore,
+snapshot_list, snapshot_delete, pcap_start, pcap_stop, screenshot,
+anti_evasion, memory_dump, extract_dropped_files, yara_scan,
+extract_iocs, timeline, detect_behaviors, detect_c2, diff.
+Regression coverage in TestF0010LastErrorLifecycleSymmetric drives
+a failing operation then a passing operation for each wrapped
+method and asserts last_error is set on failure and cleared on
+recovery, plus that target_path/binary_loaded survive across
+state-tracker transitions.
+
+- **hexpat:** F-0007 wire std::print sink through UI panel and bridge  (`0c6408a`)
+The HexPat ``std::print`` builtin's output had no visible consumer.
+Neither the hex-editor pattern panel nor the ``HexEditorBridge`` ever
+installed a ``print_sink`` on the cached ``HexPatInterpreter``, so
+``_io_print`` only landed in the structured log and never reached the
+user or AI / CLI callers.
+
+- **bridges:** F-0008/F-0019/F-0035/F-0037/F-0044 process bridge audit7  (`df27f12`)
+Resolve five PARTIAL audit2/bridges-process findings:
+* F-0008: get_seh_chain now uses 4-byte pointers for WOW64 targets via
+the new _PTR_SIZE_32 constant. The previous code derived ptr_size
+from struct.calcsize("P") on the host interpreter, which silently
+produced 16-byte SEH reads for WOW64 (32-bit) processes on a 64-bit
+Python and corrupted every returned address.
+* F-0019: get_handles now resolves ObjectTypeIndex to a type_name
+string via the cached NtQueryObject(ObjectAllTypesInformation) map
+built by _build_handle_type_map. The raw type_index integer is kept
+as a sibling field. Tool-def returns text updated to advertise the
+new schema. The _modules_tab.py UI consumer prefers the resolved
+name when present.
+* F-0035: search_pattern dispatches each per-region scan through
+asyncio.to_thread and yields via asyncio.sleep(0) between regions
+so the event loop remains responsive while large processes are
+scanned.
+* F-0037: query_system_info now returns a hex string (return type
+annotation switched to str) so the tool-def contract is honoured
+and JSON tool responses are serialisable. The _system_tab.py UI
+consumer accepts the hex-string output and renders the hex dump
+via bytes.fromhex.
+* F-0044: pipe_connect and device_open register their handles into
+_pipe_handles / _device_handles on success so shutdown can release
+them; the corresponding *_close methods pop the entry on a
+successful close. Closes the handle leaks that previously left both
+dicts empty at shutdown.
+Adds tests/test_bridges/test_process_audit7.py with twelve regression
+tests covering each fix.
+
+- **hex-editor:** F-0012/F-0017 fire TEMPLATE_REGISTERED on apply paths  (`0da33aa`)
+
+- **core-orchestration:** F-0007/F-0008/F-0022 wire tool_state, tag chips, fix YARA Protocol  (`c51750a`)
+
+- **x64dbg:** F-0001 verify 19 fire-and-forget wrappers post-condition  (`4530960`)
+Audit7 F-0001 (from audit/07_findings_bridges-x64dbg.md) covered 19
+x64dbg console wrappers that returned hardcoded ``{"success": True}``
+immediately after queuing an asynchronous command, without inspecting
+whether the debugger actually applied the change.
+Each wrapper now performs an operation-appropriate verification:
+* set_label / set_comment - readback compare via ``lbl_list`` /
+``cmt_list``.
+* enable_breakpoint / disable_breakpoint - poll ``bp_list`` for the
+expected ``enabled`` flag.
+* suspend_thread / resume_thread / switch_thread / set_thread_name -
+poll ``thread_detail`` until the post-condition (suspended state,
+thread listed, or new name) is observed.
+* trace_into / trace_over / step_count / animate_start / animate_stop -
+poll ``status`` until the debugger's running flag flips to the
+expected value.
+* script_load / script_run / script_cmd / script_abort - query
+``script.iserror()`` via the expression evaluator.
+* plugin_load / plugin_unload - check ``plugin_list`` with a
+``plugin.find()`` fallback.
+Each wrapper raises ``ToolError`` on verification failure with a
+structured ``x64dbg_error_code`` detail (no fake-success returns,
+no ``{"success": False}``). Class-level ``VERIFY_TIMEOUT`` (5 s) and
+``VERIFY_POLL_INTERVAL`` (50 ms) bound the polling. When the plugin
+lacks a verification RPC (older builds), wrappers surface
+``verified=False`` so callers can distinguish unverified from
+verified-success.
+Regression coverage in tests/test_bridges/test_x64dbg_audit7_f0001.py
+(42 new tests) covers happy + failure paths for every wrapper; the
+failure-path tests would fail on main (fake success) and pass on
+this branch. Two pre-existing audit6 logging tests are updated to
+script the new verification RPCs in their fake-pipe responder.
+
+- **sandbox:** F-0019/F-0025 audit7 — coordinated monitor shutdown + dll_monitor structured unparsed records  (`73839ff`)
+
+- **ui-app-core:** F-0021 wire wire_sandbox_backend through MainWindow + startup helper  (`2212fb3`)
+Adds the missing production call sites for `ToolOutputPanel.wire_sandbox_backend`:
+* `MainWindow.wire_sandbox_backend(sandbox, manager=None)` exposes the public
+plugin/CLI injection surface, forwards to the tool panel, and installs the
+resulting manager onto `MainWindow.sandbox_manager` so dialog/teardown paths
+observe the same instance.
+* `intellicrack.main._wire_preregistered_sandbox` runs from `_create_main_window`
+at startup and forwards any pre-registered `SandboxBridge` instance from the
+orchestrator's tool registry into `MainWindow.wire_sandbox_backend`.
+* `ToolOutputPanel.get_sandbox_bridge` now also surfaces the deferred bridge
+before the sandbox panel is constructed.
+Regression tests cover the public method, manager reuse, single-invocation
+forwarding, type validation, the startup helper's wiring path, and its no-op
+behaviour without pre-registration.
+
+- **hex:** F-0042 stream BPS/UPS source via mmap to avoid full-file Python copy  (`bc9dc58`)
+BPS/UPS patch export materialised the entire source via
+`bytes(mm)` before invoking the encoder, so very large source files
+would push peak Python heap RSS up by the full source size. The
+pure-Python fallback held two materialised buffers concurrently.
+Adds two new PyO3 bindings to `intellicrack-hexcore`:
+`HexDocument::export_patches_bps_from_path` and
+`HexDocument::export_patches_ups_from_path`. Both share a private
+`export_patch_from_path_inner` helper that memory-maps the source
+inside Rust via `memmap2::Mmap` and hands the slice straight to
+`bps_ups::export_bps` / `bps_ups::export_ups`. The Python bridge
+prefers these path-based entrypoints, then falls back to handing the
+legacy byte-slice signature an `mmap.mmap` object through the buffer
+protocol. A new `HexEditorBridge._open_source_mmap` contextmanager
+provides the mmap view. The pure-Python fallback walks the source
+through that mmap view rather than calling `bytes(mm)`; the BPS / UPS
+encoder helpers are typed against a new `_BPSBuffer = bytes |
+mmap.mmap` alias so the buffer-protocol path is type-correct.
+`_load_source_via_mmap` is kept as a deprecated compatibility shim so
+no method binding is removed.
+Tests in `tests/test_audit7/bridges_hex/test_bps_streaming_export.py`
+pin (a) the pyfallback hands `mmap.mmap` to the encoder, not `bytes`;
+(b) the source-handoff phase against a 2 GiB sparse source keeps
+tracemalloc peak under 64 MiB; (c) the legacy byte-slice backend path
+also receives `mmap.mmap`; (d) the new `export_patches_*_from_path`
+Rust bindings produce valid BPS1 / UPS1 patches that roundtrip.
+
+- **sandbox:** F-0013/F-0021 windows.py WMI hijack + minidump target PID  (`3267dc2`)
+
+- **ui-app-core:** F-0007 reuse prefetched status in ToolStatusDialog  (`a3f6eed`)
+Previously, MainWindow._on_tool_status pre-fetched the full tool
+availability snapshot via run_bridge_coroutine and then constructed
+ToolStatusDialog, which immediately spawned six fresh
+ToolStatusCheckWorker QThreads to do the same work — doubling the
+work and delaying first paint.
+Add a typed tool_statuses parameter (TypedDict ToolStatusEntry) to
+ToolStatusDialog.__init__. When supplied, the dialog populates its
+list view directly from the snapshot and skips the initial worker
+batch entirely. The Refresh button is still wired to _refresh_status
+so explicit user-initiated refreshes always re-spawn workers.
+Update MainWindow._refresh_tool_status to return the typed snapshot
+keyed by ToolName.value (the dialog's canonical tool IDs) and
+forward it to the dialog at construction.
+Also fix a latent crash in ToolCapabilitiesWidget: setProperty()
+was being invoked with the keyword form value=True, which PyQt6's
+sip-generated binding rejects (positional-only). The crash was
+unreachable from main but was triggered the moment the new
+regression tests instantiated the dialog. Switched to the string
+"true" the QSS theme selectors already match against.
+Tests in tests/test_ui/test_tool_status_dialog_prefetch.py cover:
+- prefetched data skips initial worker spawn
+- omitting prefetched data spawns one worker per tool row
+- Refresh button re-spawns workers even after prefetch
+- partial prefetched payloads render an unknown placeholder for
+missing rows without spawning workers
+
+- **qemu:** F-0022/F-0029 anti-evasion reg.exe allowlist + identity consistency  (`3888d00`)
+Fixes audit7 findings F-0022 and F-0029 together because they share
+`QEMUSandbox.apply_anti_evasion` and each fix is meaningless without the
+other.
+
+- **qemu:** F-0003 capture stdout/stderr in run_command fallback path  (`5ca19ac`)
+The file-polling fallback path of QEMUSandbox.run_command (used when the
+guest agent is unreachable) was returning empty stdout and stderr because
+the generated execution script only wrote the exit code to the shared
+folder. Any command run through that path returned (exit_code, "", ""),
+making it impossible for callers to diagnose failures or capture analysis
+output.
+* `_generate_execution_script` now redirects stdout and stderr to per-id
+sidecar files (`<id>.stdout`, `<id>.stderr`) under the guest's shared
+`output` folder before writing the exit-code sentinel. The redirection
+closes both descriptors before the result file is written so the host
+only observes the exit code once stdout/stderr are fully flushed.
+* `_poll_for_result` now reads both sidecars via the new `_read_sidecar`
+helper once the exit-code file appears and returns their content.
+* `_cleanup_result_artifacts` removes the script, result, and sidecar
+files after a successful read so the shared folder no longer
+accumulates per-invocation artefacts.
+Adds 5 regression tests covering: stdout/stderr propagation from
+sidecars, missing-sidecar returns empty string without raising, cleanup
+of all per-invocation files, and OS-specific script generation for
+Windows (.cmd) and Linux (.sh).
+
+- **xml:** F-0011 replace __import__ obfuscation with direct xml.etree import  (`caf2ca5`)
+Replace the obfuscated ``__import__("xml" + ".etree.ElementTree")`` loader
+in ``intellicrack.core._xml_gen`` with a plain
+``from xml.etree.ElementTree import ...``. Move the bandit B405 suppression
+to ``pyproject.toml [tool.bandit] skips`` with a documented project-wide
+rationale, and add the matching ruff ``S405`` ignore. No inline ``# nosec``,
+``# noqa``, or ``# type: ignore`` directives anywhere.
+Regression tests assert the source contains a real direct import, no
+``__import__`` / ``import_module`` / string-concatenation obfuscation,
+and no inline suppression directives. Adds a representative sandbox XML
+payload round-trip to confirm the write-side API still works.
+
+- **process-panel:** F-0022/F-0023 add PID guards and user-visible error dialogs to SystemTab  (`0002a6a`)
+
+- **providers:** F-0023 drop dead re-exports from package __init__  (`7cc58f9`)
+Remove DiscoveryEvent, DtypeOption, and ModelConfig from
+intellicrack.providers.__all__ and the package-level re-exports.
+No production code or test imports them via intellicrack.providers.<name>
+- callers use the canonical submodules
+(intellicrack.providers.discovery / intellicrack.providers.model_loader)
+directly. Removing the dead re-exports trims the documented public
+surface and keeps implementation-detail types from leaking through the
+package facade.
+Add a regression test asserting the three names are absent from both
+__all__ and the package's attribute table while remaining exported from
+their canonical source modules.
 
 - **qemu:** F-0007 wrap extract_dropped_files commands and add host fallback (`185f6d7`)
 
