@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import hashlib
 import html
 import importlib
@@ -49,6 +50,8 @@ from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, Too
 
 
 if TYPE_CHECKING:
+    from collections.abc import Buffer, Generator
+
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.disassembler import HexDisassembler
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
@@ -280,6 +283,17 @@ _PT_LOAD = 1
 _MAX_ELF_SEGMENTS = 64
 _NDB_MIN_FIELDS = 4
 _HDB_MIN_FIELDS = 3
+
+type _BPSBuffer = bytes | mmap.mmap
+"""Read-only byte container accepted by the BPS/UPS encoders.
+
+The encoders index, slice, and CRC the source buffer; ``bytes`` and
+:class:`mmap.mmap` both satisfy that contract via the buffer protocol
+plus sequence semantics, allowing the source to be passed directly
+from a memory-mapped file without first being copied onto the Python
+heap.
+"""
+
 
 _ERR_NO_DOCUMENT: Final[str] = "no document open"
 _ERR_NO_SELECTION: Final[str] = "no selection active"
@@ -7673,14 +7687,16 @@ class HexEditorBridge(ToolBridgeBase):
     async def export_patches_bps(self, original_path: str) -> str:
         """Export a BPS patch comparing the current document against the original.
 
-        When the underlying Rust backend implements
-        ``export_patches_bps`` the source file is memory-mapped via
-        :class:`mmap.mmap` and handed to the backend without first
-        materialising the whole file in Python; the target is read
-        through the existing memory-mapped document and never copied
-        into a duplicate Python ``bytes`` buffer. The pure-Python
-        fallback continues to require both files in memory because the
-        BPS encoder makes random-access lookups on both buffers.
+        The source file is never materialised on the Python heap. When
+        the Rust backend exposes ``export_patches_bps_from_path``, the
+        source is memory-mapped inside Rust and passed straight to the
+        encoder; otherwise the bridge maps the source with
+        :class:`mmap.mmap` and hands the mapping to the backend via the
+        buffer protocol. The pure-Python fallback also walks the source
+        through an :class:`mmap.mmap` view so no full copy of the source
+        ever lives on the Python heap; the target document is read
+        through the existing memory-mapped piece-table because the BPS
+        algorithm requires random-access lookups on both buffers.
 
         Args:
             original_path: Path to the original unmodified file.
@@ -7708,8 +7724,13 @@ class HexEditorBridge(ToolBridgeBase):
     def _load_source_via_mmap(original_path: str) -> bytes:
         """Read ``original_path`` into memory via :class:`mmap.mmap`.
 
-        Empty files short-circuit to ``b""`` since :func:`mmap.mmap`
-        rejects zero-length mappings on Windows.
+        Retained for compatibility with callers that need a fully
+        materialised ``bytes`` value; new code paths should use
+        :meth:`_open_source_mmap` instead and pass the mmap object
+        directly to consumers that support the buffer protocol so the
+        full file is never duplicated on the Python heap. Empty files
+        short-circuit to ``b""`` since :func:`mmap.mmap` rejects
+        zero-length mappings on Windows.
 
         Args:
             original_path: Filesystem path of the source file.
@@ -7724,8 +7745,42 @@ class HexEditorBridge(ToolBridgeBase):
             with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
                 return bytes(mm)
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _open_source_mmap(original_path: str) -> Generator[mmap.mmap | bytes]:
+        """Yield a read-only ``mmap`` view of ``original_path``.
+
+        The returned object supports the buffer protocol and Python
+        sequence semantics (``len``, ``obj[i]``, ``obj[i:j]``), so it
+        can be passed directly to consumers that previously required
+        ``bytes`` without first copying the full file onto the Python
+        heap. Empty files yield an empty ``bytes`` literal because
+        :func:`mmap.mmap` rejects zero-length mappings on Windows.
+
+        Args:
+            original_path: Filesystem path of the source file.
+
+        Yields:
+            Generator[mmap.mmap | bytes]: A memory-mapped view of the
+                file, or ``b""`` if the file is empty.
+        """
+        with Path(original_path).open("rb") as fh:
+            source_size = os.fstat(fh.fileno()).st_size
+            if source_size == 0:
+                yield b""
+                return
+            with mmap.mmap(fh.fileno(), source_size, access=mmap.ACCESS_READ) as mm:
+                yield mm
+
     def _export_patches_bps_via_backend(self, original_path: str) -> bytes:
-        """Invoke the Rust backend's BPS exporter with an mmap'd source.
+        """Invoke the Rust backend's BPS exporter without copying the source.
+
+        Prefers the path-based backend entrypoint
+        ``export_patches_bps_from_path`` (which memory-maps the source
+        inside Rust), then falls back to a buffer-protocol mmap pass-
+        through when only the legacy ``export_patches_bps`` byte-slice
+        signature is available. Either way the source file is never
+        materialised as a Python ``bytes`` value.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -7739,10 +7794,22 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        return self.document.export_patches_bps(self._load_source_via_mmap(original_path))
+        path_method = getattr(self.document, "export_patches_bps_from_path", None)
+        if path_method is not None:
+            result = path_method(original_path)
+            return bytes(result)
+        with self._open_source_mmap(original_path) as source:
+            return self.document.export_patches_bps(source)
 
     def _export_patches_bps_pyfallback(self, original_path: str) -> bytes:
-        """Build a BPS patch in pure Python with mmap-backed source.
+        """Build a BPS patch in pure Python with an mmap-backed source.
+
+        The source file is held only as an :class:`mmap.mmap` view
+        (no ``bytes(mm)`` materialisation); the BPS encoder accesses it
+        through the buffer protocol so the source is never duplicated
+        onto the Python heap. The target is the current document, which
+        is read once through :meth:`_read_all_doc_bytes` because the
+        BPS algorithm requires random access on both buffers.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -7756,9 +7823,9 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        source_data = self._load_source_via_mmap(original_path)
-        target_data = self._read_all_doc_bytes()
-        return self._build_bps_patch(source_data, target_data)
+        with self._open_source_mmap(original_path) as source:
+            target_data = self._read_all_doc_bytes()
+            return self._build_bps_patch(source, target_data)
 
     async def import_patches_bps(self, patch_b64: str, original_path: str) -> dict[str, int]:
         """Import and apply a BPS patch.
@@ -7798,9 +7865,10 @@ class HexEditorBridge(ToolBridgeBase):
         """Export a UPS patch comparing the current document against the original.
 
         Mirrors :meth:`export_patches_bps`: the source file is opened
-        via :class:`mmap.mmap` so two full copies of the input data do
-        not coexist in Python memory while the target document is
-        already available through the memory-mapped Rust backend.
+        via :class:`mmap.mmap` (or memory-mapped inside Rust when the
+        backend exposes ``export_patches_ups_from_path``) so a full copy
+        of the source never lives on the Python heap. The target
+        document is read through the memory-mapped Rust backend.
 
         Args:
             original_path: Path to the original unmodified file.
@@ -7825,7 +7893,14 @@ class HexEditorBridge(ToolBridgeBase):
         return base64.b64encode(raw).decode("ascii")
 
     def _export_patches_ups_via_backend(self, original_path: str) -> bytes:
-        """Invoke the Rust backend's UPS exporter with an mmap'd source.
+        """Invoke the Rust backend's UPS exporter without copying the source.
+
+        Prefers the path-based backend entrypoint
+        ``export_patches_ups_from_path`` (which memory-maps the source
+        inside Rust), then falls back to a buffer-protocol mmap pass-
+        through when only the legacy ``export_patches_ups`` byte-slice
+        signature is available. Either way the source file is never
+        materialised as a Python ``bytes`` value.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -7839,10 +7914,22 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        return self.document.export_patches_ups(self._load_source_via_mmap(original_path))
+        path_method = getattr(self.document, "export_patches_ups_from_path", None)
+        if path_method is not None:
+            result = path_method(original_path)
+            return bytes(result)
+        with self._open_source_mmap(original_path) as source:
+            return self.document.export_patches_ups(source)
 
     def _export_patches_ups_pyfallback(self, original_path: str) -> bytes:
-        """Build a UPS patch in pure Python with mmap-backed source.
+        """Build a UPS patch in pure Python with an mmap-backed source.
+
+        The source file is held only as an :class:`mmap.mmap` view
+        (no ``bytes(mm)`` materialisation); the UPS encoder accesses it
+        through the buffer protocol so the source is never duplicated
+        onto the Python heap. The target document is read once through
+        :meth:`_read_all_doc_bytes` because the UPS XOR walk requires
+        positional access on both buffers.
 
         Args:
             original_path: Path to the unmodified original file.
@@ -7856,9 +7943,9 @@ class HexEditorBridge(ToolBridgeBase):
         if self.document is None:
             msg = "no document open"
             raise RuntimeError(msg)
-        source_data = self._load_source_via_mmap(original_path)
-        target_data = self._read_all_doc_bytes()
-        return self._build_ups_patch(source_data, target_data)
+        with self._open_source_mmap(original_path) as source:
+            target_data = self._read_all_doc_bytes()
+            return self._build_ups_patch(source, target_data)
 
     async def import_patches_ups(self, patch_b64: str, original_path: str) -> dict[str, int]:
         """Import and apply a UPS patch.
@@ -7939,11 +8026,15 @@ class HexEditorBridge(ToolBridgeBase):
         return result, pos
 
     @staticmethod
-    def _crc32_compute(data: bytes) -> int:
+    def _crc32_compute(data: Buffer) -> int:
         """Compute CRC32 of data using zlib.
 
+        Accepts any object that exposes the buffer protocol so callers
+        can hand in :class:`bytes`, :class:`bytearray`,
+        :class:`memoryview`, or :class:`mmap.mmap` without copying.
+
         Args:
-            data: Input bytes.
+            data: Buffer-protocol object holding the bytes to hash.
 
         Returns:
             int: CRC32 value as unsigned 32-bit integer.
@@ -7953,7 +8044,7 @@ class HexEditorBridge(ToolBridgeBase):
     _BPS_MIN_LZ_MATCH: int = 4
     _BPS_HASH_WORD: int = 4
 
-    def _build_bps_patch(self, source: bytes, target: bytes) -> bytes:
+    def _build_bps_patch(self, source: _BPSBuffer, target: _BPSBuffer) -> bytes:
         """Build a BPS patch from source and target data.
 
         Emits the full BPS opcode set: ``SourceRead`` when source and
@@ -7965,6 +8056,11 @@ class HexEditorBridge(ToolBridgeBase):
         at each ``_BPS_HASH_WORD``-byte word, so the encoder finds
         non-trivial repeats in ``O(target_len * _BPS_HASH_WORD)`` time
         rather than the previous best-effort sequential scan.
+
+        Either buffer may be an :class:`mmap.mmap` view rather than a
+        ``bytes`` value; the encoder accesses both via the buffer
+        protocol so the source does not have to be materialised on the
+        Python heap before encoding.
 
         Args:
             source: Original file data.
@@ -7989,7 +8085,7 @@ class HexEditorBridge(ToolBridgeBase):
         patch.extend(struct.pack("<I", patch_crc))
         return bytes(patch)
 
-    def _encode_bps_body(self, patch: bytearray, source: bytes, target: bytes) -> None:
+    def _encode_bps_body(self, patch: bytearray, source: _BPSBuffer, target: _BPSBuffer) -> None:
         """Emit the actions section of a BPS patch into ``patch``.
 
         Args:
@@ -8017,8 +8113,8 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         patch: bytearray,
         pending: bytearray,
-        source: bytes,
-        target: bytes,
+        source: _BPSBuffer,
+        target: _BPSBuffer,
         state: dict[str, int],
     ) -> int:
         """Emit a SourceRead command if source/target run agrees.
@@ -8052,8 +8148,8 @@ class HexEditorBridge(ToolBridgeBase):
         self,
         patch: bytearray,
         pending: bytearray,
-        source: bytes,
-        target: bytes,
+        source: _BPSBuffer,
+        target: _BPSBuffer,
         source_index: dict[bytes, list[int]],
         target_index: dict[bytes, list[int]],
         state: dict[str, int],
@@ -8110,7 +8206,7 @@ class HexEditorBridge(ToolBridgeBase):
     def _emit_bps_target_read_byte(
         self,
         pending: bytearray,
-        target: bytes,
+        target: _BPSBuffer,
         target_index: dict[bytes, list[int]],
         state: dict[str, int],
     ) -> None:
@@ -8141,7 +8237,7 @@ class HexEditorBridge(ToolBridgeBase):
         patch.extend(bytes(pending))
         pending.clear()
 
-    def _build_bps_word_index(self, data: bytes) -> dict[bytes, list[int]]:
+    def _build_bps_word_index(self, data: _BPSBuffer) -> dict[bytes, list[int]]:
         """Build a word -> sorted-offset index for BPS encoding.
 
         Args:
@@ -8161,7 +8257,7 @@ class HexEditorBridge(ToolBridgeBase):
     @staticmethod
     def _index_target_window(
         index: dict[bytes, list[int]],
-        target: bytes,
+        target: _BPSBuffer,
         start: int,
         end: int,
         word_len: int,
@@ -8181,8 +8277,8 @@ class HexEditorBridge(ToolBridgeBase):
 
     @staticmethod
     def _find_best_bps_match(
-        haystack: bytes,
-        needle: bytes,
+        haystack: _BPSBuffer,
+        needle: _BPSBuffer,
         needle_pos: int,
         candidate_offsets: list[int] | None,
         cap: int | None = None,
@@ -8347,8 +8443,13 @@ class HexEditorBridge(ToolBridgeBase):
                 state[0] += 1
         return pos
 
-    def _build_ups_patch(self, source: bytes, target: bytes) -> bytes:
+    def _build_ups_patch(self, source: _BPSBuffer, target: _BPSBuffer) -> bytes:
         """Build a UPS patch from source and target data.
+
+        Either buffer may be an :class:`mmap.mmap` view rather than a
+        ``bytes`` value; the encoder walks both via the buffer protocol
+        so the source does not have to be materialised on the Python
+        heap before encoding.
 
         Args:
             source: Original file data.

@@ -176,6 +176,8 @@ _QEMU_GA_PING_INTERVAL = 1.0
 _QEMU_GA_EXEC_TIMEOUT = 10.0
 _GUEST_AGENT_LAUNCH_PATH_WINDOWS = "Z:\\monitor\\start_agent.cmd"
 _GUEST_AGENT_LAUNCH_PATH_LINUX = "/mnt/shared/monitor/start_agent.sh"
+_WINDOWS_REG_EXE_PATH = "C:\\Windows\\System32\\reg.exe"
+WINDOWS_REG_EXE_PATH: str = _WINDOWS_REG_EXE_PATH
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
 _ERR_PPM_UNSUPPORTED_MAXVAL = "unsupported PPM maxval; only 8-bit (255) is supported"
@@ -1400,8 +1402,85 @@ class QEMUSandbox(SandboxBase):
         )
 
     @staticmethod
+    def _anti_evasion_identity(profile: str) -> tuple[str, str]:
+        """Return the manufacturer/product identity strings for an anti-evasion profile.
+
+        Single source of truth for vendor and product strings written by
+        :meth:`_anti_evasion_smbios_entries` (SMBIOS launch arguments) and by
+        :meth:`apply_anti_evasion` (Windows registry patches). Keeping both
+        paths driven by the same mapping prevents the detectable inconsistency
+        described in audit finding F-0029, where SMBIOS reported one vendor and
+        the registry advertised another.
+
+        Args:
+            profile: Profile name (``default``, ``workstation``, or ``laptop``).
+
+        Returns:
+            tuple[str, str]: ``(manufacturer, product)`` pair. ``manufacturer``
+            is the canonical short vendor name (e.g. ``"HP"`` or ``"Dell Inc."``),
+            and ``product`` is the consumer-visible product model
+            (e.g. ``"HP EliteDesk 800 G6"``).
+        """
+        if profile == "workstation":
+            return ("Dell Inc.", "OptiPlex 7090")
+        if profile == "laptop":
+            return ("Lenovo", "ThinkPad T14 Gen 3")
+        return ("HP", "HP EliteDesk 800 G6")
+
+    @staticmethod
+    def _anti_evasion_registry_commands(profile: str, product_id: str) -> list[tuple[str, list[str]]]:
+        r"""Return the Windows registry-patch commands for an anti-evasion profile.
+
+        The returned list is consumed by :meth:`apply_anti_evasion` to dispatch
+        ``reg.exe add`` invocations through the guest agent. Each command uses
+        the absolute Windows System32 path for ``reg.exe`` so that the in-guest
+        :func:`Test-AllowedCommand` allowlist accepts the invocation (audit
+        finding F-0022). Manufacturer and product strings come from
+        :meth:`_anti_evasion_identity` so they agree with the SMBIOS launch
+        arguments (audit finding F-0029).
+
+        Args:
+            profile: Anti-evasion profile name (``default``, ``workstation``,
+                or ``laptop``).
+            product_id: Randomised product identifier written to
+                ``HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ProductId``.
+
+        Returns:
+            list[tuple[str, list[str]]]: Ordered list of ``(executable, argv)``
+            pairs. ``executable`` is always :data:`_WINDOWS_REG_EXE_PATH`.
+        """
+        sep = "\\"
+        bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
+        current_version_key = sep.join(["HKLM", "SOFTWARE", "Microsoft", "Windows", "CurrentVersion"])
+        disk_enum_key = sep.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", "Disk", "Enum"])
+        identity_manufacturer, identity_product = QEMUSandbox._anti_evasion_identity(profile)
+        return [
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", bios_key, "/v", "SystemManufacturer", "/t", "REG_SZ", "/d", identity_manufacturer, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", bios_key, "/v", "SystemProductName", "/t", "REG_SZ", "/d", identity_product, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", current_version_key, "/v", "ProductId", "/t", "REG_SZ", "/d", product_id, "/f"],
+            ),
+            (
+                _WINDOWS_REG_EXE_PATH,
+                ["add", disk_enum_key, "/v", "0", "/t", "REG_SZ", "/d", "WDC WD10EZEX-00BBHA0", "/f"],
+            ),
+        ]
+
+    @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
         """Return SMBIOS entries for the selected anti-evasion profile.
+
+        Manufacturer and product strings come from
+        :meth:`_anti_evasion_identity` so that the SMBIOS launch arguments
+        agree with the Windows registry writes performed in
+        :meth:`apply_anti_evasion`.
 
         Args:
             profile: Profile name (``default``, ``workstation``, or ``laptop``).
@@ -1409,22 +1488,23 @@ class QEMUSandbox(SandboxBase):
         Returns:
             list[dict[str, str]]: SMBIOS entries suitable for ``-smbios`` argv.
         """
+        manufacturer, product = QEMUSandbox._anti_evasion_identity(profile)
         if profile == "workstation":
             return [
-                {"type": "1", "manufacturer": "Dell Inc.", "product": "OptiPlex 7090", "serial": f"SVC{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Dell Inc.", "product": "0WN7Y6"},
-                {"type": "3", "manufacturer": "Dell Inc.", "chassis-type": "3"},
+                {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"SVC{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": manufacturer, "product": "0WN7Y6"},
+                {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
             ]
         if profile == "laptop":
             return [
-                {"type": "1", "manufacturer": "Lenovo", "product": "ThinkPad T14 Gen 3", "serial": f"PF{secrets.token_hex(5).upper()}"},
-                {"type": "2", "manufacturer": "Lenovo", "product": "21AHS00000"},
-                {"type": "3", "manufacturer": "Lenovo", "chassis-type": "10"},
+                {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"PF{secrets.token_hex(5).upper()}"},
+                {"type": "2", "manufacturer": manufacturer, "product": "21AHS00000"},
+                {"type": "3", "manufacturer": manufacturer, "chassis-type": "10"},
             ]
         return [
-            {"type": "1", "manufacturer": "HP", "product": "HP EliteDesk 800 G6", "serial": f"MXL{secrets.token_hex(5).upper()}"},
-            {"type": "2", "manufacturer": "HP", "product": "8767"},
-            {"type": "3", "manufacturer": "HP", "chassis-type": "3"},
+            {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"MXL{secrets.token_hex(5).upper()}"},
+            {"type": "2", "manufacturer": manufacturer, "product": "8767"},
+            {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
         ]
 
     async def _build_qemu_command(self) -> list[str]:
@@ -2429,18 +2509,30 @@ python3 /mnt/shared/monitor/agent.py &
 
         script_id = secrets.token_hex(8)
         result_name = f"result_{script_id}.txt"
+        stdout_name = f"{script_id}.stdout"
+        stderr_name = f"{script_id}.stderr"
         script_name, script_content = self._generate_execution_script(
             command=command,
             working_directory=working_directory,
             script_id=script_id,
             result_name=result_name,
+            stdout_name=stdout_name,
+            stderr_name=stderr_name,
         )
 
         script_path = self._shared_folder / "input" / script_name
         result_path = self._shared_folder / "output" / result_name
+        stdout_path = self._shared_folder / "output" / stdout_name
+        stderr_path = self._shared_folder / "output" / stderr_name
         await asyncio.to_thread(script_path.write_text, script_content, encoding="utf-8")
 
-        return await self._poll_for_result(result_path=result_path, time_limit=effective_timeout)
+        return await self._poll_for_result(
+            result_path=result_path,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+            script_path=script_path,
+            time_limit=effective_timeout,
+        )
 
     def _generate_execution_script(
         self,
@@ -2449,14 +2541,25 @@ python3 /mnt/shared/monitor/agent.py &
         working_directory: str | None,
         script_id: str,
         result_name: str,
+        stdout_name: str,
+        stderr_name: str,
     ) -> tuple[str, str]:
         """Generate an OS-specific execution script for the sandbox guest.
+
+        The generated script redirects the command's standard output to a
+        ``stdout_name`` sidecar file and standard error to a ``stderr_name``
+        sidecar file (both under the guest's shared ``output`` folder), then
+        writes the command's exit code to ``result_name``. The exit-code file
+        is the polling sentinel and is written last so the host only observes
+        the result after both sidecar files have been fully flushed.
 
         Args:
             command: Command to execute in the guest.
             working_directory: Optional working directory for the command.
             script_id: Unique identifier for the script file.
-            result_name: Name of the result file.
+            result_name: Name of the result file containing the exit code.
+            stdout_name: Name of the sidecar file capturing stdout.
+            stderr_name: Name of the sidecar file capturing stderr.
 
         Returns:
             tuple[str, str]: Tuple of (script_filename, script_content).
@@ -2466,18 +2569,25 @@ python3 /mnt/shared/monitor/agent.py &
         """
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             script_name = f"exec_{script_id}.cmd"
-            script_content = f"""@echo off
-{f'cd /d "{working_directory}"' if working_directory else ""}
-{command}
-echo %ERRORLEVEL% > "{self.GUEST_SHARED_PATH_WINDOWS}output\\{result_name}"
-"""
+            stdout_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{stdout_name}"
+            stderr_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{stderr_name}"
+            result_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{result_name}"
+            cd_line = f'cd /d "{working_directory}"' if working_directory else ""
+            script_content = (
+                "@echo off\r\n"
+                f"{cd_line}\r\n"
+                f'({command}) 1> "{stdout_guest_path}" 2> "{stderr_guest_path}"\r\n'
+                f'echo %ERRORLEVEL% > "{result_guest_path}"\r\n'
+            )
         elif self._qemu_config.guest_os == GuestOS.LINUX:
             script_name = f"exec_{script_id}.sh"
-            script_content = f"""#!/bin/bash
-{f'cd "{working_directory}"' if working_directory else ""}
-{command}
-echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
-"""
+            stdout_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{stdout_name}"
+            stderr_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{stderr_name}"
+            result_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
+            cd_line = f'cd "{working_directory}"' if working_directory else ""
+            script_content = (
+                f'#!/bin/bash\n{cd_line}\n( {command} ) > "{stdout_guest_path}" 2> "{stderr_guest_path}"\necho $? > "{result_guest_path}"\n'
+            )
         else:
             _logger.error(
                 "execution_script_unsupported_guest_os",
@@ -2492,12 +2602,26 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         *,
         result_path: Path,
         time_limit: int,
+        stdout_path: Path | None = None,
+        stderr_path: Path | None = None,
+        script_path: Path | None = None,
     ) -> tuple[int, str, str]:
         """Poll the shared folder for command execution results.
 
+        Waits for ``result_path`` to appear, then reads the exit code and
+        the contents of the optional ``stdout_path`` / ``stderr_path`` sidecar
+        files written by the guest execution script. Sidecar files and the
+        result/script files are removed after successful read so the shared
+        folder does not accumulate per-invocation artefacts.
+
         Args:
-            result_path: Path to the expected result file.
+            result_path: Path to the expected result file containing the
+                exit code.
             time_limit: Maximum time in seconds to wait.
+            stdout_path: Optional path to the stdout sidecar file.
+            stderr_path: Optional path to the stderr sidecar file.
+            script_path: Optional path to the originating execution script,
+                cleaned up alongside the result and sidecars.
 
         Returns:
             tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
@@ -2518,11 +2642,79 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
                     exit_code = int(result_text) if result_text.isdigit() else -1
                 except (OSError, ValueError) as e:
                     _logger.debug("result_read_failed", extra={"error": str(e)})
-                else:
-                    return (exit_code, "", "")
+                    continue
+                stdout_text = await QEMUSandbox._read_sidecar(stdout_path)
+                stderr_text = await QEMUSandbox._read_sidecar(stderr_path)
+                await QEMUSandbox._cleanup_result_artifacts(
+                    result_path=result_path,
+                    stdout_path=stdout_path,
+                    stderr_path=stderr_path,
+                    script_path=script_path,
+                )
+                return (exit_code, stdout_text, stderr_text)
 
         _logger.warning("command_timed_out", extra={"timeout_seconds": time_limit})
         raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=time_limit)
+
+    @staticmethod
+    async def _read_sidecar(path: Path | None) -> str:
+        """Read a guest-written sidecar file, returning empty string if missing.
+
+        Args:
+            path: Optional sidecar file path. ``None`` returns an empty string.
+
+        Returns:
+            str: The decoded text contents of the file, or an empty string
+            when the file does not exist or cannot be decoded.
+        """
+        if path is None:
+            return ""
+        if not await asyncio.to_thread(path.exists):
+            return ""
+        try:
+            return await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
+        except OSError as exc:
+            _logger.debug("sidecar_read_failed", extra={"path": str(path), "error": str(exc)})
+            return ""
+
+    @staticmethod
+    async def _cleanup_result_artifacts(
+        *,
+        result_path: Path,
+        stdout_path: Path | None,
+        stderr_path: Path | None,
+        script_path: Path | None,
+    ) -> None:
+        """Remove per-invocation script/result/sidecar files.
+
+        Errors are logged at debug level and otherwise suppressed because
+        the shared folder may be on a FAT image that occasionally rejects
+        deletes while the guest still holds a handle. The next invocation
+        uses a fresh ``script_id`` so leftover files never cause name
+        collisions.
+
+        Args:
+            result_path: Result file containing the exit code.
+            stdout_path: Optional stdout sidecar file.
+            stderr_path: Optional stderr sidecar file.
+            script_path: Optional script file produced by the host.
+        """
+        candidates: tuple[Path | None, ...] = (
+            result_path,
+            stdout_path,
+            stderr_path,
+            script_path,
+        )
+        for candidate in candidates:
+            if candidate is None:
+                continue
+            try:
+                await asyncio.to_thread(candidate.unlink, missing_ok=True)
+            except OSError as exc:
+                _logger.debug(
+                    "result_artifact_cleanup_failed",
+                    extra={"path": str(candidate), "error": str(exc)},
+                )
 
     async def run_binary(
         self,
@@ -3103,69 +3295,7 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         techniques.append("cpuid_hypervisor_mask_launch_arg")
 
         if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
-            product_id = secrets.token_hex(8).upper()
-            sep = "\\"
-            bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
-            current_version_key = sep.join(["HKLM", "SOFTWARE", "Microsoft", "Windows", "CurrentVersion"])
-            disk_enum_key = sep.join(["HKLM", "SYSTEM", "CurrentControlSet", "Services", "Disk", "Enum"])
-            registry_commands: list[tuple[str, list[str]]] = [
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        bios_key,
-                        "/v",
-                        "SystemManufacturer",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "HP",
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        bios_key,
-                        "/v",
-                        "SystemProductName",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "HP EliteDesk 800 G6",
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        current_version_key,
-                        "/v",
-                        "ProductId",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        product_id,
-                        "/f",
-                    ],
-                ),
-                (
-                    "reg.exe",
-                    [
-                        "add",
-                        disk_enum_key,
-                        "/v",
-                        "0",
-                        "/t",
-                        "REG_SZ",
-                        "/d",
-                        "WDC WD10EZEX-00BBHA0",
-                        "/f",
-                    ],
-                ),
-            ]
+            registry_commands = self._anti_evasion_registry_commands(current_profile, secrets.token_hex(8).upper())
             for cmd_name, cmd_args in registry_commands:
                 exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
                 if exit_code == 0:
@@ -3193,11 +3323,22 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         _logger.info("anti_evasion_applied", profile=current_profile, technique_count=len(techniques))
         return applied
 
-    async def dump_memory(self, output_path: Path | None = None) -> Path:
+    async def dump_memory(
+        self,
+        output_path: Path | None = None,
+        target_pid: int | None = None,
+    ) -> Path:
         """Dump guest memory to a file.
+
+        QEMU dumps the entire VM via the ``dump-guest-memory`` QMP command, so
+        ``target_pid`` is accepted for interface parity with
+        :meth:`WindowsSandbox.dump_memory` but is not used to filter the dump.
+        The value is recorded in the debug log for traceability.
 
         Args:
             output_path: Optional path to save the memory dump.
+            target_pid: Ignored for QEMU. Accepted for interface parity with
+                Windows Sandbox where it selects the process to dump.
 
         Returns:
             Path: Path to the saved memory dump file.
@@ -3205,6 +3346,8 @@ echo $? > "{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
         Raises:
             SandboxError: If memory dump fails.
         """
+        if target_pid is not None:
+            _logger.debug("qemu_dump_memory_ignoring_target_pid", target_pid=target_pid)
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
