@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
     from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.bridges.x64dbg import X64DbgBridge
+    from intellicrack.core.session import Session
 
 
 _logger = get_logger(__name__)
@@ -101,7 +102,31 @@ class ToolRegistry:
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
         self._initialized = False
+        self._session: Session | None = None
         _logger.debug("tool_registry_init", tools_dir=str(tools_dir))
+
+    def set_session(self, session: Session | None) -> None:
+        """Attach (or detach) the active session for every registered bridge.
+
+        Propagates the supplied session to every bridge so each bridge's
+        lifecycle transitions (connect, attach, error, detach) flow into
+        the session's ``tool_states`` registry. Newly registered bridges
+        added via :meth:`register_bridge` inherit the current session
+        automatically.
+
+        Args:
+            session: The active ``Session`` to publish state into, or
+                ``None`` to detach all bridges from any previously
+                attached session.
+        """
+        self._session = session
+        for bridge in self._bridges.values():
+            bridge.set_session(session)
+        _logger.debug(
+            "tool_registry_session_set",
+            attached=session is not None,
+            bridge_count=len(self._bridges),
+        )
 
     @property
     def tools_directory(self) -> Path:
@@ -135,7 +160,10 @@ class ToolRegistry:
             try:
                 mod = importlib.import_module(module_path)
                 cls = getattr(mod, class_name)
-                self._bridges[tool_name] = cls()
+                bridge_instance = cls()
+                self._bridges[tool_name] = bridge_instance
+                if self._session is not None:
+                    bridge_instance.set_session(self._session)
             except Exception:
                 _logger.exception("bridge_import_failed", bridge=tool_name.value)
         _logger.debug(
@@ -247,6 +275,8 @@ class ToolRegistry:
         """
         previous = self._bridges.get(name)
         self._bridges[name] = bridge
+        if self._session is not None:
+            bridge.set_session(self._session)
         _logger.info(
             "bridge_registered",
             tool_name=name.value,

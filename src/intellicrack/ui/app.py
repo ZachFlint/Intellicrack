@@ -58,7 +58,7 @@ from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDi
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog
 from intellicrack.ui.session_manager import SessionManagerDialog
-from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog
+from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog, ToolStatusEntry
 from intellicrack.ui.tools import ToolOutputPanel
 
 
@@ -83,6 +83,7 @@ if TYPE_CHECKING:
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.template_manager import TemplateManager
+    from intellicrack.sandbox.base import SandboxBase
 
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
@@ -377,6 +378,36 @@ class MainWindow(QMainWindow):
         self.tool_panel.wire_script_backend(manager, validator)
         _logger.debug("script_manager_wired")
 
+    def wire_sandbox_backend(self, sandbox: SandboxBase, manager: SandboxManager | None = None) -> None:
+        """Inject an externally constructed sandbox backend into the UI.
+
+        Public entry point used by plugins, CLI bootstraps, and the
+        application startup path to register a pre-existing ``SandboxBase``
+        (and optional ``SandboxManager``) so the sandbox tab, chat workflow,
+        and AI bridges can drive it. When ``manager`` is supplied it
+        replaces the lazy manager on the resulting ``SandboxBridge``;
+        otherwise the bridge constructs its own. The supplied manager (or
+        the bridge's lazily created one) is also installed on the window
+        as :attr:`sandbox_manager` so the sandbox configuration dialog and
+        teardown paths see the same instance the panel sees.
+
+        Args:
+            sandbox: Pre-constructed ``SandboxBase`` implementation.
+            manager: Optional pre-constructed ``SandboxManager`` to install
+                on the resulting bridge. When ``None`` the bridge's lazy
+                manager is used.
+        """
+        self.tool_panel.wire_sandbox_backend(sandbox, manager)
+        wired_bridge = self.tool_panel.get_sandbox_bridge()
+        wired_manager = getattr(wired_bridge, "manager", None)
+        if isinstance(wired_manager, SandboxManager):
+            self.sandbox_manager = wired_manager
+        _logger.info(
+            "main_window_sandbox_backend_wired",
+            sandbox_type=type(sandbox).__name__,
+            had_manager=manager is not None,
+        )
+
     def set_script_generator(self, generator: ScriptGenerator) -> None:
         """Persist the application-scoped ScriptGenerator instance.
 
@@ -478,9 +509,7 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """
-
-           ,
+        """,
         )
 
     @property
@@ -1043,18 +1072,36 @@ class MainWindow(QMainWindow):
         except OSError:
             _logger.warning("tool_installer_init_skipped")
 
-    async def _refresh_tool_status(self) -> dict[str, object]:
+    async def _refresh_tool_status(self) -> dict[str, ToolStatusEntry]:
         """Refresh tool installation status asynchronously.
 
+        Builds a snapshot of every tool's current availability suitable for
+        feeding directly into :class:`ToolStatusDialog` (and any future
+        prefetch-aware consumer). Keys are the lowercase ``ToolName.value``
+        identifiers used elsewhere in the UI (``"ghidra"``, ``"x64dbg"``,
+        ``"frida"``, ``"cutter"``, ``"process"``, ``"sandbox"``,
+        ``"hex_editor"``).
+
         Returns:
-            dict[str, object]: Dictionary mapping tool names to (available, path) tuples.
+            dict[str, ToolStatusEntry]: Mapping of tool IDs to typed status
+            payloads with ``available``, ``path`` and ``message`` fields.
+            An empty dict is returned when the installer is unavailable.
         """
         installer = getattr(self, "_tool_installer", None)
         if installer is None:
             return {}
 
         statuses = await installer.get_all_tool_status()
-        result = {str(k): v for k, v in statuses.items()}
+        result: dict[str, ToolStatusEntry] = {}
+        for tool_name, (available, path) in statuses.items():
+            tool_id = tool_name.value if isinstance(tool_name, ToolName) else str(tool_name)
+            message = (f"Installed at {path}" if path is not None else "Available") if available else "Not installed"
+            entry: ToolStatusEntry = {
+                "available": bool(available),
+                "path": str(path) if path is not None else None,
+                "message": message,
+            }
+            result[tool_id] = entry
         _logger.info(
             "tool_status_refreshed",
             tool_count=len(result),
@@ -1620,22 +1667,30 @@ class MainWindow(QMainWindow):
     def _on_tool_status(self) -> None:
         """Handle tool status action.
 
-        Pre-fetches the live tool registry from the orchestrator and threads it through to ``ToolStatusDialog`` so the dialog can render
-        real availability instead of an empty checking-only state.
+        Pre-fetches the live tool availability snapshot from the installer and
+        forwards it to :class:`ToolStatusDialog` via its ``tool_statuses``
+        parameter so the dialog can render the result immediately without
+        spawning a second wave of background status-check workers. If the
+        pre-fetch fails the dialog falls back to its own worker-driven path.
         """
+        prefetched: dict[str, ToolStatusEntry] | None = None
         try:
             from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
-            tool_statuses = run_bridge_coroutine(self._refresh_tool_status())
+            prefetched = run_bridge_coroutine(self._refresh_tool_status())
             _logger.info(
                 "tool_status_dialog_opened",
-                tool_count=len(tool_statuses) if tool_statuses is not None else 0,
+                tool_count=len(prefetched) if prefetched is not None else 0,
             )
         except (RuntimeError, AttributeError, OSError):
             _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
 
         tool_registry = getattr(self._orchestrator, "_tool_registry", None)
-        dialog = ToolStatusDialog(tool_registry=tool_registry, parent=self)
+        dialog = ToolStatusDialog(
+            tool_registry=tool_registry,
+            parent=self,
+            tool_statuses=prefetched,
+        )
         dialog.exec()
 
     def _on_configure_tools(self) -> None:

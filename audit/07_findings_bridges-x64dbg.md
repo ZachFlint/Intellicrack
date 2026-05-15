@@ -49,7 +49,7 @@
 
 ### Category 2 - Hardcoded Return Values & Fake Success
 
-#### F-0001 - Many command wrappers return hardcoded `{"success": True, ...}` immediately after enqueuing a fire-and-forget x64dbg script command without inspecting the actual outcome
+#### F-0001 - Many command wrappers return hardcoded `{"success": True, ...}` immediately after enqueuing a fire-and-forget x64dbg script command without inspecting the actual outcome [fixed: audit7/f0001-x64dbg-wrappers]
 
 - **File:** `src/intellicrack/bridges/x64dbg.py`
 - **Lines:** 3687-3754, 3756-3768, 3805-3817, 3854-3898, 3900-3913, 4242-4273, 4275-4290, 4292-4304, 4306-4318, 4526-4537, 4539-4590, 4750-4766, 4768-4798, 4800-4815, 4817-4849, 4876-4889, 4891-4913, 5047-5117, 5259-5270, 5403-5414
