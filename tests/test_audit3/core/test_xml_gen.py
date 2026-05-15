@@ -6,25 +6,42 @@
 
 Covers:
 
-- F-0011: ``_xml_gen.py`` must not use :func:`importlib.import_module`
-  to resolve the ``xml.etree.ElementTree`` module. The previous
-  implementation lazily imported the module via ``importlib`` which made
-  static analysers, basedpyright, and security scanners unable to track
-  the dependency. The fix loads the module via a direct call so the
-  audit boundary is grep-able.
+- F-0011: ``_xml_gen.py`` must not obfuscate its
+  ``xml.etree.ElementTree`` dependency. Earlier revisions used
+  :func:`importlib.import_module` and later
+  ``__import__("xml" + ".etree.ElementTree")`` purely to dodge bandit
+  B405. Both forms broke static analysers and type checkers. The
+  production fix uses a plain ``import xml.etree.ElementTree as ET``
+  with the B405 skip recorded once in ``pyproject.toml`` instead of
+  scattered inline directives.
 """
 
 from __future__ import annotations
 
+import ast
 import inspect
 from pathlib import Path
+from xml.etree.ElementTree import (
+    Element as _StdlibElement,
+    ElementTree as _StdlibElementTree,
+    SubElement as _stdlib_SubElement,
+    indent as _stdlib_indent,
+    tostring as _stdlib_tostring,
+)
 
 from intellicrack.core import _xml_gen
-from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent, tostring
+from intellicrack.core._xml_gen import (
+    Element,
+    ElementTree,
+    SubElement,
+    indent,
+    tostring,
+)
 
 
 # ---------------------------------------------------------------------------
-# F-0011: source must contain no ``importlib.import_module`` for xml etree
+# F-0011: source must use a direct ``import xml.etree.ElementTree`` form
+# and must not contain any runtime-obfuscated import or inline suppression.
 # ---------------------------------------------------------------------------
 
 
@@ -61,6 +78,73 @@ def test_f0011_no_importlib_import_for_xml_etree_dotted_path() -> None:
     """
     source = _xml_gen_source()
     assert "import_module" not in source, "import_module references must not appear in _xml_gen.py"
+
+
+def test_f0011_no_dunder_import_obfuscation() -> None:
+    """The module source must not call ``__import__`` with a constructed name.
+
+    Regression guard for the second-round defect: the original lazy
+    ``importlib.import_module`` was swapped for
+    ``__import__("xml" + ".etree.ElementTree")`` -- different API,
+    same B405-evasion intent. Both are prohibited.
+    """
+    source = _xml_gen_source()
+    assert "__import__" not in source, "_xml_gen.py must not call __import__ to resolve xml.etree (regression: F-0011 second-round)"
+
+
+def test_f0011_no_runtime_string_concatenation_of_xml_etree() -> None:
+    """Concatenated module names must not appear in the source.
+
+    Both ``"xml" + ".etree"`` and ``"xml.etree" + "."`` are documented
+    audit-evasion patterns; either form means a reader cannot grep the
+    dependency.
+    """
+    source = _xml_gen_source()
+    assert '"xml" +' not in source, "Runtime string-concatenation of xml module name is forbidden"
+    assert '"xml.etree" +' not in source, "Runtime string-concatenation of xml.etree submodule name is forbidden"
+
+
+def test_f0011_uses_direct_import_statement() -> None:
+    """The module must import ``xml.etree.ElementTree`` via a real ``import`` statement.
+
+    Parses the source AST and asserts a top-level ``import
+    xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...``
+    node exists. This is the positive form of the obfuscation guards
+    above.
+    """
+    tree = ast.parse(_xml_gen_source())
+    plain_imports = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    from_imports = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module is not None}
+    assert "xml.etree.ElementTree" in plain_imports | from_imports, (
+        "_xml_gen.py must contain a direct ``import xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...`` statement"
+    )
+
+
+def test_f0011_no_inline_suppression_directives() -> None:
+    """No inline noqa / nosec / type-ignore directives may live in the file.
+
+    The whole point of the F-0011 remediation is to move the bandit
+    B405 exclusion to ``pyproject.toml``. Inline suppressions defeat
+    that goal.
+    """
+    source = _xml_gen_source()
+    assert "# nosec" not in source, "Inline # nosec directives are forbidden in _xml_gen.py"
+    assert "# noqa" not in source, "Inline # noqa directives are forbidden in _xml_gen.py"
+    assert "# type: ignore" not in source, "Inline # type: ignore directives are forbidden in _xml_gen.py"
+    assert "# pyright: ignore" not in source, "Inline # pyright: ignore directives are forbidden in _xml_gen.py"
+
+
+def test_f0011_re_exports_are_the_stdlib_objects() -> None:
+    """Re-exported names must be identity-equal to the stdlib originals.
+
+    Defends against accidental wrapping that would silently change
+    behaviour (e.g. swapping ``Element`` for a custom subclass).
+    """
+    assert _xml_gen.Element is _StdlibElement
+    assert _xml_gen.SubElement is _stdlib_SubElement
+    assert _xml_gen.ElementTree is _StdlibElementTree
+    assert _xml_gen.indent is _stdlib_indent
+    assert _xml_gen.tostring is _stdlib_tostring
 
 
 # ---------------------------------------------------------------------------
@@ -113,4 +197,31 @@ def test_xml_gen_tostring_round_trip() -> None:
     payload = tostring(root, encoding="unicode")
     assert payload.startswith("<Configuration>")
     assert "<vGPU>Enable</vGPU>" in payload
+    assert payload.endswith("</Configuration>")
+
+
+def test_xml_gen_representative_sandbox_xml_payload() -> None:
+    """A representative sandbox-config XML payload must round-trip through tostring.
+
+    Mirrors the shape of XML the ``intellicrack.sandbox.windows`` module
+    builds with these factories: nested ``Configuration`` element with
+    ``Memory`` and ``vGPU`` children, then serialised with deterministic
+    indent.
+    """
+    configuration = Element("Configuration")
+    memory = SubElement(configuration, "Memory")
+    memory.text = "4096"
+    vgpu = SubElement(configuration, "vGPU")
+    vgpu.text = "Enable"
+    networking = SubElement(configuration, "Networking")
+    SubElement(networking, "DefaultSwitch").text = "True"
+
+    tree = ElementTree(configuration)
+    indent(tree, space="  ")
+    payload = tostring(configuration, encoding="unicode")
+
+    assert "<Configuration>" in payload
+    assert "<Memory>4096</Memory>" in payload
+    assert "<vGPU>Enable</vGPU>" in payload
+    assert "<DefaultSwitch>True</DefaultSwitch>" in payload
     assert payload.endswith("</Configuration>")
