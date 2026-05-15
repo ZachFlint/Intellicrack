@@ -162,16 +162,28 @@
 - **Lines:** 2710-2717
 - **Pattern:** Cat 4, Cat 14
 
+### Category 17 - Allowlist / Path Resolution
+#### F-0022 - QEMU `apply_anti_evasion` uses bare `reg.exe` blocked by guest agent allowlist [fixed: audit7/u12-qemu-anti-evasion-identity]
+
+- **Source audit:** audit4.md / `sandbox-py`
+- **Reviewer verdict:** NOT_FIXED
+- **File:** `src/intellicrack/sandbox/qemu.py`
+- **Lines:** ~3113, 3127, 3141, 3155 (registry dispatches); ~1887-1898 (guest agent allowlist)
+- **Pattern:** Cat 17
+- **Why this is non-functional:** All four `apply_anti_evasion` invocations called `reg.exe` as a bare command name. The guest agent's `Test-AllowedCommand` only allows entries in `$allowedNames` (`powershell`, `powershell.exe`, `cmd`, `cmd.exe`) or `.exe` files rooted at `Z:\`, `%SystemRoot%\System32\`, or `%SystemRoot%\SysWOW64\`. Bare `reg.exe` failed every check, so the agent returned `exit_code=-1` for all four registry patches and the anti-evasion technique silently did nothing.
+- **Resolution:** Replaced every bare `"reg.exe"` dispatch with the absolute `C:\Windows\System32\reg.exe` path stored in the new `WINDOWS_REG_EXE_PATH` module constant. Refactored the registry-command construction into a static helper `_anti_evasion_registry_commands(profile, product_id)` so the dispatch list has a single source of truth. Added regression coverage in `tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py::TestF0022RegExeAllowlistSafe` (four tests) that drive `apply_anti_evasion` against a host-side emulation of `Test-AllowedCommand` and assert every dispatched executable is allowlist-safe.
+
 ### Category 21 - Wrong PowerShell Construct
-#### F-0029 - QEMU `apply_anti_evasion(profile=...)` ignores profile parameter [fixed: audit7/u08-anti-evasion-profile]
+#### F-0029 - QEMU `apply_anti_evasion(profile=...)` ignores profile parameter [fixed: audit7/u08-anti-evasion-profile; identity completion: audit7/u12-qemu-anti-evasion-identity]
 
 - **Source audit:** audit4.md / `sandbox-py`
 - **Reviewer verdict:** FAIL
 - **Reviewer assessment:** The `profile` parameter is accepted and logged in the result dict, but the actual anti-evasion configuration sourced from `self._qemu_config.anti_evasion_profile` (line 2675) at launch time ignores the runtime `profile` parameter. The comment explicitly states "the actual SMBIOS profile is sourced from QEMUConfig.anti_evasion_profile", making the parameter meaningless for controlling runtime behavior.
 
 - **File:** `src/intellicrack/sandbox/qemu.py`
-- **Lines:** 2502-2625
+- **Lines:** 2502-2625 (initial fix); SMBIOS vs registry identity drift completed at ~1403-1428 and ~3122/3136
 - **Pattern:** Cat 21
+- **Identity-drift follow-up:** The initial fix on `audit7/u08-anti-evasion-profile` made SMBIOS profile-aware via `_anti_evasion_smbios_entries`, but `apply_anti_evasion`'s registry writes still hard-coded `"HP"` / `"HP EliteDesk 800 G6"`. With a `workstation` profile the SMBIOS reported Dell while the registry advertised HP, a trivially detectable contradiction. Fixed on `audit7/u12-qemu-anti-evasion-identity` by extracting a single `_anti_evasion_identity(profile) -> tuple[str, str]` helper consumed by both `_anti_evasion_smbios_entries` and `_anti_evasion_registry_commands`, eliminating every hard-coded `"HP"` string outside the helper. Regression coverage in `tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py::TestF0029IdentityProfileConsistency` (parametrised across all three profiles) asserts SMBIOS type-1 manufacturer/product strings and the registry `SystemManufacturer` / `SystemProductName` writes both track the launch-time profile.
 
 ### Category 13 - Race Condition / Fixed Sleep
 #### F-0031 - QEMU `run_binary` 2-second sleep [fixed: audit7/u09-logs-stable]
