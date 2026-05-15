@@ -263,6 +263,63 @@
 - **Pattern:** Cat 11
 
 
+# Findings: bridges-process (from audit2.md)
+
+## Summary
+
+5 opus-confirmed NEEDS-WORK findings from audit2.md / section `bridges-process`.
+
+## Findings
+
+#### F-0008 - `get_seh_chain` WOW64 pointer-size bug [fixed: audit7/u02-bridges-process]
+
+- **Source audit:** audit2.md / `bridges-process`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/process.py`
+- **Lines:** ~4963-5010 (`get_seh_chain`)
+- **Pattern:** Cat 4
+- **Why this is non-functional:** The native-x64 guard correctly raises `ToolError(_ERR_SEH_NOT_APPLICABLE_X64)`. When the target is WOW64 (a 32-bit process on a 64-bit host — the common real-world case), the code falls through and uses `ptr_size = struct.calcsize("P")`. On a 64-bit Python host that returns 8, so the function reads 16-byte SEH records with `<QQ`. WOW64 SEH records are 8 bytes (two 4-byte x86 pointers). Every address and handler returned for a WOW64 target is silently wrong.
+- **Resolution:** `get_seh_chain` now caches `_target_is_wow64()` into a local, hard-codes `ptr_size = _PTR_SIZE_32` (4 bytes) when WOW64, and unpacks with `<II`. The host-derived `struct.calcsize("P")` path now applies only to non-WOW64 targets. New constant `_PTR_SIZE_32` is defined alongside `_PTR_SIZE_64`.
+
+#### F-0019 - `get_handles` tool still returns raw `ObjectTypeIndex` integers [fixed: audit7/u02-bridges-process]
+
+- **Source audit:** audit2.md / `bridges-process`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/process.py`
+- **Lines:** ~3396 (`get_handles`), ~3584 (`enum_handles`)
+- **Pattern:** Cat 4
+- **Why this is non-functional:** A new `enum_handles` method properly resolves type indices to human-readable names via `NtQueryObject(ObjectAllTypesInformation)`, but it is **not registered as a tool**. The tool-callable `process.get_handles` still delegates to `_sync_iterate_handles_for_pid` which returns `"type_index"` as a raw integer. LLM/CLI callers receiving "type_index=37" cannot interpret it.
+- **Resolution:** `get_handles` now calls `_build_handle_type_map()` on first use (cached afterwards) and `_sync_iterate_handles_for_pid` resolves each entry's `ObjectTypeIndex` to a `type_name` string via the cached map. The raw `type_index` integer is preserved as a sibling field. The tool-def `returns` text now lists `handle_value, type_index, type_name, granted_access, object_address`.
+
+#### F-0035 - `search_pattern` blocks the event loop across regions [fixed: audit7/u02-bridges-process]
+
+- **Source audit:** audit2.md / `bridges-process`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/process.py`
+- **Lines:** ~2352-2417 (`search_pattern`, `_scan_region_pattern`)
+- **Pattern:** Cat 7
+- **Why this is non-functional:** Handle enumeration at 100k+ entries was correctly moved to `asyncio.to_thread`, but `search_pattern` still iterates regions synchronously inside the coroutine and calls `_scan_region_pattern` without yielding between regions. Large processes with many readable regions stall the event loop for multi-second intervals, blocking concurrent tool calls and UI updates.
+- **Resolution:** Each `_scan_region_pattern` invocation is now dispatched via `await asyncio.to_thread(...)` with an additional `await asyncio.sleep(0)` after each region to guarantee the event loop has a chance to service other coroutines between regions.
+
+#### F-0037 - `query_system_info` returns raw bytes against a "hex string" tool-def contract [fixed: audit7/u02-bridges-process]
+
+- **Source audit:** audit2.md / `bridges-process`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/process.py`
+- **Lines:** ~7652-7700 (`query_system_info`), tool definition ~line 1006
+- **Pattern:** Cat 4
+- **Why this is non-functional:** The function's return type is `bytes` and it returns `buffer.raw[: return_length.value]` (raw bytes). The tool definition advertises `returns="Hex string of raw output buffer"`. Every other hex-returning method in this bridge was corrected; this one was missed. LLM callers serialising the return value into a JSON tool response will hit a non-serialisable `bytes` payload.
+- **Resolution:** `query_system_info` return annotation is now `-> str` and the success path returns `buffer.raw[: return_length.value].hex()`. The `_system_tab.py` UI consumer was updated to handle the new hex-string contract (decoding via `bytes.fromhex` for the hex-dump display).
+
+#### F-0044 - `pipe_connect` / `device_open` never insert into the shutdown tracking dicts [fixed: audit7/u02-bridges-process]
+
+- **Source audit:** audit2.md / `bridges-process`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/bridges/process.py`
+- **Lines:** ~5967-6003 (`pipe_connect`), ~6555-6588 (`device_open`), ~1443-1446 (`shutdown` cleanup loop)
+- **Pattern:** Cat 4
+- **Why this is non-functional:** `shutdown` iterates `self._pipe_handles` and `self._device_handles` to close them, but neither `pipe_connect` nor `device_open` populates those dicts after successfully opening a handle. The dicts are always empty at shutdown. Section handle tracking is wired end-to-end correctly, but pipe and device handles leak unless the caller explicitly calls `pipe_close` / `device_close`.
+- **Resolution:** After a successful `CreateFileW`, `pipe_connect` now stores `self._pipe_handles[handle] = pipe_name` and `device_open` stores `self._device_handles[handle] = device_path`. The corresponding `pipe_close` / `device_close` methods now `pop` the entry on a successful close so the dicts reflect only currently-open handles. `shutdown` already iterates these dicts so the leaks are fully closed.
 # Findings: ui-panels-hex_editor (from audit4.md / audit5.md)
 
 ## Summary
