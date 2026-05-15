@@ -968,3 +968,193 @@ class TestPatternApplyBranches:
         apply_seen = [evt for evt in apply_recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
         assert apply_seen == [], "loop guard must suppress the apply echo on its own source: " + repr(apply_seen)
         assert len(apply_register) == 1, "apply-source recorder must still receive the register event: " + repr(apply_recorder.events)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestAudit7TemplateRegisteredOnApply:
+    """Audit7 F-0012 + F-0017 -- apply paths must also fire ``TEMPLATE_REGISTERED``.
+
+    Pre-fix code on both apply paths emitted ``PATTERN_EXECUTED`` only.
+    AI / CLI subscribers that listen for ``TEMPLATE_REGISTERED`` to
+    refresh their template registries therefore missed every GUI
+    template apply. The audit-defined remediation requires that
+    ``_on_apply_template`` and ``_apply_via_interpreter`` mirror the
+    compile-register-apply branch in :meth:`PatternEditorMixin._on_pattern_apply`
+    by firing ``notify_template_registered`` alongside the existing
+    ``notify_pattern_executed`` event.
+    """
+
+    @staticmethod
+    def test_apply_template_emits_template_registered() -> None:
+        """``_on_apply_template`` must emit ``TEMPLATE_REGISTERED`` after apply.
+
+        The pre-fix path only fired ``PATTERN_EXECUTED``; subscribers
+        that key off ``TEMPLATE_REGISTERED`` (the audit-supported
+        contract) missed the GUI apply entirely.
+        """
+        document = StubTemplateDocument(
+            b"\x00" * 256,
+            apply_fields=[{"name": "magic", "offset": 0, "size": 2}],
+        )
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+
+        harness = TemplatesHarness(
+            document=document,
+            state_holder=state,
+            template_combo_text="MY_TPL",
+        )
+        try:
+            harness.trigger_apply_template()
+        finally:
+            harness.deleteLater()
+
+        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
+        assert len(registered) == 1, f"expected one TEMPLATE_REGISTERED event from the apply path; got {recorder.events}"
+        _, payload = registered[0]
+        assert payload == {"template_name": "MY_TPL"}
+
+    @staticmethod
+    def test_apply_template_register_uses_audit_source() -> None:
+        """The apply register notification must use the audit-defined source label.
+
+        Registering the recorder against the audit-defined source id
+        and verifying the loop guard suppresses the echo proves the
+        mixin used the documented identifier rather than an unrelated
+        string.
+        """
+        document = StubTemplateDocument(b"\x00" * 256, apply_fields=[])
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(
+            recorder,
+            source_id="hex-editor.templates.apply.register",
+        )
+
+        harness = TemplatesHarness(
+            document=document,
+            state_holder=state,
+            template_combo_text="MY_TPL",
+        )
+        try:
+            harness.trigger_apply_template()
+        finally:
+            harness.deleteLater()
+
+        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
+        assert registered == [], (
+            "expected the loop-guard filter to suppress the register echo "
+            "when the recorder registers with the register source_id; got: " + repr(registered)
+        )
+
+    @staticmethod
+    def test_interpreter_branch_emits_template_registered(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The interpreter branch must emit ``TEMPLATE_REGISTERED`` for the inline source.
+
+        The audit-defined remediation requires the interpreter path
+        to fire ``notify_template_registered("<inline>")`` alongside
+        the existing ``notify_pattern_executed`` event so subscribers
+        treat the inline run the same way they treat a
+        compile-register-apply run.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture used to substitute
+                the interpreter class with a deterministic stub.
+        """
+        stub = _StubInterpreter([
+            {"name": "f1", "offset": 0, "size": 2},
+            {"name": "f2", "offset": 2, "size": 4},
+        ])
+
+        class _ConstructibleStub:
+            """Callable wrapper that returns the prepared interpreter stub."""
+
+            def __call__(self) -> _StubInterpreter:
+                """Return the prepared interpreter stub.
+
+                Returns:
+                    _StubInterpreter: Pre-prepared interpreter the
+                        mixin should drive.
+                """
+                return stub
+
+        monkeypatch.setattr(
+            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            True,
+        )
+        monkeypatch.setattr(
+            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            _ConstructibleStub(),
+        )
+
+        document = StubTemplateDocument(b"\x00" * 256)
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+
+        harness = PatternHarness(document=document, state_holder=state)
+        try:
+            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+        finally:
+            harness.deleteLater()
+
+        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
+        assert len(registered) == 1, "expected one TEMPLATE_REGISTERED event from the interpreter path; got " + repr(recorder.events)
+        _, payload = registered[0]
+        assert payload == {"template_name": "<inline>"}
+
+    @staticmethod
+    def test_interpreter_branch_register_uses_audit_source(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The interpreter branch register notification must use its audit source.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture used to substitute
+                the interpreter class with a deterministic stub.
+        """
+        stub = _StubInterpreter([{"name": "f1", "offset": 0, "size": 4}])
+
+        class _ConstructibleStub:
+            """Callable wrapper that returns the prepared interpreter stub."""
+
+            def __call__(self) -> _StubInterpreter:
+                """Return the prepared interpreter stub.
+
+                Returns:
+                    _StubInterpreter: Pre-prepared interpreter the
+                        mixin should drive.
+                """
+                return stub
+
+        monkeypatch.setattr(
+            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            True,
+        )
+        monkeypatch.setattr(
+            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            _ConstructibleStub(),
+        )
+
+        document = StubTemplateDocument(b"\x00" * 256)
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(
+            recorder,
+            source_id="hex-editor.pattern_editor.apply.interpreter.register",
+        )
+
+        harness = PatternHarness(document=document, state_holder=state)
+        try:
+            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+        finally:
+            harness.deleteLater()
+
+        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
+        assert registered == [], (
+            "expected the loop-guard filter to suppress the register echo "
+            "when the recorder registers with the register source_id; got: " + repr(registered)
+        )
