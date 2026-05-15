@@ -15,12 +15,14 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolState
 
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
+    from intellicrack.core.session import Session
     from intellicrack.core.types import (
         BinaryInfo,
         BreakpointInfo,
@@ -151,6 +153,7 @@ consults this mapping in ``execute_tool_call`` to raise ``ToolError`` when a bri
 does not advertise. The mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth,
 and ``intellicrack.core.tools`` imports it from here.
 """
+
 
 @dataclass
 class DisassemblyLine:
@@ -339,6 +342,7 @@ class ToolBridgeBase(ABC):
         self._state: BridgeState = BridgeState()
         self._capabilities: BridgeCapabilities = BridgeCapabilities()
         self._logger = get_logger(f"bridges.{self.__class__.__name__.lower()}").bind(bridge=self.__class__.__name__.lower())
+        self._orchestrator_session: Session | None = None
 
     @property
     @abstractmethod
@@ -373,6 +377,67 @@ class ToolBridgeBase(ABC):
             process_attached=value.process_attached,
         )
         self._state = value
+        self._publish_tool_state()
+
+    def set_session(self, session: Session | None) -> None:
+        """Attach (or detach) the session that this bridge reports state into.
+
+        When a session is attached, the bridge immediately publishes its
+        current ``BridgeState`` as a ``ToolState`` entry on the session so
+        the persisted view reflects any state changes that happened before
+        the session was wired in. Passing ``None`` detaches the bridge
+        without modifying the previously held session.
+
+        Args:
+            session: The active ``Session`` whose ``tool_states`` registry
+                should receive this bridge's lifecycle updates, or ``None``
+                to detach.
+        """
+        self._orchestrator_session = session
+        if session is not None:
+            self._publish_tool_state()
+
+    def _publish_tool_state(self) -> None:
+        """Publish the bridge's current ``BridgeState`` to the attached session.
+
+        This is the single funnel through which every bridge lifecycle
+        transition (connect, attach, error, detach) updates the session's
+        ``tool_states`` registry. The mapping from the internal
+        ``BridgeState`` representation to the session-facing ``ToolState``
+        is performed here so callers only need to mutate ``self._state``
+        (or call this method directly after a mutation) and the published
+        record stays in sync.
+
+        Does nothing when no session is attached so bridges that run
+        outside of an orchestrated session (e.g. CLI smoke checks, unit
+        tests) remain functional.
+        """
+        session = self._orchestrator_session
+        if session is None:
+            return
+
+        tool_name = self.name
+        state = ToolState(
+            tool=tool_name,
+            connected=self._state.connected,
+            process_attached=self._state.process_attached,
+            target_path=self._state.target_path,
+            last_error=self._state.last_error,
+        )
+        session.set_tool_state(state)
+
+    def _clear_tool_state_in_session(self) -> None:
+        """Remove this bridge's entry from the attached session's tool state.
+
+        Called from :meth:`_finalize_shutdown` so a fully-shutdown bridge
+        is no longer reported as connected/attached. Does nothing when no
+        session is attached.
+        """
+        session = self._orchestrator_session
+        if session is None:
+            return
+
+        session.clear_tool_state(self.name)
 
     @property
     def capabilities(self) -> BridgeCapabilities:
@@ -419,9 +484,14 @@ class ToolBridgeBase(ABC):
         Logs the bridge-class transition and resets ``_state`` to a fresh :class:`BridgeState` so observers see a clean idle state even when
         the subclass cleanup raises early. Concrete bridges invoke this through ``await super().shutdown()`` (which calls the abstract
         method's body) -- callers should not invoke it directly.
+
+        Also clears the bridge's entry from the attached session's
+        ``tool_states`` registry so the orchestrator's view does not
+        retain a stale connection after teardown.
         """
         self._logger.info("bridge_shutdown", bridge_class=self.__class__.__name__)
         self._state = BridgeState()
+        self._clear_tool_state_in_session()
 
     @abstractmethod
     async def is_available(self) -> bool:

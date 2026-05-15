@@ -263,6 +263,34 @@
 - **Pattern:** Cat 11
 
 
+# Findings: core-orchestration (from audit/17)
+
+## Summary
+
+3 opus-confirmed NEEDS-WORK findings from audit/17_findings_core-orchestration.md.
+
+## Findings
+
+#### F-0007 core-orchestration - Bridges do not publish lifecycle to Session.tool_states [fixed: audit7/u-core-orch-tool-state]
+
+- **Source audit:** audit/17_findings_core-orchestration.md / `core-orchestration`
+- **File:** `src/intellicrack/core/session.py`, `src/intellicrack/core/types.py`, `src/intellicrack/bridges/*`
+- **Pattern:** Cat 20, Cat 11
+- **Resolution:** Added `ToolBridgeBase.set_session()` and `_publish_tool_state()` plus `_clear_tool_state_in_session()` hooks. The base class `state` setter and `_finalize_shutdown` now fan state into `Session.tool_states`. `ToolRegistry.set_session()` propagates the active session to every registered bridge and to bridges registered later. The orchestrator calls `_tools.set_session(session)` whenever the current session changes (start/load).
+
+#### F-0008 core-orchestration - Session.tags has no UI surface [fixed: audit7/u-core-orch-tag-chips]
+
+- **Source audit:** audit/17_findings_core-orchestration.md / `core-orchestration`
+- **File:** `src/intellicrack/ui/session_manager.py`, `src/intellicrack/core/orchestrator.py`
+- **Pattern:** Cat 20
+- **Resolution:** Added `TagChipsWidget` (with internal `_FlowLayout`) to `ui/session_manager.py` that renders each tag as a click-to-remove chip, plus an inline "Add tag…" editor wired to `session.add_tag` / `session.remove_tag`. The `SessionManagerDialog` accepts a `current_session` arg and embeds the widget in a "Tags" group on the right panel. Added `Orchestrator.tag_current_session(tag)` and `Orchestrator.untag_current_session(tag)` CLI parity APIs.
+
+#### F-0022 core-orchestration - CompiledYaraRules.match Protocol body returned fake data [fixed: audit7/u-core-orch-yara-protocol]
+
+- **Source audit:** audit/17_findings_core-orchestration.md / `core-orchestration`
+- **File:** `src/intellicrack/core/types.py`
+- **Pattern:** Cat 8, Cat 21
+- **Resolution:** Replaced the fake `_ = (self, ...); return []` body in `CompiledYaraRules.match` with the Protocol convention `...` so structural typing is preserved and no shadow fake-success value is returned from the Protocol method body.
 # Findings: bridges-x64dbg (from audit/07_findings_bridges-x64dbg.md)
 
 ## Summary

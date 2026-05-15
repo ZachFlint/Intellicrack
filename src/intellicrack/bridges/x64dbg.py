@@ -2043,7 +2043,7 @@ class X64DbgBridge(DebuggerBridge):
             tool_path: Path to x64dbg installation.
         """
         self._x64dbg_path = tool_path
-        self._state = BridgeState(
+        self.state = BridgeState(
             connected=False,
             tool_running=False,
             binary_loaded=False,
@@ -2059,6 +2059,7 @@ class X64DbgBridge(DebuggerBridge):
 
             if x64_exe.exists() or x32_exe.exists():
                 self._state.connected = True
+                self._publish_tool_state()
                 _logger.info("x64dbg_found", path=str(tool_path))
                 self._plugin_deployed = deploy_x64dbg_plugin(
                     tool_path,
@@ -2317,6 +2318,7 @@ class X64DbgBridge(DebuggerBridge):
         await self._wait_for_pipe_ready()
         self._state.connected = True
         self._state.tool_running = True
+        self._publish_tool_state()
 
     _PIPE_READY_TIMEOUT_SECONDS: float = 15.0
     _PIPE_READY_POLL_MS: int = 500
@@ -2761,6 +2763,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.binary_loaded = True
         self._state.target_path = self._binary_path
+        self._publish_tool_state()
 
         _logger.info("x64dbg_binary_loaded", path=path.name)
 
@@ -2867,6 +2870,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.process_attached = True
         self._state.target_pid = pid
+        self._publish_tool_state()
         _logger.info("x64dbg_attached", pid=pid)
 
     @staticmethod
@@ -2932,6 +2936,7 @@ class X64DbgBridge(DebuggerBridge):
         self._state.tool_running = True
         self._state.process_attached = False
         self._state.target_pid = None
+        self._publish_tool_state()
 
         _logger.info("x64dbg_process_detached", bridge="x64dbg")
 
