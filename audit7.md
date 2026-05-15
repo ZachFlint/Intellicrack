@@ -294,6 +294,24 @@
 - **Pattern:** Cat 9
 - **Why this is non-functional:** `taskkill /F /T` short-circuits each monitor's `finally` cleanup, so STOP telemetry never reaches its lifecycle log, the realtime `TraceEventSession` is leaked, and the WMI subscription leaks into the next sandbox session. The shutdown driver loses every monitor's "I exited cleanly" signal.
 - **Suggested remediation summary:** Introduce a named manual-reset event `IntellicrackMonitorStop`. Each of the four monitor PS1s (`dll_monitor`, `api_trace`, `injection_monitor`, `kernel_object_monitor`) opens the event at startup, polls `WaitHandle.WaitOne(0)` non-blocking in its main loop, and breaks out so the `finally` clause runs and writes a STOP record to a per-monitor `*.lifecycle.log`. `stop_monitors.cmd` signals the event via `_stop_monitors_helper.ps1` first, waits up to a configurable grace window (default 10s) per tracked PID, then escalates only the stragglers to `taskkill /F /T`.
+# Findings: ui-app-core (from audit5.md)
+
+## Summary
+
+1 verifier-confirmed PARTIAL finding from audit5.md / section `ui-app-core`.
+
+## Findings
+
+### Category 20 - Implemented But Uncalled
+
+#### F-0021 - `ToolOutputPanel.wire_sandbox_backend` reimplemented but no caller anywhere [fixed: audit7/u14-wire-sandbox-backend]
+
+- **Source audit:** audit5.md / `ui-app-core`
+- **Reviewer verdict:** PARTIAL
+- **File:** `src/intellicrack/ui/tools.py` (`ToolOutputPanel.wire_sandbox_backend`)
+- **Pattern:** Cat 20
+- **Why this is non-functional:** The method was a deprecated no-op in the original finding and is now a full implementation (type validation, `SandboxBridge` construction, manager attachment, `register_existing_sandbox`, delegation to `wire_sandbox_bridge`). Grep across the entire `src/` tree finds it defined only in `tools.py` with zero callers. The "implemented" defect is satisfied; the "dead / unreachable" defect is not.
+- **Remediation applied:** Added :meth:`MainWindow.wire_sandbox_backend` in `src/intellicrack/ui/app.py` as the public plugin/CLI injection surface that forwards to `ToolOutputPanel.wire_sandbox_backend` and installs the resulting manager on `MainWindow.sandbox_manager`. Added :func:`_wire_preregistered_sandbox` in `src/intellicrack/main.py` which is invoked from `_create_main_window` at startup; it inspects the orchestrator's tool registry for a pre-registered `SandboxBridge` with registered instances and forwards the first one to `MainWindow.wire_sandbox_backend`. Also taught `ToolOutputPanel.get_sandbox_bridge` to surface the deferred bridge before the sandbox panel is constructed so plugin/CLI consumers can reach the wired backend immediately. Regression tests cover the public method, manager reuse, single-invocation forwarding, type validation, the bootstrap helper's wiring path, and its no-op behaviour without pre-registration.
 #### F-0022 - `SystemTab` missing `_attached_pid` guards on mitigation/GUI/job-info actions [fixed: audit7/u10-system-tab-pid-guards]
 
 - **Source audit:** audit4.md / `ui-panels-process`
