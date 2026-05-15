@@ -202,3 +202,63 @@
 - **File:** `src/intellicrack/ui/panels/process_panel/_threads_tab.py`
 - **Lines:** 96-106, 353-384
 - **Pattern:** Cat 11
+
+
+# Findings: bridges-x64dbg (from audit/07_findings_bridges-x64dbg.md)
+
+## Summary
+
+1 audit-confirmed Cat 2 finding from `audit/07_findings_bridges-x64dbg.md`
+covering 19 fire-and-forget x64dbg wrappers that returned hardcoded
+``{"success": True}`` without verifying the underlying operation.
+
+## Findings
+
+#### F-0001 - 19 x64dbg fire-and-forget wrappers return hardcoded `{"success": True}` without verification [fixed: audit7/f0001-x64dbg-wrappers]
+
+- **Source audit:** audit/07_findings_bridges-x64dbg.md / `bridges-x64dbg`
+- **Reviewer verdict:** FAIL (now FIXED)
+- **File:** `src/intellicrack/bridges/x64dbg.py`
+- **Wrappers covered (19):** `set_label`, `set_comment`,
+  `enable_breakpoint`, `disable_breakpoint`, `suspend_thread`,
+  `resume_thread`, `switch_thread`, `set_thread_name`, `trace_into`,
+  `trace_over`, `step_count`, `animate_start`, `animate_stop`,
+  `script_load`, `script_run`, `script_cmd`, `script_abort`,
+  `plugin_load`, `plugin_unload`.
+- **Pattern:** Cat 2 (hardcoded return / fake success)
+- **Why this was non-functional:** `_send_pipe_command` only raises
+  when the response includes ``success=False``. Each wrapper above
+  forwards a textual x64dbg console command via the ``exec`` /
+  ``_send_command`` path. x64dbg's interpreter parses the command and
+  dispatches it asynchronously, then reports success only that the
+  command parsed - never that the underlying state changed. So
+  ``be 0x...`` parses fine but the breakpoint may never actually be
+  enabled; ``setthreadname 0x123, "foo"`` parses fine for any TID but
+  silently fails for invalid TIDs; ``AnimateInto`` parses fine but the
+  debugger may stay paused; ``scriptrun`` parses fine even when the
+  script raises a runtime error; ``plugload`` parses fine even when
+  the DLL never loads. Each wrapper synthesised
+  ``{"success": True, ...}`` regardless of debugger state.
+- **Fix:** Per-wrapper post-condition verification appropriate to the
+  operation. ``set_label`` / ``set_comment`` read the annotation back
+  via ``lbl_list`` / ``cmt_list`` and compare. ``enable_breakpoint`` /
+  ``disable_breakpoint`` poll ``bp_list`` until the breakpoint's
+  ``enabled`` flag matches expectation. The thread wrappers poll
+  ``thread_detail`` until the matching record reports the expected
+  ``suspended`` flag (suspend / resume), is listed at all (switch),
+  or reports the expected ``name`` (rename). The trace and animate
+  wrappers poll ``status`` until the debugger's ``is_running`` flag
+  flips to the expected value. The script wrappers query the
+  ``script.iserror()`` register via the expression evaluator. The
+  plugin wrappers check ``plugin_list`` (preferred) with a
+  ``plugin.find()`` fallback via the expression evaluator. Each
+  wrapper raises ``ToolError`` on verification failure and never
+  returns ``{"success": False}`` — the audit explicitly forbids that.
+  Class-level ``VERIFY_TIMEOUT`` and ``VERIFY_POLL_INTERVAL`` knobs
+  bound the polling. When the plugin lacks a verification RPC (older
+  builds), wrappers surface ``verified=False`` so callers can detect
+  the unverified case rather than receive a fake-success status.
+- **Tests:** `tests/test_bridges/test_x64dbg_audit7_f0001.py` (42
+  tests) covers happy path + failure path for every wrapper. The
+  failure-path tests fail on main (which returns fake success) and
+  pass on this branch.
