@@ -683,11 +683,16 @@ class SandboxBase:
     async def dump_memory(
         self,
         output_path: Path | None = None,
+        target_pid: int | None = None,
     ) -> Path:
         """Dump guest memory to a file.
 
         Args:
             output_path: Optional path to save the memory dump.
+            target_pid: Guest-side PID of the process to dump. Concrete
+                sandbox types that target individual processes (Windows
+                Sandbox via ``MiniDumpWriteDump``) require this argument;
+                whole-VM dumpers (QEMU) may ignore it.
 
         Returns:
             Path: Filesystem path to the memory dump file on the host.
@@ -696,7 +701,7 @@ class SandboxBase:
             SandboxError: If memory dump fails.
         """
         _logger.debug("base_sandbox_dump_memory_called", class_name=type(self).__name__)
-        del output_path
+        del output_path, target_pid
         raise SandboxError(_ERR_MEMORY_DUMP_NOT_IMPL)
 
     async def extract_dropped_files(
