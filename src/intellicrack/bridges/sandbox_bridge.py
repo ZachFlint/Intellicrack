@@ -764,12 +764,16 @@ class SandboxBridge(ToolBridgeBase):
                 ),
                 ToolFunction(
                     name="sandbox.memory_dump",
-                    description="Dump guest memory to a file for offline analysis (QEMU sandboxes only).",
+                    description=(
+                        "Dump guest memory to a file for offline analysis. "
+                        "QEMU dumps the entire VM; Windows Sandbox dumps the specific guest process "
+                        "identified by target_pid via MiniDumpWriteDump."
+                    ),
                     parameters=[
                         ToolParameter(
                             name="instance_id",
                             type="string",
-                            description="ID of the QEMU sandbox instance",
+                            description="ID of the sandbox instance",
                             required=True,
                         ),
                         ToolParameter(
@@ -778,6 +782,16 @@ class SandboxBridge(ToolBridgeBase):
                             description="Optional local path to save the memory dump (default: auto-generated temp path)",
                             required=False,
                             default="",
+                        ),
+                        ToolParameter(
+                            name="target_pid",
+                            type="integer",
+                            description=(
+                                "Guest-side PID of the process to dump. Required for Windows Sandbox "
+                                "(MiniDumpWriteDump targets a specific process). Ignored for QEMU."
+                            ),
+                            required=False,
+                            default=0,
                         ),
                     ],
                     returns="Dictionary with memory dump file path",
@@ -1935,18 +1949,28 @@ class SandboxBridge(ToolBridgeBase):
         self,
         instance_id: str,
         output_path: str | None = None,
+        target_pid: int | None = None,
     ) -> dict[str, Any]:
-        """Dump guest memory from a QEMU sandbox instance.
+        """Dump guest memory from a sandbox instance.
+
+        QEMU sandboxes dump the whole VM via the ``dump-guest-memory`` QMP
+        command and ignore ``target_pid``. Windows Sandbox runs
+        ``MiniDumpWriteDump`` inside the guest against the process identified
+        by ``target_pid``; ``target_pid`` is required for Windows Sandbox
+        because passing ``GetCurrentProcess()`` would (incorrectly) dump the
+        PowerShell host instead of the analysis target (audit7 F-0021).
 
         Args:
-            instance_id: ID of the QEMU sandbox instance.
+            instance_id: ID of the sandbox instance.
             output_path: Optional local path to save the memory dump.
+            target_pid: Guest-side PID of the process to dump. Required for
+                Windows Sandbox instances; ignored for QEMU.
 
         Returns:
             dict[str, Any]: Dictionary with memory dump file path.
 
         Raises:
-            ToolError: If memory dump fails or sandbox is not QEMU.
+            ToolError: If memory dump fails or required arguments are missing.
         """
         async with self._track_state("memory_dump"):
             manager = self.ensure_manager()
@@ -1956,16 +1980,28 @@ class SandboxBridge(ToolBridgeBase):
                 msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
                 raise ToolError(msg)
 
-            if instance.sandbox_type != "qemu":
-                msg = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_QEMU_REQUIRED}"
+            if instance.sandbox_type not in {"qemu", "windows"}:
+                msg = f"{_ERR_MEMORY_DUMP_FAILED}: unsupported sandbox type {instance.sandbox_type!r}"
+                raise ToolError(msg)
+
+            if instance.sandbox_type == "windows" and (target_pid is None or target_pid <= 0):
+                msg = (
+                    f"{_ERR_MEMORY_DUMP_FAILED}: target_pid is required for Windows Sandbox memory_dump "
+                    "(MiniDumpWriteDump must target a specific guest process)"
+                )
                 raise ToolError(msg)
 
             out = Path(output_path) if output_path else None
 
             try:
-                dump_path = await instance.sandbox.dump_memory(out)
+                dump_path = await instance.sandbox.dump_memory(out, target_pid=target_pid)
                 instance.touch()
-                _logger.info("memory_dumped", instance_id=instance_id, path=str(dump_path))
+                _logger.info(
+                    "memory_dumped",
+                    instance_id=instance_id,
+                    path=str(dump_path),
+                    target_pid=target_pid,
+                )
             except SandboxError as e:
                 _logger.warning("memory_dump_failed", error=str(e))
                 msg = f"{_ERR_MEMORY_DUMP_FAILED}: {e}"
@@ -1974,6 +2010,7 @@ class SandboxBridge(ToolBridgeBase):
                 return {
                     "instance_id": instance_id,
                     "dump_path": str(dump_path),
+                    "target_pid": target_pid,
                 }
 
     async def extract_dropped_files(

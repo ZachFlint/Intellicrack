@@ -18,7 +18,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, TypedDict, cast
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -88,6 +88,26 @@ _COMPAT_DIALOG_WIDTH: Final[int] = 700
 _COMPAT_DIALOG_HEIGHT: Final[int] = 500
 _COMPAT_SPLIT_LEFT: Final[int] = 300
 _COMPAT_SPLIT_RIGHT: Final[int] = 400
+
+
+class ToolStatusEntry(TypedDict):
+    """Pre-fetched tool status payload accepted by :class:`ToolStatusDialog`.
+
+    The dialog uses this typed mapping in place of running its own per-tool
+    status workers when the caller has already produced the same information.
+
+    Attributes:
+        available: Whether the tool is currently usable.
+        path: Filesystem location of the resolved tool executable or
+            installation directory when applicable. ``None`` for built-in
+            tools or for tools that were not located.
+        message: Human-readable status message rendered next to the tool
+            name in the dialog's list view.
+    """
+
+    available: bool
+    path: str | None
+    message: str
 
 
 class ToolInstallWorker(QThread):
@@ -1211,7 +1231,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         self._name_label = QLabel("Select a tool")
         self._name_label.setObjectName("bold_label")
-        self._name_label.setProperty("heading", value=True)
+        self._name_label.setProperty("heading", "true")
         layout.addWidget(self._name_label)
 
         caps_group = QGroupBox("Capabilities")
@@ -1231,7 +1251,7 @@ class ToolCapabilitiesWidget(QFrame):
 
         for cap_id, cap_name in capabilities:
             indicator = QLabel("\u25cb")
-            indicator.setProperty("muted", value=True)
+            indicator.setProperty("muted", "true")
             self._cap_labels[cap_id] = indicator
             caps_layout.addRow(cap_name, indicator)
 
@@ -1241,7 +1261,7 @@ class ToolCapabilitiesWidget(QFrame):
         arch_layout = QVBoxLayout(arch_group)
         self._arch_label = QLabel("--")
         self._arch_label.setWordWrap(True)
-        self._arch_label.setProperty("muted", value=True)
+        self._arch_label.setProperty("muted", "true")
         arch_layout.addWidget(self._arch_label)
         layout.addWidget(arch_group)
 
@@ -1249,7 +1269,7 @@ class ToolCapabilitiesWidget(QFrame):
         fmt_layout = QVBoxLayout(fmt_group)
         self._fmt_label = QLabel("--")
         self._fmt_label.setWordWrap(True)
-        self._fmt_label.setProperty("muted", value=True)
+        self._fmt_label.setProperty("muted", "true")
         fmt_layout.addWidget(self._fmt_label)
         layout.addWidget(fmt_group)
 
@@ -1280,10 +1300,10 @@ class ToolCapabilitiesWidget(QFrame):
             if label := self._cap_labels.get(cap_id):
                 if capabilities.get(cap_key):
                     label.setText("\u25cf")
-                    label.setProperty("success", value=True)
+                    label.setProperty("success", "true")
                 else:
                     label.setText("\u25cb")
-                    label.setProperty("muted", value=True)
+                    label.setProperty("muted", "true")
 
         self._arch_label.setText(", ".join(archs) if archs else "--")
         self._fmt_label.setText(", ".join(formats) if formats else "--")
@@ -1372,12 +1392,19 @@ class ToolStatusDialog(QDialog):
         self,
         tool_registry: ToolRegistry | None = None,
         parent: QWidget | None = None,
+        tool_statuses: dict[str, ToolStatusEntry] | None = None,
     ) -> None:
         """Initialize the ToolStatusDialog.
 
         Args:
             tool_registry: Optional registry of available analysis tools.
             parent: Parent widget.
+            tool_statuses: Optional mapping of tool IDs to pre-fetched
+                :class:`ToolStatusEntry` payloads. When provided, the dialog
+                renders the supplied status snapshot immediately and skips
+                the initial background status-check workers. Subsequent
+                refreshes triggered by explicit user action (e.g. the
+                Refresh button) always re-run the workers.
         """
         super().__init__(parent)
         self._registry = tool_registry
@@ -1386,7 +1413,10 @@ class ToolStatusDialog(QDialog):
         self._tool_statuses: dict[str, tuple[bool, str]] = {}
 
         self._setup_ui()
-        self._refresh_status()
+        if tool_statuses is not None:
+            self._populate_from_prefetched(tool_statuses)
+        else:
+            self._refresh_status()
 
         self.setWindowTitle("Tool Status & Capabilities")
         self.resize(_COMPAT_DIALOG_WIDTH, _COMPAT_DIALOG_HEIGHT)
@@ -1482,13 +1512,16 @@ class ToolStatusDialog(QDialog):
             _logger.warning("tool_settings_load_all_failed")
             return {}
 
-    def _refresh_status(self) -> None:
-        """Refresh tool status display."""
-        self._status_list.clear()
-        self._tool_statuses.clear()
-        self._refresh_btn.setEnabled(False)
+    @staticmethod
+    def _tool_rows() -> list[tuple[str, str, str]]:
+        """Return the canonical display rows for the status list.
 
-        tools = [
+        Returns:
+            list[tuple[str, str, str]]: List of ``(display_name, tool_id,
+            category)`` tuples in the order they should appear in the
+            dialog's left-hand tool list.
+        """
+        return [
             ("Ghidra", "ghidra", "Static analysis"),
             ("x64dbg", "x64dbg", "Debugging"),
             ("Frida", "frida", "Dynamic instrumentation"),
@@ -1497,9 +1530,55 @@ class ToolStatusDialog(QDialog):
             ("Binary Operations", "binary", "File analysis"),
         ]
 
+    def _populate_from_prefetched(self, statuses: dict[str, ToolStatusEntry]) -> None:
+        """Render the dialog directly from a pre-fetched status snapshot.
+
+        Skips spawning :class:`ToolStatusCheckWorker` threads entirely so the
+        dialog can be shown instantly when the caller has already collected
+        the same data. The Refresh button remains wired to
+        :meth:`_refresh_status` so users can still re-check on demand.
+
+        Args:
+            statuses: Mapping of tool IDs (matching the dialog's canonical
+                tool list, e.g. ``"ghidra"``) to :class:`ToolStatusEntry`
+                payloads describing the current availability and message.
+        """
+        self._status_list.clear()
+        self._tool_statuses.clear()
+        self._refresh_btn.setEnabled(True)
+
+        for display_name, tool_id, _category in self._tool_rows():
+            entry = statuses.get(tool_id)
+            if entry is None:
+                item = QListWidgetItem(f"... {display_name} - Status unknown")
+                self._status_list.addItem(item)
+                continue
+
+            available = bool(entry["available"])
+            message = entry["message"]
+            self._tool_statuses[tool_id] = (available, message)
+
+            status_icon = "✓" if available else "✗"
+            item = QListWidgetItem(f"{status_icon}  {display_name} - {message}")
+            self._status_list.addItem(item)
+
+        if self._status_list.count() > 0:
+            self._status_list.setCurrentRow(0)
+
+    def _refresh_status(self) -> None:
+        """Refresh tool status display.
+
+        Always spawns a fresh batch of :class:`ToolStatusCheckWorker` threads.
+        Invoked on dialog open when no prefetched data is supplied and on
+        every explicit user click of the Refresh button.
+        """
+        self._status_list.clear()
+        self._tool_statuses.clear()
+        self._refresh_btn.setEnabled(False)
+
         saved_settings = self._load_settings()
 
-        for display_name, tool_id, _category in tools:
+        for display_name, tool_id, _category in self._tool_rows():
             item = QListWidgetItem(f"... {display_name} - Checking...")
             self._status_list.addItem(item)
 

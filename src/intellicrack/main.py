@@ -71,6 +71,7 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
+
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
@@ -867,7 +868,55 @@ def _create_main_window(
     if template_manager is not None:
         window.set_template_manager(template_manager)
     window.set_model_discovery(cast("ModelDiscovery", model_discovery))
+    _wire_preregistered_sandbox(window, orchestrator)
     return window
+
+
+def _wire_preregistered_sandbox(window: MainWindow, orchestrator: Orchestrator) -> None:
+    """Inject any pre-registered sandbox backend into the main window.
+
+    When a plugin or CLI bootstrap constructs a ``SandboxBase`` and
+    registers it on the orchestrator's tool registry (via
+    :meth:`SandboxBridge.register_existing_sandbox`) before the GUI is
+    created, this helper forwards the first such instance to
+    :meth:`MainWindow.wire_sandbox_backend` so the sandbox tab, the chat
+    workflow, and AI bridges all observe the externally supplied backend.
+    Silent no-op when no pre-registered sandbox exists, which is the
+    common case for a plain ``intellicrack`` GUI launch.
+
+    Args:
+        window: MainWindow whose tool panel should receive the backend.
+        orchestrator: Orchestrator whose tool registry is inspected for a
+            pre-registered ``SandboxBridge`` with existing instances.
+    """
+    tool_registry = getattr(orchestrator, "_tools", None)
+    if tool_registry is None:
+        return
+    getter = getattr(tool_registry, "get_sandbox_bridge", None)
+    if not callable(getter):
+        return
+    from intellicrack.core.types import ToolError as _ToolError
+
+    try:
+        bridge = getter()
+    except (RuntimeError, ImportError, AttributeError, _ToolError):
+        _logger.debug("preregistered_sandbox_bridge_lookup_failed", exc_info=True)
+        return
+    manager = getattr(bridge, "manager", None)
+    if manager is None:
+        return
+    instances = list(getattr(manager, "instances", []))
+    if not instances:
+        return
+    sandbox = getattr(instances[0], "sandbox", None)
+    if sandbox is None:
+        return
+    window.wire_sandbox_backend(sandbox, manager)
+    _logger.info(
+        "preregistered_sandbox_wired_into_main_window",
+        sandbox_type=type(sandbox).__name__,
+        instance_count=len(instances),
+    )
 
 
 async def _shutdown_application(

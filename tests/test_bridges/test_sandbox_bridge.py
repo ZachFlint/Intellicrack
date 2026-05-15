@@ -616,20 +616,32 @@ class TestF0007GetVNCPort:
 
 
 class TestF0008QEMUGatedMethods:
-    """F-0008: pcap_start/screenshot/memory_dump/extract_dropped_files/anti_evasion raise on non-QEMU."""
+    """F-0008: pcap_start/screenshot/extract_dropped_files/anti_evasion raise on non-QEMU.
+
+    ``memory_dump`` is no longer QEMU-only (audit7 F-0021): the Windows sandbox
+    implementation now supports per-process minidumps via ``MiniDumpWriteDump``
+    with a required ``target_pid`` argument. ``memory_dump`` therefore raises a
+    different error (``target_pid is required for Windows Sandbox memory_dump``)
+    when invoked against a Windows instance without ``target_pid``, which is
+    covered separately in :class:`tests.test_audit7.sandbox_windows`.
+    """
 
     @pytest.mark.parametrize(
         ("method", "kwargs"),
         [
             ("pcap_start", {}),
             ("screenshot", {}),
-            ("memory_dump", {}),
             ("extract_dropped_files", {}),
             ("anti_evasion", {}),
         ],
     )
     def test_raises_on_windows_sandbox(self, method: str, kwargs: dict[str, Any]) -> None:
-        """Each QEMU-only method raises ToolError when sandbox_type is 'windows'."""
+        """Each QEMU-only method raises ToolError when sandbox_type is 'windows'.
+
+        Args:
+            method: Bridge method name to invoke.
+            kwargs: Extra keyword arguments for the method.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()

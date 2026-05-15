@@ -771,6 +771,17 @@ impl HexDocument {
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
+    /// Export a BPS patch by memory-mapping the source file inside Rust.
+    ///
+    /// Avoids the round-trip through Python `bytes` that
+    /// `export_patches_bps` requires: the source path is mapped via
+    /// `memmap2::Mmap` and the resulting slice is handed directly to
+    /// the encoder. The target is read out of this document's piece
+    /// table without crossing the FFI boundary.
+    fn export_patches_bps_from_path(&self, source_path: &str) -> PyResult<Vec<u8>> {
+        self.export_patch_from_path_inner(source_path, bps_ups::export_bps)
+    }
+
     fn import_patches_bps(&mut self, patch_data: &[u8], source_data: &[u8]) -> PyResult<usize> {
         let target = bps_ups::import_bps(patch_data, source_data)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
@@ -785,6 +796,15 @@ impl HexDocument {
         let target = self.inner.read_all();
         bps_ups::export_ups(source_data, &target)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    }
+
+    /// Export a UPS patch by memory-mapping the source file inside Rust.
+    ///
+    /// Mirrors `export_patches_bps_from_path`: opens the source path
+    /// with `memmap2::Mmap` so neither Python nor Rust hold the source
+    /// as an owned `Vec<u8>` while encoding proceeds.
+    fn export_patches_ups_from_path(&self, source_path: &str) -> PyResult<Vec<u8>> {
+        self.export_patch_from_path_inner(source_path, bps_ups::export_ups)
     }
 
     fn import_patches_ups(&mut self, patch_data: &[u8], source_data: &[u8]) -> PyResult<usize> {
@@ -1080,6 +1100,41 @@ impl HexDocument {
 
     fn get_memory_budget_hint(&self) -> usize {
         self.memory_budget_hint
+    }
+}
+
+impl HexDocument {
+    /// Memory-map ``source_path`` and feed it to ``encoder``.
+    ///
+    /// Shared implementation for `export_patches_bps_from_path` and
+    /// `export_patches_ups_from_path`. The source file is opened and
+    /// mapped via `memmap2::Mmap` so neither Python nor Rust allocate
+    /// a full-file `Vec<u8>` for the source; the target is read out
+    /// of this document's piece table.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PyIOError` if the file cannot be opened or mapped,
+    /// and `PyValueError` if the underlying encoder rejects the
+    /// inputs.
+    fn export_patch_from_path_inner<F>(&self, source_path: &str, encoder: F) -> PyResult<Vec<u8>>
+    where
+        F: FnOnce(&[u8], &[u8]) -> std::io::Result<Vec<u8>>,
+    {
+        let file = std::fs::File::open(source_path)
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        let metadata = file
+            .metadata()
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        let target = self.inner.read_all();
+        if metadata.len() == 0 {
+            return encoder(&[], &target)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()));
+        }
+        let mmap = unsafe { memmap2::Mmap::map(&file) }
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        encoder(&mmap[..], &target)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 }
 

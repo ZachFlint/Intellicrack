@@ -11,7 +11,68 @@ if (-not (Test-Path -LiteralPath $LogDir)) {
 }
 $script:logPathRef = Join-Path -Path $LogDir -ChildPath 'injection_monitor.log'
 $script:diagPathRef = Join-Path -Path $LogDir -ChildPath 'injection_monitor.diag.log'
+$script:lifecyclePathRef = Join-Path -Path $LogDir -ChildPath 'injection_monitor.lifecycle.log'
 $script:targetPidFilter = [int]$TargetPid
+$script:StopEventName = 'IntellicrackMonitorStop'
+$script:StopEvent = $null
+$script:StopPollIntervalMs = 250
+$script:StopWatchTimer = $null
+$script:StopWatchSubscriberId = $null
+$script:StopWatchJob = $null
+$script:CurrentInjectionSource = $null
+
+function Open-MonitorStopEvent {
+    [CmdletBinding()]
+    [OutputType([System.Threading.EventWaitHandle])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+    $createdNew = $false
+    try {
+        $handle = [System.Threading.EventWaitHandle]::new(
+            $false,
+            [System.Threading.EventResetMode]::ManualReset,
+            $Name,
+            [ref]$createdNew)
+        return $handle
+    } catch [System.UnauthorizedAccessException] {
+        try {
+            return [System.Threading.EventWaitHandle]::OpenExisting($Name)
+        } catch {
+            return $null
+        }
+    } catch {
+        return $null
+    }
+}
+
+function Test-MonitorStopRequested {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+    if ($null -eq $script:StopEvent) { return $false }
+    try {
+        return $script:StopEvent.WaitOne(0)
+    } catch {
+        return $false
+    }
+}
+
+function Write-InjectionLifecycle {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$State,
+        [Parameter(Mandatory = $false)][string]$Detail = ''
+    )
+    $ts = (Get-Date).ToString('o')
+    $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
+    $line = "$ts|injection_monitor|$State|$safeDetail"
+    try {
+        Add-Content -LiteralPath $script:lifecyclePathRef -Value $line -Encoding utf8
+    } catch {
+        $null = $_
+    }
+}
 
 function Write-InjectionRecord {
     [CmdletBinding()]
@@ -207,6 +268,9 @@ function Get-ProviderEventApiName {
     return "EventId_$([int]$EtwEvent.ID)"
 }
 
+$script:StopEvent = Open-MonitorStopEvent -Name $script:StopEventName
+Write-InjectionLifecycle -State 'started' -Detail "pid_filter=$script:targetPidFilter stop_event=$script:StopEventName"
+
 $session = $null
 try {
     $sessionType = [Type]::GetType('Microsoft.Diagnostics.Tracing.Session.TraceEventSession, Microsoft.Diagnostics.Tracing.TraceEvent')
@@ -398,6 +462,30 @@ try {
     $dynamicParser.add_All($threatIntelHandler)
     $source.UnhandledEvents.add_All($threatIntelHandler)
 
+    $script:CurrentInjectionSource = $source
+    $script:StopWatchTimer = New-Object System.Timers.Timer
+    $script:StopWatchTimer.Interval = [double]$script:StopPollIntervalMs
+    $script:StopWatchTimer.AutoReset = $true
+    $stopWatchAction = {
+        try {
+            if ($null -eq $script:StopEvent) { return }
+            if (-not $script:StopEvent.WaitOne(0)) { return }
+            if ($null -ne $script:CurrentInjectionSource) {
+                try { $script:CurrentInjectionSource.StopProcessing() } catch { $null = $_ }
+            }
+            if ($null -ne $script:StopWatchTimer) {
+                try { $script:StopWatchTimer.Stop() } catch { $null = $_ }
+            }
+        } catch {
+            $null = $_
+        }
+    }
+    $script:StopWatchSubscriberId = 'IntInjectionStopWatcher'
+    try { Unregister-Event -SourceIdentifier $script:StopWatchSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+    $script:StopWatchJob = Register-ObjectEvent -InputObject $script:StopWatchTimer -EventName Elapsed `
+        -SourceIdentifier $script:StopWatchSubscriberId -Action $stopWatchAction
+    $script:StopWatchTimer.Start()
+
     [void]$source.Process()
 } catch {
     $ts = Get-Date -Format 'o'
@@ -408,8 +496,27 @@ try {
     Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message
     throw
 } finally {
+    if ($null -ne $script:StopWatchTimer) {
+        try { $script:StopWatchTimer.Stop() } catch { $null = $_ }
+        try { $script:StopWatchTimer.Dispose() } catch { $null = $_ }
+        $script:StopWatchTimer = $null
+    }
+    if ($null -ne $script:StopWatchSubscriberId) {
+        try { Unregister-Event -SourceIdentifier $script:StopWatchSubscriberId -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:StopWatchSubscriberId = $null
+    }
+    if ($null -ne $script:StopWatchJob) {
+        try { Remove-Job -Job $script:StopWatchJob -Force -ErrorAction SilentlyContinue } catch { $null = $_ }
+        $script:StopWatchJob = $null
+    }
+    $script:CurrentInjectionSource = $null
     if ($session) {
         try { $session.Stop($true) | Out-Null } catch { $null = $_ }
         try { $session.Dispose() } catch { $null = $_ }
+    }
+    Write-InjectionLifecycle -State 'stopped' -Detail "stop_requested=$(Test-MonitorStopRequested)"
+    if ($null -ne $script:StopEvent) {
+        try { $script:StopEvent.Dispose() } catch { $null = $_ }
+        $script:StopEvent = $null
     }
 }
