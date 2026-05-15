@@ -189,7 +189,7 @@
 
 ## Summary
 
-1 opus-confirmed NEEDS-WORK finding from audit4.md / section `ui-panels-process`.
+3 opus-confirmed NEEDS-WORK findings from audit4.md / section `ui-panels-process`.
 
 ## Findings
 
@@ -202,3 +202,27 @@
 - **File:** `src/intellicrack/ui/panels/process_panel/_threads_tab.py`
 - **Lines:** 96-106, 353-384
 - **Pattern:** Cat 11
+
+#### F-0022 - `SystemTab` missing `_attached_pid` guards on mitigation/GUI/job-info actions [fixed: audit7/u10-system-tab-pid-guards]
+
+- **Source audit:** audit4.md / `ui-panels-process`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** `_refresh_mitigations`, `_on_gui_resources`, and `_on_job_info` executed without checking `_attached_pid is None`, leading to silent failures or crashes when the operator clicked the corresponding buttons before attaching to a process.
+
+- **File:** `src/intellicrack/ui/panels/process_panel/_system_tab.py`
+- **Lines:** 700-729, 793-814, 816-837
+- **Pattern:** Cat 11
+- **Why this is non-functional:** Clicking Query Mitigations / Get GUI Resources / Get Job Info with no attached process produced no visible feedback. The bridge was invoked with `pid=None`, which either silently failed inside the worker thread or raised an exception that was only routed to a `_logger.warning` line — operators had no way to know the action was refused.
+- **Suggested remediation summary:** Added a `_require_attached_pid(action)` helper that centralises the guard pattern (structured log, raw-output update, `QMessageBox.warning`) and applied it to every PID-dependent method (`_refresh_privileges`, `_on_enable_debug`, `_refresh_windows`, `_refresh_services`, `_on_read_peb`, `_refresh_mitigations`, `_on_gui_resources`, `_on_job_info`). New regression tests under `tests/ui/test_system_tab_warnings.py` assert that the three previously-unguarded handlers surface a warning dialog and skip dispatch when unattached, and do not raise.
+
+#### F-0023 - `SystemTab` silent `_on_error` paths swallow bridge failures [fixed: audit7/u10-system-tab-show-error]
+
+- **Source audit:** audit4.md / `ui-panels-process`
+- **Reviewer verdict:** FAIL
+- **Reviewer assessment:** Every `_on_error` callback in `SystemTab` invoked `_logger.warning(...)` only. Operators saw no user-visible signal when the bridge call failed, mirroring the silent-failure pattern audit4 already flagged for `ModulesTab`.
+
+- **File:** `src/intellicrack/ui/panels/process_panel/_system_tab.py`
+- **Lines:** 502-503, 521-522, 553-554, 583-584, 611-612, 638-639, 660-661, 695-696, 720-722, 748-749, 768-769, 788-789, 806-807, 829-830, 857-858
+- **Pattern:** Cat 11
+- **Why this is non-functional:** Bridge errors from `get_token_privileges`, `adjust_token_privilege`, `get_windows`, `list_services`, `read_peb`, `read_teb`, `pipe_connect`, `pipe_close`, `get_mitigation_policies`, `reg_read_value`, `reg_enum_keys`, `reg_enum_values`, `get_gui_resources`, `get_job_info`, and `query_system_info` were only logged. The operator had no idea their action failed.
+- **Suggested remediation summary:** Added a `_show_error(title, exc, log_event=...)` helper that records the structured warning and routes the message through `QMessageBox.warning(parent=self, ...)` with per-action titles. Replaced every `_logger.warning`-only `_on_error` body with a call to the helper (or, for `_on_pipe_close`, an inline equivalent that preserves the `pipe` structured field). New regression tests under `tests/ui/test_system_tab_warnings.py` assert that the three target handlers' error callbacks produce a warning dialog containing the bridge's exception message.
