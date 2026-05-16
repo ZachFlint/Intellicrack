@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -216,7 +216,7 @@ class TestF0021DumpMemoryUsesOpenProcessAndTargetPid:
                 captured_dump_path["path"] = match.group(1)
                 shared = sb.get_shared_folder()
                 assert shared is not None
-                filename = Path(match.group(1)).name
+                filename = PureWindowsPath(match.group(1)).name
                 dump_file = shared / "output" / filename
                 dump_file.write_bytes(_real_minidump_bytes(target_pid))
             return (0, "", "")
@@ -259,7 +259,7 @@ class TestF0021DumpMemoryUsesOpenProcessAndTargetPid:
             if match:
                 shared = sb.get_shared_folder()
                 assert shared is not None
-                filename = Path(match.group(1)).name
+                filename = PureWindowsPath(match.group(1)).name
                 (shared / "output" / filename).write_bytes(_real_minidump_bytes(target_pid))
             return (0, "", "")
 
@@ -311,7 +311,7 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
             if match_path:
                 shared = sb.get_shared_folder()
                 assert shared is not None
-                filename = Path(match_path.group(1)).name
+                filename = PureWindowsPath(match_path.group(1)).name
                 (shared / "output" / filename).write_bytes(_real_minidump_bytes(pid_for_dump))
             return (0, "", "")
 

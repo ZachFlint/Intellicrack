@@ -335,6 +335,14 @@ class ExecutionReport:
         stdout: Standard output captured from the binary.
         stderr: Standard error captured from the binary.
         duration_seconds: Total execution duration in seconds.
+        sandbox_id: Identifier of the sandbox instance that produced this
+            report. Optional so legacy call sites that construct
+            ``ExecutionReport`` without the originating instance ID still
+            work; orchestration code that wires sandbox manager output
+            through to AI provider context should populate it.
+        binary_path: Path of the binary that was executed, as observed by
+            the sandbox. Optional for the same backward-compatibility
+            reason.
         file_changes: File system changes detected.
         registry_changes: Registry changes detected.
         network_activity: Network activity detected.
@@ -350,9 +358,11 @@ class ExecutionReport:
 
     result: ExecutionResult
     exit_code: int
-    stdout: str
-    stderr: str
-    duration_seconds: float
+    stdout: str = ""
+    stderr: str = ""
+    duration_seconds: float = 0.0
+    sandbox_id: str | None = None
+    binary_path: str | None = None
     file_changes: list[FileChange] = field(default_factory=list)
     registry_changes: list[RegistryChange] = field(default_factory=list)
     network_activity: list[NetworkActivity] = field(default_factory=list)

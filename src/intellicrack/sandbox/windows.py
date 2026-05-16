@@ -1956,8 +1956,6 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If memory dump fails or ``target_pid`` is missing/invalid.
         """
-        if sys.platform != "win32":
-            raise SandboxError(_ERR_MEMORY_DUMP_NOT_WINDOWS)
         if self.state.status != "running":
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
         if self._shared_folder is None:

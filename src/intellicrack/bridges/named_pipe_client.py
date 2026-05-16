@@ -181,19 +181,21 @@ class NamedPipeClient:
         call has already returned a real handle, the handle is closed in the
         cancellation path so it does not leak into the operating system.
 
+        The platform check lives in :meth:`_open_handle` (the Win32 boundary)
+        rather than here so cross-platform tests can monkey-patch
+        ``_open_handle`` and exercise the dispatch / locking / cancellation
+        logic without spinning up a real Windows named pipe.
+
         Raises:
-            ToolError: If called on a non-Windows platform, if the connect
-                times out, or if the underlying Win32 calls fail.
+            ToolError: If called on a non-Windows platform (raised by
+                :meth:`_open_handle`), if the connect times out, or if the
+                underlying Win32 calls fail.
             asyncio.CancelledError: Re-raised when the connect is cancelled
                 so callers see normal asyncio cancellation semantics.
             Exception: Any other unexpected error from the underlying
                 thread-pool open is re-raised after the leaked handle (if any)
                 has been scheduled for closure.
         """
-        if sys.platform != "win32":
-            error_message = "Named pipes are only supported on Windows"
-            raise ToolError(error_message)
-
         if self._handle is not None:
             return
 

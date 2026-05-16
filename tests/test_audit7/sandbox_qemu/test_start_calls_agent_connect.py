@@ -225,6 +225,7 @@ class _StartHarness:
                 new=AsyncMock(return_value=["qemu-system-x86_64"]),
             ),
             patch.object(sb, "_connect_and_verify_qmp", new=AsyncMock()),
+            patch.object(sb, "_bootstrap_guest_agent", new=AsyncMock()),
             patch.object(sb, "_verify_qemu_pid", new=AsyncMock()),
             patch.object(sb, "_cleanup", new=AsyncMock()),
             patch(
