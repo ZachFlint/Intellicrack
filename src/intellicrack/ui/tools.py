@@ -650,6 +650,18 @@ class FunctionListPanel(QFrame):
         except (ValueError, IndexError):
             _logger.warning("failed_to_parse_function_item", text=item.text())
 
+    def on_item_double_clicked(self, item: QListWidgetItem) -> None:
+        """Public alias of :meth:`_on_item_double_clicked`.
+
+        Exposes the double-click handler so external callers (UI tests,
+        host application code wiring up alternate event sources) can
+        invoke it without reaching into a private attribute.
+
+        Args:
+            item: The clicked list item.
+        """
+        self._on_item_double_clicked(item)
+
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
 
@@ -736,6 +748,19 @@ class XRefPanel(QFrame):
                 self.xref_selected.emit(address)
             except ValueError:
                 _logger.warning("xref_address_parse_failed", address=address_str)
+
+    def on_item_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        """Public alias of :meth:`_on_item_clicked`.
+
+        Exposes the click handler so external callers (UI tests, host
+        application code wiring up alternate event sources) can invoke
+        it without reaching into a private attribute.
+
+        Args:
+            item: The clicked tree item.
+            column: The clicked column index.
+        """
+        self._on_item_clicked(item, column)
 
     def set_xrefs(
         self,
@@ -1070,6 +1095,17 @@ class ToolOutputPanel(QFrame):
             self.tabs["log"] = log_tab
             self.tab_widget.addTab(log_tab, "Log")
         self.append_tab_content("log", message)
+
+    def log(self, message: str) -> None:
+        """Append a message to the lazily-created Log tab.
+
+        Convenience alias of :meth:`append_log_message` that matches the
+        natural call shape used by host application code and tests.
+
+        Args:
+            message: Message to append to the log tab.
+        """
+        self.append_log_message(message)
 
     def clear_tab(self, tab_name: OutputType) -> None:
         """Clear content of a specific tab.
@@ -1777,6 +1813,18 @@ class ToolOutputPanel(QFrame):
         widget.deleteLater()
         _logger.info("tab_closed", tab_index=index)
 
+    def on_tab_close_requested(self, index: int) -> None:
+        """Public alias of :meth:`_on_tab_close_requested`.
+
+        Exposes the close-handler so external callers (UI tests, host
+        application code wiring up alternate event sources) can invoke
+        it without reaching into a private attribute.
+
+        Args:
+            index: Tab index to close.
+        """
+        self._on_tab_close_requested(index)
+
     def close_embedded_tools(self) -> None:
         """Close all embedded tool instances and null their references."""
         if self._hex_editor_panel is not None:
@@ -1908,6 +1956,19 @@ class ToolOutputPanel(QFrame):
         self.tab_widget.setCurrentWidget(widget)
         _logger.info("tab_reattached", title=title)
 
+    def reattach_panel(self, widget: QWidget, title: str) -> None:
+        """Public alias of :meth:`_reattach_panel`.
+
+        Exposes the re-dock action so external callers (UI tests, host
+        application code that wants to re-attach panels programmatically)
+        can invoke it without reaching into a private attribute.
+
+        Args:
+            widget: The panel widget being returned.
+            title: The tab title to restore.
+        """
+        self._reattach_panel(widget, title)
+
     def _close_other_tabs(self, keep_index: int) -> None:
         """Close all tabs except the one at the given index.
 
@@ -1919,10 +1980,22 @@ class ToolOutputPanel(QFrame):
         for i in indices_to_close:
             self._on_tab_close_requested(i)
 
+    def close_other_tabs(self, keep_index: int) -> None:
+        """Public alias of :meth:`_close_other_tabs`.
+
+        Args:
+            keep_index: Tab index to keep open.
+        """
+        self._close_other_tabs(keep_index)
+
     def _close_all_tabs(self) -> None:
         """Close every tab in the tab widget."""
         for i in range(self.tab_widget.count() - 1, -1, -1):
             self._on_tab_close_requested(i)
+
+    def close_all_tabs(self) -> None:
+        """Public alias of :meth:`_close_all_tabs`."""
+        self._close_all_tabs()
 
     def detach_current_tab(self) -> DetachedPanelWindow | None:
         """Detach the currently active tab into a floating window.

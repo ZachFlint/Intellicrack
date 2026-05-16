@@ -76,7 +76,7 @@ class CalculatorMixin:
         self._calc_results_tree.setHeaderLabels(["Representation", "Value"])
         self._calc_results_tree.setColumnCount(_TREE_COL_COUNT)
         self._calc_results_tree.setRootIsDecorated(show=False)
-        self._calc_results_tree.setAlternatingRowColors(enable=True)
+        self._calc_results_tree.setAlternatingRowColors(True)
         layout.addWidget(self._calc_results_tree)
 
         ieee_box = QGroupBox("IEEE 754")

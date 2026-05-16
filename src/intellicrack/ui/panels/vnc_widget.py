@@ -1702,7 +1702,7 @@ class VNCWidget(QWidget):
         self._pump_loop: asyncio.AbstractEventLoop | None = None
         self._pump_task_ref: asyncio.Task[None] | None = None
         _ = self.framebuffer_updated.connect(self.update)
-        self.setMouseTracking(enable=True)
+        self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
 

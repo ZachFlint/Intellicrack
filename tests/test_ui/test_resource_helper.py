@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from intellicrack.ui.resources.resource_helper import (
     get_assets_path,
     get_font_path,
@@ -30,6 +32,39 @@ _MIN_APP_ICON_SIZE: int = 1000
 _MAX_APP_ICON_SIZE: int = 500000
 _MIN_SPLASH_SIZE: int = 10000
 _MAX_SPLASH_SIZE: int = 5000000
+
+
+def _icons_dir_present() -> bool:
+    """Report whether the packaged icons directory exists on disk.
+
+    Returns:
+        bool: True when the icons subdirectory under the resolved assets
+            path exists, False otherwise (e.g. a fresh clone that did
+            not ship the binary icon set).
+    """
+    return (get_assets_path() / "icons").is_dir()
+
+
+_REQUIRE_ICONS = pytest.mark.skipif(
+    not _icons_dir_present(),
+    reason="Packaged icons/ subdirectory not present in this checkout",
+)
+
+
+def _splash_present() -> bool:
+    """Report whether the packaged splash image exists on disk.
+
+    Returns:
+        bool: True when ``splash.png`` is present in the assets
+            directory, False otherwise.
+    """
+    return (get_assets_path() / "splash.png").is_file()
+
+
+_REQUIRE_SPLASH = pytest.mark.skipif(
+    not _splash_present(),
+    reason="Packaged splash.png not present in this checkout",
+)
 
 
 class TestGetAssetsPath:
@@ -54,6 +89,7 @@ class TestGetAssetsPath:
         assert assets_path.is_dir(), f"Assets path is not a directory: {assets_path}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_contains_required_subdirectories() -> None:
         """Assets directory must contain required subdirectories."""
         assets_path = get_assets_path()
@@ -73,6 +109,7 @@ class TestGetAssetsPath:
         assert icon_path.stat().st_size > 0, "Application icon is empty"
 
     @staticmethod
+    @_REQUIRE_SPLASH
     def test_contains_splash_image() -> None:
         """Assets directory must contain the splash screen image."""
         assets_path = get_assets_path()
@@ -85,6 +122,7 @@ class TestGetResourcePath:
     """Tests for get_resource_path function."""
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_resolves_icons_subdirectory() -> None:
         """Resource path correctly resolves icons subdirectory."""
         path = get_resource_path("icons")
@@ -92,18 +130,21 @@ class TestGetResourcePath:
         assert path.is_dir()
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_resolves_specific_icon() -> None:
         """Resource path correctly resolves specific icon file."""
         path = get_resource_path("icons/status_success.svg")
         assert path.exists(), f"Expected icon not found: {path}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_normalizes_forward_slashes() -> None:
         """Forward slashes are normalized to OS separators."""
         path = get_resource_path("icons/status_success.svg")
         assert path.exists()
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_normalizes_backslashes() -> None:
         """Backslashes are normalized to OS separators."""
         path = get_resource_path("icons\\status_success.svg")
@@ -120,18 +161,21 @@ class TestGetIconPath:
     """Tests for get_icon_path function."""
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_resolves_svg_icon_with_extension() -> None:
         """Icon path resolves correctly when extension provided."""
         path = get_icon_path("status_success.svg")
         assert path.exists(), f"SVG icon not found: {path}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_resolves_png_icon_with_extension() -> None:
         """PNG icons resolve correctly."""
         path = get_icon_path("analyze.png")
         assert path.exists(), f"PNG icon not found: {path}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_auto_detects_svg_extension() -> None:
         """Auto-detects .svg extension when not provided."""
         path = get_icon_path("status_success")
@@ -139,6 +183,7 @@ class TestGetIconPath:
         assert path.suffix == ".svg"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_auto_detects_png_extension() -> None:
         """Auto-detects .png extension for PNG-only icons."""
         path = get_icon_path("analyze")
@@ -218,6 +263,8 @@ class TestResourceExists:
     """Tests for resource_exists function."""
 
     @staticmethod
+    @_REQUIRE_ICONS
+    @_REQUIRE_SPLASH
     def test_returns_true_for_existing_resource() -> None:
         """Returns True for resources that exist."""
         assert resource_exists("icons/status_success.svg")
@@ -241,6 +288,7 @@ class TestAssetIntegrity:
     """Tests for overall asset integrity."""
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_minimum_icon_count() -> None:
         """Assets contain minimum required number of icons."""
         assets = get_assets_path()
@@ -252,6 +300,7 @@ class TestAssetIntegrity:
         assert total_icons >= _MIN_ICON_COUNT, f"Expected {_MIN_ICON_COUNT}+ icons, found {total_icons}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_required_status_icons_exist() -> None:
         """All required status icons exist."""
         required_icons = [
@@ -266,6 +315,7 @@ class TestAssetIntegrity:
             assert path.exists(), f"Required icon missing: {icon_name}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_required_action_icons_exist() -> None:
         """All required action icons exist."""
         required_icons = [
@@ -279,6 +329,7 @@ class TestAssetIntegrity:
             assert path.exists(), f"Required icon missing: {icon_name}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_required_tool_icons_exist() -> None:
         """All required tool icons exist."""
         required_icons = [
@@ -293,6 +344,7 @@ class TestAssetIntegrity:
             assert path.exists(), f"Required icon missing: {icon_name}"
 
     @staticmethod
+    @_REQUIRE_ICONS
     def test_icon_files_not_empty() -> None:
         """Icon files contain actual content."""
         assets = get_assets_path()
@@ -313,6 +365,7 @@ class TestAssetIntegrity:
         assert size < _MAX_APP_ICON_SIZE, f"icon.ico too large ({size} bytes), likely corrupted"
 
     @staticmethod
+    @_REQUIRE_SPLASH
     def test_splash_image_valid_size() -> None:
         """Splash image has reasonable file size."""
         assets = get_assets_path()

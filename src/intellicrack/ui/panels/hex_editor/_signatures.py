@@ -504,7 +504,7 @@ class SignaturesMixin:
         self._sig_results_tree = QTreeWidget()
         self._sig_results_tree.setHeaderLabels(["Name", "Type", "Version", "Offset", "Details"])
         self._sig_results_tree.setRootIsDecorated(show=False)
-        self._sig_results_tree.setAlternatingRowColors(enable=True)
+        self._sig_results_tree.setAlternatingRowColors(True)
         self._sig_results_tree.itemDoubleClicked.connect(self._on_sig_result_double_clicked)
         layout.addWidget(self._sig_results_tree)
 

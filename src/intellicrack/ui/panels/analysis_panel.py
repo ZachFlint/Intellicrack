@@ -88,15 +88,15 @@ class BridgeAnalysisPanel(QWidget):
         header_layout.setSpacing(_HEADER_SPACING)
 
         self._binary_label = QLabel("No binary loaded")
-        self._binary_label.setProperty("heading", value=True)
+        self._binary_label.setProperty("heading", True)
         header_layout.addWidget(self._binary_label, 0, 0, 1, 2)
 
         self._format_label = QLabel("")
-        self._format_label.setProperty("muted", value=True)
+        self._format_label.setProperty("muted", True)
         header_layout.addWidget(self._format_label, 1, 0)
 
         self._arch_label = QLabel("")
-        self._arch_label.setProperty("muted", value=True)
+        self._arch_label.setProperty("muted", True)
         header_layout.addWidget(self._arch_label, 1, 1)
 
         self._bridges_label = QLabel("")
@@ -113,7 +113,7 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table = self._create_table(["Address", "Name", "Size", "Convention", "Return Type"])
         self._sections_table = self._create_table(["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"])
         self._notes_edit = QTextEdit()
-        self._notes_edit.setReadOnly(ro=True)
+        self._notes_edit.setReadOnly(True)
         self._notes_edit.setFont(self._mono_font)
         self._notes_edit.setObjectName("code_preview_text")
 
@@ -144,17 +144,17 @@ class BridgeAnalysisPanel(QWidget):
         table = QTableWidget()
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
-        table.setAlternatingRowColors(enable=True)
+        table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         v_header = table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(v=False)
+            v_header.setVisible(False)
         table.setFont(self._mono_font)
 
         h_header = table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(stretch=True)
+            h_header.setStretchLastSection(True)
             h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         return table

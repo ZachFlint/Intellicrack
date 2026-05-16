@@ -120,7 +120,7 @@ class PatternEditorMixin:
         editor_tabs.addTab(self._pattern_dsl_editor, "DSL")
 
         self._pattern_json_preview = QPlainTextEdit()
-        self._pattern_json_preview.setReadOnly(ro=True)
+        self._pattern_json_preview.setReadOnly(True)
         self._pattern_json_preview.setFont(font)
         editor_tabs.addTab(self._pattern_json_preview, "JSON")
 
@@ -154,7 +154,7 @@ class PatternEditorMixin:
         right_layout.addLayout(action_bar)
 
         self._pattern_error_display = QPlainTextEdit()
-        self._pattern_error_display.setReadOnly(ro=True)
+        self._pattern_error_display.setReadOnly(True)
         self._pattern_error_display.setMaximumHeight(60)
         right_layout.addWidget(self._pattern_error_display)
 
@@ -162,7 +162,7 @@ class PatternEditorMixin:
         right_layout.addWidget(print_label)
 
         self._pattern_print_output = QPlainTextEdit()
-        self._pattern_print_output.setReadOnly(ro=True)
+        self._pattern_print_output.setReadOnly(True)
         self._pattern_print_output.setMaximumHeight(100)
         self._pattern_print_output.setFont(font)
         right_layout.addWidget(self._pattern_print_output)

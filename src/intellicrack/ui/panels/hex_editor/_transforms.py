@@ -268,7 +268,7 @@ class TransformsMixin:
             QPlainTextEdit: Read-only monospace preview pane.
         """
         self._transform_preview_pane = QPlainTextEdit()
-        self._transform_preview_pane.setReadOnly(ro=True)
+        self._transform_preview_pane.setReadOnly(True)
         preview_font = self._transform_preview_pane.font()
         preview_font.setFamily("Consolas")
         preview_font.setPointSize(9)

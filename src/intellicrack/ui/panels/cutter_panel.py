@@ -241,14 +241,14 @@ class CutterPanel(AnalysisPanelBase):
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(ro=True)
+        self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         self._asm_highlighter = AssemblySyntaxHighlighter(self._disasm_view.document())
         tabs.addTab(self._disasm_view, self.tr("Disassembly"))
 
         self._decompiled_view = QPlainTextEdit()
         self._decompiled_view.setFont(fm.get_code_font(10))
-        self._decompiled_view.setReadOnly(ro=True)
+        self._decompiled_view.setReadOnly(True)
         set_max_block_count(self._decompiled_view, 50000)
         self._c_highlighter = CSyntaxHighlighter(self._decompiled_view.document())
         tabs.addTab(self._decompiled_view, "Decompiler")
@@ -386,7 +386,7 @@ class CutterPanel(AnalysisPanelBase):
 
         self.console_output = QPlainTextEdit()
         self.console_output.setFont(fm.get_code_font(9))
-        self.console_output.setReadOnly(ro=True)
+        self.console_output.setReadOnly(True)
         set_max_block_count(self.console_output, 10000)
         layout.addWidget(self.console_output)
 

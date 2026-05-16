@@ -260,7 +260,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(ro=True)
+        self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         layout.addWidget(self._disasm_view)
 
@@ -538,7 +538,7 @@ class X64DbgPanel(AnalysisPanelBase):
         mem_layout.addLayout(mem_toolbar)
         self._mem_dump = QPlainTextEdit()
         self._mem_dump.setFont(fm.get_code_font(10))
-        self._mem_dump.setReadOnly(ro=True)
+        self._mem_dump.setReadOnly(True)
         set_max_block_count(self._mem_dump, 10000)
         mem_layout.addWidget(self._mem_dump)
         return mem_container
@@ -559,7 +559,7 @@ class X64DbgPanel(AnalysisPanelBase):
         console_layout.setSpacing(_PANEL_SPACING)
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(ro=True)
+        self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         console_layout.addWidget(self._console_output)
         self._console_input = QLineEdit()
@@ -742,7 +742,7 @@ class X64DbgPanel(AnalysisPanelBase):
         trace_layout.addLayout(trace_toolbar)
         self._trace_output = QPlainTextEdit()
         self._trace_output.setFont(fm.get_code_font(9))
-        self._trace_output.setReadOnly(ro=True)
+        self._trace_output.setReadOnly(True)
         set_max_block_count(self._trace_output, 50000)
         trace_layout.addWidget(self._trace_output)
         return trace_container

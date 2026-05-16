@@ -102,7 +102,7 @@ class YaraMixin:
 
         self._yara_results_tree = QTreeWidget()
         self._yara_results_tree.setHeaderLabels(["Rule", "Offset", "Identifier", "Match Data"])
-        self._yara_results_tree.setAlternatingRowColors(enable=True)
+        self._yara_results_tree.setAlternatingRowColors(True)
         self._yara_results_tree.itemDoubleClicked.connect(self._on_yara_result_double_clicked)
         layout.addWidget(self._yara_results_tree)
 

@@ -329,11 +329,11 @@ class StackFrameTable(QTableWidget):
 
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.setAlternatingRowColors(enable=True)
+        self.setAlternatingRowColors(True)
         sv_v_header = self.verticalHeader()
         if sv_v_header is not None:
-            sv_v_header.setVisible(v=False)
-        self.setShowGrid(show=False)
+            sv_v_header.setVisible(False)
+        self.setShowGrid(False)
 
         self.cellClicked.connect(self._on_cell_clicked)
         self.cellDoubleClicked.connect(self._on_cell_double_clicked)

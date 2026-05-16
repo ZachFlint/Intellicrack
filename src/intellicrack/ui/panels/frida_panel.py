@@ -181,7 +181,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._console = QPlainTextEdit()
         self._console.setFont(FontManager.get_instance().get_code_font(9))
-        self._console.setReadOnly(ro=True)
+        self._console.setReadOnly(True)
         set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
@@ -1535,7 +1535,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._mem_hex_display = QPlainTextEdit()
         self._mem_hex_display.setFont(FontManager.get_instance().get_code_font(9))
-        self._mem_hex_display.setReadOnly(ro=True)
+        self._mem_hex_display.setReadOnly(True)
         rw_layout.addWidget(self._mem_hex_display)
 
         write_row = QHBoxLayout()

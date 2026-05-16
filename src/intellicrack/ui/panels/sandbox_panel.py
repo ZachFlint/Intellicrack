@@ -240,7 +240,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(ro=True)
+        self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         output_tabs.addTab(self._console_output, "Console")
 

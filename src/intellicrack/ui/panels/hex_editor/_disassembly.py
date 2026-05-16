@@ -114,17 +114,17 @@ class DisassemblyMixin:
         self._disasm_table.setHorizontalHeaderLabels(["Address", "Hex Bytes", "Mnemonic", "Operands"])
         self._disasm_table.setSelectionBehavior(self._disasm_table.SelectionBehavior.SelectRows)
         self._disasm_table.setEditTriggers(self._disasm_table.EditTrigger.NoEditTriggers)
-        self._disasm_table.setAlternatingRowColors(enable=True)
+        self._disasm_table.setAlternatingRowColors(True)
         table_font = self._disasm_table.font()
         table_font.setFamily("Consolas")
         table_font.setPointSize(9)
         self._disasm_table.setFont(table_font)
         h_header = self._disasm_table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(stretch=True)
+            h_header.setStretchLastSection(True)
         v_header = self._disasm_table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(v=False)
+            v_header.setVisible(False)
         self._disasm_table.cellDoubleClicked.connect(self._on_disasm_row_double_clicked)
         layout.addWidget(self._disasm_table)
 

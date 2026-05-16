@@ -529,7 +529,7 @@ class HexdumpTab(QWidget):
 
         self._output = QPlainTextEdit()
         self._output.setFont(fm.get_code_font(9))
-        self._output.setReadOnly(ro=True)
+        self._output.setReadOnly(True)
         layout.addWidget(self._output)
 
         self._bridge: CutterBridge | None = None
@@ -624,7 +624,7 @@ class ESILConsoleTab(QWidget):
 
         self._output = QPlainTextEdit()
         self._output.setFont(fm.get_code_font(9))
-        self._output.setReadOnly(ro=True)
+        self._output.setReadOnly(True)
         layout.addWidget(self._output)
 
         input_row = QHBoxLayout()

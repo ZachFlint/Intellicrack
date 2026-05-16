@@ -105,7 +105,7 @@ class EntropyGraphWidget(QWidget):
         self._entropy_values: list[float] = []
         self._block_size: int = 4096
         self.setMinimumHeight(120)
-        self.setMouseTracking(enable=True)
+        self.setMouseTracking(True)
 
     def set_data(self, entropy_values: list[float], block_size: int) -> None:
         """Load new entropy data and trigger a repaint.
@@ -212,7 +212,7 @@ class ByteDistributionWidget(QWidget):
         self._log_scale: bool = False
         self._hovered_bar: int = -1
         self.setMinimumHeight(100)
-        self.setMouseTracking(enable=True)
+        self.setMouseTracking(True)
 
     def set_data(self, counts: list[int]) -> None:
         """Load byte frequency data and repaint.
@@ -523,7 +523,7 @@ class _DigramMatrixWidget(QWidget):
         self._matrix = matrix_data
         self._max_val = max(matrix_data) if matrix_data else 1
         self.setMinimumSize(QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE))
-        self.setMouseTracking(enable=True)
+        self.setMouseTracking(True)
 
     @override
     def minimumSizeHint(self) -> QSize:

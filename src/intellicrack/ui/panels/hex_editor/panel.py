@@ -582,7 +582,7 @@ class HexEditorPanel(
         tree = QTreeWidget()
         tree.setHeaderLabels(headers)
         tree.setRootIsDecorated(show=False)
-        tree.setAlternatingRowColors(enable=True)
+        tree.setAlternatingRowColors(True)
         return tree
 
     def load_file(self, file_path: Path | str) -> bool:

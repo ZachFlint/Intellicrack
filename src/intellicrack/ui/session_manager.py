@@ -505,10 +505,10 @@ class SessionManagerDialog(QDialog):
         self._session_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         sm_v_header = self._session_table.verticalHeader()
         if sm_v_header is not None:
-            sm_v_header.setVisible(v=False)
+            sm_v_header.setVisible(False)
         header = self._session_table.horizontalHeader()
         if header is not None:
-            header.setStretchLastSection(stretch=True)
+            header.setStretchLastSection(True)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
@@ -617,7 +617,7 @@ class SessionManagerDialog(QDialog):
         group = QGroupBox("Preview")
         layout = QVBoxLayout()
         self._preview_text = QTextEdit()
-        self._preview_text.setReadOnly(ro=True)
+        self._preview_text.setReadOnly(True)
         self._preview_text.setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; font-size: 10px;")
         layout.addWidget(self._preview_text)
         group.setLayout(layout)

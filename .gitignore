@@ -391,11 +391,20 @@ backup/
 # ==============================================================================
 # SPECIFIC FILES TO IGNORE
 # ==============================================================================
-# Screenshots and images (except documentation)
+# Screenshots and images (except documentation and packaged assets)
 *.png
 *.jpg
 *.jpeg
 *.gif
+!src/intellicrack/assets/**/*.png
+!src/intellicrack/assets/**/*.jpg
+!src/intellicrack/assets/**/*.jpeg
+!src/intellicrack/assets/**/*.gif
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.jpeg
+!docs/**/*.gif
+!README*.png
 
 # Docker and containerization
 .docker/
