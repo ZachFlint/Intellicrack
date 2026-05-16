@@ -40,6 +40,7 @@ Findings covered:
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import os
 from typing import TYPE_CHECKING
@@ -216,13 +217,26 @@ class _StatusEmissionRecorder:
 
 
 class TestHxDButtonHandlerCleanedUp:
-    """F-0001 was resolved upstream; the dangling ``add_hxd_tab`` reference is gone."""
+    """``on_open_hxd`` resolves ``add_hxd_tab`` against the real public API.
+
+    The audit5 F-0001 finding was originally about a *dangling*
+    reference: ``on_open_hxd`` called a method that did not exist on
+    ``ToolOutputPanel``. The follow-up audit added ``add_hxd_tab`` as a
+    real public method, so the reference is now legitimate. This test
+    asserts the bound method exists rather than asserting the symbol is
+    absent from the source.
+    """
 
     @staticmethod
-    def test_on_open_hxd_no_longer_references_missing_method() -> None:
-        """The ``on_open_hxd`` source no longer references ``add_hxd_tab``."""
+    def test_on_open_hxd_references_real_add_hxd_tab_method() -> None:
+        """``on_open_hxd`` source references an ``add_hxd_tab`` that actually exists."""
         source = inspect.getsource(MainWindow.on_open_hxd)
-        assert "add_hxd_tab" not in source
+        assert "add_hxd_tab" in source
+
+        tool_panel_cls = importlib.import_module(
+            "intellicrack.ui.tools",
+        ).ToolOutputPanel
+        assert callable(getattr(tool_panel_cls, "add_hxd_tab", None))
 
 
 # ---------------------------------------------------------------------------
