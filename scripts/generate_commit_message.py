@@ -621,8 +621,9 @@ def _subsplit_large_file_diff(file_diff: str) -> list[str]:
                 sub_chunks.append(file_header + "".join(current_hunks))
                 current_hunks = []
                 current_size = header_size
-            big_pieces = _split_text_by_lines(file_header + hunk, max_chars)
-            sub_chunks.extend(big_pieces)
+            hunk_budget = max(max_chars - header_size, 1)
+            big_pieces = _split_text_by_lines(hunk, hunk_budget)
+            sub_chunks.extend(file_header + piece for piece in big_pieces)
             continue
 
         if current_size + len(hunk) > max_chars and current_hunks:

@@ -110,7 +110,7 @@ class TestBridgeImportPatches:
         dst.write_bytes(payload)
 
         fresh: HexEditorBridge = HexEditorBridge()
-        asyncio.get_event_loop().run_until_complete(fresh.initialize())
+        _run(fresh.initialize())
         _run(fresh.open_file(str(dst)))
         count: int = _run(fresh.import_patches(b64_patches))
         assert isinstance(count, int)
@@ -139,7 +139,7 @@ class TestBridgePatchRoundtrip:
         dst.write_bytes(payload)
 
         fresh = HexEditorBridge()
-        asyncio.get_event_loop().run_until_complete(fresh.initialize())
+        _run(fresh.initialize())
         _run(fresh.open_file(str(dst)))
         _run(fresh.import_patches(b64_patches))
 

@@ -24,6 +24,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, TypedDict, cast
 
+import psutil
 import pytest
 
 from intellicrack.core.process_manager import (
@@ -585,8 +586,13 @@ class TestTerminateExternalPid:
 
         assert result is True
 
-        exit_code = proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
-        assert exit_code != 0
+        # ProcessManager._terminate_tree_with_psutil already reaps the
+        # child via psutil.wait_procs, so subprocess.Popen.wait() returns
+        # 0 instead of the real signal-encoded exit code. Verify
+        # termination directly via psutil.pid_exists() before draining
+        # the Popen pipes.
+        assert not psutil.pid_exists(pid)
+        proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
 
 
 class TestProcessCleanup:

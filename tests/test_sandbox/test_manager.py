@@ -37,6 +37,31 @@ _MAX_INSTANCES: Final[int] = 3
 _STALE_THRESHOLD: Final[int] = 3600
 
 
+def _run_async(coro: object) -> object:
+    """Run an async coroutine synchronously for test convenience.
+
+    Uses the current event loop when available, otherwise creates and
+    installs a fresh one. Required for Python 3.13 + pytest-asyncio
+    strict mode where ``asyncio.get_event_loop()`` no longer auto-creates
+    a loop on the main thread.
+
+    Args:
+        coro: An awaitable coroutine object.
+
+    Returns:
+        object: The result of the coroutine.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+
 class _TestableManager:
     """SandboxManager-like class that uses InMemorySandbox for create().
 
@@ -336,28 +361,27 @@ class TestManagerCreate:
     def test_create_returns_instance(self) -> None:
         """create() returns an instance with an ID."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(mgr.create())
+        inst = _run_async(mgr.create())
         assert inst.id is not None
 
     def test_create_adds_to_list(self) -> None:
         """Created instance appears in manager's instance list."""
         mgr = _TestableManager()
-        asyncio.get_event_loop().run_until_complete(mgr.create())
+        _run_async(mgr.create())
         assert len(mgr.instances) == 1
 
     def test_max_instances_raises(self) -> None:
         """Exceeding max_instances raises SandboxError."""
         mgr = _TestableManager(max_instances=2)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.create())
+        _run_async(mgr.create())
+        _run_async(mgr.create())
         with pytest.raises(SandboxError, match="Maximum"):
-            loop.run_until_complete(mgr.create())
+            _run_async(mgr.create())
 
     def test_auto_start_starts_sandbox(self) -> None:
         """auto_start=True sets status to running."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(
+        inst = _run_async(
             mgr.create(auto_start=True),
         )
         assert inst.sandbox.state.status == "running"
@@ -365,7 +389,7 @@ class TestManagerCreate:
     def test_auto_start_false_stays_stopped(self) -> None:
         """auto_start=False keeps status as stopped."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(
+        inst = _run_async(
             mgr.create(auto_start=False),
         )
         assert inst.sandbox.state.status == "stopped"
@@ -377,15 +401,14 @@ class TestManagerGet:
     def test_existing_returns_instance(self) -> None:
         """get() returns the instance for a valid ID."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create())
-        found = loop.run_until_complete(mgr.get(inst.id))
+        inst = _run_async(mgr.create())
+        found = _run_async(mgr.get(inst.id))
         assert found is inst
 
     def test_nonexistent_returns_none(self) -> None:
         """get() returns None for an invalid ID."""
         mgr = _TestableManager()
-        found = asyncio.get_event_loop().run_until_complete(mgr.get("no-such-id"))
+        found = _run_async(mgr.get("no-such-id"))
         assert found is None
 
 
@@ -395,24 +418,22 @@ class TestManagerDestroy:
     def test_removes_instance(self) -> None:
         """destroy() removes the instance from the manager."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.destroy(inst.id))
+        inst = _run_async(mgr.create())
+        _run_async(mgr.destroy(inst.id))
         assert len(mgr.instances) == 0
 
     def test_nonexistent_raises(self) -> None:
         """destroy() raises SandboxError for unknown ID."""
         mgr = _TestableManager()
         with pytest.raises(SandboxError, match="not found"):
-            asyncio.get_event_loop().run_until_complete(mgr.destroy("bad-id"))
+            _run_async(mgr.destroy("bad-id"))
 
     def test_destroy_all_empties(self) -> None:
         """destroy_all() removes all instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.destroy_all())
+        _run_async(mgr.create())
+        _run_async(mgr.create())
+        _run_async(mgr.destroy_all())
         assert len(mgr.instances) == 0
 
 
@@ -422,7 +443,7 @@ class TestManagerRunBinary:
     def test_returns_instance_and_report(self) -> None:
         """run_binary() returns a (instance, report) tuple."""
         mgr = _TestableManager()
-        inst, report = asyncio.get_event_loop().run_until_complete(
+        inst, report = _run_async(
             mgr.run_binary(Path("test.exe")),
         )
         assert inst is not None
@@ -432,7 +453,7 @@ class TestManagerRunBinary:
     def test_stores_last_report(self) -> None:
         """run_binary() stores the report on the instance."""
         mgr = _TestableManager()
-        inst, report = asyncio.get_event_loop().run_until_complete(
+        inst, report = _run_async(
             mgr.run_binary(Path("test.exe")),
         )
         assert inst.last_report is report
@@ -440,7 +461,7 @@ class TestManagerRunBinary:
     def test_creates_new_instance(self) -> None:
         """run_binary() adds an instance to the manager."""
         mgr = _TestableManager()
-        asyncio.get_event_loop().run_until_complete(
+        _run_async(
             mgr.run_binary(Path("test.exe")),
         )
         assert len(mgr.instances) == 1
@@ -452,7 +473,7 @@ class TestManagerStatus:
     def test_status_has_expected_keys(self) -> None:
         """get_status() returns dict with required keys."""
         mgr = _TestableManager()
-        status = asyncio.get_event_loop().run_until_complete(mgr.get_status())
+        status = _run_async(mgr.get_status())
         assert "max_instances" in status
         assert "active_count" in status
         assert "total_count" in status
@@ -461,9 +482,8 @@ class TestManagerStatus:
     def test_active_count_correct(self) -> None:
         """active_count reflects running instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create(auto_start=True))
-        loop.run_until_complete(mgr.create(auto_start=False))
+        _run_async(mgr.create(auto_start=True))
+        _run_async(mgr.create(auto_start=False))
         assert mgr.active_count == 1
 
 
@@ -473,18 +493,16 @@ class TestManagerCleanup:
     def test_removes_old_instances(self) -> None:
         """cleanup_stale removes instances idle longer than threshold."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create(auto_start=True))
+        inst = _run_async(mgr.create(auto_start=True))
         inst.last_used = datetime.now(UTC) - timedelta(seconds=7200)
-        removed = loop.run_until_complete(mgr.cleanup_stale(max_idle_seconds=3600))
+        removed = _run_async(mgr.cleanup_stale(max_idle_seconds=3600))
         assert removed == 1
         assert len(mgr.instances) == 0
 
     def test_keeps_recent_instances(self) -> None:
         """cleanup_stale keeps recently-used instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create(auto_start=True))
-        removed = loop.run_until_complete(mgr.cleanup_stale(max_idle_seconds=3600))
+        _run_async(mgr.create(auto_start=True))
+        removed = _run_async(mgr.cleanup_stale(max_idle_seconds=3600))
         assert removed == 0
         assert len(mgr.instances) == 1

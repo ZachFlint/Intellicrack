@@ -575,7 +575,7 @@ def bridge() -> HexEditorBridge:
         HexEditorBridge: An initialized HexEditorBridge.
     """
     b = HexEditorBridge()
-    asyncio.get_event_loop().run_until_complete(b.initialize())
+    run_async(b.initialize())
     return b
 
 
@@ -590,7 +590,7 @@ def loaded_bridge(bridge: HexEditorBridge, pe_binary: Path) -> HexEditorBridge:
     Returns:
         HexEditorBridge: The bridge with the PE file opened.
     """
-    asyncio.get_event_loop().run_until_complete(bridge.open_file(str(pe_binary)))
+    run_async(bridge.open_file(str(pe_binary)))
     return bridge
 
 

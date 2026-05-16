@@ -230,9 +230,16 @@ class OllamaProvider(LLMProviderBase):
             if self._local_client:
                 await self._local_client.aclose()
                 self._local_client = None
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError) as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError, OverflowError, ValueError) as e:
             self._local_available = False
             self._logger.warning("local_ollama_unavailable", error=str(e))
+            if self._local_client:
+                await self._local_client.aclose()
+                self._local_client = None
+        except BaseExceptionGroup as eg:
+            self._local_available = False
+            inner = eg.exceptions[0] if eg.exceptions else eg
+            self._logger.warning("local_ollama_unavailable", error=str(inner))
             if self._local_client:
                 await self._local_client.aclose()
                 self._local_client = None
@@ -257,11 +264,23 @@ class OllamaProvider(LLMProviderBase):
             if self._cloud_client:
                 await self._cloud_client.aclose()
                 self._cloud_client = None
-        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError) as e:
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError, OverflowError, ValueError) as e:
             self._cloud_available = False
             self._logger.warning(
                 "cloud_ollama_unavailable",
                 error=str(e),
+                url=self.CLOUD_API_URL,
+                hint="Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
+            )
+            if self._cloud_client:
+                await self._cloud_client.aclose()
+                self._cloud_client = None
+        except BaseExceptionGroup as eg:
+            self._cloud_available = False
+            inner = eg.exceptions[0] if eg.exceptions else eg
+            self._logger.warning(
+                "cloud_ollama_unavailable",
+                error=str(inner),
                 url=self.CLOUD_API_URL,
                 hint="Set INTELLICRACK_OLLAMA_CLOUD_URL to a valid remote Ollama endpoint",
             )

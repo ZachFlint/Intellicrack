@@ -49,12 +49,17 @@ import os
 import tempfile
 import tracemalloc
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
-import intellicrack_hexcore
 import pytest
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
+
+
+intellicrack_hexcore: Any = pytest.importorskip(
+    "intellicrack_hexcore",
+    reason="intellicrack_hexcore native module not built",
+)
 
 
 if TYPE_CHECKING:

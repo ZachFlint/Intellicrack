@@ -46,6 +46,31 @@ _TEST_ADDRESS: Final[int] = 0x401000
 _MIN_DESC_LEN: Final[int] = 5
 
 
+def _run_async(coro: object) -> object:
+    """Run an async coroutine synchronously for test convenience.
+
+    Uses the current event loop when available, otherwise creates and
+    installs a fresh one. Required for Python 3.13 + pytest-asyncio
+    strict mode where ``asyncio.get_event_loop()`` no longer auto-creates
+    a loop on the main thread.
+
+    Args:
+        coro: An awaitable coroutine object.
+
+    Returns:
+        object: The result of the coroutine.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+
 class _CommandRecorder:
     """r2pipe stand-in that records commands and returns configurable JSON.
 
@@ -191,7 +216,7 @@ def loaded_bridge(recorder: _CommandRecorder) -> CutterBridge:
     """
     b = CutterBridge()
     b.r2 = _as_r2pipe(recorder)
-    asyncio.get_event_loop().run_until_complete(b.analyze())
+    _run_async(b.analyze())
     recorder.commands.clear()
     return b
 

@@ -168,10 +168,14 @@ def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[
 def project_root() -> Path:
     """Get the project root directory.
 
+    Resolves the repository root relative to this conftest file so the
+    suite works on any host (Windows dev box, Linux CI, Docker sandbox,
+    macOS) without depending on a hardcoded developer-machine path.
+
     Returns:
         Path: Path to the Intellicrack project root.
     """
-    return Path("D:/Intellicrack")
+    return Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture(scope="session")

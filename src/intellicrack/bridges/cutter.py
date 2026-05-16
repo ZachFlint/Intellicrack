@@ -78,8 +78,7 @@ _ERR_CMD_TIMEOUT = "cutter command timed out"
 _ERR_INVALID_R2_INPUT = "input contains rizin command-control characters"
 _ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
 _BITS_64 = 64
-_R2_COMMAND_TIMEOUT: float = 60.0
-R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
+R2_COMMAND_TIMEOUT: float = 60.0
 
 _RZ_64BIT_ARCHES: frozenset[str] = frozenset(
     {
@@ -895,18 +894,19 @@ class CutterBridge(StaticAnalysisBridge):
         if self._r2 is None:
             _logger.warning("_r2_cmd_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
+        timeout = R2_COMMAND_TIMEOUT
         try:
             result = await asyncio.wait_for(
                 asyncio.to_thread(self._r2.cmd, command),
-                timeout=_R2_COMMAND_TIMEOUT,
+                timeout=timeout,
             )
         except TimeoutError:
             _logger.warning(
                 "r2_command_timeout",
                 command=command,
-                timeout=_R2_COMMAND_TIMEOUT,
+                timeout=timeout,
             )
-            msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
+            msg = f"{_ERR_CMD_TIMEOUT} after {timeout}s: {command}"
             raise ToolError(msg) from None
         except (OSError, RuntimeError, ValueError) as e:
             _logger.warning("r2_command_failed", command=command, error=str(e))

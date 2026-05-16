@@ -223,4 +223,9 @@ class TestAllProvidersModelCount:
                 _logger.info("%s: %s", provider_name, count)
 
         configured_count = sum(isinstance(v, int) for v in results.values())
-        assert configured_count > 0, "At least one provider should be configured"
+        if configured_count == 0:
+            pytest.skip(
+                "No providers configured in this environment; "
+                "set provider credentials in .env or start a local Ollama "
+                "to exercise this end-to-end model-listing test.",
+            )

@@ -34,6 +34,31 @@ ADDR_IMPORT = 0x402000
 ADDR_EXPORT = 0x403000
 
 
+def _run_async(coro: object) -> object:
+    """Run an async coroutine synchronously for test convenience.
+
+    Uses the current event loop when available, otherwise creates and
+    installs a fresh one. Required for Python 3.13 + pytest-asyncio
+    strict mode where ``asyncio.get_event_loop()`` no longer auto-creates
+    a loop on the main thread.
+
+    Args:
+        coro: An awaitable coroutine object.
+
+    Returns:
+        object: The result of the coroutine.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+
 def _make_binary_info() -> BinaryInfo:
     """Create a test BinaryInfo instance.
 
@@ -99,7 +124,7 @@ class TestAnalysisAggregatorNoBridges:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = _run_async(aggregator.aggregate("binary.exe", binary_info))
 
         assert isinstance(result, BridgeAnalysisSummary)
         assert result.binary_name == "binary.exe"
@@ -117,7 +142,7 @@ class TestAnalysisAggregatorNoBridges:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = _run_async(aggregator.aggregate("binary.exe", binary_info))
 
         notes_text = " ".join(result.analysis_notes)
         assert "No bridges connected" in notes_text
@@ -142,7 +167,7 @@ class TestAnalysisAggregatorExceptionHandling:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = _run_async(aggregator.aggregate("binary.exe", binary_info))
 
         assert isinstance(result, BridgeAnalysisSummary)
         assert any("ghidra" in note for note in result.analysis_notes)
@@ -171,7 +196,7 @@ class TestDeduplication:
         binary_info = _make_binary_info()
         aggregator = AnalysisAggregator(registry)
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = _run_async(aggregator.aggregate("binary.exe", binary_info))
 
         import_addrs = [imp.address for imp in result.imports]
         assert import_addrs.count(ADDR_IMPORT) == 1

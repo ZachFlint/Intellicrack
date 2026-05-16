@@ -32,7 +32,19 @@ _MAX_TOKENS: Final[int] = 4096
 _RESPONSE_TIME_A: Final[float] = 100.0
 _RESPONSE_TIME_B: Final[float] = 200.0
 _EXPECTED_AVG: Final[float] = 150.0
-_STATS_KEYS: Final[int] = 6
+_STATS_KEYS: Final[int] = 10
+_EXPECTED_STATS_FIELDS: Final[frozenset[str]] = frozenset({
+    "total_requests",
+    "total_tool_calls",
+    "successful_tool_calls",
+    "failed_tool_calls",
+    "total_tokens_used",
+    "provider_prompt_tokens",
+    "provider_completion_tokens",
+    "provider_total_tokens",
+    "thinking_blocks_collected",
+    "average_response_time_ms",
+})
 _DESTRUCTIVE_COUNT: Final[int] = 12
 _CUSTOM_MAX_ITER: Final[int] = 5
 _FLOAT_TOLERANCE: Final[float] = 1e-9
@@ -105,8 +117,7 @@ def test_stats_to_dict() -> None:
     stats.record_response_time(_RESPONSE_TIME_A)
     d = stats.to_dict()
     assert len(d) == _STATS_KEYS
-    assert "total_requests" in d
-    assert "average_response_time_ms" in d
+    assert set(d) == _EXPECTED_STATS_FIELDS
 
 
 def test_orchestrator_initial_state(tmp_path: Path) -> None:

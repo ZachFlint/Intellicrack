@@ -15,11 +15,16 @@ from __future__ import annotations
 
 import contextlib
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 import pytest_asyncio
-import torch
+
+
+torch: Any = pytest.importorskip(
+    "torch",
+    reason="PyTorch is not installed; local XPU inference tests require torch",
+)
 
 from intellicrack.core.types import (
     Message,
