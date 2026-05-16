@@ -137,9 +137,9 @@ class TestToolbarButtonsIntegration:
             patched_window: MainWindow fixture with SandboxManager patched out.
         """
         window = patched_window
-        assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
-        assert hasattr(window, "_cutter_btn"), "Cutter button not found"
-        assert hasattr(window, "_hxd_btn"), "HxD button not found"
+        assert hasattr(window, "x64dbg_btn"), "x64dbg button not found"
+        assert hasattr(window, "cutter_btn"), "Cutter button not found"
+        assert hasattr(window, "hxd_btn"), "HxD button not found"
 
         x64dbg_btn: object = window.x64dbg_btn
         cutter_btn: object = window.cutter_btn

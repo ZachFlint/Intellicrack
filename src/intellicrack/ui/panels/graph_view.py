@@ -481,6 +481,25 @@ class CFGGraphScene(QGraphicsScene):
 
         return dict(layers)
 
+    @staticmethod
+    def compute_layers(
+        block_map: dict[int, dict[str, Any]],
+    ) -> dict[int, list[int]]:
+        """Public alias of :meth:`_compute_layers`.
+
+        Exposes the BFS layer computation so layout-validation tests and
+        external callers can drive the algorithm without reaching into a
+        private attribute.
+
+        Args:
+            block_map: Mapping of block address to block data.
+
+        Returns:
+            dict[int, list[int]]: Dict mapping layer index to list of
+                block addresses.
+        """
+        return CFGGraphScene._compute_layers(block_map)
+
 
 class CFGGraphView(QGraphicsView):
     """Zoomable, pannable graphics view for CFG visualization.

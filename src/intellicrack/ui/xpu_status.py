@@ -124,6 +124,7 @@ class XPUStatusDialog(QDialog):
         form = QFormLayout()
 
         self._status_label = QLabel("Checking...")
+        self.status_label = self._status_label
         form.addRow("Status:", self._status_label)
 
         self.device_name_label = QLabel("--")

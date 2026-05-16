@@ -1306,6 +1306,56 @@ class ToolOutputPanel(QFrame):
         else:
             return self._x64dbg_widget
 
+    def add_hxd_tab(self) -> QWidget | None:
+        """Add the HxD hex editor as a native panel tab.
+
+        Looks up the HxD executable via the shared finder and, when
+        present, instantiates :class:`HxDPanel`, attaches it to the
+        tab widget, and registers it under ``embedded_tools["hxd"]``.
+        Returns ``None`` (and logs at debug) when HxD is not installed,
+        so callers can surface a "tool not available" warning instead
+        of crashing.
+
+        Returns:
+            QWidget | None: The created HxD panel widget, the already
+                attached one on a second call, or ``None`` when HxD
+                isn't reachable.
+        """
+        existing = self.embedded_tools.get("hxd")
+        if existing is not None:
+            return existing
+
+        try:
+            from intellicrack.ui.panels.hxd_panel import (  # noqa: PLC0415
+                HxDPanel,
+                find_hxd_executable,
+            )
+        except (RuntimeError, ImportError) as exc:
+            _logger.debug("hxd_panel_import_failed", error=str(exc))
+            return None
+
+        if find_hxd_executable() is None:
+            _logger.debug("hxd_panel_skipped_executable_not_found")
+            return None
+
+        try:
+            panel = HxDPanel()
+        except (RuntimeError, OSError) as exc:
+            _logger.warning("hxd_panel_construction_failed", error=str(exc))
+            return None
+
+        try:
+            self.tab_widget.addTab(panel, "HxD")
+            self.embedded_tools["hxd"] = panel
+        except (RuntimeError, AttributeError) as exc:
+            _logger.warning("hxd_panel_tab_register_failed", error=str(exc))
+            panel.cleanup()
+            panel.deleteLater()
+            return None
+
+        _logger.info("hxd_tab_added", tab="HxD")
+        return panel
+
     def add_cutter_tab(self) -> CutterWidgetProtocol | None:
         """Add the Cutter reverse engineering panel as a native tab.
 
@@ -1589,6 +1639,35 @@ class ToolOutputPanel(QFrame):
         success = self._hex_editor_panel.load_file(file_path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._hex_editor_panel))
+        return success
+
+    def open_in_hxd(self, file_path: Path | str) -> bool:
+        """Open a file in the external HxD hex editor.
+
+        Creates the HxD tab on demand via :meth:`add_hxd_tab` and asks
+        the panel to load ``file_path``. Returns ``False`` when HxD is
+        not installed (no executable resolvable) or the panel could not
+        be created.
+
+        Args:
+            file_path: Path to the file to open.
+
+        Returns:
+            bool: True if the file was opened successfully.
+        """
+        widget = self.embedded_tools.get("hxd") or self.add_hxd_tab()
+        if widget is None:
+            return False
+
+        load_file: object = getattr(widget, "load_file", None)
+        if not callable(load_file):
+            _logger.warning("hxd_panel_missing_load_file")
+            return False
+
+        success_raw = load_file(file_path)
+        success = bool(success_raw)
+        if success:
+            self._activate_tab_by_widget(cast("QWidget", widget))
         return success
 
     def open_in_x64dbg(

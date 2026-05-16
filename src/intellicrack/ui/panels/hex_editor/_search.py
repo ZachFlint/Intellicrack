@@ -413,7 +413,7 @@ class SearchMixin:
                 frame,
             ),
         )
-        self._numeric_max_input.setVisible(visible=False)
+        self._numeric_max_input.setVisible(False)
         layout.addWidget(self._numeric_max_input)
 
         search_btn = QPushButton("Search")

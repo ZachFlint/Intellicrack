@@ -99,7 +99,7 @@ class ComparisonMixin:
 
         self._diff_results_tree = QTreeWidget()
         self._diff_results_tree.setHeaderLabels(["Offset", "Length", "Type", "Details"])
-        self._diff_results_tree.setRootIsDecorated(show=False)
+        self._diff_results_tree.setRootIsDecorated(False)
         self._diff_results_tree.setAlternatingRowColors(True)
         self._diff_results_tree.itemDoubleClicked.connect(self._on_diff_item_double_clicked)
         layout.addWidget(self._diff_results_tree)

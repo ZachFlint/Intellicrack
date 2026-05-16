@@ -696,7 +696,7 @@ class SessionManagerDialog(QDialog):
                 for col in range(4):
                     if item := self._session_table.item(row, col):
                         font = item.font()
-                        font.setBold(enable=True)
+                        font.setBold(True)
                         item.setFont(font)
 
         _logger.info("session_list_refreshed", count=len(self._sessions))

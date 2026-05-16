@@ -350,11 +350,11 @@ class HexEditorPanel(
         self._main_vsplit.addWidget(hsplit)
 
         self._pattern_frame = self._build_pattern_editor()
-        self._pattern_frame.setVisible(visible=False)
+        self._pattern_frame.setVisible(False)
         self._main_vsplit.addWidget(self._pattern_frame)
 
         self._numeric_search_frame = self._build_numeric_search_panel()
-        self._numeric_search_frame.setVisible(visible=False)
+        self._numeric_search_frame.setVisible(False)
         self._main_vsplit.addWidget(self._numeric_search_frame)
 
         if self._search_mode_combo is not None:
@@ -550,7 +550,7 @@ class HexEditorPanel(
         hash_row.addWidget(custom_crc_btn)
         hashes_layout.addLayout(hash_row)
         self._hash_result_label = QLabel("")
-        self._hash_result_label.setWordWrap(on=True)
+        self._hash_result_label.setWordWrap(True)
         self._hash_result_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hashes_layout.addWidget(self._hash_result_label)
         hash_sel_btn = QPushButton("Hash Selection")
@@ -581,7 +581,7 @@ class HexEditorPanel(
         """
         tree = QTreeWidget()
         tree.setHeaderLabels(headers)
-        tree.setRootIsDecorated(show=False)
+        tree.setRootIsDecorated(False)
         tree.setAlternatingRowColors(True)
         return tree
 

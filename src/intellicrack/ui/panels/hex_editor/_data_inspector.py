@@ -302,7 +302,7 @@ class DataInspectorMixin:
         layout.addLayout(encode_row)
 
         self._encode_output = QLabel("")
-        self._encode_output.setWordWrap(on=True)
+        self._encode_output.setWordWrap(True)
         layout.addWidget(self._encode_output)
 
         return box

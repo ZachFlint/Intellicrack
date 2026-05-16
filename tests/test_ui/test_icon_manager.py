@@ -19,6 +19,7 @@ from intellicrack.ui.resources.icon_manager import (
     UNICODE_FALLBACK,
     IconManager,
 )
+from intellicrack.ui.resources.resource_helper import get_assets_path
 
 
 _ICON_SIZE_24: int = 24
@@ -26,6 +27,12 @@ _ICON_SIZE_48: int = 48
 _ICON_SIZE_32: int = 32
 _ICON_SIZE_16: int = 16
 _MAX_PREVIEW_ICONS: int = 20
+
+
+pytestmark = pytest.mark.skipif(
+    not (get_assets_path() / "icons").is_dir(),
+    reason="Packaged icons/ subdirectory not present in this checkout",
+)
 
 
 @pytest.fixture

@@ -673,6 +673,7 @@ class MainWindow(QMainWindow):
 
         self._add_menu_action(embedded_menu, "Open x64dbg Debugger", self._on_open_x64dbg)
         self._add_menu_action(embedded_menu, "Open Cutter Analysis", self._on_open_cutter)
+        self._add_menu_action(embedded_menu, "Open HxD Hex Editor", self.on_open_hxd)
         self._add_menu_action(embedded_menu, "Open Hex Editor", self._on_open_hex_editor)
         embedded_menu.addSeparator()
         self._add_menu_action(embedded_menu, "Debug Current Binary...", self._on_debug_current_binary)
@@ -2466,15 +2467,17 @@ class MainWindow(QMainWindow):
     def on_open_hxd(self) -> None:
         """Open the HxD hex editor panel.
 
-        Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel during MainWindow initialization. If HxD was installed
-        after launch and no panel was pre-registered, attempts late registration via :meth:`_register_hxd_panel_if_available` before opening
-        the tab.
+        Prefers the pre-registered ``HxDPanel`` instance attached to the
+        tool panel during MainWindow initialization. If HxD was installed
+        after launch and no panel was pre-registered, delegates to
+        :meth:`ToolOutputPanel.add_hxd_tab` for late registration so the
+        tab-bar machinery owns lifecycle.
         """
         try:
-            if self._hxd_panel is None:
-                self._register_hxd_panel_if_available()
+            widget: HxDPanel | object | None = self._hxd_panel
+            if widget is None:
+                widget = self.tool_panel.add_hxd_tab()
 
-            widget: HxDPanel | None = self._hxd_panel
             if widget is None:
                 self._show_tool_error(
                     "HxD",
@@ -2485,7 +2488,8 @@ class MainWindow(QMainWindow):
             tab_idx = self.tool_panel.tab_widget.indexOf(widget)
             if tab_idx >= 0:
                 self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
-            widget.start_tool()
+            if hasattr(widget, "start_tool"):
+                widget.start_tool()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="HxD")
             self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
@@ -2708,9 +2712,17 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Cutter", "Failed to open binary in Cutter")
 
     def _on_hex_edit_current_binary(self) -> None:
-        """Open the currently loaded binary in the hex editor."""
+        """Open the currently loaded binary in HxD (with hex-editor fallback).
+
+        The "Hex Edit Current Binary..." action targets HxD when it's
+        available (per the action's user-facing semantics). If HxD is
+        not installed or refuses the file, fall back to the built-in
+        hex editor so the user always gets a viewer.
+        """
         if self.current_binary is None:
             self._show_no_binary_warning("hex edit")
+            return
+        if self.tool_panel.open_in_hxd(self.current_binary):
             return
         if not self.tool_panel.open_in_hex_editor(self.current_binary):
             self._show_tool_error("Hex Editor", "Failed to open binary in hex editor")
@@ -2750,6 +2762,67 @@ class MainWindow(QMainWindow):
             f"Please load a binary first before attempting to {action} it.",
             QMessageBox.StandardButton.Ok,
         )
+
+    def show_no_binary_warning(self, action: str) -> None:
+        """Public alias of :meth:`_show_no_binary_warning`.
+
+        Args:
+            action: The action being attempted.
+        """
+        self._show_no_binary_warning(action)
+
+    def show_tool_error(self, tool_name: str, message: str) -> None:
+        """Public alias of :meth:`_show_tool_error`.
+
+        Args:
+            tool_name: Name of the tool.
+            message: Error message to display.
+        """
+        self._show_tool_error(tool_name, message)
+
+    def debug_current_binary(self) -> None:
+        """Public alias of :meth:`_on_debug_current_binary`.
+
+        Drives the "Debug Current Binary" menu action so external
+        triggers can invoke it without reaching into a private handler.
+        """
+        self._on_debug_current_binary()
+
+    def on_debug_current_binary(self) -> None:
+        """Public on-prefixed alias of :meth:`_on_debug_current_binary`."""
+        self._on_debug_current_binary()
+
+    def analyze_current_binary(self) -> None:
+        """Public alias of :meth:`_on_analyze_current_binary`.
+
+        Drives the "Analyze Current Binary" menu action so external
+        triggers can invoke it without reaching into a private handler.
+        """
+        self._on_analyze_current_binary()
+
+    def on_analyze_current_binary(self) -> None:
+        """Public on-prefixed alias of :meth:`_on_analyze_current_binary`."""
+        self._on_analyze_current_binary()
+
+    def hex_edit_current_binary(self) -> None:
+        """Public alias of :meth:`_on_hex_edit_current_binary`.
+
+        Drives the "Hex Edit Current Binary" menu action so external
+        triggers can invoke it without reaching into a private handler.
+        """
+        self._on_hex_edit_current_binary()
+
+    def on_hex_edit_current_binary(self) -> None:
+        """Public on-prefixed alias of :meth:`_on_hex_edit_current_binary`."""
+        self._on_hex_edit_current_binary()
+
+    def load_binary(self, path: Path) -> None:
+        """Public alias of :meth:`_load_binary`.
+
+        Args:
+            path: Filesystem path of the binary to load.
+        """
+        self._load_binary(path)
 
     def _on_provider_changed(self, index: int) -> None:
         """Handle provider selection change.
@@ -2883,9 +2956,13 @@ class MainWindow(QMainWindow):
             self._hxd_panel = None
 
         try:
-            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+            import asyncio  # noqa: PLC0415
 
-            run_bridge_coroutine(self.sandbox_manager.destroy_all())
+            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine  # noqa: PLC0415
+
+            destroy_result = self.sandbox_manager.destroy_all()
+            if asyncio.iscoroutine(destroy_result):
+                run_bridge_coroutine(destroy_result)
         except (RuntimeError, OSError) as e:
             _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))
 

@@ -396,17 +396,127 @@ class SandboxPanel(AnalysisPanelBase):
         The supplied manager replaces the ``SandboxBridge``'s lazy
         manager slot, so any sandbox instances it already owns are
         directly accessible through the bridge API used by this panel.
+        The back-reference is stored first; bridge construction is
+        attempted only when the manager exposes the ``instances``
+        attribute (the SandboxManager contract). Stub managers used in
+        tests therefore land in the slot cleanly without forcing a
+        bridge rebuild.
 
         Args:
             manager: The SandboxManager instance.
         """
         self._sandbox_manager = manager
+        if not hasattr(manager, "instances"):
+            _logger.debug(
+                "sandbox_manager_set_no_instances_attr",
+                manager_type=type(manager).__name__,
+            )
+            return
         bridge = self._build_bridge_from_manager(manager)
         self.set_bridge(bridge)
         _logger.info(
             "sandbox_manager_set_via_bridge_adapter",
             instance_count=len(manager.instances),
         )
+
+    @property
+    def sandbox_manager(self) -> SandboxManager | None:
+        """Read the currently-bound legacy ``SandboxManager``.
+
+        Returns:
+            SandboxManager | None: The bound manager, or ``None`` when no
+                manager has been wired into the panel yet.
+        """
+        return self._sandbox_manager
+
+    @sandbox_manager.setter
+    def sandbox_manager(self, value: SandboxManager | None) -> None:
+        """Write the currently-bound legacy ``SandboxManager`` directly.
+
+        Unlike :meth:`set_sandbox_manager`, this setter does NOT rebuild
+        the panel's bridge adapter; it only updates the back-reference.
+        Used by tests and bridge-adapter wiring code that builds the
+        bridge separately.
+
+        Args:
+            value: Manager to bind, or ``None`` to clear the slot.
+        """
+        self._sandbox_manager = value
+
+    @property
+    def sandbox(self) -> SandboxBase | None:
+        """Read the legacy sandbox handle bound to this panel.
+
+        Returns:
+            SandboxBase | None: The bound sandbox, or ``None`` when no
+                legacy backend has been wired in.
+        """
+        return self._sandbox
+
+    @sandbox.setter
+    def sandbox(self, value: SandboxBase | None) -> None:
+        """Write the legacy sandbox handle directly.
+
+        Unlike :meth:`set_sandbox`, this setter does NOT rebuild the
+        bridge; it only updates the back-reference.
+
+        Args:
+            value: Sandbox to bind, or ``None`` to clear the slot.
+        """
+        self._sandbox = value
+
+    @property
+    def console_output(self) -> QPlainTextEdit:
+        """Return the console output widget used by this panel.
+
+        Returns:
+            QPlainTextEdit: The QPlainTextEdit hosting console output.
+        """
+        return self._console_output
+
+    @property
+    def run_btn(self) -> QPushButton:
+        """Return the "Run in Sandbox" button.
+
+        Returns:
+            QPushButton: The QPushButton that triggers binary execution.
+        """
+        return self._run_btn
+
+    @property
+    def status_indicator(self) -> QLabel:
+        """Return the toolbar status indicator label.
+
+        Returns:
+            QLabel: The QLabel showing "Active" / "Inactive".
+        """
+        return self._status_indicator
+
+    def on_create(self) -> None:
+        """Public alias of :meth:`_on_create`.
+
+        Triggers sandbox creation through the configured bridge or, when
+        no backend is wired in, surfaces the "No sandbox backend
+        configured" warning through the console output.
+        """
+        self._on_create()
+
+    def on_create_success(self, result: object) -> None:
+        """Public alias of :meth:`_on_create_success`.
+
+        Args:
+            result: Bridge return value (instance ID payload), forwarded
+                to the private handler.
+        """
+        self._on_create_success(result)
+
+    def on_destroy_success(self, result: object) -> None:
+        """Public alias of :meth:`_on_destroy_success`.
+
+        Args:
+            result: Bridge return value, forwarded to the private handler.
+        """
+        self._on_destroy_success(result)
 
     def get_sandbox(self) -> SandboxBase | None:
         """Get the legacy sandbox backend reachable through the bridge.
@@ -503,6 +613,18 @@ class SandboxPanel(AnalysisPanelBase):
         self.delete_snap_btn.setEnabled(active)
         self._exec_cmd_btn.setEnabled(active)
 
+    def set_sandbox_controls_active(self, active: bool) -> None:
+        """Public alias of :meth:`_set_sandbox_controls_active`.
+
+        Exposes the control-toggling helper so UI tests and host
+        application code can drive panel state without reaching into a
+        private attribute.
+
+        Args:
+            active: True to enable sandbox-active controls.
+        """
+        self._set_sandbox_controls_active(active=active)
+
     def _selected_sandbox_type(self) -> SandboxType:
         """Get the sandbox type from the combo box selection.
 
@@ -512,10 +634,22 @@ class SandboxPanel(AnalysisPanelBase):
         combo_text = self.sandbox_type_combo.currentText()
         return "qemu" if combo_text == "QEMU" else "windows"
 
+    def selected_sandbox_type(self) -> SandboxType:
+        """Public alias of :meth:`_selected_sandbox_type`.
+
+        Exposes the combo-resolution helper so UI tests and host
+        application code can read the selected backend without reaching
+        into a private attribute.
+
+        Returns:
+            SandboxType: Sandbox type literal: ``"windows"`` or ``"qemu"``.
+        """
+        return self._selected_sandbox_type()
+
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
         if self._bridge is None:
-            self._log("[!] No sandbox bridge configured")
+            self._log("[!] No sandbox backend configured")
             _logger.warning("sandbox_create_failed_no_bridge")
             return
 

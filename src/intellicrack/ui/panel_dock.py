@@ -108,6 +108,15 @@ class DetachedPanelWindow(QMainWindow):
         self._save_geometry()
         self.reattach_requested.emit(self._panel, self._title)
 
+    def on_redock(self) -> None:
+        """Public alias of :meth:`_on_redock`.
+
+        Exposes the redock action so external callers (UI tests, host
+        application code wiring up alternate triggers) can invoke it
+        without reaching into a private attribute.
+        """
+        self._on_redock()
+
     def _save_geometry(self) -> None:
         """Persist this window's geometry to QSettings."""
         settings = QSettings("Intellicrack", "DetachedPanels")
