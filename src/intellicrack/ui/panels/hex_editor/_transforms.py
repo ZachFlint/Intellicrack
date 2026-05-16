@@ -647,14 +647,14 @@ class TransformsMixin:
         self._refresh_pipeline_list()
         self._transform_pipeline_list.setCurrentRow(row + 1)
 
-    def _on_pipeline_execute(self) -> None:
-        """Execute all pipeline steps on the current document region and write results."""
-        if self.document is None or self._transform_pipeline is None:
-            return
+    def _resolve_pipeline_region(self) -> tuple[int, int]:
+        """Resolve the cursor offset and apply length for pipeline execution.
 
-        if self._pipeline_step_count() == 0:
-            return
-
+        Returns:
+            tuple[int, int]: ``(cursor_offset, apply_len)`` derived from the current
+                hex widget selection if any, otherwise the cursor position with the
+                default pipeline window length.
+        """
         cursor_offset = 0
         apply_len = _PIPELINE_DEFAULT_LEN
         if self._hex_widget is not None:
@@ -664,44 +664,54 @@ class TransformsMixin:
             if sel_start >= 0 and sel_end >= 0 and sel_end > sel_start:
                 cursor_offset = sel_start
                 apply_len = sel_end - sel_start
+        return cursor_offset, apply_len
 
+    def _read_pipeline_input(self, cursor_offset: int, apply_len: int) -> tuple[bytes, int] | None:
+        """Read the input region for the pipeline.
+
+        Args:
+            cursor_offset: Document offset at which to read.
+            apply_len: Maximum number of bytes to read.
+
+        Returns:
+            tuple[bytes, int] | None: ``(data, read_len)`` on success, or ``None`` if
+                the document is empty, the read returned an unexpected type, or an
+                attribute/value error was raised while reading.
+        """
+        if self.document is None:
+            return None
         try:
             doc_len: int = self.document.length()
             read_len = min(apply_len, doc_len - cursor_offset)
             if read_len <= 0:
-                return
+                return None
             raw: object = self.document.read(cursor_offset, read_len)
-            if isinstance(raw, (list, bytearray)):
-                data = bytes(cast("list[int]", raw) if isinstance(raw, list) else raw)
-            elif isinstance(raw, bytes):
-                data = raw
-            else:
-                return
         except (AttributeError, ValueError):
             _logger.exception("pipeline_read_failed")
-            return
+            return None
+        if isinstance(raw, (list, bytearray)):
+            return bytes(cast("list[int]", raw) if isinstance(raw, list) else raw), read_len
+        if isinstance(raw, bytes):
+            return raw, read_len
+        return None
 
-        execute_fn: Any = getattr(self._transform_pipeline, "execute", None)
-        if not callable(execute_fn):
-            _logger.warning("pipeline_execute_not_available")
-            return
+    def _write_pipeline_output(self, cursor_offset: int, result: bytes, read_len: int) -> None:
+        """Write pipeline output back to the document.
 
-        try:
-            raw_result: object = execute_fn(data)
-            result: bytes = raw_result if isinstance(raw_result, bytes) else bytes(cast("list[int]", raw_result))
-        except (ValueError, TypeError, KeyError) as exc:
-            _logger.exception("pipeline_execution_failed")
-            parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(
-                parent,
-                "Pipeline Failed",
-                f"Pipeline execution failed at a step:\n{exc}",
-            )
-            return
+        Truncates ``result`` to ``read_len`` when the output exceeds the input region
+        size and surfaces a warning dialog. Updates the hex widget viewport and emits
+        a ``notify_data_modified`` signal to the session state holder.
 
+        Args:
+            cursor_offset: Document offset at which to begin writing.
+            result: Pipeline output bytes to write.
+            read_len: Length of the original input region, used to bound the write.
+        """
+        if self.document is None:
+            return
+        parent = self if isinstance(self, QWidget) else None
         write_len = min(len(result), read_len)
         if len(result) > read_len:
-            parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(
                 parent,
                 "Pipeline Truncated",
@@ -721,16 +731,48 @@ class TransformsMixin:
             self.document.write_bytes(cursor_offset, write_payload)
         except (AttributeError, ValueError):
             _logger.exception("pipeline_write_failed", offset=cursor_offset, length=write_len)
-        else:
-            if self._hex_widget is not None:
-                update_fn = getattr(self._hex_widget, "_update_viewport", None)
-                if callable(update_fn):
-                    update_fn()
-            state_holder = getattr(self, "state_holder", None)
-            if state_holder is not None:
-                state_holder.notify_data_modified(cursor_offset, write_len, source="hex-editor.transforms.pipeline")
-            self._on_data_changed()
-            _logger.info("pipeline_executed", offset=cursor_offset, length=write_len)
+            return
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            state_holder.notify_data_modified(cursor_offset, write_len, source="hex-editor.transforms.pipeline")
+        self._on_data_changed()
+        _logger.info("pipeline_executed", offset=cursor_offset, length=write_len)
+
+    def _on_pipeline_execute(self) -> None:
+        """Execute all pipeline steps on the current document region and write results."""
+        if self.document is None or self._transform_pipeline is None:
+            return
+        if self._pipeline_step_count() == 0:
+            return
+
+        cursor_offset, apply_len = self._resolve_pipeline_region()
+        read_result = self._read_pipeline_input(cursor_offset, apply_len)
+        if read_result is None:
+            return
+        data, read_len = read_result
+
+        execute_fn: Any = getattr(self._transform_pipeline, "execute", None)
+        if not callable(execute_fn):
+            _logger.warning("pipeline_execute_not_available")
+            return
+
+        try:
+            raw_result: object = execute_fn(data)
+            result: bytes = raw_result if isinstance(raw_result, bytes) else bytes(cast("list[int]", raw_result))
+        except (ValueError, TypeError, KeyError) as exc:
+            _logger.exception("pipeline_execution_failed")
+            QMessageBox.warning(
+                self if isinstance(self, QWidget) else None,
+                "Pipeline Failed",
+                f"Pipeline execution failed at a step:\n{exc}",
+            )
+            return
+
+        self._write_pipeline_output(cursor_offset, result, read_len)
 
     def _on_block_fill(self) -> None:
         """Fill a block via hexcore document.fill_block."""

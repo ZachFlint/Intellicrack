@@ -37,7 +37,7 @@ from intellicrack.ui.panels.hex_editor._bookmarks import BookmarksMixin
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Iterator
 
     from intellicrack_hexcore import HexDocument
 
@@ -56,7 +56,7 @@ _BM_COLOR: Final[str] = "#FFFF00"
 
 
 @pytest.fixture(scope="module")
-def qapp() -> Generator[QApplication]:
+def qapp() -> Iterator[QApplication]:
     """Provide a process-wide ``QApplication`` for Qt widget construction.
 
     Yields:

@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 import pytest_asyncio
+import torch
 
 from intellicrack.core.types import (
     Message,
@@ -49,7 +50,6 @@ from intellicrack.providers.xpu_utils import (
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterator
 
-    import torch
     from transformers import PreTrainedTokenizerBase
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
@@ -293,10 +293,8 @@ def _iter_model_parameters(loaded: LoadedModel) -> Iterator[torch.nn.Parameter]:
     Raises:
         TypeError: If the loaded model is not a torch.nn.Module instance.
     """
-    import torch as _torch
-
     model_obj: object = loaded.model
-    if not isinstance(model_obj, _torch.nn.Module):
+    if not isinstance(model_obj, torch.nn.Module):
         msg = f"Expected torch.nn.Module, got {type(model_obj).__name__}"
         raise TypeError(msg)
     yield from model_obj.parameters()
@@ -463,11 +461,11 @@ def fresh_model_cache() -> ModelCache:
     return ModelCache()
 
 
-@pytest_asyncio.fixture
-async def fresh_xpu_provider(
+@pytest.fixture
+def fresh_xpu_provider(
     *,
     has_xpu_available: bool,
-) -> AsyncGenerator[LocalTransformersProvider]:
+) -> LocalTransformersProvider:
     """Create an unconnected XPU provider for lifecycle tests.
 
     Skips the test if XPU hardware is not available.
@@ -475,13 +473,13 @@ async def fresh_xpu_provider(
     Args:
         has_xpu_available: Whether XPU hardware is available.
 
-    Yields:
-        AsyncGenerator[LocalTransformersProvider]: An unconnected provider instance.
+    Returns:
+        LocalTransformersProvider: An unconnected provider instance.
     """
     if not has_xpu_available:
         pytest.skip("XPU not available")
 
-    yield LocalTransformersProvider(prefer_xpu=True)
+    return LocalTransformersProvider(prefer_xpu=True)
 
 
 @pytest.mark.xpu
@@ -489,7 +487,7 @@ async def fresh_xpu_provider(
 class TestXPUHardwareValidation:
     """Validate XPU hardware detection and device info on Arc B580."""
 
-    def test_xpu_device_detected(self, has_xpu_available: bool) -> None:
+    def test_xpu_device_detected(self, *, has_xpu_available: bool) -> None:
         """XPU should be detected as available with at least one device.
 
         Args:
@@ -501,7 +499,7 @@ class TestXPUHardwareValidation:
         assert is_xpu_available() is True
         assert get_xpu_device_count() >= 1
 
-    def test_device_info_complete(self, has_xpu_available: bool) -> None:
+    def test_device_info_complete(self, *, has_xpu_available: bool) -> None:
         """Device info should contain all expected fields populated.
 
         Args:
@@ -518,6 +516,7 @@ class TestXPUHardwareValidation:
 
     def test_b580_identification(
         self,
+        *,
         has_xpu_available: bool,
         has_arc_b580: bool,
     ) -> None:
@@ -539,6 +538,7 @@ class TestXPUHardwareValidation:
 
     def test_memory_reporting_accuracy(
         self,
+        *,
         has_xpu_available: bool,
         has_arc_b580: bool,
     ) -> None:
@@ -564,6 +564,7 @@ class TestXPUHardwareValidation:
 
     def test_rebar_and_windows_requirements(
         self,
+        *,
         has_xpu_available: bool,
     ) -> None:
         """Windows requirements check should return expected structure.
@@ -580,6 +581,7 @@ class TestXPUHardwareValidation:
 
     def test_dtype_support_flags(
         self,
+        *,
         has_xpu_available: bool,
         has_arc_b580: bool,
     ) -> None:
@@ -1173,6 +1175,7 @@ class TestVRAMManagement:
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
         """
+        assert loaded_xpu_provider.current_model_id is not None
         allocated, total = get_xpu_memory_info(0)
         assert total > 0
         assert allocated >= 0
@@ -1186,6 +1189,7 @@ class TestVRAMManagement:
         Args:
             xpu_provider: The session-scoped XPU provider.
         """
+        assert xpu_provider.device_type in {"xpu", "cuda", "cpu"}
         allocated, total = get_xpu_memory_info(0)
         assert isinstance(allocated, int)
         assert isinstance(total, int)

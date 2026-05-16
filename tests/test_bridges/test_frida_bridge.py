@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypeVar, cast
 
 
@@ -317,8 +320,11 @@ def notepad_process() -> Generator[subprocess.Popen[bytes]]:
     Yields:
         Generator[subprocess.Popen[bytes]]: The running notepad process.
     """
+    notepad_path = shutil.which("notepad.exe") or str(
+        Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
+    )
     proc = subprocess.Popen(
-        ["notepad.exe"],
+        [notepad_path],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

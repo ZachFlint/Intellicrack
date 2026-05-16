@@ -24,8 +24,13 @@ from typing import cast
 
 import pytest
 
+from intellicrack.core.config import Config, get_config_dir
+from intellicrack.core.logging import get_logger
+from intellicrack.core.script_gen import ScriptGenerator, ScriptManager, ScriptValidator
 from intellicrack.core.session import Session, SessionManager, SessionStore
+from intellicrack.core.template_manager import TemplateManager
 from intellicrack.core.types import ProviderName
+from intellicrack.main import init_script_engine, init_template_manager
 
 
 def _store_connection(store: SessionStore) -> AbstractContextManager[sqlite3.Connection]:
@@ -371,11 +376,6 @@ class TestStartupWiring:
         Args:
             tmp_path: Pytest temporary directory used as the data root.
         """
-        from intellicrack.core.config import Config
-        from intellicrack.core.logging import get_logger
-        from intellicrack.core.script_gen import ScriptGenerator, ScriptManager, ScriptValidator
-        from intellicrack.main import init_script_engine
-
         config = Config.default()
         config.data_directory = tmp_path / "data"
         config.data_directory.mkdir(parents=True, exist_ok=True)
@@ -391,11 +391,6 @@ class TestStartupWiring:
     @staticmethod
     def test_init_template_manager_creates_directories() -> None:
         """_init_template_manager builds template tree under config_dir."""
-        from intellicrack.core.config import get_config_dir
-        from intellicrack.core.logging import get_logger
-        from intellicrack.core.template_manager import TemplateManager
-        from intellicrack.main import init_template_manager
-
         logger = get_logger("test")
         manager = init_template_manager(logger)
 

@@ -59,9 +59,6 @@ def _resolve_cmd() -> str:
 
     Returns:
         str: Absolute path to ``cmd.exe``.
-
-    Raises:
-        pytest.skip.Exception: If ``cmd.exe`` cannot be located.
     """
     cmd = shutil.which("cmd.exe") or shutil.which("cmd")
     if cmd is None:
@@ -74,9 +71,6 @@ def _resolve_pwsh() -> str:
 
     Returns:
         str: Absolute path to ``pwsh.exe``.
-
-    Raises:
-        pytest.skip.Exception: If ``pwsh.exe`` cannot be located.
     """
     pwsh = shutil.which("pwsh")
     if pwsh is None:

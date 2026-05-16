@@ -82,7 +82,7 @@ class TestBPSExport:
         orig.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         garbage_b64 = base64.b64encode(b"not a real patch").decode("ascii")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="BPS"):
             _run(bridge.import_patches_bps(garbage_b64, str(orig)))
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:
@@ -147,7 +147,7 @@ class TestBPSRoundtrip:
         target = tmp_path / "bps_target_b.bin"
         target.write_bytes(b"\xff" * 64)
         _run(bridge.open_file(str(target)))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"CRC|BPS"):
             _run(bridge.import_patches_bps(b64_patch, str(orig_b)))
 
     def test_bps_large_modification(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -214,7 +214,7 @@ class TestUPSExport:
         orig.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
         garbage_b64 = base64.b64encode(b"garbage data here").decode("ascii")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="UPS"):
             _run(bridge.import_patches_ups(garbage_b64, str(orig)))
 
 

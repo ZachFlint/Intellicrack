@@ -12,8 +12,10 @@ import pytest
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.bridges.process import ProcessBridge
+from intellicrack.ui.panels import ProcessPanel as ProcessPanelFromPanels
 from intellicrack.ui.panels.process_panel import ProcessPanel
 from intellicrack.ui.panels.process_panel._memory_tab import MemoryTab
+from tests.test_ui.conftest import SignalRecorder
 
 
 if TYPE_CHECKING:
@@ -32,6 +34,7 @@ def panel(qapp: QApplication) -> Generator[ProcessPanel]:
     Yields:
         Generator[ProcessPanel]: ProcessPanel widget.
     """
+    del qapp
     p = ProcessPanel()
     yield p
     p.deleteLater()
@@ -290,22 +293,15 @@ class TestImportCompatibility:
 
     def test_import_from_package(self) -> None:
         """Verify import from process_panel package."""
-        from intellicrack.ui.panels.process_panel import ProcessPanel as PP1
-
-        assert PP1 is not None
+        assert ProcessPanel is not None
 
     def test_import_from_panels(self) -> None:
         """Verify import from panels package."""
-        from intellicrack.ui.panels import ProcessPanel as PP2
-
-        assert PP2 is not None
+        assert ProcessPanelFromPanels is not None
 
     def test_both_imports_same_class(self) -> None:
         """Verify both import paths resolve to the same class."""
-        from intellicrack.ui.panels import ProcessPanel as PP2
-        from intellicrack.ui.panels.process_panel import ProcessPanel as PP1
-
-        assert PP1 is PP2
+        assert ProcessPanel is ProcessPanelFromPanels
 
 
 class TestSignalEmission:
@@ -317,8 +313,6 @@ class TestSignalEmission:
         Args:
             panel: ProcessPanel fixture instance.
         """
-        from tests.test_ui.conftest import SignalRecorder
-
         recorder = SignalRecorder()
         panel.process_selected.connect(recorder)
         panel._on_process_selected(42)
@@ -331,8 +325,6 @@ class TestSignalEmission:
             panel: ProcessPanel fixture instance.
             bridge: Uninitialized ProcessBridge fixture instance.
         """
-        from tests.test_ui.conftest import SignalRecorder
-
         recorder = SignalRecorder()
         panel.set_bridge(bridge)
         panel.process_attached.connect(recorder)
@@ -346,8 +338,6 @@ class TestSignalEmission:
             panel: ProcessPanel fixture instance.
             bridge: Uninitialized ProcessBridge fixture instance.
         """
-        from tests.test_ui.conftest import SignalRecorder
-
         recorder = SignalRecorder()
         panel.set_bridge(bridge)
         panel._on_process_attached(42)

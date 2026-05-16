@@ -30,7 +30,7 @@ out as defensively unsafe.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 import pytest
 
@@ -449,7 +449,7 @@ def test_f0006_format_prompt_handles_tokenizer_without_chat_template() -> None:
     class _AttrErrorTokenizer:
         """Tokenizer raising ``AttributeError`` on ``chat_template`` access."""
 
-        def __getattr__(self, item: str) -> object:
+        def __getattr__(self, item: str) -> NoReturn:
             """Raise on any attribute access - simulates a totally unknown tokenizer.
 
             Args:

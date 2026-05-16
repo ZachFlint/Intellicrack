@@ -19,6 +19,7 @@ The tests cover:
 from __future__ import annotations
 
 import importlib
+import tempfile
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -26,6 +27,9 @@ import pytest
 from intellicrack.sandbox._tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 from intellicrack.sandbox.analysis import extract_iocs
 from intellicrack.sandbox.base import ExecutionReport
+
+
+_TEST_BINARY_PATH = f"{tempfile.gettempdir()}/sample.bin"
 
 
 if TYPE_CHECKING:
@@ -37,7 +41,7 @@ _looks_like_domain: Callable[[str], bool] = getattr(_analysis_mod, "_looks_like_
 _has_valid_tld: Callable[[str], bool] = getattr(_analysis_mod, "_has_valid_tld")
 
 
-def _empty_report(**kwargs: Any) -> ExecutionReport:
+def _empty_report(**kwargs: object) -> ExecutionReport:
     """Build a minimal ExecutionReport for IOC extraction tests.
 
     Args:
@@ -49,7 +53,7 @@ def _empty_report(**kwargs: Any) -> ExecutionReport:
     """
     defaults: dict[str, Any] = {
         "sandbox_id": "test-sandbox",
-        "binary_path": "/tmp/sample.bin",
+        "binary_path": _TEST_BINARY_PATH,
         "result": "completed",
         "exit_code": 0,
         "duration_seconds": 1.0,

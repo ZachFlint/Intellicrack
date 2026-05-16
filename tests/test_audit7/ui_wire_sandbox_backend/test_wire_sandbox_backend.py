@@ -39,7 +39,7 @@ from intellicrack.ui.app import MainWindow
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
     from PyQt6.QtWidgets import QApplication
@@ -78,16 +78,15 @@ def _orchestrator_tool_registry(orchestrator: Orchestrator) -> ToolRegistry:
     The orchestrator stores its registry on ``_tools`` (a leading-underscore
     attribute). Tests need to insert bridges before the helper under test
     runs, so we route that access through :func:`getattr` to keep the
-    private name out of the test source.
+    private name out of the test source. The accompanying ``assert``
+    narrows the lookup result for ``basedpyright`` and is stripped under
+    ``python -O`` rather than functioning as a documented exception.
 
     Args:
         orchestrator: Orchestrator whose registry the test wants to mutate.
 
     Returns:
         ToolRegistry: The orchestrator-owned tool registry.
-
-    Raises:
-        AssertionError: If the orchestrator does not expose the registry.
     """
     registry = getattr(orchestrator, "_tools", None)
     assert isinstance(registry, ToolRegistry), "orchestrator must expose a ToolRegistry"
@@ -138,7 +137,7 @@ def main_window(
     qapp: QApplication,
     real_config: Config,
     real_orchestrator: Orchestrator,
-) -> Generator[MainWindow]:
+) -> Iterator[MainWindow]:
     """Construct a real :class:`MainWindow` and clean it up after each test.
 
     Args:

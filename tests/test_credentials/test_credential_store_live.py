@@ -30,6 +30,8 @@ import threading
 import uuid
 from typing import TYPE_CHECKING, Protocol, cast
 
+import keyring
+import keyring.errors
 import pytest
 
 from intellicrack.core.types import ProviderCredentials, ProviderName
@@ -267,9 +269,6 @@ def test_keyring_error_handled(
     """
     if not _keyring_backend_usable(store_module_fresh):
         pytest.skip("Keyring backend is not available on this host.")
-
-    import keyring
-    import keyring.errors
 
     def _raise(*_args: object, **_kwargs: object) -> None:
         msg = "simulated backend failure"

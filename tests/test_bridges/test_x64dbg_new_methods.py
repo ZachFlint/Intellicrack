@@ -304,8 +304,6 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        from intellicrack.core.types import ToolError
-
         with pytest.raises(ToolError, match="too short"):
             await attached_bridge.scan_memory(b"short")
 
@@ -316,8 +314,6 @@ class TestScanMemory:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        from intellicrack.core.types import ToolError
-
         with pytest.raises(ToolError, match="non-empty"):
             await attached_bridge.scan_memory(b"")
 

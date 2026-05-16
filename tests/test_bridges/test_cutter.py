@@ -28,6 +28,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os
+import tempfile
 from pathlib import Path
 from typing import Final, cast
 from unittest.mock import patch
@@ -1163,11 +1164,12 @@ class TestSaveBinary:
         b.r2 = _as_r2pipe(recorder)
         await b.analyze()
         recorder.commands.clear()
-        result = await b.save_binary("/tmp/output.exe")
+        output_path = f"{tempfile.gettempdir()}/output.exe"
+        result = await b.save_binary(output_path)
         assert result is True
         wtf_cmds = [c for c in recorder.commands if c.startswith("wtf")]
         assert len(wtf_cmds) == 1
-        assert "/tmp/output.exe" in wtf_cmds[0]
+        assert output_path in wtf_cmds[0]
 
 
 class TestGetSymbols:

@@ -1139,13 +1139,14 @@ class TestCrossProviderConsistency:
     async def available_providers(
         self,
         credential_loader: CredentialLoader,
+        ollama_server: subprocess.Popen[bytes] | None,
+        *,
         has_anthropic_key: bool,
         has_openai_key: bool,
         has_google_key: bool,
         has_grok_key: bool,
         has_openrouter_key: bool,
         has_huggingface_key: bool,
-        ollama_server: subprocess.Popen[bytes] | None,
     ) -> AsyncGenerator[list[tuple[str, str, LLMProviderBase]]]:
         """Create connected providers for all configured credentials.
 
@@ -1188,8 +1189,9 @@ class TestCrossProviderConsistency:
 
         ollama_available = False
         try:
-            resp = httpx.get(_OLLAMA_TAGS_URL, timeout=2.0)
-            ollama_available = resp.status_code == _HTTP_OK
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.get(_OLLAMA_TAGS_URL)
+                ollama_available = resp.status_code == _HTTP_OK
         except (OSError, httpx.HTTPError):
             pass
 

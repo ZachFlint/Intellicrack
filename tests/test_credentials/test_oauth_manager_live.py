@@ -25,7 +25,7 @@ import json
 import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 from urllib.parse import parse_qs, urlencode
 
 import httpx
@@ -97,14 +97,14 @@ class _MockOAuthProviderHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(payload).encode("utf-8"))
 
-    def log_message(self, format: str, *args: object) -> None:
+    def log_message(self, *args: object, **kwargs: object) -> None:
         """Silence default HTTP logging.
 
         Args:
-            format: Unused format string from stdlib signature.
             *args: Unused arguments from stdlib signature.
+            **kwargs: Unused keyword arguments for forward compatibility.
         """
-        del self, format, args
+        del args, kwargs
 
 
 @pytest.fixture
@@ -154,8 +154,9 @@ def test_singleton_thread_safety(reloaded_oauth_module: ModuleType) -> None:
     """
     call_count = 32
 
-    def call(_: int) -> Any:
-        return reloaded_oauth_module.get_oauth_manager()
+    def call(_: int) -> oauth_module.OAuthManager:
+        result: oauth_module.OAuthManager = reloaded_oauth_module.get_oauth_manager()
+        return result
 
     with ThreadPoolExecutor(max_workers=call_count) as executor:
         results = list(executor.map(call, range(call_count)))
@@ -214,7 +215,7 @@ def test_full_callback_path_with_mock_provider(
         callback_port=callback_port,
     )
 
-    async def drive() -> Any:
+    async def drive() -> oauth_module.OAuthToken:
         auth_url, oauth_state = await manager.start_authorization_flow(
             config,
             open_browser=False,
@@ -296,8 +297,8 @@ def test_state_mismatch_is_rejected(
 
 def _prime_cached_token(
     module: ModuleType,
-    manager: Any,
-    provider: Any,
+    manager: oauth_module.OAuthManager,
+    provider: oauth_module.OAuthProvider,
 ) -> None:
     """Seed a manager's in-memory token cache without going through keyring.
 
@@ -307,10 +308,13 @@ def _prime_cached_token(
         provider: The :class:`OAuthProvider` value keying the cached token.
     """
     token_cls = module.OAuthToken
+    cached_access = "old"
+    cached_refresh = "rt"
+    bearer_type = "Bearer"
     token = token_cls(
-        access_token="old",
-        refresh_token="rt",
-        token_type="Bearer",
+        access_token=cached_access,
+        refresh_token=cached_refresh,
+        token_type=bearer_type,
         expires_at=None,
     )
     cache = manager._token_cache
@@ -367,12 +371,13 @@ def test_refresh_token_transient_error_raises_plain_token_error(
     provider = reloaded_oauth_module.OAuthProvider.GOOGLE
     _prime_cached_token(reloaded_oauth_module, manager, provider)
 
+    unreachable_endpoint = "http://127.0.0.1:1/does-not-exist"
     config = reloaded_oauth_module.OAuthConfig(
         provider=provider,
         client_id="client",
         client_secret=None,
         authorization_url=f"{base_url}/authorize",
-        token_url="http://127.0.0.1:1/does-not-exist",
+        token_url=unreachable_endpoint,
         scopes=("s",),
         use_pkce=False,
     )

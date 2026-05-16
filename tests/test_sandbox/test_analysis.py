@@ -17,6 +17,7 @@ Tests validate:
 from __future__ import annotations
 
 import importlib
+import math
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from intellicrack.sandbox.analysis import (
@@ -168,7 +169,7 @@ class TestHelperFunctions:
 
     def test_shannon_entropy_uniform(self) -> None:
         """Uniform string (e.g., 'aaaa') has 0.0 entropy."""
-        assert _shannon_entropy("aaaa") == 0.0
+        assert math.isclose(_shannon_entropy("aaaa"), 0.0, abs_tol=1e-9)
 
     def test_shannon_entropy_high(self) -> None:
         """High-randomness string has entropy > 3.0."""
@@ -176,7 +177,7 @@ class TestHelperFunctions:
 
     def test_shannon_entropy_empty(self) -> None:
         """Empty string has 0.0 entropy."""
-        assert _shannon_entropy("") == 0.0
+        assert math.isclose(_shannon_entropy(""), 0.0, abs_tol=1e-9)
 
 
 class TestDetectC2Patterns:
@@ -1207,8 +1208,8 @@ class TestDiffReports:
         a = ExecutionReport(result="success", exit_code=0, stdout="", stderr="", duration_seconds=1.0)
         b = ExecutionReport(result="success", exit_code=0, stdout="", stderr="", duration_seconds=5.0)
         result = diff_reports(a, b)
-        assert result["scalars"]["duration_seconds"]["a"] == 1.0
-        assert result["scalars"]["duration_seconds"]["b"] == 5.0
+        assert math.isclose(float(result["scalars"]["duration_seconds"]["a"]), 1.0)
+        assert math.isclose(float(result["scalars"]["duration_seconds"]["b"]), 5.0)
 
     def test_full_sample_diff(self, sample_report: ExecutionReport, empty_report: ExecutionReport) -> None:
         """Diffing full vs empty report puts everything in unique_to_a.

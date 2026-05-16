@@ -72,17 +72,6 @@ class _RecordingBridge(ProcessBridge):
 
     Overrides methods exercised by ProcessPanel so their behaviour can be
     verified without a live Win32 backend.
-
-    Attributes:
-        arch_calls: PIDs passed to each ``detect_architecture`` call.
-        arch_result: Architecture string returned by ``detect_architecture``.
-        arch_should_raise: When non-None, ``detect_architecture`` raises this.
-        priv_calls: PIDs passed to each ``get_token_privileges`` call.
-        priv_result: Privilege list returned by ``get_token_privileges``.
-        priv_should_raise: When non-None, ``get_token_privileges`` raises this.
-        list_calls: Number of ``list_processes_detailed`` calls.
-        open_calls: PIDs passed to ``open_process``.
-        close_calls: Number of ``close`` calls.
     """
 
     def __init__(self) -> None:
@@ -131,16 +120,23 @@ class _RecordingBridge(ProcessBridge):
 
     @override
     async def detect_architecture(self, pid: int) -> str:
-        """Return scripted architecture or raise scripted error.
+        """Return scripted architecture or raise the scripted error.
+
+        When ``arch_should_raise`` is non-None, the stored ``ToolError`` is
+        propagated unchanged so callers observe the configured failure.
 
         Args:
             pid: Process ID to detect architecture for.
 
         Returns:
-            str: ``arch_result`` unless ``arch_should_raise`` is set.
+            str: ``arch_result`` unless ``arch_should_raise`` is set, in
+            which case the scripted exception is raised instead.
 
         Raises:
-            ToolError: When ``arch_should_raise`` is non-None.
+            self.arch_should_raise: The stored ``ToolError`` instance is
+                re-raised unchanged. The Raises entry uses the literal
+                raise target so static analysis can correlate the body
+                with the docstring.
         """
         self.arch_calls.append(pid)
         if self.arch_should_raise is not None:
@@ -149,16 +145,24 @@ class _RecordingBridge(ProcessBridge):
 
     @override
     async def get_token_privileges(self, pid: int | None = None) -> list[dict[str, object]]:
-        """Return scripted privilege list or raise scripted error.
+        """Return scripted privilege list or raise the scripted error.
+
+        When ``priv_should_raise`` is non-None, the stored ``ToolError`` is
+        propagated unchanged so callers observe the configured failure.
 
         Args:
             pid: Process ID to query privileges for.
 
         Returns:
-            list[dict[str, object]]: ``priv_result`` unless ``priv_should_raise`` is set.
+            list[dict[str, object]]: ``priv_result`` unless
+            ``priv_should_raise`` is set, in which case the scripted
+            exception is raised instead.
 
         Raises:
-            ToolError: When ``priv_should_raise`` is non-None.
+            self.priv_should_raise: The stored ``ToolError`` instance is
+                re-raised unchanged. The Raises entry uses the literal
+                raise target so static analysis can correlate the body
+                with the docstring.
         """
         self.priv_calls.append(pid)
         if self.priv_should_raise is not None:

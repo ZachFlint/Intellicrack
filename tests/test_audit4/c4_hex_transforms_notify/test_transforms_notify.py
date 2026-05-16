@@ -12,10 +12,12 @@ selection / read_len <= 0) do NOT fire the notification.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
+from PyQt6.QtWidgets import QDialog
 
+import intellicrack.ui.panels.hex_editor._transforms as _t_mod
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
 from intellicrack.ui.panels.hex_editor._transforms import TransformsMixin
 
@@ -319,7 +321,7 @@ class TestPipelineExecuteNotify:
         mixin = _ConcreteTransforms(doc, state)
 
         class _FakePipeline:
-            steps: list[object] = [object()]
+            steps: ClassVar[list[object]] = [object()]
 
             @staticmethod
             def execute(data: bytes) -> bytes:
@@ -379,7 +381,7 @@ class TestPipelineExecuteNotify:
         mixin = _ConcreteTransforms(doc, state)
 
         class _EmptyPipeline:
-            steps: list[object] = []
+            steps: ClassVar[list[object]] = []
 
         mixin._transform_pipeline = _EmptyPipeline()
         mixin._on_pipeline_execute()
@@ -401,22 +403,18 @@ class TestBlockFillNotify:
             doc_state_events: Fixture providing spy doc, state, and events.
             monkeypatch: pytest monkeypatch fixture.
         """
-        from PyQt6.QtWidgets import QDialog
-
-        import intellicrack.ui.panels.hex_editor._transforms as _t_mod
-
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
         monkeypatch.setattr(
             _t_mod._BlockFillDialog,
             "exec",
-            lambda self: QDialog.DialogCode.Accepted,
+            lambda _self: QDialog.DialogCode.Accepted,
         )
         monkeypatch.setattr(
             _t_mod._BlockFillDialog,
             "get_values",
-            lambda self: (8, 16, bytes([0xAA])),
+            lambda _self: (8, 16, bytes([0xAA])),
         )
 
         mixin._on_block_fill()
@@ -438,17 +436,13 @@ class TestBlockFillNotify:
             doc_state_events: Fixture providing spy doc, state, and events.
             monkeypatch: pytest monkeypatch fixture.
         """
-        from PyQt6.QtWidgets import QDialog
-
-        import intellicrack.ui.panels.hex_editor._transforms as _t_mod
-
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
         monkeypatch.setattr(
             _t_mod._BlockFillDialog,
             "exec",
-            lambda self: QDialog.DialogCode.Rejected,
+            lambda _self: QDialog.DialogCode.Rejected,
         )
 
         mixin._on_block_fill()
@@ -470,22 +464,18 @@ class TestBlockCopyNotify:
             doc_state_events: Fixture providing spy doc, state, and events.
             monkeypatch: pytest monkeypatch fixture.
         """
-        from PyQt6.QtWidgets import QDialog
-
-        import intellicrack.ui.panels.hex_editor._transforms as _t_mod
-
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
         monkeypatch.setattr(
             _t_mod._BlockCopyMoveDialog,
             "exec",
-            lambda self: QDialog.DialogCode.Accepted,
+            lambda _self: QDialog.DialogCode.Accepted,
         )
         monkeypatch.setattr(
             _t_mod._BlockCopyMoveDialog,
             "get_values",
-            lambda self: (0, 8, 64),
+            lambda _self: (0, 8, 64),
         )
 
         mixin._on_block_copy()
@@ -511,22 +501,18 @@ class TestBlockMoveNotify:
             doc_state_events: Fixture providing spy doc, state, and events.
             monkeypatch: pytest monkeypatch fixture.
         """
-        from PyQt6.QtWidgets import QDialog
-
-        import intellicrack.ui.panels.hex_editor._transforms as _t_mod
-
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
         monkeypatch.setattr(
             _t_mod._BlockCopyMoveDialog,
             "exec",
-            lambda self: QDialog.DialogCode.Accepted,
+            lambda _self: QDialog.DialogCode.Accepted,
         )
         monkeypatch.setattr(
             _t_mod._BlockCopyMoveDialog,
             "get_values",
-            lambda self: (0, 16, 64),
+            lambda _self: (0, 16, 64),
         )
 
         mixin._on_block_move()
@@ -551,22 +537,18 @@ class TestBlockSwapNotify:
             doc_state_events: Fixture providing spy doc, state, and events.
             monkeypatch: pytest monkeypatch fixture.
         """
-        from PyQt6.QtWidgets import QDialog
-
-        import intellicrack.ui.panels.hex_editor._transforms as _t_mod
-
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
         monkeypatch.setattr(
             _t_mod._BlockSwapDialog,
             "exec",
-            lambda self: QDialog.DialogCode.Accepted,
+            lambda _self: QDialog.DialogCode.Accepted,
         )
         monkeypatch.setattr(
             _t_mod._BlockSwapDialog,
             "get_values",
-            lambda self: (0, 8, 16, 8),
+            lambda _self: (0, 8, 16, 8),
         )
 
         mixin._on_block_swap()
@@ -604,7 +586,7 @@ class TestNoStateHolderSafety:
         mixin.state_holder = None
 
         class _IdentityPipeline:
-            steps: list[object] = [object()]
+            steps: ClassVar[list[object]] = [object()]
 
             @staticmethod
             def execute(data: bytes) -> bytes:

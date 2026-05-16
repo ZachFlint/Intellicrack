@@ -12,11 +12,12 @@ using real splash image assets.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtCore import QPropertyAnimation
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QPropertyAnimation, QRectF
+from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QLabel, QProgressBar, QWidget
 
 from intellicrack.ui.dialogs.splash_screen import (
@@ -543,7 +544,7 @@ class TestFadeAnimation:
         """
         splash_screen.show_animated()
         assert splash_screen.fade_animation is not None
-        assert float(splash_screen.fade_animation.endValue()) == 1.0
+        assert math.isclose(float(splash_screen.fade_animation.endValue()), 1.0)
 
     @staticmethod
     def test_show_animated_correct_duration(splash_screen: SplashScreen) -> None:
@@ -581,7 +582,7 @@ class TestFadeAnimation:
         target = QWidget()
         splash_screen.finish_animated(target)
         assert splash_screen.fade_animation is not None
-        assert float(splash_screen.fade_animation.endValue()) == 0.0
+        assert math.isclose(float(splash_screen.fade_animation.endValue()), 0.0, abs_tol=1e-9)
         target.close()
 
 
@@ -707,7 +708,7 @@ class TestDpiScaling:
     @staticmethod
     def test_default_dpi_scale_constant() -> None:
         """DEFAULT_DPI_SCALE constant is 1.0."""
-        assert float(DEFAULT_DPI_SCALE) == 1.0
+        assert math.isclose(float(DEFAULT_DPI_SCALE), 1.0)
 
 
 _STATE_PENDING: int = 0
@@ -735,7 +736,7 @@ class TestAnimatedGradient:
         Args:
             splash_screen: SplashScreen fixture instance.
         """
-        assert getattr(splash_screen, "_gradient_time") == 0.0
+        assert math.isclose(float(getattr(splash_screen, "_gradient_time")), 0.0, abs_tol=1e-9)
 
     @staticmethod
     def test_active_pulse_time_initialized(splash_screen: SplashScreen) -> None:
@@ -744,7 +745,7 @@ class TestAnimatedGradient:
         Args:
             splash_screen: SplashScreen fixture instance.
         """
-        assert getattr(splash_screen, "_active_pulse_time") == 0.0
+        assert math.isclose(float(getattr(splash_screen, "_active_pulse_time")), 0.0, abs_tol=1e-9)
 
     @staticmethod
     def test_show_animated_starts_timer(splash_screen: SplashScreen) -> None:
@@ -1014,7 +1015,7 @@ class TestEndToEndLifecycle:
         target = QWidget()
         splash.finish_animated(target)
         assert splash.fade_animation is not None
-        assert float(splash.fade_animation.endValue()) == 0.0
+        assert math.isclose(float(splash.fade_animation.endValue()), 0.0, abs_tol=1e-9)
         target.close()
         splash.close()
 
@@ -1112,9 +1113,6 @@ class TestEndToEndLifecycle:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
-        from PyQt6.QtCore import QRectF
-        from PyQt6.QtGui import QPainter, QPixmap
-
         splash = SplashScreen(version="1.0.0")
 
         for progress_val, message in _REAL_PROGRESS_SEQUENCE:
@@ -1150,9 +1148,6 @@ class TestEndToEndLifecycle:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
-        from PyQt6.QtCore import QRectF
-        from PyQt6.QtGui import QPainter, QPixmap
-
         splash = SplashScreen(version="1.0.0")
         splash.mark_stage_failed(2)
 
@@ -1187,7 +1182,7 @@ class TestEndToEndLifecycle:
 
         assert splash.fade_animation is not None
         assert isinstance(splash.fade_animation, QPropertyAnimation)
-        assert float(splash.fade_animation.endValue()) == 1.0
+        assert math.isclose(float(splash.fade_animation.endValue()), 1.0)
         assert splash.fade_animation.duration() == FADE_DURATION_MS
         splash.close()
 
@@ -1208,7 +1203,7 @@ class TestEndToEndLifecycle:
         target = QWidget()
         splash.finish_animated(target)
         assert splash.fade_animation is not None
-        assert float(splash.fade_animation.endValue()) == 0.0
+        assert math.isclose(float(splash.fade_animation.endValue()), 0.0, abs_tol=1e-9)
         assert splash.fade_animation.duration() == FADE_DURATION_MS
         target.close()
         splash.close()
@@ -1243,9 +1238,6 @@ class TestEndToEndLifecycle:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
-        from PyQt6.QtCore import QRectF
-        from PyQt6.QtGui import QPainter, QPixmap
-
         splash_with = SplashScreen(version="3.5.1")
         splash_without = SplashScreen()
 
@@ -1260,7 +1252,7 @@ class TestEndToEndLifecycle:
 
         assert splash_with.version == "3.5.1"
         assert splash_with.version_label is not None
-        assert splash_without.version == ""
+        assert not splash_without.version
         assert splash_without.version_label is None
         splash_with.close()
         splash_without.close()

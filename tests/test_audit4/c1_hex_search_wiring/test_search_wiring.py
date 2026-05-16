@@ -19,19 +19,19 @@ Validates that:
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any
-
-import pytest
-
-from intellicrack.ui.panels.hex_editor._search import SearchMixin
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QApplication
-
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+import pytest
+from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit
+
+from intellicrack.ui.panels.hex_editor._search import SearchMixin
 
 
 class _FakeDocument:
@@ -157,23 +157,25 @@ class _TrackingHexWidget:
 class _ConcreteSearch(SearchMixin):
     """Minimal concrete SearchMixin implementation used in tests."""
 
-    def __init__(self, document: Any, hex_widget: Any) -> None:
+    def __init__(
+        self,
+        document: _FakeDocument | None,
+        hex_widget: _TrackingHexWidget,
+    ) -> None:
         """Set up minimal mixin state.
 
         Args:
             document: Document to expose as ``self.document``.
             hex_widget: Hex widget for highlight tracking.
         """
-        from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit
-
         app = QApplication.instance()
         if app is None:
             self._owned_app: QApplication | None = QApplication([])
         else:
             self._owned_app = None
 
-        self.document: Any = document
-        self._hex_widget: Any = hex_widget
+        self.document: _FakeDocument | None = document
+        self._hex_widget: _TrackingHexWidget = hex_widget
         self._search_results: list[tuple[int, int]] = []
         self._search_index: int = 0
         self._search_worker: GenericCallableWorker | None = None
@@ -202,8 +204,6 @@ def qapp() -> QApplication:
     Returns:
         QApplication: Active QApplication instance.
     """
-    from PyQt6.QtWidgets import QApplication
-
     existing = QApplication.instance()
     if isinstance(existing, QApplication):
         return existing
@@ -214,7 +214,7 @@ class TestSearchUsesDocument:
     """F-0001: search must use ``self.document``, not dead ``self._document``."""
 
     @staticmethod
-    def test_search_dispatches_worker_with_correct_document(qapp: Any) -> None:
+    def test_search_dispatches_worker_with_correct_document(qapp: QApplication) -> None:
         """Calling ``_on_search`` creates a worker bound to ``self.document``.
 
         Before the fix, ``_on_search`` checked ``self._document`` (the dead
@@ -242,7 +242,7 @@ class TestSearchUsesDocument:
         worker.wait(2000)
 
     @staticmethod
-    def test_search_no_attribute_error_when_document_set(qapp: Any) -> None:
+    def test_search_no_attribute_error_when_document_set(qapp: QApplication) -> None:
         """``_on_search`` raises no ``AttributeError`` when ``self.document`` is set.
 
         Before the fix, ``_on_search`` evaluated ``self._document`` which is
@@ -275,7 +275,7 @@ class TestSearchUsesDocument:
             worker.wait(2000)
 
     @staticmethod
-    def test_search_returns_early_when_document_is_none(qapp: Any) -> None:
+    def test_search_returns_early_when_document_is_none(qapp: QApplication) -> None:
         """``_on_search`` returns early without error when no document is loaded.
 
         Args:
@@ -291,7 +291,7 @@ class TestSearchUsesDocument:
         assert mixin._search_worker is None, "_on_search must not create a worker when document is None"
 
     @staticmethod
-    def test_dead_class_annotation_removed(qapp: Any) -> None:
+    def test_dead_class_annotation_removed(qapp: QApplication) -> None:
         """``SearchMixin`` must not declare ``_document`` as a class attribute.
 
         The dead ``_document: Any | None`` annotation was the root cause of
@@ -312,7 +312,7 @@ class TestSearchResultsClearedOnModeChange:
     """F-0014: switching search modes must clear stale results and highlights."""
 
     @staticmethod
-    def test_results_cleared_after_mode_change(qapp: Any) -> None:
+    def test_results_cleared_after_mode_change(qapp: QApplication) -> None:
         """Changing the search mode resets ``_search_results`` to empty.
 
         Simulates completing a text search (populating ``_search_results``),
@@ -338,7 +338,7 @@ class TestSearchResultsClearedOnModeChange:
         assert mixin._search_index == 0, "_search_index must reset to 0"
 
     @staticmethod
-    def test_highlights_cleared_after_mode_change(qapp: Any) -> None:
+    def test_highlights_cleared_after_mode_change(qapp: QApplication) -> None:
         """Changing the search mode calls ``clear_highlights('search')`` on the widget.
 
         Args:
@@ -355,7 +355,7 @@ class TestSearchResultsClearedOnModeChange:
         assert "search" in widget.clear_calls, "clear_highlights('search') must be called on the hex widget when mode changes"
 
     @staticmethod
-    def test_status_label_cleared_after_mode_change(qapp: Any) -> None:
+    def test_status_label_cleared_after_mode_change(qapp: QApplication) -> None:
         """Changing the search mode clears the status label text.
 
         Args:
@@ -370,10 +370,10 @@ class TestSearchResultsClearedOnModeChange:
         mixin._search_status_label.setText("Found 3 results")
         mixin._on_search_mode_changed("Text")
 
-        assert mixin._search_status_label.text() == "", "Status label must be cleared when mode changes"
+        assert not mixin._search_status_label.text(), "Status label must be cleared when mode changes"
 
     @staticmethod
-    def test_reset_search_state_clears_all_fields(qapp: Any) -> None:
+    def test_reset_search_state_clears_all_fields(qapp: QApplication) -> None:
         """``_reset_search_state`` clears results, index, highlights, and status.
 
         Args:
@@ -393,11 +393,11 @@ class TestSearchResultsClearedOnModeChange:
 
         assert mixin._search_results == []
         assert mixin._search_index == 0
-        assert mixin._search_status_label.text() == ""
+        assert not mixin._search_status_label.text()
         assert "search" in widget.clear_calls
 
     @staticmethod
-    def test_input_text_change_triggers_reset(qapp: Any) -> None:
+    def test_input_text_change_triggers_reset(qapp: QApplication) -> None:
         """Modifying the search input text resets stale results.
 
         After calling ``_setup_search_signals``, typing in the search input
