@@ -60,9 +60,6 @@ def _resolve_pwsh() -> str:
 
     Returns:
         str: Absolute path to ``pwsh.exe``.
-
-    Raises:
-        pytest.skip.Exception: If ``pwsh`` cannot be located on ``PATH``.
     """
     pwsh = shutil.which("pwsh")
     if pwsh is None:

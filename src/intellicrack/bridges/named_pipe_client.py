@@ -299,7 +299,6 @@ class NamedPipeClient:
         futures with a ``ToolError`` so awaiting ``send_command`` callers do not hang, and then closes the underlying Windows handle on the
         asyncio thread pool via ``asyncio.to_thread``. Safe to call when the client is not connected.
         """
-
         async with self._close_lock:
             if self._handle is None:
                 return
@@ -412,7 +411,6 @@ class NamedPipeClient:
         Returns:
             int: A positive request id in ``[1, 2 ** 31 - 1]``.
         """
-
         async with self._id_lock:
             self._next_id = (self._next_id % _REQUEST_ID_MAX) + 1
             return self._next_id

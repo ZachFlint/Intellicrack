@@ -203,10 +203,6 @@ class _EventSignal:
     emits the log call, the signal correctly fires even when the producing
     code path runs on an ``asyncio.to_thread`` / ``run_in_executor`` worker
     thread, eliminating the race that broke ``capfd``-based capture.
-
-    Attributes:
-        entries: Captured event dicts in arrival order.
-        event_seen: ``threading.Event`` set once ``target`` is seen at least once.
     """
 
     def __init__(self, target: str) -> None:
@@ -462,9 +458,6 @@ async def test_event_handler_exception_does_not_break_request_stream(
     def angry_handler(_: dict[str, Any]) -> None:
         """Always raise to simulate a buggy event handler.
 
-        Args:
-            _: Ignored event payload.
-
         Raises:
             RuntimeError: Always.
         """
@@ -527,11 +520,7 @@ async def test_event_handler_runs_outside_write_lock(
     release_handler = threading.Event()
 
     def slow_handler(_: dict[str, Any]) -> None:
-        """Block in the handler until the test releases it.
-
-        Args:
-            _: Ignored event payload.
-        """
+        """Block in the handler until the test releases it."""
         handler_started.set()
         release_handler.wait(timeout=5.0)
 
@@ -591,9 +580,6 @@ def test_dispatch_event_safe_isolates_exceptions() -> None:
 
     def boom(_: dict[str, Any]) -> None:
         """Raise unconditionally.
-
-        Args:
-            _: Ignored event payload.
 
         Raises:
             ValueError: Always.

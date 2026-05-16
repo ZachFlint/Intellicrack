@@ -58,6 +58,22 @@ fn decode_var_int(data: &[u8], pos: &mut usize) -> io::Result<u64> {
 const BPS_MATCH_WINDOW: usize = 4;
 const BPS_MIN_COPY_LEN: usize = 4;
 
+#[derive(Clone, Copy)]
+enum ChoiceKind {
+    SourceRead,
+    SourceCopy,
+    TargetCopy,
+}
+
+fn usize_to_i64(value: usize) -> io::Result<i64> {
+    i64::try_from(value).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "buffer offset exceeds signed 64-bit range",
+        )
+    })
+}
+
 fn build_hash_index(data: &[u8]) -> std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>> {
     let mut index: std::collections::HashMap<[u8; BPS_MATCH_WINDOW], Vec<usize>> =
         std::collections::HashMap::new();
@@ -209,34 +225,27 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
         let target_copy_candidate =
             find_best_match(target, target, tgt_pos, &target_index, tgt_pos);
 
-        #[derive(Clone, Copy)]
-        enum ChoiceKind {
-            SourceRead,
-            SourceCopy,
-            TargetCopy,
-        }
-
         let mut choices: Vec<(i64, ChoiceKind, usize, usize)> = Vec::new();
 
         if source_read_len >= BPS_MIN_COPY_LEN {
             let cmd_cost = var_int_len(((source_read_len as u64) - 1) << 2);
-            let score = source_read_len as i64 - cmd_cost as i64;
+            let score = usize_to_i64(source_read_len)? - usize_to_i64(cmd_cost)?;
             choices.push((score, ChoiceKind::SourceRead, source_read_len, 0));
         }
 
         if let Some((offset, len)) = source_copy_candidate {
-            let delta = offset as i64 - source_rel_offset;
+            let delta = usize_to_i64(offset)? - source_rel_offset;
             let enc = encode_rel_offset(delta);
             let cmd_cost = var_int_len((((len as u64) - 1) << 2) | 2) + var_int_len(enc);
-            let score = len as i64 - cmd_cost as i64;
+            let score = usize_to_i64(len)? - usize_to_i64(cmd_cost)?;
             choices.push((score, ChoiceKind::SourceCopy, len, offset));
         }
 
         if let Some((offset, len)) = target_copy_candidate {
-            let delta = offset as i64 - target_rel_offset;
+            let delta = usize_to_i64(offset)? - target_rel_offset;
             let enc = encode_rel_offset(delta);
             let cmd_cost = var_int_len((((len as u64) - 1) << 2) | 3) + var_int_len(enc);
-            let score = len as i64 - cmd_cost as i64;
+            let score = usize_to_i64(len)? - usize_to_i64(cmd_cost)?;
             choices.push((score, ChoiceKind::TargetCopy, len, offset));
         }
 
@@ -262,16 +271,16 @@ pub fn export_bps(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
                 patch.extend_from_slice(&encode_var_int(((best_len as u64) - 1) << 2));
             }
             ChoiceKind::SourceCopy => {
-                let new_rel = best_offset as i64;
+                let new_rel = usize_to_i64(best_offset)?;
                 let delta = new_rel - source_rel_offset;
-                source_rel_offset = new_rel + best_len as i64;
+                source_rel_offset = new_rel + usize_to_i64(best_len)?;
                 patch.extend_from_slice(&encode_var_int((((best_len as u64) - 1) << 2) | 2));
                 patch.extend_from_slice(&encode_var_int(encode_rel_offset(delta)));
             }
             ChoiceKind::TargetCopy => {
-                let new_rel = best_offset as i64;
+                let new_rel = usize_to_i64(best_offset)?;
                 let delta = new_rel - target_rel_offset;
-                target_rel_offset = new_rel + best_len as i64;
+                target_rel_offset = new_rel + usize_to_i64(best_len)?;
                 patch.extend_from_slice(&encode_var_int((((best_len as u64) - 1) << 2) | 3));
                 patch.extend_from_slice(&encode_var_int(encode_rel_offset(delta)));
             }
@@ -357,6 +366,152 @@ fn validate_bps_patch(patch: &[u8], source: &[u8]) -> io::Result<BpsValidation> 
     })
 }
 
+fn apply_source_read(
+    target: &mut [u8],
+    source: &[u8],
+    output_offset: &mut usize,
+    length: usize,
+    pos: usize,
+) -> io::Result<()> {
+    let end = output_offset.saturating_add(length);
+    if end > target.len() || end > source.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS SourceRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        ));
+    }
+    for _ in 0..length {
+        target[*output_offset] = source[*output_offset];
+        *output_offset += 1;
+    }
+    Ok(())
+}
+
+fn apply_target_read(
+    target: &mut [u8],
+    patch: &[u8],
+    output_offset: &mut usize,
+    pos: &mut usize,
+    length: usize,
+    footer_start: usize,
+) -> io::Result<()> {
+    if *pos >= footer_start
+        || pos.saturating_add(length) > footer_start
+        || output_offset.saturating_add(length) > target.len()
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS TargetRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        ));
+    }
+    for _ in 0..length {
+        target[*output_offset] = patch[*pos];
+        *pos += 1;
+        *output_offset += 1;
+    }
+    Ok(())
+}
+
+fn apply_source_copy(
+    target: &mut [u8],
+    source: &[u8],
+    patch: &[u8],
+    output_offset: &mut usize,
+    pos: &mut usize,
+    source_rel_offset: &mut i64,
+    length: usize,
+) -> io::Result<()> {
+    let offset_data = decode_var_int(patch, pos)?;
+    let negative = offset_data & 1 != 0;
+    let offset_val = i64::try_from(offset_data >> 1)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow"))?;
+    *source_rel_offset += if negative { -offset_val } else { offset_val };
+    let length_i64 = i64::try_from(length)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "source copy length overflow"))?;
+    let end_src = source_rel_offset
+        .checked_add(length_i64)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "source copy end overflow"))?;
+    let src_start = usize::try_from(*source_rel_offset).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        )
+    })?;
+    let src_end = usize::try_from(end_src).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        )
+    })?;
+    if src_end > source.len() || output_offset.saturating_add(length) > target.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        ));
+    }
+    for &src_byte in &source[src_start..src_end] {
+        target[*output_offset] = src_byte;
+        *output_offset += 1;
+    }
+    *source_rel_offset = end_src;
+    Ok(())
+}
+
+fn apply_target_copy(
+    target: &mut [u8],
+    patch: &[u8],
+    output_offset: &mut usize,
+    pos: &mut usize,
+    target_rel_offset: &mut i64,
+    length: usize,
+) -> io::Result<()> {
+    let offset_data = decode_var_int(patch, pos)?;
+    let negative = offset_data & 1 != 0;
+    let offset_val = i64::try_from(offset_data >> 1)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow"))?;
+    *target_rel_offset += if negative { -offset_val } else { offset_val };
+    let tgt_start = usize::try_from(*target_rel_offset).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        )
+    })?;
+    if tgt_start >= *output_offset || output_offset.saturating_add(length) > target.len() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+            ),
+        ));
+    }
+    for _ in 0..length {
+        let tgt_idx = usize::try_from(*target_rel_offset).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
+                ),
+            )
+        })?;
+        target[*output_offset] = target[tgt_idx];
+        *target_rel_offset += 1;
+        *output_offset += 1;
+    }
+    Ok(())
+}
+
 /// Apply a BPS patch to the source data, producing the target.
 ///
 /// Validates the BPS1 header, source CRC32, target CRC32, and patch CRC32.
@@ -392,129 +547,32 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "action length overflow"))?;
 
         match command {
-            0 => {
-                if output_offset.saturating_add(length) > target.len()
-                    || output_offset.saturating_add(length) > source.len()
-                {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS SourceRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    ));
-                }
-                for _ in 0..length {
-                    target[output_offset] = source[output_offset];
-                    output_offset += 1;
-                }
-            }
-            1 => {
-                if pos >= footer_start {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS TargetRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    ));
-                }
-                if pos.saturating_add(length) > footer_start
-                    || output_offset.saturating_add(length) > target.len()
-                {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS TargetRead OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    ));
-                }
-                for _ in 0..length {
-                    target[output_offset] = patch[pos];
-                    pos += 1;
-                    output_offset += 1;
-                }
-            }
-            2 => {
-                let offset_data = decode_var_int(patch, &mut pos)?;
-                let negative = offset_data & 1 != 0;
-                let offset_val = i64::try_from(offset_data >> 1).map_err(|_| {
-                    io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow")
-                })?;
-                source_rel_offset += if negative { -offset_val } else { offset_val };
-                let end_src = source_rel_offset
-                    .checked_add(i64::try_from(length).map_err(|_| {
-                        io::Error::new(io::ErrorKind::InvalidData, "source copy length overflow")
-                    })?)
-                    .ok_or_else(|| {
-                        io::Error::new(io::ErrorKind::InvalidData, "source copy end overflow")
-                    })?;
-                let src_start = usize::try_from(source_rel_offset).map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    )
-                })?;
-                let src_end = usize::try_from(end_src).map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    )
-                })?;
-                if src_end > source.len() || output_offset.saturating_add(length) > target.len() {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS SourceCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    ));
-                }
-                for &src_byte in &source[src_start..src_end] {
-                    target[output_offset] = src_byte;
-                    output_offset += 1;
-                }
-                source_rel_offset = end_src;
-            }
-            3 => {
-                let offset_data = decode_var_int(patch, &mut pos)?;
-                let negative = offset_data & 1 != 0;
-                let offset_val = i64::try_from(offset_data >> 1).map_err(|_| {
-                    io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow")
-                })?;
-                target_rel_offset += if negative { -offset_val } else { offset_val };
-                let tgt_start = usize::try_from(target_rel_offset).map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    )
-                })?;
-                if tgt_start >= output_offset || output_offset.saturating_add(length) > target.len()
-                {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                        ),
-                    ));
-                }
-                for _ in 0..length {
-                    let tgt_idx = usize::try_from(target_rel_offset).map_err(|_| {
-                        io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            format!(
-                                "BPS TargetCopy OOB at patch offset {pos}: source/target read of {length} bytes would exceed bounds"
-                            ),
-                        )
-                    })?;
-                    target[output_offset] = target[tgt_idx];
-                    target_rel_offset += 1;
-                    output_offset += 1;
-                }
-            }
+            0 => apply_source_read(&mut target, source, &mut output_offset, length, pos)?,
+            1 => apply_target_read(
+                &mut target,
+                patch,
+                &mut output_offset,
+                &mut pos,
+                length,
+                footer_start,
+            )?,
+            2 => apply_source_copy(
+                &mut target,
+                source,
+                patch,
+                &mut output_offset,
+                &mut pos,
+                &mut source_rel_offset,
+                length,
+            )?,
+            3 => apply_target_copy(
+                &mut target,
+                patch,
+                &mut output_offset,
+                &mut pos,
+                &mut target_rel_offset,
+                length,
+            )?,
             _ => unreachable!(),
         }
     }
@@ -735,7 +793,7 @@ mod tests {
         let _src = decode_var_int(patch, &mut pos).unwrap();
         let _tgt = decode_var_int(patch, &mut pos).unwrap();
         let metadata_size = decode_var_int(patch, &mut pos).unwrap();
-        pos += metadata_size as usize;
+        pos += usize::try_from(metadata_size).expect("test patch metadata fits in usize");
 
         while pos < footer_start {
             let action = decode_var_int(patch, &mut pos).unwrap();

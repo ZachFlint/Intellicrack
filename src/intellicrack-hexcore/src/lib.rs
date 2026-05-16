@@ -532,10 +532,10 @@ impl HexDocument {
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
-    fn export_patches_cod(&self) -> PyResult<Vec<u8>> {
+    fn export_patches_cod(&self) -> Vec<u8> {
         let ops = self.undo_mgr.get_overwrite_patches();
         let records = patch_export::extract_patches_from_overwrites(&ops);
-        Ok(patch_export::export_cod(&records))
+        patch_export::export_cod(&records)
     }
 
     fn export_patches_json(&self) -> PyResult<String> {

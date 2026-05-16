@@ -29,9 +29,6 @@ class _FakeBridge(ToolBridgeBase):
 
     Only the abstract surface required by :class:`ToolBridgeBase` is
     implemented; the bridge does not talk to any external tool.
-
-    Attributes:
-        _tool_name: Tool identity reported by :attr:`name`.
     """
 
     def __init__(self, tool: ToolName) -> None:

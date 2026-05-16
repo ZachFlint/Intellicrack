@@ -2571,10 +2571,6 @@ class HexEditorBridge(ToolBridgeBase):
                   from every ``std::print`` invocation during evaluation,
                   or the empty string if the pattern did not call
                   ``std::print``.
-
-        Raises:
-            RuntimeError: If no document is open or the interpreter
-                module is unavailable.
         """
         captured: list[str] = []
         fields: list[dict[str, Any]] = await self.execute_pattern(source, offset, print_sink=captured.append)
@@ -2605,11 +2601,6 @@ class HexEditorBridge(ToolBridgeBase):
                   from every ``std::print`` invocation during evaluation,
                   or the empty string if the pattern did not call
                   ``std::print``.
-
-        Raises:
-            RuntimeError: If no document is open or the interpreter
-                module is unavailable.
-            FileNotFoundError: If the pattern file does not exist.
         """
         captured: list[str] = []
         fields: list[dict[str, Any]] = await self.execute_pattern_file(

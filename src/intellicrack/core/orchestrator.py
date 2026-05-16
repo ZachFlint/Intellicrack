@@ -866,8 +866,6 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If no session is currently active.
-            ValueError: If ``tag`` is empty or whitespace-only (raised
-                by :meth:`Session.add_tag`).
         """
         if self._current_session is None:
             error_message = "No active session"

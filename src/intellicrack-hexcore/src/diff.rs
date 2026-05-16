@@ -210,7 +210,7 @@ fn compute_anchors(data: &[u8]) -> Vec<(u32, usize)> {
     }
 
     let window = ANCHOR_WINDOW;
-    let window_u32 = window as u32;
+    let window_u32 = u32::try_from(window).expect("ANCHOR_WINDOW constant must fit in u32");
     let mut anchors: Vec<(u32, usize)> = Vec::new();
 
     let mut idx: usize = 0;
@@ -545,7 +545,8 @@ mod tests {
         let size = BYTE_LEVEL_THRESHOLD + 4096;
         let mut data_a = vec![0u8; size];
         for (idx, byte) in data_a.iter_mut().enumerate() {
-            *byte = ((idx * 31 + 7) & 0xFF) as u8;
+            *byte = u8::try_from((idx * 31 + 7) & 0xFF)
+                .expect("mask with 0xFF guarantees value fits in u8");
         }
         let mut data_b = data_a.clone();
         let change_offset = size / 2;
@@ -615,7 +616,8 @@ mod tests {
         let size = BYTE_LEVEL_THRESHOLD + 1024;
         let mut data_a = vec![0u8; size];
         for (idx, byte) in data_a.iter_mut().enumerate() {
-            *byte = ((idx * 17 + 3) & 0xFF) as u8;
+            *byte = u8::try_from((idx * 17 + 3) & 0xFF)
+                .expect("mask with 0xFF guarantees value fits in u8");
         }
         let mut data_b = data_a.clone();
         let change_offset = size / 3 + 5;

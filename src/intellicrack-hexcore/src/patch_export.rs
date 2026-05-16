@@ -605,9 +605,9 @@ mod tests {
 
     fn contains_header_with_offset_3(body: &[u8], offset: usize) -> bool {
         let target = [
-            ((offset >> 16) & 0xFF) as u8,
-            ((offset >> 8) & 0xFF) as u8,
-            (offset & 0xFF) as u8,
+            u8::try_from((offset >> 16) & 0xFF).expect("mask with 0xFF fits in u8"),
+            u8::try_from((offset >> 8) & 0xFF).expect("mask with 0xFF fits in u8"),
+            u8::try_from(offset & 0xFF).expect("mask with 0xFF fits in u8"),
         ];
         let mut pos = 0;
         while pos + 5 <= body.len() {
@@ -623,10 +623,10 @@ mod tests {
 
     fn contains_header_with_offset_4(body: &[u8], offset: usize) -> bool {
         let target = [
-            ((offset >> 24) & 0xFF) as u8,
-            ((offset >> 16) & 0xFF) as u8,
-            ((offset >> 8) & 0xFF) as u8,
-            (offset & 0xFF) as u8,
+            u8::try_from((offset >> 24) & 0xFF).expect("mask with 0xFF fits in u8"),
+            u8::try_from((offset >> 16) & 0xFF).expect("mask with 0xFF fits in u8"),
+            u8::try_from((offset >> 8) & 0xFF).expect("mask with 0xFF fits in u8"),
+            u8::try_from(offset & 0xFF).expect("mask with 0xFF fits in u8"),
         ];
         let mut pos = 0;
         while pos + 6 <= body.len() {

@@ -26,12 +26,7 @@ if TYPE_CHECKING:
 
 
 class _CountingBridge(ToolBridgeBase):
-    """Bridge that records how many times its session is reassigned.
-
-    Attributes:
-        _tool_name: Tool identity reported by :attr:`name`.
-        set_session_calls: Counter for :meth:`set_session` invocations.
-    """
+    """Bridge that records how many times its session is reassigned."""
 
     def __init__(self, tool: ToolName) -> None:
         """Initialize the counting bridge.

@@ -19,6 +19,8 @@ Tests validate:
 from __future__ import annotations
 
 import asyncio
+import math
+from pathlib import Path
 from typing import Final
 
 import pytest
@@ -309,7 +311,7 @@ class TestExecutionReport:
             duration_seconds=300.0,
         )
         assert report.result == "timeout"
-        assert report.duration_seconds == 300.0
+        assert math.isclose(report.duration_seconds, 300.0)
 
 
 class TestSandboxConfig:
@@ -388,8 +390,6 @@ class TestSandboxBase:
 
     def test_run_binary_raises(self) -> None:
         """Base run_binary raises SandboxError."""
-        from pathlib import Path
-
         sb = SandboxBase()
         with pytest.raises(SandboxError):
             asyncio.get_event_loop().run_until_complete(
@@ -398,8 +398,6 @@ class TestSandboxBase:
 
     def test_copy_to_sandbox_raises(self) -> None:
         """Base copy_to_sandbox raises SandboxError."""
-        from pathlib import Path
-
         sb = SandboxBase()
         with pytest.raises(SandboxError):
             asyncio.get_event_loop().run_until_complete(
@@ -408,8 +406,6 @@ class TestSandboxBase:
 
     def test_copy_from_sandbox_raises(self) -> None:
         """Base copy_from_sandbox raises SandboxError."""
-        from pathlib import Path
-
         sb = SandboxBase()
         with pytest.raises(SandboxError):
             asyncio.get_event_loop().run_until_complete(

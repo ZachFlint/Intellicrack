@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Zachary Flint
+#
+# This file is part of Intellicrack. See LICENSE for details.
 """Tests for the commit message generator's splitting and error handling."""
 
 from __future__ import annotations
@@ -315,7 +319,7 @@ class TestExtractStatSection:
         """Verify fallback when markers are absent."""
         inp = "diff --git a/file1.py b/file1.py\n--- a/file1.py\n+++ b/file1.py"
         stat, body = _extract_stat_section(inp)
-        assert stat == ""
+        assert not stat
         assert body == inp
 
 

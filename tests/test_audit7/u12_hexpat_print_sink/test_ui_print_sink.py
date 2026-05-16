@@ -197,15 +197,14 @@ class _PatternHarness(QWidget, PatternEditorMixin):
 
         Wraps the private :attr:`_pattern_print_output` attribute the
         mixin populates so the regression tests can read the widget
-        without tripping basedpyright's ``reportPrivateUsage`` rule.
+        without tripping basedpyright's ``reportPrivateUsage`` rule. The
+        accompanying ``assert`` narrows the optional attribute and is
+        skipped under ``python -O`` rather than raising a documented
+        exception.
 
         Returns:
             QPlainTextEdit: The widget the mixin appends ``std::print``
             output to.
-
-        Raises:
-            AssertionError: If the harness was not initialised with a
-                concrete print-output widget.
         """
         widget = self._pattern_print_output
         assert widget is not None, "harness must be initialised with a concrete print-output widget"

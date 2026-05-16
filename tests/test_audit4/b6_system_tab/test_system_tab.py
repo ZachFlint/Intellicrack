@@ -100,8 +100,15 @@ class _AsyncError:
             *_args: Ignored positional arguments.
             **_kwargs: Ignored keyword arguments.
 
+        Returns:
+            object: Never returns; the coroutine always raises the exception
+            supplied at construction.
+
         Raises:
-            Exception: The configured exception.
+            self._exc: The exception instance supplied at construction is
+                re-raised unchanged so callers observe the scripted failure.
+                The Raises entry uses the literal raise target so static
+                analysis can correlate the body with the docstring.
         """
         raise self._exc
 

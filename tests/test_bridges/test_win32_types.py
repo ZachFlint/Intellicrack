@@ -14,6 +14,8 @@ import pytest
 
 from intellicrack.bridges import named_pipe_client, x64dbg
 from intellicrack.bridges._win32_types import (
+    CONTEXT32,
+    CONTEXT64,
     CONTEXT_ALL,
     CONTEXT_AMD64,
     CONTEXT_CONTROL,
@@ -31,9 +33,11 @@ from intellicrack.bridges._win32_types import (
     IMAGE_FILE_MACHINE_I386,
     IMAGE_FILE_MACHINE_IA64,
     INVALID_HANDLE_VALUE,
+    LUID,
     MEM_COMMIT,
     MEM_RELEASE,
     MEM_RESERVE,
+    MEMORY_BASIC_INFORMATION,
     NT_HEADERS_OPTIONAL_OFFSET,
     OPEN_EXISTING,
     PE_HEADER_OFFSET,
@@ -47,6 +51,13 @@ from intellicrack.bridges._win32_types import (
     TH32CS_SNAPPROCESS,
     THREAD_ALL_ACCESS,
     THREAD_STATE_NAMES,
+    THREADENTRY32,
+    get_advapi32,
+    get_dbghelp,
+    get_kernel32,
+    get_ntdll,
+    get_psapi,
+    get_user32,
     mem_type_to_string,
     protection_to_string,
     state_to_string,
@@ -329,24 +340,14 @@ class TestStructureFieldVerification:
 
     def test_threadentry32_size(self) -> None:
         """Verify THREADENTRY32 is 28 bytes."""
-        import ctypes
-
-        from intellicrack.bridges._win32_types import THREADENTRY32
-
         assert ctypes.sizeof(THREADENTRY32) == 28
 
     def test_luid_size(self) -> None:
         """Verify LUID is 8 bytes."""
-        import ctypes
-
-        from intellicrack.bridges._win32_types import LUID
-
         assert ctypes.sizeof(LUID) == 8
 
     def test_context64_has_rip_rsp(self) -> None:
         """Verify CONTEXT64 has Rip, Rsp, Rax, Rbx fields."""
-        from intellicrack.bridges._win32_types import CONTEXT64
-
         ctx = CONTEXT64()
         assert hasattr(ctx, "Rip")
         assert hasattr(ctx, "Rsp")
@@ -355,8 +356,6 @@ class TestStructureFieldVerification:
 
     def test_context32_has_eip_esp(self) -> None:
         """Verify CONTEXT32 has Eip, Esp, Eax, Ebx fields."""
-        from intellicrack.bridges._win32_types import CONTEXT32
-
         ctx = CONTEXT32()
         assert hasattr(ctx, "Eip")
         assert hasattr(ctx, "Esp")
@@ -365,8 +364,6 @@ class TestStructureFieldVerification:
 
     def test_memory_basic_information_has_all_fields(self) -> None:
         """Verify MEMORY_BASIC_INFORMATION has all 7 fields."""
-        from intellicrack.bridges._win32_types import MEMORY_BASIC_INFORMATION
-
         mbi = MEMORY_BASIC_INFORMATION()
         assert hasattr(mbi, "BaseAddress")
         assert hasattr(mbi, "AllocationBase")
@@ -383,72 +380,48 @@ class TestDllHelperCaching:
 
     def test_get_kernel32_returns_non_none(self) -> None:
         """Verify get_kernel32 returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_kernel32
-
         assert get_kernel32() is not None
 
     def test_get_kernel32_cached(self) -> None:
         """Verify get_kernel32 returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_kernel32
-
         assert get_kernel32() is get_kernel32()
 
     def test_get_ntdll_returns_non_none(self) -> None:
         """Verify get_ntdll returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_ntdll
-
         assert get_ntdll() is not None
 
     def test_get_ntdll_cached(self) -> None:
         """Verify get_ntdll returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_ntdll
-
         assert get_ntdll() is get_ntdll()
 
     def test_get_advapi32_returns_non_none(self) -> None:
         """Verify get_advapi32 returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_advapi32
-
         assert get_advapi32() is not None
 
     def test_get_advapi32_cached(self) -> None:
         """Verify get_advapi32 returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_advapi32
-
         assert get_advapi32() is get_advapi32()
 
     def test_get_user32_returns_non_none(self) -> None:
         """Verify get_user32 returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_user32
-
         assert get_user32() is not None
 
     def test_get_user32_cached(self) -> None:
         """Verify get_user32 returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_user32
-
         assert get_user32() is get_user32()
 
     def test_get_dbghelp_returns_non_none(self) -> None:
         """Verify get_dbghelp returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_dbghelp
-
         assert get_dbghelp() is not None
 
     def test_get_dbghelp_cached(self) -> None:
         """Verify get_dbghelp returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_dbghelp
-
         assert get_dbghelp() is get_dbghelp()
 
     def test_get_psapi_returns_non_none(self) -> None:
         """Verify get_psapi returns a non-None handle."""
-        from intellicrack.bridges._win32_types import get_psapi
-
         assert get_psapi() is not None
 
     def test_get_psapi_cached(self) -> None:
         """Verify get_psapi returns the same cached object."""
-        from intellicrack.bridges._win32_types import get_psapi
-
         assert get_psapi() is get_psapi()

@@ -68,13 +68,6 @@ class _FlowLayout(QLayout):
     wraps child widgets onto additional rows when the available width is
     exceeded so a long list of tag chips renders cleanly inside the
     session manager dialog without horizontal scrolling.
-
-    Attributes:
-        _items: Internal list of ``QLayoutItem`` widgets managed by the
-            layout.
-        _horizontal_spacing: Horizontal gap between chips, in pixels.
-        _vertical_spacing: Vertical gap between rows of chips, in
-            pixels.
     """
 
     def __init__(

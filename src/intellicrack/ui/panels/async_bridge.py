@@ -57,6 +57,7 @@ This tuple is the union of error types currently raised by hex-editor mixin call
 via the ``exceptions`` constructor argument.
 """
 
+
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
 

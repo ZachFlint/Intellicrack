@@ -36,6 +36,7 @@ class SignalRecorder:
     """
 
     def __init__(self) -> None:
+        """Initialise the signal recorder with an empty call history."""
         self.calls: list[tuple[Any, ...]] = []
 
     def __call__(self, *args: object) -> None:
@@ -80,6 +81,7 @@ class DialogRecorder:
     """
 
     def __init__(self) -> None:
+        """Initialise the dialog recorder with an empty call history."""
         self.calls: list[tuple[Any, ...]] = []
 
     def __call__(self, *args: object, **_kwargs: object) -> None:
@@ -104,6 +106,12 @@ class NoOpSandboxManager:
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
+        """Accept and discard all constructor arguments.
+
+        Args:
+            *args: Ignored positional arguments.
+            **kwargs: Ignored keyword arguments.
+        """
         del args, kwargs
 
     def __getattr__(self, name: str) -> Callable[..., None]:
@@ -126,6 +134,11 @@ class CallRecorder:
     """
 
     def __init__(self, result: object = None) -> None:
+        """Initialise the call recorder.
+
+        Args:
+            result: Value returned by each invocation of this recorder.
+        """
         self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
         self.result: object = result
 
