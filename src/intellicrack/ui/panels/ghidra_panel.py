@@ -1751,10 +1751,8 @@ class GhidraPanel(AnalysisPanelBase):
             if isinstance(blocks_raw, list):
                 blocks_list = cast("list[dict[str, object]]", blocks_raw)
         if CFGGraphView is not None and isinstance(self._cfg_view, CFGGraphView):
-            graph_data: dict[str, object] = {"nodes": blocks_list}
             scene = self._cfg_view.graph_scene()
             scene.load_graph(blocks_list)
-            _ = graph_data
         elif isinstance(self._cfg_view, QPlainTextEdit):
             lines2: list[str] = []
             for blk in blocks_list:
