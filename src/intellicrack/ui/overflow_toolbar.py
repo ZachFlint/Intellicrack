@@ -244,14 +244,25 @@ class OverflowToolBar(QToolBar):
             def _combo_proxy_clicked(*_args: object) -> None:
                 """Close the overflow menu and display the combo popup at a safe anchor."""
                 self._overflow_menu.close()
-                pos = combo.mapToGlobal(QPoint(0, combo.height()))
-                screen = QApplication.screenAt(pos)
+                anchor = combo.mapToGlobal(QPoint(0, combo.height()))
+                combo.showPopup()
+                view = combo.view()
+                if view is None:
+                    return
+                container = view.parentWidget()
+                if container is None:
+                    return
+                target = anchor
+                screen = QApplication.screenAt(anchor)
                 if screen is not None:
                     rect = screen.availableGeometry()
-                    pos = QPoint(
-                        min(pos.x(), rect.right() - combo.width()),
-                        min(pos.y(), rect.bottom() - 200),
+                    container_size = container.size()
+                    max_x = rect.right() - container_size.width()
+                    max_y = rect.bottom() - container_size.height()
+                    target = QPoint(
+                        max(rect.left(), min(anchor.x(), max_x)),
+                        max(rect.top(), min(anchor.y(), max_y)),
                     )
-                combo.showPopup()
+                container.move(target)
 
             proxy.triggered.connect(_combo_proxy_clicked)
