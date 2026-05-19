@@ -178,6 +178,13 @@ class TransformsMixin:
 
     def _on_data_changed(self) -> None:
         """Handle document data-change signals by refreshing derived views."""
+        if self._transform_preview_pane is not None:
+            self._transform_preview_pane.clear()
+        self._transform_nodes_cache = _load_transform_descriptors(self.document)
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
 
     def _create_transforms_tab(self) -> QWidget:
         """Create the Transforms side panel tab widget.
@@ -268,7 +275,7 @@ class TransformsMixin:
             QPlainTextEdit: Read-only monospace preview pane.
         """
         self._transform_preview_pane = QPlainTextEdit()
-        self._transform_preview_pane.setReadOnly(ro=True)
+        self._transform_preview_pane.setReadOnly(True)
         preview_font = self._transform_preview_pane.font()
         preview_font.setFamily("Consolas")
         preview_font.setPointSize(9)

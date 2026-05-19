@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -38,9 +38,25 @@ from intellicrack.ui.panels.hex_editor._base import (
     hexpat_mod,
 )
 from intellicrack.ui.resources.font_manager import FontManager
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
+
+
+_PATTERN_FIELD_DARK: Final[str] = "#FFD080"
+_PATTERN_FIELD_LIGHT: Final[str] = "#E65100"
+
+
+def _get_default_pattern_field_color() -> str:
+    """Return a theme-appropriate highlight color for pattern editor fields.
+
+    Returns:
+        str: Hex color string suitable for the active theme.
+    """
+    if ThemeManager.get_instance().is_dark_theme():
+        return _PATTERN_FIELD_DARK
+    return _PATTERN_FIELD_LIGHT
 
 
 if TYPE_CHECKING:
@@ -77,6 +93,22 @@ class PatternEditorMixin:
         Args:
             fields: Interpreted template field entries with metadata.
         """
+        if self._templates_tree is None:
+            return
+        for field in fields:
+            name_val = str(field.get("name", ""))
+            offset_raw = field.get("offset")
+            size_raw = field.get("size")
+            type_val = str(field.get("type", ""))
+            offset_int = offset_raw if isinstance(offset_raw, int) else 0
+            size_int = size_raw if isinstance(size_raw, int) else 0
+            item = QTreeWidgetItem([
+                name_val,
+                f"0x{offset_int:08X}",
+                f"{size_int}",
+                type_val,
+            ])
+            self._templates_tree.addTopLevelItem(item)
 
     def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None:
         """Apply region highlights in the hex view for template fields.
@@ -84,9 +116,45 @@ class PatternEditorMixin:
         Args:
             fields: Interpreted template field entries with offsets and sizes.
         """
+        if self._hex_widget is None:
+            return
+        highlight_fn = getattr(self._hex_widget, "highlight_offsets", None)
+        if not callable(highlight_fn):
+            return
+        highlights: list[tuple[int, int, str]] = []
+        for field in fields:
+            offset_raw = field.get("offset")
+            size_raw = field.get("size")
+            if isinstance(offset_raw, int) and isinstance(size_raw, int):
+                color_raw = field.get("color")
+                color = color_raw if isinstance(color_raw, str) else _get_default_pattern_field_color()
+                highlights.append((offset_raw, size_raw, color))
+        if highlights:
+            highlight_fn(highlights, "pattern")
 
     def _populate_template_combo(self) -> None:
         """Populate the template selector combo with available structures."""
+        if self._template_combo is None:
+            return
+        self._template_combo.clear()
+        if self.document is None:
+            return
+        list_fn = getattr(self.document, "list_templates", None)
+        if not callable(list_fn):
+            return
+        try:
+            templates_raw: object = list_fn()
+        except (AttributeError, ValueError, RuntimeError):
+            _logger.exception("populate_template_combo_failed")
+            return
+        if not isinstance(templates_raw, list):
+            return
+        for entry in cast("list[object]", templates_raw):
+            if isinstance(entry, (tuple, list)) and len(cast("tuple[object, ...]", entry)) > 0:
+                first = cast("tuple[object, ...]", entry)[0]
+                self._template_combo.addItem(str(first))
+            elif isinstance(entry, str):
+                self._template_combo.addItem(entry)
 
     def _build_pattern_editor(self) -> QFrame:
         """Build the collapsible pattern editor panel.
@@ -120,7 +188,7 @@ class PatternEditorMixin:
         editor_tabs.addTab(self._pattern_dsl_editor, "DSL")
 
         self._pattern_json_preview = QPlainTextEdit()
-        self._pattern_json_preview.setReadOnly(ro=True)
+        self._pattern_json_preview.setReadOnly(True)
         self._pattern_json_preview.setFont(font)
         editor_tabs.addTab(self._pattern_json_preview, "JSON")
 
@@ -154,7 +222,7 @@ class PatternEditorMixin:
         right_layout.addLayout(action_bar)
 
         self._pattern_error_display = QPlainTextEdit()
-        self._pattern_error_display.setReadOnly(ro=True)
+        self._pattern_error_display.setReadOnly(True)
         self._pattern_error_display.setMaximumHeight(60)
         right_layout.addWidget(self._pattern_error_display)
 
@@ -162,7 +230,7 @@ class PatternEditorMixin:
         right_layout.addWidget(print_label)
 
         self._pattern_print_output = QPlainTextEdit()
-        self._pattern_print_output.setReadOnly(ro=True)
+        self._pattern_print_output.setReadOnly(True)
         self._pattern_print_output.setMaximumHeight(100)
         self._pattern_print_output.setFont(font)
         right_layout.addWidget(self._pattern_print_output)
@@ -584,7 +652,7 @@ class PatternEditorMixin:
             template_item.setToolTip(0, desc_val)
             categories[category].addChild(template_item)
 
-        builtin_root.setExpanded(aexpand=True)
+        builtin_root.setExpanded(True)
 
         self._populate_hexpat_library_entries()
 
@@ -626,7 +694,7 @@ class PatternEditorMixin:
                 p_item.setData(0, Qt.ItemDataRole.UserRole, str(pattern.file_path))
                 cat_item.addChild(p_item)
 
-        hexpat_root.setExpanded(aexpand=True)
+        hexpat_root.setExpanded(True)
 
     def _refresh_template_combo(self) -> None:
         """Refresh the template combo box after registration changes."""
