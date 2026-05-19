@@ -47,6 +47,7 @@ class PatchesMixin:
 
     def _on_data_changed(self) -> None:
         """Handle document data-change signals by refreshing derived views."""
+        self._update_patches()
 
     def _update_patches(self) -> None:
         """Update the patches tree by comparing modified offsets to originals."""
