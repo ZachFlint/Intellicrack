@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, cast, override, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
@@ -35,6 +35,8 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QCloseEvent
+
     from intellicrack.bridges.frida_bridge import FridaBridge
     from intellicrack.bridges.x64dbg import X64DbgBridge
 
@@ -329,11 +331,11 @@ class StackFrameTable(QTableWidget):
 
         self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        self.setAlternatingRowColors(enable=True)
+        self.setAlternatingRowColors(True)
         sv_v_header = self.verticalHeader()
         if sv_v_header is not None:
-            sv_v_header.setVisible(v=False)
-        self.setShowGrid(show=False)
+            sv_v_header.setVisible(False)
+        self.setShowGrid(False)
 
         self.cellClicked.connect(self._on_cell_clicked)
         self.cellDoubleClicked.connect(self._on_cell_double_clicked)
@@ -639,3 +641,14 @@ class StackViewerPanel(QWidget):
         self._frame_table.setRowCount(0)
         self._frame_count_label.setText("0 frames")
         self._last_update_label.setText("")
+
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
+        """Stop the refresh timer when the panel closes.
+
+        Args:
+            a0: The close event.
+        """
+        if self.refresh_timer is not None:
+            self.refresh_timer.stop()
+        super().closeEvent(a0)
