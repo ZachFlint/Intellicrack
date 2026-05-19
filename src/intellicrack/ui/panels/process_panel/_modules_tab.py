@@ -325,7 +325,11 @@ class ModulesTab(QWidget):
                 )
             self._mod_count.setText(f"{len(typed_result)} modules")
 
-        run_bridge_coroutine_async(self._bridge.get_modules(self._attached_pid), _on_success, None, self)
+        def _on_error(exc: object) -> None:
+            _logger.warning("Module enumeration failed: %s", exc)
+            QMessageBox.warning(self, "Module Enumeration Error", str(exc))
+
+        run_bridge_coroutine_async(self._bridge.get_modules(self._attached_pid), _on_success, _on_error, self)
 
     def _on_browse_dll(self) -> None:
         """Open file dialog to select a DLL."""
