@@ -2226,7 +2226,7 @@ class MainWindow(QMainWindow):
             counts: dict[str, int] = {}
             for provider_name_obj, models_obj in result_dict.items():
                 key = provider_name_obj.value if isinstance(provider_name_obj, ProviderName) else str(provider_name_obj)
-                counts[key] = len(models_obj) if isinstance(models_obj, list) else 0
+                counts[key] = len(cast("list[object]", models_obj)) if isinstance(models_obj, list) else 0
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", per_provider_counts={})

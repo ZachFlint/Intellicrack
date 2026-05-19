@@ -813,7 +813,19 @@ class TestProviderChangedSetsActive:
         holder, registry, recorder = _build_provider_holder(
             provider=_ProviderDouble(is_connected=False),
         )
-        holder._prompt_provider_not_connected = lambda _name: "cancel"
+
+        def _cancel_prompt(_name: str) -> str:
+            """Return the ``"cancel"`` selection sentinel.
+
+            Args:
+                _name: Provider name (unused).
+
+            Returns:
+                str: Always ``"cancel"``.
+            """
+            return "cancel"
+
+        setattr(holder, "_prompt_provider_not_connected", _cancel_prompt)
         MainWindow._on_provider_changed(holder, 0)
 
         assert registry.set_active_calls == []
@@ -826,8 +838,24 @@ class TestProviderChangedSetsActive:
             provider=_ProviderDouble(is_connected=False),
         )
         configure_calls: list[int] = []
-        holder._prompt_provider_not_connected = lambda _name: "configure"
-        holder._on_configure_providers = lambda: configure_calls.append(1)
+
+        def _configure_prompt(_name: str) -> str:
+            """Return the ``"configure"`` selection sentinel.
+
+            Args:
+                _name: Provider name (unused).
+
+            Returns:
+                str: Always ``"configure"``.
+            """
+            return "configure"
+
+        def _record_configure() -> None:
+            """Append a marker to ``configure_calls`` to confirm invocation."""
+            configure_calls.append(1)
+
+        setattr(holder, "_prompt_provider_not_connected", _configure_prompt)
+        setattr(holder, "_on_configure_providers", _record_configure)
         MainWindow._on_provider_changed(holder, 0)
 
         assert registry.set_active_calls == []
@@ -1059,5 +1087,6 @@ class TestMainWindowConstructionWiresMenu:
             real_window: MainWindow fixture.
         """
         assert hasattr(real_window, "_sandbox_monitor_wired_widgets")
-        assert isinstance(real_window._sandbox_monitor_wired_widgets, weakref.WeakSet)
-        assert len(real_window._sandbox_monitor_wired_widgets) == 0
+        wired: weakref.WeakSet[object] = getattr(real_window, "_sandbox_monitor_wired_widgets")
+        assert isinstance(wired, weakref.WeakSet)
+        assert len(wired) == 0
