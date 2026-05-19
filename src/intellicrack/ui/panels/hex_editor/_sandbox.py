@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import posixpath
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -164,12 +165,42 @@ class SandboxMixin:
 
         copy_to_fn: SandboxBridge = cast("SandboxBridge", bridge)
         run_bridge_coroutine_async(
-            copy_to_fn.copy_to(instance_id, src, dest_path),
+            self._copy_to_with_timeout(copy_to_fn, instance_id, src, dest_path, timeout),
             on_success=self._on_sandbox_finished_obj,
             on_error=self._on_sandbox_error_obj,
             parent=self if isinstance(self, QWidget) else None,
         )
-        _ = timeout
+
+    @staticmethod
+    async def _copy_to_with_timeout(
+        bridge: SandboxBridge,
+        instance_id: str,
+        source: str,
+        dest: str,
+        time_limit: int,
+    ) -> dict[str, Any]:
+        """Invoke ``SandboxBridge.copy_to`` under an ``asyncio.timeout`` deadline.
+
+        ``SandboxBridge.copy_to`` does not expose a timeout parameter, so the
+        user-supplied limit from the hex editor's Sandbox panel is enforced
+        at this call site to prevent indefinitely hanging copy operations.
+
+        Args:
+            bridge: SandboxBridge instance providing the ``copy_to`` coroutine.
+            instance_id: ID of the sandbox instance to copy into.
+            source: Local source file path.
+            dest: Destination path inside the sandbox.
+            time_limit: Maximum number of seconds the copy may take before
+                ``TimeoutError`` is raised.
+
+        Returns:
+            dict[str, Any]: Success confirmation returned by ``copy_to``.
+
+        Raises:
+            TimeoutError: If the copy operation exceeds ``time_limit`` seconds.
+        """
+        async with asyncio.timeout(time_limit):
+            return await bridge.copy_to(instance_id, source, dest)
 
     def _on_test_in_sandbox(self) -> None:
         """Execute the current binary in the sandbox and display output."""
