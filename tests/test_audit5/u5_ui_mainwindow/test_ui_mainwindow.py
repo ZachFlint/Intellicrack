@@ -42,7 +42,8 @@ from __future__ import annotations
 
 import inspect
 import os
-from typing import TYPE_CHECKING
+import weakref
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox, QTabWidget, QWidget
@@ -673,7 +674,21 @@ class _RegistryDouble:
 
 
 class _ProviderComboDouble:
-    """Combo box double returning a fixed :class:`ProviderName` from ``currentData``."""
+    """Combo box double exposing the subset of Qt API the production code uses.
+
+    Qt's combo box API is camelCase; the production code calls
+    ``currentData``, ``findData``, ``setCurrentIndex`` and ``blockSignals``
+    by their Qt names. To keep the double Python-idiomatic (snake_case)
+    while still responding to those calls, the camelCase names are routed
+    through :meth:`__getattr__` to internal snake_case implementations.
+    """
+
+    _qt_alias_map: ClassVar[dict[str, str]] = {
+        "currentData": "_current_data",
+        "findData": "_find_data",
+        "setCurrentIndex": "_set_current_index",
+        "blockSignals": "_block_signals",
+    }
 
     def __init__(self, value: object) -> None:
         """Initialise with the value to return.
@@ -682,14 +697,65 @@ class _ProviderComboDouble:
             value: Value the combo's ``currentData`` should return.
         """
         self._value = value
+        self._current_index: int = 0
+        self._signals_blocked: bool = False
 
-    def currentData(self) -> object:  # noqa: N802 - matches Qt API name
+    def _current_data(self) -> object:
         """Return the configured value.
 
         Returns:
             object: The configured value.
         """
         return self._value
+
+    def _find_data(self, value: object) -> int:
+        """Return a synthetic index for ``value``.
+
+        Args:
+            value: Sentinel data to look up.
+
+        Returns:
+            int: ``0`` when ``value`` equals the configured value, ``-1`` otherwise.
+        """
+        return 0 if value == self._value else -1
+
+    def _set_current_index(self, index: int) -> None:
+        """Record the index passed by the production code.
+
+        Args:
+            index: Index value the production code restored.
+        """
+        self._current_index = index
+
+    def _block_signals(self, *, b: bool) -> bool:
+        """Record signal-blocking state changes.
+
+        Args:
+            b: New signal-blocking state.
+
+        Returns:
+            bool: Previous signal-blocking state.
+        """
+        prev = self._signals_blocked
+        self._signals_blocked = b
+        return prev
+
+    def __getattr__(self, name: str) -> object:
+        """Route Qt-style camelCase attribute lookups to snake_case methods.
+
+        Args:
+            name: Attribute name requested by the production code.
+
+        Returns:
+            object: The bound method matching the Qt API call site.
+
+        Raises:
+            AttributeError: When the requested name has no mapping.
+        """
+        alias = self._qt_alias_map.get(name)
+        if alias is None:
+            raise AttributeError(name)
+        return getattr(self, alias)
 
 
 class _OrchestratorDouble:
@@ -747,10 +813,53 @@ class TestProviderChangedSetsActive:
         holder, registry, recorder = _build_provider_holder(
             provider=_ProviderDouble(is_connected=False),
         )
+
+        def _cancel_prompt(_name: str) -> str:
+            """Return the ``"cancel"`` selection sentinel.
+
+            Args:
+                _name: Provider name (unused).
+
+            Returns:
+                str: Always ``"cancel"``.
+            """
+            return "cancel"
+
+        setattr(holder, "_prompt_provider_not_connected", _cancel_prompt)
         MainWindow._on_provider_changed(holder, 0)
 
         assert registry.set_active_calls == []
         assert any("not connected" in msg.lower() or "configure" in msg.lower() for msg in recorder.emissions)
+
+    @staticmethod
+    def test_disconnected_provider_prompt_configure_route() -> None:
+        """Choosing 'Configure Now' opens the provider configuration dialog."""
+        holder, registry, _ = _build_provider_holder(
+            provider=_ProviderDouble(is_connected=False),
+        )
+        configure_calls: list[int] = []
+
+        def _configure_prompt(_name: str) -> str:
+            """Return the ``"configure"`` selection sentinel.
+
+            Args:
+                _name: Provider name (unused).
+
+            Returns:
+                str: Always ``"configure"``.
+            """
+            return "configure"
+
+        def _record_configure() -> None:
+            """Append a marker to ``configure_calls`` to confirm invocation."""
+            configure_calls.append(1)
+
+        setattr(holder, "_prompt_provider_not_connected", _configure_prompt)
+        setattr(holder, "_on_configure_providers", _record_configure)
+        MainWindow._on_provider_changed(holder, 0)
+
+        assert registry.set_active_calls == []
+        assert configure_calls == [1]
 
     @staticmethod
     def test_provider_error_does_not_propagate() -> None:
@@ -781,19 +890,42 @@ class _TimerDouble:
 
 
 class _StatusLabelDouble:
-    """QLabel double recording the most recent text passed to :meth:`setText`."""
+    """QLabel double recording the most recent text passed to ``setText``.
+
+    Routes the Qt camelCase API name through :meth:`__getattr__` to keep the
+    class definition Python-idiomatic.
+    """
+
+    _qt_alias_map: ClassVar[dict[str, str]] = {"setText": "_set_text"}
 
     def __init__(self) -> None:
         """Initialise the text holder."""
         self.text: str = ""
 
-    def setText(self, value: str) -> None:  # noqa: N802 - matches Qt API name
+    def _set_text(self, value: str) -> None:
         """Record the text.
 
         Args:
             value: Text to display.
         """
         self.text = value
+
+    def __getattr__(self, name: str) -> object:
+        """Route Qt-style camelCase attribute lookups to snake_case methods.
+
+        Args:
+            name: Attribute name requested by the production code.
+
+        Returns:
+            object: The bound method matching the Qt API call site.
+
+        Raises:
+            AttributeError: When the requested name has no mapping.
+        """
+        alias = self._qt_alias_map.get(name)
+        if alias is None:
+            raise AttributeError(name)
+        return getattr(self, alias)
 
 
 class _OrchestratorAlwaysOk:
@@ -949,10 +1081,12 @@ class TestMainWindowConstructionWiresMenu:
     def test_sandbox_monitor_wired_widgets_set_initialised(
         real_window: MainWindow,
     ) -> None:
-        """``_sandbox_monitor_wired_widgets`` is initialised as an empty set.
+        """``_sandbox_monitor_wired_widgets`` is initialised as an empty WeakSet.
 
         Args:
             real_window: MainWindow fixture.
         """
         assert hasattr(real_window, "_sandbox_monitor_wired_widgets")
-        assert real_window._sandbox_monitor_wired_widgets == set()
+        wired: weakref.WeakSet[object] = getattr(real_window, "_sandbox_monitor_wired_widgets")
+        assert isinstance(wired, weakref.WeakSet)
+        assert len(wired) == 0
