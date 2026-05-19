@@ -14,10 +14,11 @@ import importlib
 import json
 import os
 import sys
+import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
-from PyQt6.QtCore import QByteArray, QSettings, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QByteArray, QObject, QSettings, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -233,9 +234,12 @@ class MainWindow(QMainWindow):
         self.template_manager: TemplateManager | None = None
         self.model_discovery: ModelDiscovery | None = None
         self._hxd_panel: HxDPanel | None = None
-        self._sandbox_monitor_wired_widgets: set[int] = set()
-        self._process_attached_wired: bool = False
+        self._sandbox_monitor_wired_widgets: weakref.WeakSet[QObject] = weakref.WeakSet()
+        self._process_attached_wired: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._status_failure_count: int = 0
+        self._session_token_total: int = 0
+        self._binary_dependent_buttons: list[QPushButton] = []
+        self._initial_discovery_triggered: bool = False
 
         _logger.debug("loading_icon_manager")
         self._icon_manager = IconManager.get_instance()
@@ -271,6 +275,7 @@ class MainWindow(QMainWindow):
 
         self._apply_smart_window_size()
         self._restore_window_state()
+        QTimer.singleShot(250, self._kickoff_initial_discovery)
 
     def _apply_smart_window_size(self) -> None:
         """Size and center the window based on available screen geometry.
@@ -807,6 +812,10 @@ class MainWindow(QMainWindow):
         self.model_combo = QComboBox()
         self.model_combo.setMinimumWidth(200)
         self.model_combo.setObjectName("toolbar_combo")
+        self.model_combo.setEditable(True)
+        model_line_edit = self.model_combo.lineEdit()
+        if model_line_edit is not None:
+            model_line_edit.editingFinished.connect(self._on_model_combo_text_committed)
         toolbar.addWidget(self.model_combo)
 
         toolbar.addSeparator()
@@ -819,36 +828,48 @@ class MainWindow(QMainWindow):
         self.x64dbg_btn.setObjectName("tool_button")
         self.x64dbg_btn.setToolTip("Open x64dbg Debugger")
         self.x64dbg_btn.clicked.connect(self._on_open_x64dbg)
+        self.x64dbg_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self.x64dbg_btn)
         toolbar.addWidget(self.x64dbg_btn)
 
         self.cutter_btn = QPushButton("Cutter")
         self.cutter_btn.setObjectName("tool_button")
         self.cutter_btn.setToolTip("Open Cutter Analysis")
         self.cutter_btn.clicked.connect(self._on_open_cutter)
+        self.cutter_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self.cutter_btn)
         toolbar.addWidget(self.cutter_btn)
 
         self.hxd_btn = QPushButton("HxD")
         self.hxd_btn.setObjectName("tool_button")
         self.hxd_btn.setToolTip("Open HxD Hex Editor")
-        self.hxd_btn.clicked.connect(self.on_open_hxd)
+        self.hxd_btn.clicked.connect(self._on_open_hxd)
+        self.hxd_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self.hxd_btn)
         toolbar.addWidget(self.hxd_btn)
 
         self._hex_editor_btn = QPushButton("Hex Editor")
         self._hex_editor_btn.setObjectName("tool_button")
         self._hex_editor_btn.setToolTip("Open Hex Editor")
         self._hex_editor_btn.clicked.connect(self._on_open_hex_editor)
+        self._hex_editor_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self._hex_editor_btn)
         toolbar.addWidget(self._hex_editor_btn)
 
         self._ghidra_btn = QPushButton("Ghidra")
         self._ghidra_btn.setObjectName("tool_button")
         self._ghidra_btn.setToolTip("Open Ghidra Reverse Engineering")
         self._ghidra_btn.clicked.connect(self._on_open_ghidra)
+        self._ghidra_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self._ghidra_btn)
         toolbar.addWidget(self._ghidra_btn)
 
         self._frida_btn = QPushButton("Frida")
         self._frida_btn.setObjectName("tool_button")
         self._frida_btn.setToolTip("Open Frida Instrumentation Panel")
         self._frida_btn.clicked.connect(self._on_open_frida)
+        self._frida_btn.setEnabled(False)
+        self._binary_dependent_buttons.append(self._frida_btn)
         toolbar.addWidget(self._frida_btn)
 
         self.process_btn = QPushButton("Process")
@@ -876,6 +897,14 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn = QPushButton("Auto-approve: OFF")
         self._auto_approve_btn.setCheckable(True)
         self._auto_approve_btn.setObjectName("toggle_button")
+        saved_auto_approve_raw: object = QSettings("Intellicrack", "MainWindow").value("auto_approve", defaultValue=False)
+        initial_auto_approve: bool = (
+            bool(saved_auto_approve_raw)
+            if isinstance(saved_auto_approve_raw, bool)
+            else str(saved_auto_approve_raw).lower() in {"true", "1"}
+        )
+        self._auto_approve_btn.setChecked(initial_auto_approve)
+        self._auto_approve_btn.setText(f"Auto-approve: {'ON' if initial_auto_approve else 'OFF'}")
 
         def _auto_approve_slot(state: int) -> None:
             self._on_auto_approve_toggled(checked=bool(state))
@@ -906,16 +935,16 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel("Ready")
         self._statusbar.addWidget(self.status_label)
 
-        self._binary_label = QLabel()
+        self._binary_label = QLabel("")
         self._statusbar.addPermanentWidget(self._binary_label)
 
-        self._memory_label = QLabel()
+        self._memory_label = QLabel("")
         self._statusbar.addPermanentWidget(self._memory_label)
 
-        self.model_status_label = QLabel()
+        self.model_status_label = QLabel("")
         self._statusbar.addPermanentWidget(self.model_status_label)
 
-        self._token_label = QLabel()
+        self._token_label = QLabel("")
         self._statusbar.addPermanentWidget(self._token_label)
 
         self._status_timer = QTimer(self)
@@ -961,6 +990,13 @@ class MainWindow(QMainWindow):
             session_id = status.get("session_id")
             session_text = f" | Session: {session_id}" if session_id else ""
             self.status_label.setText(f"State: {state}{session_text}")
+            metrics_obj: object = status.get("metrics")
+            if isinstance(metrics_obj, dict):
+                metrics_dict = cast("dict[str, object]", metrics_obj)
+                total_tokens_obj: object = metrics_dict.get("provider_total_tokens", 0)
+                if isinstance(total_tokens_obj, int) and total_tokens_obj > 0 and total_tokens_obj != self._session_token_total:
+                    self._session_token_total = total_tokens_obj
+                    self._token_label.setText(f"Tokens: {self._session_token_total:,}")
 
         self._refresh_memory_status()
         self._refresh_model_discovery_status()
@@ -1183,6 +1219,7 @@ class MainWindow(QMainWindow):
         """
         if self._stream_append:
             self._stream_append(chunk)
+        self._accumulate_usage_from_payload(chunk)
 
     def _on_tool_call(self, call: ToolCall) -> None:
         """Handle tool call notification.
@@ -1201,6 +1238,7 @@ class MainWindow(QMainWindow):
         """
         status = "SUCCESS" if result.success else "FAILED"
         self.tool_panel.append_log_message(f"[{status}] Duration: {result.duration_ms:.1f}ms")
+        self._accumulate_usage_from_payload(result.result)
 
         if result.success and result.result:
             result_str = str(result.result)
@@ -1226,6 +1264,41 @@ class MainWindow(QMainWindow):
 
         if result.error:
             self.tool_panel.append_log_message(f"Error: {result.error}")
+
+    def _accumulate_usage_from_payload(self, payload: object) -> None:
+        """Accumulate ``total_tokens`` from a payload's ``usage`` dict into the session token total.
+
+        The payload is inspected defensively: only mapping-style values with a
+        ``usage`` member that exposes integer token counts are considered. Any
+        other shape is ignored so streaming string chunks and arbitrary tool
+        result objects can be passed without raising.
+
+        Args:
+            payload: Stream chunk or tool result payload that may carry a
+                ``usage`` mapping with ``total_tokens`` (or
+                ``input_tokens`` + ``output_tokens``) entries.
+        """
+        if not isinstance(payload, dict):
+            return
+        payload_dict = cast("dict[str, object]", payload)
+        usage_obj: object = payload_dict.get("usage")
+        if not isinstance(usage_obj, dict):
+            return
+        usage_dict = cast("dict[str, object]", usage_obj)
+        total_raw: object = usage_dict.get("total_tokens")
+        delta: int = 0
+        if isinstance(total_raw, int):
+            delta = total_raw
+        else:
+            input_raw: object = usage_dict.get("input_tokens", 0)
+            output_raw: object = usage_dict.get("output_tokens", 0)
+            input_val = input_raw if isinstance(input_raw, int) else 0
+            output_val = output_raw if isinstance(output_raw, int) else 0
+            delta = input_val + output_val
+        if delta <= 0:
+            return
+        self._session_token_total += delta
+        self._token_label.setText(f"Tokens: {self._session_token_total:,}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
         """Run an async operation in a worker thread.
@@ -1308,6 +1381,9 @@ class MainWindow(QMainWindow):
             path: Path to the binary.
         """
         self.current_binary = path
+        self._binary_label.setText(f"Binary: {path.name}")
+        for button in self._binary_dependent_buttons:
+            button.setEnabled(True)
         binary_name = path.name
 
         async def load() -> None:
@@ -1667,30 +1743,17 @@ class MainWindow(QMainWindow):
     def _on_tool_status(self) -> None:
         """Handle tool status action.
 
-        Pre-fetches the live tool availability snapshot from the installer and
-        forwards it to :class:`ToolStatusDialog` via its ``tool_statuses``
-        parameter so the dialog can render the result immediately without
-        spawning a second wave of background status-check workers. If the
-        pre-fetch fails the dialog falls back to its own worker-driven path.
+        Constructs :class:`ToolStatusDialog` without a pre-fetched status map
+        so the dialog spawns its own background status-check workers and the
+        Qt event loop is never blocked while ``_on_tool_status`` runs.
         """
-        prefetched: dict[str, ToolStatusEntry] | None = None
-        try:
-            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
-
-            prefetched = run_bridge_coroutine(self._refresh_tool_status())
-            _logger.info(
-                "tool_status_dialog_opened",
-                tool_count=len(prefetched) if prefetched is not None else 0,
-            )
-        except (RuntimeError, AttributeError, OSError):
-            _logger.debug("tool_status_refresh_before_dialog_failed", exc_info=True)
-
         tool_registry = getattr(self._orchestrator, "_tool_registry", None)
         dialog = ToolStatusDialog(
             tool_registry=tool_registry,
             parent=self,
-            tool_statuses=prefetched,
+            tool_statuses=None,
         )
+        _logger.info("tool_status_dialog_opened")
         dialog.exec()
 
     def _on_configure_tools(self) -> None:
@@ -2106,6 +2169,78 @@ class MainWindow(QMainWindow):
             self.model_combo.setCurrentIndex(idx)
         self.status_update.emit(f"Model selected: {model_id}")
 
+    def _on_model_combo_text_committed(self) -> None:
+        """Warn when a manually typed model id is not in the provider catalog.
+
+        The slot fires when the user finishes editing the model combo's line
+        edit. If the entered text does not match any known model id in the
+        combo it is forwarded to the user via the status bar and a structured
+        log entry so a custom request is still attempted but the user is told
+        it may not be valid.
+        """
+        line_edit = self.model_combo.lineEdit()
+        if line_edit is None:
+            return
+        text = line_edit.text().strip()
+        if not text:
+            return
+        if self.model_combo.findText(text) == -1:
+            _logger.warning("model_combo_text_not_in_catalog", model_id=text)
+            self.status_update.emit(
+                f"Custom model id '{text}' not present in provider catalog - request may fail",
+            )
+
+    def _kickoff_initial_discovery(self) -> None:
+        """Trigger a one-shot non-blocking model discovery pass after startup.
+
+        Guards against duplicate invocations via ``_initial_discovery_triggered``
+        so repeated re-entries (e.g. provider config changes that re-enter
+        :meth:`_sync_model_combo` paths) do not re-fire the initial discovery.
+        Skipped entirely when no :class:`ModelDiscovery` instance has been
+        wired into the window yet.
+        """
+        if self._initial_discovery_triggered:
+            return
+        if self.model_discovery is None:
+            _logger.debug("initial_discovery_skipped_no_discovery")
+            return
+        self._initial_discovery_triggered = True
+        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+
+        _logger.info("initial_model_discovery_kickoff")
+        run_bridge_coroutine_async(
+            self.model_discovery.discover_all(),
+            self._on_initial_discovery_done,
+            self._on_initial_discovery_error,
+            self,
+        )
+
+    def _on_initial_discovery_done(self, result: object) -> None:
+        """Handle initial discovery completion.
+
+        Args:
+            result: Mapping of provider names to lists of ``ModelInfo``.
+        """
+        if isinstance(result, dict):
+            result_dict = cast("dict[object, object]", result)
+            counts: dict[str, int] = {}
+            for provider_name_obj, models_obj in result_dict.items():
+                key = provider_name_obj.value if isinstance(provider_name_obj, ProviderName) else str(provider_name_obj)
+                counts[key] = len(cast("list[object]", models_obj)) if isinstance(models_obj, list) else 0
+            _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
+        else:
+            _logger.info("initial_model_discovery_completed", per_provider_counts={})
+        self._refresh_model_discovery_status()
+
+    def _on_initial_discovery_error(self, error: object) -> None:
+        """Handle initial discovery failure.
+
+        Args:
+            error: Exception raised during discovery.
+        """
+        _logger.warning("initial_model_discovery_failed", error=str(error))
+        self._refresh_model_discovery_status()
+
     def _on_configure_sandbox(self) -> None:
         """Handle configure sandbox action.
 
@@ -2464,6 +2599,10 @@ class MainWindow(QMainWindow):
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
     def on_open_hxd(self) -> None:
+        """Open the HxD hex editor panel (public wrapper for external callers)."""
+        self._on_open_hxd()
+
+    def _on_open_hxd(self) -> None:
         """Open the HxD hex editor panel.
 
         Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel during MainWindow initialization. If HxD was installed
@@ -2547,9 +2686,10 @@ class MainWindow(QMainWindow):
         panel.start_tool()
 
         signal = getattr(panel, "process_attached", None)
-        if signal is not None and not getattr(self, "_process_attached_wired", False):
+        panel_obj: QObject = cast("QObject", panel)
+        if signal is not None and panel_obj not in self._process_attached_wired:
             signal.connect(self._on_process_attached)
-            self._process_attached_wired = True
+            self._process_attached_wired.add(panel_obj)
 
     def _on_process_attached(self, pid: int) -> None:
         """Handle process attachment by showing a memory region picker.
@@ -2675,18 +2815,17 @@ class MainWindow(QMainWindow):
 
         monitors = sandbox_widget.findChildren(SandboxMonitorWidget)
         for monitor in monitors:
-            ident = id(monitor)
-            if ident in self._sandbox_monitor_wired_widgets:
+            if monitor in self._sandbox_monitor_wired_widgets:
                 continue
             monitor.sandbox_stopped.connect(self._on_sandbox_monitor_stopped)
-            self._sandbox_monitor_wired_widgets.add(ident)
+            self._sandbox_monitor_wired_widgets.add(monitor)
         _logger.debug("sandbox_monitor_signals_wired", count=len(monitors))
 
     def _on_sandbox_monitor_stopped(self) -> None:
         """Reflect a SandboxMonitorWidget stop event in MainWindow state."""
         _logger.info("sandbox_monitor_stopped")
         self._sandbox_btn.blockSignals(b=True)
-        self._sandbox_btn.setChecked(False)
+        self._sandbox_btn.setChecked(a0=False)
         self._sandbox_btn.setText("Sandbox: OFF")
         self._sandbox_btn.blockSignals(b=False)
         self.status_update.emit("Sandbox stopped")
@@ -2755,26 +2894,38 @@ class MainWindow(QMainWindow):
         """Handle provider selection change.
 
         Sets the registry's active provider so subsequent requests are routed to
-        the user's selection. Falls back to logging only when the selected
-        provider is not yet connected (i.e. has no credentials registered) so
-        ``set_active`` would raise.
+        the user's selection. When the selected provider has no live connection
+        the user is prompted with a "Configure Now / Cancel" dialog: the
+        configure choice opens the provider configuration dialog and the cancel
+        choice restores the previously active provider in the combo.
 
         Args:
             index: New selection index.
         """
         del index
+        registry = self._orchestrator.provider_registry
+        active_provider = getattr(registry, "active", None)
+        prev_idx = self._provider_combo.findData(active_provider.name) if active_provider is not None else -1
+
         provider: object = self._provider_combo.currentData()
         if not isinstance(provider, ProviderName):
             _logger.debug("provider_changed_invalid_data")
             return
 
-        registry = self._orchestrator.provider_registry
         instance = registry.get(provider)
         if instance is None or not instance.is_connected:
             _logger.info(
                 "provider_changed_not_connected",
                 provider=provider.value,
             )
+            choice = self._prompt_provider_not_connected(provider.value)
+            if choice == "configure":
+                self._on_configure_providers()
+            else:
+                self._provider_combo.blockSignals(b=True)
+                if prev_idx >= 0:
+                    self._provider_combo.setCurrentIndex(prev_idx)
+                self._provider_combo.blockSignals(b=False)
             self.status_update.emit(
                 f"Provider {provider.value} selected but not connected. Configure credentials in Providers menu.",
             )
@@ -2797,6 +2948,34 @@ class MainWindow(QMainWindow):
 
         _logger.info("provider_changed", provider=provider.value)
         self.status_update.emit(f"Active provider: {provider.value}")
+
+    def _prompt_provider_not_connected(self, provider_name: str) -> str:
+        """Show the disconnected-provider dialog and return the user's choice.
+
+        Isolated so unit tests can override this method on a holder double
+        without instantiating a real :class:`QMessageBox`.
+
+        Args:
+            provider_name: Display name of the disconnected provider.
+
+        Returns:
+            str: ``"configure"`` when the user chose to open the provider
+            configuration dialog; ``"cancel"`` otherwise.
+        """
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Warning)
+        message_box.setWindowTitle("Provider Not Connected")
+        message_box.setText(
+            f"Provider '{provider_name}' is not connected.\n\n"
+            "Configure its credentials now, or cancel and stay on the previously active provider.",
+        )
+        configure_button = message_box.addButton("Configure Now...", QMessageBox.ButtonRole.AcceptRole)
+        message_box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        message_box.setDefaultButton(configure_button)
+        message_box.exec()
+        if message_box.clickedButton() is configure_button:
+            return "configure"
+        return "cancel"
 
     def _on_sandbox_toggled(self, *, checked: bool) -> None:
         """Handle sandbox toggle.
@@ -2822,6 +3001,8 @@ class MainWindow(QMainWindow):
         else:
             self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.DESTRUCTIVE)
             self.status_update.emit("Auto-approve disabled - destructive operations require confirmation")
+
+        QSettings("Intellicrack", "MainWindow").setValue("auto_approve", checked)
 
     def _on_cancel(self) -> None:
         """Handle cancel button click."""
