@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import weakref
 from typing import TYPE_CHECKING
 
 import pytest
@@ -682,6 +683,8 @@ class _ProviderComboDouble:
             value: Value the combo's ``currentData`` should return.
         """
         self._value = value
+        self._current_index: int = 0
+        self._signals_blocked: bool = False
 
     def currentData(self) -> object:  # noqa: N802 - matches Qt API name
         """Return the configured value.
@@ -690,6 +693,38 @@ class _ProviderComboDouble:
             object: The configured value.
         """
         return self._value
+
+    def findData(self, value: object) -> int:  # noqa: N802 - matches Qt API name
+        """Return a synthetic index for ``value``.
+
+        Args:
+            value: Sentinel data to look up.
+
+        Returns:
+            int: ``0`` when ``value`` equals the configured value, ``-1`` otherwise.
+        """
+        return 0 if value == self._value else -1
+
+    def setCurrentIndex(self, index: int) -> None:  # noqa: N802 - matches Qt API name
+        """Record the index passed by the production code.
+
+        Args:
+            index: Index value the production code restored.
+        """
+        self._current_index = index
+
+    def blockSignals(self, *, b: bool) -> bool:  # noqa: N802 - matches Qt API name
+        """Record signal-blocking state changes.
+
+        Args:
+            b: New signal-blocking state.
+
+        Returns:
+            bool: Previous signal-blocking state.
+        """
+        prev = self._signals_blocked
+        self._signals_blocked = b
+        return prev
 
 
 class _OrchestratorDouble:
@@ -747,10 +782,25 @@ class TestProviderChangedSetsActive:
         holder, registry, recorder = _build_provider_holder(
             provider=_ProviderDouble(is_connected=False),
         )
+        holder._prompt_provider_not_connected = lambda _name: "cancel"
         MainWindow._on_provider_changed(holder, 0)
 
         assert registry.set_active_calls == []
         assert any("not connected" in msg.lower() or "configure" in msg.lower() for msg in recorder.emissions)
+
+    @staticmethod
+    def test_disconnected_provider_prompt_configure_route() -> None:
+        """Choosing 'Configure Now' opens the provider configuration dialog."""
+        holder, registry, _ = _build_provider_holder(
+            provider=_ProviderDouble(is_connected=False),
+        )
+        configure_calls: list[int] = []
+        holder._prompt_provider_not_connected = lambda _name: "configure"
+        holder._on_configure_providers = lambda: configure_calls.append(1)
+        MainWindow._on_provider_changed(holder, 0)
+
+        assert registry.set_active_calls == []
+        assert configure_calls == [1]
 
     @staticmethod
     def test_provider_error_does_not_propagate() -> None:
@@ -949,10 +999,11 @@ class TestMainWindowConstructionWiresMenu:
     def test_sandbox_monitor_wired_widgets_set_initialised(
         real_window: MainWindow,
     ) -> None:
-        """``_sandbox_monitor_wired_widgets`` is initialised as an empty set.
+        """``_sandbox_monitor_wired_widgets`` is initialised as an empty WeakSet.
 
         Args:
             real_window: MainWindow fixture.
         """
         assert hasattr(real_window, "_sandbox_monitor_wired_widgets")
-        assert real_window._sandbox_monitor_wired_widgets == set()
+        assert isinstance(real_window._sandbox_monitor_wired_widgets, weakref.WeakSet)
+        assert len(real_window._sandbox_monitor_wired_widgets) == 0

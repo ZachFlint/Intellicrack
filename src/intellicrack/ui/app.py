@@ -2918,18 +2918,8 @@ class MainWindow(QMainWindow):
                 "provider_changed_not_connected",
                 provider=provider.value,
             )
-            message_box = QMessageBox(self)
-            message_box.setIcon(QMessageBox.Icon.Warning)
-            message_box.setWindowTitle("Provider Not Connected")
-            message_box.setText(
-                f"Provider '{provider.value}' is not connected.\n\n"
-                "Configure its credentials now, or cancel and stay on the previously active provider.",
-            )
-            configure_button = message_box.addButton("Configure Now...", QMessageBox.ButtonRole.AcceptRole)
-            message_box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-            message_box.setDefaultButton(configure_button)
-            message_box.exec()
-            if message_box.clickedButton() is configure_button:
+            choice = self._prompt_provider_not_connected(provider.value)
+            if choice == "configure":
                 self._on_configure_providers()
             else:
                 self._provider_combo.blockSignals(b=True)
@@ -2958,6 +2948,34 @@ class MainWindow(QMainWindow):
 
         _logger.info("provider_changed", provider=provider.value)
         self.status_update.emit(f"Active provider: {provider.value}")
+
+    def _prompt_provider_not_connected(self, provider_name: str) -> str:
+        """Show the disconnected-provider dialog and return the user's choice.
+
+        Isolated so unit tests can override this method on a holder double
+        without instantiating a real :class:`QMessageBox`.
+
+        Args:
+            provider_name: Display name of the disconnected provider.
+
+        Returns:
+            str: ``"configure"`` when the user chose to open the provider
+            configuration dialog; ``"cancel"`` otherwise.
+        """
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Warning)
+        message_box.setWindowTitle("Provider Not Connected")
+        message_box.setText(
+            f"Provider '{provider_name}' is not connected.\n\n"
+            "Configure its credentials now, or cancel and stay on the previously active provider.",
+        )
+        configure_button = message_box.addButton("Configure Now...", QMessageBox.ButtonRole.AcceptRole)
+        message_box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        message_box.setDefaultButton(configure_button)
+        message_box.exec()
+        if message_box.clickedButton() is configure_button:
+            return "configure"
+        return "cancel"
 
     def _on_sandbox_toggled(self, *, checked: bool) -> None:
         """Handle sandbox toggle.
