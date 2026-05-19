@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHeaderView,
     QLabel,
+    QMessageBox,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -113,7 +114,8 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table = self._create_table(["Address", "Name", "Size", "Convention", "Return Type"])
         self._sections_table = self._create_table(["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"])
         self._notes_edit = QTextEdit()
-        self._notes_edit.setReadOnly(ro=True)
+        self._notes_edit.setReadOnly(True)
+        self._notes_edit.setPlaceholderText("No notes available")
         self._notes_edit.setFont(self._mono_font)
         self._notes_edit.setObjectName("code_preview_text")
 
@@ -144,7 +146,7 @@ class BridgeAnalysisPanel(QWidget):
         table = QTableWidget()
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
-        table.setAlternatingRowColors(enable=True)
+        table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         v_header = table.verticalHeader()
@@ -221,6 +223,11 @@ class BridgeAnalysisPanel(QWidget):
                 self.address_navigate.emit(int(text, 16))
             except ValueError:
                 _logger.warning("invalid_hex_address", address_text=text)
+                QMessageBox.warning(
+                    self,
+                    "Invalid Address",
+                    f"Could not parse '{text}' as a hex address.",
+                )
 
     def set_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Populate the panel with bridge analysis data.
@@ -242,10 +249,7 @@ class BridgeAnalysisPanel(QWidget):
         self._populate_sections(analysis)
 
         self._notes_edit.clear()
-        if analysis.analysis_notes:
-            self._notes_edit.setPlainText("\n".join(analysis.analysis_notes))
-        else:
-            self._notes_edit.setPlainText("No notes.")
+        self._notes_edit.setPlainText("\n".join(analysis.analysis_notes))
 
         _logger.info(
             "analysis_panel_updated",
