@@ -43,7 +43,7 @@ from __future__ import annotations
 import inspect
 import os
 import weakref
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox, QTabWidget, QWidget
@@ -674,7 +674,21 @@ class _RegistryDouble:
 
 
 class _ProviderComboDouble:
-    """Combo box double returning a fixed :class:`ProviderName` from ``currentData``."""
+    """Combo box double exposing the subset of Qt API the production code uses.
+
+    Qt's combo box API is camelCase; the production code calls
+    ``currentData``, ``findData``, ``setCurrentIndex`` and ``blockSignals``
+    by their Qt names. To keep the double Python-idiomatic (snake_case)
+    while still responding to those calls, the camelCase names are routed
+    through :meth:`__getattr__` to internal snake_case implementations.
+    """
+
+    _qt_alias_map: ClassVar[dict[str, str]] = {
+        "currentData": "_current_data",
+        "findData": "_find_data",
+        "setCurrentIndex": "_set_current_index",
+        "blockSignals": "_block_signals",
+    }
 
     def __init__(self, value: object) -> None:
         """Initialise with the value to return.
@@ -686,7 +700,7 @@ class _ProviderComboDouble:
         self._current_index: int = 0
         self._signals_blocked: bool = False
 
-    def currentData(self) -> object:  # noqa: N802 - matches Qt API name
+    def _current_data(self) -> object:
         """Return the configured value.
 
         Returns:
@@ -694,7 +708,7 @@ class _ProviderComboDouble:
         """
         return self._value
 
-    def findData(self, value: object) -> int:  # noqa: N802 - matches Qt API name
+    def _find_data(self, value: object) -> int:
         """Return a synthetic index for ``value``.
 
         Args:
@@ -705,7 +719,7 @@ class _ProviderComboDouble:
         """
         return 0 if value == self._value else -1
 
-    def setCurrentIndex(self, index: int) -> None:  # noqa: N802 - matches Qt API name
+    def _set_current_index(self, index: int) -> None:
         """Record the index passed by the production code.
 
         Args:
@@ -713,7 +727,7 @@ class _ProviderComboDouble:
         """
         self._current_index = index
 
-    def blockSignals(self, *, b: bool) -> bool:  # noqa: N802 - matches Qt API name
+    def _block_signals(self, *, b: bool) -> bool:
         """Record signal-blocking state changes.
 
         Args:
@@ -725,6 +739,23 @@ class _ProviderComboDouble:
         prev = self._signals_blocked
         self._signals_blocked = b
         return prev
+
+    def __getattr__(self, name: str) -> object:
+        """Route Qt-style camelCase attribute lookups to snake_case methods.
+
+        Args:
+            name: Attribute name requested by the production code.
+
+        Returns:
+            object: The bound method matching the Qt API call site.
+
+        Raises:
+            AttributeError: When the requested name has no mapping.
+        """
+        alias = self._qt_alias_map.get(name)
+        if alias is None:
+            raise AttributeError(name)
+        return getattr(self, alias)
 
 
 class _OrchestratorDouble:
@@ -831,19 +862,42 @@ class _TimerDouble:
 
 
 class _StatusLabelDouble:
-    """QLabel double recording the most recent text passed to :meth:`setText`."""
+    """QLabel double recording the most recent text passed to ``setText``.
+
+    Routes the Qt camelCase API name through :meth:`__getattr__` to keep the
+    class definition Python-idiomatic.
+    """
+
+    _qt_alias_map: ClassVar[dict[str, str]] = {"setText": "_set_text"}
 
     def __init__(self) -> None:
         """Initialise the text holder."""
         self.text: str = ""
 
-    def setText(self, value: str) -> None:  # noqa: N802 - matches Qt API name
+    def _set_text(self, value: str) -> None:
         """Record the text.
 
         Args:
             value: Text to display.
         """
         self.text = value
+
+    def __getattr__(self, name: str) -> object:
+        """Route Qt-style camelCase attribute lookups to snake_case methods.
+
+        Args:
+            name: Attribute name requested by the production code.
+
+        Returns:
+            object: The bound method matching the Qt API call site.
+
+        Raises:
+            AttributeError: When the requested name has no mapping.
+        """
+        alias = self._qt_alias_map.get(name)
+        if alias is None:
+            raise AttributeError(name)
+        return getattr(self, alias)
 
 
 class _OrchestratorAlwaysOk:
