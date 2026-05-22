@@ -197,6 +197,11 @@ class YaraMixin:
             try:
                 offset_int = int(offset_raw)
             except (TypeError, ValueError):
+                _logger.warning(
+                    "hex_editor_yara_match_invalid_offset",
+                    input_text=str(offset_raw),
+                    rule_name=str(match.get("rule", "")),
+                )
                 continue
             identifier = str(entry.get("identifier", ""))
             data_hex = str(entry.get("data", ""))
@@ -273,6 +278,6 @@ class YaraMixin:
         try:
             offset = int(offset_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_yara_result_invalid_offset", input_text=offset_text)
         else:
             self.goto_offset(offset)

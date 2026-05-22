@@ -980,6 +980,7 @@ class GhidraPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith(("0x", "0X")) else int(addr_text)
         except ValueError:
+            _logger.warning("ghidra_get_data_type_invalid_address", input_text=addr_text)
             self._dt_result_view.setPlainText("Invalid address")
             return
 
@@ -1041,6 +1042,7 @@ class GhidraPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 16) if addr_text.startswith(("0x", "0X")) else int(addr_text)
         except ValueError:
+            _logger.warning("ghidra_set_data_type_invalid_address", input_text=addr_text)
             self._set_status("Invalid address")
             return
 
@@ -1148,6 +1150,7 @@ class GhidraPanel(AnalysisPanelBase):
                 return int(text, 16)
             return int(text)
         except (ValueError, TypeError):
+            _logger.warning("ghidra_parse_address_invalid_input", input_text=text)
             return None
 
     # ------------------------------------------------------------------
@@ -1993,6 +1996,7 @@ class GhidraPanel(AnalysisPanelBase):
                 try:
                     color_int = int(color_hex.strip(), 16)
                 except ValueError:
+                    _logger.warning("ghidra_set_color_invalid_hex", input_text=color_hex)
                     self._set_status("Invalid color hex value")
                     return
                 self._run_async(
@@ -3091,6 +3095,11 @@ class GhidraPanel(AnalysisPanelBase):
         try:
             params: dict[str, object] = json.loads(params_text) if params_text else {}
         except json.JSONDecodeError as exc:
+            _logger.warning(
+                "ghidra_run_script_invalid_json_params",
+                input_text=params_text,
+                error=str(exc),
+            )
             self._set_status(f"Invalid JSON params: {exc}")
             return
         self._run_script_params_btn.setEnabled(False)
@@ -3153,6 +3162,13 @@ class GhidraPanel(AnalysisPanelBase):
             try:
                 parsed = json.loads(options_text)
             except json.JSONDecodeError as exc:
+                _logger.warning(
+                    "ghidra_configure_analysis_invalid_json",
+                    input_text=options_text,
+                    error=str(exc),
+                    line=exc.lineno,
+                    column=exc.colno,
+                )
                 self._set_status(f"Analyzer options JSON error: {exc.msg} (line {exc.lineno}, col {exc.colno})")
                 return
             if not isinstance(parsed, dict):

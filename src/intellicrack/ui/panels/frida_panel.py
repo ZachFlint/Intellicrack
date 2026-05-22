@@ -1021,7 +1021,12 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 thread_id = int(tid_text)
             except ValueError:
-                self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
+                self._invalid_input(
+                    "frida_stalker_start_invalid_tid",
+                    input_text=tid_text,
+                    console_msg=f"[-] Invalid thread ID: {tid_text}",
+                    logger=_logger,
+                )
                 return
 
         events = self._get_stalker_events_string()
@@ -1682,7 +1687,12 @@ class FridaPanel(AnalysisPanelBase):
         try:
             data = bytes.fromhex(hex_str.replace(" ", ""))
         except ValueError:
-            self._console.appendPlainText("[-] Invalid hex data")
+            self._invalid_input(
+                "frida_write_memory_invalid_hex",
+                input_text=hex_str,
+                console_msg="[-] Invalid hex data",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.write_memory(addr, data),
@@ -1711,7 +1721,12 @@ class FridaPanel(AnalysisPanelBase):
         try:
             pattern_bytes = bytes.fromhex(pattern_str.replace("??", "00").replace(" ", ""))
         except ValueError:
-            self._console.appendPlainText("[-] Invalid pattern")
+            self._invalid_input(
+                "frida_scan_memory_invalid_pattern",
+                input_text=pattern_str,
+                console_msg="[-] Invalid pattern",
+                logger=_logger,
+            )
             return
         self._mem_scan_btn.setEnabled(False)
         self._run_async(
@@ -2129,7 +2144,12 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 args = [int(a.strip(), 0) for a in args_text.split(",")]
             except ValueError:
-                self._console.appendPlainText("[-] Invalid arguments")
+                self._invalid_input(
+                    "frida_call_function_invalid_args",
+                    input_text=args_text,
+                    console_msg="[-] Invalid arguments",
+                    logger=_logger,
+                )
                 return
 
         ret_type = self._adv_ret_type.currentText()

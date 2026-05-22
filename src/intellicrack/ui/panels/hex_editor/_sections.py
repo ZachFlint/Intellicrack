@@ -389,7 +389,7 @@ class SectionsMixin:
         try:
             offset = int(offset_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_string_invalid_offset", input_text=offset_text)
         else:
             self.goto_offset(offset)
 

@@ -543,6 +543,13 @@ class SearchMixin:
                 min_val = float(min_val_int)
                 max_val = float(max_val_int)
         except ValueError as exc:
+            _logger.warning(
+                "hex_editor_numeric_search_invalid_input",
+                input_text=value_text,
+                max_text=max_text,
+                is_float=is_float,
+                error=str(exc),
+            )
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(parent, "Numeric Search", f"Invalid value: {exc}")
             return

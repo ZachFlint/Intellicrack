@@ -591,6 +591,12 @@ class HexdumpTab(QWidget):
             address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text)
             length = int(self._len_input.text().strip() or "256")
         except ValueError:
+            _logger.warning(
+                "cutter_hexdump_invalid_input",
+                input_text=f"{addr_text} | {self._len_input.text()}",
+                address_text=addr_text,
+                length_text=self._len_input.text(),
+            )
             self._output.setPlainText("[error] Invalid address or length")
             return
         self._run_async_fn(

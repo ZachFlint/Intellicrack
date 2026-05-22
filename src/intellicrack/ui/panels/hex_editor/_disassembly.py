@@ -350,6 +350,6 @@ class DisassemblyMixin:
         try:
             offset = int(addr_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_disasm_row_invalid_address", input_text=addr_text)
         else:
             self.goto_offset(offset)
