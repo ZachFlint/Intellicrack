@@ -98,6 +98,7 @@ from intellicrack.core._subprocess import (
     STARTUPINFO,
     Popen,
 )
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import (
@@ -3223,6 +3224,14 @@ class X64DbgBridge(DebuggerBridge):
                     address=hex(address),
                 )
                 return
+            log_passthrough(
+                _logger,
+                "verify_breakpoint_applied_passthrough",
+                exc,
+                bridge="x64dbg",
+                address=hex(address),
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
             raise
         if not isinstance(result, list):
             msg = f"set_breakpoint verification: bp_list returned {type(result).__name__}, expected list"
@@ -5026,6 +5035,14 @@ class X64DbgBridge(DebuggerBridge):
             except ToolError as exc:
                 if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
                     return None
+                log_passthrough(
+                    _logger,
+                    "wait_for_instruction_pointer_passthrough",
+                    exc,
+                    bridge="x64dbg",
+                    rpc="reg_get",
+                    x64dbg_error_code=_x64dbg_error_code(exc),
+                )
                 raise
             ip_value: int | None = None
             if isinstance(rip_result, int):
@@ -5070,6 +5087,15 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
                 return None
+            log_passthrough(
+                _logger,
+                "lookup_annotation_text_passthrough",
+                exc,
+                bridge="x64dbg",
+                rpc=rpc,
+                address=hex(address),
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
             raise
         if not isinstance(result, list):
             return ""
@@ -5140,6 +5166,14 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
                 return None
+            log_passthrough(
+                _logger,
+                "query_bp_list_passthrough",
+                exc,
+                bridge="x64dbg",
+                rpc="bp_list",
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
             raise
         if isinstance(result, list):
             return result
@@ -5230,6 +5264,14 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
                 return None
+            log_passthrough(
+                _logger,
+                "query_thread_details_passthrough",
+                exc,
+                bridge="x64dbg",
+                rpc="thread_detail",
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
             raise
         if not isinstance(result, list):
             return []
@@ -5334,6 +5376,14 @@ class X64DbgBridge(DebuggerBridge):
                         return last_state, rpc_available
                     await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
                     continue
+                log_passthrough(
+                    _logger,
+                    "wait_for_running_state_passthrough",
+                    exc,
+                    bridge="x64dbg",
+                    rpc="status",
+                    x64dbg_error_code=_x64dbg_error_code(exc),
+                )
                 raise
             rpc_available = True
             current: bool | None = None
@@ -5376,6 +5426,14 @@ class X64DbgBridge(DebuggerBridge):
             code = _x64dbg_error_code(exc)
             if code == _X64DBG_ERR_UNKNOWN_COMMAND:
                 return None
+            log_passthrough(
+                _logger,
+                "query_script_error_passthrough",
+                exc,
+                bridge="x64dbg",
+                rpc="script.iserror()",
+                x64dbg_error_code=code,
+            )
             raise
         return bool(value)
 
@@ -5405,6 +5463,15 @@ class X64DbgBridge(DebuggerBridge):
             list_result = await self._send_pipe_command("plugin_list")
         except ToolError as exc:
             if _x64dbg_error_code(exc) != _X64DBG_ERR_UNKNOWN_COMMAND:
+                log_passthrough(
+                    _logger,
+                    "query_plugin_present_plugin_list_passthrough",
+                    exc,
+                    bridge="x64dbg",
+                    rpc="plugin_list",
+                    plugin=name,
+                    x64dbg_error_code=_x64dbg_error_code(exc),
+                )
                 raise
         if isinstance(list_result, list):
             needle = name.lower()
@@ -5420,6 +5487,15 @@ class X64DbgBridge(DebuggerBridge):
         except ToolError as exc:
             if _x64dbg_error_code(exc) == _X64DBG_ERR_UNKNOWN_COMMAND:
                 return None
+            log_passthrough(
+                _logger,
+                "query_plugin_present_plugin_find_passthrough",
+                exc,
+                bridge="x64dbg",
+                rpc="plugin.find",
+                plugin=name,
+                x64dbg_error_code=_x64dbg_error_code(exc),
+            )
             raise
         return handle != 0
 

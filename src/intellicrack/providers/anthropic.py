@@ -23,6 +23,7 @@ from anthropic.types import (
     ToolUseBlock,
 )
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -468,6 +469,12 @@ class AnthropicProvider(LLMProviderBase):
                     error=str(e),
                 )
                 raise RateLimitError(_MSG_REQUEST_FAILED) from e
+            log_passthrough(
+                self._logger,
+                "anthropic_api_status_error_passthrough",
+                e,
+                status_code=status_code,
+            )
             raise
 
     async def chat(
@@ -569,7 +576,14 @@ class AnthropicProvider(LLMProviderBase):
                 tool_calls=tool_calls,
                 duration_ms=duration_ms,
             )
-        except RateLimitError:
+        except RateLimitError as exc:
+            log_passthrough(
+                self._logger,
+                "anthropic_chat_rate_limit_passthrough",
+                exc,
+                provider="anthropic",
+                model=model,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
             self._logger.warning("anthropic_request_failed", error=str(e))
