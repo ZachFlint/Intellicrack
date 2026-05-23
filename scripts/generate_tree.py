@@ -507,15 +507,18 @@ def generate_hta(root_path: str, output_file: str) -> None:
     }}
 
     .controls {{
-        position: fixed;
-        top: 20px;
-        right: 20px;
         background: #2a2a2a;
         padding: 10px;
         border-radius: 5px;
         display: flex;
+        align-items: center;
         gap: 10px;
-        z-index: 1000;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }}
+
+    .controls .spacer {{
+        flex: 1;
     }}
 
     button {{
@@ -552,19 +555,20 @@ def generate_hta(root_path: str, output_file: str) -> None:
 </style>
 </head>
 <body>
-<div class="controls">
-    <label for="searchBox" style="color: #808080; margin-right: 5px;">Filter:</label>
-    <input type="text" class="search-box" id="searchBox" value="" title="Enter filename or partial text to search" onfocus="this.select()">
-    <button id="expandBtn" title="Expands every folder (will materialize the full tree, may take a moment)">Expand All</button>
-    <button id="collapseBtn">Collapse All</button>
-    <button id="copyBtn">Copy Relative Path</button>
-    <button id="refreshBtn">Refresh Tree</button>
-</div>
-
 <h1>
     Intellicrack Directory Structure
     <span class="stats">{file_count} files, {folder_count} folders</span>
 </h1>
+
+<div class="controls">
+    <label for="searchBox" style="color: #808080;">Filter:</label>
+    <input type="text" class="search-box" id="searchBox" value="" title="Enter filename or partial text to search" onfocus="this.select()">
+    <span class="spacer"></span>
+    <button id="expandBtn" title="Materializes the full tree - may take a moment for very large trees">Expand All</button>
+    <button id="collapseBtn">Collapse All</button>
+    <button id="copyBtn">Copy Relative Path</button>
+    <button id="refreshBtn">Refresh Tree</button>
+</div>
 
 <div class="path-display" id="pathDisplay">Ready - Single-click to preview, double-click to open</div>
 <div class="action-buttons">
