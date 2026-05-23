@@ -1306,10 +1306,6 @@ class GhidraBridge(StaticAnalysisBridge):
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self.state.connected = True
-            self.state.tool_running = True
-            self._publish_tool_state()
-            _logger.info("ghidra_bridge_connected", port=self._port)
 
         except ImportError as imp_err:
             _logger.warning("ghidra_bridge_module_missing", bridge="ghidra")
@@ -1330,6 +1326,12 @@ class GhidraBridge(StaticAnalysisBridge):
             self._publish_tool_state()
             error_message = f"Failed to connect to Ghidra: {exc}"
             raise ToolError(error_message) from exc
+
+        else:
+            self.state.connected = True
+            self.state.tool_running = True
+            self._publish_tool_state()
+            _logger.info("ghidra_bridge_connected", port=self._port)
 
     async def shutdown(self) -> None:
         """Shutdown Ghidra and cleanup resources.
@@ -1545,14 +1547,15 @@ class GhidraBridge(StaticAnalysisBridge):
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
             )
-            self.state.connected = True
-            self.state.tool_running = True
-            _logger.info("ghidra_headless_connected", port=self._port)
         except Exception as e:
             _logger.warning("ghidra_connect_failed", port=self._port, error=str(e))
             error_message = f"Failed to connect to Ghidra: {e}"
             self.state.last_error = error_message
             raise ToolError(error_message) from e
+        else:
+            self.state.connected = True
+            self.state.tool_running = True
+            _logger.info("ghidra_headless_connected", port=self._port)
 
     @staticmethod
     def _resolve_headless_executable(ghidra_path: Path) -> Path:
@@ -1644,7 +1647,8 @@ class GhidraBridge(StaticAnalysisBridge):
             on_line: Optional callback invoked for each non-empty decoded line
                 (used by the stderr drainer to buffer for diagnostics).
         """
-        try:
+
+        def read_loop() -> None:
             for raw_line in iter(stream.readline, b""):
                 line = raw_line.decode("utf-8", errors="replace").rstrip()
                 if not line:
@@ -1652,6 +1656,9 @@ class GhidraBridge(StaticAnalysisBridge):
                 if on_line is not None:
                     on_line(line)
                 _logger.debug("ghidra_headless_pipe_line", stream=stream_name, line=line)
+
+        try:
+            read_loop()
         except (OSError, ValueError):
             _logger.debug("ghidra_pipe_drain_terminated", stream=stream_name, exc_info=True)
         finally:
@@ -3588,6 +3595,7 @@ metadata
                     None
             """)
         except Exception as e:
+            _logger.warning("ghidra_create_function_failed", address=hex(address), error=str(e))
             error_message = f"Create function failed: {e}"
             raise ToolError(error_message) from e
 
@@ -3720,6 +3728,14 @@ metadata
                     }}
             """)
         except Exception as e:
+            _logger.warning(
+                "ghidra_edit_function_signature_failed",
+                address=hex(address),
+                new_name=name,
+                return_type=return_type,
+                calling_convention=calling_convention,
+                error=str(e),
+            )
             error_message = f"Edit function signature failed: {e}"
             raise ToolError(error_message) from e
 
@@ -3769,6 +3785,13 @@ metadata
                 found
             """)
         except Exception as e:
+            _logger.warning(
+                "ghidra_set_function_variable_type_failed",
+                func_address=hex(func_address),
+                var_name=var_name,
+                new_type=new_type,
+                error=str(e),
+            )
             error_message = f"Set variable type failed: {e}"
             raise ToolError(error_message) from e
 
@@ -3831,6 +3854,7 @@ metadata
             """)
             return cast("dict[str, Any]", result) if result else {"name": name, "success": False}
         except Exception as e:
+            _logger.warning("ghidra_define_structure_failed", struct_name=name, error=str(e))
             error_message = f"Define structure failed: {e}"
             raise ToolError(error_message) from e
 
@@ -3920,6 +3944,12 @@ metadata
                     False
             """)
         except Exception as e:
+            _logger.warning(
+                "ghidra_apply_structure_at_failed",
+                address=hex(address),
+                struct_name=struct_name,
+                error=str(e),
+            )
             error_message = f"Apply structure failed: {e}"
             raise ToolError(error_message) from e
 
@@ -4190,6 +4220,7 @@ metadata
         try:
             unsigned_bytes = [int(clean_hex[i : i + 2], 16) for i in range(0, len(clean_hex), 2)]
         except ValueError as exc:
+            _logger.debug("ghidra_write_bytes_invalid_hex", error=str(exc))
             msg = f"Invalid hex payload: {exc}"
             raise ToolError(msg) from exc
 
@@ -4353,6 +4384,7 @@ metadata
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
+            _logger.warning("ghidra_undo_failed", error=str(e))
             error_message = f"Undo failed: {e}"
             raise ToolError(error_message) from e
 
@@ -4378,6 +4410,7 @@ metadata
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
+            _logger.warning("ghidra_redo_failed", error=str(e))
             error_message = f"Redo failed: {e}"
             raise ToolError(error_message) from e
 
@@ -5107,6 +5140,7 @@ metadata
             """)
             return cast("dict[str, Any]", result) if isinstance(result, dict) else {"name": name, "path": name, "success": False}
         except Exception as e:
+            _logger.warning("ghidra_create_namespace_failed", namespace_name=name, parent=parent, error=str(e))
             error_message = f"Create namespace failed: {e}"
             raise ToolError(error_message) from e
 
@@ -5683,6 +5717,13 @@ metadata
                 else {"name": name, "kind": type_kind, "size": 0, "success": False}
             )
         except Exception as e:
+            _logger.warning(
+                "ghidra_create_data_type_failed",
+                type_name=name,
+                type_kind=type_kind,
+                category=category,
+                error=str(e),
+            )
             error_message = f"Create data type failed: {e}"
             raise ToolError(error_message) from e
 
@@ -5729,6 +5770,7 @@ metadata
                 else {"address": hex(address), "type": data_type, "size": 0, "success": False}
             )
         except Exception as e:
+            _logger.warning("ghidra_create_data_failed", address=hex(address), data_type=data_type, error=str(e))
             error_message = f"Create data failed: {e}"
             raise ToolError(error_message) from e
 
@@ -5790,6 +5832,7 @@ metadata
                 else {"analyzer": analyzer_name, "enabled": enabled, "success": False}
             )
         except Exception as e:
+            _logger.warning("ghidra_configure_analysis_failed", analyzer=analyzer_name, enabled=enabled, error=str(e))
             error_message = f"Configure analysis failed: {e}"
             raise ToolError(error_message) from e
 
@@ -5955,6 +5998,7 @@ metadata
                 else {"name": name, "start": hex(start), "size": size, "permissions": permissions, "success": False}
             )
         except Exception as e:
+            _logger.warning("ghidra_create_memory_block_failed", block_name=name, start=hex(start), error=str(e))
             error_message = f"Create memory block failed: {e}"
             raise ToolError(error_message) from e
 
@@ -6634,6 +6678,13 @@ metadata
                 else {"library": library, "name": name, "address": address, "success": False}
             )
         except Exception as e:
+            _logger.warning(
+                "ghidra_add_external_function_failed",
+                library=library,
+                func_name=name,
+                address=hex(address) if address is not None else None,
+                error=str(e),
+            )
             error_message = f"Add external function failed: {e}"
             raise ToolError(error_message) from e
 
@@ -6664,6 +6715,7 @@ metadata
         except ToolError:
             raise
         except Exception as exc:
+            _logger.warning("ghidra_create_overlay_space_failed", overlay_name=name, error=str(exc))
             msg = f"Create overlay space failed: {exc}"
             raise ToolError(msg) from exc
 
