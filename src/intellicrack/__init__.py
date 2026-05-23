@@ -28,8 +28,6 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
-import structlog
-
 from intellicrack._metadata import (
     __author__,
     __copyright__,
@@ -39,6 +37,10 @@ from intellicrack._metadata import (
     __url__,
     __version__,
 )
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
 
 
 if TYPE_CHECKING:
@@ -84,7 +86,7 @@ def __getattr__(name: str) -> object:
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
 
-    structlog.get_logger("intellicrack").debug("lazy_import_resolved", attribute=name)
+    _logger.debug("lazy_import_resolved", attribute=name)
     return attr
 
 

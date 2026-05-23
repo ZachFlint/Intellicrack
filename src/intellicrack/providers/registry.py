@@ -33,6 +33,8 @@ _MSG_NO_ACTIVE_PROVIDER = "No active provider"
 _MSG_DISCONNECT_FAILURES = "One or more providers failed to disconnect"
 _MSG_NO_CLASS_REGISTERED = "No class registered for provider"
 
+_logger = get_logger(__name__)
+
 
 class CredentialLoaderProtocol(Protocol):
     """Protocol for objects that can load provider credentials.
@@ -45,7 +47,7 @@ class CredentialLoaderProtocol(Protocol):
         """Return credentials for the given provider, or None when unavailable.
 
         Args:
-            provider: The provider whose credentials should be loaded.
+            provider: The provider to load credentials for.
 
         Returns:
             ProviderCredentials | None: Loaded credentials or None when unavailable.
@@ -72,8 +74,7 @@ class ProviderRegistry:
         self._active_provider: ProviderName | None = None
         self._credential_loader = credential_loader
         self._lock = threading.RLock()
-        self._logger = get_logger(__name__)
-        self._logger.info(
+        _logger.info(
             "provider_registry_initialized",
             has_credential_loader=credential_loader is not None,
         )
@@ -94,10 +95,10 @@ class ProviderRegistry:
         name = provider.name
         with self._lock:
             if name in self._providers:
-                self._logger.warning("provider_already_registered", provider=name.value)
+                _logger.warning("provider_already_registered", provider=name.value)
             self._providers[name] = provider
             self._provider_classes[name] = type(provider)
-            self._logger.info("provider_registered", provider=name.value)
+            _logger.info("provider_registered", provider=name.value)
 
     def register_class(
         self,
@@ -116,7 +117,7 @@ class ProviderRegistry:
         """
         with self._lock:
             self._provider_classes[name] = provider_class
-            self._logger.info("provider_class_registered", provider=name.value)
+            _logger.info("provider_class_registered", provider=name.value)
 
     def unregister(self, name: ProviderName) -> bool:
         """Unregister a provider.
@@ -134,7 +135,7 @@ class ProviderRegistry:
                     del self._provider_classes[name]
                 if self._active_provider == name:
                     self._active_provider = None
-                self._logger.info("provider_unregistered", provider=name.value)
+                _logger.info("provider_unregistered", provider=name.value)
                 return True
             return False
 
@@ -165,7 +166,7 @@ class ProviderRegistry:
         with self._lock:
             provider = self._providers.get(name)
         if provider is None:
-            self._logger.error("provider_not_registered", provider=name.value)
+            _logger.error("provider_not_registered", provider=name.value)
             raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name.value)
         return provider
 
@@ -229,27 +230,27 @@ class ProviderRegistry:
             credentials = self._credential_loader.get_credentials(name)
 
         if credentials is None:
-            self._logger.error("provider_connect_no_credentials", provider=name.value)
+            _logger.error("provider_connect_no_credentials", provider=name.value)
             raise ProviderError(_MSG_NO_CREDENTIALS, provider_name=name.value)
 
         try:
             await provider.connect(credentials)
         except (AuthenticationError, ProviderError, ConfigurationError) as exc:
-            self._logger.warning(
+            _logger.warning(
                 "provider_connection_failed",
                 provider=name.value,
                 error=str(exc),
             )
             raise
         except (ConnectionError, TimeoutError, OSError, RuntimeError, ValueError) as exc:
-            self._logger.warning(
+            _logger.warning(
                 "provider_connection_failed",
                 provider=name.value,
                 error=str(exc),
             )
             raise
 
-        self._logger.info("provider_connected", provider=name.value)
+        _logger.info("provider_connected", provider=name.value)
         return True
 
     def _get_or_construct(self, name: ProviderName) -> LLMProviderBase:
@@ -272,13 +273,13 @@ class ProviderRegistry:
 
             provider_class = self._provider_classes.get(name)
             if provider_class is None:
-                self._logger.error("provider_not_registered", provider=name.value)
+                _logger.error("provider_not_registered", provider=name.value)
                 raise ProviderError(_MSG_NOT_REGISTERED, provider_name=name.value)
 
             try:
                 instance = provider_class()
             except (TypeError, ValueError, RuntimeError) as exc:
-                self._logger.warning(
+                _logger.warning(
                     "provider_construction_failed",
                     provider=name.value,
                     error=str(exc),
@@ -287,7 +288,7 @@ class ProviderRegistry:
                 raise ProviderError(msg, provider_name=name.value) from exc
 
             self._providers[name] = instance
-            self._logger.info("provider_constructed_from_class", provider=name.value)
+            _logger.info("provider_constructed_from_class", provider=name.value)
             return instance
 
     async def disconnect_provider(self, name: ProviderName) -> None:
@@ -302,11 +303,11 @@ class ProviderRegistry:
             provider = self._providers.get(name)
         if provider is not None and provider.is_connected:
             await provider.disconnect()
-            self._logger.info("provider_disconnected", provider=name.value)
+            _logger.info("provider_disconnected", provider=name.value)
         with self._lock:
             if self._active_provider == name:
                 self._active_provider = None
-                self._logger.info("active_provider_cleared", provider=name.value)
+                _logger.info("active_provider_cleared", provider=name.value)
 
     async def disconnect_all(self) -> None:
         """Disconnect from all providers, aggregating any failures.
@@ -327,7 +328,7 @@ class ProviderRegistry:
             try:
                 await self.disconnect_provider(name)
             except (ProviderError, ConnectionError, OSError, RuntimeError, ValueError) as exc:
-                self._logger.warning(
+                _logger.warning(
                     "provider_disconnect_failed",
                     provider=name.value,
                     error=str(exc),
@@ -351,11 +352,11 @@ class ProviderRegistry:
         """
         provider = self.get_or_raise(name)
         if not provider.is_connected:
-            self._logger.error("set_active_provider_not_connected", provider=name.value)
+            _logger.error("set_active_provider_not_connected", provider=name.value)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name=name.value)
         with self._lock:
             self._active_provider = name
-        self._logger.info("active_provider_set", provider=name.value)
+        _logger.info("active_provider_set", provider=name.value)
 
     @property
     def active(self) -> LLMProviderBase | None:
