@@ -24,6 +24,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
+
 
 _TREE_COL_COUNT: Final[int] = 2
 _IEEE_FLOAT32_BYTES: Final[int] = 4
@@ -106,6 +111,7 @@ class CalculatorMixin:
         try:
             value = self._parse_input_value(text)
         except ValueError as exc:
+            _logger.debug("calc_input_parse_failed", text=text, error=str(exc))
             self._calc_results_tree.addTopLevelItem(
                 QTreeWidgetItem(["Error", str(exc)]),
             )
@@ -137,7 +143,8 @@ class CalculatorMixin:
                 packed = struct.pack(fmt, value & mask if fmt[-1].isupper() else self._to_signed(value, size))
                 unpacked = struct.unpack(fmt, packed)[0]
                 self._add_result(label, str(unpacked))
-            except (struct.error, OverflowError):
+            except (struct.error, OverflowError) as exc:
+                _logger.debug("calc_int_overflow", label=label, value=value, error=str(exc))
                 self._add_result(label, "overflow")
 
         for label, fmt in [(f"float32_{order_label}", f"{byte_order}f"), (f"float64_{order_label}", f"{byte_order}d")]:
@@ -147,7 +154,8 @@ class CalculatorMixin:
                 packed = struct.pack(f"{byte_order}{'I' if size == _IEEE_FLOAT32_BYTES else 'Q'}", value & mask)
                 float_val = struct.unpack(fmt, packed)[0]
                 self._add_result(label, f"{float_val}")
-            except (struct.error, OverflowError):
+            except (struct.error, OverflowError) as exc:
+                _logger.debug("calc_float_pack_failed", label=label, error=str(exc))
                 self._add_result(label, "N/A")
 
         self._update_ieee754_display(value, byte_order)
@@ -223,7 +231,8 @@ class CalculatorMixin:
                 self._calc_float32_label.setText(
                     f"float32: {fval}  [S={sign} E={exp} M=0x{mantissa:06X}]",
                 )
-            except struct.error:
+            except struct.error as exc:
+                _logger.debug("calc_ieee754_pack_failed", label="float32", error=str(exc))
                 self._calc_float32_label.setText("float32: N/A")
 
         if self._calc_float64_label is not None:
@@ -237,5 +246,6 @@ class CalculatorMixin:
                 self._calc_float64_label.setText(
                     f"float64: {fval}  [S={sign} E={exp} M=0x{mantissa:013X}]",
                 )
-            except struct.error:
+            except struct.error as exc:
+                _logger.debug("calc_ieee754_pack_failed", label="float64", error=str(exc))
                 self._calc_float64_label.setText("float64: N/A")
