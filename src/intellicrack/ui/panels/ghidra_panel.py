@@ -45,7 +45,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
@@ -984,10 +984,14 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         self._dt_get_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_data_type(address),
             on_success=self._apply_get_data_type,
             on_error=self._on_get_data_type_error,
+            parent=self,
+            event="ghidra_get_data_type",
+            logger=_logger,
+            address=hex(address),
         )
 
     def _apply_get_data_type(self, result: object) -> None:
@@ -1045,10 +1049,16 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         self._dt_set_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.set_data_type(address, type_name),
             on_success=self._apply_set_data_type,
             on_error=self._on_set_data_type_error,
+            parent=self,
+            event="ghidra_set_data_type",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            type_name=type_name,
         )
 
     def _apply_set_data_type(self, result: object) -> None:
@@ -1227,10 +1237,15 @@ class GhidraPanel(AnalysisPanelBase):
             return False
 
         self._load_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.load_binary(binary_path),
             on_success=lambda _: self._on_binary_loaded(binary_path),
             on_error=lambda e: self._on_binary_load_error(binary_path, e),
+            parent=self,
+            event="ghidra_load_binary",
+            logger=_logger,
+            level="info",
+            binary_path=str(binary_path),
         )
         return True
 
@@ -1267,10 +1282,14 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         self._connect_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.initialize(),
             on_success=lambda _: self._on_connect_success(),
             on_error=self._on_connect_error,
+            parent=self,
+            event="ghidra_initialize",
+            logger=_logger,
+            level="info",
         )
 
     def _on_connect_success(self) -> None:
@@ -1301,10 +1320,14 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         self._disconnect_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.shutdown(),
             on_success=lambda _: self._on_disconnect_success(),
             on_error=self._on_disconnect_error,
+            parent=self,
+            event="ghidra_shutdown",
+            logger=_logger,
+            level="info",
         )
 
     def _on_disconnect_success(self) -> None:
@@ -1352,10 +1375,14 @@ class GhidraPanel(AnalysisPanelBase):
         self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.analyze(),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
+            parent=self,
+            event="ghidra_analyze",
+            logger=_logger,
+            level="info",
         )
 
     def _on_analysis_complete(self) -> None:
@@ -1395,10 +1422,15 @@ class GhidraPanel(AnalysisPanelBase):
         project_dir = Path(tempfile.gettempdir()) / "intellicrack_ghidra"
         self._headless_btn.setEnabled(False)
         self._set_status("Starting headless Ghidra...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.start_headless(project_dir),
             on_success=lambda _: self._on_headless_started(),
             on_error=self._on_headless_error,
+            parent=self,
+            event="ghidra_start_headless",
+            logger=_logger,
+            level="info",
+            project_dir=str(project_dir),
         )
 
     def _on_headless_started(self) -> None:
@@ -1431,10 +1463,14 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.undo(),
             on_success=lambda _: self._set_status("Undo complete"),
             on_error=lambda e: self._set_status(f"Undo failed: {e}"),
+            parent=self,
+            event="ghidra_undo",
+            logger=_logger,
+            level="info",
         )
 
     def _on_redo(self) -> None:
@@ -1442,10 +1478,14 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.redo(),
             on_success=lambda _: self._set_status("Redo complete"),
             on_error=lambda e: self._set_status(f"Redo failed: {e}"),
+            parent=self,
+            event="ghidra_redo",
+            logger=_logger,
+            level="info",
         )
 
     # ------------------------------------------------------------------
@@ -1461,10 +1501,14 @@ class GhidraPanel(AnalysisPanelBase):
         if not pattern:
             return
         self._byte_search_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.search_bytes(pattern),
             on_success=self._apply_byte_search_results,
             on_error=self._on_byte_search_error,
+            parent=self,
+            event="ghidra_search_bytes",
+            logger=_logger,
+            pattern_length=len(pattern),
         )
 
     def _apply_byte_search_results(self, result: object) -> None:
@@ -1508,10 +1552,15 @@ class GhidraPanel(AnalysisPanelBase):
         )
         if not file_path:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.import_debug_info(file_path),
             on_success=lambda _: self._set_status(f"Debug info imported: {Path(file_path).name}"),
             on_error=lambda e: self._set_status(f"Debug import failed: {e}"),
+            parent=self,
+            event="ghidra_import_debug_info",
+            logger=_logger,
+            level="info",
+            file_path=file_path,
         )
 
     # ------------------------------------------------------------------
@@ -1532,10 +1581,14 @@ class GhidraPanel(AnalysisPanelBase):
         if not file_path:
             return
         self._set_status("Comparing programs...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.diff_programs(file_path),
             on_success=self._apply_diff_results,
             on_error=lambda e: self._set_status(f"Diff failed: {e}"),
+            parent=self,
+            event="ghidra_diff_programs",
+            logger=_logger,
+            file_path=file_path,
         )
 
     def _apply_diff_results(self, result: object) -> None:
@@ -1573,10 +1626,15 @@ class GhidraPanel(AnalysisPanelBase):
         if not name:
             self._set_status("Overlay name required")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_overlay_space(name),
             on_success=lambda _: self._set_status(f"Overlay space '{name}' created"),
             on_error=lambda e: self._set_status(f"Create overlay failed: {e}"),
+            parent=self,
+            event="ghidra_create_overlay_space",
+            logger=_logger,
+            level="info",
+            name=name,
         )
 
     # ------------------------------------------------------------------
@@ -1592,10 +1650,14 @@ class GhidraPanel(AnalysisPanelBase):
         filter_text = self._func_filter.text().strip() or None
         self._refresh_funcs_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_functions(filter_text),
             on_success=self._apply_functions,
             on_error=lambda _: self._on_refresh_funcs_error(),
+            parent=self,
+            event="ghidra_get_functions",
+            logger=_logger,
+            filter=filter_text,
         )
 
     def _apply_functions(self, result: object) -> None:
@@ -1657,28 +1719,44 @@ class GhidraPanel(AnalysisPanelBase):
             offset=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.decompile(address),
             on_success=self._apply_decompiled,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_decompile_failed", "Decompile", addr, e),
+            parent=self,
+            event="ghidra_decompile",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.disassemble(address),
             on_success=self._apply_disassembly,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_disassemble_failed", "Disassemble", addr, e),
+            parent=self,
+            event="ghidra_disassemble",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_pcode(address),
             on_success=self._apply_pcode,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_pcode_failed", "PCode", addr, e),
+            parent=self,
+            event="ghidra_get_pcode",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_basic_blocks(address),
             on_success=self._apply_cfg,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_cfg_failed", "CFG", addr, e),
+            parent=self,
+            event="ghidra_get_basic_blocks",
+            logger=_logger,
+            address=hex(address),
         )
 
         self.show_xrefs(address)
@@ -1841,10 +1919,16 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Invalid address for create function")
             return
         name = self._create_func_name.text().strip() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_function(addr, name),
             on_success=lambda _: self._on_refresh_functions(),
             on_error=lambda e: self._set_status(f"Create function failed: {e}"),
+            parent=self,
+            event="ghidra_create_function",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            name=name,
         )
 
     # ------------------------------------------------------------------
@@ -1915,10 +1999,16 @@ class GhidraPanel(AnalysisPanelBase):
         if chosen is actions["rename"]:
             new_name, ok = QInputDialog.getText(self, self.tr("Rename Function"), self.tr("New name:"), text=func_name)
             if ok and new_name.strip():
-                self._run_async(
+                run_bridge_coroutine_logged(
                     bridge.rename_function(address, new_name.strip()),
                     on_success=lambda _: self._on_refresh_functions(),
                     on_error=lambda e: self._set_status(f"Rename failed: {e}"),
+                    parent=self,
+                    event="ghidra_rename_function",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    new_name=new_name.strip(),
                 )
 
         elif chosen is actions["edit_sig"]:
@@ -1927,10 +2017,17 @@ class GhidraPanel(AnalysisPanelBase):
         elif chosen is actions["add_cmt"]:
             cmt_text, ok = QInputDialog.getText(self, self.tr("Add Comment"), self.tr("Comment:"))
             if ok and cmt_text.strip():
-                self._run_async(
+                run_bridge_coroutine_logged(
                     bridge.add_comment(address, cmt_text.strip(), "EOL"),
                     on_success=lambda _: self._set_status("Comment added"),
                     on_error=lambda e: self._set_status(f"Add comment failed: {e}"),
+                    parent=self,
+                    event="ghidra_add_comment",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    comment_type="EOL",
+                    comment_length=len(cmt_text.strip()),
                 )
 
         elif chosen is actions["set_var"]:
@@ -1941,10 +2038,17 @@ class GhidraPanel(AnalysisPanelBase):
             )
             if ok and ":" in var_info:
                 var_name, var_type = var_info.split(":", 1)
-                self._run_async(
+                run_bridge_coroutine_logged(
                     bridge.set_function_variable_type(address, var_name.strip(), var_type.strip()),
                     on_success=lambda _: self._set_status("Variable type set"),
                     on_error=lambda e: self._set_status(f"Set variable type failed: {e}"),
+                    parent=self,
+                    event="ghidra_set_function_variable_type",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    variable_name=var_name.strip(),
+                    variable_type=var_type.strip(),
                 )
 
         elif chosen is actions["call_graph"]:
@@ -1954,17 +2058,25 @@ class GhidraPanel(AnalysisPanelBase):
             self._on_build_call_graph()
 
         elif chosen is actions["stack"]:
-            self._run_async(
+            run_bridge_coroutine_logged(
                 bridge.get_stack_frame(address),
                 on_success=lambda r: self._show_info_dialog("Stack Frame", str(r)),
                 on_error=lambda e: self._set_status(f"Stack frame failed: {e}"),
+                parent=self,
+                event="ghidra_get_stack_frame",
+                logger=_logger,
+                address=hex(address),
             )
 
         elif chosen is actions["body"]:
-            self._run_async(
+            run_bridge_coroutine_logged(
                 bridge.get_function_body(address),
                 on_success=self._show_function_body_info,
                 on_error=lambda e: self._set_status(f"Function body failed: {e}"),
+                parent=self,
+                event="ghidra_get_function_body",
+                logger=_logger,
+                address=hex(address),
             )
 
         elif chosen is actions["conventions"]:
@@ -1977,10 +2089,13 @@ class GhidraPanel(AnalysisPanelBase):
                     body_text = str(r)
                 self._show_info_dialog("Calling Conventions", body_text)
 
-            self._run_async(
+            run_bridge_coroutine_logged(
                 bridge.get_calling_conventions(),
                 on_success=_show_conventions,
                 on_error=lambda e: self._set_status(f"Calling conventions failed: {e}"),
+                parent=self,
+                event="ghidra_get_calling_conventions",
+                logger=_logger,
             )
 
         elif chosen is actions["set_color"]:
@@ -1995,10 +2110,16 @@ class GhidraPanel(AnalysisPanelBase):
                 except ValueError:
                     self._set_status("Invalid color hex value")
                     return
-                self._run_async(
+                run_bridge_coroutine_logged(
                     bridge.set_color(address, color_int),
                     on_success=lambda _: self._set_status(f"Color set at 0x{address:X}"),
                     on_error=lambda e: self._set_status(f"Set color failed: {e}"),
+                    parent=self,
+                    event="ghidra_set_color",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
+                    color=hex(color_int),
                 )
 
         elif chosen is actions["delete"]:
@@ -2008,10 +2129,15 @@ class GhidraPanel(AnalysisPanelBase):
                 self.tr(f"Delete function '{func_name}' at 0x{address:X}?"),
             )
             if reply == QMessageBox.StandardButton.Yes:
-                self._run_async(
+                run_bridge_coroutine_logged(
                     bridge.delete_function(address),
                     on_success=lambda _: self._on_refresh_functions(),
                     on_error=lambda e: self._set_status(f"Delete failed: {e}"),
+                    parent=self,
+                    event="ghidra_delete_function",
+                    logger=_logger,
+                    level="info",
+                    address=hex(address),
                 )
 
     def _handle_edit_signature(
@@ -2035,10 +2161,18 @@ class GhidraPanel(AnalysisPanelBase):
             return
         new_sig_name, ok3 = QInputDialog.getText(self, self.tr("Edit Signature"), self.tr("Function name:"), text=func_name)
         if ok3:
-            self._run_async(
+            run_bridge_coroutine_logged(
                 bridge.edit_function_signature(address, ret_type, cc, new_sig_name),
                 on_success=lambda _: self._set_status("Signature updated"),
                 on_error=lambda e: self._set_status(f"Signature update failed: {e}"),
+                parent=self,
+                event="ghidra_edit_function_signature",
+                logger=_logger,
+                level="info",
+                address=hex(address),
+                return_type=ret_type,
+                calling_convention=cc,
+                new_name=new_sig_name,
             )
 
     # ------------------------------------------------------------------
@@ -2051,10 +2185,13 @@ class GhidraPanel(AnalysisPanelBase):
         if bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_imports(),
             on_success=self._apply_imports,
             on_error=self._on_imports_refresh_error,
+            parent=self,
+            event="ghidra_get_imports",
+            logger=_logger,
         )
 
     def _on_imports_refresh_error(self, exc: object) -> None:
@@ -2097,10 +2234,13 @@ class GhidraPanel(AnalysisPanelBase):
         if bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_exports(),
             on_success=self._apply_exports,
             on_error=self._on_exports_refresh_error,
+            parent=self,
+            event="ghidra_get_exports",
+            logger=_logger,
         )
 
     def _apply_exports(self, result: object) -> None:
@@ -2134,10 +2274,14 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         self._string_search_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.search_strings(pattern),
             on_success=self._apply_strings,
             on_error=lambda _: self._on_string_search_error(pattern),
+            parent=self,
+            event="ghidra_search_strings",
+            logger=_logger,
+            pattern=pattern,
         )
 
     def _apply_strings(self, result: object) -> None:
@@ -2188,16 +2332,24 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._xrefs_tree.clear()
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_xrefs_to_failed", "Xrefs-to lookup", addr, e),
+            parent=self,
+            event="ghidra_get_xrefs_to",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
             on_error=lambda e, addr=address: self._on_op_error("ghidra_xrefs_from_failed", "Xrefs-from lookup", addr, e),
+            parent=self,
+            event="ghidra_get_xrefs_from",
+            logger=_logger,
+            address=hex(address),
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
@@ -2255,10 +2407,16 @@ class GhidraPanel(AnalysisPanelBase):
         if not name:
             self._set_status("Label name required")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.set_label(addr, name),
             on_success=lambda _: self._on_refresh_labels(),
             on_error=lambda e: self._set_status(f"Set label failed: {e}"),
+            parent=self,
+            event="ghidra_set_label",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            name=name,
         )
 
     def _on_refresh_labels(self) -> None:
@@ -2278,10 +2436,14 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status(f"Refresh labels: invalid address '{raw}'")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_labels(addr),
             on_success=self._apply_labels,
             on_error=lambda e: self._set_status(f"Refresh labels failed: {e}"),
+            parent=self,
+            event="ghidra_get_labels",
+            logger=_logger,
+            address=hex(addr),
         )
 
     def _apply_labels(self, result: object) -> None:
@@ -2315,10 +2477,17 @@ class GhidraPanel(AnalysisPanelBase):
             return
         comment = self._bm_comment_input.text().strip()
         bm_type = self._bm_type_combo.currentText()
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_bookmark(addr, category, comment, bm_type),
             on_success=lambda _: self._on_refresh_bookmarks(),
             on_error=lambda e: self._set_status(f"Create bookmark failed: {e}"),
+            parent=self,
+            event="ghidra_create_bookmark",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            category=category,
+            bookmark_type=bm_type,
         )
 
     def _on_refresh_bookmarks(self) -> None:
@@ -2326,10 +2495,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_bookmarks(),
             on_success=self._apply_bookmarks,
             on_error=lambda e: self._set_status(f"Refresh bookmarks failed: {e}"),
+            parent=self,
+            event="ghidra_get_bookmarks",
+            logger=_logger,
         )
 
     def _apply_bookmarks(self, result: object) -> None:
@@ -2377,10 +2549,16 @@ class GhidraPanel(AnalysisPanelBase):
         field_dicts: list[dict[str, object]] = [{"name": n, "type": t, "size": 0} for n, t in self._struct_fields_list]
         self._struct_fields_list.clear()
         self._struct_fields_label.setText("")
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.define_structure(name, field_dicts),
             on_success=lambda _: self._on_refresh_structures(),
             on_error=lambda e: self._set_status(f"Define structure failed: {e}"),
+            parent=self,
+            event="ghidra_define_structure",
+            logger=_logger,
+            level="info",
+            name=name,
+            field_count=len(field_dicts),
         )
 
     def _on_refresh_structures(self) -> None:
@@ -2388,10 +2566,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_structures(),
             on_success=self._apply_structures,
             on_error=lambda e: self._set_status(f"Refresh structures failed: {e}"),
+            parent=self,
+            event="ghidra_get_structures",
+            logger=_logger,
         )
 
     def _apply_structures(self, result: object) -> None:
@@ -2424,10 +2605,16 @@ class GhidraPanel(AnalysisPanelBase):
         if not struct_name:
             self._set_status("Structure name required")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.apply_structure_at(addr, struct_name),
             on_success=lambda _: self._set_status(f"Structure '{struct_name}' applied at 0x{addr:X}"),
             on_error=lambda e: self._set_status(f"Apply structure failed: {e}"),
+            parent=self,
+            event="ghidra_apply_structure_at",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            structure_name=struct_name,
         )
 
     # ------------------------------------------------------------------
@@ -2439,10 +2626,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_memory_map(),
             on_success=self._apply_memory_map,
             on_error=lambda e: self._set_status(f"Refresh memory map failed: {e}"),
+            parent=self,
+            event="ghidra_get_memory_map",
+            logger=_logger,
         )
 
     def _apply_memory_map(self, result: object) -> None:
@@ -2478,10 +2668,15 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Invalid address for read bytes")
             return
         length = self._read_len_spin.value()
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.read_bytes(addr, length),
             on_success=self._apply_read_bytes,
             on_error=lambda e: self._set_status(f"Read bytes failed: {e}"),
+            parent=self,
+            event="ghidra_read_bytes",
+            logger=_logger,
+            address=hex(addr),
+            length=length,
         )
 
     def _apply_read_bytes(self, result: object) -> None:
@@ -2543,10 +2738,16 @@ class GhidraPanel(AnalysisPanelBase):
             address=hex(addr),
             byte_count=len(clean_hex) // 2,
         )
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.write_bytes(addr, hex_data),
             on_success=lambda _: self._set_status(f"Wrote {len(clean_hex) // 2} byte(s) at 0x{addr:X}"),
             on_error=lambda e: self._set_status(f"Write bytes failed: {e}"),
+            parent=self,
+            event="ghidra_write_bytes",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            byte_count=len(clean_hex) // 2,
         )
 
     def _on_create_memory_block(self) -> None:
@@ -2564,10 +2765,18 @@ class GhidraPanel(AnalysisPanelBase):
             return
         size = self._block_size_spin.value()
         perms = self._block_perms_input.text().strip()
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_memory_block(name, start, size, perms),
             on_success=lambda _: self._on_refresh_memory_map(),
             on_error=lambda e: self._set_status(f"Create memory block failed: {e}"),
+            parent=self,
+            event="ghidra_create_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            start=hex(start),
+            size=size,
+            permissions=perms,
         )
 
     # ------------------------------------------------------------------
@@ -2579,10 +2788,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_segments(),
             on_success=self._apply_segments,
             on_error=lambda e: self._set_status(f"Refresh segments failed: {e}"),
+            parent=self,
+            event="ghidra_get_segments",
+            logger=_logger,
         )
 
     def _apply_segments(self, result: object) -> None:
@@ -2614,10 +2826,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_program_info(),
             on_success=self._apply_program_info,
             on_error=lambda e: self._set_status(f"Refresh program info failed: {e}"),
+            parent=self,
+            event="ghidra_get_program_info",
+            logger=_logger,
         )
 
     def _apply_program_info(self, result: object) -> None:
@@ -2665,10 +2880,16 @@ class GhidraPanel(AnalysisPanelBase):
         if name is None and image_base is None:
             self._set_status("No metadata to update")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.set_program_metadata(name=name, image_base=image_base),
             on_success=lambda _: self._set_status("Metadata updated"),
             on_error=lambda e: self._set_status(f"Update metadata failed: {e}"),
+            parent=self,
+            event="ghidra_set_program_metadata",
+            logger=_logger,
+            level="info",
+            program_name=name,
+            image_base=image_base,
         )
 
     # ------------------------------------------------------------------
@@ -2687,10 +2908,16 @@ class GhidraPanel(AnalysisPanelBase):
         depth = self._cg_depth_spin.value()
         direction = self._cg_direction_combo.currentText()
         self._call_graph_tree.clear()
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_call_tree(addr, direction=direction, depth=depth),
             on_success=self._apply_call_graph,
             on_error=lambda e: self._set_status(f"Build call graph failed: {e}"),
+            parent=self,
+            event="ghidra_get_call_tree",
+            logger=_logger,
+            address=hex(addr),
+            direction=direction,
+            depth=depth,
         )
 
     def _apply_call_graph(self, result: object) -> None:
@@ -2743,10 +2970,14 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status("Invalid address for callers")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_callers(addr),
             on_success=self._apply_callers,
             on_error=lambda e: self._set_status(f"Get callers failed: {e}"),
+            parent=self,
+            event="ghidra_get_callers",
+            logger=_logger,
+            address=hex(addr),
         )
 
     def _apply_callers(self, result: object) -> None:
@@ -2772,10 +3003,14 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status("Invalid address for slice")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_slice(addr),
             on_success=self._apply_slice,
             on_error=lambda e: self._set_status(f"Get slice failed: {e}"),
+            parent=self,
+            event="ghidra_get_slice",
+            logger=_logger,
+            address=hex(addr),
         )
 
     def _apply_slice(self, result: object) -> None:
@@ -2813,10 +3048,17 @@ class GhidraPanel(AnalysisPanelBase):
         if not cmt_text:
             self._set_status("Comment text required")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.add_comment(addr, cmt_text, cmt_type),
             on_success=lambda _: self._set_status("Comment added"),
             on_error=lambda e: self._set_status(f"Add comment failed: {e}"),
+            parent=self,
+            event="ghidra_add_comment",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            comment_type=cmt_type,
+            comment_length=len(cmt_text),
         )
 
     def _on_refresh_comments(self) -> None:
@@ -2828,10 +3070,14 @@ class GhidraPanel(AnalysisPanelBase):
         if addr is None:
             self._set_status("Invalid address for refresh comments")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_comments(addr),
             on_success=self._apply_comments,
             on_error=lambda e: self._set_status(f"Refresh comments failed: {e}"),
+            parent=self,
+            event="ghidra_get_comments",
+            logger=_logger,
+            address=hex(addr),
         )
 
     def _on_load_all_comments(self) -> None:
@@ -2841,10 +3087,13 @@ class GhidraPanel(AnalysisPanelBase):
             return
         self._load_all_cmt_btn.setEnabled(False)
         self._set_status("Loading all comments...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_all_comments(),
             on_success=self._apply_all_comments_success,
             on_error=self._on_load_all_comments_error,
+            parent=self,
+            event="ghidra_get_all_comments",
+            logger=_logger,
         )
 
     def _apply_all_comments_success(self, result: object) -> None:
@@ -2898,10 +3147,15 @@ class GhidraPanel(AnalysisPanelBase):
             return
         name = self._sym_name_input.text().strip()
         sym_type = self._sym_type_combo.currentText() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.search_symbols(name, sym_type),
             on_success=self._apply_symbols,
             on_error=lambda e: self._set_status(f"Symbol search failed: {e}"),
+            parent=self,
+            event="ghidra_search_symbols",
+            logger=_logger,
+            symbol_name=name,
+            symbol_type=sym_type,
         )
 
     def _apply_symbols(self, result: object) -> None:
@@ -2931,10 +3185,16 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Namespace name required")
             return
         parent = self._ns_parent_input.text().strip() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_namespace(name, parent),
             on_success=lambda _: self._on_refresh_namespaces(),
             on_error=lambda e: self._set_status(f"Create namespace failed: {e}"),
+            parent=self,
+            event="ghidra_create_namespace",
+            logger=_logger,
+            level="info",
+            namespace_name=name,
+            namespace_parent=parent,
         )
 
     def _on_refresh_namespaces(self) -> None:
@@ -2942,10 +3202,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_namespaces(),
             on_success=self._apply_namespaces,
             on_error=lambda e: self._set_status(f"Refresh namespaces failed: {e}"),
+            parent=self,
+            event="ghidra_get_namespaces",
+            logger=_logger,
         )
 
     def _apply_namespaces(self, result: object) -> None:
@@ -2980,10 +3243,17 @@ class GhidraPanel(AnalysisPanelBase):
         if not name:
             self._set_status("Equate name required")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.create_equate(addr, value, name),
             on_success=lambda _: self._on_refresh_equates(),
             on_error=lambda e: self._set_status(f"Create equate failed: {e}"),
+            parent=self,
+            event="ghidra_create_equate",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            value=value,
+            name=name,
         )
 
     def _on_refresh_equates(self) -> None:
@@ -2991,10 +3261,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_equates(),
             on_success=self._apply_equates,
             on_error=lambda e: self._set_status(f"Refresh equates failed: {e}"),
+            parent=self,
+            event="ghidra_get_equates",
+            logger=_logger,
         )
 
     def _apply_equates(self, result: object) -> None:
@@ -3018,10 +3291,13 @@ class GhidraPanel(AnalysisPanelBase):
         bridge = self._require_connected()
         if bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.get_relocations(),
             on_success=self._apply_relocations,
             on_error=lambda e: self._set_status(f"Refresh relocations failed: {e}"),
+            parent=self,
+            event="ghidra_get_relocations",
+            logger=_logger,
         )
 
     def _apply_relocations(self, result: object) -> None:
@@ -3052,10 +3328,17 @@ class GhidraPanel(AnalysisPanelBase):
             return
         addr_text = self._ext_addr_input.text().strip()
         addr = self._parse_address(addr_text) if addr_text else None
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.add_external_function(library, func_name, addr),
             on_success=lambda _: self._set_status(f"External function '{library}::{func_name}' added"),
             on_error=lambda e: self._set_status(f"Add external function failed: {e}"),
+            parent=self,
+            event="ghidra_add_external_function",
+            logger=_logger,
+            level="info",
+            library=library,
+            function_name=func_name,
+            address=hex(addr),
         )
 
     # ------------------------------------------------------------------
@@ -3072,10 +3355,15 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status("Script is empty")
             return
         self._run_script_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.execute_script(script),
             on_success=self._apply_script_result,
             on_error=self._on_script_error,
+            parent=self,
+            event="ghidra_execute_script",
+            logger=_logger,
+            level="info",
+            script_size=len(script),
         )
 
     def _on_run_script_with_params(self) -> None:
@@ -3094,10 +3382,16 @@ class GhidraPanel(AnalysisPanelBase):
             self._set_status(f"Invalid JSON params: {exc}")
             return
         self._run_script_params_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.execute_script_with_params(script, params),
             on_success=self._apply_script_result,
             on_error=self._on_script_error,
+            parent=self,
+            event="ghidra_execute_script_with_params",
+            logger=_logger,
+            level="info",
+            script_size=len(script),
+            param_count=len(params),
         )
 
     def _apply_script_result(self, result: object) -> None:
@@ -3130,10 +3424,16 @@ class GhidraPanel(AnalysisPanelBase):
             return
         simplification = self._decomp_simplification_input.text().strip() or None
         max_instructions = self._decomp_max_inst_spin.value()
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.set_decompiler_options(simplification=simplification, max_instructions=max_instructions),
             on_success=lambda _: self._set_status("Decompiler options applied"),
             on_error=lambda e: self._set_status(f"Decompiler options failed: {e}"),
+            parent=self,
+            event="ghidra_set_decompiler_options",
+            logger=_logger,
+            level="info",
+            simplification=simplification,
+            max_instructions=max_instructions,
         )
 
     def _on_configure_analysis(self) -> None:
@@ -3160,10 +3460,16 @@ class GhidraPanel(AnalysisPanelBase):
                 return
             options = cast("dict[str, object]", parsed)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             bridge.configure_analysis(analyzer_name, enabled=enabled, options=options),
             on_success=lambda _: self._set_status(
                 f"Analyzer '{analyzer_name}' configured (enabled={enabled}, options_keys={list((options or {}).keys())})",
             ),
             on_error=lambda e: self._set_status(f"Configure analysis failed: {e}"),
+            parent=self,
+            event="ghidra_configure_analysis",
+            logger=_logger,
+            level="info",
+            analyzer=analyzer_name,
+            enabled=enabled,
         )
