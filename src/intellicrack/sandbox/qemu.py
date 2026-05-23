@@ -2473,7 +2473,7 @@ python3 /mnt/shared/monitor/agent.py &
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
         await asyncio.to_thread(startup_script.write_text, startup_content, encoding="utf-8")
 
-        _logger.debug("guest_agent_scripts_created", extra={"path": str(monitor_dir)})
+        _logger.debug("guest_agent_scripts_created", path=str(monitor_dir))
 
     async def run_command(
         self,
@@ -2641,7 +2641,7 @@ python3 /mnt/shared/monitor/agent.py &
                     result_text = result_text.strip()
                     exit_code = int(result_text) if result_text.isdigit() else -1
                 except (OSError, ValueError) as e:
-                    _logger.debug("result_read_failed", extra={"error": str(e)})
+                    _logger.debug("result_read_failed", error=str(e))
                     continue
                 stdout_text = await QEMUSandbox._read_sidecar(stdout_path)
                 stderr_text = await QEMUSandbox._read_sidecar(stderr_path)
@@ -2653,7 +2653,7 @@ python3 /mnt/shared/monitor/agent.py &
                 )
                 return (exit_code, stdout_text, stderr_text)
 
-        _logger.warning("command_timed_out", extra={"timeout_seconds": time_limit})
+        _logger.warning("command_timed_out", timeout_seconds=time_limit)
         raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=time_limit)
 
     @staticmethod
@@ -2674,7 +2674,7 @@ python3 /mnt/shared/monitor/agent.py &
         try:
             return await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         except OSError as exc:
-            _logger.debug("sidecar_read_failed", extra={"path": str(path), "error": str(exc)})
+            _logger.debug("sidecar_read_failed", path=str(path), error=str(exc))
             return ""
 
     @staticmethod
@@ -2713,7 +2713,8 @@ python3 /mnt/shared/monitor/agent.py &
             except OSError as exc:
                 _logger.debug(
                     "result_artifact_cleanup_failed",
-                    extra={"path": str(candidate), "error": str(exc)},
+                    path=str(candidate),
+                    error=str(exc),
                 )
 
     async def run_binary(
@@ -2743,7 +2744,7 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_NOT_RUNNING)
 
         if not await asyncio.to_thread(binary_path.exists):
-            _logger.warning("binary_not_found", extra={"path": str(binary_path)})
+            _logger.warning("binary_not_found", path=str(binary_path))
             raise SandboxError(_ERR_BINARY_NOT_FOUND)
 
         if self._shared_folder is None:
@@ -2777,13 +2778,13 @@ python3 /mnt/shared/monitor/agent.py &
             )
             result = "success" if exit_code == 0 else "error"
         except SandboxTimeoutError as e:
-            _logger.warning("sandbox_execution_timeout", extra={"binary": binary_path.name, "timeout": effective_timeout})
+            _logger.warning("sandbox_execution_timeout", binary=binary_path.name, timeout=effective_timeout)
             result = "timeout"
             stderr = str(e)
             stdout = ""
             exit_code = -1
         except SandboxError as e:
-            _logger.warning("sandbox_execution_error", extra={"binary": binary_path.name, "error": str(e)})
+            _logger.warning("sandbox_execution_error", binary=binary_path.name, error=str(e))
             result = "error"
             stderr = str(e)
             stdout = ""
@@ -2913,20 +2914,16 @@ python3 /mnt/shared/monitor/agent.py &
             if all(count >= stable_polls for count in unchanged_counts.values()):
                 _logger.debug(
                     "logs_stable_reached",
-                    extra={
-                        "elapsed_seconds": time.monotonic() - start,
-                        "stable_polls": stable_polls,
-                    },
+                    elapsed_seconds=time.monotonic() - start,
+                    stable_polls=stable_polls,
                 )
                 return
 
             if time.monotonic() - start >= max_wait:
                 _logger.warning(
                     "logs_stable_max_wait_elapsed",
-                    extra={
-                        "max_wait_seconds": max_wait,
-                        "stable_polls": stable_polls,
-                    },
+                    max_wait_seconds=max_wait,
+                    stable_polls=stable_polls,
                 )
                 return
 
@@ -2946,7 +2943,7 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         if not await asyncio.to_thread(source.exists):
-            _logger.warning("source_file_not_found", extra={"path": str(source)})
+            _logger.warning("source_file_not_found", path=str(source))
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         dest_path = self._shared_folder / dest
@@ -2954,7 +2951,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         try:
             await asyncio.to_thread(shutil.copy2, source, dest_path)
-            _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": dest})
+            _logger.debug("file_copied_to_sandbox", source=str(source), dest=dest)
         except OSError as e:
             _logger.warning("copy_to_sandbox_failed", error=str(e), source=str(source), dest=dest)
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
@@ -2975,14 +2972,14 @@ python3 /mnt/shared/monitor/agent.py &
         source_path = self._shared_folder / source
 
         if not await asyncio.to_thread(source_path.exists):
-            _logger.warning("sandbox_source_file_not_found", extra={"path": source})
+            _logger.warning("sandbox_source_file_not_found", path=source)
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
         await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
 
         try:
             await asyncio.to_thread(shutil.copy2, source_path, dest)
-            _logger.debug("file_copied_from_sandbox", extra={"source": source, "dest": str(dest)})
+            _logger.debug("file_copied_from_sandbox", source=source, dest=str(dest))
         except OSError as e:
             _logger.warning("copy_from_sandbox_failed", error=str(e), source=source, dest=str(dest))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
@@ -3004,10 +3001,10 @@ python3 /mnt/shared/monitor/agent.py &
 
         result = await self._qmp.savevm(name)
         if not result.success:
-            _logger.warning("snapshot_create_failed", extra={"error": result.error})
+            _logger.warning("snapshot_create_failed", error=result.error)
             raise SandboxError(_ERR_SNAPSHOT_CREATE)
 
-        _logger.info("snapshot_created", extra={"snapshot_name": name})
+        _logger.info("snapshot_created", snapshot_name=name)
         return name
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
@@ -3024,10 +3021,10 @@ python3 /mnt/shared/monitor/agent.py &
 
         result = await self._qmp.loadvm(snapshot_id)
         if not result.success:
-            _logger.warning("snapshot_restore_failed", extra={"error": result.error})
+            _logger.warning("snapshot_restore_failed", error=result.error)
             raise SandboxError(_ERR_SNAPSHOT_RESTORE)
 
-        _logger.info("snapshot_restored", extra={"snapshot_id": snapshot_id})
+        _logger.info("snapshot_restored", snapshot_id=snapshot_id)
 
     async def list_snapshots(self) -> list[str]:
         """List available snapshots.
@@ -3065,10 +3062,10 @@ python3 /mnt/shared/monitor/agent.py &
 
         result = await self._qmp.delvm(name)
         if not result.success:
-            _logger.warning("snapshot_delete_failed", extra={"error": result.error})
+            _logger.warning("snapshot_delete_failed", error=result.error)
             raise SandboxError(_ERR_SNAPSHOT_DELETE)
 
-        _logger.info("snapshot_deleted", extra={"snapshot_name": name})
+        _logger.info("snapshot_deleted", snapshot_name=name)
 
     async def start_pcap_capture(self) -> str:
         """Start packet capture on the sandbox network.
