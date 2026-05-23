@@ -482,3 +482,9 @@ reports/tests/
 /intel_page.html
 /intel.oneapi.*.dot
 /intel.sessionmanifest.*.json
+
+# Personal Antigravity CLI cache (per-user, not part of the project)
+/.antigravitycli/
+
+# Manual ad-hoc git worktrees parked under the repo root (never tracked)
+/worktrees/
