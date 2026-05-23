@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from intellicrack.bridges._parse_helpers import safe_call
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
     PE_OPTIONAL_HEADER_OFFSET,
@@ -1405,7 +1404,11 @@ class ProcessBridge(ToolBridgeBase):
                 _logger.debug("se_debug_privilege_enabled")
             finally:
                 self._kernel32.CloseHandle(token_handle)
-        except ToolError:
+        except ToolError as exc:
+            _logger.debug(
+                "se_debug_privilege_known_failure",
+                error=str(exc),
+            )
             raise
         except (OSError, AttributeError, ctypes.ArgumentError):
             _logger.exception("se_debug_privilege_elevation_failed")
@@ -2811,8 +2814,13 @@ class ProcessBridge(ToolBridgeBase):
                     finally:
                         self._kernel32.ResumeThread(handle)
                     return result
-        except (OSError, ctypes.ArgumentError):
-            pass
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.debug(
+                "thread_state_probe_failed",
+                tid=tid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
         finally:
             self._kernel32.CloseHandle(handle)
 
@@ -2886,8 +2894,12 @@ class ProcessBridge(ToolBridgeBase):
                         result = (pc, state)
                     finally:
                         self._kernel32.ResumeThread(handle)
-        except (OSError, ctypes.ArgumentError):
-            pass
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.debug(
+                "thread_pc_and_state_probe_failed",
+                tid=tid,
+                error=str(exc),
+            )
         finally:
             self._kernel32.CloseHandle(handle)
 
@@ -3504,6 +3516,7 @@ class ProcessBridge(ToolBridgeBase):
             str: Decoded type name, or empty string on failure.
         """
         del ptr_size
+        str_offset = offset + _OBJECT_TYPE_INFO_HEADER_SIZE
         try:
             length_ptr = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(wintypes.USHORT))
             max_length_ptr = ctypes.cast(ctypes.byref(buffer, offset + 2), ctypes.POINTER(wintypes.USHORT))
@@ -3512,16 +3525,14 @@ class ProcessBridge(ToolBridgeBase):
             if length == 0 or length > max_length or length > _MAX_TYPE_NAME_BYTES:
                 return ""
             buf_len = getattr(buffer, "_length_", 0)
-            str_offset = offset + _OBJECT_TYPE_INFO_HEADER_SIZE
             if str_offset + length > buf_len:
                 return ""
             raw = bytes(buffer[str_offset : str_offset + length])
             return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
         except (ValueError, OSError, ctypes.ArgumentError) as exc:
             _logger.debug(
-                "read_type_name_failed",
-                offset=offset,
-                exc_type=type(exc).__name__,
+                "object_type_name_decode_failed",
+                offset=str_offset,
                 error=str(exc),
             )
             return ""
@@ -5782,8 +5793,8 @@ class ProcessBridge(ToolBridgeBase):
                     sehop_mask = mask_buf[0]
             except (OSError, ctypes.ArgumentError) as exc:
                 _logger.debug(
-                    "sehop_options_mask_query_failed",
-                    exc_type=type(exc).__name__,
+                    "sehop_mask_query_failed",
+                    pid=target_pid,
                     error=str(exc),
                 )
                 sehop_mask = 0
@@ -5847,8 +5858,8 @@ class ProcessBridge(ToolBridgeBase):
                         disabled = bool(policy_buf.value & 1)
                 except (OSError, ctypes.ArgumentError) as exc:
                     _logger.debug(
-                        "extension_point_policy_query_failed",
-                        exc_type=type(exc).__name__,
+                        "extension_policy_query_failed",
+                        pid=target_pid,
                         error=str(exc),
                     )
                     disabled = False
@@ -6482,7 +6493,10 @@ class ProcessBridge(ToolBridgeBase):
             sections_off = nt_offset + PE_OPTIONAL_HEADER_OFFSET + size_of_optional_header
             sections = list(iterate_section_headers(data, sections_off, num_sections))
         except struct.error as exc:
-            _logger.debug("parse_pe_com_descriptor_struct_error", error=str(exc))
+            _logger.debug(
+                "cor20_pe_descriptor_parse_failed",
+                error=str(exc),
+            )
             return None
         return com_rva, sections
 
@@ -6535,13 +6549,16 @@ class ProcessBridge(ToolBridgeBase):
             or cor20_read.value < _DOTNET_COR20_HEADER_SIZE
         ):
             return None
-        meta_rva = safe_call(
-            lambda: int(struct.unpack_from("<I", cor20_buf.raw, 8)[0]),
-            exceptions=struct.error,
-            context="read_cor20_version_meta_rva",
-            default=None,
-        )
-        if meta_rva is None or meta_rva == 0:
+        try:
+            meta_rva = int(struct.unpack_from("<I", cor20_buf.raw, 8)[0])
+        except struct.error as exc:
+            _logger.debug(
+                "cor20_meta_rva_parse_failed",
+                base_address=hex(base_address),
+                error=str(exc),
+            )
+            return None
+        if meta_rva == 0:
             return None
         return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
 
@@ -6600,7 +6617,11 @@ class ProcessBridge(ToolBridgeBase):
             version_bytes = meta_data[16 : 16 + version_length]
             version_str = version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
         except struct.error as exc:
-            _logger.debug("read_metadata_version_struct_error", error=str(exc))
+            _logger.debug(
+                "dotnet_metadata_header_parse_failed",
+                meta_va=hex(meta_va),
+                error=str(exc),
+            )
             return None
         else:
             return version_str or None
@@ -6930,7 +6951,12 @@ class ProcessBridge(ToolBridgeBase):
 
         try:
             buffer, num_handles, entry_size = self._query_extended_handles_buffer()
-        except ToolError:
+        except ToolError as exc:
+            _logger.debug(
+                "job_handle_dup_buffer_query_failed",
+                target_pid=target_pid,
+                error=str(exc),
+            )
             return None
 
         open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
