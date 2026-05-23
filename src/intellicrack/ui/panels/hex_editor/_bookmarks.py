@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QColorDialog, QInputDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
+from intellicrack.core.logging import get_logger
+
+
+_logger = get_logger(__name__)
+
 
 if TYPE_CHECKING:
     from intellicrack.bridges.hex_state import HexDocumentState
@@ -71,7 +76,13 @@ class BookmarksMixin:
         if not color.isValid():
             return
 
-        self.document.add_bookmark(cursor_offset, 1, name, color.name())
+        try:
+            self.document.add_bookmark(cursor_offset, 1, name, color.name())
+        except (RuntimeError, OSError, ValueError, IndexError, TypeError):
+            _logger.exception("bookmark_add_failed", offset=cursor_offset, name=name)
+            return
+        _logger.info("bookmark_added", offset=cursor_offset, name=name, color=color.name())
+
         self._notify_state_data_modified(cursor_offset, 1, source="hex-editor.bookmarks.add")
         self._refresh_bookmarks()
 
@@ -86,14 +97,26 @@ class BookmarksMixin:
 
         index = self._bookmarks_tree.indexOfTopLevelItem(current)
         if index >= 0:
-            bookmarks = self.document.list_bookmarks()
+            try:
+                bookmarks = self.document.list_bookmarks()
+            except (RuntimeError, OSError):
+                _logger.exception("bookmark_list_failed")
+                return
+
             if index < len(bookmarks):
                 bm_offset: int = int(bookmarks[index][0])
                 bm_length: int = int(bookmarks[index][1])
             else:
                 bm_offset = 0
                 bm_length = 1
-            self.document.remove_bookmark(index)
+
+            try:
+                self.document.remove_bookmark(index)
+            except (RuntimeError, OSError, IndexError, ValueError):
+                _logger.exception("bookmark_remove_failed", index=index)
+                return
+            _logger.info("bookmark_removed", index=index, offset=bm_offset, length=bm_length)
+
             self._notify_state_data_modified(bm_offset, bm_length, source="hex-editor.bookmarks.remove")
             self._refresh_bookmarks()
 
@@ -103,7 +126,12 @@ class BookmarksMixin:
             return
 
         self._bookmarks_tree.clear()
-        bookmarks = self.document.list_bookmarks()
+        try:
+            bookmarks = self.document.list_bookmarks()
+        except (RuntimeError, OSError):
+            _logger.exception("bookmark_list_failed")
+            return
+
         for bm in bookmarks:
             offset_str = f"0x{bm[0]:08X}"
             length_str = str(bm[1])

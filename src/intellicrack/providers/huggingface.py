@@ -128,6 +128,8 @@ _HF_HTTP_MSGS = HttpErrorMessages(
     service_unavailable=_ERR_MODEL_LOADING,
 )
 
+_logger = get_logger(__name__)
+
 
 def _hf_status_code(exc: BaseException) -> int:
     """Return the HTTP status code associated with a HuggingFace exception.
@@ -284,7 +286,8 @@ class HuggingFaceProvider(LLMProviderBase):
             return "Model is loading and not yet ready"
         try:
             body = response.json()
-        except (json.JSONDecodeError, ValueError, UnicodeDecodeError, TypeError, httpx.DecodingError):
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError, TypeError, httpx.DecodingError) as decode_exc:
+            _logger.warning("huggingface_503_decode_failed", error=str(decode_exc))
             return "Model is loading and not yet ready"
         if isinstance(body, dict):
             body_dict = cast("dict[str, Any]", body)
@@ -615,6 +618,69 @@ class HuggingFaceProvider(LLMProviderBase):
             duration_ms=duration_ms,
         )
 
+    async def _consume_stream_chunks(
+        self,
+        raw_stream: AsyncIterable[ChatCompletionStreamOutput],
+        *,
+        model: str,
+        tc_buffer: ToolCallBufferManager,
+    ) -> AsyncIterator[str]:
+        """Consume HuggingFace streaming chunks and yield text content pieces.
+
+        Accumulates tool-call deltas into ``tc_buffer`` and the last seen
+        usage payload into ``self._pending_usage``. On cancellation the
+        loop breaks early; on natural exhaustion ``tc_buffer.finalize()``
+        publishes the assembled tool calls into ``self._pending_tool_calls``
+        and a completion log entry is emitted. Exceptions raised by the
+        SDK during iteration propagate unchanged so the caller's typed
+        exception handlers can translate them.
+
+        Args:
+            raw_stream: Async iterable of chunk events from the HF SDK.
+            model: Model ID for structured-log context.
+            tc_buffer: Tool-call buffer to accumulate streamed deltas into.
+
+        Yields:
+            str: Text content pieces, one per chunk that carries content.
+        """
+        chunk_count = 0
+        async for chunk in raw_stream:
+            if self._cancel_requested:
+                self._logger.info(
+                    "huggingface_stream_cancelled",
+                    model=model,
+                    chunks_received=chunk_count,
+                )
+                break
+
+            content_piece, tool_updates = _extract_stream_delta(chunk)
+            if content_piece:
+                chunk_count += 1
+                yield content_piece
+            for upd in tool_updates:
+                tc_buffer.accumulate(
+                    index=upd["index"],
+                    call_id=upd["id"],
+                    name=upd["name"],
+                    arguments=upd["arguments"],
+                )
+
+            usage = getattr(chunk, "usage", None)
+            if usage is not None:
+                self._pending_usage = UsageInfo(
+                    prompt_tokens=int(usage.prompt_tokens),
+                    completion_tokens=int(usage.completion_tokens),
+                    total_tokens=int(usage.total_tokens),
+                )
+
+        self._pending_tool_calls = tc_buffer.finalize()
+        self._logger.info(
+            "huggingface_stream_completed",
+            model=model,
+            chunks_received=chunk_count,
+            has_usage=self._pending_usage is not None,
+        )
+
     async def chat_stream(
         self,
         messages: list[Message],
@@ -671,7 +737,6 @@ class HuggingFaceProvider(LLMProviderBase):
             has_tools=tools is not None,
         )
 
-        chunk_count = 0
         tc_buffer = ToolCallBufferManager()
         chat_completion = cast("_ChatCompletionCallable", self.client.chat_completion)
 
@@ -717,42 +782,8 @@ class HuggingFaceProvider(LLMProviderBase):
             raise ProviderError(_ERR_STREAM_FAILED % exc) from exc
 
         try:
-            async for chunk in raw_stream:
-                if self._cancel_requested:
-                    self._logger.info(
-                        "huggingface_stream_cancelled",
-                        model=model,
-                        chunks_received=chunk_count,
-                    )
-                    break
-
-                content_piece, tool_updates = _extract_stream_delta(chunk)
-                if content_piece:
-                    chunk_count += 1
-                    yield content_piece
-                for upd in tool_updates:
-                    tc_buffer.accumulate(
-                        index=upd["index"],
-                        call_id=upd["id"],
-                        name=upd["name"],
-                        arguments=upd["arguments"],
-                    )
-
-                usage = getattr(chunk, "usage", None)
-                if usage is not None:
-                    self._pending_usage = UsageInfo(
-                        prompt_tokens=int(usage.prompt_tokens),
-                        completion_tokens=int(usage.completion_tokens),
-                        total_tokens=int(usage.total_tokens),
-                    )
-
-            self._pending_tool_calls = tc_buffer.finalize()
-            self._logger.info(
-                "huggingface_stream_completed",
-                model=model,
-                chunks_received=chunk_count,
-                has_usage=self._pending_usage is not None,
-            )
+            async for piece in self._consume_stream_chunks(raw_stream, model=model, tc_buffer=tc_buffer):
+                yield piece
         except BadRequestError as exc:
             self._logger.warning(
                 "huggingface_stream_bad_request",
