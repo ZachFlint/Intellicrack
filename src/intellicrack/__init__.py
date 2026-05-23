@@ -40,9 +40,6 @@ from intellicrack._metadata import (
 from intellicrack.core.logging import get_logger
 
 
-_logger = get_logger(__name__)
-
-
 if TYPE_CHECKING:
     from intellicrack.core import (
         Config,
@@ -86,7 +83,7 @@ def __getattr__(name: str) -> object:
         msg = f"module {__name__!r} has no attribute {name!r}"
         raise AttributeError(msg)
 
-    _logger.debug("lazy_import_resolved", attribute=name)
+    get_logger(__name__).debug("lazy_import_resolved", attribute=name)
     return attr
 
 
