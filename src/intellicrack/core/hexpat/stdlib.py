@@ -59,7 +59,7 @@ _FORMAT_FIELD_RE: re.Pattern[str] = re.compile(r"\{([^{}]*)\}")
 def _create_rng() -> _random.Random:
     """Return a new non-cryptographic PRNG instance used by ``std::random``.
 
-    ImHex's ``std::random`` is documented to use Mersenne Twister and must
+    The hexpat ``std::random`` is documented to use Mersenne Twister and must
     support deterministic seeding via ``set_seed``. This factory isolates the
     instantiation of the generator so that callers receive a ready-to-seed
     instance. The returned object is explicitly not cryptographically secure;

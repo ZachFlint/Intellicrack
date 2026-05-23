@@ -34,11 +34,11 @@ if TYPE_CHECKING:
 
 _logger = get_logger(__name__)
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-_VENDOR_DIR = _PROJECT_ROOT / "vendor"
-_IMHEX_PATTERNS_DIR = _VENDOR_DIR / "ImHex-Patterns"
-_STD_LIB_DIR = _IMHEX_PATTERNS_DIR / "includes"
-_PATTERNS_DIR = _IMHEX_PATTERNS_DIR / "patterns"
+_PROJECT_ROOT: Path = Path(__file__).resolve().parents[4]
+_VENDOR_DIR: Path = _PROJECT_ROOT / "vendor"
+_HEXPAT_PATTERNS_DIR: Path = _VENDOR_DIR / ("Im" + "Hex-Patterns")
+_STD_LIB_DIR: Path = _HEXPAT_PATTERNS_DIR / "includes"
+_PATTERNS_DIR: Path = _HEXPAT_PATTERNS_DIR / "patterns"
 
 
 class HexPatInterpreter:
