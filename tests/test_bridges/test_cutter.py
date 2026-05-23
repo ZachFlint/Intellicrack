@@ -41,7 +41,7 @@ from intellicrack.core.types import ToolError, ToolName
 from intellicrack.ui.panels.cutter_panel import perm_to_rwx
 
 
-_EXPECTED_TOOL_FUNC_COUNT: Final[int] = 80
+_EXPECTED_TOOL_FUNC_COUNT: Final[int] = 95
 _TEST_ADDRESS: Final[int] = 0x401000
 _MIN_DESC_LEN: Final[int] = 5
 
@@ -239,13 +239,18 @@ class TestCapabilities:
         """
         assert bridge.capabilities.supports_static_analysis is True
 
-    def test_does_not_support_dynamic_analysis(self, bridge: CutterBridge) -> None:
-        """Verify dynamic analysis is not claimed.
+    def test_supports_dynamic_analysis(self, bridge: CutterBridge) -> None:
+        """Verify dynamic analysis is supported.
+
+        The CutterBridge exposes rizin's full debug subsystem
+        (attach/detach, breakpoints, stepping, register and memory
+        access, thread and module enumeration), so the capability
+        flag must advertise it.
 
         Args:
             bridge: CutterBridge fixture.
         """
-        assert bridge.capabilities.supports_dynamic_analysis is False
+        assert bridge.capabilities.supports_dynamic_analysis is True
 
     def test_supports_decompilation(self, bridge: CutterBridge) -> None:
         """Verify decompilation is supported.
@@ -255,13 +260,21 @@ class TestCapabilities:
         """
         assert bridge.capabilities.supports_decompilation is True
 
-    def test_does_not_support_debugging(self, bridge: CutterBridge) -> None:
-        """Verify debugging is not claimed.
+    def test_supports_debugging(self, bridge: CutterBridge) -> None:
+        """Verify debugging is supported.
 
         Args:
             bridge: CutterBridge fixture.
         """
-        assert bridge.capabilities.supports_debugging is False
+        assert bridge.capabilities.supports_debugging is True
+
+    def test_supports_memory_access(self, bridge: CutterBridge) -> None:
+        """Verify process memory access is supported.
+
+        Args:
+            bridge: CutterBridge fixture.
+        """
+        assert bridge.capabilities.supports_memory_access is True
 
     def test_supports_patching(self, bridge: CutterBridge) -> None:
         """Verify patching is supported.
