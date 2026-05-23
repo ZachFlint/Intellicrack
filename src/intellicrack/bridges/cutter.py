@@ -32,6 +32,7 @@ from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import (
     BinaryInfo,
     BlockInfo,
+    BreakpointInfo,
     ClassInfo,
     CommentInfo,
     CrossReference,
@@ -42,13 +43,17 @@ from intellicrack.core.types import (
     HeaderInfo,
     ImportInfo,
     LibraryInfo,
+    MemoryRegion,
+    ModuleInfo,
     ParameterInfo,
+    RegisterState,
     RelocationInfo,
     ResourceInfo,
     SectionInfo,
     SegmentInfo,
     StringInfo,
     SymbolInfo,
+    ThreadInfo,
     ToolDefinition,
     ToolError,
     ToolFunction,
@@ -70,6 +75,7 @@ _ERR_FILE_NOT_FOUND = "file not found"
 _ERR_LOAD_FAILED = "failed to load binary"
 _ERR_NO_BINARY = "no binary loaded"
 _ERR_NOT_ANALYZED = "binary not analyzed"
+_ERR_NOT_ATTACHED = "not attached to a process"
 _ERR_CMD_FAILED = "command execution failed"
 _ERR_TOOL_NOT_AVAILABLE = "cutter not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
@@ -77,6 +83,10 @@ _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
 _ERR_CMD_TIMEOUT = "cutter command timed out"
 _ERR_INVALID_R2_INPUT = "input contains rizin command-control characters"
 _ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
+_ERR_INVALID_BP_TYPE = "invalid breakpoint type"
+_ERR_INVALID_HEX = "invalid hex response from rizin"
+_ERR_INVALID_DEBUG_RESPONSE = "invalid debug response from rizin"
+_VALID_BP_TYPES: frozenset[str] = frozenset({"software", "hardware", "memory"})
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 60.0
 R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
@@ -274,6 +284,35 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
     """
     val = data.get(key)
     return cast("list[Any]", val) if isinstance(val, list) else []
+
+
+def _parse_int_response(value: str) -> int:
+    """Parse an integer from a rizin command response string.
+
+    Accepts decimal, hexadecimal (``0x...``), or whitespace-padded
+    forms. Empty or unparseable responses raise ``ToolError`` so a
+    debug command that should have produced a numeric result does not
+    silently degrade to ``0``.
+
+    Args:
+        value: Raw command output (typically the program counter).
+
+    Returns:
+        int: Parsed integer value.
+
+    Raises:
+        ToolError: If ``value`` cannot be parsed as an integer.
+    """
+    stripped = value.strip()
+    if not stripped:
+        msg = f"{_ERR_INVALID_DEBUG_RESPONSE}: empty integer response"
+        raise ToolError(msg, tool_name="cutter")
+    try:
+        return int(stripped, 0)
+    except ValueError as exc:
+        _logger.warning("debug_int_parse_failed", value=stripped[:120])
+        msg = f"{_ERR_INVALID_DEBUG_RESPONSE}: cannot parse {stripped!r} as integer"
+        raise ToolError(msg, tool_name="cutter") from exc
 
 
 def _tf(
@@ -811,6 +850,120 @@ def _build_tool_functions() -> list[ToolFunction]:
             ],
             "List of BlockInfo objects",
         ),
+        _tf(
+            "attach",
+            "Attach the rizin debugger to a running process",
+            [
+                _tp("pid", "integer", "Target process identifier"),
+            ],
+            "None; updates bridge state to mark the process as attached.",
+        ),
+        _tf(
+            "detach",
+            "Detach the rizin debugger from the currently attached process",
+            [],
+            "None; clears attached-process state on the bridge.",
+        ),
+        _tf(
+            "set_breakpoint",
+            "Set a debugger breakpoint at an address",
+            [
+                _tp("address", "integer", "Address to break on"),
+                _tp(
+                    "bp_type",
+                    "string",
+                    "Breakpoint type",
+                    required=False,
+                    default="software",
+                    enum=["software", "hardware", "memory"],
+                ),
+                _tp("condition", "string", "Optional conditional expression", required=False),
+            ],
+            "Breakpoint id (the breakpoint address)",
+        ),
+        _tf(
+            "remove_breakpoint",
+            "Remove a debugger breakpoint at an address",
+            [
+                _tp("address", "integer", "Address of the breakpoint to remove"),
+            ],
+            "True when the breakpoint was removed",
+        ),
+        _tf(
+            "get_breakpoints",
+            "List active debugger breakpoints",
+            [],
+            "List of BreakpointInfo objects",
+        ),
+        _tf(
+            "step_into",
+            "Single-step into the next instruction",
+            [],
+            "New instruction pointer after the step",
+        ),
+        _tf(
+            "step_over",
+            "Single-step over the next instruction",
+            [],
+            "New instruction pointer after the step",
+        ),
+        _tf(
+            "run",
+            "Continue debugger execution until the next event",
+            [],
+            "None",
+        ),
+        _tf(
+            "get_registers",
+            "Read the full CPU register state of the attached process",
+            [],
+            "RegisterState object with general purpose and segment registers",
+        ),
+        _tf(
+            "set_register",
+            "Set a single CPU register on the attached process",
+            [
+                _tp("register", "string", "Register name (e.g. rax, rbx, rip)"),
+                _tp("value", "integer", "Numeric value to write into the register"),
+            ],
+            "True on success",
+        ),
+        _tf(
+            "read_memory",
+            "Read raw memory from the attached process",
+            [
+                _tp("address", "integer", "Address to read from"),
+                _tp("size", "integer", "Number of bytes to read"),
+            ],
+            "Raw bytes read from the attached process",
+        ),
+        _tf(
+            "write_memory",
+            "Write raw bytes into the attached process memory",
+            [
+                _tp("address", "integer", "Destination address"),
+                _tp("data", "string", "Hex-encoded bytes to write (e.g. '90909090')"),
+            ],
+            "Number of bytes written",
+        ),
+        _tf(
+            "get_memory_regions",
+            "Enumerate memory regions of the attached process",
+            [],
+            "List of MemoryRegion objects",
+        ),
+        _tf(
+            "get_threads",
+            "Enumerate threads of the attached process",
+            [],
+            "List of ThreadInfo objects",
+        ),
+        _tf(
+            "get_modules",
+            "Enumerate loaded modules of the attached process",
+            [],
+            "List of ModuleInfo objects",
+        ),
     ]
 
 
@@ -830,13 +983,19 @@ class CutterBridge(StaticAnalysisBridge):
         self._binary_path: Path | None = None
         self._analyzed: bool = False
         self._r2_pid: int | None = None
+        self._debug_mode: bool = False
+        self._attached_pid: int | None = None
+        self._breakpoints: dict[int, BreakpointInfo] = {}
+        self._threads: dict[int, ThreadInfo] = {}
+        self._current_thread_id: int | None = None
         self._capabilities = BridgeCapabilities(
             supports_static_analysis=True,
             supports_dynamic_analysis=True,
             supports_decompilation=True,
-            supports_debugging=False,
+            supports_debugging=True,
             supports_patching=True,
             supports_scripting=True,
+            supports_memory_access=True,
             supported_architectures=["x86", "x86_64", "arm", "arm64", "mips", "ppc"],
             supported_formats=["pe", "elf", "macho", "raw"],
         )
@@ -994,6 +1153,11 @@ class CutterBridge(StaticAnalysisBridge):
 
             self._binary_path = None
             self._analyzed = False
+            self._debug_mode = False
+            self._attached_pid = None
+            self._breakpoints.clear()
+            self._threads.clear()
+            self._current_thread_id = None
         finally:
             await super().shutdown()
             _logger.info("cutter_bridge_shutdown", bridge="cutter")
@@ -1045,6 +1209,13 @@ class CutterBridge(StaticAnalysisBridge):
                 process_manager = ProcessManager.get_instance()
                 process_manager.unregister_external_pid(self._r2_pid)
                 self._r2_pid = None
+            self._debug_mode = False
+            self._attached_pid = None
+            self._breakpoints.clear()
+            self._threads.clear()
+            self._current_thread_id = None
+            self.state.process_attached = False
+            self.state.target_pid = None
 
     def _register_rizin_process(self, path: Path) -> None:
         """Register Rizin process with process manager.
@@ -1109,11 +1280,17 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("binary_metadata_extracted", file_type=file_type, arch=arch)
         return file_type, arch, bits, entry
 
-    async def load_binary(self, path: Path | str) -> BinaryInfo:
+    async def load_binary(self, path: Path | str, *, debug: bool = False) -> BinaryInfo:
         """Load a binary file into Cutter/Rizin.
 
         Args:
             path: Path to the binary file.
+            debug: When ``True``, open the binary in rizin's debug-attach
+                mode (``-d``) so the dynamic-analysis surface
+                (breakpoints, stepping, register/memory access, thread
+                and module enumeration) can be exercised. When ``False``
+                (the default), the binary is opened read-only (``-2``)
+                for static analysis.
 
         Returns:
             BinaryInfo: BinaryInfo with file details.
@@ -1132,9 +1309,11 @@ class CutterBridge(StaticAnalysisBridge):
         try:
             await self._close_existing_r2()
 
-            self.r2 = await asyncio.to_thread(r2pipe.open, str(path), ["-2"])
+            open_flags: list[str] = ["-d"] if debug else ["-2"]
+            self.r2 = await asyncio.to_thread(r2pipe.open, str(path), open_flags)
             self._binary_path = await asyncio.to_thread(path.resolve)
             self._analyzed = False
+            self._debug_mode = debug
 
             self._register_rizin_process(path)
 
@@ -3525,3 +3704,585 @@ class CutterBridge(StaticAnalysisBridge):
         ]
         _logger.debug("basic_blocks_queried", address=hex(address), result_count=len(result))
         return result
+
+    def _require_attached(self, operation: str) -> None:
+        """Ensure a debug session is attached before issuing dynamic commands.
+
+        Args:
+            operation: Human-readable name of the operation being attempted,
+                included in the raised error message for diagnostics.
+
+        Raises:
+            ToolError: If no rizin debug session is currently attached to a
+                process (no binary loaded, or ``attach`` has not been called).
+        """
+        if self._r2 is None:
+            _logger.warning("debug_op_without_binary", operation=operation)
+            msg = f"{operation}: {_ERR_NO_BINARY}"
+            raise ToolError(msg, tool_name="cutter")
+        if not self.state.process_attached or self._attached_pid is None:
+            _logger.warning("debug_op_without_attach", operation=operation)
+            msg = f"{operation}: {_ERR_NOT_ATTACHED}"
+            raise ToolError(msg, tool_name="cutter")
+
+    async def _debug_cmd_json(self, command: str) -> object:
+        """Run a rizin debug command that returns JSON and parse the response.
+
+        Unlike :meth:`_cmd_json`, this helper does not coerce non-list JSON
+        into a single-element list — rizin's debug subsystem emits both
+        objects (e.g. ``drj``) and arrays (e.g. ``dbj``, ``dmj``), and the
+        caller decides what shape to expect.
+
+        Args:
+            command: Rizin command to execute (the JSON-emitting variant,
+                e.g. ``dbj`` or ``drj``).
+
+        Returns:
+            object: Parsed JSON value (dict, list, scalar, or ``None`` when
+            rizin returned an empty response).
+
+        Raises:
+            ToolError: If the command output cannot be decoded as JSON.
+        """
+        result = await self._r2_cmd(command)
+        if not result or not result.strip():
+            return None
+        try:
+            return json.loads(result)
+        except json.JSONDecodeError as exc:
+            _logger.warning(
+                "debug_json_parse_failed",
+                command=command,
+                error=str(exc),
+                response_prefix=result[:120],
+            )
+            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
+            raise ToolError(msg, tool_name="cutter") from exc
+
+    async def attach(self, pid: int) -> None:
+        """Attach the rizin debugger to a running process.
+
+        Issues ``dp <pid>`` against the open rizin session so subsequent
+        debug commands (breakpoints, stepping, register/memory access)
+        target the requested process. The session must already be open;
+        callers typically invoke :meth:`load_binary` with ``debug=True``
+        before attaching, or attach to a process started under rizin's
+        own ``-d`` flag.
+
+        Args:
+            pid: Process identifier to attach to.
+
+        Raises:
+            ToolError: If no rizin session is open or the attach command
+                fails.
+        """
+        if self._r2 is None:
+            _logger.warning("attach_without_binary", pid=pid)
+            msg = f"attach: {_ERR_NO_BINARY}"
+            raise ToolError(msg, tool_name="cutter")
+        _logger.info("cutter_attaching", pid=pid)
+        await self._r2_cmd(f"dp {pid}")
+        self._attached_pid = pid
+        self._debug_mode = True
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = True
+        self.state.target_pid = pid
+        self._publish_tool_state()
+        _logger.info("cutter_attached", pid=pid)
+
+    async def detach(self) -> None:
+        """Detach the rizin debugger from the currently attached process.
+
+        Issues ``dp-`` to release the active debug attachment and clears
+        every bookkeeping field that tracks debugger state
+        (breakpoints, threads, current thread, attached pid). The
+        underlying rizin session remains open so the caller can re-load
+        another binary or reattach without re-initialising the bridge.
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is currently attached.
+        """
+        self._require_attached("detach")
+        await self._r2_cmd("dp-")
+        previous_pid = self._attached_pid
+        self._attached_pid = None
+        self._breakpoints.clear()
+        self._threads.clear()
+        self._current_thread_id = None
+        self.state.process_attached = False
+        self.state.target_pid = None
+        self._publish_tool_state()
+        _logger.info("cutter_detached", pid=previous_pid)
+
+    async def set_breakpoint(
+        self,
+        address: int,
+        bp_type: str = "software",
+        condition: str | None = None,
+    ) -> int:
+        """Set a debugger breakpoint at ``address``.
+
+        Rizin keys breakpoints by address, so the returned id is the
+        breakpoint's address (mirroring :class:`X64DbgBridge.set_breakpoint`'s
+        contract). When ``condition`` is supplied, ``dbC`` installs the
+        conditional expression after the breakpoint is created so it
+        only fires when the condition evaluates truthy in the debugger
+        context.
+
+        Args:
+            address: Address to break on.
+            bp_type: Breakpoint type (``software``, ``hardware``, or
+                ``memory``). Defaults to ``software``.
+            condition: Optional conditional expression evaluated by the
+                rizin debugger; the breakpoint only fires when the
+                expression is truthy.
+
+        Returns:
+            int: Breakpoint identifier (the breakpoint address).
+
+        Raises:
+            ToolError: If not attached, ``bp_type`` is invalid, the
+                condition contains rizin command-control characters, or
+                rizin reports a failure.
+        """
+        self._require_attached("set_breakpoint")
+        if bp_type not in _VALID_BP_TYPES:
+            _logger.warning("set_breakpoint_invalid_type", bp_type=bp_type)
+            msg = f"{_ERR_INVALID_BP_TYPE}: {bp_type}"
+            raise ToolError(msg, tool_name="cutter")
+        if condition is not None:
+            validate_r2_argument(condition, field="set_breakpoint condition")
+
+        if bp_type == "hardware":
+            await self._r2_cmd(f"dbH {address}")
+        elif bp_type == "memory":
+            await self._r2_cmd(f"dbm {address}")
+        else:
+            await self._r2_cmd(f"db {address}")
+
+        bp_type_lit: Literal["software", "hardware", "memory"]
+        if bp_type == "hardware":
+            bp_type_lit = "hardware"
+        elif bp_type == "memory":
+            bp_type_lit = "memory"
+        else:
+            bp_type_lit = "software"
+
+        if condition is not None:
+            await self._r2_cmd(f"dbC {address} {condition}")
+
+        self._breakpoints[address] = BreakpointInfo(
+            id=address,
+            address=address,
+            bp_type=bp_type_lit,
+            enabled=True,
+            hit_count=0,
+            condition=condition,
+        )
+        _logger.info("cutter_breakpoint_set", address=hex(address), bp_type=bp_type_lit)
+        return address
+
+    async def remove_breakpoint(self, address: int) -> bool:
+        """Remove a debugger breakpoint by its address.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is currently attached.
+
+        Args:
+            address: Address of the breakpoint to remove.
+
+        Returns:
+            bool: ``True`` when the rizin ``db-`` command accepts the
+            request.
+        """
+        self._require_attached("remove_breakpoint")
+        await self._r2_cmd(f"db- {address}")
+        self._breakpoints.pop(address, None)
+        _logger.info("cutter_breakpoint_removed", address=hex(address))
+        return True
+
+    async def get_breakpoints(self) -> list[BreakpointInfo]:
+        """Enumerate active debugger breakpoints.
+
+        Queries rizin via ``dbj`` for the authoritative breakpoint list
+        and merges it with the locally tracked map so breakpoints set
+        from outside the bridge (e.g. interactive rizin sessions) are
+        also surfaced. Locally tracked entries win ties so any
+        ``condition`` recorded by :meth:`set_breakpoint` is preserved.
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when
+        rizin returns malformed JSON.
+
+        Returns:
+            list[BreakpointInfo]: List of every active breakpoint
+            currently known by rizin or by the bridge's local cache.
+        """
+        self._require_attached("get_breakpoints")
+        parsed = await self._debug_cmd_json("dbj")
+        merged: dict[int, BreakpointInfo] = dict(self._breakpoints)
+        if isinstance(parsed, list):
+            for entry in cast("list[object]", parsed):
+                if not isinstance(entry, dict):
+                    continue
+                entry_dict = cast("dict[str, Any]", entry)
+                addr = _get_int(entry_dict, "addr", _get_int(entry_dict, "offset"))
+                if addr == 0 or addr in merged:
+                    continue
+                raw_type = _get_str(entry_dict, "type", "software")
+                bp_type_lit: Literal["software", "hardware", "memory"]
+                if raw_type in {"hardware", "hw"}:
+                    bp_type_lit = "hardware"
+                elif raw_type in {"memory", "mem"}:
+                    bp_type_lit = "memory"
+                else:
+                    bp_type_lit = "software"
+                raw_enabled = entry_dict.get("enabled", True)
+                enabled = raw_enabled if isinstance(raw_enabled, bool) else True
+                hit_count = _get_int(entry_dict, "hits", _get_int(entry_dict, "hit_count"))
+                condition_str: str | None = _get_optional_str(entry_dict, "cond")
+                if condition_str is None:
+                    condition_str = _get_optional_str(entry_dict, "condition")
+                merged[addr] = BreakpointInfo(
+                    id=addr,
+                    address=addr,
+                    bp_type=bp_type_lit,
+                    enabled=enabled,
+                    hit_count=hit_count,
+                    condition=condition_str,
+                )
+        result = list(merged.values())
+        _logger.debug("cutter_breakpoints_queried", count=len(result))
+        return result
+
+    async def step_into(self) -> int:
+        """Single-step into the next instruction.
+
+        Issues ``ds`` to perform one source-step, then reads the program
+        counter via ``dr?PC`` so the returned value reflects the
+        post-step instruction pointer. Propagates ``ToolError`` from
+        :meth:`_require_attached` when no process is attached, and from
+        :func:`_parse_int_response` when rizin returns an unparseable
+        program counter.
+
+        Returns:
+            int: New instruction pointer after the step completes.
+        """
+        self._require_attached("step_into")
+        await self._r2_cmd("ds")
+        result = (await self._r2_cmd("dr?PC")).strip()
+        _logger.debug("cutter_step_into_complete", pc_raw=result)
+        return _parse_int_response(result)
+
+    async def step_over(self) -> int:
+        """Single-step over the next instruction.
+
+        Issues ``dso`` (step-over) which lets ``call`` instructions run
+        to completion before pausing, then reads ``dr?PC`` for the
+        post-step instruction pointer. Propagates ``ToolError`` from
+        :meth:`_require_attached` when no process is attached, and from
+        :func:`_parse_int_response` when rizin returns an unparseable
+        program counter.
+
+        Returns:
+            int: New instruction pointer after the step completes.
+        """
+        self._require_attached("step_over")
+        await self._r2_cmd("dso")
+        result = (await self._r2_cmd("dr?PC")).strip()
+        _logger.debug("cutter_step_over_complete", pc_raw=result)
+        return _parse_int_response(result)
+
+    async def run(self) -> None:
+        """Continue debugger execution until the next event.
+
+        Issues ``dc`` so the debuggee runs until it hits a breakpoint,
+        signal, or terminates. Propagates ``ToolError`` from
+        :meth:`_require_attached` when no process is attached.
+        """
+        self._require_attached("run")
+        await self._r2_cmd("dc")
+        _logger.info("cutter_execution_continued")
+
+    async def get_registers(self) -> RegisterState:
+        """Read the full CPU register state of the attached process.
+
+        Parses rizin's ``drj`` JSON output into a :class:`RegisterState`
+        matching the x64dbg bridge's representation so the LLM-callable
+        surface stays consistent across debugger backends. Missing
+        registers default to ``0`` so 32-bit targets (where ``r8``..``r15``
+        are absent) still produce a valid object.
+
+        Returns:
+            RegisterState: Current CPU state of the attached process.
+
+        Raises:
+            ToolError: If not attached or rizin returns malformed JSON.
+        """
+        self._require_attached("get_registers")
+        parsed = await self._debug_cmd_json("drj")
+        if not isinstance(parsed, dict):
+            _logger.warning("get_registers_invalid_payload", payload_type=type(parsed).__name__)
+            msg = f"{_ERR_INVALID_DEBUG_RESPONSE}: drj"
+            raise ToolError(msg, tool_name="cutter")
+        registers = cast("dict[str, Any]", parsed)
+
+        def reg(primary: str, alt: str | None = None) -> int:
+            """Return a register value from the rizin response.
+
+            Args:
+                primary: 64-bit register name (e.g. ``rax``).
+                alt: Optional 32-bit fallback name (e.g. ``eax``).
+
+            Returns:
+                int: Integer register value, or ``0`` when absent.
+            """
+            value = _get_optional_int(registers, primary)
+            if value is None and alt is not None:
+                value = _get_optional_int(registers, alt)
+            return value if value is not None else 0
+
+        state = RegisterState(
+            rax=reg("rax", "eax"),
+            rbx=reg("rbx", "ebx"),
+            rcx=reg("rcx", "ecx"),
+            rdx=reg("rdx", "edx"),
+            rsi=reg("rsi", "esi"),
+            rdi=reg("rdi", "edi"),
+            rbp=reg("rbp", "ebp"),
+            rsp=reg("rsp", "esp"),
+            rip=reg("rip", "eip"),
+            r8=reg("r8"),
+            r9=reg("r9"),
+            r10=reg("r10"),
+            r11=reg("r11"),
+            r12=reg("r12"),
+            r13=reg("r13"),
+            r14=reg("r14"),
+            r15=reg("r15"),
+            rflags=reg("rflags", "eflags"),
+            cs=reg("cs"),
+            ds=reg("ds"),
+            es=reg("es"),
+            fs=reg("fs"),
+            gs=reg("gs"),
+            ss=reg("ss"),
+        )
+        _logger.debug(
+            "cutter_registers_read",
+            gpr_count=len(state.get_gpr_dict()),
+            segment_count=len(state.get_segment_registers()),
+        )
+        return state
+
+    async def set_register(self, register: str, value: int) -> bool:
+        """Set a single CPU register on the attached process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :func:`validate_r2_argument` when
+        ``register`` contains rizin command-control characters.
+
+        Args:
+            register: Register name (e.g. ``rax``, ``rip``).
+            value: Numeric value to write into the register.
+
+        Returns:
+            bool: ``True`` after the register update completes.
+        """
+        self._require_attached("set_register")
+        validate_r2_argument(register, field="set_register register")
+        await self._r2_cmd(f"dr {register}={value}")
+        _logger.info("cutter_register_set", register=register, value=hex(value))
+        return True
+
+    async def read_memory(self, address: int, size: int) -> bytes:
+        """Read raw memory from the attached process.
+
+        Args:
+            address: Address to read from in the debuggee's address
+                space.
+            size: Number of bytes to read.
+
+        Returns:
+            bytes: Bytes read from the attached process.
+
+        Raises:
+            ToolError: If not attached, ``size`` is negative, or rizin
+                returns an unparseable hex response.
+        """
+        self._require_attached("read_memory")
+        if size < 0:
+            msg = f"read_memory: size must be non-negative, got {size}"
+            raise ToolError(msg, tool_name="cutter")
+        if size == 0:
+            return b""
+        response = await self._r2_cmd(f"p8 {size} @ {address}")
+        hex_str = response.strip()
+        if not hex_str:
+            return b""
+        try:
+            data = bytes.fromhex(hex_str)
+        except ValueError as exc:
+            _logger.warning(
+                "read_memory_invalid_hex",
+                address=hex(address),
+                size=size,
+                response_prefix=hex_str[:120],
+            )
+            msg = f"{_ERR_INVALID_HEX}: read_memory"
+            raise ToolError(msg, tool_name="cutter") from exc
+        _logger.debug("cutter_memory_read", address=hex(address), size=size, returned=len(data))
+        return data
+
+    async def write_memory(self, address: int, data: bytes) -> int:
+        """Write raw bytes into the attached process memory.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached.
+
+        Args:
+            address: Destination address in the debuggee.
+            data: Bytes to write.
+
+        Returns:
+            int: Number of bytes written (equal to ``len(data)`` on
+            success).
+        """
+        self._require_attached("write_memory")
+        if not data:
+            _logger.debug("cutter_memory_write_empty", address=hex(address))
+            return 0
+        hex_data = data.hex()
+        await self._r2_cmd(f"wx {hex_data} @ {address}")
+        _logger.info("cutter_memory_written", address=hex(address), bytes_written=len(data))
+        return len(data)
+
+    async def get_memory_regions(self) -> list[MemoryRegion]:
+        """Enumerate memory regions of the attached process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when rizin
+        returns malformed JSON.
+
+        Returns:
+            list[MemoryRegion]: List of memory regions reported by
+            rizin's ``dmj`` command.
+        """
+        self._require_attached("get_memory_regions")
+        parsed = await self._debug_cmd_json("dmj")
+        regions: list[MemoryRegion] = []
+        if not isinstance(parsed, list):
+            _logger.debug("get_memory_regions_empty")
+            return regions
+        for entry in cast("list[object]", parsed):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            base = _get_int(entry_dict, "addr", _get_int(entry_dict, "from"))
+            end = _get_int(entry_dict, "addr_end", _get_int(entry_dict, "to"))
+            explicit_size = _get_optional_int(entry_dict, "size")
+            if explicit_size is not None and explicit_size > 0:
+                size = explicit_size
+            elif end > base:
+                size = end - base
+            else:
+                size = 0
+            protection = _get_str(entry_dict, "perm", _get_str(entry_dict, "permissions", "----"))
+            state_str = _get_str(entry_dict, "state", "commit")
+            type_str = _get_str(entry_dict, "type", _get_str(entry_dict, "kind", "private"))
+            module_name = _get_optional_str(entry_dict, "name")
+            if module_name is None:
+                module_name = _get_optional_str(entry_dict, "file")
+            regions.append(
+                MemoryRegion(
+                    base_address=base,
+                    size=size,
+                    protection=protection,
+                    state=state_str,
+                    type=type_str,
+                    module_name=module_name,
+                ),
+            )
+        _logger.debug("cutter_memory_regions_queried", count=len(regions))
+        return regions
+
+    async def get_threads(self) -> list[ThreadInfo]:
+        """Enumerate threads of the attached process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when rizin
+        returns malformed JSON.
+
+        Returns:
+            list[ThreadInfo]: Thread snapshots reported by rizin's
+            ``dptj`` command.
+        """
+        self._require_attached("get_threads")
+        parsed = await self._debug_cmd_json("dptj")
+        threads: list[ThreadInfo] = []
+        thread_map: dict[int, ThreadInfo] = {}
+        if not isinstance(parsed, list):
+            self._threads = thread_map
+            return threads
+        for entry in cast("list[object]", parsed):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            tid = _get_int(entry_dict, "pid", _get_int(entry_dict, "tid"))
+            start_address = _get_int(entry_dict, "start", _get_int(entry_dict, "entry"))
+            current_pc = _get_int(entry_dict, "pc", _get_int(entry_dict, "rip"))
+            state_str = _get_str(entry_dict, "status", _get_str(entry_dict, "state", "unknown"))
+            thread_info = ThreadInfo(
+                tid=tid,
+                start_address=start_address,
+                current_pc=current_pc,
+                state=state_str,
+            )
+            threads.append(thread_info)
+            thread_map[tid] = thread_info
+        self._threads = thread_map
+        _logger.debug("cutter_threads_queried", count=len(threads))
+        return threads
+
+    async def get_modules(self) -> list[ModuleInfo]:
+        """Enumerate loaded modules of the attached process.
+
+        Propagates ``ToolError`` from :meth:`_require_attached` when no
+        process is attached, and from :meth:`_debug_cmd_json` when rizin
+        returns malformed JSON.
+
+        Returns:
+            list[ModuleInfo]: Loaded modules reported by rizin's
+            ``dmIj`` command (``ModuleInfo.entry_point`` is ``0`` when
+            rizin omits it).
+        """
+        self._require_attached("get_modules")
+        parsed = await self._debug_cmd_json("dmIj")
+        modules: list[ModuleInfo] = []
+        if not isinstance(parsed, list):
+            return modules
+        for entry in cast("list[object]", parsed):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            path_str = _get_str(entry_dict, "file", _get_str(entry_dict, "path"))
+            module_path = Path(path_str) if path_str else Path()
+            raw_name = _get_optional_str(entry_dict, "name")
+            name_str = raw_name or (module_path.name if path_str else "")
+            base_address = _get_int(entry_dict, "addr", _get_int(entry_dict, "base"))
+            size = _get_int(entry_dict, "size")
+            if size == 0:
+                end = _get_int(entry_dict, "addr_end", _get_int(entry_dict, "end"))
+                if end > base_address:
+                    size = end - base_address
+            entry_point = _get_int(entry_dict, "entry", _get_int(entry_dict, "ep"))
+            modules.append(
+                ModuleInfo(
+                    name=name_str,
+                    path=module_path,
+                    base_address=base_address,
+                    size=size,
+                    entry_point=entry_point,
+                ),
+            )
+        _logger.debug("cutter_modules_queried", count=len(modules))
+        return modules
