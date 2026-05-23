@@ -339,6 +339,11 @@ class ToolBridgeBase(ABC):
 
     All bridge implementations must inherit from this class and override the methods defined here. This ensures a consistent interface for
     the orchestrator to interact with any reverse engineering tool.
+
+    Note:
+        The use of a per-instance `self._logger` attribute is intentional and
+        justified in this class to dynamically encode the concrete subclass name
+        into the logger metadata.
     """
 
     def __init__(self) -> None:
