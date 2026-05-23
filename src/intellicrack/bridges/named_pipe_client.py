@@ -306,6 +306,7 @@ class NamedPipeClient:
         """
         async with self._close_lock:
             if self._handle is None:
+                _logger.debug("pipe_close_noop_already_disconnected")
                 return
             pipe_name = self._config.pipe_name
             _logger.info("pipe_disconnecting", pipe_name=pipe_name)
@@ -318,8 +319,10 @@ class NamedPipeClient:
                 reader.cancel()
                 try:
                     await reader
-                except (asyncio.CancelledError, ToolError, OSError):
-                    pass
+                except asyncio.CancelledError as exc:
+                    _logger.debug("pipe_reader_cancelled_on_close", error=str(exc))
+                except (ToolError, OSError) as exc:
+                    _logger.warning("pipe_reader_error_on_close", error=str(exc))
                 except Exception:
                     _logger.exception("pipe_reader_close_unexpected_error")
 

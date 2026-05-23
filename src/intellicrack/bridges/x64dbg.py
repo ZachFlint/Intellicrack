@@ -2204,6 +2204,7 @@ class X64DbgBridge(DebuggerBridge):
             try:
                 loop = waiter.get_loop()
             except RuntimeError:
+                _logger.debug("step_waiter_loop_unavailable_on_cancel", waiter=id(waiter))
                 continue
             loop.call_soon_threadsafe(self._cancel_step_waiter_future, waiter)
 
@@ -2520,6 +2521,7 @@ class X64DbgBridge(DebuggerBridge):
             try:
                 loop = waiter.get_loop()
             except RuntimeError:
+                _logger.debug("step_waiter_loop_unavailable_on_resolve", waiter=id(waiter))
                 continue
             loop.call_soon_threadsafe(self._set_step_waiter_result, waiter, address)
 
@@ -2997,6 +2999,12 @@ class X64DbgBridge(DebuggerBridge):
                 event_ip = await asyncio.wait_for(waiter, timeout=self.STEP_TIMEOUT_SECONDS)
             except TimeoutError as exc:
                 self._cancel_step_waiter(waiter)
+                _logger.warning(
+                    "x64dbg_step_timeout",
+                    command=command,
+                    timeout_s=self.STEP_TIMEOUT_SECONDS,
+                    error=str(exc),
+                )
                 msg = (
                     f"x64dbg {command} did not complete within {self.STEP_TIMEOUT_SECONDS:.0f}s; "
                     "the debuggee may be blocked in a syscall, on a long-running call, or hung"
@@ -3004,6 +3012,7 @@ class X64DbgBridge(DebuggerBridge):
                 raise ToolError(msg, tool_name="x64dbg") from exc
         except BaseException:
             self._cancel_step_waiter(waiter)
+            _logger.debug("x64dbg_step_cancelled", command=command, exc_info=True)
             raise
 
         try:
