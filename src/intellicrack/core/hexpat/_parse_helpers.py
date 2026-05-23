@@ -97,13 +97,13 @@ def safe_int_from_str(
         return default
 
 
-def safe_call[_T, _D](
-    func: Callable[[], _T],
+def safe_call[T, D](
+    func: Callable[[], T],
     *,
     exceptions: type[BaseException] | tuple[type[BaseException], ...],
     context: str,
-    default: _D,
-) -> _T | _D:
+    default: D,
+) -> T | D:
     """Call ``func`` and return ``default`` on any of the listed exceptions.
 
     Mirrors :func:`intellicrack.bridges._parse_helpers.safe_call`. The
@@ -121,7 +121,7 @@ def safe_call[_T, _D](
         default: Value to return when one of ``exceptions`` is raised.
 
     Returns:
-        _T | _D: Result of ``func()`` on success, otherwise ``default``.
+        T | D: Result of ``func()`` on success, otherwise ``default``.
     """
     try:
         return func()

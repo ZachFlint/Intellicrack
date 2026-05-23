@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 
+from intellicrack.core.hexpat._parse_helpers import safe_call, safe_int_from_str
 from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, PatternValue
@@ -1813,9 +1814,13 @@ class BuiltinFunctions:
         if not args:
             return PatternValue(value=0)
         epoch = int(self._unwrap(args[0]))
-        try:
-            tm = time.localtime(epoch)
-        except (OverflowError, OSError, ValueError):
+        tm = safe_call(
+            lambda: time.localtime(epoch),
+            exceptions=(OverflowError, OSError, ValueError),
+            context="hexpat_time_to_local",
+            default=None,
+        )
+        if tm is None:
             return PatternValue(value=0)
         return PatternValue(value=self._pack_time_struct(tm))
 
@@ -1831,9 +1836,13 @@ class BuiltinFunctions:
         if not args:
             return PatternValue(value=0)
         epoch = int(self._unwrap(args[0]))
-        try:
-            tm = time.gmtime(epoch)
-        except (OverflowError, OSError, ValueError):
+        tm = safe_call(
+            lambda: time.gmtime(epoch),
+            exceptions=(OverflowError, OSError, ValueError),
+            context="hexpat_time_to_utc",
+            default=None,
+        )
+        if tm is None:
             return PatternValue(value=0)
         return PatternValue(value=self._pack_time_struct(tm))
 
@@ -1865,7 +1874,16 @@ class BuiltinFunctions:
                 (year, mon, mday, hour, minute, sec, wday, yday, 1 if isdst else 0),
             )
             formatted = time.strftime(fmt, tm)
-        except (OverflowError, ValueError):
+        except (OverflowError, ValueError) as exc:
+            _logger.debug(
+                "hexpat_time_format_failed",
+                fmt=fmt,
+                year=year,
+                mon=mon,
+                mday=mday,
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return PatternValue(value="")
         return PatternValue(value=formatted)
 
@@ -2728,15 +2746,15 @@ class BuiltinFunctions:
                 index = auto_index
                 auto_index += 1
             else:
-                try:
-                    index = int(head)
-                except ValueError:
+                parsed_index = safe_int_from_str(head, base=10, context="hexpat_format_string_index")
+                if parsed_index is None:
                     _logger.warning(
                         "hexpat_format_invalid_index",
                         spec=spec,
                         head=head,
                     )
                     return match.group(0)
+                index = parsed_index
             if index < 0 or index >= len(unwrapped):
                 return ""
             value = unwrapped[index]
@@ -2744,12 +2762,25 @@ class BuiltinFunctions:
                 return str(value)
             try:
                 return format(value, format_spec)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as exc:
+                _logger.debug(
+                    "hexpat_format_spec_failed",
+                    spec=spec,
+                    format_spec=format_spec,
+                    value_type=type(value).__name__,
+                    error=str(exc),
+                )
                 return str(value)
 
         try:
             return _FORMAT_FIELD_RE.sub(_replace, fmt)
-        except (IndexError, KeyError):
+        except (IndexError, KeyError) as exc:
+            _logger.debug(
+                "hexpat_format_string_regex_failed",
+                fmt=fmt,
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return fmt
 
     def _read_struct_field(self, *args: object) -> PatternValue:
