@@ -897,6 +897,7 @@ class LocalTransformersProvider(LLMProviderBase):
             model = model.to(device)
             model.eval()
         except (RuntimeError, ImportError, ValueError, OSError) as exc:
+            self._logger.warning("cuda_from_pretrained_failed", model_id=config.model_id, error=str(exc))
             try:
                 empty_cache = getattr(cuda_module, "empty_cache", None)
                 if callable(empty_cache):
