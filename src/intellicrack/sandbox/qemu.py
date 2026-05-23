@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 
 import psutil
 
+from intellicrack.core._optional_imports import require_yara
 from intellicrack.core._subprocess import (
     TimeoutExpired as _SubprocessTimeoutExpired,
     run as _subprocess_run,
@@ -2899,6 +2900,7 @@ python3 /mnt/shared/monitor/agent.py &
             try:
                 return path.stat().st_size
             except FileNotFoundError:
+                _logger.debug("logs_stable_stat_missing", path=str(path))
                 return 0
 
         start = time.monotonic()
@@ -3163,6 +3165,7 @@ python3 /mnt/shared/monitor/agent.py &
             try:
                 current_size = await asyncio.to_thread(lambda: ppm_path.stat().st_size)
             except FileNotFoundError:
+                _logger.debug("ppm_stat_missing", ppm_path=str(ppm_path))
                 await asyncio.sleep(_SCREENSHOT_STABILITY_POLL_DELAY_S)
                 continue
             if current_size > 0 and current_size == previous_size:
@@ -3595,10 +3598,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If scan fails.
         """
-        try:
-            import yara  # noqa: PLC0415
-        except ImportError as exc:
-            raise SandboxError(_ERR_YARA_NOT_AVAILABLE) from exc
+        yara = require_yara()
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
