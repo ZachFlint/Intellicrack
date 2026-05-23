@@ -10,7 +10,6 @@ This module provides integration with x64dbg for dynamic analysis, debugging, an
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import math
 import os
 import re
@@ -2558,8 +2557,11 @@ class X64DbgBridge(DebuggerBridge):
         Args:
             waiter: The future to remove.
         """
-        with self._step_waiters_lock, contextlib.suppress(ValueError):
-            self._step_waiters.remove(waiter)
+        with self._step_waiters_lock:
+            try:
+                self._step_waiters.remove(waiter)
+            except ValueError as exc:
+                _logger.debug("step_waiter_already_removed", waiter=id(waiter), error=str(exc))
 
     async def _send_pipe_command(
         self,
