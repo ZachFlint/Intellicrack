@@ -22,6 +22,7 @@ from intellicrack.bridges._win32_types import (
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
 )
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
 
@@ -226,6 +227,10 @@ class NamedPipeClient:
             raise
         except Exception:
             self._reap_open_task(open_task)
+            _logger.exception(
+                "pipe_connect_unexpected_failure",
+                pipe_name=pipe_name,
+            )
             raise
 
         _logger.info("pipe_connected", pipe_name=pipe_name)
@@ -438,7 +443,12 @@ class NamedPipeClient:
         while True:
             try:
                 message = await self._read_message()
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as exc:
+                log_passthrough(
+                    _logger,
+                    "pipe_reader_loop_cancelled_passthrough",
+                    exc,
+                )
                 raise
             except (ToolError, OSError, RuntimeError, ValueError) as exc:
                 self._read_failure = exc

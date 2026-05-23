@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 import openai
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -505,7 +506,14 @@ class LLMProviderBase(ABC):
         for attempt in range(max_retries + 1):
             try:
                 return await coro_factory()
-            except AuthenticationError:
+            except AuthenticationError as exc:
+                log_passthrough(
+                    self._logger,
+                    "provider_retry_auth_passthrough",
+                    exc,
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                )
                 raise
             except retryable_exceptions as exc:
                 if attempt >= max_retries:

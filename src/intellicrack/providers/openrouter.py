@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, cast, override
 
 import httpx
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -746,7 +747,15 @@ class OpenRouterProvider(LLMProviderBase):
                 chunks_yielded=chunks_yielded,
             )
 
-        except (AuthenticationError, RateLimitError, ProviderError):
+        except (AuthenticationError, RateLimitError, ProviderError) as exc:
+            log_passthrough(
+                self._logger,
+                "openrouter_chat_stream_passthrough",
+                exc,
+                provider="openrouter",
+                model=model,
+                chunks_yielded=chunks_yielded,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             self._logger.warning(

@@ -130,6 +130,12 @@ class YaraScanner:
         try:
             compiled: CompiledYaraRules = _yara_mod.compile(filepaths=filepaths)
         except (ValueError, OSError, RuntimeError) as exc:
+            _logger.warning(
+                "yara_compile_rules_failed",
+                file_count=len(filepaths),
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             msg = f"YARA compilation failed: {exc}"
             raise ValueError(msg) from exc
         else:
@@ -158,6 +164,12 @@ class YaraScanner:
         try:
             compiled: CompiledYaraRules = _yara_mod.compile(sources=sources)
         except (ValueError, OSError, RuntimeError) as exc:
+            _logger.warning(
+                "yara_compile_source_failed",
+                namespace=namespace,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             msg = f"YARA compilation failed: {exc}"
             raise ValueError(msg) from exc
         else:

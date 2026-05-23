@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, TypedDict, cast, override
 
 import httpx
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger, log_provider_request
 from intellicrack.core.types import (
     AuthenticationError,
@@ -413,9 +414,23 @@ class OllamaProvider(LLMProviderBase):
             response = await client.get(f"{base_url}/api/tags")
             self._raise_for_status(response)
             return cast("OllamaTagsResponse", response.json())
-        except ProviderError:
+        except ProviderError as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_list_tags_passthrough",
+                exc,
+                provider="ollama",
+                source=source,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
+            self._logger.warning(
+                "ollama_list_tags_transport_failed",
+                provider="ollama",
+                source=source,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             raise ProviderError(_ERR_TRANSPORT % exc, provider_name="ollama") from exc
 
     async def list_running_models(
@@ -444,9 +459,23 @@ class OllamaProvider(LLMProviderBase):
             response = await client.get(f"{base_url}/api/ps")
             self._raise_for_status(response)
             return cast("OllamaPsResponse", response.json())
-        except ProviderError:
+        except ProviderError as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_list_running_models_passthrough",
+                exc,
+                provider="ollama",
+                source=source,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
+            self._logger.warning(
+                "ollama_list_running_models_transport_failed",
+                provider="ollama",
+                source=source,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             raise ProviderError(_ERR_TRANSPORT % exc, provider_name="ollama") from exc
 
     async def show_model(
@@ -477,9 +506,23 @@ class OllamaProvider(LLMProviderBase):
             )
             self._raise_for_status(response)
             return cast("OllamaShowResponse", response.json())
-        except ProviderError:
+        except ProviderError as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_show_model_passthrough",
+                exc,
+                provider="ollama",
+                model=actual_model,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
+            self._logger.warning(
+                "ollama_show_model_transport_failed",
+                provider="ollama",
+                model=actual_model,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
             raise ProviderError(_ERR_TRANSPORT % exc, provider_name="ollama") from exc
 
     async def generate(
@@ -1325,7 +1368,14 @@ class OllamaProvider(LLMProviderBase):
                             accumulated_tool_calls,
                             tool_call_order,
                         )
-        except (AuthenticationError, RateLimitError, ProviderError):
+        except (AuthenticationError, RateLimitError, ProviderError) as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_stream_native_passthrough",
+                exc,
+                provider="ollama",
+                endpoint=endpoint,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             if not self._cancel_requested:
@@ -1480,7 +1530,14 @@ class OllamaProvider(LLMProviderBase):
                             cast("list[dict[str, Any]]", tc_deltas),
                             accumulated_tool_calls,
                         )
-        except (AuthenticationError, RateLimitError, ProviderError):
+        except (AuthenticationError, RateLimitError, ProviderError) as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_stream_openai_compatible_passthrough",
+                exc,
+                provider="ollama",
+                endpoint=endpoint,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             if not self._cancel_requested:
@@ -1650,7 +1707,14 @@ class OllamaProvider(LLMProviderBase):
                             continue
                         if status := data.get("status", ""):
                             yield status
-        except (AuthenticationError, RateLimitError, ProviderError):
+        except (AuthenticationError, RateLimitError, ProviderError) as exc:
+            log_passthrough(
+                self._logger,
+                "ollama_pull_model_passthrough",
+                exc,
+                provider="ollama",
+                model=actual_model,
+            )
             raise
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("ollama_pull_failed", model=actual_model, error=str(e))
