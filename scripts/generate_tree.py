@@ -3,40 +3,86 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Intellicrack Directory Tree Generator - Fixed Version.
+"""Intellicrack Directory Tree Generator.
 
-Generates an HTA application with clickable file links using data attributes to avoid escaping issues.
+Generates an HTA application that renders the directory tree lazily: the
+filesystem is serialized once as a flat JSON node table, then only the root
+plus its immediate children are materialized into the DOM at load time. Folders
+expand on demand, which keeps mshta's Trident layout engine responsive even on
+trees with tens of thousands of entries.
 """
 
+from __future__ import annotations
+
 import datetime
-import hashlib
+import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
 
-def _esc_attr(value: str) -> str:
-    """Escape a string for safe use in an HTML attribute value.
+EXCLUDED_NAMES: frozenset[str] = frozenset({
+    ".git",
+    ".pixi",
+    "node_modules",
+    "__pycache__",
+    ".ruff_cache",
+    ".aider.tags.cache.v4",
+    "dist",
+    "build",
+    ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".claude",
+    ".serena",
+    "Intellicrack.egg-info",
+})
 
-    Args:
-        value: Raw string to escape.
+FILE_ICONS: dict[str, str] = {
+    ".py": "[PY]",
+    ".js": "[JS]",
+    ".json": "[JSON]",
+    ".md": "[MD]",
+    ".txt": "[TXT]",
+    ".html": "[HTML]",
+    ".css": "[CSS]",
+    ".exe": "[EXE]",
+    ".dll": "[DLL]",
+    ".so": "[SO]",
+    ".java": "[JAVA]",
+    ".c": "[C]",
+    ".cpp": "[CPP]",
+    ".h": "[H]",
+    ".rs": "[RS]",
+    ".go": "[GO]",
+    ".yaml": "[YAML]",
+    ".yml": "[YML]",
+    ".xml": "[XML]",
+    ".svg": "[SVG]",
+    ".png": "[PNG]",
+    ".jpg": "[JPG]",
+    ".jpeg": "[JPEG]",
+    ".gif": "[GIF]",
+    ".ico": "[ICO]",
+    ".zip": "[ZIP]",
+    ".rar": "[RAR]",
+    ".7z": "[7Z]",
+    ".tar": "[TAR]",
+    ".gz": "[GZ]",
+    ".pdf": "[PDF]",
+    ".doc": "[DOC]",
+    ".docx": "[DOCX]",
+    ".xls": "[XLS]",
+    ".xlsx": "[XLSX]",
+}
 
-    Returns:
-        HTML-escaped string with quotes escaped.
-    """
-    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&#x27;")
-
-
-def _esc_text(value: str) -> str:
-    """Escape a string for safe use in HTML text content.
-
-    Args:
-        value: Raw string to escape.
-
-    Returns:
-        HTML-escaped string.
-    """
-    return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+SYNTAX_CLASSES: dict[str, str] = {
+    ".py": " python",
+    ".js": " javascript",
+    ".jsx": " javascript",
+    ".json": " json",
+}
 
 
 def get_file_icon(file_path: str) -> str:
@@ -46,171 +92,167 @@ def get_file_icon(file_path: str) -> str:
         file_path: Full or relative path to a file.
 
     Returns:
-        A string icon representation matching the file type.
+        str: A string icon representation matching the file type.
 
     """
-    ext = Path(file_path).suffix.lower()
-    icons = {
-        ".py": "[PY]",
-        ".js": "[JS]",
-        ".json": "[JSON]",
-        ".md": "[MD]",
-        ".txt": "[TXT]",
-        ".html": "[HTML]",
-        ".css": "[CSS]",
-        ".exe": "[EXE]",
-        ".dll": "[DLL]",
-        ".so": "[SO]",
-        ".java": "[JAVA]",
-        ".c": "[C]",
-        ".cpp": "[CPP]",
-        ".h": "[H]",
-        ".rs": "[RS]",
-        ".go": "[GO]",
-        ".yaml": "[YAML]",
-        ".yml": "[YML]",
-        ".xml": "[XML]",
-        ".svg": "[SVG]",
-        ".png": "[PNG]",
-        ".jpg": "[JPG]",
-        ".jpeg": "[JPEG]",
-        ".gif": "[GIF]",
-        ".ico": "[ICO]",
-        ".zip": "[ZIP]",
-        ".rar": "[RAR]",
-        ".7z": "[7Z]",
-        ".tar": "[TAR]",
-        ".gz": "[GZ]",
-        ".pdf": "[PDF]",
-        ".doc": "[DOC]",
-        ".docx": "[DOCX]",
-        ".xls": "[XLS]",
-        ".xlsx": "[XLSX]",
-    }
-    return icons.get(ext, "[FILE]")
+    return FILE_ICONS.get(Path(file_path).suffix.lower(), "[FILE]")
 
 
-def scan_directory(root_path: str) -> tuple[str, int, int]:
-    """Recursively scan directory and build HTML directly.
-
-    Args:
-        root_path: Root directory path to scan.
-
-    Returns:
-        A tuple containing the HTML tree structure, file count, and folder count.
-
-    """
-    file_count = 0
-    folder_count = 0
-
-    def build_html(path: str, level: int = 0) -> str:
-        nonlocal file_count, folder_count
-
-        # Generate unique ID for this item
-        item_id = hashlib.sha256(path.encode()).hexdigest()[:8]
-
-        html = ""
-        name = Path(path).name or path
-
-        if Path(path).is_dir():
-            folder_count += 1
-            icon = "[DIR]"
-            safe_path = _esc_attr(path)
-            safe_name = _esc_text(name)
-            html += "<li>"
-            html += f'<span class="item folder expanded" data-path="{safe_path}" data-id="{item_id}" data-type="folder">'
-            html += f"{icon} {safe_name}"
-            html += "</span>"
-
-            try:
-                items = []
-                for entry in Path(path).iterdir():
-                    if entry.name in {
-                        ".git",
-                        ".pixi",
-                        "node_modules",
-                        "__pycache__",
-                        ".ruff_cache",
-                        ".aider.tags.cache.v4",
-                        "dist",
-                        "build",
-                        ".venv",
-                        ".mypy_cache",
-                        ".pytest_cache",
-                        ".claude",
-                        ".serena",
-                        "Intellicrack.egg-info",
-                    }:
-                        continue
-                    items.append(str(entry))
-
-                # Sort: directories first, then files
-                items.sort(key=lambda x: (not Path(x).is_dir(), x.lower()))
-
-                if items:
-                    html += "<ul>"
-                    for item_path in items:
-                        html += build_html(item_path, level + 1)
-                    html += "</ul>"
-            except PermissionError:
-                pass
-
-            html += "</li>"
-        else:
-            file_count += 1
-            icon = get_file_icon(path)
-            ext = Path(path).suffix.lower()
-            file_class = "file"
-
-            # Add specific classes for syntax highlighting
-            if ext == ".py":
-                file_class += " python"
-            elif ext in {".js", ".jsx"}:
-                file_class += " javascript"
-            elif ext == ".json":
-                file_class += " json"
-
-            try:
-                size = Path(path).stat().st_size
-                size_str = format_size(size)
-            except (OSError, ValueError, TypeError):
-                size_str = ""
-
-            safe_path = _esc_attr(path)
-            safe_name = _esc_text(name)
-            html += "<li>"
-            html += f'<span class="item {file_class}" data-path="{safe_path}" data-id="{item_id}" data-type="file">'
-            html += f"{icon} {safe_name}"
-            if size_str:
-                html += f' <span class="size">({size_str})</span>'
-            html += "</span>"
-            html += "</li>"
-
-        return html
-
-    html_tree = '<ul class="root-list">' + build_html(root_path) + "</ul>"
-    return html_tree, file_count, folder_count
-
-
-def format_size(file_bytes: int) -> str:
+def format_size(file_bytes: float) -> str:
     """Format file size in human-readable format.
 
     Args:
         file_bytes: Number of bytes to format.
 
     Returns:
-        Human-readable string representation of file size (e.g., "1.23 MB").
+        str: Human-readable string representation of file size (e.g., "1.23 MB").
 
     """
     if file_bytes == 0:
         return "0 B"
-    k = 1024
+    k = 1024.0
     sizes = ["B", "KB", "MB", "GB", "TB"]
     i = 0
-    while file_bytes >= k and i < len(sizes) - 1:
-        file_bytes /= k
+    value = float(file_bytes)
+    while value >= k and i < len(sizes) - 1:
+        value /= k
         i += 1
-    return f"{file_bytes:.2f} {sizes[i]}"
+    return f"{value:.2f} {sizes[i]}"
+
+
+def _list_dir_sorted(directory: Path) -> list[Path]:
+    """Return non-excluded children of ``directory``, folders first then files.
+
+    Args:
+        directory: Directory whose entries should be listed.
+
+    Returns:
+        list[Path]: Sorted list of child paths, or an empty list if the
+        directory cannot be read (e.g. permission denied).
+
+    """
+    try:
+        entries = [e for e in directory.iterdir() if e.name not in EXCLUDED_NAMES]
+    except PermissionError:
+        return []
+    entries.sort(key=lambda e: (not e.is_dir(), e.name.lower()))
+    return entries
+
+
+def _stat_size(path: Path) -> int:
+    """Return the size in bytes of ``path``, or 0 if it cannot be stat'd.
+
+    Args:
+        path: Filesystem path to stat.
+
+    Returns:
+        int: File size in bytes, or 0 on stat failure.
+
+    """
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
+def scan_directory(root_path: str) -> tuple[list[dict[str, object]], int, int]:
+    """Recursively scan ``root_path`` and produce a flat list of node records.
+
+    Each node is a dict with short keys to keep the embedded JSON small:
+    ``n`` (name), ``p`` (absolute path), ``t`` (``"d"`` folder / ``"f"``
+    file), ``pa`` (parent index, ``-1`` for root), plus ``c`` (list of child
+    indices, folders only) or ``s`` (size in bytes, files only).
+
+    Args:
+        root_path: Root directory path to scan.
+
+    Returns:
+        tuple[list[dict[str, object]], int, int]: A tuple
+        ``(nodes, file_count, folder_count)``. ``nodes[0]`` is always the
+        root entry; child indices refer into the same list.
+
+    """
+    nodes: list[dict[str, object]] = []
+    file_count = 0
+    folder_count = 0
+
+    def walk(path: str, parent: int) -> int:
+        nonlocal file_count, folder_count
+        idx = len(nodes)
+        p_obj = Path(path)
+        name = p_obj.name or path
+
+        if p_obj.is_dir():
+            folder_count += 1
+            children: list[int] = []
+            node: dict[str, object] = {
+                "n": name,
+                "p": path,
+                "t": "d",
+                "pa": parent,
+                "c": children,
+            }
+            nodes.append(node)
+            children.extend(walk(str(entry), idx) for entry in _list_dir_sorted(p_obj))
+        else:
+            file_count += 1
+            file_node: dict[str, object] = {
+                "n": name,
+                "p": path,
+                "t": "f",
+                "pa": parent,
+                "s": _stat_size(p_obj),
+            }
+            nodes.append(file_node)
+        return idx
+
+    walk(root_path, -1)
+    return nodes, file_count, folder_count
+
+
+def _embed_json(data: object) -> str:
+    """Serialize ``data`` to JSON safe for inline ``<script>`` embedding.
+
+    Args:
+        data: Any JSON-serializable Python object.
+
+    Returns:
+        str: Compact JSON string with ``</`` sequences neutralized so an
+        embedded path or name cannot prematurely terminate the surrounding
+        script tag.
+
+    """
+    raw = json.dumps(data, separators=(",", ":"), ensure_ascii=True)
+    return raw.replace("</", "<\\/")
+
+
+def _run_system_tree(root_path: str) -> str:
+    """Invoke the system ``tree -F`` command and return its stdout.
+
+    Args:
+        root_path: Directory to run ``tree`` against.
+
+    Returns:
+        str: The tree command's stdout, or an empty string if the binary is
+        not available or the invocation failed for any reason.
+
+    """
+    tree_bin = shutil.which("tree")
+    if tree_bin is None:
+        return ""
+    try:
+        result = subprocess.run(
+            [tree_bin, "-F"],
+            capture_output=True,
+            text=True,
+            shell=False,
+            cwd=root_path,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f"Warning: Could not generate tree with system command: {e}")
+        return ""
+    return result.stdout if result.returncode == 0 else ""
 
 
 def generate_txt_tree(root_path: str, output_file: str) -> None:
@@ -219,6 +261,7 @@ def generate_txt_tree(root_path: str, output_file: str) -> None:
     Args:
         root_path: Root directory path to generate tree from.
         output_file: Output file path for the text tree structure.
+
     """
     print(f"Generating text tree for: {root_path}")
 
@@ -235,19 +278,11 @@ For an interactive HTML version with clickable links, see IntellicrackStructure.
 
 """
 
-    try:
-        if os.name == "nt":
-            tree_output = generate_fallback_tree(root_path)
-        else:
-            result = subprocess.run(["tree", "-F"], capture_output=True, text=True, shell=False, cwd=root_path, check=False)
-            tree_output = result.stdout if result.returncode == 0 else ""
-
-            if not tree_output:
-                tree_output = generate_fallback_tree(root_path)
-
-    except (OSError, subprocess.SubprocessError) as e:
-        print(f"Warning: Could not generate tree with system command: {e}")
-        tree_output = generate_fallback_tree(root_path)
+    tree_output = (
+        generate_fallback_tree(root_path)
+        if os.name == "nt"
+        else _run_system_tree(root_path) or generate_fallback_tree(root_path)
+    )
 
     with Path(output_file).open("w", encoding="utf-8") as f:
         f.write(header_content)
@@ -266,61 +301,39 @@ def generate_fallback_tree(root_path: str, prefix: str = "", *, _is_last: bool =
         _is_last: Whether this is the last item in the current directory.
 
     Returns:
-        String representation of the directory tree structure.
+        str: String representation of the directory tree structure.
 
     """
-    tree_str = ""
-
-    try:
-        items = []
-        for entry in Path(root_path).iterdir():
-            if entry.name in {
-                ".git",
-                ".pixi",
-                "node_modules",
-                "__pycache__",
-                ".ruff_cache",
-                ".aider.tags.cache.v4",
-                "dist",
-                "build",
-                ".venv",
-                ".mypy_cache",
-                ".pytest_cache",
-                ".claude",
-                ".serena",
-                "Intellicrack.egg-info",
-            }:
-                continue
-            items.append((entry.name, str(entry)))
-
-        items.sort(key=lambda x: (not Path(x[1]).is_dir(), x[0].lower()))
-
-        for i, (name, path) in enumerate(items):
-            is_last_item = i == len(items) - 1
-            connector = "└── " if is_last_item else "├── "
-            tree_str += f"{prefix}{connector}{name}"
-
-            if Path(path).is_dir():
-                tree_str += "/\n"
-                extension = "    " if is_last_item else "│   "
-                tree_str += generate_fallback_tree(path, prefix + extension, _is_last=is_last_item)
-            else:
-                tree_str += "\n"
-    except PermissionError:
-        pass
-
-    return tree_str
+    entries = _list_dir_sorted(Path(root_path))
+    parts: list[str] = []
+    for i, entry in enumerate(entries):
+        is_last_item = i == len(entries) - 1
+        connector = "└── " if is_last_item else "├── "
+        parts.append(f"{prefix}{connector}{entry.name}")
+        if entry.is_dir():
+            parts.append("/\n")
+            extension = "    " if is_last_item else "│   "
+            parts.append(generate_fallback_tree(str(entry), prefix + extension, _is_last=is_last_item))
+        else:
+            parts.append("\n")
+    return "".join(parts)
 
 
 def generate_hta(root_path: str, output_file: str) -> None:
-    """Generate HTA file with clickable directory tree.
+    """Generate HTA file with a lazy-rendered, clickable directory tree.
 
     Args:
         root_path: Root directory path to generate HTA for.
         output_file: Output file path for the HTA application.
+
     """
     print(f"Scanning directory: {root_path}")
-    html_tree, file_count, folder_count = scan_directory(root_path)
+    nodes, file_count, folder_count = scan_directory(root_path)
+
+    nodes_json = _embed_json(nodes)
+    icons_json = _embed_json(FILE_ICONS)
+    syntax_json = _embed_json(SYNTAX_CLASSES)
+    root_path_json = _embed_json(root_path)
 
     hta_content = f"""<!DOCTYPE html>
 <html>
@@ -341,6 +354,7 @@ def generate_hta(root_path: str, output_file: str) -> None:
     NAVIGABLE="yes"
 />
 <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <style>
     body {{
         font-family: 'Consolas', 'Courier New', monospace;
@@ -448,15 +462,21 @@ def generate_hta(root_path: str, output_file: str) -> None:
     }}
 
     .folder.collapsed:before {{
-        content: '▶ ';
+        content: '\\25B6\\00A0';
         color: #808080;
         display: inline-block;
         width: 15px;
     }}
 
     .folder.expanded:before {{
-        content: '▼ ';
+        content: '\\25BC\\00A0';
         color: #808080;
+        display: inline-block;
+        width: 15px;
+    }}
+
+    .folder.leaf:before {{
+        content: '\\00A0\\00A0\\00A0';
         display: inline-block;
         width: 15px;
     }}
@@ -535,7 +555,7 @@ def generate_hta(root_path: str, output_file: str) -> None:
 <div class="controls">
     <label for="searchBox" style="color: #808080; margin-right: 5px;">Filter:</label>
     <input type="text" class="search-box" id="searchBox" value="" title="Enter filename or partial text to search" onfocus="this.select()">
-    <button id="expandBtn">Expand All</button>
+    <button id="expandBtn" title="Expands every folder (will materialize the full tree, may take a moment)">Expand All</button>
     <button id="collapseBtn">Collapse All</button>
     <button id="copyBtn">Copy Relative Path</button>
     <button id="refreshBtn">Refresh Tree</button>
@@ -554,76 +574,170 @@ def generate_hta(root_path: str, output_file: str) -> None:
 </div>
 
 <div class="main-container">
-    <div class="tree-pane tree" id="tree">
-    {html_tree}
-    </div>
+    <div class="tree-pane tree" id="tree"></div>
     <div class="preview-pane">
         <pre id="previewContent">[Select a file to preview]</pre>
     </div>
 </div>
 
 <script type="text/javascript">
-var rootPath = "{root_path}";
+var ROOT_PATH = {root_path_json};
+var NODES = {nodes_json};
+var FILE_ICONS = {icons_json};
+var SYNTAX_CLASSES = {syntax_json};
+
 var fso = new ActiveXObject("Scripting.FileSystemObject");
 var shell = new ActiveXObject("WScript.Shell");
 var currentPath = "";
 var selectedItem = null;
+var spanById = {{}};
 
-// Initialize event handlers when window loads
-window.onload = function() {{
-    // Add click handlers to all items using onclick
-    var allElements = document.getElementsByTagName('span');
-    for (var i = 0; i < allElements.length; i++) {{
-        if (allElements[i].className && allElements[i].className.indexOf('item') !== -1) {{
-            allElements[i].onclick = handleItemClick;
-            allElements[i].ondblclick = handleItemDoubleClick;
+function getExt(name) {{
+    var dot = name.lastIndexOf(".");
+    if (dot < 0) return "";
+    return name.substring(dot).toLowerCase();
+}}
+
+function iconFor(node) {{
+    if (node.t === 'd') return '[DIR]';
+    var ext = getExt(node.n);
+    return FILE_ICONS[ext] || '[FILE]';
+}}
+
+function fmtSize(bytes) {{
+    if (!bytes) return "0 B";
+    var k = 1024;
+    var sizes = ["B", "KB", "MB", "GB", "TB"];
+    var i = 0;
+    var v = bytes;
+    while (v >= k && i < sizes.length - 1) {{ v /= k; i++; }}
+    return v.toFixed(2) + " " + sizes[i];
+}}
+
+function classifyFolder(node) {{
+    var hasChildren = node.c && node.c.length > 0;
+    if (!hasChildren) return 'item folder leaf';
+    return 'item folder collapsed';
+}}
+
+function createItem(id) {{
+    var node = NODES[id];
+    var li = document.createElement('li');
+    li.setAttribute('data-id', '' + id);
+
+    var span = document.createElement('span');
+    span.setAttribute('data-path', node.p);
+    span.setAttribute('data-id', '' + id);
+
+    if (node.t === 'd') {{
+        span.setAttribute('data-type', 'folder');
+        span.className = classifyFolder(node);
+        span.appendChild(document.createTextNode(iconFor(node) + ' ' + node.n));
+    }} else {{
+        span.setAttribute('data-type', 'file');
+        var ext = getExt(node.n);
+        var cls = 'item file' + (SYNTAX_CLASSES[ext] || '');
+        span.className = cls;
+        span.appendChild(document.createTextNode(iconFor(node) + ' ' + node.n));
+        if (node.s) {{
+            var sizeSpan = document.createElement('span');
+            sizeSpan.className = 'size';
+            sizeSpan.appendChild(document.createTextNode('(' + fmtSize(node.s) + ')'));
+            span.appendChild(document.createTextNode(' '));
+            span.appendChild(sizeSpan);
         }}
     }}
 
-    // Button handlers using onclick
-    document.getElementById('expandBtn').onclick = expandAll;
-    document.getElementById('collapseBtn').onclick = collapseAll;
-    document.getElementById('copyBtn').onclick = copyPath;
-    document.getElementById('searchBox').onkeyup = performSearch;
-    document.getElementById('refreshBtn').onclick = refreshTree;
+    span.onclick = handleItemClick;
+    span.ondblclick = handleItemDoubleClick;
+    li.appendChild(span);
+    spanById[id] = span;
+    return li;
+}}
 
-    document.getElementById('btnCode').onclick = openInCode;
-    document.getElementById('btnNotepad').onclick = openInNotepad;
-    document.getElementById('btnTerminal').onclick = openTerminal;
-}};
+function findChildUl(span) {{
+    var next = span.nextSibling;
+    while (next && next.nodeType !== 1) next = next.nextSibling;
+    if (next && next.tagName === 'UL') return next;
+    return null;
+}}
+
+function materializeChildren(span) {{
+    var existing = findChildUl(span);
+    if (existing) return existing;
+    var id = parseInt(span.getAttribute('data-id'), 10);
+    var node = NODES[id];
+    if (node.t !== 'd' || !node.c || node.c.length === 0) return null;
+    var li = span.parentNode;
+    var ul = document.createElement('ul');
+    var frag = document.createDocumentFragment ? document.createDocumentFragment() : null;
+    for (var i = 0; i < node.c.length; i++) {{
+        var child = createItem(node.c[i]);
+        if (frag) frag.appendChild(child); else ul.appendChild(child);
+    }}
+    if (frag) ul.appendChild(frag);
+    li.appendChild(ul);
+    return ul;
+}}
+
+function expandFolder(span) {{
+    if (span.className.indexOf('leaf') !== -1) return;
+    var ul = materializeChildren(span);
+    if (ul) ul.style.display = 'block';
+    span.className = span.className.replace('collapsed', 'expanded');
+}}
+
+function collapseFolder(span) {{
+    if (span.className.indexOf('leaf') !== -1) return;
+    var ul = findChildUl(span);
+    if (ul) ul.style.display = 'none';
+    span.className = span.className.replace('expanded', 'collapsed');
+}}
+
+function toggleFolder(span) {{
+    if (span.className.indexOf('leaf') !== -1) return;
+    if (span.className.indexOf('expanded') !== -1) {{
+        collapseFolder(span);
+    }} else {{
+        expandFolder(span);
+    }}
+}}
+
+function findItemAncestor(el) {{
+    while (el && (!el.className || ('' + el.className).indexOf('item') === -1)) {{
+        el = el.parentNode;
+    }}
+    return el;
+}}
 
 function handleItemClick(event) {{
     event = event || window.event;
-    if (event.stopPropagation) {{
-        event.stopPropagation();
-    }} else {{
-        event.cancelBubble = true;
-    }}
+    if (event.stopPropagation) {{ event.stopPropagation(); }} else {{ event.cancelBubble = true; }}
 
-    var element = event.srcElement || event.target;
+    var element = findItemAncestor(event.srcElement || event.target);
+    if (!element) return;
+
     var path = element.getAttribute('data-path');
     var type = element.getAttribute('data-type');
 
-    // Update selection
     if (selectedItem) {{
-        selectedItem.className = selectedItem.className.replace(' selected', '');
+        selectedItem.className = ('' + selectedItem.className).replace(' selected', '');
     }}
-    element.className += ' selected';
+    element.className = element.className + ' selected';
     selectedItem = element;
 
     currentPath = path;
     document.getElementById('pathDisplay').innerHTML = '<strong>Selected:</strong> ' + path;
 
-    // Toggle folder if it's a folder
     if (type === 'folder') {{
         toggleFolder(element);
         document.getElementById('previewContent').innerText = "[Folder selected: " + path + "]";
     }} else if (type === 'file') {{
         try {{
             var file = fso.GetFile(path);
-            if (file.Size > 0 && file.Size < 1000000) {{ // Limit preview to files under 1MB
+            if (file.Size > 0 && file.Size < 1000000) {{
                 var stream = fso.OpenTextFile(path, 1);
-                var content = stream.Read(Math.min(file.Size, 15000)); // Read up to 15KB
+                var content = stream.Read(Math.min(file.Size, 15000));
                 stream.Close();
                 if (file.Size > 15000) content += "\\n\\n... [Preview Truncated] ...";
                 document.getElementById('previewContent').innerText = content;
@@ -636,39 +750,13 @@ function handleItemClick(event) {{
     }}
 }}
 
-function openInCode() {{
-    if(currentPath) shell.Run('cmd /c code "' + currentPath + '"', 0, false);
-}}
-
-function openInNotepad() {{
-    if(currentPath) shell.Run('notepad.exe "' + currentPath + '"', 1, false);
-}}
-
-function openTerminal() {{
-    if(currentPath) {{
-        var folder = fso.FileExists(currentPath) ? fso.GetParentFolderName(currentPath) : currentPath;
-        shell.Run('pwsh -NoExit -Command "cd \\'' + folder + '\\'"', 1, false);
-    }}
-}}
-
-function refreshTree() {{
-    try {{
-        shell.Run('pwsh -c "pixi run python scripts/generate_tree.py"', 0, true);
-        window.location.reload();
-    }} catch(e) {{
-        alert("Failed to refresh: " + e.message);
-    }}
-}}
-
 function handleItemDoubleClick(event) {{
     event = event || window.event;
-    if (event.stopPropagation) {{
-        event.stopPropagation();
-    }} else {{
-        event.cancelBubble = true;
-    }}
+    if (event.stopPropagation) {{ event.stopPropagation(); }} else {{ event.cancelBubble = true; }}
 
-    var element = event.srcElement || event.target;
+    var element = findItemAncestor(event.srcElement || event.target);
+    if (!element) return;
+
     var path = element.getAttribute('data-path');
     var type = element.getAttribute('data-type');
 
@@ -679,36 +767,10 @@ function handleItemDoubleClick(event) {{
     }}
 }}
 
-function toggleFolder(element) {{
-    if (element.className.indexOf('expanded') !== -1) {{
-        element.className = element.className.replace('expanded', 'collapsed');
-        // Find the next UL sibling
-        var next = element.nextSibling;
-        while (next && next.nodeType !== 1) {{
-            next = next.nextSibling;
-        }}
-        if (next && next.tagName === 'UL') {{
-            next.style.display = 'none';
-        }}
-    }} else {{
-        element.className = element.className.replace('collapsed', 'expanded');
-        // Find the next UL sibling
-        var next = element.nextSibling;
-        while (next && next.nodeType !== 1) {{
-            next = next.nextSibling;
-        }}
-        if (next && next.tagName === 'UL') {{
-            next.style.display = 'block';
-        }}
-    }}
-}}
-
 function openFile(path) {{
     try {{
-        // Try to open with default application
         shell.Run('"' + path + '"', 1, false);
     }} catch(e) {{
-        // If that fails, open containing folder and select file
         try {{
             shell.Run('explorer.exe /select,"' + path + '"', 1, false);
         }} catch(e2) {{
@@ -725,36 +787,137 @@ function openFolder(path) {{
     }}
 }}
 
-function expandAll() {{
-    var allElements = document.getElementsByTagName('span');
-    for (var i = 0; i < allElements.length; i++) {{
-        if (allElements[i].className && allElements[i].className.indexOf('folder') !== -1) {{
-            if (allElements[i].className.indexOf('collapsed') !== -1) {{
-                allElements[i].className = allElements[i].className.replace('collapsed', 'expanded');
-            }}
-        }}
-    }}
-    // Now show all UL elements
-    var uls = document.getElementsByTagName('ul');
-    for (var i = 0; i < uls.length; i++) {{
-        uls[i].style.display = 'block';
+function openInCode() {{
+    if (currentPath) shell.Run('cmd /c code "' + currentPath + '"', 0, false);
+}}
+
+function openInNotepad() {{
+    if (currentPath) shell.Run('notepad.exe "' + currentPath + '"', 1, false);
+}}
+
+function openTerminal() {{
+    if (currentPath) {{
+        var folder = fso.FileExists(currentPath) ? fso.GetParentFolderName(currentPath) : currentPath;
+        shell.Run('pwsh -NoExit -Command "cd \\'' + folder + '\\'"', 1, false);
     }}
 }}
 
+function refreshTree() {{
+    try {{
+        shell.Run('pwsh -c "pixi run python scripts/generate_tree.py"', 0, true);
+        window.location.reload();
+    }} catch(e) {{
+        alert("Failed to refresh: " + e.message);
+    }}
+}}
+
+function expandAllFrom(id) {{
+    var node = NODES[id];
+    if (node.t !== 'd' || !node.c || node.c.length === 0) return;
+    var span = spanById[id];
+    if (!span) return;
+    var ul = materializeChildren(span);
+    if (ul) ul.style.display = 'block';
+    span.className = span.className.replace('collapsed', 'expanded');
+    for (var i = 0; i < node.c.length; i++) {{
+        expandAllFrom(node.c[i]);
+    }}
+}}
+
+function expandAll() {{
+    expandAllFrom(0);
+}}
+
 function collapseAll() {{
-    var allElements = document.getElementsByTagName('span');
-    for (var i = 0; i < allElements.length; i++) {{
-        if (allElements[i].className && allElements[i].className.indexOf('folder') !== -1) {{
-            if (allElements[i].className.indexOf('expanded') !== -1) {{
-                allElements[i].className = allElements[i].className.replace('expanded', 'collapsed');
+    for (var key in spanById) {{
+        if (!spanById.hasOwnProperty(key)) continue;
+        if (key === '0') continue;
+        var s = spanById[key];
+        if (s.className && s.className.indexOf('folder') !== -1 && s.className.indexOf('leaf') === -1) {{
+            if (s.className.indexOf('expanded') !== -1) {{
+                s.className = s.className.replace('expanded', 'collapsed');
+            }}
+            var ul = findChildUl(s);
+            if (ul) ul.style.display = 'none';
+        }}
+    }}
+    var rootSpan = spanById[0];
+    if (rootSpan) {{
+        if (rootSpan.className.indexOf('collapsed') !== -1) {{
+            rootSpan.className = rootSpan.className.replace('collapsed', 'expanded');
+        }}
+        var rootUl = findChildUl(rootSpan);
+        if (rootUl) rootUl.style.display = 'block';
+    }}
+}}
+
+function ensureAncestorsRendered(id) {{
+    var chain = [];
+    var cur = id;
+    while (cur >= 0) {{
+        chain.push(cur);
+        cur = NODES[cur].pa;
+    }}
+    chain.reverse();
+    for (var i = 0; i < chain.length - 1; i++) {{
+        var ancestorSpan = spanById[chain[i]];
+        if (ancestorSpan) {{
+            var ul = materializeChildren(ancestorSpan);
+            if (ul) ul.style.display = 'block';
+            if (ancestorSpan.className.indexOf('collapsed') !== -1) {{
+                ancestorSpan.className = ancestorSpan.className.replace('collapsed', 'expanded');
             }}
         }}
     }}
-    // Now hide all UL elements except root
-    var uls = document.getElementsByTagName('ul');
-    for (var i = 0; i < uls.length; i++) {{
-        if (uls[i].className !== 'root-list') {{
-            uls[i].style.display = 'none';
+}}
+
+function clearSearchState() {{
+    for (var key in spanById) {{
+        if (!spanById.hasOwnProperty(key)) continue;
+        var s = spanById[key];
+        if (s.className.indexOf('highlight') !== -1) {{
+            s.className = ('' + s.className).replace(' highlight', '');
+        }}
+        var li = s.parentNode;
+        if (li && li.style.display === 'none') {{
+            li.style.display = '';
+        }}
+    }}
+}}
+
+function performSearch() {{
+    var query = document.getElementById('searchBox').value;
+    clearSearchState();
+    if (!query) return;
+    var q = query.toLowerCase();
+
+    var onPath = {{}};
+    for (var i = 0; i < NODES.length; i++) {{
+        if (NODES[i].n.toLowerCase().indexOf(q) === -1) continue;
+        onPath[i] = 'match';
+        var anc = NODES[i].pa;
+        while (anc >= 0 && onPath[anc] !== 'ancestor' && onPath[anc] !== 'match') {{
+            onPath[anc] = 'ancestor';
+            anc = NODES[anc].pa;
+        }}
+    }}
+
+    for (var k in onPath) {{
+        if (!onPath.hasOwnProperty(k)) continue;
+        ensureAncestorsRendered(parseInt(k, 10));
+    }}
+
+    for (var key in spanById) {{
+        if (!spanById.hasOwnProperty(key)) continue;
+        var s = spanById[key];
+        var li = s.parentNode;
+        if (onPath[key]) {{
+            li.style.display = 'list-item';
+            if (onPath[key] === 'match' && s.className.indexOf('highlight') === -1) {{
+                s.className = s.className + ' highlight';
+            }}
+        }} else {{
+            li.style.display = 'none';
         }}
     }}
 }}
@@ -763,8 +926,8 @@ function copyPath() {{
     if (currentPath) {{
         try {{
             var relPath = currentPath;
-            if (currentPath.toLowerCase().indexOf(rootPath.toLowerCase()) === 0) {{
-                relPath = currentPath.substring(rootPath.length);
+            if (currentPath.toLowerCase().indexOf(ROOT_PATH.toLowerCase()) === 0) {{
+                relPath = currentPath.substring(ROOT_PATH.length);
                 if (relPath.charAt(0) === '\\\\' || relPath.charAt(0) === '/') {{
                     relPath = relPath.substring(1);
                 }}
@@ -779,79 +942,33 @@ function copyPath() {{
     }}
 }}
 
-function performSearch() {{
-    var query = document.getElementById('searchBox').value.toLowerCase();
-    var allElements = document.getElementsByTagName('span');
-    var items = [];
-
-    // Collect all items
-    for (var i = 0; i < allElements.length; i++) {{
-        if (allElements[i].className && allElements[i].className.indexOf('item') !== -1) {{
-            items.push(allElements[i]);
-        }}
+function renderRoot() {{
+    var rootUl = document.createElement('ul');
+    rootUl.className = 'root-list';
+    var rootLi = createItem(0);
+    rootUl.appendChild(rootLi);
+    var rootSpan = spanById[0];
+    if (rootSpan && rootSpan.className.indexOf('leaf') === -1) {{
+        var ul = materializeChildren(rootSpan);
+        if (ul) ul.style.display = 'block';
+        rootSpan.className = rootSpan.className.replace('collapsed', 'expanded');
     }}
-
-    if (!query) {{
-        // Show all items
-        for (var i = 0; i < items.length; i++) {{
-            items[i].className = items[i].className.replace(' highlight', '');
-            items[i].parentElement.style.display = 'list-item';
-        }}
-        return;
-    }}
-
-    // Search and highlight
-    for (var i = 0; i < items.length; i++) {{
-        var item = items[i];
-        var text = item.textContent || item.innerText || '';
-        text = text.toLowerCase();
-
-        if (text.indexOf(query) !== -1) {{
-            if (item.className.indexOf('highlight') === -1) {{
-                item.className += ' highlight';
-            }}
-            item.parentElement.style.display = 'list-item';
-
-            // Show parent folders
-            var parent = item.parentElement;
-            while (parent && parent !== document.getElementById('tree')) {{
-                parent.style.display = 'block';
-                // Find previous sibling that's a folder
-                var prev = parent.previousSibling;
-                while (prev && prev.nodeType !== 1) {{
-                    prev = prev.previousSibling;
-                }}
-                if (prev && prev.className && prev.className.indexOf('folder') !== -1) {{
-                    prev.className = prev.className.replace('collapsed', 'expanded');
-                }}
-                parent = parent.parentElement;
-            }}
-        }} else {{
-            item.className = item.className.replace(' highlight', '');
-            // Don't hide folders that contain matches
-            if (item.className.indexOf('folder') === -1 || !hasHighlightedChildren(item)) {{
-                item.parentElement.style.display = 'none';
-            }}
-        }}
-    }}
+    var treeEl = document.getElementById('tree');
+    treeEl.innerHTML = '';
+    treeEl.appendChild(rootUl);
 }}
 
-function hasHighlightedChildren(element) {{
-    // Find the next UL sibling
-    var next = element.nextSibling;
-    while (next && next.nodeType !== 1) {{
-        next = next.nextSibling;
-    }}
-    if (next && next.tagName === 'UL') {{
-        var children = next.getElementsByTagName('*');
-        for (var i = 0; i < children.length; i++) {{
-            if (children[i].className && children[i].className.indexOf('highlight') !== -1) {{
-                return true;
-            }}
-        }}
-    }}
-    return false;
-}}
+window.onload = function() {{
+    renderRoot();
+    document.getElementById('expandBtn').onclick = expandAll;
+    document.getElementById('collapseBtn').onclick = collapseAll;
+    document.getElementById('copyBtn').onclick = copyPath;
+    document.getElementById('searchBox').onkeyup = performSearch;
+    document.getElementById('refreshBtn').onclick = refreshTree;
+    document.getElementById('btnCode').onclick = openInCode;
+    document.getElementById('btnNotepad').onclick = openInNotepad;
+    document.getElementById('btnTerminal').onclick = openTerminal;
+}};
 </script>
 </body>
 </html>"""
@@ -863,6 +980,7 @@ function hasHighlightedChildren(element) {{
     print(f"HTA file generated successfully: {output_file}")
     print(f"Root path: {root_path}")
     print(f"Processed: {file_count} files, {folder_count} folders")
+    print(f"Node table size: {len(nodes_json):,} bytes")
     print("\nDouble-click the HTA file to open")
 
 
