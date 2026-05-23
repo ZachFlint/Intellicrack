@@ -9,11 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast, runtime_checkable
 
-from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.bridges._pe_format import detect_format
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor._base import (
     PREVIEW_BYTES,
     DataReaderCls,
@@ -129,7 +129,7 @@ class SectionsMixin:
     def _populate_sections(self) -> None:
         """Populate the sections tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_sections` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge
+        Calls :meth:`HexEditorBridge.get_pe_sections` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge
         event loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self.sections_tree is None:
@@ -142,10 +142,14 @@ class SectionsMixin:
             _logger.warning("sections_bridge_unavailable")
             return
 
-        run_bridge_coroutine_async(
+        parent_obj = self if isinstance(self, QWidget) else None
+        run_bridge_coroutine_logged(
             bridge.get_pe_sections(),
             on_success=self._on_pe_sections_ready,
             on_error=self._on_pe_sections_failed,
+            parent=parent_obj,
+            event="hex_editor_get_pe_sections",
+            logger=_logger,
         )
 
     def _on_pe_sections_ready(self, result: object) -> None:
@@ -190,7 +194,7 @@ class SectionsMixin:
     def _populate_imports(self) -> None:
         """Populate the imports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_imports` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge event
+        Calls :meth:`HexEditorBridge.get_pe_imports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge event
         loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._imports_tree is None:
@@ -203,10 +207,14 @@ class SectionsMixin:
             _logger.warning("imports_bridge_unavailable")
             return
 
-        run_bridge_coroutine_async(
+        parent_obj = self if isinstance(self, QWidget) else None
+        run_bridge_coroutine_logged(
             bridge.get_pe_imports(),
             on_success=self._on_pe_imports_ready,
             on_error=self._on_pe_imports_failed,
+            parent=parent_obj,
+            event="hex_editor_get_pe_imports",
+            logger=_logger,
         )
 
     def _on_pe_imports_ready(self, result: object) -> None:
@@ -244,7 +252,7 @@ class SectionsMixin:
     def _populate_exports(self) -> None:
         """Populate the exports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_exports` via :func:`run_bridge_coroutine_async` so the parse runs on the persistent bridge event
+        Calls :meth:`HexEditorBridge.get_pe_exports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge event
         loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._exports_tree is None:
@@ -257,10 +265,14 @@ class SectionsMixin:
             _logger.warning("exports_bridge_unavailable")
             return
 
-        run_bridge_coroutine_async(
+        parent_obj = self if isinstance(self, QWidget) else None
+        run_bridge_coroutine_logged(
             bridge.get_pe_exports(),
             on_success=self._on_pe_exports_ready,
             on_error=self._on_pe_exports_failed,
+            parent=parent_obj,
+            event="hex_editor_get_pe_exports",
+            logger=_logger,
         )
 
     def _on_pe_exports_ready(self, result: object) -> None:
@@ -389,7 +401,7 @@ class SectionsMixin:
         try:
             offset = int(offset_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_string_invalid_offset", input_text=offset_text)
         else:
             self.goto_offset(offset)
 

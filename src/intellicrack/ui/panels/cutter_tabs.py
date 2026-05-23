@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import SectionInfo, SegmentInfo
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -117,14 +118,21 @@ class AllStringsTab(QWidget):
         self._table = _make_table(["Address", "Value", "Section", "Encoding"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_all_strings(), self._apply_data, _log_tab_error(type(self).__name__, "get_all_strings"))
+        run_bridge_coroutine_logged(
+            bridge.get_all_strings(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_all_strings"),
+            parent=self,
+            event="cutter_get_all_strings",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with string results.
@@ -158,14 +166,21 @@ class SymbolsTab(QWidget):
         self._table = _make_table(["Name", "Address", "Module"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_symbols(), self._apply_data, _log_tab_error(type(self).__name__, "get_symbols"))
+        run_bridge_coroutine_logged(
+            bridge.get_symbols(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_symbols"),
+            parent=self,
+            event="cutter_get_symbols",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with symbol results.
@@ -198,14 +213,21 @@ class LibrariesTab(QWidget):
         self._table = _make_table(["Name"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_libraries(), self._apply_data, _log_tab_error(type(self).__name__, "get_libraries"))
+        run_bridge_coroutine_logged(
+            bridge.get_libraries(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_libraries"),
+            parent=self,
+            event="cutter_get_libraries",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with library results.
@@ -236,14 +258,21 @@ class HeadersTab(QWidget):
         self._table = _make_table(["Name", "Value", "Address"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_headers(), self._apply_data, _log_tab_error(type(self).__name__, "get_headers"))
+        run_bridge_coroutine_logged(
+            bridge.get_headers(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_headers"),
+            parent=self,
+            event="cutter_get_headers",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with header results.
@@ -276,14 +305,21 @@ class RelocationsTab(QWidget):
         self._table = _make_table(["Name", "Address", "Type", "VAddr"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_relocations(), self._apply_data, _log_tab_error(type(self).__name__, "get_relocations"))
+        run_bridge_coroutine_logged(
+            bridge.get_relocations(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_relocations"),
+            parent=self,
+            event="cutter_get_relocations",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with relocation results.
@@ -317,14 +353,21 @@ class ResourcesTab(QWidget):
         self._table = _make_table(["Name", "Address", "Size", "Type", "Language"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_resources(), self._apply_data, _log_tab_error(type(self).__name__, "get_resources"))
+        run_bridge_coroutine_logged(
+            bridge.get_resources(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_resources"),
+            parent=self,
+            event="cutter_get_resources",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with resource results.
@@ -359,14 +402,21 @@ class CommentsTab(QWidget):
         self._table = _make_table(["Address", "Text", "Type"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_comments(), self._apply_data, _log_tab_error(type(self).__name__, "get_comments"))
+        run_bridge_coroutine_logged(
+            bridge.get_comments(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_comments"),
+            parent=self,
+            event="cutter_get_comments",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with comment results.
@@ -399,14 +449,21 @@ class FlagsTab(QWidget):
         self._table = _make_table(["Name", "Address", "Size"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_flags(), self._apply_data, _log_tab_error(type(self).__name__, "get_flags"))
+        run_bridge_coroutine_logged(
+            bridge.get_flags(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_flags"),
+            parent=self,
+            event="cutter_get_flags",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with flag results.
@@ -452,30 +509,39 @@ class ROPGadgetsTab(QWidget):
         layout.addWidget(self._table)
 
         self._bridge: CutterBridge | None = None
-        self._run_async_fn: RunAsyncFn | None = None
         self._search_btn.clicked.connect(self._on_search)
         self._pattern_input.returnPressed.connect(self._on_search)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
         self._bridge = bridge
-        self._run_async_fn = run_async
-        run_async(bridge.search_rop_gadgets(), self._apply_data, _log_tab_error(type(self).__name__, "search_rop_gadgets"))
+        run_bridge_coroutine_logged(
+            bridge.search_rop_gadgets(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "search_rop_gadgets"),
+            parent=self,
+            event="cutter_search_rop_gadgets",
+            logger=_logger,
+        )
 
     def _on_search(self) -> None:
         """Trigger ROP gadget search with current pattern."""
-        if self._bridge is None or self._run_async_fn is None:
+        if self._bridge is None:
             return
         pattern = self._pattern_input.text().strip()
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.search_rop_gadgets(pattern),
-            self._apply_data,
-            None,
+            on_success=self._apply_data,
+            on_error=None,
+            parent=self,
+            event="cutter_search_rop_gadgets",
+            logger=_logger,
+            pattern=pattern,
         )
 
     def _apply_data(self, result: object) -> None:
@@ -533,11 +599,10 @@ class HexdumpTab(QWidget):
         layout.addWidget(self._output)
 
         self._bridge: CutterBridge | None = None
-        self._run_async_fn: RunAsyncFn | None = None
         self._dump_btn.clicked.connect(self._on_dump)
         self._addr_input.returnPressed.connect(self._on_dump)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Store bridge reference and trigger an automatic dump of the entry region.
 
         Retrieves the binary's section layout and dumps ``_HEXDUMP_AUTO_BYTES`` bytes
@@ -547,15 +612,17 @@ class HexdumpTab(QWidget):
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
         self._bridge = bridge
-        self._run_async_fn = run_async
         if not self._addr_input.text().strip():
-            run_async(
+            run_bridge_coroutine_logged(
                 bridge.get_sections(),
-                self._apply_auto_sections,
-                _log_tab_error(type(self).__name__, "get_sections"),
+                on_success=self._apply_auto_sections,
+                on_error=_log_tab_error(type(self).__name__, "get_sections"),
+                parent=self,
+                event="cutter_get_sections",
+                logger=_logger,
             )
 
     def _apply_auto_sections(self, result: object) -> None:
@@ -564,7 +631,7 @@ class HexdumpTab(QWidget):
         Args:
             result: ``list[SectionInfo]`` returned by ``get_sections``.
         """
-        if self._bridge is None or self._run_async_fn is None or not isinstance(result, list):
+        if self._bridge is None or not isinstance(result, list):
             return
         entries: list[SectionInfo] = [entry for entry in cast("list[object]", result) if isinstance(entry, SectionInfo)]
         if not entries:
@@ -574,15 +641,20 @@ class HexdumpTab(QWidget):
             return
         self._addr_input.setText(f"0x{chosen.virtual_address:X}")
         self._len_input.setText(str(_HEXDUMP_AUTO_BYTES))
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.hexdump(chosen.virtual_address, _HEXDUMP_AUTO_BYTES),
-            self._apply_data,
-            lambda e: self._output.setPlainText(f"[error] {e}"),
+            on_success=self._apply_data,
+            on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_hexdump",
+            logger=_logger,
+            address=hex(chosen.virtual_address),
+            length=_HEXDUMP_AUTO_BYTES,
         )
 
     def _on_dump(self) -> None:
         """Trigger hexdump with current address and length inputs."""
-        if self._bridge is None or self._run_async_fn is None:
+        if self._bridge is None:
             return
         addr_text = self._addr_input.text().strip()
         if not addr_text:
@@ -599,10 +671,15 @@ class HexdumpTab(QWidget):
             )
             self._output.setPlainText("[error] Invalid address or length")
             return
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.hexdump(address, length),
-            self._apply_data,
-            lambda e: self._output.setPlainText(f"[error] {e}"),
+            on_success=self._apply_data,
+            on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_hexdump",
+            logger=_logger,
+            address=hex(address),
+            length=length,
         )
 
     def _apply_data(self, result: object) -> None:
@@ -653,29 +730,31 @@ class ESILConsoleTab(QWidget):
         layout.addLayout(input_row)
 
         self._bridge: CutterBridge | None = None
-        self._run_async_fn: RunAsyncFn | None = None
         self._esil_initialised: bool = False
         self._eval_btn.clicked.connect(self._on_eval)
         self._expr_input.returnPressed.connect(self._on_eval)
         self._step_btn.clicked.connect(self._on_step)
         self._init_btn.clicked.connect(self._on_init_mem)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
         self._bridge = bridge
-        self._run_async_fn = run_async
         if not self._esil_initialised:
             self._output.appendPlainText(_ESIL_WELCOME)
             self._output.appendPlainText("> aeim")
-            run_async(
+            run_bridge_coroutine_logged(
                 bridge.esil_init_memory(),
-                self._on_auto_init_success,
-                self._on_auto_init_error,
+                on_success=self._on_auto_init_success,
+                on_error=self._on_auto_init_error,
+                parent=self,
+                event="cutter_esil_init_memory",
+                logger=_logger,
+                level="info",
             )
 
     def _on_auto_init_success(self, _result: object) -> None:
@@ -698,39 +777,52 @@ class ESILConsoleTab(QWidget):
 
     def _on_eval(self) -> None:
         """Evaluate the current ESIL expression."""
-        if self._bridge is None or self._run_async_fn is None:
+        if self._bridge is None:
             return
         expr = self._expr_input.text().strip()
         if not expr:
             return
         self._output.appendPlainText(f"> ae {expr}")
         self._expr_input.clear()
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.esil_eval(expr),
-            self._apply_result,
-            lambda e: self._output.appendPlainText(f"[error] {e}"),
+            on_success=self._apply_result,
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_eval",
+            logger=_logger,
+            level="info",
+            expression=expr,
         )
 
     def _on_step(self) -> None:
         """Step the ESIL emulator forward one instruction."""
-        if self._bridge is None or self._run_async_fn is None:
+        if self._bridge is None:
             return
         self._output.appendPlainText("> aes")
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.esil_step(),
-            self._apply_result,
-            lambda e: self._output.appendPlainText(f"[error] {e}"),
+            on_success=self._apply_result,
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_step",
+            logger=_logger,
+            level="info",
         )
 
     def _on_init_mem(self) -> None:
         """Initialize ESIL emulation memory."""
-        if self._bridge is None or self._run_async_fn is None:
+        if self._bridge is None:
             return
         self._output.appendPlainText("> aeim")
-        self._run_async_fn(
+        run_bridge_coroutine_logged(
             self._bridge.esil_init_memory(),
-            lambda _: self._output.appendPlainText("[ok] ESIL memory initialized"),
-            lambda e: self._output.appendPlainText(f"[error] {e}"),
+            on_success=lambda _: self._output.appendPlainText("[ok] ESIL memory initialized"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_init_memory",
+            logger=_logger,
+            level="info",
         )
 
     def _apply_result(self, result: object) -> None:
@@ -759,17 +851,38 @@ class TypeBrowserTab(QWidget):
         self._tree.setHeaderLabels(["Name", "Details"])
         layout.addWidget(self._tree)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh all type categories from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
         self._tree.clear()
-        run_async(bridge.get_types(), self._apply_types, _log_tab_error(type(self).__name__, "get_types"))
-        run_async(bridge.get_structs(), self._apply_structs, _log_tab_error(type(self).__name__, "get_structs"))
-        run_async(bridge.get_enums(), self._apply_enums, _log_tab_error(type(self).__name__, "get_enums"))
+        run_bridge_coroutine_logged(
+            bridge.get_types(),
+            on_success=self._apply_types,
+            on_error=_log_tab_error(type(self).__name__, "get_types"),
+            parent=self,
+            event="cutter_get_types",
+            logger=_logger,
+        )
+        run_bridge_coroutine_logged(
+            bridge.get_structs(),
+            on_success=self._apply_structs,
+            on_error=_log_tab_error(type(self).__name__, "get_structs"),
+            parent=self,
+            event="cutter_get_structs",
+            logger=_logger,
+        )
+        run_bridge_coroutine_logged(
+            bridge.get_enums(),
+            on_success=self._apply_enums,
+            on_error=_log_tab_error(type(self).__name__, "get_enums"),
+            parent=self,
+            event="cutter_get_enums",
+            logger=_logger,
+        )
 
     def _apply_types(self, result: object) -> None:
         """Populate the types category.
@@ -870,14 +983,21 @@ class SegmentsTab(QWidget):
         self._table = _make_table(["Name", "Address", "Size", "Permissions", "Type"])
         layout.addWidget(self._table)
 
-    def refresh(self, bridge: CutterBridge, run_async: RunAsyncFn) -> None:
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
 
         Args:
             bridge: CutterBridge instance.
-            run_async: Async runner function.
+            _run_async: Deprecated parameter, retained for backward compatibility.
         """
-        run_async(bridge.get_segments(), self._apply_data, _log_tab_error(type(self).__name__, "get_segments"))
+        run_bridge_coroutine_logged(
+            bridge.get_segments(),
+            on_success=self._apply_data,
+            on_error=_log_tab_error(type(self).__name__, "get_segments"),
+            parent=self,
+            event="cutter_get_segments",
+            logger=_logger,
+        )
 
     def _apply_data(self, result: object) -> None:
         """Populate the table with segment results.

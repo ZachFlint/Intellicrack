@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
 
 
@@ -237,11 +237,16 @@ class HighlightingMixin:
 
         params_json = json.dumps(params)
         parent_obj = self if isinstance(self, QWidget) else None
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             bridge.add_highlight_rule(condition_type, params_json, color),
             on_success=self._on_bridge_rule_added,
             on_error=self._on_bridge_rule_error,
             parent=parent_obj,
+            event="hex_editor_add_highlight_rule",
+            logger=_logger,
+            level="info",
+            condition_type=condition_type,
+            color=color,
         )
 
     @staticmethod
@@ -284,11 +289,15 @@ class HighlightingMixin:
 
         rule_id = self._active_highlight_ids[row]
         parent_obj = self if isinstance(self, QWidget) else None
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             bridge.remove_highlight_rule(rule_id),
             on_success=self._on_bridge_rule_removed,
             on_error=self._on_bridge_rule_remove_error,
             parent=parent_obj,
+            event="hex_editor_remove_highlight_rule",
+            logger=_logger,
+            level="info",
+            rule_id=rule_id,
         )
 
     @staticmethod

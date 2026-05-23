@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
@@ -406,7 +406,15 @@ class ThreadsTab(QWidget):
             if self._system_tab is not None:
                 self._system_tab.update_thread_list(thread_list)
 
-        run_bridge_coroutine_async(self._bridge.get_threads(self._attached_pid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_threads(self._attached_pid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_get_threads",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
 
     def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
         """Toggle automatic thread list refresh.
@@ -429,13 +437,31 @@ class ThreadsTab(QWidget):
         """Suspend every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
-        run_bridge_coroutine_async(self._bridge.suspend(self._attached_pid), None, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.suspend(self._attached_pid),
+            on_success=None,
+            on_error=None,
+            parent=self,
+            event="process_suspend",
+            logger=_logger,
+            level="info",
+            pid=self._attached_pid,
+        )
 
     def _on_resume_thread(self) -> None:
         """Resume every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
-        run_bridge_coroutine_async(self._bridge.resume(self._attached_pid), None, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.resume(self._attached_pid),
+            on_success=None,
+            on_error=None,
+            parent=self,
+            event="process_resume",
+            logger=_logger,
+            level="info",
+            pid=self._attached_pid,
+        )
 
     def _refresh_registers(self) -> None:
         """Refresh register context for the selected thread."""
@@ -458,7 +484,15 @@ class ThreadsTab(QWidget):
                 self._reg_table.setItem(row, 1, QTableWidgetItem(f"0x{int_val:X}"))
                 self._reg_table.setItem(row, 2, QTableWidgetItem(str(int_val)))
 
-        run_bridge_coroutine_async(self._bridge.get_thread_context(tid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_thread_context(tid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_get_thread_context",
+            logger=_logger,
+            tid=tid,
+        )
 
     def _on_reg_cell_changed(self, row: int, col: int) -> None:
         """Mirror register value edits between the Hex and Decimal columns.
@@ -537,7 +571,17 @@ class ThreadsTab(QWidget):
                     )
                     continue
 
-        run_bridge_coroutine_async(self._bridge.set_thread_context(tid, regs), None, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.set_thread_context(tid, regs),
+            on_success=None,
+            on_error=None,
+            parent=self,
+            event="process_set_thread_context",
+            logger=_logger,
+            level="info",
+            tid=tid,
+            register_count=len(regs),
+        )
 
     def _on_stack_walk(self) -> None:
         """Walk the stack of the selected thread."""
@@ -570,7 +614,15 @@ class ThreadsTab(QWidget):
                 disp = disp_raw if isinstance(disp_raw, int) else 0
                 self._stack_table.setItem(row, 4, QTableWidgetItem(f"0x{disp:X}"))
 
-        run_bridge_coroutine_async(self._bridge.stack_walk(tid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.stack_walk(tid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_stack_walk",
+            logger=_logger,
+            tid=tid,
+        )
 
     def _on_seh_enumerate(self) -> None:
         """Enumerate SEH chain for the selected thread."""
@@ -600,7 +652,15 @@ class ThreadsTab(QWidget):
                 self._seh_table.setItem(row, 1, QTableWidgetItem(f"0x{handler_val:X}"))
                 self._seh_table.setItem(row, 2, QTableWidgetItem(f"0x{next_val:X}"))
 
-        run_bridge_coroutine_async(self._bridge.get_seh_chain(tid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_seh_chain(tid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_get_seh_chain",
+            logger=_logger,
+            tid=tid,
+        )
 
     def _on_fiber(self) -> None:
         """Get fiber data for the selected thread."""
@@ -622,7 +682,15 @@ class ThreadsTab(QWidget):
                 val_str = f"0x{val:X}" if isinstance(val, int) else str(val)
                 self._fiber_table.setItem(row, 1, QTableWidgetItem(val_str))
 
-        run_bridge_coroutine_async(self._bridge.get_fiber_data(tid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_fiber_data(tid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_get_fiber_data",
+            logger=_logger,
+            tid=tid,
+        )
 
     def _on_tls(self) -> None:
         """Get TLS slot values for the selected thread."""
@@ -650,4 +718,12 @@ class ThreadsTab(QWidget):
                 tls_val = tls_raw if isinstance(tls_raw, int) else 0
                 self._tls_table.setItem(row, 1, QTableWidgetItem(f"0x{tls_val:X}"))
 
-        run_bridge_coroutine_async(self._bridge.get_tls_values(tid), _on_success, None, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_tls_values(tid),
+            on_success=_on_success,
+            on_error=None,
+            parent=self,
+            event="process_get_tls_values",
+            logger=_logger,
+            tid=tid,
+        )

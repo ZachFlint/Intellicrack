@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor._base import hexcore, hexcore_available
 
 
@@ -324,13 +324,18 @@ class ProcessMemoryMixin:
             return
 
         pid, addr, size = dlg.region_selected
-        _logger.info("process_memory_dispatch", pid=pid, address=hex(addr), size=size)
         coro: Coroutine[object, object, dict[str, Any]] = bridge.open_process_memory(pid, addr, size)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             coro,
             on_success=self._on_process_memory_success,
             on_error=self._on_process_memory_error,
             parent=parent,
+            event="hex_editor_open_process_memory",
+            logger=_logger,
+            level="info",
+            pid=pid,
+            address=hex(addr),
+            size=size,
         )
 
     def _on_process_memory_success(self, result: object) -> None:
