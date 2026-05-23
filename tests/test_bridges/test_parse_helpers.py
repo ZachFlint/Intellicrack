@@ -12,11 +12,11 @@ audit constraint ``every except must log at least at debug`` is upheld.
 
 from __future__ import annotations
 
-import logging
 import struct
 
 import pytest
 
+from intellicrack.bridges import _parse_helpers
 from intellicrack.bridges._parse_helpers import safe_call, safe_int_from_str
 
 
@@ -61,21 +61,33 @@ class TestSafeIntFromStr:
         """An object that is not int/str/bytes returns ``default``."""
         assert safe_int_from_str([1, 2, 3], context="unit_unsupported_type", default=-99) == -99
 
-    def test_logs_at_debug_on_parse_failure(self, caplog: pytest.LogCaptureFixture) -> None:
-        """A failed parse emits a ``safe_int_parse_failed`` debug record."""
-        caplog.set_level(logging.DEBUG, logger="intellicrack.bridges._parse_helpers")
+    def test_logs_at_debug_on_parse_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A failed parse emits a ``safe_int_parse_failed`` debug event."""
+        events: list[tuple[str, dict[str, object]]] = []
+
+        def _record(event: str, **kwargs: object) -> None:
+            events.append((event, kwargs))
+
+        logger = vars(_parse_helpers)["_logger"]
+        monkeypatch.setattr(logger, "debug", _record)
         result = safe_int_from_str("bogus", context="unit_logging_check")
         assert result is None
-        matching = [r for r in caplog.records if "safe_int_parse_failed" in r.getMessage()]
-        assert matching, f"expected debug log emitted, got: {[r.getMessage() for r in caplog.records]}"
+        matching = [(name, kwargs) for name, kwargs in events if name == "safe_int_parse_failed"]
+        assert matching, f"expected debug event emitted, got: {events!r}"
+        assert matching[0][1]["context"] == "unit_logging_check"
 
-    def test_logs_at_debug_on_bool_rejection(self, caplog: pytest.LogCaptureFixture) -> None:
-        """A bool input emits a ``safe_int_parse_failed`` debug record."""
-        caplog.set_level(logging.DEBUG, logger="intellicrack.bridges._parse_helpers")
+    def test_logs_at_debug_on_bool_rejection(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A bool input emits a ``safe_int_parse_failed`` debug event."""
+        events: list[tuple[str, dict[str, object]]] = []
+
+        def _record(event: str, **kwargs: object) -> None:
+            events.append((event, kwargs))
+
+        logger = vars(_parse_helpers)["_logger"]
+        monkeypatch.setattr(logger, "debug", _record)
         true_value: bool = True
         safe_int_from_str(true_value, context="unit_bool_logging")
-        matching = [r for r in caplog.records if "safe_int_parse_failed" in r.getMessage()]
-        assert matching, "bool rejection should log a debug event"
+        assert any(name == "safe_int_parse_failed" for name, _ in events), "bool rejection should log a debug event"
 
     def test_parses_bytes_input(self) -> None:
         """A ``bytes`` input is accepted just like ``str``."""
@@ -158,9 +170,15 @@ class TestSafeCall:
                 default=None,
             )
 
-    def test_logs_at_debug_on_caught_exception(self, caplog: pytest.LogCaptureFixture) -> None:
-        """A caught exception emits a ``safe_call_failed`` debug record."""
-        caplog.set_level(logging.DEBUG, logger="intellicrack.bridges._parse_helpers")
+    def test_logs_at_debug_on_caught_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A caught exception emits a ``safe_call_failed`` debug event."""
+        events: list[tuple[str, dict[str, object]]] = []
+
+        def _record(event: str, **kwargs: object) -> None:
+            events.append((event, kwargs))
+
+        logger = vars(_parse_helpers)["_logger"]
+        monkeypatch.setattr(logger, "debug", _record)
         msg = "nope"
 
         def _raise() -> None:
@@ -173,5 +191,7 @@ class TestSafeCall:
             default=None,
         )
 
-        matching = [r for r in caplog.records if "safe_call_failed" in r.getMessage()]
-        assert matching, f"expected debug log emitted, got: {[r.getMessage() for r in caplog.records]}"
+        matching = [(name, kwargs) for name, kwargs in events if name == "safe_call_failed"]
+        assert matching, f"expected debug event emitted, got: {events!r}"
+        assert matching[0][1]["context"] == "unit_logging_check"
+        assert matching[0][1]["exc_type"] == "ValueError"
