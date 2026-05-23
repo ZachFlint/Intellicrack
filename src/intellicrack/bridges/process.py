@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+from intellicrack.bridges._parse_helpers import safe_call
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
     PE_OPTIONAL_HEADER_OFFSET,
@@ -3516,7 +3517,13 @@ class ProcessBridge(ToolBridgeBase):
                 return ""
             raw = bytes(buffer[str_offset : str_offset + length])
             return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
-        except (ValueError, OSError, ctypes.ArgumentError):
+        except (ValueError, OSError, ctypes.ArgumentError) as exc:
+            _logger.debug(
+                "read_type_name_failed",
+                offset=offset,
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return ""
 
     def _parse_type_info_buffer(
@@ -5112,7 +5119,13 @@ class ProcessBridge(ToolBridgeBase):
                         policies[name] = self._decode_mitigation_flags(name, flags_val, policy)
                     else:
                         policies[name] = {"enabled": False, "error": "query failed"}
-                except (OSError, ctypes.ArgumentError):
+                except (OSError, ctypes.ArgumentError) as exc:
+                    _logger.debug(
+                        "mitigation_policy_query_unsupported",
+                        policy=name,
+                        exc_type=type(exc).__name__,
+                        error=str(exc),
+                    )
                     policies[name] = {"enabled": False, "error": "not supported"}
 
             return policies
@@ -5767,7 +5780,12 @@ class ProcessBridge(ToolBridgeBase):
                     ctypes.sizeof(mask_buf),
                 ):
                     sehop_mask = mask_buf[0]
-            except (OSError, ctypes.ArgumentError):
+            except (OSError, ctypes.ArgumentError) as exc:
+                _logger.debug(
+                    "sehop_options_mask_query_failed",
+                    exc_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 sehop_mask = 0
             finally:
                 if close_handle and proc_handle:
@@ -5827,7 +5845,12 @@ class ProcessBridge(ToolBridgeBase):
                         ctypes.sizeof(policy_buf),
                     ):
                         disabled = bool(policy_buf.value & 1)
-                except (OSError, ctypes.ArgumentError):
+                except (OSError, ctypes.ArgumentError) as exc:
+                    _logger.debug(
+                        "extension_point_policy_query_failed",
+                        exc_type=type(exc).__name__,
+                        error=str(exc),
+                    )
                     disabled = False
             return {"disable_extension_points": disabled}
         finally:
@@ -6458,7 +6481,8 @@ class ProcessBridge(ToolBridgeBase):
                 return None
             sections_off = nt_offset + PE_OPTIONAL_HEADER_OFFSET + size_of_optional_header
             sections = list(iterate_section_headers(data, sections_off, num_sections))
-        except struct.error:
+        except struct.error as exc:
+            _logger.debug("parse_pe_com_descriptor_struct_error", error=str(exc))
             return None
         return com_rva, sections
 
@@ -6511,11 +6535,13 @@ class ProcessBridge(ToolBridgeBase):
             or cor20_read.value < _DOTNET_COR20_HEADER_SIZE
         ):
             return None
-        try:
-            meta_rva = int(struct.unpack_from("<I", cor20_buf.raw, 8)[0])
-        except struct.error:
-            return None
-        if meta_rva == 0:
+        meta_rva = safe_call(
+            lambda: int(struct.unpack_from("<I", cor20_buf.raw, 8)[0]),
+            exceptions=struct.error,
+            context="read_cor20_version_meta_rva",
+            default=None,
+        )
+        if meta_rva is None or meta_rva == 0:
             return None
         return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
 
@@ -6573,7 +6599,8 @@ class ProcessBridge(ToolBridgeBase):
                 return None
             version_bytes = meta_data[16 : 16 + version_length]
             version_str = version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
-        except struct.error:
+        except struct.error as exc:
+            _logger.debug("read_metadata_version_struct_error", error=str(exc))
             return None
         else:
             return version_str or None

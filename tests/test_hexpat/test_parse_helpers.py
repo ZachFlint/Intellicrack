@@ -12,10 +12,9 @@ hexpat runtime never silently swallows parse failures again.
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
+from intellicrack.core.hexpat import _parse_helpers
 from intellicrack.core.hexpat._parse_helpers import safe_call, safe_int_from_str
 
 
@@ -43,12 +42,21 @@ class TestHexpatSafeIntFromStr:
         true_value: bool = True
         assert safe_int_from_str(true_value, context="unit_bool") is None
 
-    def test_logs_at_debug_on_failure(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_logs_at_debug_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A failed parse emits a debug-level structured record."""
-        caplog.set_level(logging.DEBUG, logger="intellicrack.core.hexpat._parse_helpers")
+        events: list[tuple[str, dict[str, object]]] = []
+
+        def _record(event: str, **kwargs: object) -> None:
+            events.append((event, kwargs))
+
+        logger = vars(_parse_helpers)["_logger"]
+        monkeypatch.setattr(logger, "debug", _record)
         safe_int_from_str("not-a-number", context="unit_log")
-        matching = [r for r in caplog.records if "safe_int_parse_failed" in r.getMessage()]
-        assert matching, "expected hexpat helper to log on failure"
+        assert any(name == "safe_int_parse_failed" for name, _ in events), f"expected debug event emitted, got: {events!r}"
+        for name, kwargs in events:
+            if name == "safe_int_parse_failed":
+                assert kwargs["context"] == "unit_log"
+                break
 
 
 class TestHexpatSafeCall:
@@ -68,9 +76,10 @@ class TestHexpatSafeCall:
 
     def test_returns_default_on_value_error(self) -> None:
         """``ValueError`` returns the configured ``default``."""
+        msg = "bad"
 
         def _raise() -> int:
-            raise ValueError("bad")
+            raise ValueError(msg)
 
         assert (
             safe_call(
@@ -84,9 +93,10 @@ class TestHexpatSafeCall:
 
     def test_returns_default_on_overflow(self) -> None:
         """``OverflowError`` is captured when listed in ``exceptions``."""
+        msg = "big"
 
         def _raise() -> int:
-            raise OverflowError("too big")
+            raise OverflowError(msg)
 
         assert (
             safe_call(
@@ -100,9 +110,10 @@ class TestHexpatSafeCall:
 
     def test_propagates_uncaught_exception(self) -> None:
         """Exceptions not listed propagate."""
+        msg = "nope"
 
         def _raise() -> None:
-            raise RuntimeError("nope")
+            raise RuntimeError(msg)
 
         with pytest.raises(RuntimeError, match="nope"):
             safe_call(
@@ -112,12 +123,19 @@ class TestHexpatSafeCall:
                 default=None,
             )
 
-    def test_logs_at_debug_on_failure(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_logs_at_debug_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Caught exception emits a ``safe_call_failed`` debug record."""
-        caplog.set_level(logging.DEBUG, logger="intellicrack.core.hexpat._parse_helpers")
+        events: list[tuple[str, dict[str, object]]] = []
+
+        def _record(event: str, **kwargs: object) -> None:
+            events.append((event, kwargs))
+
+        logger = vars(_parse_helpers)["_logger"]
+        monkeypatch.setattr(logger, "debug", _record)
+        msg = "debug-log-check"
 
         def _raise() -> None:
-            raise ValueError("debug-log-check")
+            raise ValueError(msg)
 
         safe_call(
             _raise,
@@ -125,5 +143,4 @@ class TestHexpatSafeCall:
             context="unit_log",
             default=None,
         )
-        matching = [r for r in caplog.records if "safe_call_failed" in r.getMessage()]
-        assert matching, "expected hexpat helper to log on failure"
+        assert any(name == "safe_call_failed" for name, _ in events), f"expected debug event emitted, got: {events!r}"

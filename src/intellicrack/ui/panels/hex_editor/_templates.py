@@ -374,7 +374,12 @@ class TemplatesMixin:
 
         try:
             magic_raw: object = self.document.read(0, 4)
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as exc:
+            _logger.debug(
+                "auto_bookmark_magic_read_failed",
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return
 
         if isinstance(magic_raw, bytes):
@@ -416,7 +421,12 @@ class TemplatesMixin:
                 dos_data = bytes(cast("list[int]", dos_raw))
             else:
                 return
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as exc:
+            _logger.debug(
+                "pe_bookmark_dos_header_read_failed",
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return
 
         self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", "#FF6B6B")
@@ -436,7 +446,13 @@ class TemplatesMixin:
                 coff_data = bytes(cast("list[int]", coff_raw))
             else:
                 return
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as exc:
+            _logger.debug(
+                "pe_bookmark_coff_header_read_failed",
+                e_lfanew=e_lfanew,
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return
 
         if len(coff_data) < 4 + PE_COFF_HEADER_SIZE or coff_data[:4] != PE_SIGNATURE:
@@ -486,7 +502,14 @@ class TemplatesMixin:
                     sec_name = bytes(cast("list[int]", sec_raw)).rstrip(b"\x00").decode("ascii", errors="replace")
                 else:
                     sec_name = f"Section {i}"
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError) as exc:
+                _logger.debug(
+                    "pe_bookmark_section_read_failed",
+                    section_index=i,
+                    section_offset=sec_off,
+                    exc_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 sec_name = f"Section {i}"
             color = section_colors[i % len(section_colors)]
             self.document.add_bookmark(sec_off, 40, sec_name, color)
@@ -510,7 +533,12 @@ class TemplatesMixin:
                 ei_class = bytes(cast("list[int]", ident_raw))[0]
             else:
                 return
-        except (AttributeError, ValueError):
+        except (AttributeError, ValueError) as exc:
+            _logger.debug(
+                "elf_bookmark_ei_class_read_failed",
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
             return
 
         is_64 = ei_class == _ELF_CLASS_64
@@ -526,7 +554,12 @@ class TemplatesMixin:
                     hdr = bytes(cast("list[int]", hdr_raw))
                 else:
                     return
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError) as exc:
+                _logger.debug(
+                    "elf64_bookmark_header_read_failed",
+                    exc_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 return
 
             ph_offset = int.from_bytes(hdr[0:8], "little")
@@ -542,7 +575,12 @@ class TemplatesMixin:
                     count_data = bytes(cast("list[int]", count_raw))
                 else:
                     return
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError) as exc:
+                _logger.debug(
+                    "elf64_bookmark_header_counts_read_failed",
+                    exc_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 return
 
             ph_count = int.from_bytes(count_data[0:2], "little")
@@ -558,7 +596,12 @@ class TemplatesMixin:
                     hdr = bytes(cast("list[int]", hdr_raw))
                 else:
                     return
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError) as exc:
+                _logger.debug(
+                    "elf32_bookmark_header_read_failed",
+                    exc_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 return
 
             ph_offset = int.from_bytes(hdr[0:4], "little")

@@ -5617,9 +5617,8 @@ class X64DbgBridge(DebuggerBridge):
                     raw_text = entry.get("text")
                     addr_str = raw_addr if isinstance(raw_addr, str) else ""
                     text = raw_text if isinstance(raw_text, str) else ""
-                    try:
-                        addr = int(addr_str, 0)
-                    except ValueError:
+                    addr = safe_int_from_str(addr_str, base=0, context="x64dbg_get_labels")
+                    if addr is None:
                         continue
                     if start <= addr <= end:
                         labels.append({"address": addr_str, "text": text})
@@ -5696,9 +5695,8 @@ class X64DbgBridge(DebuggerBridge):
                     raw_text = entry.get("text")
                     addr_str = raw_addr if isinstance(raw_addr, str) else ""
                     text = raw_text if isinstance(raw_text, str) else ""
-                    try:
-                        addr = int(addr_str, 0)
-                    except ValueError:
+                    addr = safe_int_from_str(addr_str, base=0, context="x64dbg_get_comments")
+                    if addr is None:
                         continue
                     if start <= addr <= end:
                         comments.append({"address": addr_str, "text": text})
@@ -8107,10 +8105,7 @@ class X64DbgBridge(DebuggerBridge):
         if isinstance(raw, int):
             return raw
         if isinstance(raw, str) and raw:
-            try:
-                return int(raw, 0)
-            except ValueError:
-                return None
+            return safe_int_from_str(raw, base=0, context="x64dbg_coerce_hex_int")
         return None
 
     async def _patch_process_heap_flags(self, peb_addr: int) -> tuple[bool, str | None]:
