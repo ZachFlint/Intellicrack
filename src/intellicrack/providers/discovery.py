@@ -108,7 +108,7 @@ class DiscoveryCache:
         self._ttl_seconds = ttl_seconds
         self._cache: dict[ProviderName, _CacheEntry] = {}
         self._cache_lock = asyncio.Lock()
-        _cache_logger.info("discovery_cache_initialized", ttl_seconds=ttl_seconds)
+        _logger.info("discovery_cache_initialized", component="discovery_cache", ttl_seconds=ttl_seconds)
 
     async def aget(self, provider: ProviderName) -> list[ModelInfo] | None:
         """Asynchronously get cached models for a provider.
@@ -119,6 +119,7 @@ class DiscoveryCache:
         Returns:
             list[ModelInfo] | None: Cached models, or None if missing/expired.
         """
+        _cache_logger.debug("discovery_cache_aget", provider=provider)
         async with self._cache_lock:
             return self._get_locked(provider)
 
@@ -163,6 +164,7 @@ class DiscoveryCache:
             provider: The provider to cache models for.
             models: Models to cache.
         """
+        _cache_logger.debug("discovery_cache_aset", provider=provider, model_count=len(models))
         async with self._cache_lock:
             self._set_locked(provider, models)
 
@@ -211,6 +213,7 @@ class DiscoveryCache:
         Args:
             provider: Specific provider to invalidate, or None for all.
         """
+        _cache_logger.debug("discovery_cache_ainvalidate", provider=provider)
         async with self._cache_lock:
             self._invalidate_locked(provider)
 
@@ -944,6 +947,7 @@ class ModelDiscovery:
         valid_task_types = {"analysis", "generation", "chat"}
         if task_type not in valid_task_types:
             msg = f"unknown task_type {task_type!r}; expected one of {sorted(valid_task_types)}"
+            _logger.warning("get_recommended_model_raise_pending", error_type="ValueError")
             raise ValueError(msg)
 
         all_models = self._cache.get_all_cached()

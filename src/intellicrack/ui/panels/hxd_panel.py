@@ -70,7 +70,8 @@ def _find_hxd_executable() -> Path | None:
                 candidate = Path(str(install_dir)) / _HXD_EXE_NAME
                 if candidate.exists() and candidate.is_file():
                     return candidate
-        except (FileNotFoundError, OSError):
+        except OSError as exc:
+            _logger.warning("hxd_registry_path_unavailable", reg_path=reg_path, error=str(exc))
             continue
 
     for common_dir in _HXD_COMMON_DIRS:
@@ -81,7 +82,7 @@ def _find_hxd_executable() -> Path | None:
     path_dirs = os.environ.get("PATH", "").split(os.pathsep)
     for dir_str in path_dirs:
         candidate = Path(dir_str) / _HXD_EXE_NAME
-        if candidate.exists() and candidate.is_file():
+        if candidate.is_file():
             return candidate
 
     return None

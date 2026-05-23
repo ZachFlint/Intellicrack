@@ -468,6 +468,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If the client is not yet connected.
         """
         if self.client is None:
+            self._logger.warning("make_grok_api_call_raise_pending", error_type="ProviderError")
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         with self._translate_openai_errors(
@@ -520,6 +521,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If the SDK client is not yet connected.
         """
         if self.client is None:
+            self._logger.warning("dispatch_grok_create_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
         if tools is not None and tool_choice is not None:
@@ -657,6 +659,7 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If the SDK client is not yet connected.
         """
         if self.client is None:
+            self._logger.warning("open_grok_stream_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
         stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}

@@ -326,7 +326,7 @@ class ModulesTab(QWidget):
             self._mod_count.setText(f"{len(typed_result)} modules")
 
         def _on_error(exc: object) -> None:
-            _logger.warning("Module enumeration failed: %s", exc)
+            _logger.warning("module_enumeration_failed", error=str(exc))
             QMessageBox.warning(self, "Module Enumeration Error", str(exc))
 
         run_bridge_coroutine_logged(

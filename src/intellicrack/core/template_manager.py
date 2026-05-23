@@ -179,11 +179,8 @@ class TemplateManager:
             no_entries_message = "list_templates_detailed returned no usable entries"
             raise TemplateBootstrapError(no_entries_message, self.failed_templates)
 
-        exported = 0
-        for tmpl_entry in template_entries:
-            if self._bootstrap_single_template(tmpl_entry, export_fn):
-                exported += 1
-
+        exported = sum(bool(self._bootstrap_single_template(tmpl_entry, export_fn))
+                   for tmpl_entry in template_entries)
         _logger.info("builtin_templates_bootstrapped", count=exported)
 
         if self.failed_templates:

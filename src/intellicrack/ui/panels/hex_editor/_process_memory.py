@@ -234,7 +234,7 @@ class ProcessMemoryDialog(QDialog):
                 regions.append((start, end - start, prot, _MEM_COMMIT))
         except (OSError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_procfs_failed")
+            _logger.exception("process_regions_procfs_failed", pid=pid)
             return
 
         self._populate_regions(regions)

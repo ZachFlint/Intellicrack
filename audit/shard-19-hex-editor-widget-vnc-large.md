@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/ui/panels/hex_editor/__init__.py — LOC 17
+### src/intellicrack/ui/panels/hex_editor/**init**.py — LOC 17
 
 **Logger status**: not present (re-export only)
 

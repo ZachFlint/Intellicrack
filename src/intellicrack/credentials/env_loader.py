@@ -90,10 +90,14 @@ def _strip_unquoted_inline_comment(value: str) -> str:
         str: The value with any trailing inline comment removed.
     """
     length = len(value)
-    for i in range(length):
-        if value[i] == "#" and (i == 0 or value[i - 1] in {" ", "\t"}):
-            return value[:i]
-    return value
+    return next(
+        (
+            value[:i]
+            for i in range(length)
+            if value[i] == "#" and (i == 0 or value[i - 1] in {" ", "\t"})
+        ),
+        value,
+    )
 
 
 def _parse_env_value(raw: str) -> str:
@@ -128,10 +132,7 @@ def _parse_env_value(raw: str) -> str:
         end = len(stripped) - 1
         while end > 0 and stripped[end] != "'":
             end -= 1
-        if end > 0:
-            return stripped[1:end]
-        return stripped[1:]
-
+        return stripped[1:end] if end > 0 else stripped[1:]
     cleaned = _strip_unquoted_inline_comment(stripped)
     return cleaned.rstrip()
 
@@ -201,9 +202,7 @@ def _detect_eol(text: str) -> str:
         str: ``"\r\n"`` if CRLF line endings appear anywhere, otherwise
             ``"\n"``.
     """
-    if "\r\n" in text:
-        return "\r\n"
-    return "\n"
+    return "\r\n" if "\r\n" in text else "\n"
 
 
 @dataclass

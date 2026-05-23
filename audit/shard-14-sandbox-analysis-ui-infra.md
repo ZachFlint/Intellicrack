@@ -111,7 +111,7 @@ Notes: All `except` clauses log. All file-read branches log success and failure.
 
 Notes: Every path resolution helper logs at `debug` with structured kwargs. The single `except FileNotFoundError` at `resource_exists` (L188) logs a warning before falling through — correct.
 
-### src/intellicrack/ui/resources/__init__.py — LOC 24
+### src/intellicrack/ui/resources/**init**.py — LOC 24
 
 **Logger status**: `missing` (acceptable — re-exports only)
 
@@ -170,7 +170,7 @@ Notes: Logger import is present but `_logger` is never called anywhere in this m
 
 Notes: Every helper (`show_error`, `show_warning`, `show_info`) emits a structured log with the appropriate level. The `exc` argument routes traceback to `exc_info=exc` when supplied.
 
-### src/intellicrack/ui/__init__.py — LOC 91
+### src/intellicrack/ui/**init**.py — LOC 91
 
 **Logger status**: `missing` (acceptable — re-exports only)
 

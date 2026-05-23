@@ -111,7 +111,7 @@ class CalculatorMixin:
         try:
             value = self._parse_input_value(text)
         except ValueError as exc:
-            _logger.debug("calc_input_parse_failed", text=text, error=str(exc))
+            _logger.warning("calc_input_parse_failed", text=text, error=str(exc))
             self._calc_results_tree.addTopLevelItem(
                 QTreeWidgetItem(["Error", str(exc)]),
             )
@@ -144,7 +144,7 @@ class CalculatorMixin:
                 unpacked = struct.unpack(fmt, packed)[0]
                 self._add_result(label, str(unpacked))
             except (struct.error, OverflowError) as exc:
-                _logger.debug("calc_int_overflow", label=label, value=value, error=str(exc))
+                _logger.warning("calc_int_overflow", label=label, value=value, error=str(exc))
                 self._add_result(label, "overflow")
 
         for label, fmt in [(f"float32_{order_label}", f"{byte_order}f"), (f"float64_{order_label}", f"{byte_order}d")]:
@@ -155,7 +155,7 @@ class CalculatorMixin:
                 float_val = struct.unpack(fmt, packed)[0]
                 self._add_result(label, f"{float_val}")
             except (struct.error, OverflowError) as exc:
-                _logger.debug("calc_float_pack_failed", label=label, error=str(exc))
+                _logger.warning("calc_float_pack_failed", label=label, error=str(exc))
                 self._add_result(label, "N/A")
 
         self._update_ieee754_display(value, byte_order)
@@ -191,9 +191,7 @@ class CalculatorMixin:
             return int(lower, 16)
         if lower.startswith("0b"):
             return int(lower, 2)
-        if lower.startswith("0o"):
-            return int(lower, 8)
-        return int(text, 10)
+        return int(lower, 8) if lower.startswith("0o") else int(text, 10)
 
     @staticmethod
     def _to_signed(value: int, size: int) -> int:
@@ -209,9 +207,7 @@ class CalculatorMixin:
         mask = (1 << (size * _BITS_PER_BYTE)) - 1
         val = value & mask
         sign_bit = 1 << (size * _BITS_PER_BYTE - 1)
-        if val & sign_bit:
-            return val - (1 << (size * _BITS_PER_BYTE))
-        return val
+        return val - (1 << (size * _BITS_PER_BYTE)) if val & sign_bit else val
 
     def _update_ieee754_display(self, value: int, byte_order: str) -> None:
         """Update the IEEE 754 bit-layout labels.
@@ -232,7 +228,7 @@ class CalculatorMixin:
                     f"float32: {fval}  [S={sign} E={exp} M=0x{mantissa:06X}]",
                 )
             except struct.error as exc:
-                _logger.debug("calc_ieee754_pack_failed", label="float32", error=str(exc))
+                _logger.warning("calc_ieee754_pack_failed", label="float32", error=str(exc))
                 self._calc_float32_label.setText("float32: N/A")
 
         if self._calc_float64_label is not None:
@@ -247,5 +243,5 @@ class CalculatorMixin:
                     f"float64: {fval}  [S={sign} E={exp} M=0x{mantissa:013X}]",
                 )
             except struct.error as exc:
-                _logger.debug("calc_ieee754_pack_failed", label="float64", error=str(exc))
+                _logger.warning("calc_ieee754_pack_failed", label="float64", error=str(exc))
                 self._calc_float64_label.setText("float64: N/A")

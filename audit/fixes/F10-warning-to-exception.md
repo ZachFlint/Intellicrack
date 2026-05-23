@@ -7,6 +7,7 @@ Per project memory: `_logger.warning(...)` is the correct level when re-raising 
 ## Fix template
 
 Before:
+
 ```python
 except (OSError, RuntimeError) as exc:
     _logger.warning("operation_failed", error=str(exc))
@@ -14,6 +15,7 @@ except (OSError, RuntimeError) as exc:
 ```
 
 After:
+
 ```python
 except (OSError, RuntimeError):
     _logger.exception("operation_failed")

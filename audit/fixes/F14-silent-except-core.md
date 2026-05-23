@@ -20,6 +20,7 @@ All six transform-node `process()` methods catch and re-raise `TransformParamErr
 | HIGH | 697-699 | `PadNode.process` byte-param except | `pad_byte_param_failed`, `error=str(exc)` |
 
 Fix template:
+
 ```python
 except re.error as exc:
     _logger.warning("regex_compile_failed", pattern=raw_pattern, error=str(exc))
@@ -37,6 +38,7 @@ Bootstrap-helper silent excepts (must use a **lazy** logger to avoid bootstrap r
 | HIGH | 99 | Same function, `except (OSError, ValueError, KeyError)` when `Config.load` fails |
 
 Fix template (use a lazy bootstrap logger; do NOT use module-level `_logger` because this IS the bootstrap):
+
 ```python
 except ImportError as exc:
     # Use a bootstrap logger acquired lazily to avoid re-entrancy
@@ -57,6 +59,7 @@ except ImportError as exc:
 | HIGH | 145 | `except OSError: return False` |
 
 Fix:
+
 ```python
 except ProcessLookupError:
     _logger.debug("pid_probe_no_such_process", pid=pid)

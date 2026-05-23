@@ -4,8 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Error-logging helpers for typed-exception passthrough patterns.
 
-These helpers exist so every ``except ... : raise`` site emits a structured log event before re-raising, satisfying the project rule that every except
-clause must log even when re-raising. Centralizing the pattern keeps call sites terse and consistent across providers, bridges, and core modules.
+These helpers exist so every ``except ... : raise`` site emits a structured log event before re-raising, satisfying the project rule that
+every except clause must log even when re-raising. Centralizing the pattern keeps call sites terse and consistent across providers, bridges,
+and core modules.
 """
 
 from __future__ import annotations
@@ -40,7 +41,8 @@ def log_passthrough(
         **context: Additional structured kwargs (provider, model, op, etc.).
     """
     logger.warning(
-        event,
+        "passthrough_exception",
+        op_event=event,
         error=str(exc),
         error_type=type(exc).__name__,
         **context,

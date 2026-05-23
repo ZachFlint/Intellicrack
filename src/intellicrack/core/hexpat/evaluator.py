@@ -899,10 +899,10 @@ class HexPatEvaluator:
                 for stmt in node.body:
                     self._eval_stmt(stmt)
             except _BreakSignalError:
-                _logger.debug("hexpat_while_break", line=node.line, column=node.column)
+                _logger.warning("hexpat_while_break", line=node.line, column=node.column)
                 break
             except _ContinueSignalError:
-                _logger.debug("hexpat_while_continue", line=node.line, column=node.column)
+                _logger.warning("hexpat_while_continue", line=node.line, column=node.column)
                 continue
 
     def _eval_for(self, node: ForStmt) -> None:
@@ -926,10 +926,10 @@ class HexPatEvaluator:
                     for stmt in node.body:
                         self._eval_stmt(stmt)
                 except _BreakSignalError:
-                    _logger.debug("hexpat_for_break", line=node.line, column=node.column)
+                    _logger.warning("hexpat_for_break", line=node.line, column=node.column)
                     break
                 except _ContinueSignalError:
-                    _logger.debug("hexpat_for_continue", line=node.line, column=node.column)
+                    _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
                 if node.update is not None:
                     self._eval_expr(node.update)
         finally:
@@ -964,7 +964,7 @@ class HexPatEvaluator:
             for stmt in node.try_body:
                 self._eval_stmt(stmt)
         except (HexPatRuntimeError, HexPatTypeError):
-            _logger.debug("hexpat_try_caught", line=node.line, column=node.column)
+            _logger.warning("hexpat_try_caught", line=node.line, column=node.column)
             for stmt in node.catch_body:
                 self._eval_stmt(stmt)
 
@@ -1304,7 +1304,7 @@ class HexPatEvaluator:
                     self._offset += int(parent_result["size"])
                     parent_members = _extract_members_dict(parent_result, "_members", pop=True)
                     if parent_members is not None:
-                        members.update(parent_members)
+                        members |= parent_members
 
             for stmt in type_info.decl.body:
                 self._eval_stmt_collect(stmt, children)
@@ -1379,7 +1379,7 @@ class HexPatEvaluator:
                 max_size = max(max_size, member_size)
 
             raw = self._data.read(offset, max(max_size, 0))
-            members.update(union_scope.bindings)
+            members |= union_scope.bindings
         finally:
             self._offset = saved_offset
             self._scope = saved_scope
@@ -2547,12 +2547,8 @@ class HexPatEvaluator:
         element_size = self._sizeof_type_node(stmt.type_node)
         if stmt.array_size is not None:
             size_pv = self._eval_expr(stmt.array_size)
-            if isinstance(size_pv.value, int):
-                return element_size * size_pv.value
-            return 0
-        if stmt.while_condition is not None:
-            return 0
-        return element_size
+            return element_size * size_pv.value if isinstance(size_pv.value, int) else 0
+        return 0 if stmt.while_condition is not None else element_size
 
     def _sizeof_placement_stmt(self, stmt: PlacementStmt) -> int:
         """Compute the static size contribution of a PlacementStmt.
@@ -2566,12 +2562,8 @@ class HexPatEvaluator:
         element_size = self._sizeof_type_node(stmt.type_node)
         if stmt.array_size is not None:
             size_pv = self._eval_expr(stmt.array_size)
-            if isinstance(size_pv.value, int):
-                return element_size * size_pv.value
-            return 0
-        if stmt.while_condition is not None:
-            return 0
-        return element_size
+            return element_size * size_pv.value if isinstance(size_pv.value, int) else 0
+        return 0 if stmt.while_condition is not None else element_size
 
     def _sizeof_conditional_field(self, stmt: ConditionalField) -> int:
         """Compute the static size of a ConditionalField by evaluating the branch.
@@ -2588,13 +2580,10 @@ class HexPatEvaluator:
         try:
             cond = self._eval_expr(stmt.condition)
         except (HexPatRuntimeError, HexPatTypeError):
-            _logger.debug("hexpat_sizeof_conditional_eval_failed", line=stmt.line)
+            _logger.warning("hexpat_sizeof_conditional_eval_failed", line=stmt.line)
             return 0
         branch = stmt.true_fields if _truthy(cond) else stmt.false_fields
-        total = 0
-        for inner in branch:
-            total += self._sizeof_struct_stmt(inner)
-        return total
+        return sum(self._sizeof_struct_stmt(inner) for inner in branch)
 
     def _sizeof_union(self, info: UnionTypeInfo) -> int:
         """Compute the byte size of a union type (maximum field size).
@@ -2881,10 +2870,12 @@ class HexPatEvaluator:
             msg = (
                 f"template type '{type_name}' takes {len(params)} parameter{'s' if len(params) != 1 else ''} but {len(args)} were supplied"
             )
+            _logger.warning("bind_template_args_arity_mismatch", type_name=type_name, param_count=len(params), arg_count=len(args))
             raise HexPatTypeError(msg, line, column)
-        bindings: dict[str, ExprNode | TypeNode] = {}
-        for param, arg in zip(params, args, strict=True):
-            bindings[param.name] = self._template_arg_to_type_node(arg)
+        bindings: dict[str, ExprNode | TypeNode] = {
+            param.name: self._template_arg_to_type_node(arg)
+            for param, arg in zip(params, args, strict=True)
+        }
         return bindings
 
     @staticmethod

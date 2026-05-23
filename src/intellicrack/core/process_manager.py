@@ -104,9 +104,9 @@ def _pid_exists_windows(pid: int) -> bool:
         if last_error == _WIN_INVALID_PARAMETER:
             return False
         handle = cast("int | None", open_process(_WIN_PROCESS_QUERY_INFORMATION, 0, pid))
-        if not handle:
-            second_error = kernel32.GetLastError()
-            return second_error == _WIN_ACCESS_DENIED
+    if not handle:
+        second_error = kernel32.GetLastError()
+        return second_error == _WIN_ACCESS_DENIED
 
     try:
         exit_code = ctypes.c_uint32(0)
@@ -139,13 +139,13 @@ def _pid_exists_posix(pid: int) -> bool:
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
-        _logger.debug("pid_probe_no_such_process", pid=pid)
+        _logger.warning("pid_probe_no_such_process", pid=pid)
         return False
     except PermissionError:
-        _logger.debug("pid_probe_permission_denied", pid=pid)
+        _logger.warning("pid_probe_permission_denied", pid=pid)
         return True
     except OSError as exc:
-        _logger.debug("pid_probe_oserror", pid=pid, error=str(exc))
+        _logger.warning("pid_probe_oserror", pid=pid, error=str(exc))
         return False
     return True
 

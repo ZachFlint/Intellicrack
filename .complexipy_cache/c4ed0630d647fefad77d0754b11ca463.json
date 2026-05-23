@@ -31,6 +31,18 @@
       "path": "src\\intellicrack\\bridges\\_lazy.py"
     },
     {
+      "complexity": 1,
+      "file_name": "_parse_helpers.py",
+      "function_name": "safe_call",
+      "path": "src\\intellicrack\\bridges\\_parse_helpers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_parse_helpers.py",
+      "function_name": "safe_int_from_str",
+      "path": "src\\intellicrack\\bridges\\_parse_helpers.py"
+    },
+    {
       "complexity": 0,
       "file_name": "_pe_format.py",
       "function_name": "get_data_directory_offset",
@@ -657,6 +669,12 @@
     {
       "complexity": 0,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::detach",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::execute_command",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -687,7 +705,37 @@
     {
       "complexity": 0,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::remove_breakpoint",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::run",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::seek",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::set_register",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::step_into",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::step_over",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -754,6 +802,12 @@
       "complexity": 1,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::analyze",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::attach",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1017,6 +1071,12 @@
     {
       "complexity": 1,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::write_memory",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::write_string",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -1155,6 +1215,12 @@
     {
       "complexity": 2,
       "file_name": "cutter.py",
+      "function_name": "_parse_int_response",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "cutter.py",
       "function_name": "is_rizin_64bit",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -1167,6 +1233,12 @@
     {
       "complexity": 3,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::_debug_cmd_json",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::_normalize_class_fields",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -1174,6 +1246,12 @@
       "complexity": 3,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::_normalize_class_methods",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::_require_attached",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1215,7 +1293,13 @@
     {
       "complexity": 4,
       "file_name": "cutter.py",
-      "function_name": "CutterBridge::load_binary",
+      "function_name": "CutterBridge::get_threads",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::read_memory",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1245,7 +1329,19 @@
     {
       "complexity": 6,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::get_registers",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::initialize",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::load_binary",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1303,6 +1399,12 @@
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
+      "complexity": 9,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::set_breakpoint",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
       "complexity": 10,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::search_strings",
@@ -1317,7 +1419,19 @@
     {
       "complexity": 11,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::get_memory_regions",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::resolve_flag",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::get_modules",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -1330,6 +1444,12 @@
       "complexity": 20,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::get_function",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 21,
+      "file_name": "cutter.py",
+      "function_name": "CutterBridge::get_breakpoints",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -4753,7 +4873,7 @@
       "path": "src\\intellicrack\\bridges\\named_pipe_client.py"
     },
     {
-      "complexity": 14,
+      "complexity": 15,
       "file_name": "named_pipe_client.py",
       "function_name": "NamedPipeClient::close",
       "path": "src\\intellicrack\\bridges\\named_pipe_client.py"
@@ -6105,12 +6225,6 @@
     {
       "complexity": 0,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_cancel_step_waiter",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_compile_wildcard_regex",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -6382,6 +6496,12 @@
       "complexity": 0,
       "file_name": "x64dbg.py",
       "function_name": "get_keystone",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_cancel_step_waiter",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -6855,7 +6975,7 @@
     {
       "complexity": 4,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_coerce_address",
+      "function_name": "X64DbgBridge::_coerce_hex_int",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -6969,7 +7089,7 @@
     {
       "complexity": 5,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_coerce_hex_int",
+      "function_name": "X64DbgBridge::_coerce_address",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7000,6 +7120,12 @@
       "complexity": 5,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::read_teb",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "x64dbg.py",
+      "function_name": "_coerce_address",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7054,12 +7180,6 @@
       "complexity": 6,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::scan_memory",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "x64dbg.py",
-      "function_name": "_coerce_address",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7219,12 +7339,6 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
-      "complexity": 13,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_verify_breakpoint_applied",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
       "complexity": 14,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_detect_process_arch",
@@ -7234,12 +7348,6 @@
       "complexity": 14,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_get_modules",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 14,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_lookup_annotation_text",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7261,15 +7369,27 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
-      "complexity": 16,
+      "complexity": 15,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_get_parent_pid",
+      "function_name": "X64DbgBridge::_lookup_annotation_text",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_verify_breakpoint_applied",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_wait_for_instruction_pointer",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
       "complexity": 16,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_wait_for_instruction_pointer",
+      "function_name": "X64DbgBridge::_get_parent_pid",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7315,18 +7435,6 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
-      "complexity": 20,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::get_comments",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 20,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::get_labels",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
       "complexity": 21,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_stack_trace",
@@ -7336,6 +7444,18 @@
       "complexity": 21,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_watchpoints",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::get_comments",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 23,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::get_labels",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7367,6 +7487,12 @@
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_breakpoints",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_optional_imports.py",
+      "function_name": "require_yara",
+      "path": "src\\intellicrack\\core\\_optional_imports.py"
     },
     {
       "complexity": 0,
@@ -7577,6 +7703,24 @@
       "file_name": "disassembler.py",
       "function_name": "HexDisassembler::_resolve_arch_mode",
       "path": "src\\intellicrack\\core\\disassembler.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "error_logging.py",
+      "function_name": "log_passthrough",
+      "path": "src\\intellicrack\\core\\error_logging.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_parse_helpers.py",
+      "function_name": "safe_call",
+      "path": "src\\intellicrack\\core\\hexpat\\_parse_helpers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_parse_helpers.py",
+      "function_name": "safe_int_from_str",
+      "path": "src\\intellicrack\\core\\hexpat\\_parse_helpers.py"
     },
     {
       "complexity": 0,
@@ -9553,7 +9697,7 @@
       "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
     },
     {
-      "complexity": 14,
+      "complexity": 16,
       "file_name": "stdlib.py",
       "function_name": "BuiltinFunctions::_format_string",
       "path": "src\\intellicrack\\core\\hexpat\\stdlib.py"
@@ -13117,7 +13261,7 @@
       "path": "src\\intellicrack\\providers\\discovery.py"
     },
     {
-      "complexity": 8,
+      "complexity": 6,
       "file_name": "discovery.py",
       "function_name": "DiscoveryCache::save_to_disk",
       "path": "src\\intellicrack\\providers\\discovery.py"
@@ -13543,6 +13687,12 @@
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
+      "complexity": 9,
+      "file_name": "huggingface.py",
+      "function_name": "HuggingFaceProvider::_consume_stream_chunks",
+      "path": "src\\intellicrack\\providers\\huggingface.py"
+    },
+    {
       "complexity": 10,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::_build_model_info_list",
@@ -13555,7 +13705,7 @@
       "path": "src\\intellicrack\\providers\\huggingface.py"
     },
     {
-      "complexity": 33,
+      "complexity": 21,
       "file_name": "huggingface.py",
       "function_name": "HuggingFaceProvider::chat_stream",
       "path": "src\\intellicrack\\providers\\huggingface.py"
@@ -15631,7 +15781,7 @@
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
-      "complexity": 17,
+      "complexity": 16,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::yara_scan",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
@@ -15919,15 +16069,15 @@
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
-      "complexity": 17,
+      "complexity": 16,
       "file_name": "windows.py",
-      "function_name": "WindowsSandbox::_resolve_worker_pid",
+      "function_name": "WindowsSandbox::yara_scan",
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
       "complexity": 17,
       "file_name": "windows.py",
-      "function_name": "WindowsSandbox::yara_scan",
+      "function_name": "WindowsSandbox::_resolve_worker_pid",
       "path": "src\\intellicrack\\sandbox\\windows.py"
     },
     {
@@ -17605,6 +17755,12 @@
       "path": "src\\intellicrack\\ui\\panels\\async_bridge.py"
     },
     {
+      "complexity": 7,
+      "file_name": "async_bridge.py",
+      "function_name": "run_bridge_coroutine_logged",
+      "path": "src\\intellicrack\\ui\\panels\\async_bridge.py"
+    },
+    {
       "complexity": 0,
       "file_name": "base_panel.py",
       "function_name": "AnalysisPanelBase::__init__",
@@ -17692,6 +17848,12 @@
       "complexity": 1,
       "file_name": "base_panel.py",
       "function_name": "AnalysisPanelBase::_set_status",
+      "path": "src\\intellicrack\\ui\\panels\\base_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "base_panel.py",
+      "function_name": "AnalysisPanelBase::_invalid_input",
       "path": "src\\intellicrack\\ui\\panels\\base_panel.py"
     },
     {
@@ -18273,6 +18435,18 @@
     {
       "complexity": 1,
       "file_name": "cutter_tabs.py",
+      "function_name": "ESILConsoleTab::_on_init_mem",
+      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "cutter_tabs.py",
+      "function_name": "ESILConsoleTab::_on_step",
+      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "cutter_tabs.py",
       "function_name": "ESILConsoleTab::refresh",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
@@ -18280,6 +18454,12 @@
       "complexity": 1,
       "file_name": "cutter_tabs.py",
       "function_name": "HexdumpTab::refresh",
+      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "cutter_tabs.py",
+      "function_name": "ROPGadgetsTab::_on_search",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
     {
@@ -18309,13 +18489,7 @@
     {
       "complexity": 2,
       "file_name": "cutter_tabs.py",
-      "function_name": "ESILConsoleTab::_on_init_mem",
-      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "cutter_tabs.py",
-      "function_name": "ESILConsoleTab::_on_step",
+      "function_name": "ESILConsoleTab::_on_eval",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
     {
@@ -18345,12 +18519,6 @@
     {
       "complexity": 2,
       "file_name": "cutter_tabs.py",
-      "function_name": "ROPGadgetsTab::_on_search",
-      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "cutter_tabs.py",
       "function_name": "RelocationsTab::_apply_data",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
@@ -18373,12 +18541,6 @@
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
     {
-      "complexity": 3,
-      "file_name": "cutter_tabs.py",
-      "function_name": "ESILConsoleTab::_on_eval",
-      "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
-    },
-    {
       "complexity": 4,
       "file_name": "cutter_tabs.py",
       "function_name": "HexdumpTab::_apply_auto_sections",
@@ -18387,13 +18549,13 @@
     {
       "complexity": 6,
       "file_name": "cutter_tabs.py",
-      "function_name": "TypeBrowserTab::_apply_types",
+      "function_name": "HexdumpTab::_on_dump",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
     {
-      "complexity": 7,
+      "complexity": 6,
       "file_name": "cutter_tabs.py",
-      "function_name": "HexdumpTab::_on_dump",
+      "function_name": "TypeBrowserTab::_apply_types",
       "path": "src\\intellicrack\\ui\\panels\\cutter_tabs.py"
     },
     {
@@ -20035,19 +20197,19 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
     },
     {
-      "complexity": 3,
+      "complexity": 4,
       "file_name": "_bookmarks.py",
       "function_name": "BookmarksMixin::_refresh_bookmarks",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
     },
     {
-      "complexity": 6,
+      "complexity": 7,
       "file_name": "_bookmarks.py",
       "function_name": "BookmarksMixin::_on_add_bookmark",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
     },
     {
-      "complexity": 7,
+      "complexity": 9,
       "file_name": "_bookmarks.py",
       "function_name": "BookmarksMixin::_on_remove_bookmark",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_bookmarks.py"
@@ -21139,27 +21301,27 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {
-      "complexity": 2,
+      "complexity": 3,
       "file_name": "_sections.py",
-      "function_name": "SectionsMixin::_populate_exports",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "_sections.py",
-      "function_name": "SectionsMixin::_populate_imports",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "_sections.py",
-      "function_name": "SectionsMixin::_populate_sections",
+      "function_name": "SectionsMixin::_on_pe_sections_ready",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {
       "complexity": 3,
       "file_name": "_sections.py",
-      "function_name": "SectionsMixin::_on_pe_sections_ready",
+      "function_name": "SectionsMixin::_populate_exports",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_imports",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_sections.py",
+      "function_name": "SectionsMixin::_populate_sections",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sections.py"
     },
     {

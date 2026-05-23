@@ -102,17 +102,17 @@ Any of these must be logged: session updates, config persistence, credential rea
 
 ### MEDIUM severity
 
-8. **Missing entry/exit logging** in public methods that perform real work (per §2.1).
-9. **Unlogged subprocess / network / file-write / registry / win32 / bridge / AI-provider call** (per §2.3).
-10. **String formatting inside log message** (`f"..."`, `%`, `.format`) instead of structured kwargs (per §1).
-11. **Wrong log level**: errors logged at `info`, debug-level data at `warning`, business events at `debug`.
-12. **Inconsistent logger name**: anything other than `_logger` at module level, or anything other than `self._logger` for the LLMProvider exception. `logger` (no underscore), `LOG`, `log`, etc. are violations.
+1. **Missing entry/exit logging** in public methods that perform real work (per §2.1).
+2. **Unlogged subprocess / network / file-write / registry / win32 / bridge / AI-provider call** (per §2.3).
+3. **String formatting inside log message** (`f"..."`, `%`, `.format`) instead of structured kwargs (per §1).
+4. **Wrong log level**: errors logged at `info`, debug-level data at `warning`, business events at `debug`.
+5. **Inconsistent logger name**: anything other than `_logger` at module level, or anything other than `self._logger` for the LLMProvider exception. `logger` (no underscore), `LOG`, `log`, etc. are violations.
 
 ### LOW severity
 
-13. **Missing context kwargs** — log call with only a message and no structured context where context was clearly available (variables in scope).
-14. **Logger initialized inside a function** instead of at module level (unless there's a justified lazy-init reason — note your judgment).
-15. **Duplicate / redundant log lines** (e.g., log of the same event from caller and callee with same level and no additional context).
+1. **Missing context kwargs** — log call with only a message and no structured context where context was clearly available (variables in scope).
+2. **Logger initialized inside a function** instead of at module level (unless there's a justified lazy-init reason — note your judgment).
+3. **Duplicate / redundant log lines** (e.g., log of the same event from caller and callee with same level and no additional context).
 
 ---
 

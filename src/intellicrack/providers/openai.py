@@ -489,6 +489,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If the SDK client is not yet connected.
         """
         if self.client is None:
+            self._logger.warning("open_openai_stream_raise_pending", error_type="ProviderError")
             raise ProviderError(_ERR_NOT_CONNECTED)
         stream_options: ChatCompletionStreamOptionsParam = {"include_usage": True}
         use_max_completion_tokens = self._supports_max_completion_tokens(model)
@@ -656,6 +657,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If the client is not yet connected.
         """
         if self.client is None:
+            self._logger.warning("openai_api_call_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         use_max_completion_tokens = self._supports_max_completion_tokens(model)

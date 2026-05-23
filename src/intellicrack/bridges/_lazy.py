@@ -15,10 +15,14 @@ import importlib
 from typing import TYPE_CHECKING, Final, cast
 
 from intellicrack.bridges.base import ToolBridgeBase
+from intellicrack.core.logging import get_logger
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.installer import ToolInstaller
+
+
+_logger = get_logger(__name__)
 
 
 LAZY_EXPORTS: Final[dict[str, tuple[str, str]]] = {
@@ -54,6 +58,7 @@ def resolve(name: str, package_globals: dict[str, object]) -> type[ToolBridgeBas
     """
     if name not in LAZY_EXPORTS:
         msg = f"module 'intellicrack.bridges' has no attribute {name!r}"
+        _logger.warning("lazy_resolve_unknown_attribute", attribute_name=name)
         raise AttributeError(msg)
     module_path, attr_name = LAZY_EXPORTS[name]
     module = importlib.import_module(module_path)
@@ -62,6 +67,7 @@ def resolve(name: str, package_globals: dict[str, object]) -> type[ToolBridgeBas
     is_installer = isinstance(raw_value, type) and attr_name == "ToolInstaller"
     if not (is_bridge or is_installer):
         msg = f"lazy export {name!r} from {module_path!r} is not a bridge or installer class"
+        _logger.warning("lazy_resolve_non_bridge_attribute", attribute_name=name, module_path=module_path)
         raise TypeError(msg)
     value = cast("type[ToolBridgeBase | ToolInstaller]", raw_value)
     package_globals[name] = value

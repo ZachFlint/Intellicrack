@@ -4,20 +4,14 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Overflow-aware QToolBar for Intellicrack's main toolbar.
 
-Qt's stock :class:`QToolBar` exposes a built-in extension arrow when items
-exceed the visible width, but the popup menu it shows only renders text/icons
-for plain :class:`QAction` entries. Items added through ``addWidget()`` are
-backed by ``QWidgetAction`` instances whose default widgets cannot be
-reparented into a :class:`QMenu`, so the popup ends up empty or collapsed to a
-few pixels. In Intellicrack the entire Tools row is composed of
-:class:`QPushButton` widgets, which is why the user-visible arrow does nothing
-useful on overflow.
+Qt's stock :class:`QToolBar` exposes a built-in extension arrow when items exceed the visible width, but the popup menu it shows only
+renders text/icons for plain :class:`QAction` entries. Items added through ``addWidget()`` are backed by ``QWidgetAction`` instances whose
+default widgets cannot be reparented into a :class:`QMenu`, so the popup ends up empty or collapsed to a few pixels. In Intellicrack the
+entire Tools row is composed of :class:`QPushButton` widgets, which is why the user-visible arrow does nothing useful on overflow.
 
-This module ships :class:`OverflowToolBar`, a drop-in :class:`QToolBar`
-replacement that detects Qt's internal extension button, replaces its click
-behavior, and shows a properly populated menu where each entry proxies clicks
-back to the underlying widget (or to the original :class:`QAction` when no
-widget proxy is needed).
+This module ships :class:`OverflowToolBar`, a drop-in :class:`QToolBar` replacement that detects Qt's internal extension button, replaces
+its click behavior, and shows a properly populated menu where each entry proxies clicks back to the underlying widget (or to the original
+:class:`QAction` when no widget proxy is needed).
 """
 
 from __future__ import annotations
@@ -62,13 +56,10 @@ _EXTENSION_BUTTON_OBJECT_NAME = "qt_toolbar_ext_button"
 class OverflowToolBar(QToolBar):
     """:class:`QToolBar` that exposes hidden widget actions through a popup.
 
-    The toolbar installs itself onto Qt's extension button once it is created
-    by the layout, disconnects Qt's default extension-popup slot, and replaces
-    it with a custom :class:`QMenu` populated on demand. Each menu entry
-    proxies activation back to the corresponding clipped widget (or directly
-    triggers the underlying :class:`QAction` for non-widget actions), so users
-    can reach every Tools-row button even when the window is too narrow to
-    display all of them.
+    The toolbar installs itself onto Qt's extension button once it is created by the layout, disconnects Qt's default extension-popup slot,
+    and replaces it with a custom :class:`QMenu` populated on demand. Each menu entry proxies activation back to the corresponding clipped
+    widget (or directly triggers the underlying :class:`QAction` for non-widget actions), so users can reach every Tools-row button even
+    when the window is too narrow to display all of them.
     """
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
@@ -139,7 +130,7 @@ class OverflowToolBar(QToolBar):
         try:
             button.clicked.disconnect()
         except TypeError:
-            _logger.debug("overflow_toolbar_no_existing_clicked_connections")
+            _logger.warning("overflow_toolbar_no_existing_clicked_connections")
         button.clicked.connect(self._show_overflow_menu)
         button.installEventFilter(self)
         button.setToolTip("Show hidden toolbar items")
@@ -197,8 +188,7 @@ class OverflowToolBar(QToolBar):
         if not text:
             return False
         proxy = QAction(text, self._overflow_menu)
-        tooltip = widget.toolTip()
-        if tooltip:
+        if tooltip := widget.toolTip():
             proxy.setToolTip(tooltip)
         proxy.setEnabled(widget.isEnabled())
         self._wire_proxy(proxy, widget)

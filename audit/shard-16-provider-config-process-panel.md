@@ -71,7 +71,7 @@
 - [LOW] L455-460 — `_on_fade_out_finished` calls `self._finish_target.show()` then `self.close()`. Mainwindow surface transition — not logged.
 - [LOW] L237-239 — `except FileNotFoundError: _logger.warning("splash_image_not_found")` does not include the path; the variable `splash_path` was constructed on L227 and is in scope. Add `path=str(splash_path)` kwarg.
 
-### src/intellicrack/ui/dialogs/__init__.py — LOC 17
+### src/intellicrack/ui/dialogs/**init**.py — LOC 17
 
 **Logger status**: not applicable (pure re-export)
 
@@ -79,7 +79,7 @@
 
 **Findings**: none — file is a pure re-export of `SplashScreen`; exempt per §4.
 
-### src/intellicrack/ui/panels/process_panel/__init__.py — LOC 15
+### src/intellicrack/ui/panels/process_panel/**init**.py — LOC 15
 
 **Logger status**: not applicable (pure re-export)
 

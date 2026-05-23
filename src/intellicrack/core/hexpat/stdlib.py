@@ -254,12 +254,8 @@ class BuiltinFunctions:
         """
         if isinstance(arg, PatternValue):
             val = arg.value
-            if isinstance(val, (int, float, str)):
-                return val
-            return 0
-        if isinstance(arg, (int, float, str)):
-            return arg
-        return 0
+            return val if isinstance(val, (int, float, str)) else 0
+        return arg if isinstance(arg, (int, float, str)) else 0
 
     @staticmethod
     def _unwrap_bytes(arg: object) -> bytes:
@@ -275,14 +271,10 @@ class BuiltinFunctions:
             val = arg.value
             if isinstance(val, bytes):
                 return val
-            if isinstance(val, str):
-                return val.encode("utf-8")
-            return b""
+            return val.encode("utf-8") if isinstance(val, str) else b""
         if isinstance(arg, bytes):
             return arg
-        if isinstance(arg, str):
-            return arg.encode("utf-8")
-        return b""
+        return arg.encode("utf-8") if isinstance(arg, str) else b""
 
     def set_array_index(self, index: int) -> None:
         """Set the current array iteration index.
@@ -852,6 +844,7 @@ class BuiltinFunctions:
         section = self._section_for(args[0]) if args else None
         if section is None:
             msg = "std::mem::get_section_size: unknown section handle"
+            _logger.warning("mem_get_section_size_unknown_handle")
             raise HexPatRuntimeError(msg)
         return PatternValue(value=len(section.data))
 
@@ -1877,7 +1870,7 @@ class BuiltinFunctions:
             )
             formatted = time.strftime(fmt, tm)
         except (OverflowError, ValueError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "hexpat_time_format_failed",
                 fmt=fmt,
                 year=year,
@@ -2765,7 +2758,7 @@ class BuiltinFunctions:
             try:
                 return format(value, format_spec)
             except (TypeError, ValueError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "hexpat_format_spec_failed",
                     spec=spec,
                     format_spec=format_spec,
@@ -2777,7 +2770,7 @@ class BuiltinFunctions:
         try:
             return _FORMAT_FIELD_RE.sub(_replace, fmt)
         except (IndexError, KeyError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "hexpat_format_string_regex_failed",
                 fmt=fmt,
                 exc_type=type(exc).__name__,

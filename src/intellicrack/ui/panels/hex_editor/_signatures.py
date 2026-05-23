@@ -70,6 +70,7 @@ def read_document_for_scan(document: object) -> bytes:
     read_fn = getattr(document, "read", None)
     if not callable(length_fn) or not callable(read_fn):
         msg = "Document does not expose length() and read() methods"
+        _logger.warning("read_document_for_scan_raise_pending", error_type="TypeError")
         raise TypeError(msg)
     doc_len: int = cast("int", length_fn())
     raw: object = read_fn(0, doc_len)
@@ -80,6 +81,7 @@ def read_document_for_scan(document: object) -> bytes:
     if isinstance(raw, bytes):
         return raw
     msg = f"Unexpected document.read return type: {type(raw).__name__}"
+    _logger.warning("read_document_for_scan_raise_pending", error_type="ValueError")
     raise ValueError(msg)
 
 
@@ -320,10 +322,10 @@ def _scan_clamav_ndb(doc_data: bytes, lines: list[str]) -> list[dict[str, Any]]:
         sig_offset_spec = parts[2]
         sig_hex = parts[3]
         try:
-            clean_hex = sig_hex.replace("*", "").replace("?", "")
-            if not clean_hex:
+            if clean_hex := sig_hex.replace("*", "").replace("?", ""):
+                pattern_bytes = bytes.fromhex(clean_hex)
+            else:
                 continue
-            pattern_bytes = bytes.fromhex(clean_hex)
         except ValueError:
             _logger.warning(
                 "ndb_pattern_decode_failed",

@@ -64,10 +64,8 @@ MESSAGE_PREVIEW_MAX_LENGTH = 100
 class _FlowLayout(QLayout):
     """Simple horizontal flow layout used to lay out tag chips.
 
-    Qt does not ship a flow layout out of the box; this implementation
-    wraps child widgets onto additional rows when the available width is
-    exceeded so a long list of tag chips renders cleanly inside the
-    session manager dialog without horizontal scrolling.
+    Qt does not ship a flow layout out of the box; this implementation wraps child widgets onto additional rows when the available width is
+    exceeded so a long list of tag chips renders cleanly inside the session manager dialog without horizontal scrolling.
     """
 
     def __init__(
@@ -124,9 +122,7 @@ class _FlowLayout(QLayout):
             QLayoutItem | None: Item at ``index`` or ``None`` when the
             index is out of range.
         """
-        if 0 <= index < len(self._items):
-            return self._items[index]
-        return None
+        return self._items[index] if 0 <= index < len(self._items) else None
 
     @override
     def takeAt(self, index: int) -> QLayoutItem | None:
@@ -139,9 +135,7 @@ class _FlowLayout(QLayout):
             QLayoutItem | None: The removed item, or ``None`` when the
             index is out of range.
         """
-        if 0 <= index < len(self._items):
-            return self._items.pop(index)
-        return None
+        return self._items.pop(index) if 0 <= index < len(self._items) else None
 
     @override
     def expandingDirections(self) -> Qt.Orientation:
@@ -415,7 +409,7 @@ class TagChipsWidget(QWidget):
         self._empty_label.setVisible(not self._session.tags)
         self.tag_removed.emit(tag)
         self.tags_changed.emit(list(self._session.tags))
-        _logger.debug("tag_removed", tag=tag, session_id=self._session.id)
+        _logger.info("tag_removed", tag=tag, session_id=self._session.id)
 
 
 class SessionManagerDialog(QDialog):
@@ -984,10 +978,7 @@ class SessionManagerDialog(QDialog):
                     f"Failed to delete session:\n{e}",
                 )
                 return False
-            if result is None:
-                return True
-            return bool(result)
-
+            return True if result is None else bool(result)
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
         if session_file.exists():
             _logger.info("session_file_unlinking", session_id=session_id, path=str(session_file))

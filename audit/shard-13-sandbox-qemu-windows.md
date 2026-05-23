@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/sandbox/__init__.py — LOC 86
+### src/intellicrack/sandbox/**init**.py — LOC 86
 
 **Logger status**: `missing` (exempt — pure re-export `__init__.py`)
 

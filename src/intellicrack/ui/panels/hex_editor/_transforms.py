@@ -478,9 +478,7 @@ class TransformsMixin:
             return result
         if isinstance(result, bytearray):
             return bytes(result)
-        if isinstance(result, list):
-            return bytes(cast("list[int]", result))
-        return None
+        return bytes(cast("list[int]", result)) if isinstance(result, list) else None
 
     def _on_transform_preview(self) -> None:
         """Apply the selected transform to the cursor region and show a hex dump preview."""
@@ -698,9 +696,7 @@ class TransformsMixin:
             return None
         if isinstance(raw, (list, bytearray)):
             return bytes(cast("list[int]", raw) if isinstance(raw, list) else raw), read_len
-        if isinstance(raw, bytes):
-            return raw, read_len
-        return None
+        return (raw, read_len) if isinstance(raw, bytes) else None
 
     def _write_pipeline_output(self, cursor_offset: int, result: bytes, read_len: int) -> None:
         """Write pipeline output back to the document.

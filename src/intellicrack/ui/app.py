@@ -514,7 +514,9 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """,
+        """
+
+           ,
         )
 
     @property
@@ -1458,8 +1460,7 @@ class MainWindow(QMainWindow):
         dialog.session_loaded.connect(self._on_session_load_requested)
         dialog.session_deleted.connect(self._on_session_deleted)
         if dialog.exec():
-            session_id = dialog.get_selected_session_id()
-            if session_id:
+            if session_id := dialog.get_selected_session_id():
                 self._on_session_load_requested(session_id)
 
     def _on_session_load_requested(self, session_id: str) -> None:
@@ -1743,9 +1744,8 @@ class MainWindow(QMainWindow):
     def _on_tool_status(self) -> None:
         """Handle tool status action.
 
-        Constructs :class:`ToolStatusDialog` without a pre-fetched status map
-        so the dialog spawns its own background status-check workers and the
-        Qt event loop is never blocked while ``_on_tool_status`` runs.
+        Constructs :class:`ToolStatusDialog` without a pre-fetched status map so the dialog spawns its own background status-check workers
+        and the Qt event loop is never blocked while ``_on_tool_status`` runs.
         """
         tool_registry = getattr(self._orchestrator, "_tool_registry", None)
         dialog = ToolStatusDialog(
@@ -2172,11 +2172,9 @@ class MainWindow(QMainWindow):
     def _on_model_combo_text_committed(self) -> None:
         """Warn when a manually typed model id is not in the provider catalog.
 
-        The slot fires when the user finishes editing the model combo's line
-        edit. If the entered text does not match any known model id in the
-        combo it is forwarded to the user via the status bar and a structured
-        log entry so a custom request is still attempted but the user is told
-        it may not be valid.
+        The slot fires when the user finishes editing the model combo's line edit. If the entered text does not match any known model id in
+        the combo it is forwarded to the user via the status bar and a structured log entry so a custom request is still attempted but the
+        user is told it may not be valid.
         """
         line_edit = self.model_combo.lineEdit()
         if line_edit is None:
@@ -2193,11 +2191,9 @@ class MainWindow(QMainWindow):
     def _kickoff_initial_discovery(self) -> None:
         """Trigger a one-shot non-blocking model discovery pass after startup.
 
-        Guards against duplicate invocations via ``_initial_discovery_triggered``
-        so repeated re-entries (e.g. provider config changes that re-enter
-        :meth:`_sync_model_combo` paths) do not re-fire the initial discovery.
-        Skipped entirely when no :class:`ModelDiscovery` instance has been
-        wired into the window yet.
+        Guards against duplicate invocations via ``_initial_discovery_triggered`` so repeated re-entries (e.g. provider config changes that
+        re-enter :meth:`_sync_model_combo` paths) do not re-fire the initial discovery. Skipped entirely when no :class:`ModelDiscovery`
+        instance has been wired into the window yet.
         """
         if self._initial_discovery_triggered:
             return
@@ -2229,7 +2225,7 @@ class MainWindow(QMainWindow):
                 counts[key] = len(cast("list[object]", models_obj)) if isinstance(models_obj, list) else 0
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
-            _logger.info("initial_model_discovery_completed", per_provider_counts={})
+            _logger.info("initial_model_discovery_completed", provider_count=0)
         self._refresh_model_discovery_status()
 
     def _on_initial_discovery_error(self, error: object) -> None:
@@ -2440,9 +2436,7 @@ class MainWindow(QMainWindow):
 
         async def open_sandbox() -> object:
             available = await bridge.is_available()
-            if not available:
-                return None
-            return await bridge.create()
+            return await bridge.create() if available else None
 
         def on_sandbox_opened(result: object) -> None:
             if result is None:

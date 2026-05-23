@@ -9,6 +9,7 @@
 ## Fix template
 
 Before:
+
 ```python
 try:
     sehop_mask = _query_token_info(handle, ...)
@@ -17,6 +18,7 @@ except (OSError, ctypes.ArgumentError):
 ```
 
 After:
+
 ```python
 try:
     sehop_mask = _query_token_info(handle, ...)

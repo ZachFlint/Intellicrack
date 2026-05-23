@@ -143,7 +143,8 @@ class ToolConfirmationDialog(QDialog):
                 font-weight: bold;
                 color: #d4d4d4;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(header_label)
 
@@ -158,7 +159,8 @@ class ToolConfirmationDialog(QDialog):
                 background-color: #252526;
                 border-radius: 4px;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(tool_label)
 
@@ -170,7 +172,8 @@ class ToolConfirmationDialog(QDialog):
                 color: #d4d4d4;
                 margin-top: 8px;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(args_label)
 
@@ -188,7 +191,8 @@ class ToolConfirmationDialog(QDialog):
                 font-size: 12px;
                 padding: 8px;
             }
-        """,
+        """
+           ,
         )
         try:
             formatted_args = json.dumps(self._call.arguments, indent=2, default=str)
@@ -209,7 +213,8 @@ class ToolConfirmationDialog(QDialog):
                 background-color: #332200;
                 border-radius: 4px;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(warning_label)
 
@@ -224,7 +229,8 @@ class ToolConfirmationDialog(QDialog):
                 width: 16px;
                 height: 16px;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(self._remember_checkbox)
 
@@ -250,7 +256,8 @@ class ToolConfirmationDialog(QDialog):
             QPushButton:pressed {
                 background-color: #5e2e2e;
             }
-        """,
+        """
+           ,
         )
         deny_btn.clicked.connect(self._on_deny)
         button_layout.addWidget(deny_btn)
@@ -273,7 +280,8 @@ class ToolConfirmationDialog(QDialog):
             QPushButton:pressed {
                 background-color: #0d5a8c;
             }
-        """,
+        """
+           ,
         )
         approve_btn.clicked.connect(self._on_approve)
         approve_btn.setDefault(True)
@@ -286,7 +294,8 @@ class ToolConfirmationDialog(QDialog):
             QDialog {
                 background-color: #2d2d30;
             }
-        """,
+        """
+           ,
         )
 
     def exec(self) -> int:

@@ -86,7 +86,7 @@ class HashingMixin:
             try:
                 candidates.append(os.fspath(panel_path))
             except TypeError:
-                _logger.debug("custom_crc_panel_path_unfsable", path_type=type(panel_path).__name__)
+                _logger.warning("custom_crc_panel_path_unfsable", path_type=type(panel_path).__name__)
         document = self.document
         if document is not None:
             doc_path_fn = getattr(document, "file_path", None)
@@ -101,7 +101,7 @@ class HashingMixin:
                     try:
                         candidates.append(os.fspath(cast("os.PathLike[str]", doc_path)))
                     except TypeError:
-                        _logger.debug(
+                        _logger.warning(
                             "custom_crc_doc_path_unfsable",
                             path_type=type(doc_path).__name__,
                         )
@@ -111,7 +111,8 @@ class HashingMixin:
             try:
                 if Path(path_str).is_file():
                     return path_str
-            except OSError:
+            except OSError as exc:
+                _logger.warning("custom_crc_candidate_unreachable", candidate=path_str, error=str(exc))
                 continue
         return None
 

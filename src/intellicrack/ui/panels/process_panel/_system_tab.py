@@ -135,7 +135,7 @@ class SystemTab(QWidget):
             log_event: Structured log event name identifying the failing action.
         """
         message = str(exc)
-        _logger.warning(log_event, exc=message)
+        _logger.warning("system_tab_action_failed", op_event=log_event, error=message)
         QMessageBox.warning(self, title, message)
 
     def _setup_ui(self) -> None:

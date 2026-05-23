@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/bridges/__init__.py — LOC 96
+### src/intellicrack/bridges/**init**.py — LOC 96
 
 **Logger status**: `n/a (exempt re-export package init)`
 

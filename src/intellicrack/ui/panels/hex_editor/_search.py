@@ -78,23 +78,24 @@ def execute_text_search(
     doc: Any = document
     if mode == "Hex":
         raw = doc.search_hex(query, max_results)
-    elif mode == "Text":
-        if hasattr(doc, "search_text_encoded"):
-            raw = doc.search_text_encoded(
-                query,
-                encoding,
-                case_sensitive=True,
-                max_results=max_results,
-            )
-        else:
-            raw = doc.search_text(
-                query,
-                encoding,
-                case_sensitive=True,
-                max_results=max_results,
-            )
     elif mode == "Regex":
         raw = doc.search_regex(query, max_results)
+    elif mode == "Text":
+        raw = (
+            doc.search_text_encoded(
+                query,
+                encoding,
+                case_sensitive=True,
+                max_results=max_results,
+            )
+            if hasattr(doc, "search_text_encoded")
+            else doc.search_text(
+                query,
+                encoding,
+                case_sensitive=True,
+                max_results=max_results,
+            )
+        )
     else:
         return []
     return [(r[0], r[1]) for r in raw]

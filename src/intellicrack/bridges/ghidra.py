@@ -186,9 +186,7 @@ def _map_ghidra_ref_type(raw_type: str) -> _XRefRefType:
         return "jump"
     if "WRITE" in upper:
         return "write"
-    if "READ" in upper:
-        return "read"
-    return "data"
+    return "read" if "READ" in upper else "data"
 
 
 def _resolve_debug_info_path(path: str) -> Path:
@@ -210,7 +208,7 @@ def _resolve_debug_info_path(path: str) -> Path:
         ToolError: If ``path`` is empty, cannot be resolved, does not
             exist, or does not refer to a regular file.
     """
-    if not path or not str(path).strip():
+    if not path or not path.strip():
         raise ToolError(_ERR_DEBUG_PATH_INVALID)
 
     candidate = Path(path)
@@ -1403,7 +1401,7 @@ class GhidraBridge(StaticAnalysisBridge):
             try:
                 sock.close()
             except OSError:
-                _logger.debug("ghidra_bridge_socket_close_failed", exc_info=True)
+                _logger.warning("ghidra_bridge_socket_close_failed", exc_info=True)
 
         comms_thread = getattr(client, "comms_thread", None)
         if comms_thread is not None:
@@ -1430,9 +1428,9 @@ class GhidraBridge(StaticAnalysisBridge):
             try:
                 parent.rmdir()
             except FileNotFoundError:
-                pass
+                _logger.warning("bridge_script_parent_already_absent", parent=str(parent))
             except OSError:
-                _logger.debug("bridge_script_parent_not_empty", parent=str(parent))
+                _logger.warning("bridge_script_parent_not_empty", parent=str(parent))
 
     async def is_available(self) -> bool:
         """Check if Ghidra is available.
@@ -1574,6 +1572,7 @@ class GhidraBridge(StaticAnalysisBridge):
         candidate = support / ("analyzeHeadless.bat" if os.name == "nt" else "analyzeHeadless")
 
         if not candidate.exists():
+            _logger.warning("ghidra_headless_executable_missing", candidate=str(candidate))
             error_message = f"Ghidra headless script not found for this platform: {candidate}"
             raise ToolError(error_message)
 
@@ -1660,12 +1659,12 @@ class GhidraBridge(StaticAnalysisBridge):
         try:
             read_loop()
         except (OSError, ValueError):
-            _logger.debug("ghidra_pipe_drain_terminated", stream=stream_name, exc_info=True)
+            _logger.warning("ghidra_pipe_drain_terminated", stream=stream_name, exc_info=True)
         finally:
             try:
                 stream.close()
             except OSError:
-                _logger.debug("ghidra_pipe_close_failed", stream=stream_name, exc_info=True)
+                _logger.warning("ghidra_pipe_close_failed", stream=stream_name, exc_info=True)
 
     def _captured_stderr_tail(self, max_lines: int = 40) -> str:
         """Return the last ``max_lines`` of buffered stderr output.
@@ -1690,9 +1689,7 @@ class GhidraBridge(StaticAnalysisBridge):
             str: ``message`` with the stderr tail appended when output exists.
         """
         tail = self._captured_stderr_tail()
-        if not tail:
-            return message
-        return f"{message}\nstderr tail:\n{tail}"
+        return f"{message}\nstderr tail:\n{tail}" if tail else message
 
     async def _wait_for_bridge_port(
         self,
@@ -4220,7 +4217,7 @@ metadata
         try:
             unsigned_bytes = [int(clean_hex[i : i + 2], 16) for i in range(0, len(clean_hex), 2)]
         except ValueError as exc:
-            _logger.debug("ghidra_write_bytes_invalid_hex", error=str(exc))
+            _logger.warning("ghidra_write_bytes_invalid_hex", error=str(exc))
             msg = f"Invalid hex payload: {exc}"
             raise ToolError(msg) from exc
 
@@ -4280,8 +4277,7 @@ metadata
             raise ToolError(msg) from exc
 
         write_info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
-        write_error = write_info.get("write_error")
-        if write_error:
+        if write_error := write_info.get("write_error"):
             msg = f"Write bytes failed: {write_error}"
             raise ToolError(msg)
 
@@ -4379,7 +4375,8 @@ metadata
         _logger.debug("undo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.undo() True.""",
+                """currentProgram.undo() True."""
+                                                 ,
             )
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
@@ -4405,7 +4402,8 @@ metadata
         _logger.debug("redo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.redo() True.""",
+                """currentProgram.redo() True."""
+                                                 ,
             )
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}

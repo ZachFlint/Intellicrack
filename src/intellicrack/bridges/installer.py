@@ -422,7 +422,7 @@ def _is_user_admin() -> bool:
     try:
         return bool(is_admin_fn())
     except OSError as exc:
-        _logger.debug("is_user_admin_check_failed", error=str(exc))
+        _logger.warning("is_user_admin_check_failed", error=str(exc))
         return False
 
 
@@ -483,7 +483,7 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
     try:
         pe = _pefile_mod.PE(str(exe_path), fast_load=True)
     except (_pefile_mod.PEFormatError, OSError) as exc:
-        _logger.debug("pe_open_failed", exe=str(exe_path), error=str(exc))
+        _logger.warning("pe_open_failed", exe=str(exe_path), error=str(exc))
         return None
 
     try:
@@ -506,12 +506,11 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
                 entries_attr: Any = getattr(st, "entries", {}) or {}
                 entries: dict[bytes, bytes] = dict(entries_attr) if entries_attr else {}
                 for key_name in preferred_keys:
-                    raw_value = entries.get(key_name.encode("utf-8"))
-                    if raw_value:
+                    if raw_value := entries.get(key_name.encode("utf-8")):
                         try:
                             return raw_value.decode("utf-8", errors="replace").strip()
                         except (AttributeError, UnicodeError) as exc:
-                            _logger.debug("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
+                            _logger.warning("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
                             continue
 
         vs_fixed_attr: Any = getattr(pe, "VS_FIXEDFILEINFO", None) or []
@@ -580,9 +579,7 @@ class ToolInstaller:
             / not on the filesystem.
         """
         found = await self.find_tool_detailed(tool)
-        if found is None:
-            return None
-        return found.path
+        return None if found is None else found.path
 
     async def find_tool_detailed(self, tool: ToolName) -> FoundTool | None:
         """Find an installed tool and return rich availability metadata.
@@ -682,7 +679,7 @@ class ToolInstaller:
                 try:
                     children: list[Path] = await asyncio.to_thread(_list_dir, parent)
                 except OSError as exc:
-                    _logger.debug(
+                    _logger.warning(
                         "tool_dir_iter_failed",
                         path=str(parent),
                         error=str(exc),
@@ -743,8 +740,8 @@ class ToolInstaller:
             )
             timeout_msg = f"version probe for {tool_info.display_name} timed out"
             raise ToolProbeTimeoutError(timeout_msg, tool_name=tool_info.name.value) from exc
-        except (FileNotFoundError, OSError) as exc:
-            _logger.debug(
+        except OSError as exc:
+            _logger.warning(
                 "python_package_probe_unavailable",
                 tool=tool_info.display_name,
                 error=str(exc),
@@ -799,6 +796,7 @@ class ToolInstaller:
             try:
                 return await self._probe_python_package(tool_info)
             except ToolProbeTimeoutError:
+                _logger.warning("python_package_probe_timeout", tool_name=getattr(tool_info, "name", "unknown"))
                 return None
 
         if path is None:
@@ -853,8 +851,7 @@ class ToolInstaller:
             exe_path = path / exe_name
             if not exe_path.is_file():
                 continue
-            raw = _read_pe_version_info(exe_path)
-            if raw:
+            if raw := _read_pe_version_info(exe_path):
                 version = _ToolInstallerVersion.parse(raw)
                 if version is not None:
                     _logger.debug(
@@ -965,6 +962,7 @@ class ToolInstaller:
             try:
                 version = await self._probe_python_package(tool_info)
             except ToolProbeTimeoutError:
+                _logger.warning("python_package_version_probe_timeout", tool_name=getattr(tool_info, "name", "unknown"))
                 return False
             if version is None:
                 return False
@@ -1166,6 +1164,7 @@ class ToolInstaller:
                     process_timeout=_VERSION_PROBE_TIMEOUT_S,
                 )
             except TimeoutExpired:
+                _logger.warning("frida_version_probe_timeout_after_install", timeout_s=_VERSION_PROBE_TIMEOUT_S)
                 return InstallResult(
                     success=False,
                     kind="python_package",
@@ -1687,14 +1686,9 @@ def _program_files_x86() -> Path:
     Returns:
         Path: Best-known absolute path to the 32-bit Program Files dir.
     """
-    # Windows ``%ProgramFiles(x86)%`` env var is case-insensitive on the
-    # OS but case-sensitive in ``os.environ`` on POSIX. Use upper-case
-    # form to satisfy ruff SIM112; Windows resolves either casing.
-    pfx86 = os.environ.get("PROGRAMFILES(X86)")
-    if pfx86:
+    if pfx86 := os.environ.get("PROGRAMFILES(X86)"):
         return Path(pfx86)
-    pf = os.environ.get("PROGRAMFILES")
-    if pf:
+    if pf := os.environ.get("PROGRAMFILES"):
         return Path(pf)
     return Path(r"C:\Program Files (x86)")
 
@@ -2181,18 +2175,17 @@ def _path_requires_admin(target: Path) -> bool:
     try:
         resolved = target.resolve()
     except OSError as exc:
-        _logger.debug("path_requires_admin_resolve_failed", target=str(target), error=str(exc))
+        _logger.warning("path_requires_admin_resolve_failed", target=str(target), error=str(exc))
         return False
     candidates: list[str] = []
     for env_key in ("PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432"):
-        env_val = os.environ.get(env_key)
-        if env_val:
+        if env_val := os.environ.get(env_key):
             candidates.append(env_val)
     for prefix in candidates:
         try:
             resolved.relative_to(Path(prefix).resolve())
         except (OSError, ValueError) as exc:
-            _logger.debug("path_requires_admin_prefix_check_failed", prefix=prefix, error=str(exc))
+            _logger.warning("path_requires_admin_prefix_check_failed", prefix=prefix, error=str(exc))
             continue
         return True
     return False
@@ -2232,8 +2225,7 @@ def _default_tools_directory() -> Path:
         defined, otherwise ``~/.intellicrack_tools``.
     """
     if sys.platform == "win32":
-        local_appdata = _env_local_appdata()
-        if local_appdata:
+        if local_appdata := _env_local_appdata():
             return Path(local_appdata) / _DEFAULT_TOOLS_DIR_NAME
     return Path("~").expanduser() / f".{_DEFAULT_TOOLS_DIR_NAME}"
 

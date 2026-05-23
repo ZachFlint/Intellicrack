@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-_logger: Final = get_logger("core.hexpat._parse_helpers")
+_logger: Final = get_logger(__name__)
 
 
 def safe_int_from_str(
@@ -68,7 +68,7 @@ def safe_int_from_str(
         _logger.debug(
             "safe_int_parse_failed",
             context=context,
-            raw=repr(value),
+            raw_repr=repr(value),
             base=base,
             error="bool rejected",
         )
@@ -79,18 +79,19 @@ def safe_int_from_str(
         _logger.debug(
             "safe_int_parse_failed",
             context=context,
-            raw=repr(value),
+            raw_repr=repr(value),
             base=base,
-            error=f"unsupported type {type(value).__name__}",
+            error="unsupported type",
+            value_type=type(value).__name__,
         )
         return default
     try:
         return int(value, base)
     except (ValueError, TypeError) as exc:
-        _logger.debug(
+        _logger.warning(
             "safe_int_parse_failed",
             context=context,
-            raw=repr(value),
+            raw_repr=repr(value),
             base=base,
             error=str(exc),
         )
@@ -126,7 +127,7 @@ def safe_call[T, D](
     try:
         return func()
     except exceptions as exc:
-        _logger.debug(
+        _logger.warning(
             "safe_call_failed",
             context=context,
             exc_type=type(exc).__name__,

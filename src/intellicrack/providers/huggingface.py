@@ -153,9 +153,7 @@ def _hf_status_code(exc: BaseException) -> int:
     """
     response = getattr(exc, "response", None)
     code = getattr(response, "status_code", None)
-    if isinstance(code, int):
-        return code
-    return 0
+    return code if isinstance(code, int) else 0
 
 
 class HuggingFaceProvider(LLMProviderBase):
@@ -212,6 +210,7 @@ class HuggingFaceProvider(LLMProviderBase):
             ProviderError: If the connection probe fails for other reasons.
         """
         if not credentials.api_key:
+            self._logger.warning("huggingface_connect_missing_credential")
             raise AuthenticationError(_ERR_CREDENTIAL_REQUIRED)
 
         self._api_token = credentials.api_key
@@ -286,22 +285,16 @@ class HuggingFaceProvider(LLMProviderBase):
             return "Model is loading and not yet ready"
         try:
             body = response.json()
-        except (
-            json.JSONDecodeError,
-            ValueError,
-            UnicodeDecodeError,
-            TypeError,
-            httpx.DecodingError,
-        ) as decode_exc:
+        except (json.JSONDecodeError, ValueError, TypeError, httpx.DecodingError) as decode_exc:
             _logger.warning("hf_503_body_decode_failed", error_type=type(decode_exc).__name__)
             return "Model is loading and not yet ready"
         if isinstance(body, dict):
             body_dict = cast("dict[str, Any]", body)
             error_msg = body_dict.get("error")
             estimated = body_dict.get("estimated_time")
-            if isinstance(error_msg, str) and isinstance(estimated, (int, float)):
-                return f"{error_msg} (estimated_time={estimated}s)"
             if isinstance(error_msg, str):
+                if isinstance(estimated, (int, float)):
+                    return f"{error_msg} (estimated_time={estimated}s)"
                 return error_msg
         return "Model is loading and not yet ready"
 

@@ -1568,9 +1568,8 @@ class ToolStatusDialog(QDialog):
     def _refresh_status(self) -> None:
         """Refresh tool status display.
 
-        Always spawns a fresh batch of :class:`ToolStatusCheckWorker` threads.
-        Invoked on dialog open when no prefetched data is supplied and on
-        every explicit user click of the Refresh button.
+        Always spawns a fresh batch of :class:`ToolStatusCheckWorker` threads. Invoked on dialog open when no prefetched data is supplied
+        and on every explicit user click of the Refresh button.
         """
         self._status_list.clear()
         self._tool_statuses.clear()

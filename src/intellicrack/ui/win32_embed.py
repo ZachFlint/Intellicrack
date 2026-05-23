@@ -156,7 +156,7 @@ def find_window_by_pid(pid: int) -> int | None:
         if not title_buf.value:
             return True
 
-        result_hwnd.append(int(hwnd))
+        result_hwnd.append(hwnd)
         return False
 
     callback = enum_func_type(_enum_callback)

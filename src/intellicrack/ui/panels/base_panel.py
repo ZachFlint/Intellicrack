@@ -277,12 +277,8 @@ class AnalysisPanelBase(QWidget):
             **context: Additional structured kwargs (``operation``, ``field``,
                 ``trace_id``, etc.) forwarded to the logger as keyword arguments.
         """
-        logger.warning(event, input_text=input_text, **context)
-        console: object | None = (
-            getattr(self, "_console_output", None)
-            or getattr(self, "_console", None)
-            or getattr(self, "_output", None)
-        )
+        logger.warning("panel_validation_failed", op_event=event, input_text=input_text, **context)
+        console: object | None = getattr(self, "_console_output", None) or getattr(self, "_console", None) or getattr(self, "_output", None)
         if isinstance(console, QPlainTextEdit):
             console.appendPlainText(console_msg)
 

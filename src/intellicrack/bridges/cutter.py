@@ -178,9 +178,11 @@ def validate_r2_argument(value: str, *, field: str) -> str:
     """
     if value.startswith("!"):
         msg = f"{_ERR_INVALID_R2_INPUT}: {field} must not start with '!'"
+        _logger.warning("validate_r2_argument_raise_pending", error_type="ToolError")
         raise ToolError(msg)
     if any(ch in _RZ_COMMAND_CONTROL_CHARS for ch in value):
         msg = f"{_ERR_INVALID_R2_INPUT}: {field}"
+        _logger.warning("validate_r2_argument_raise_pending", error_type="ToolError")
         raise ToolError(msg)
     return value
 
@@ -310,7 +312,7 @@ def _parse_int_response(value: str) -> int:
     try:
         return int(stripped, 0)
     except ValueError as exc:
-        _logger.warning("debug_int_parse_failed", value=stripped[:120])
+        _logger.warning("cutter_int_parse_failed", value=stripped[:120])
         msg = f"{_ERR_INVALID_DEBUG_RESPONSE}: cannot parse {stripped!r} as integer"
         raise ToolError(msg, tool_name="cutter") from exc
 
@@ -1197,25 +1199,26 @@ class CutterBridge(StaticAnalysisBridge):
 
     async def _close_existing_r2(self) -> None:
         """Close existing Rizin session and unregister process."""
-        if self._r2 is not None:
-            _logger.debug("r2_session_closing")
-            try:
-                await asyncio.to_thread(self._r2.quit)
-            except (OSError, RuntimeError, ValueError) as e:
-                _logger.warning("r2_session_close_failed", error=str(e))
-            finally:
-                self.r2 = None
-            if self._r2_pid is not None:
-                process_manager = ProcessManager.get_instance()
-                process_manager.unregister_external_pid(self._r2_pid)
-                self._r2_pid = None
-            self._debug_mode = False
-            self._attached_pid = None
-            self._breakpoints.clear()
-            self._threads.clear()
-            self._current_thread_id = None
-            self.state.process_attached = False
-            self.state.target_pid = None
+        if self._r2 is None:
+            return
+        _logger.debug("r2_session_closing")
+        try:
+            await asyncio.to_thread(self._r2.quit)
+        except (OSError, RuntimeError, ValueError) as e:
+            _logger.warning("r2_session_close_failed", error=str(e))
+        finally:
+            self.r2 = None
+        if self._r2_pid is not None:
+            process_manager = ProcessManager.get_instance()
+            process_manager.unregister_external_pid(self._r2_pid)
+            self._r2_pid = None
+        self._debug_mode = False
+        self._attached_pid = None
+        self._breakpoints.clear()
+        self._threads.clear()
+        self._current_thread_id = None
+        self.state.process_attached = False
+        self.state.target_pid = None
 
     def _register_rizin_process(self, path: Path) -> None:
         """Register Rizin process with process manager.
@@ -1527,9 +1530,7 @@ class CutterBridge(StaticAnalysisBridge):
             size, otherwise 4.
         """
         bits = _get_optional_int(func_info, "bits") or 0
-        if bits >= _BITS_64:
-            return 8
-        return 4
+        return 8 if bits >= _BITS_64 else 4
 
     @staticmethod
     def _size_for_type(type_str: str, word_size: int) -> int:
@@ -2264,9 +2265,7 @@ class CutterBridge(StaticAnalysisBridge):
 
         entry = info[0]
         resolved_name = _get_str(entry, "name")
-        if resolved_name != name:
-            return None
-        return _get_optional_int(entry, "offset")
+        return None if resolved_name != name else _get_optional_int(entry, "offset")
 
     async def get_all_strings(self) -> list[StringInfo]:
         """Get all strings from the binary including non-data sections.
@@ -3572,7 +3571,11 @@ class CutterBridge(StaticAnalysisBridge):
             ToolError: If no binary is loaded.
         """
         if self._r2 is None:
-            _logger.warning("compare_disassembly_without_binary", file_path=str(file_path), address=hex(address))
+            _logger.warning(
+                "compare_disassembly_without_binary",
+                file_path=file_path,
+                address=hex(address),
+            )
             raise ToolError(_ERR_NO_BINARY)
 
         disasm_diff = await self._r2_cmd(f"cD {file_path} @ {address}")
@@ -3717,11 +3720,11 @@ class CutterBridge(StaticAnalysisBridge):
                 process (no binary loaded, or ``attach`` has not been called).
         """
         if self._r2 is None:
-            _logger.warning("debug_op_without_binary", operation=operation)
+            _logger.warning("cutter_debug_op_without_binary", operation=operation)
             msg = f"{operation}: {_ERR_NO_BINARY}"
             raise ToolError(msg, tool_name="cutter")
         if not self.state.process_attached or self._attached_pid is None:
-            _logger.warning("debug_op_without_attach", operation=operation)
+            _logger.warning("cutter_debug_op_without_attach", operation=operation)
             msg = f"{operation}: {_ERR_NOT_ATTACHED}"
             raise ToolError(msg, tool_name="cutter")
 
@@ -3751,7 +3754,7 @@ class CutterBridge(StaticAnalysisBridge):
             return json.loads(result)
         except json.JSONDecodeError as exc:
             _logger.warning(
-                "debug_json_parse_failed",
+                "cutter_debug_json_parse_failed",
                 command=command,
                 error=str(exc),
                 response_prefix=result[:120],
@@ -3794,13 +3797,10 @@ class CutterBridge(StaticAnalysisBridge):
     async def detach(self) -> None:
         """Detach the rizin debugger from the currently attached process.
 
-        Issues ``dp-`` to release the active debug attachment and clears
-        every bookkeeping field that tracks debugger state
-        (breakpoints, threads, current thread, attached pid). The
-        underlying rizin session remains open so the caller can re-load
-        another binary or reattach without re-initialising the bridge.
-        Propagates ``ToolError`` from :meth:`_require_attached` when no
-        process is currently attached.
+        Issues ``dp-`` to release the active debug attachment and clears every bookkeeping field that tracks debugger state (breakpoints,
+        threads, current thread, attached pid). The underlying rizin session remains open so the caller can re-load another binary or
+        reattach without re-initialising the bridge. Propagates ``ToolError`` from :meth:`_require_attached` when no process is currently
+        attached.
         """
         self._require_attached("detach")
         await self._r2_cmd("dp-")
@@ -3995,8 +3995,7 @@ class CutterBridge(StaticAnalysisBridge):
     async def run(self) -> None:
         """Continue debugger execution until the next event.
 
-        Issues ``dc`` so the debuggee runs until it hits a breakpoint,
-        signal, or terminates. Propagates ``ToolError`` from
+        Issues ``dc`` so the debuggee runs until it hits a breakpoint, signal, or terminates. Propagates ``ToolError`` from
         :meth:`_require_attached` when no process is attached.
         """
         self._require_attached("run")
@@ -4149,7 +4148,7 @@ class CutterBridge(StaticAnalysisBridge):
         """
         self._require_attached("write_memory")
         if not data:
-            _logger.debug("cutter_memory_write_empty", address=hex(address))
+            _logger.debug("cutter_memory_skipped_empty_payload", address=hex(address))
             return 0
         hex_data = data.hex()
         await self._r2_cmd(f"wx {hex_data} @ {address}")

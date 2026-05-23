@@ -287,13 +287,10 @@ _HDB_MIN_FIELDS = 3
 type _BPSBuffer = bytes | mmap.mmap
 """Read-only byte container accepted by the BPS/UPS encoders.
 
-The encoders index, slice, and CRC the source buffer; ``bytes`` and
-:class:`mmap.mmap` both satisfy that contract via the buffer protocol
-plus sequence semantics, allowing the source to be passed directly
-from a memory-mapped file without first being copied onto the Python
+The encoders index, slice, and CRC the source buffer; ``bytes`` and :class:`mmap.mmap` both satisfy that contract via the buffer protocol
+plus sequence semantics, allowing the source to be passed directly from a memory-mapped file without first being copied onto the Python
 heap.
 """
-
 
 _ERR_NO_DOCUMENT: Final[str] = "no document open"
 _ERR_NO_SELECTION: Final[str] = "no selection active"
@@ -1995,10 +1992,7 @@ class HexEditorBridge(ToolBridgeBase):
             start: Selection start offset, or -1 to clear.
             end: Selection end offset, or -1 to clear.
         """
-        if start >= 0 and end >= 0:
-            self._selection = (start, end)
-        else:
-            self._selection = None
+        self._selection = (start, end) if start >= 0 and end >= 0 else None
 
     async def search_hex(self, pattern: str, max_results: int = 100) -> list[dict[str, int]]:
         """Search for a hex pattern with optional wildcards.
@@ -2572,6 +2566,7 @@ class HexEditorBridge(ToolBridgeBase):
                   or the empty string if the pattern did not call
                   ``std::print``.
         """
+        _logger.info("execute_pattern_with_output_started", offset=offset)
         captured: list[str] = []
         fields: list[dict[str, Any]] = await self.execute_pattern(source, offset, print_sink=captured.append)
         return {"fields": fields, "hexpat_print": "\n".join(captured)}
@@ -2602,6 +2597,7 @@ class HexEditorBridge(ToolBridgeBase):
                   or the empty string if the pattern did not call
                   ``std::print``.
         """
+        _logger.info("execute_pattern_file_with_output_started", pattern_path=pattern_path, offset=offset)
         captured: list[str] = []
         fields: list[dict[str, Any]] = await self.execute_pattern_file(
             pattern_path,
@@ -3062,6 +3058,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             ValueError: If ``bookmark_limit`` is negative.
         """
+        _logger.info("get_context_for_ai_started")
         if bookmark_limit < 0:
             msg = f"bookmark_limit must be non-negative, got {bookmark_limit}"
             raise ValueError(msg)
@@ -3369,6 +3366,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open.
         """
         if self.document is None:
+            _logger.warning("byte_distribution_no_document_open")
             msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
         counts = [0] * 256
@@ -3599,7 +3597,7 @@ class HexEditorBridge(ToolBridgeBase):
             raw_matrix = self._compute_digram_matrix_python()
 
         total_pairs = sum(raw_matrix)
-        unique_pairs = sum(1 for v in raw_matrix if v > 0)
+        unique_pairs = sum(v > 0 for v in raw_matrix)
         result: dict[str, Any] = {
             "total_pairs": total_pairs,
             "unique_pairs": unique_pairs,
@@ -3634,6 +3632,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open.
         """
         if self.document is None:
+            _logger.warning("digram_matrix_no_document_open")
             msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
         counts = [0] * 65536
@@ -5186,7 +5185,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         if self.document is not None:
-            _logger.info("process_memory_replacing_existing_document")
+            _logger.info("process_memory_replacing_existing_document", pid=pid, address=hex(address), size=size)
             self.document = None
             self._cursor_offset = 0
             self._selection = None
@@ -6216,11 +6215,11 @@ class HexEditorBridge(ToolBridgeBase):
             list[dict[str, Any]]: List of string match dicts.
         """
         results: list[dict[str, Any]] = []
-        printable_min = 0x20
-        printable_max = 0x7E
-
         if include_ascii:
             run_start = -1
+            printable_min = 0x20
+            printable_max = 0x7E
+
             for i, b in enumerate(data):
                 if printable_min <= b <= printable_max or b in _WHITESPACE_BYTES:
                     if run_start < 0:
@@ -7043,7 +7042,7 @@ class HexEditorBridge(ToolBridgeBase):
         top = 1 << 32
 
         for i in range(0, len(data) & ~1, 2):
-            if i == checksum_offset or i == checksum_offset + 2:
+            if i in [checksum_offset, checksum_offset + 2]:
                 continue
             word = data[i] | (data[i + 1] << 8)
             checksum += word
@@ -7392,7 +7391,7 @@ class HexEditorBridge(ToolBridgeBase):
             if not isinstance(patterns_field, list):
                 _logger.warning(
                     "scan_die_entry_patterns_not_list",
-                    name=sig_info[0],
+                    signature_name=sig_info[0],
                     patterns_type=type(patterns_field).__name__,
                 )
                 continue
@@ -7716,20 +7715,19 @@ class HexEditorBridge(ToolBridgeBase):
                 i += 1
                 continue
             if i + 1 >= n:
-                _logger.debug("clamav_ndb_pattern_truncated", sig_hex=sig_hex)
+                _logger.debug("clamav_ndb_pattern_short", sig_hex=sig_hex)
                 return None
             pair = cleaned[i : i + 2]
             if pair == "??":
                 regex_parts.append(b".")
-                min_len += 1
             else:
                 try:
                     byte_val = int(pair, 16)
                 except ValueError:
-                    _logger.debug("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
+                    _logger.warning("clamav_ndb_pattern_bad_hex", sig_hex=sig_hex, pair=pair)
                     return None
                 regex_parts.append(re.escape(bytes([byte_val])))
-                min_len += 1
+            min_len += 1
             i += 2
         try:
             compiled = re.compile(b"".join(regex_parts), re.DOTALL)
@@ -7919,6 +7917,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If the document was closed in the interim.
         """
         if self.document is None:
+            _logger.warning("export_patches_bps_via_backend_no_document")
             msg = "no document open"
             raise RuntimeError(msg)
         path_method = getattr(self.document, "export_patches_bps_from_path", None)
@@ -7948,6 +7947,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If the document was closed in the interim.
         """
         if self.document is None:
+            _logger.warning("export_patches_bps_pyfallback_no_document")
             msg = "no document open"
             raise RuntimeError(msg)
         with self._open_source_mmap(original_path) as source:
@@ -8039,6 +8039,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If the document was closed in the interim.
         """
         if self.document is None:
+            _logger.warning("export_patches_ups_via_backend_no_document")
             msg = "no document open"
             raise RuntimeError(msg)
         path_method = getattr(self.document, "export_patches_ups_from_path", None)
@@ -8068,6 +8069,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If the document was closed in the interim.
         """
         if self.document is None:
+            _logger.warning("export_patches_ups_pyfallback_no_document")
             msg = "no document open"
             raise RuntimeError(msg)
         with self._open_source_mmap(original_path) as source:

@@ -156,6 +156,7 @@ Many public methods log only failure or only exit, not both. Most prevalent in:
 ### 3.13 Forbidden "ImHex" literal (project memory feedback_no_imhex_name.md)
 
 Not a logging finding per se, but flagged by shard 09:
+
 - `src/intellicrack/core/hexpat/interpreter.py:L39` — `_IMHEX_PATTERNS_DIR` identifier
 - `src/intellicrack/core/hexpat/stdlib.py:L63` — `ImHex's` literal in docstring
 
@@ -247,81 +248,81 @@ Ordered by impact × ease.
 
 ### Tier 2 — File-specific HIGH fixes (one-line debug log per site)
 
-10. `bridges/ghidra.py` — 14 mutation methods (`create_function`, `edit_function_signature`, `set_function_variable_type`, `define_structure`, `apply_structure_at`, `undo`, `redo`, `create_namespace`, `create_data_type`, `create_data`, `configure_analysis`, `create_memory_block`, `add_external_function`, `create_overlay_space`) add `_logger.warning("ghidra_<op>_failed", ...)` before re-raise. **14 HIGH.**
+1. `bridges/ghidra.py` — 14 mutation methods (`create_function`, `edit_function_signature`, `set_function_variable_type`, `define_structure`, `apply_structure_at`, `undo`, `redo`, `create_namespace`, `create_data_type`, `create_data`, `configure_analysis`, `create_memory_block`, `add_external_function`, `create_overlay_space`) add `_logger.warning("ghidra_<op>_failed", ...)` before re-raise. **14 HIGH.**
 
-11. `bridges/process.py` — 3 silent thread-state probes (L2813, L2888) + 7 silent struct/registry parsers (L3519, L5115, L5770, L5830, L6461, L6516, L6576, L6906) add `_logger.debug("<probe>_failed", ...)`. **10 HIGH.**
+2. `bridges/process.py` — 3 silent thread-state probes (L2813, L2888) + 7 silent struct/registry parsers (L3519, L5115, L5770, L5830, L6461, L6516, L6576, L6906) add `_logger.debug("<probe>_failed", ...)`. **10 HIGH.**
 
-12. `core/transform_pipeline.py` — 6 transform-node `process()` methods (L410, L487, L550, L615, L686, L697) add `_logger.warning("<node>_param_failed", error=str(exc))` before `raise TransformParamError`. **6 HIGH.**
+3. `core/transform_pipeline.py` — 6 transform-node `process()` methods (L410, L487, L550, L615, L686, L697) add `_logger.warning("<node>_param_failed", error=str(exc))` before `raise TransformParamError`. **6 HIGH.**
 
-13. `core/logging.py` — 3 bootstrap helper excepts (L80, L90, L99) in `_resolve_log_dir_from_config()` add lazy `_logger.debug(...)` (must use lazy `get_logger` to avoid bootstrap re-entrancy). **3 HIGH.**
+4. `core/logging.py` — 3 bootstrap helper excepts (L80, L90, L99) in `_resolve_log_dir_from_config()` add lazy `_logger.debug(...)` (must use lazy `get_logger` to avoid bootstrap re-entrancy). **3 HIGH.**
 
-14. `core/process_manager.py` — 3 `_pid_exists_posix` excepts (L141, L143, L145) add `_logger.debug(...)`. **3 HIGH.**
+5. `core/process_manager.py` — 3 `_pid_exists_posix` excepts (L141, L143, L145) add `_logger.debug(...)`. **3 HIGH.**
 
-15. `core/hexpat/parser.py` — 4 parser backtrack excepts (L774, L989, L1034, L1055) add `_logger.debug("hexpat_parser_backtrack", context=...)` — mirror the existing pattern at L840. **4 HIGH.**
+6. `core/hexpat/parser.py` — 4 parser backtrack excepts (L774, L989, L1034, L1055) add `_logger.debug("hexpat_parser_backtrack", context=...)` — mirror the existing pattern at L840. **4 HIGH.**
 
-16. `core/hexpat/evaluator.py` — `_eval_try` L966, `_sizeof_conditional_field` L2589, float cast L2736 add debug/warning logs. **3 HIGH.**
+7. `core/hexpat/evaluator.py` — `_eval_try` L966, `_sizeof_conditional_field` L2589, float cast L2736 add debug/warning logs. **3 HIGH.**
 
-17. `core/hexpat/stdlib.py` — time conversion (L1818, L1836, L1868) + format string (L2747, L2752) silent swallows add `_logger.warning(...)`. **5 HIGH.**
+8. `core/hexpat/stdlib.py` — time conversion (L1818, L1836, L1868) + format string (L2747, L2752) silent swallows add `_logger.warning(...)`. **5 HIGH.**
 
-18. `core/hexpat_compiler.py` — L803-806 and L811-814 wrap-and-reraise add `_logger.exception(...)`. **2 HIGH.**
+9. `core/hexpat_compiler.py` — L803-806 and L811-814 wrap-and-reraise add `_logger.exception(...)`. **2 HIGH.**
 
-19. `bridges/installer.py` — 5 silent excepts (L424, L512, L1778, L2180, L2190) for admin/PE-parse/cmake/Program Files probes. **5 HIGH.**
+10. `bridges/installer.py` — 5 silent excepts (L424, L512, L1778, L2180, L2190) for admin/PE-parse/cmake/Program Files probes. **5 HIGH.**
 
-20. `bridges/named_pipe_client.py` — L227-229, L316-317, L441-442 add log before re-raise/swallow. **3 HIGH.**
+11. `bridges/named_pipe_client.py` — L227-229, L316-317, L441-442 add log before re-raise/swallow. **3 HIGH.**
 
-21. `bridges/frida_bridge.py` — L4828-4829, L5075-5076 add `_logger.warning(...)` before re-raise; L6748-6750 promote `.warning` → `.exception`. **3 HIGH.**
+12. `bridges/frida_bridge.py` — L4828-4829, L5075-5076 add `_logger.warning(...)` before re-raise; L6748-6750 promote `.warning` → `.exception`. **3 HIGH.**
 
-22. `sandbox/qemu.py` — 3 silent excepts (L2900, L3168, L3601). **3 HIGH.**
+13. `sandbox/qemu.py` — 3 silent excepts (L2900, L3168, L3601). **3 HIGH.**
 
-23. `sandbox/windows.py` — 3 silent excepts (L1501, L2193, L2478). **3 HIGH.**
+14. `sandbox/windows.py` — 3 silent excepts (L1501, L2193, L2478). **3 HIGH.**
 
-24. `ui/panels/process_panel/_base.py` — L256, L276 silent `except ToolError: return None` in arch/privilege fetchers. **2 HIGH.**
+15. `ui/panels/process_panel/_base.py` — L256, L276 silent `except ToolError: return None` in arch/privilege fetchers. **2 HIGH.**
 
-25. `ui/panels/process_panel/_modules_tab.py` — 4 `_refresh_*._on_error` silent QMessageBox sites (L405, L431, L455, L479). **4 HIGH.**
+16. `ui/panels/process_panel/_modules_tab.py` — 4 `_refresh_*._on_error` silent QMessageBox sites (L405, L431, L455, L479). **4 HIGH.**
 
-26. `ui/panels/process_panel/_threads_tab.py` — L484 register-cell parse + L405 None-error-callback. **2 HIGH.**
+17. `ui/panels/process_panel/_threads_tab.py` — L484 register-cell parse + L405 None-error-callback. **2 HIGH.**
 
-27. `ui/panels/hex_editor/_templates.py` — 8 silent `except (AttributeError, ValueError): return` in PE/ELF readers. **8 HIGH.**
+18. `ui/panels/hex_editor/_templates.py` — 8 silent `except (AttributeError, ValueError): return` in PE/ELF readers. **8 HIGH.**
 
-28. `ui/panels/hex_editor/_search.py:L545`, `_sections.py:L389`, `_disassembly.py:L350`, `_yara.py:L197/L273`, `_hashing.py:L96/L113/L143/L264`, `_data_inspector.py:L327/L337/L370`, `_base.py:L663`, `_widgets.py:L447` — assorted silent excepts. **~14 HIGH.**
+19. `ui/panels/hex_editor/_search.py:L545`, `_sections.py:L389`, `_disassembly.py:L350`, `_yara.py:L197/L273`, `_hashing.py:L96/L113/L143/L264`, `_data_inspector.py:L327/L337/L370`, `_base.py:L663`, `_widgets.py:L447` — assorted silent excepts. **~14 HIGH.**
 
-29. `ui/panels/hex_editor/panel.py` — `_refresh_bookmarks_tree:L1105` silent pass, `_on_save:L670` + `_on_save_as:L687` OSError without log, `load_file:L640` `.warning` → `.exception`. **4 HIGH.**
+20. `ui/panels/hex_editor/panel.py` — `_refresh_bookmarks_tree:L1105` silent pass, `_on_save:L670` + `_on_save_as:L687` OSError without log, `load_file:L640` `.warning` → `.exception`. **4 HIGH.**
 
-30. `ui/panels/hex_editor/_scripting.py` — `execute_script` (L1193-1205) add invocation/exception/completion logs; L606/L827/L1196 add log before LookupError re-raise. **5 HIGH.**
+21. `ui/panels/hex_editor/_scripting.py` — `execute_script` (L1193-1205) add invocation/exception/completion logs; L606/L827/L1196 add log before LookupError re-raise. **5 HIGH.**
 
-31. `ui/panels/hex_editor/_transforms.py:L917` — `_logger.warning` → `_logger.exception` in `_on_apply_arithmetic`. **1 HIGH.**
+22. `ui/panels/hex_editor/_transforms.py:L917` — `_logger.warning` → `_logger.exception` in `_on_apply_arithmetic`. **1 HIGH.**
 
-32. `bridges/hex_editor.py` — ~8 sites of `_logger.warning("..._failed", error=str(exc))` inside non-re-raising except blocks. Convert to `.exception(...)`. **8 LOW upgraded to MEDIUM since traceback is lost.**
+23. `bridges/hex_editor.py` — ~8 sites of `_logger.warning("..._failed", error=str(exc))` inside non-re-raising except blocks. Convert to `.exception(...)`. **8 LOW upgraded to MEDIUM since traceback is lost.**
 
-33. `providers/ollama.py` — 13 sites (L356, L416, L418, L447, L449, L480, L482, L1059, L1160, L1163, L1328, L1483, L1653) — silent transport-error swallows and `except ProviderError: raise` passthroughs. **13 HIGH.**
+24. `providers/ollama.py` — 13 sites (L356, L416, L418, L447, L449, L480, L482, L1059, L1160, L1163, L1328, L1483, L1653) — silent transport-error swallows and `except ProviderError: raise` passthroughs. **13 HIGH.**
 
-34. `providers/local_transformers.py` — 7 sites (L527, L530, L545, L630, L633, L648, L870) — `ProviderError` raises without prior log. **7 HIGH.**
+25. `providers/local_transformers.py` — 7 sites (L527, L530, L545, L630, L633, L648, L870) — `ProviderError` raises without prior log. **7 HIGH.**
 
-35. `providers/anthropic.py:L462/L572`, `google.py:L375/L511/L663`, `openrouter.py:L573/L749`, `huggingface.py:L287`, `base.py:L508`, `yara_scanner.py:L132/L160` — silent typed-exception passthroughs / yara compile re-raises. **~12 HIGH (subset of Tier 1 fix #1 + module-level `_logger` fix #7).**
+26. `providers/anthropic.py:L462/L572`, `google.py:L375/L511/L663`, `openrouter.py:L573/L749`, `huggingface.py:L287`, `base.py:L508`, `yara_scanner.py:L132/L160` — silent typed-exception passthroughs / yara compile re-raises. **~12 HIGH (subset of Tier 1 fix #1 + module-level `_logger` fix #7).**
 
-36. UI tool panels (`frida_panel.py`, `ghidra_panel.py`, `x64dbg_panel.py`) — 15 silent user-input `ValueError`/`JSONDecodeError` sites. Closed by Tier 1 fix #4. **15 HIGH.**
+27. UI tool panels (`frida_panel.py`, `ghidra_panel.py`, `x64dbg_panel.py`) — 15 silent user-input `ValueError`/`JSONDecodeError` sites. Closed by Tier 1 fix #4. **15 HIGH.**
 
-37. `ui/panels/cutter_tabs.py:L590/L470`, `ui/panels/hxd_panel.py:L67` — silent UI parse / silent registry probe. **3 HIGH.**
+28. `ui/panels/cutter_tabs.py:L590/L470`, `ui/panels/hxd_panel.py:L67` — silent UI parse / silent registry probe. **3 HIGH.**
 
 ### Tier 3 — Coverage additions (MEDIUM)
 
-38. Add pre-call logs to external operations (subprocess, network, file I/O, registry, win32) per §2.3 — see §3.7, §3.11, §3.12.
+1. Add pre-call logs to external operations (subprocess, network, file I/O, registry, win32) per §2.3 — see §3.7, §3.11, §3.12.
 
-39. Add entry/exit logs to public methods that perform real work — §3.10.
+2. Add entry/exit logs to public methods that perform real work — §3.10.
 
-40. Add logs for §2.4 lifecycle/state mutations — Session dataclass mutators, GUI workflow milestones in `ui/app.py`, VNC protocol writes, splash screen stage transitions.
+3. Add logs for §2.4 lifecycle/state mutations — Session dataclass mutators, GUI workflow milestones in `ui/app.py`, VNC protocol writes, splash screen stage transitions.
 
-41. Add module-level `_logger` to remaining files where it's missing but should be present (none required beyond #7 — verified across all 153 files).
+4. Add module-level `_logger` to remaining files where it's missing but should be present (none required beyond #7 — verified across all 153 files).
 
 ### Tier 4 — Hygiene (LOW)
 
-42. Promote `_logger.warning` → `_logger.exception` in non-re-raising except blocks (§3.9).
+1. Promote `_logger.warning` → `_logger.exception` in non-re-raising except blocks (§3.9).
 
-43. Add missing context kwargs to existing log calls.
+2. Add missing context kwargs to existing log calls.
 
-44. Standardize log levels (`error` vs `warning` per project's TRY400 convention when re-raising).
+3. Standardize log levels (`error` vs `warning` per project's TRY400 convention when re-raising).
 
-45. Fix the "ImHex" literal in 2 files (§3.13).
+4. Fix the "ImHex" literal in 2 files (§3.13).
 
 ---
 

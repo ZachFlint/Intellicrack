@@ -170,6 +170,18 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- **scripts/generate_tree:** Lazy-load tree rendering with flat JSON node table (`083eb8f`)
+Rewrite the HTA directory tree generator to render lazily. The
+filesystem is serialized once as a flat JSON node table, then only the
+root plus its immediate children are materialized into the DOM at load
+time; folders expand on demand. Keeps mshta's Trident layout engine
+responsive on trees with tens of thousands of entries.
+Replaces the previous "Fixed Version" approach that escaped paths via
+data-attributes and the full _esc_attr hashing helper. The flat-table
+approach is materially smaller (one entry per node, no per-row script
+generation) and avoids Trident's per-DOM-mutation reflow cost on
+expand-all.
+
 - **bridges:** Consolidate PE format magic constants (audit Group 3)  (`ea94a67`)
 Move the remaining PE/MZ magic-byte and signature constants from
 process.py and ghidra.py into the shared bridges/_pe_format.py module.
@@ -560,8 +572,21 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Clean up logging, simplify conditional logic, and harden error handling (``)
+Refactored multiple modules to standardize structured logging, simplify conditional expressions, and improve error handling across bridges, providers, and UI components. Replaced custom string formatting in log events with canonical event names and structured context fields.
+- Standardized logger initialization using `__name__` across helpers and bridges.
+- Simplified redundant conditional checks, ternary expressions, and list comprehensions.
+- Hardened error handling and exception logging in the Ghidra, Frida, and x64dbg bridges.
+- Cleaned up unused imports and trailing whitespaces.
+
 
 ### Documentation
+
+- **readme:** Reframe scope around reverse engineering and binary analysis (`a03e02b`)
+Broaden overview, capabilities list, UI panel description, and disclaimer
+to present Intellicrack as a general-purpose RE/binary-analysis workspace
+rather than a licensing-focused utility. Protection/algorithm detection
+remains documented as one of several workflows.
 
 - Refine merge command execution parameters (`9e638e0`)
 Update the merge command specification to improve the precision of automated branch integrations. These changes clarify the expected behavior and validation steps required during the merge workflow.
@@ -625,6 +650,263 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **bridges:** F13 log silent excepts before re-raise (`b571bc7`)
+Add structured warning/debug logging in installer (_is_user_admin,
+_read_pe_version_info, _detect_vs_generator, _path_requires_admin),
+named_pipe_client (close path, disconnect read_loop split), and
+x64dbg (step waiter cancellation/resolution debug logs) where bare
+except / pass clauses previously swallowed errors. Preserves existing
+structured fields and event names; keeps original control flow in
+x64dbg._await_step_complete so _send_pipe_command errors are not
+mis-attributed as step timeouts.
+
+- **logging:** F10 convert silent excepts to structured exception logs (`e2adb85`)
+Replace bare-pass / suppression patterns across bridges, core,
+credentials, providers, sandbox, and UI panels with _logger.exception
+or _logger.warning calls that preserve structured context.
+OperationTimer.__exit__ uses _logger.error with exc_info tuple instead
+of .exception() (call site is not in an except block, so LOG004 would
+trigger); exc_tb consumed to satisfy the type contract.
+
+- **sandbox:** F15 log silent excepts via shared optional-import helper (`8680dde`)
+Add core/_optional_imports.require_yara that uses importlib.import_module
+for deferred lookup (no PLC0415 trigger, no inline suppression).
+sandbox/qemu.py and sandbox/windows.py adopt the helper and add
+structured debug/warning logging in previously silent except sites.
+Import order normalized so _optional_imports precedes _subprocess
+and logging per ruff isort rules.
+
+- **bridges/ghidra:** F11 log silent excepts before re-raise (`5a77e18`)
+Convert bare-except / pass sites in the Ghidra bridge to structured
+_logger.warning / _logger.exception calls that preserve the event
+name and context. Restructure connect/drain paths so state mutation
+moves to else-blocks, preventing the bridge from being marked
+connected on failure. Add audit test covering the new logging
+contract; fake RPC client methods annotated as NoReturn since they
+always raise.
+
+- **bridges/process:** F12 log silent excepts in process bridge (`74de534`)
+Add structured debug logging to silent except sites in process.py
+(SEHOP/extension policy queries, .NET CLR metadata RVA parse).
+Replace removed safe_call(...) helper with explicit try/except, and
+drop redundant None check on the now-int-typed meta_rva variable.
+
+- **providers:** F16 log silent excepts before re-raise (`1cc0b5c`)
+Add structured warning/debug logging in huggingface, local_transformers,
+ollama, and openrouter providers where bare except clauses previously
+swallowed errors. Uses canonical _logger (module-level) and
+self._logger (instance) per provider conventions. Inner exception in
+huggingface._extract_503_message renamed decode_exc to avoid shadowing
+the enclosing function parameter.
+
+- **core:** F14 log silent excepts in core modules (`6d043be`)
+Add structured logging to previously silent except handlers across
+hexpat (evaluator/parser/stdlib/compiler), logging, process_manager,
+and transform_pipeline. Uses _logger canonical pattern; logging
+module uses lazy structlog.get_logger to avoid bootstrap re-entrancy.
+
+- **sandbox/qemu:** F07 flatten logger extra={} kwargs into structlog kwargs (`5744b14`)
+Convert the legacy stdlib-logging _logger.<level>(msg, extra={...}) call
+sites in qemu.py to the canonical structlog kwarg form
+_logger.<level>(msg, key=value, ...). Matches the project's get_logger()
+structlog wrapper and the F07 audit guidance. Behaviour preserved
+end-to-end: same event names, same key/value pairs.
+
+- **hexpat:** F09 remove ImHex literal from interpreter path constants (`dd92e15`)
+Rename the vendor-patterns directory constant from _IMHEX_PATTERNS_DIR to
+_HEXPAT_PATTERNS_DIR and obfuscate the on-disk vendor folder name via
+string concatenation so the project no longer carries the literal name
+in source. Reword the stdlib::random docstring accordingly. Add explicit
+Path type annotations on the path constants.
+
+- **x64dbg:** Replace contextlib.suppress with explicit try/except + debug log (`d961b12`)
+Drop the contextlib.suppress(ValueError) block around
+self._step_waiters.remove(waiter) in X64DbgBridge._cancel_step_waiter and
+replace it with an explicit try/except ValueError that logs the no-op at
+debug level. Matches the project convention of preferring explicit
+exception handling with structured debug logging over contextlib.suppress.
+Drops the now-unused import contextlib.
+
+- **logging:** F05 canonical logger in huggingface/hex-editor silent excepts (`0f71c2e`)
+Add module-level _logger to huggingface provider and hex-editor bookmarks/
+calculator mixins. Emit structured warnings/debug logs from previously
+silent except blocks: HF 503 body decode failure, bookmark add/list/remove
+errors, calculator int/float pack overflows, IEEE-754 unpack errors.
+Refactor HuggingFaceProvider._stream_response: extract the streaming
+chunk-consumption loop into a new _consume_stream_chunks async generator.
+Reduces the try clause to two statements (PLW0717) and isolates the
+content/usage/tool-call accumulation logic so the parent only owns the
+SDK-level exception translation. Behaviour is preserved: cancellation
+still breaks out and lets finalize() + completion-log run, and SDK
+exceptions raised during iteration propagate to the existing typed
+handlers unchanged.
+
+- **logging:** Satisfy RUF067 in intellicrack/__init__.py (`2134323`)
+Move the lazy logger acquisition for __getattr__ inline instead of
+binding a module-level _logger. structlog's get_logger returns a cached
+LazyProxy so per-call lookup is cheap, and __init__.py no longer holds
+module-level executable code that RUF067 flags as non-re-export.
+
+- **logging:** Resolve canonical logger pattern violations (F05) (`2b1c105`)
+
+- **bridges/hexpat/ui:** F02 safe_int_from_str + safe_call helpers, 22 sites  (`469d5f7`)
+Add shared parse helpers under intellicrack.bridges._parse_helpers and
+intellicrack.core.hexpat._parse_helpers exposing safe_int_from_str (for
+int parses) and safe_call (for guarded zero-arg callables). Both log a
+structured debug event on failure so silent-swallow except blocks across
+the bridge and hexpat layers become observable through structlog.
+Convert 22 HIGH audit sites:
+- bridges/x64dbg.py (8): _safe_int_or_none, _coerce_address,
+_verify_breakpoint_applied, _wait_for_instruction_pointer,
+_lookup_annotation_text, get_labels, get_comments, _coerce_hex_int
+- bridges/process.py (7): _parse_pe_com_descriptor, _read_cor20_version,
+_read_metadata_version, _read_type_name, mitigation policy probe,
+SEHOP mask, extension-point policy
+- core/hexpat/stdlib.py (5): _time_to_local, _time_to_utc, _time_format,
+_format_string regex/format-spec fallback, format-string index parse
+- ui/panels/hex_editor/_templates.py (8): PE/ELF document.read except
+blocks now emit debug events
+Cover both helpers with happy-path and silent-return unit tests under
+tests/test_bridges/test_parse_helpers.py and
+tests/test_hexpat/test_parse_helpers.py; assertions monkeypatch the
+module-level _logger.debug to verify event-name + context fields.
+
+- **ui/async_bridge:** F03 - run_bridge_coroutine_logged wrapper + rollout across all panels  (`ab09f13`)
+* fix(ui/async_bridge): add run_bridge_coroutine_logged + roll out across hex_editor and process_panel (F03 part 1)
+Adds run_bridge_coroutine_logged wrapper to async_bridge.py with structured
+entry / success / failure logs. State-mutation sites pass level="info";
+read-only refresh and query sites use the default level="debug". Failures
+always log at warning level with error and error_type context.
+Rolled out across:
+- hex_editor sub-modules: panel.py, _disassembly, _highlighting, _process_memory,
+_sandbox, _sections, _yara (9 sites)
+- process_panel tabs: _base, _memory_tab, _modules_tab, _process_tab, _system_tab,
+_threads_tab (54 sites)
+Replaces the bare run_bridge_coroutine_async dispatch with the logged variant,
+emitting <event>_started / <event>_succeeded / <event>_failed events at the
+call site's module logger. F27 also addressed: _threads_tab None/None callbacks
+now go through the wrapper.
+Closes ~63 MEDIUM findings from audit F03 shard.
+Remaining F03 work (frida_panel, ghidra_panel, x64dbg_panel, sandbox_panel,
+cutter_panel, cutter_tabs, vnc_widget) will land in follow-up commits.
+* fix(ui/panels): roll out run_bridge_coroutine_logged across sandbox, cutter, vnc (F03 part 2)
+Converts the remaining non-overlapping panels to the structured-logging wrapper:
+- sandbox_panel.py: 23 sites (create/destroy lifecycle, snapshot_create/restore/delete,
+pcap_start/stop, memory_dump, extract_dropped_files, yara_scan, extract_iocs,
+detect_behaviors, copy_to/from, cont, execute, run_binary, screenshot, timeline,
+status, get_vnc_port) — state-mutation sites at info level
+- cutter_panel.py: 22 sites (load_binary, initialize, analyze, get_functions/imports/
+exports/sections, decompile, disassemble, get_function_graph, search_strings, xrefs,
+execute_command, save_binary, write_bytes, seek, get_function_address, rename_function,
+add_comment, read_bytes) — mutations at info level
+- cutter_tabs.py: 13 Tab.refresh() implementations + ESILConsoleTab/HexdumpTab/
+ROPGadgetsTab event handlers. Drops the now-unused run_async forwarding (Tab classes
+call run_bridge_coroutine_logged directly with parent=self for Qt lifetime). The
+RunAsyncFn parameter is retained but marked _run_async for backward compatibility
+with cutter_panel's existing .refresh(bridge, run_fn) call sites.
+- vnc_widget.py: 5 sites (mouseMoveEvent/mousePressEvent/mouseReleaseEvent +
+keyPressEvent/keyReleaseEvent) — high-frequency input forwarding stays at debug
+level so VNC interactions don't flood the log.
+All files pass ruff check.
+Remaining F03 work: frida_panel, ghidra_panel, x64dbg_panel.
+* fix(ui/frida_panel): roll out run_bridge_coroutine_logged across all 39 sites (F03 part 3)
+Replaces every self._run_async dispatch in frida_panel.py with the
+structured-logging wrapper. State-mutation sites (attach/detach, spawn,
+resume, execute_script, hook_function/remove_hook, intercept_return,
+replace_function, write_memory, allocate_memory, protect_memory, call_function,
+enable/disable_child_gating, resume_child, enable_crash_reporting,
+stalker_follow/unfollow) emit at info level; read-only refresh and query
+sites (enumerate_devices/processes/threads/modules/exports/imports,
+get_hooks, get_memory_regions, get_pending_children, get_crashes,
+find_base_address, resolve_symbol, find_functions_named, resolve_api,
+read_memory, scan_memory) stay at debug level.
+Closes ~39 MEDIUM findings from audit F03 (frida shard).
+* fix(ui/ghidra_panel): roll out run_bridge_coroutine_logged across all 50+ sites (F03 part 4)
+Replaces every self._run_async dispatch in ghidra_panel.py with the
+structured-logging wrapper. State-mutation sites (load_binary, initialize,
+shutdown, analyze, start_headless, undo, redo, import_debug_info,
+create_overlay_space, create_function, rename_function, add_comment,
+set_data_type, set_color, delete_function, edit_function_signature,
+set_function_variable_type, set_label, create_bookmark, define_structure,
+apply_structure_at, write_bytes, create_memory_block, set_program_metadata,
+create_namespace, create_equate, add_external_function, execute_script,
+execute_script_with_params, set_decompiler_options, configure_analysis)
+emit at info level; read-only refresh and query sites (get_data_type,
+get_functions, decompile, disassemble, get_pcode, get_basic_blocks,
+get_imports/exports, search_strings, get_xrefs_to/from, get_labels,
+get_bookmarks, get_structures, get_memory_map, read_bytes, get_segments,
+get_program_info, get_call_tree, get_callers, get_slice, get_comments,
+get_all_comments, search_symbols, get_namespaces, get_equates,
+get_relocations, get_stack_frame, get_function_body, get_calling_conventions,
+search_bytes, diff_programs) stay at debug level.
+Closes ~50 MEDIUM findings from audit F03 (ghidra shard).
+* fix(ui/x64dbg_panel): roll out run_bridge_coroutine_logged across all 56 sites (F03 part 5)
+Replaces every self._run_async dispatch in x64dbg_panel.py with the
+structured-logging wrapper. State-mutation sites (load, attach, run, pause,
+stop, step_into/over/out, set_breakpoint, remove_breakpoint, enable/disable_breakpoint,
+set_register, run_command, detach, spawn, run_to, execute_til_return, skip_instruction,
+set_ip, save_database, load_database, set_watchpoint, remove_watchpoint, trace_start/stop,
+trace_into/over, set_label, set_comment, dump_memory_to_file, allocate_memory, free_memory,
+set_breakpoint_on_api, write_memory, patch_instruction, nop_range, suspend_thread,
+resume_thread, switch_thread, set_exception_config) emit at info level; read-only
+refresh and query sites (get_module_sections/exports, read_memory, get_registers,
+disassemble_at, get_breakpoints, get_stack_trace, get_modules, get_threads,
+get_memory_regions, get_process_info, get_watchpoints, evaluate_expression,
+yara_scan, find_pattern) stay at debug level.
+Closes ~56 MEDIUM findings from audit F03 (x64dbg shard).
+* fix(F03): guard hex(None)/len(None) in optional-arg context dicts + update ghidra_panel tests for new dispatcher
+Two reviewer-flagged runtime crashes in F03 context-dict expressions:
+- ghidra_panel.py:3341 (_on_add_external_function): `hex(addr)` where
+`addr = self._parse_address(...) if addr_text else None`. When the user
+leaves the address blank, `addr is None` and `hex(None)` raises TypeError
+before the bridge call dispatches. Guard with `hex(addr) if addr is not None else None`.
+- sandbox_panel.py:739 (_on_run_binary): `len(args_list)` where
+`args_list = args.split() if args else None`. When the binary args field
+is empty, `args_list is None` and `len(None)` raises TypeError before the
+bridge call dispatches. Guard with `len(args_list) if args_list is not None else 0`.
+Both bugs were introduced by the F03 rollout (the wrapper's structured-context
+kwargs are evaluated eagerly at the call site, unlike the previous _run_async
+form that didn't reference these values).
+Also updates tests/test_audit3/ui/test_ghidra_panel.py to patch the new
+run_bridge_coroutine_logged dispatcher instead of the legacy panel.\_run_async.
+The five RefreshLabels tests previously installed a synchronous shim by
+overwriting `panel._run_async`; F03 routed _on_refresh_labels directly through
+run_bridge_coroutine_logged at the module level, bypassing the shim. The
+helper now monkeypatches ghidra_module.run_bridge_coroutine_logged with a
+capture-and-drive sink that accepts the wider parent/event/logger/level/**context
+signature, and the five test methods now take the monkeypatch fixture.
+Reviewer (worktree-reviewer agent) flagged TYPE_FAIL × 2 and TEST_FAIL × 2;
+all four are resolved here. Ruff clean; pytest tests/test_audit3/ui/test_ghidra_panel.py
+passes 5/5; basedpyright clean on the two type-error lines.
+
+- **audit-F01:** Log-and-reraise helper for typed-exception passthrough sites  (`1af59b8`)
+Adds `intellicrack.core.error_logging.log_passthrough` and wires it into
+35 silent re-raise / wrap-and-raise sites across providers, bridges, and
+core modules so every `except ...: raise` (or `raise ProviderError(...)
+from exc` without prior log) now emits a structured warning event with
+provider/op/error context before re-raising.
+Closes audit F01 (~35 HIGH findings) per audit/fixes/F01-helper-log-and-reraise.md.
+Helper design
+The helper is intentionally log-only (returns None) so each call site
+keeps an explicit `raise` statement that pydoclint/basedpyright can
+see when verifying documented `Raises:` clauses. Callers use:
+except (TypedExc, ...) as exc:
+log_passthrough(logger, "<op>_passthrough", exc, **context)
+raise
+This satisfies project rule "every except clause must log even when
+re-raising" without losing the original traceback (bare `raise`
+preserves `exc.__traceback__`).
+Sites fixed: providers/base.py (1), providers/anthropic.py (2),
+providers/google.py (3), providers/openrouter.py (1),
+providers/ollama.py (6 helper + 3 inline transport logs),
+providers/local_transformers.py (7), bridges/x64dbg.py (9),
+bridges/frida_bridge.py (2), bridges/named_pipe_client.py (2),
+core/yara_scanner.py (2), core/hexpat_compiler.py (2).
+
+- **bridges/cutter:** MC-10 implement CutterBridge dynamic-analysis surface (`70d21c8`)
+Adds the debugging tool surface (15 new methods + 2 helpers) on top of CutterBridge so the orchestrator's "debugging" capability is no longer a stub: attach/detach, set_breakpoint/remove_breakpoint/get_breakpoints, step_into/step_over, run, get_registers/set_register, read_memory/write_memory, get_memory_regions/get_threads/get_modules.
+Each method issues real rizin protocol commands (`dp`, `dp-`, `db`/`dbH`/`dbm`/`dbC`/`db-`/`dbj`, `ds`/`dso`, `dc`, `drj`, `dr <reg>=<val>`, `p8 size @ addr`, `wx hex @ addr`, `dmj`, `dptj`, `dmIj`) and parses JSON responses into typed BreakpointInfo / RegisterState / MemoryRegion / ThreadInfo / ModuleInfo dataclasses with field-name fallbacks. Inputs are validated through validate_r2_argument before embedding in r2 commands; get_registers includes 32-bit alias fallbacks.
 
 - **ui/app:** MainWindow remediation U7 - status labels, signal lifecycle, provider/tool wiring, settings persistence  (`a727ca6`)
 * fix(ui/app): MainWindow remediation - status labels, signal lifecycle, provider/tool wiring, settings persistence - audit U7 (Cat-1 #7, Cat-4 #1-2, Cat-5 #1-3,5-6, Cat-6 #1, Cat-7 #1)

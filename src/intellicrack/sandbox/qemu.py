@@ -693,7 +693,7 @@ class GuestAgentClient:
                 break
 
             except (TimeoutError, OSError):
-                _logger.debug("guest_agent_connect_retry", host=self._host, port=self._port)
+                _logger.warning("guest_agent_connect_retry", host=self._host, port=self._port)
                 await asyncio.sleep(retry_interval)
 
         if not connected:
@@ -1063,7 +1063,7 @@ class QEMUSandbox(SandboxBase):
                 _logger.debug("whpx_hypervisor_platform_not_enabled", state=feature_state)
                 return False
         except (OSError, _SubprocessTimeoutExpired) as e:
-            _logger.debug("whpx_feature_probe_failed", error=str(e))
+            _logger.warning("whpx_feature_probe_failed", error=str(e))
             return False
 
         bcdedit_path = shutil.which("bcdedit.exe") or shutil.which("bcdedit")
@@ -1086,7 +1086,7 @@ class QEMUSandbox(SandboxBase):
                 _logger.debug("whpx_bcdedit_hypervisorlaunchtype_not_auto", bcd_output=bcd_output)
                 return False
         except (OSError, _SubprocessTimeoutExpired) as e:
-            _logger.debug("whpx_bcdedit_probe_failed", error=str(e))
+            _logger.warning("whpx_bcdedit_probe_failed", error=str(e))
             return False
 
         _logger.debug("whpx_host_prerequisites_satisfied")
@@ -1341,7 +1341,7 @@ class QEMUSandbox(SandboxBase):
                 "qemu_ga_exec_no_pid",
                 path=path,
                 arg=list(args),
-                data=data,
+                response_payload=data,
             )
             raise SandboxError(_ERR_QEMU_GA_EXEC_NO_PID)
 
@@ -1747,7 +1747,7 @@ class QEMUSandbox(SandboxBase):
                             qemu_pid = int(pid_content.strip())
                             break
                         except (ValueError, OSError):
-                            _logger.debug(
+                            _logger.warning(
                                 "pidfile_read_retry",
                                 attempt=attempt + 1,
                             )
@@ -2642,7 +2642,7 @@ python3 /mnt/shared/monitor/agent.py &
                     result_text = result_text.strip()
                     exit_code = int(result_text) if result_text.isdigit() else -1
                 except (OSError, ValueError) as e:
-                    _logger.debug("result_read_failed", error=str(e))
+                    _logger.warning("result_read_failed", error=str(e))
                     continue
                 stdout_text = await QEMUSandbox._read_sidecar(stdout_path)
                 stderr_text = await QEMUSandbox._read_sidecar(stderr_path)
@@ -2675,7 +2675,7 @@ python3 /mnt/shared/monitor/agent.py &
         try:
             return await asyncio.to_thread(path.read_text, encoding="utf-8", errors="replace")
         except OSError as exc:
-            _logger.debug("sidecar_read_failed", path=str(path), error=str(exc))
+            _logger.warning("sidecar_read_failed", path=str(path), error=str(exc))
             return ""
 
     @staticmethod
@@ -2712,7 +2712,7 @@ python3 /mnt/shared/monitor/agent.py &
             try:
                 await asyncio.to_thread(candidate.unlink, missing_ok=True)
             except OSError as exc:
-                _logger.debug(
+                _logger.warning(
                     "result_artifact_cleanup_failed",
                     path=str(candidate),
                     error=str(exc),
@@ -2874,12 +2874,16 @@ python3 /mnt/shared/monitor/agent.py &
             SandboxError: If the shared folder has not been initialized.
         """
         if poll_delay <= 0:
+            _logger.warning("wait_for_logs_stable_invalid_poll_delay", poll_delay=poll_delay)
             raise ValueError(_ERR_LOGS_STABLE_POLL_DELAY)
         if stable_polls < 1:
+            _logger.warning("wait_for_logs_stable_invalid_stable_polls", stable_polls=stable_polls)
             raise ValueError(_ERR_LOGS_STABLE_STABLE_POLLS)
         if max_wait < 0:
+            _logger.warning("wait_for_logs_stable_invalid_max_wait", max_wait=max_wait)
             raise ValueError(_ERR_LOGS_STABLE_MAX_WAIT)
         if self._shared_folder is None:
+            _logger.warning("wait_for_logs_stable_no_shared_folder")
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         logs_folder = self._shared_folder / "logs"
@@ -2900,7 +2904,7 @@ python3 /mnt/shared/monitor/agent.py &
             try:
                 return path.stat().st_size
             except FileNotFoundError:
-                _logger.debug("logs_stable_stat_missing", path=str(path))
+                _logger.warning("logs_stable_stat_missing", path=str(path))
                 return 0
 
         start = time.monotonic()
@@ -3165,7 +3169,7 @@ python3 /mnt/shared/monitor/agent.py &
             try:
                 current_size = await asyncio.to_thread(lambda: ppm_path.stat().st_size)
             except FileNotFoundError:
-                _logger.debug("ppm_stat_missing", ppm_path=str(ppm_path))
+                _logger.warning("ppm_stat_missing", ppm_path=str(ppm_path))
                 await asyncio.sleep(_SCREENSHOT_STABILITY_POLL_DELAY_S)
                 continue
             if current_size > 0 and current_size == previous_size:
@@ -3455,7 +3459,7 @@ python3 /mnt/shared/monitor/agent.py &
                     time_limit=30.0,
                 )
                 _logger.debug(
-                    "dropped_files_agent_copy_dispatched",
+                    "dropfile_agent_copy_dispatched",
                     guest_dir=guest_dir,
                     wrapped_command=wrapped_command,
                     exit_code=exit_code,
@@ -3468,7 +3472,7 @@ python3 /mnt/shared/monitor/agent.py &
 
         files_collected = await asyncio.to_thread(self._count_files_recursive, staging_dir)
         _logger.debug(
-            "dropped_files_collected",
+            "dropfile_collection_completed",
             agent_used=agent_used,
             files_collected=files_collected,
             staging_dir=str(staging_dir),
@@ -3533,7 +3537,7 @@ python3 /mnt/shared/monitor/agent.py &
         mirror_dir = self._shared_folder / "output" / "dropped"
         if not await asyncio.to_thread(mirror_dir.exists):
             _logger.debug(
-                "dropped_files_mirror_absent",
+                "dropfile_mirror_absent",
                 mirror_dir=str(mirror_dir),
             )
             return
@@ -3575,11 +3579,8 @@ python3 /mnt/shared/monitor/agent.py &
         """
         if not directory.exists():
             return 0
-        count = 0
-        for entry in directory.rglob("*"):
-            if entry.is_file():
-                count += 1
-        return count
+        return sum(bool(entry.is_file())
+               for entry in directory.rglob("*"))
 
     async def yara_scan(
         self,

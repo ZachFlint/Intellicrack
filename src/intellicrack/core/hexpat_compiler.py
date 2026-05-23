@@ -430,11 +430,13 @@ class HexPatCodegen:
 
         if while_condition_expr is not None:
             msg = "while-conditioned arrays are runtime constructs and cannot be compiled to a static JSON template"
+            _logger.warning("gen_regular_field_while_condition_unsupported", line=node.line, column=node.column)
             raise HexPatError(msg, node.line, node.column)
 
         if isinstance(type_node, ArrayType):
             if type_node.while_condition is not None:
                 msg = "while-conditioned arrays are runtime constructs and cannot be compiled to a static JSON template"
+                _logger.warning("gen_regular_field_nested_while_unsupported", line=node.line, column=node.column)
                 raise HexPatError(msg, node.line, node.column)
             array_size_expr = type_node.size
             type_node = type_node.element
@@ -530,9 +532,7 @@ class HexPatCodegen:
             specifier was present, otherwise ``None``.
         """
         keyword = node.endianness or getattr(node.type_node, "endianness", None)
-        if keyword is None:
-            return None
-        return _ENDIANNESS_MAP.get(keyword.lower())
+        return None if keyword is None else _ENDIANNESS_MAP.get(keyword.lower())
 
     def _gen_conditional(self, node: ConditionalField) -> list[dict[str, Any]]:
         """Generate conditional field definition dicts.

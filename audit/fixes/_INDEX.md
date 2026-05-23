@@ -3,6 +3,7 @@
 Per-fix-type markdowns for the 770 findings from the 20-shard logging audit. Each file groups all findings sharing the same mechanical fix.
 
 **See also**:
+
 - `D:\Intellicrack\audit\AUDIT_CRITERIA.md` — the strict rules the audit enforced
 - `D:\Intellicrack\audit\MASTER_REPORT.md` — aggregate report with executive summary
 - `D:\Intellicrack\audit\shard-NN-*.md` — per-shard raw findings (20 files)
@@ -86,33 +87,33 @@ The order minimizes rework — earlier fixes set up helpers that later fixes dep
 
 ### Phase 2 — Targeted HIGH fixes (2-3 days)
 
-9. F11 — bridges/ghidra.py mutations
-10. F12 — bridges/process.py probes
-11. F13 — bridges/installer + named_pipe + frida + x64dbg
-12. F14 — core silent excepts
-13. F15 — sandbox silent excepts
-14. F16 — providers misc
-15. F17 — process_panel silent excepts
-16. F18 — hex_editor submodule silent excepts
-17. F07 — Flatten qemu.py `extra={...}`
-18. F10 — `.warning` → `.exception` conversions
-19. F26 — execute_script security logs
+1. F11 — bridges/ghidra.py mutations
+2. F12 — bridges/process.py probes
+3. F13 — bridges/installer + named_pipe + frida + x64dbg
+4. F14 — core silent excepts
+5. F15 — sandbox silent excepts
+6. F16 — providers misc
+7. F17 — process_panel silent excepts
+8. F18 — hex_editor submodule silent excepts
+9. F07 — Flatten qemu.py `extra={...}`
+10. F10 — `.warning` → `.exception` conversions
+11. F26 — execute_script security logs
 
 **End of Phase 2**: HIGH count ≈ 0; MEDIUM count drops further.
 
 ### Phase 3 — Coverage additions (5-7 days)
 
-20. F19 — Entry/exit on public methods
-21. F20 — External op pre-call logs
-22. F21 — GUI workflow milestones
-23. F22 — OAuth + HTTP probe entry logs
-24. F23 — Win32 / ctypes pre-call logs
-25. F24 — Session dataclass mutator logs
-26. F25 — VNC send-side protocol logs
-27. F27 — async_bridge None-callback anti-pattern
-28. F28 — Sandbox public op entry logs
-29. F29 — Splash screen stage logs
-30. F30 — State-mutating bridge ops → info level
+1. F19 — Entry/exit on public methods
+2. F20 — External op pre-call logs
+3. F21 — GUI workflow milestones
+4. F22 — OAuth + HTTP probe entry logs
+5. F23 — Win32 / ctypes pre-call logs
+6. F24 — Session dataclass mutator logs
+7. F25 — VNC send-side protocol logs
+8. F27 — async_bridge None-callback anti-pattern
+9. F28 — Sandbox public op entry logs
+10. F29 — Splash screen stage logs
+11. F30 — State-mutating bridge ops → info level
 
 **End of Phase 3**: MEDIUM count < 50; LOW count addressed in cleanup.
 

@@ -117,9 +117,7 @@ def _has_valid_tld(candidate: str) -> bool:
     if len(parts) < _MIN_HOSTNAME_LABELS:
         return False
     tld = parts[-1].lower()
-    if tld in FILE_EXTENSION_TLDS:
-        return False
-    return tld in KNOWN_TLDS
+    return False if tld in FILE_EXTENSION_TLDS else tld in KNOWN_TLDS
 
 
 def _is_private_ip(ip: str) -> bool:
@@ -629,8 +627,7 @@ def _timeline_add_file_events(
             "path": change["path"],
             "operation": change["operation"],
         }
-        old_path = change.get("old_path")
-        if old_path:
+        if old_path := change.get("old_path"):
             details["old_path"] = old_path
             summary += f" (from {old_path})"
         if change.get("size") is not None:
@@ -663,11 +660,9 @@ def _timeline_add_registry_events(
             "operation": change["operation"],
             "value_name": val_name,
         }
-        value_type = change.get("value_type")
-        if value_type:
+        if value_type := change.get("value_type"):
             details["value_type"] = value_type
-        value_data = change.get("value_data")
-        if value_data:
+        if value_data := change.get("value_data"):
             details["value_data"] = value_data
         events.append(
             TimelineEvent(
@@ -729,11 +724,9 @@ def _timeline_add_process_events(
             "name": proc["name"],
             "operation": proc["operation"],
         }
-        proc_path = proc.get("path")
-        if proc_path:
+        if proc_path := proc.get("path"):
             details["path"] = proc_path
-        cmd_line = proc.get("command_line")
-        if cmd_line:
+        if cmd_line := proc.get("command_line"):
             details["command_line"] = cmd_line
         if proc.get("parent_pid") is not None:
             details["parent_pid"] = str(proc["parent_pid"])
@@ -1052,12 +1045,11 @@ def _match_defense_evasion(
         for inj in report.injection_events
     )
 
-    anti_debug_evidence: list[str] = [
+    if anti_debug_evidence := [
         f"{call['api_name']} by {call['process_name']} (PID {call['pid']})"
         for call in report.api_calls
         if call["api_name"] in _ANTI_DEBUG_APIS
-    ]
-    if anti_debug_evidence:
+    ]:
         matches.append(
             BehaviorMatch(
                 signature_name="Anti-Debug Techniques",
@@ -1165,12 +1157,13 @@ def _match_exfiltration(
         if activity["direction"] == "outbound" and activity["bytes_sent"] > _EXFIL_THRESHOLD_BYTES
     )
 
-    clipboard_read_evidence: list[str] = [
-        (f"Clipboard read by {clip['process_name']} (PID {clip['pid']}): {clip['format']} ({clip['size_bytes']} bytes)")
+    if clipboard_read_evidence := [
+        (
+            f"Clipboard read by {clip['process_name']} (PID {clip['pid']}): {clip['format']} ({clip['size_bytes']} bytes)"
+        )
         for clip in report.clipboard_events
         if clip["operation"].lower() == "read"
-    ]
-    if clipboard_read_evidence:
+    ]:
         matches.append(
             BehaviorMatch(
                 signature_name="Clipboard Data Access",
@@ -1193,12 +1186,13 @@ def _match_discovery(
         report: The execution report to analyze.
         matches: Accumulator list for behavior matches.
     """
-    discovery_evidence: list[str] = [
-        (f"{proc['name']} (PID {proc['pid']}): {proc.get('command_line') or 'N/A'}")
+    if discovery_evidence := [
+        (
+            f"{proc['name']} (PID {proc['pid']}): {proc.get('command_line') or 'N/A'}"
+        )
         for proc in report.process_activity
         if proc["name"].lower() in _SYSTEM_DISCOVERY_TOOLS
-    ]
-    if discovery_evidence:
+    ]:
         matches.append(
             BehaviorMatch(
                 signature_name="System Information Discovery",

@@ -857,8 +857,9 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            return f"{val_f:13.6g}"
-        if mode == "float64":
+            else:
+                return f"{val_f:13.6g}"
+        elif mode == "float64":
             try:
                 val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
@@ -1114,7 +1115,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if callable(decode_fn):
             try:
                 raw_decoded: object = decode_fn(row_offset, bytes_in_row, self.encoding)
-            except (RuntimeError, OSError, ValueError, UnicodeDecodeError, LookupError, AttributeError):
+            except (RuntimeError, OSError, ValueError, LookupError, AttributeError):
                 decoded = None
             else:
                 decoded = raw_decoded if isinstance(raw_decoded, str) else None

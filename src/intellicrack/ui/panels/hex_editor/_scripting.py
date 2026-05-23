@@ -440,6 +440,7 @@ class _DocAPI:
         self._widget = hex_widget
         self._file_path = file_path
         self._encoding_provider = encoding_provider
+        _logger.debug("doc_api_initialized", file_path=file_path)
 
     @property
     def file_path(self) -> str | None:
@@ -518,9 +519,7 @@ class _DocAPI:
             bytes: Read data.
         """
         raw = self._doc.read(offset, length)
-        if isinstance(raw, bytes):
-            return raw
-        return bytes(raw)
+        return raw if isinstance(raw, bytes) else bytes(raw)
 
     def write(self, offset: int, data: bytes) -> None:
         """Write bytes to the document.
@@ -632,8 +631,7 @@ class _DocAPI:
             return explicit
 
         if self._encoding_provider is not None:
-            panel_encoding = self._encoding_provider()
-            if panel_encoding:
+            if panel_encoding := self._encoding_provider():
                 return panel_encoding
 
         return "utf-8"
@@ -967,9 +965,7 @@ def _safe_getattr(target: object, name: object, *default: object) -> object:
         msg = f"getattr(..., {name!r}) is forbidden"
         _logger.warning("script_sandbox_getattr_denied", attr_name=str(name))
         raise _SandboxViolationError(msg)
-    if default:
-        return getattr(target, name, default[0])
-    return getattr(target, name)
+    return getattr(target, name, default[0]) if default else getattr(target, name)
 
 
 def _safe_setattr(target: object, name: object, value: object) -> None:
@@ -1468,21 +1464,17 @@ class ScriptingMixin:
             return
 
         lines: list[str] = []
-        output = result.get("output", "")
-        if output:
+        if output := result.get("output", ""):
             lines.append(output)
 
-        stderr_text = result.get("stderr", "")
-        if stderr_text:
+        if stderr_text := result.get("stderr", ""):
             lines.extend(("--- stderr ---", stderr_text))
 
-        output_files = result.get("output_files", [])
-        if output_files:
+        if output_files := result.get("output_files", []):
             lines.append("--- Files ---")
             lines.extend(f"  {path}" for path in output_files)
 
-        user_vars = result.get("variables", {})
-        if user_vars:
+        if user_vars := result.get("variables", {}):
             lines.append("--- Variables ---")
             lines.extend(f"  {name} = {val}" for name, val in user_vars.items())
 

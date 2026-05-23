@@ -107,7 +107,7 @@ All log calls use structured kwargs. No `print(` calls found anywhere (despite t
 
 ---
 
-### src/intellicrack/__init__.py — LOC 105
+### src/intellicrack/**init**.py — LOC 105
 
 **Logger status**: `wrong-name` — uses `structlog.get_logger("intellicrack")` directly inside `__getattr__` at L87, **NOT** `intellicrack.core.logging.get_logger`, and not at module level.
 
@@ -122,7 +122,7 @@ This is the only canonical-pattern violation in the shard.
 
 ---
 
-### src/intellicrack/__main__.py — LOC 44
+### src/intellicrack/**main**.py — LOC 44
 
 **Logger status**: `module-level _logger` (L23)
 
@@ -146,7 +146,7 @@ This is the only canonical-pattern violation in the shard.
 
 ---
 
-### src/intellicrack/credentials/__init__.py — LOC 72
+### src/intellicrack/credentials/**init**.py — LOC 72
 
 **Logger status**: `missing` (exempt under §4 — re-exports only)
 

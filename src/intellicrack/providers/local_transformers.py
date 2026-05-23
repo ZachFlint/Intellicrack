@@ -554,7 +554,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         if self._loaded_model is None:
             self._logger.warning(
-                "local_transformers_chat_no_model_loaded",
+                "local_transformers_chat_model_missing",
                 provider="local_transformers",
                 model=model_id,
             )
@@ -671,7 +671,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
         if self._loaded_model is None:
             self._logger.warning(
-                "local_transformers_stream_no_model_loaded",
+                "local_transformers_stream_model_missing",
                 provider="local_transformers",
                 model=model_id,
             )
@@ -790,9 +790,7 @@ class LocalTransformersProvider(LLMProviderBase):
             Literal["xpu", "cpu", "auto"]: The value to place on
             ``ModelConfig.device``.
         """
-        if device == "xpu":
-            return "xpu"
-        return "cpu"
+        return "xpu" if device == "xpu" else "cpu"
 
     async def _load_for_device(self, device: Literal["cuda", "xpu", "cpu"], config: ModelConfig) -> LoadedModel:
         """Dispatch to the correct model loader for the given device.
@@ -823,9 +821,7 @@ class LocalTransformersProvider(LLMProviderBase):
         """
         if current == "cuda":
             return ["cpu"]
-        if current == "xpu":
-            return ["cpu"]
-        return []
+        return ["cpu"] if current == "xpu" else []
 
     def _load_model_for_cuda(self, config: ModelConfig) -> LoadedModel:
         """Load a causal language model onto a CUDA device.
@@ -1413,9 +1409,7 @@ class LocalTransformersProvider(LLMProviderBase):
             str: Text before the tool call JSON.
         """
         start_idx = LocalTransformersProvider._find_tool_call_start(response)
-        if start_idx == -1:
-            return response
-        return response[:start_idx].strip()
+        return response if start_idx == -1 else response[:start_idx].strip()
 
     def get_device_info(self) -> dict[str, object]:
         """Get information about the current device.

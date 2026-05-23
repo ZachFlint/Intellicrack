@@ -161,13 +161,11 @@ class HexPatPreprocessor:
                 base_address = _parse_int_value(m.group(1))
                 continue
 
-            m = _PRAGMA_EVAL_DEPTH_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_EVAL_DEPTH_RE.match(stripped):
                 eval_depth = int(m.group(1))
                 continue
 
-            m = _PRAGMA_ARRAY_LIMIT_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_ARRAY_LIMIT_RE.match(stripped):
                 array_limit = _parse_int_value(m.group(1))
                 continue
 
@@ -669,10 +667,10 @@ class HexPatPreprocessor:
         if not params:
             return body
 
-        replacements: dict[str, str] = {}
-        for idx, param in enumerate(params):
-            replacements[param] = args[idx] if idx < len(args) else ""
-
+        replacements: dict[str, str] = {
+            param: args[idx] if idx < len(args) else ""
+            for idx, param in enumerate(params)
+        }
         out: list[str] = []
         i: int = 0
         n: int = len(body)
@@ -779,13 +777,11 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             base_address = _parse_int_value(m.group(1))
             continue
 
-        m = _PRAGMA_EVAL_DEPTH_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_EVAL_DEPTH_RE.match(stripped):
             eval_depth = int(m.group(1))
             continue
 
-        m = _PRAGMA_ARRAY_LIMIT_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_ARRAY_LIMIT_RE.match(stripped):
             array_limit = _parse_int_value(m.group(1))
             continue
 

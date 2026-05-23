@@ -4,19 +4,15 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Windows PnP PCI resource enumeration for GPU BAR detection.
 
-Uses ``cfgmgr32.dll`` (``CM_Locate_DevNodeW``, ``CM_Get_First_Log_Conf``,
-``CM_Get_Next_Res_Des``, ``CM_Get_Res_Des_Data``) to walk the allocated
-resource descriptors of a GPU PnP device and read the actual MEM_LARGE
-(64-bit prefetchable) BAR sizes that Windows allocated to the device.
+Uses ``cfgmgr32.dll`` (``CM_Locate_DevNodeW``, ``CM_Get_First_Log_Conf``, ``CM_Get_Next_Res_Des``, ``CM_Get_Res_Des_Data``) to walk the
+allocated resource descriptors of a GPU PnP device and read the actual MEM_LARGE (64-bit prefetchable) BAR sizes that Windows allocated to
+the device.
 
-This is the canonical user-space, no-admin Windows mechanism for inspecting
-the resized PCI BAR. ``Win32_DeviceMemoryAddress`` only reports legacy 32-bit
-MMIO ranges, so it cannot distinguish ReBAR-enabled (multi-GB BAR) from
-ReBAR-disabled (256 MB cap) on Intel Arc, AMD Radeon, or NVIDIA discrete
-GPUs.
+This is the canonical user-space, no-admin Windows mechanism for inspecting the resized PCI BAR. ``Win32_DeviceMemoryAddress`` only reports
+legacy 32-bit MMIO ranges, so it cannot distinguish ReBAR-enabled (multi-GB BAR) from ReBAR-disabled (256 MB cap) on Intel Arc, AMD Radeon,
+or NVIDIA discrete GPUs.
 
-Reference: ``cfgmgr32.h`` and ``cfg.h`` (Windows SDK), MEM_DES /
-MEM_LARGE_RESOURCE layouts.
+Reference: ``cfgmgr32.h`` and ``cfg.h`` (Windows SDK), MEM_DES / MEM_LARGE_RESOURCE layouts.
 """
 
 from __future__ import annotations
@@ -104,6 +100,7 @@ class _Cfgmgr32:
         self.get_res_des_data = self._lib.CM_Get_Res_Des_Data
         self.free_res_des_handle = self._lib.CM_Free_Res_Des_Handle
         self.free_log_conf_handle = self._lib.CM_Free_Log_Conf_Handle
+        _logger.debug("cfgmgr32_bindings_loaded", function_count=len(self._SIGNATURES))
 
 
 def _load_cfgmgr() -> _Cfgmgr32 | None:
@@ -118,7 +115,7 @@ def _load_cfgmgr() -> _Cfgmgr32 | None:
     try:
         return _Cfgmgr32()
     except OSError as exc:
-        _logger.debug("cfgmgr32_load_failed", error=str(exc))
+        _logger.warning("cfgmgr32_load_failed", error=str(exc))
         return None
 
 
@@ -135,7 +132,7 @@ def _locate_devnode(cfg: _Cfgmgr32, device_id: str) -> int | None:
     devinst = c_uint32(0)
     rc: int = int(cfg.locate_devnode(byref(devinst), device_id, 0))
     if rc != _CR_SUCCESS:
-        _logger.debug("cfgmgr_locate_failed", device_id=device_id, rc=f"0x{rc:x}")
+        _logger.debug("cfgmgr_locate_failed", device_id=device_id, rc=rc, rc_hex=hex(rc))
         return None
     return devinst.value
 
@@ -156,9 +153,7 @@ def _read_descriptor_bytes(cfg: _Cfgmgr32, res_des: int) -> bytes | None:
         return None
     buf = (ctypes.c_uint8 * size.value)()
     rc = int(cfg.get_res_des_data(res_des, buf, size.value, 0))
-    if rc != _CR_SUCCESS:
-        return None
-    return bytes(buf)
+    return None if rc != _CR_SUCCESS else bytes(buf)
 
 
 def _parse_mem_descriptor(data: bytes, *, large: bool) -> _BarDescriptor | None:
@@ -181,14 +176,12 @@ def _parse_mem_descriptor(data: bytes, *, large: bool) -> _BarDescriptor | None:
     if len(data) < minimum:
         return None
     range_offset = _MEM_DES_SIZE
+    flags_le = data[range_offset + 32 : range_offset + 36]
     if large:
         nbytes_le = data[range_offset + 8 : range_offset + 16]
-        flags_le = data[range_offset + 32 : range_offset + 36]
-        size_bytes = int.from_bytes(nbytes_le, byteorder="little", signed=False)
     else:
         nbytes_le = data[range_offset + 8 : range_offset + 12]
-        flags_le = data[range_offset + 32 : range_offset + 36]
-        size_bytes = int.from_bytes(nbytes_le, byteorder="little", signed=False)
+    size_bytes = int.from_bytes(nbytes_le, byteorder="little", signed=False)
     flags = struct.unpack("<I", flags_le)[0]
     return _BarDescriptor(is_large=large, size_bytes=size_bytes, flags=flags)
 
@@ -251,7 +244,7 @@ def enumerate_pci_memory_bars(device_id: str) -> list[_BarDescriptor]:
     log_conf = c_uint64(0)
     rc: int = int(cfg.get_first_log_conf(byref(log_conf), devinst, _ALLOC_LOG_CONF))
     if rc != _CR_SUCCESS:
-        _logger.debug("cfgmgr_no_alloc_log_conf", device_id=device_id, rc=f"0x{rc:x}")
+        _logger.debug("cfgmgr_no_alloc_log_conf", device_id=device_id, rc=rc, rc_hex=hex(rc))
         return []
 
     try:
@@ -271,6 +264,4 @@ def max_memory_bar_bytes(device_id: str) -> int:
         MEM_LARGE allocations). Zero when no BARs are reported.
     """
     bars = enumerate_pci_memory_bars(device_id)
-    if not bars:
-        return 0
-    return max(b.size_bytes for b in bars)
+    return max(b.size_bytes for b in bars) if bars else 0

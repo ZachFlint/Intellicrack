@@ -520,7 +520,6 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
-
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -573,13 +572,12 @@ def classify_tool_call(call: ToolCall) -> DestructiveClassification:
     try:
         tool_enum = ToolName(tool_name.lower())
     except ValueError:
+        _logger.warning("tool_name_not_registered", tool_name=tool_name)
         return "unknown"
     destructive_set = BRIDGE_DESTRUCTIVE_METHODS.get(tool_enum)
     if destructive_set is None:
         return "unknown"
-    if method_leaf in destructive_set:
-        return "destructive"
-    return "read_only"
+    return "destructive" if method_leaf in destructive_set else "read_only"
 
 
 @dataclass
@@ -1123,7 +1121,7 @@ class Orchestrator:
                 session_messages.pop()
         if session_messages and session_messages[-1] is user_message:
             session_messages.pop()
-        _logger.debug(
+        _logger.info(
             "turn_messages_rolled_back",
             user_message_removed=True,
             assistant_or_tool_removed=len(turn_messages),
@@ -1498,6 +1496,7 @@ class Orchestrator:
 
         model_id = self._current_session.model if self._current_session is not None else "<no session>"
         provider_name = provider.name.value
+        _logger.warning("context_window_unknown", provider=provider_name, model=model_id)
         error_message = (
             f"No context window known for provider '{provider_name}' model '{model_id}'. "
             "Configure OrchestratorConfig.context_window_override (or fix the provider's "
@@ -1540,6 +1539,7 @@ class Orchestrator:
             ToolError: If ``context_window`` is ``None``.
         """
         if context_window is None:
+            _logger.warning("trim_messages_context_window_unknown")
             error_message = (
                 "Cannot trim messages: context window is unknown. Configure "
                 "OrchestratorConfig.context_window_override or pass a real "
@@ -1687,8 +1687,7 @@ class Orchestrator:
                 completion_tokens=usage.completion_tokens,
                 total_tokens=usage.total_tokens,
             )
-        thinking_blocks = provider.get_pending_thinking()
-        if thinking_blocks:
+        if thinking_blocks := provider.get_pending_thinking():
             self._stats.thinking_blocks_collected += len(thinking_blocks)
             if response.thinking_content is None:
                 response.thinking_content = "\n\n".join(thinking_blocks)
@@ -2078,7 +2077,7 @@ class Orchestrator:
             cancelled, or no callback is registered.
         """
         if self._shutdown_called or self._shutdown_event.is_set():
-            _logger.debug("confirmation_skipped_shutdown", call_id=call.id)
+            _logger.debug("confirmation_aborted_during_teardown", call_id=call.id)
             return False
 
         self._state = "waiting_confirmation"
@@ -2092,7 +2091,7 @@ class Orchestrator:
             try:
                 return await future
             except asyncio.CancelledError:
-                _logger.debug("confirmation_future_cancelled", call_id=call.id)
+                _logger.warning("confirmation_future_cancelled", call_id=call.id)
                 return False
             finally:
                 self._pending_confirmations.discard(pending)
@@ -2126,7 +2125,7 @@ class Orchestrator:
         try:
             pending.future.set_result(confirmed)
         except asyncio.InvalidStateError:
-            _logger.debug(
+            _logger.warning(
                 "confirm_pending_invalid_state",
                 call_id=pending.call.id,
                 confirmed=confirmed,
@@ -2719,10 +2718,14 @@ def _resolve_arch(raw: str) -> str:
     Returns:
         str: Canonical architecture name.
     """
-    for keyword, canonical in _ARCH_KEYWORDS.items():
-        if keyword in raw:
-            return canonical
-    return raw or "unknown"
+    return next(
+        (
+            canonical
+            for keyword, canonical in _ARCH_KEYWORDS.items()
+            if keyword in raw
+        ),
+        raw or "unknown",
+    )
 
 
 def _extract_sections(binary: object) -> list[SectionInfo]:
@@ -2795,7 +2798,7 @@ def extract_imports(binary: object) -> list[ImportInfo]:
                     _ImportInfo(
                         dll=dll_name,
                         function=entry_name or f"ord_{entry.data}",
-                        ordinal=int(entry.data) if not entry_name else None,
+                        ordinal=None if entry_name else int(entry.data),
                         address=int(entry.iat_value),
                     ),
                 )

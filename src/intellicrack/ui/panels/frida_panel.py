@@ -1542,18 +1542,18 @@ class FridaPanel(AnalysisPanelBase):
         """Show exports for the selected module."""
         if self._bridge is None:
             return
-        module_name = self._module_combo.currentText()
-        if not module_name:
+        if module_name := self._module_combo.currentText():
+            run_bridge_coroutine_logged(
+                self._bridge.enumerate_exports(module_name),
+                on_success=self._populate_exports_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Exports failed: {e}"),
+                parent=self,
+                event="frida_enumerate_exports",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.enumerate_exports(module_name),
-            on_success=self._populate_exports_table,
-            on_error=lambda e: self._console.appendPlainText(f"[-] Exports failed: {e}"),
-            parent=self,
-            event="frida_enumerate_exports",
-            logger=_logger,
-            module=module_name,
-        )
 
     def _populate_exports_table(self, result: object) -> None:
         """Populate the exports table from results.
@@ -1578,18 +1578,18 @@ class FridaPanel(AnalysisPanelBase):
         """Show imports for the selected module."""
         if self._bridge is None:
             return
-        module_name = self._module_combo.currentText()
-        if not module_name:
+        if module_name := self._module_combo.currentText():
+            run_bridge_coroutine_logged(
+                self._bridge.enumerate_imports(module_name),
+                on_success=self._populate_imports_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Imports failed: {e}"),
+                parent=self,
+                event="frida_enumerate_imports",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.enumerate_imports(module_name),
-            on_success=self._populate_imports_table,
-            on_error=lambda e: self._console.appendPlainText(f"[-] Imports failed: {e}"),
-            parent=self,
-            event="frida_enumerate_imports",
-            logger=_logger,
-            module=module_name,
-        )
 
     def _populate_imports_table(self, result: object) -> None:
         """Populate the imports table from results.
@@ -1759,13 +1759,15 @@ class FridaPanel(AnalysisPanelBase):
         size = self._mem_read_size.value()
         captured_addr = addr
         run_bridge_coroutine_logged(
-            self._bridge.read_memory(addr, size),
+            self._bridge.read_memory(captured_addr, size),
             on_success=lambda r: self._on_read_memory_success(captured_addr, r),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Read failed: {e}"),
+            on_error=lambda e: self._console.appendPlainText(
+                f"[-] Read failed: {e}"
+            ),
             parent=self,
             event="frida_read_memory",
             logger=_logger,
-            address=hex(addr),
+            address=hex(captured_addr),
             size=size,
         )
 
@@ -2060,18 +2062,18 @@ class FridaPanel(AnalysisPanelBase):
         """Find the base address of a module."""
         if self._bridge is None:
             return
-        module_name = self._sym_module_input.text().strip()
-        if not module_name:
+        if module_name := self._sym_module_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.find_base_address(module_name),
+                on_success=lambda r: self._sym_base_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
+                on_error=lambda e: self._console.appendPlainText(f"[-] Find base failed: {e}"),
+                parent=self,
+                event="frida_find_base_address",
+                logger=_logger,
+                module=module_name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.find_base_address(module_name),
-            on_success=lambda r: self._sym_base_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Find base failed: {e}"),
-            parent=self,
-            event="frida_find_base_address",
-            logger=_logger,
-            module=module_name,
-        )
 
     def _on_resolve_symbol(self) -> None:
         """Resolve a symbol from an address."""
@@ -2106,18 +2108,18 @@ class FridaPanel(AnalysisPanelBase):
         """Find functions by name."""
         if self._bridge is None:
             return
-        name = self._sym_func_input.text().strip()
-        if not name:
+        if name := self._sym_func_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.find_functions_named(name),
+                on_success=self._populate_sym_results_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] Find functions failed: {e}"),
+                parent=self,
+                event="frida_find_functions_named",
+                logger=_logger,
+                function_name=name,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.find_functions_named(name),
-            on_success=self._populate_sym_results_table,
-            on_error=lambda e: self._console.appendPlainText(f"[-] Find functions failed: {e}"),
-            parent=self,
-            event="frida_find_functions_named",
-            logger=_logger,
-            function_name=name,
-        )
 
     def _populate_sym_results_table(self, result: object) -> None:
         """Populate the symbols results table.
@@ -2145,18 +2147,18 @@ class FridaPanel(AnalysisPanelBase):
         """Resolve API functions by pattern."""
         if self._bridge is None:
             return
-        query = self._sym_api_input.text().strip()
-        if not query:
+        if query := self._sym_api_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.resolve_api(query),
+                on_success=self._populate_api_table,
+                on_error=lambda e: self._console.appendPlainText(f"[-] API resolve failed: {e}"),
+                parent=self,
+                event="frida_resolve_api",
+                logger=_logger,
+                query=query,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.resolve_api(query),
-            on_success=self._populate_api_table,
-            on_error=lambda e: self._console.appendPlainText(f"[-] API resolve failed: {e}"),
-            parent=self,
-            event="frida_resolve_api",
-            logger=_logger,
-            query=query,
-        )
 
     def _populate_api_table(self, result: object) -> None:
         """Populate the API matches table.
@@ -2303,10 +2305,10 @@ class FridaPanel(AnalysisPanelBase):
                 return
 
         ret_type = self._adv_ret_type.currentText()
-        arg_types_text = self._adv_arg_types.text().strip()
-        arg_types: list[str] | None = None
-        if arg_types_text:
+        if arg_types_text := self._adv_arg_types.text().strip():
             arg_types = [t.strip() for t in arg_types_text.split(",")]
+        else:
+            arg_types = None
         cc = self._adv_cc.currentText()
 
         run_bridge_coroutine_logged(

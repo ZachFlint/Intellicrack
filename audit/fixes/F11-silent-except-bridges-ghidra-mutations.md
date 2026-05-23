@@ -7,6 +7,7 @@
 ## Fix template
 
 Before:
+
 ```python
 try:
     result = self._call_jython(...)
@@ -15,6 +16,7 @@ except Exception as e:
 ```
 
 After:
+
 ```python
 try:
     result = self._call_jython(...)

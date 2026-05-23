@@ -326,18 +326,21 @@ class SessionStore:
                 NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
                 data TEXT NOT NULL )
-                """,
+                """
+                   ,
             )
 
             conn.execute(
-                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)""",
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
+                                                                                                   ,
             )
 
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
 
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
-                """,
+                """
+                   ,
             )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
@@ -375,7 +378,8 @@ class SessionStore:
                 conn.execute(
                     """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    """
+                       ,
                     (
                         session.id,
                         session.name,
@@ -497,7 +501,8 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?""",
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
+                                                                                                                                   ,
                 (limit,),
             ).fetchall()
 
@@ -1055,6 +1060,7 @@ class SessionManager:
         Returns:
             Session | None: Session instance or None if not found.
         """
+        _logger.debug("session_get_invoked", session_id=session_id)
         async with self._db_lock:
             return await asyncio.to_thread(self.store.load, session_id)
 
@@ -1069,6 +1075,7 @@ class SessionManager:
         Args:
             session: Session to update.
         """
+
         async with self._db_lock:
             await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)
@@ -1260,7 +1267,7 @@ class SessionManager:
                 await asyncio.sleep(self.save_interval)
                 await self.save()
             except asyncio.CancelledError:
-                _logger.debug("autosave_loop_cancelled")
+                _logger.warning("autosave_loop_cancelled")
                 raise
             except Exception:
                 _logger.exception(

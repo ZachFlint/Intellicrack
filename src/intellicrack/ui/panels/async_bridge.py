@@ -59,7 +59,6 @@ This tuple is the union of error types currently raised by hex-editor mixin call
 via the ``exceptions`` constructor argument.
 """
 
-
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
 
@@ -338,20 +337,18 @@ def run_bridge_coroutine_logged(
         **context: Structured kwargs included in every emitted log entry.
     """
     emit = logger.info if level == "info" else logger.debug
-    started_event = event + "_started"
-    succeeded_event = event + "_succeeded"
-    failed_event = event + "_failed"
-    emit(started_event, **context)
+    emit("bridge_coroutine_started", op_event=event, **context)
 
     def _logged_success(result: object) -> None:
-        emit(succeeded_event, **context)
+        emit("bridge_coroutine_succeeded", op_event=event, **context)
         if on_success is not None:
             on_success(result)
 
     def _logged_error(exc: object) -> None:
         error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
         logger.warning(
-            failed_event,
+            "bridge_coroutine_failed",
+            op_event=event,
             error=str(error_obj),
             error_type=type(error_obj).__name__,
             **context,

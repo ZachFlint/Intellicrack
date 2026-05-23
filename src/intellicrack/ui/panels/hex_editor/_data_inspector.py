@@ -256,9 +256,7 @@ class DataInspectorMixin:
         if combo is None:
             return "utf-8"
         data = combo.currentData()
-        if isinstance(data, str) and data:
-            return data
-        return "utf-8"
+        return data if isinstance(data, str) and data else "utf-8"
 
     def _create_text_decode_group(self) -> QGroupBox:
         """Create the text decode/encode group box.
@@ -368,7 +366,7 @@ class DataInspectorMixin:
         try:
             hex_str = run_bridge_coroutine(bridge.encode_text(text, encoding))
         except (AttributeError, ValueError, OverflowError, RuntimeError) as exc:
-            _logger.exception("encode_text_bridge_failed", encoding=encoding, error=str(exc))
+            _logger.exception("encode_text_bridge_failed", encoding=encoding)
             self._encode_output.setText(f"Error: {exc}")
             return
 
