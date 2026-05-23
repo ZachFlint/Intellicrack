@@ -17,10 +17,10 @@ Implement an entrypoint overlay mechanism for Windows containers to streamline i
 
 - Implement BitAndZero opcode in hexcore and compiler (`f144be8`)
 Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
-* Implement BitAndZero logic in TemplateEvaluator and ConditionOp
-* Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
-* Refactor various UI components and docstrings for consistent line length and formatting
-* Update linting reports and semgrep rules to reflect recent codebase changes
+- Implement BitAndZero logic in TemplateEvaluator and ConditionOp
+- Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
+- Refactor various UI components and docstrings for consistent line length and formatting
+- Update linting reports and semgrep rules to reflect recent codebase changes
 
 - Migrate test harness from Windows Sandbox to Docker (`cf470c3`)
 Replace the legacy Windows Sandbox-based test redirection with a unified Docker-based sandbox driver. The new harness uses Windows process-isolated containers to provide consistent, reproducible environments for unit, integration, and E2E tests while maintaining host-side report harvesting.
@@ -43,7 +43,7 @@ accumulate), hash fns (crc8/16/32/64 via generic CRC engine), time fns
 (epoch, to_local, to_utc, format), sandboxed file fns (open, close, read,
 write, seek, size, resize, flush, remove, create_directories), random fns
 (set_seed, generate with Distribution enum), env, sizeof_pack, and core
-reflection fns wired through an _ReflectionProvider dataclass.
+reflection fns wired through an_ReflectionProvider dataclass.
 
 - **hexcore:** Big-endian ELF support and Sym/Rel/Rela/Dyn/Nhdr templates  (`0f2027d`)
 F13 — add FieldType::EndiannessSwitch { peek_offset, big_value }.
@@ -107,33 +107,33 @@ the current candidate instead of being silently dropped.
 This massive update represents a significant architectural pivot, transitioning from a process-centric model to a centralized, state-managed binary analysis framework. The core of the application has been refactored to prioritize advanced hex editing, deep static analysis, and comprehensive sandbox orchestration. By moving logic out of the legacy bridge layers and into a robust core orchestrator, the system now supports more complex, multi-tool workflows with improved thread safety and state synchronization.
 The Rust-based hex engine has been significantly enhanced to support large-file operations, patch formats, and granular memory manipulation, while the UI has been decomposed into modular mixins to manage the increased complexity of the new analysis panels. The tool bridges for Frida, Ghidra, Cutter, and x64dbg have been expanded from basic wrappers into full-featured instrumentation and analysis interfaces. This restructuring also introduces a sophisticated sandbox monitoring subsystem capable of behavioral analysis, network capture, and automated IOC extraction, providing a unified environment for both static and dynamic malware research.
 Core Architecture & Orchestration:
-* Refactored `src.intellicrack.core.orchestrator` to centralize logic previously held in bridges, adding `lief`-based binary parsing for section and import extraction.
-* Updated `ToolRegistry` in `src.intellicrack.core.tools` to use dynamic imports for bridge instantiation, reducing circular dependencies and removing the redundant `BinaryBridge`.
-* Implemented a thread-safe state management system in `src.intellicrack.bridges.hex_state` with new event types for VA mapping, alignment grids, and color modes.
-* Expanded the Rust backend in `src/intellicrack-hexcore` with new modules for BPS/UPS patch handling, string extraction, and PE checksum verification.
+- Refactored `src.intellicrack.core.orchestrator` to centralize logic previously held in bridges, adding `lief`-based binary parsing for section and import extraction.
+- Updated `ToolRegistry` in `src.intellicrack.core.tools` to use dynamic imports for bridge instantiation, reducing circular dependencies and removing the redundant `BinaryBridge`.
+- Implemented a thread-safe state management system in `src.intellicrack.bridges.hex_state` with new event types for VA mapping, alignment grids, and color modes.
+- Expanded the Rust backend in `src/intellicrack-hexcore` with new modules for BPS/UPS patch handling, string extraction, and PE checksum verification.
 Binary & Hex Editing Subsystem:
-* Introduced `HexEditorBridge` with comprehensive support for block operations (fill, copy, move, swap), bitwise arithmetic, and VA mapping management.
-* Added a modular UI for the hex editor in `src.intellicrack.ui.panels.hex_editor`, utilizing mixins for hashing, signatures, scripting, and process memory access.
-* Implemented a background `DiffWorker` in `_comparison.py` to enable non-blocking side-by-side binary comparisons.
-* Added `_data_inspector.py` to provide granular bit-level editing and multi-encoding text decoding directly within the hex view.
+- Introduced `HexEditorBridge` with comprehensive support for block operations (fill, copy, move, swap), bitwise arithmetic, and VA mapping management.
+- Added a modular UI for the hex editor in `src.intellicrack.ui.panels.hex_editor`, utilizing mixins for hashing, signatures, scripting, and process memory access.
+- Implemented a background `DiffWorker` in `_comparison.py` to enable non-blocking side-by-side binary comparisons.
+- Added `_data_inspector.py` to provide granular bit-level editing and multi-encoding text decoding directly within the hex view.
 Tool Bridge Enhancements:
-* Expanded `FridaBridge` to include cross-language runtime hooking (Java/ObjC), kernel memory access, and persistent script management via `CModule`.
-* Upgraded `GhidraBridge` with P-code IR analysis, control flow graph generation, and automated symbol/type management functions.
-* Refactored `CutterBridge` to support ROP gadget searching, ESIL emulation, and Zignature management while switching assembly backend to Rizin's `pa` command.
-* Enhanced `x64dbg` bridge and plugin with support for expression evaluation, resource enumeration, anti-debug detection, and database persistence.
+- Expanded `FridaBridge` to include cross-language runtime hooking (Java/ObjC), kernel memory access, and persistent script management via `CModule`.
+- Upgraded `GhidraBridge` with P-code IR analysis, control flow graph generation, and automated symbol/type management functions.
+- Refactored `CutterBridge` to support ROP gadget searching, ESIL emulation, and Zignature management while switching assembly backend to Rizin's `pa` command.
+- Enhanced `x64dbg` bridge and plugin with support for expression evaluation, resource enumeration, anti-debug detection, and database persistence.
 Process & System Analysis:
-* Created `src.intellicrack.bridges.process` and `_win32_types.py` to provide low-level Windows inspection, including token/privilege management and SEH chain traversal.
-* Implemented a new `ProcessPanel` UI with dedicated tabs for thread context manipulation, module section enumeration, and system-wide handle tracking.
-* Added `_elevate_debug_privilege` to automatically acquire `SeDebugPrivilege` during process bridge initialization.
+- Created `src.intellicrack.bridges.process` and `_win32_types.py` to provide low-level Windows inspection, including token/privilege management and SEH chain traversal.
+- Implemented a new `ProcessPanel` UI with dedicated tabs for thread context manipulation, module section enumeration, and system-wide handle tracking.
+- Added `_elevate_debug_privilege` to automatically acquire `SeDebugPrivilege` during process bridge initialization.
 Sandbox & Behavioral Monitoring:
-* Developed a comprehensive sandbox analysis suite in `src.intellicrack.sandbox.analysis` for C2 pattern detection, beaconing analysis, and timeline generation.
-* Added PowerShell-based monitoring hooks for API tracing, clipboard activity, and injection detection within the QEMU/Windows sandbox environments.
-* Updated `SandboxBridge` to expose advanced capabilities like PCAP capture, memory dumping, and automated YARA scanning of guest memory.
-* Refactored `SandboxPanel` to display rich behavioral data including DLL loads, service modifications, and kernel object interactions.
+- Developed a comprehensive sandbox analysis suite in `src.intellicrack.sandbox.analysis` for C2 pattern detection, beaconing analysis, and timeline generation.
+- Added PowerShell-based monitoring hooks for API tracing, clipboard activity, and injection detection within the QEMU/Windows sandbox environments.
+- Updated `SandboxBridge` to expose advanced capabilities like PCAP capture, memory dumping, and automated YARA scanning of guest memory.
+- Refactored `SandboxPanel` to display rich behavioral data including DLL loads, service modifications, and kernel object interactions.
 Development & Tooling:
-* Replaced `scripts/process_lint_json.py` with a more robust reporting mechanism and added `scripts/run-all-tools.py` for integrated CI/CD checks.
-* Updated the project knowledge graph (`IntellicrackKnowledgeGraph.graphml`) to reflect the removal of legacy bridges and the addition of the new hex-centric architecture.
-* Added extensive E2E test suites for hexcore operations, sandbox management, and Win32 type safety.
+- Replaced `scripts/process_lint_json.py` with a more robust reporting mechanism and added `scripts/run-all-tools.py` for integrated CI/CD checks.
+- Updated the project knowledge graph (`IntellicrackKnowledgeGraph.graphml`) to reflect the removal of legacy bridges and the addition of the new hex-centric architecture.
+- Added extensive E2E test suites for hexcore operations, sandbox management, and Win32 type safety.
 
 - Auto-discover latest Gemini Flash model, fix blinter findings, update configs (`d76da60`)
 Reworked generate_commit_message.py to dynamically discover the latest
@@ -167,7 +167,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
-
 ### Changed
 
 - **bridges:** Consolidate PE format magic constants (audit Group 3)  (`ea94a67`)
@@ -176,8 +175,8 @@ process.py and ghidra.py into the shared bridges/_pe_format.py module.
 Adds the integer companion forms PE_DOS_SIGNATURE_INT (0x5A4D) and
 PE_SIGNATURE_INT (0x00004550) for call sites that compare against
 values already unpacked with struct.unpack_from. Removes per-file
-duplicates _PE_DOS_SIGNATURE, _PE_HEADER_OFFSET_FIELD, _PE_SIGNATURE
-(process.py) and _PE_POINTER_OFFSET, _PE_POINTER_END, _PE_MAGIC,
+duplicates _PE_DOS_SIGNATURE,_PE_HEADER_OFFSET_FIELD,_PE_SIGNATURE
+(process.py) and_PE_POINTER_OFFSET, _PE_POINTER_END,_PE_MAGIC,
 _MZ_MAGIC (ghidra.py); the call sites now reference the canonical
 PE_DOS_SIGNATURE_INT, PE_SIGNATURE_INT, PE_DOS_LFANEW_OFFSET,
 PE_DOS_HEADER_SIZE, PE_DOS_SIGNATURE, and PE_SIGNATURE constants.
@@ -242,7 +241,7 @@ helper against every IMAGE_FILE_MACHINE_* value plus unknown / zero,
 plus three real-shape PE32 / PE32+ / ARM64 buffer round-trips.
 The pre-commit test-coverage-modified hook fails on the prereq commit
 itself (test infrastructure depends on sandbox/_log_helpers from PR
-#271 which is not present on this branch). --no-verify used for that
+# 271 which is not present on this branch). --no-verify used for that
 unrelated reason; ruff / format / basedpyright / pydoclint /
 pydocstyle / pytest of changed tests / vulture all pass.
 
@@ -260,7 +259,7 @@ UI refactor:
 - _disassembly._on_disassemble dispatches via run_bridge_coroutine_async
 - _yara._on_yara_scan dispatches via run_bridge_coroutine_async
 - _sections._populate_{sections,imports,exports} dispatch via the new bridge methods
-Also fixes a latent bug in _detect_pe_va_mappings introduced by PR #274
+Also fixes a latent bug in_detect_pe_va_mappings introduced by PR #274
 where read_dos_e_lfanew was passed a 4-byte slice instead of the full
 DOS header.
 Bypassing pre-commit because bandit fails on main for unrelated
@@ -352,9 +351,9 @@ is preserved and covered by the new test suite.
 - **ui:** Consolidate hex-editor QThread workers into GenericCallableWorker  (`374eeb4`)
 Audit Group 15. Replaces eight near-identical synchronous QThread worker
 subclasses in the hex-editor mixins with a single GenericCallableWorker
-in async_bridge.py that runs an arbitrary func(*args, **kwargs) on a
+in async_bridge.py that runs an arbitrary func(_args, **kwargs) on a
 background thread and emits call_finished / call_error signals.
-Each former worker becomes a module-level pure function (execute_*) taking
+Each former worker becomes a module-level pure function (execute__) taking
 the parameters previously stored as self._* attributes. The mixins
 instantiate GenericCallableWorker(execute_*, ...) inline and forward typed
 handlers via narrow _*_obj adapters that bridge pyqtSignal(object) to the
@@ -404,7 +403,7 @@ package by routing all consumers through the canonical
 ``_win32_types`` module.
 
 - **providers:** Consolidate streaming JSON parse-skip helper  (`25ab8f0`)
-* refactor(providers): consolidate streaming JSON parse-skip helper (audit Group 9)
+- refactor(providers): consolidate streaming JSON parse-skip helper (audit Group 9)
 Adds LLMProviderBase._safe_parse_stream_json static helper to centralise the
 shared parse-or-skip-and-warn behaviour used by every streaming provider when
 decoding chunks line-by-line. Replaces 3 duplicated try/except blocks
@@ -417,7 +416,7 @@ exercising real structlog loggers (no mocks) and covering: valid object
 parsing, empty-line short-circuit, malformed JSON warning, truncated JSON,
 non-object decode rejection, custom event names, logger binding propagation,
 and whitespace-only behaviour.
-* test(providers): align whitespace-line test name with helper contract
+- test(providers): align whitespace-line test name with helper contract
 The whitespace-only test asserted that the helper emits a warning event
 for "   " (because json.loads raises JSONDecodeError on it), but the
 test was named ..._returns_none_silently and its docstring summary said
@@ -449,7 +448,7 @@ Add intellicrack/ui/_dialogs.py exposing show_error, show_warning,
 show_info wrappers around QMessageBox.critical/warning/information
 that emit consistent structured logging with optional exc_info capture.
 Adopt across all 9 cited UI surfaces from audit Group 16:
-hex_editor/panel.py, _yara.py, _disassembly.py, _patches.py,
+hex_editor/panel.py, _yara.py,_disassembly.py, _patches.py,
 _hashing.py; provider_config.py; sandbox_config.py; tool_config.py.
 hxd_panel.py is in scope but had no QMessageBox calls to migrate.
 QMessageBox.question is left alone because it has interactive
@@ -515,11 +514,11 @@ list no longer sums to total_length and is unrecoverable in-place.
 
 - Add docstrings and improve type safety in hexcore (`574fe2b`)
 Standardized documentation across the Python UI and core modules by adding missing docstrings to class constructors and methods. Updated the Rust hexcore library to improve integer type safety, add CRC validation logic for patching, and refine string extraction routines.
-* Update Python dependencies in pyproject.toml including pydantic, rich, and anthropic
-* Implement robust BPS/UPS patch validation and error handling in Rust
-* Add comprehensive docstrings to UI panels, bridges, and provider implementations
-* Synchronize knowledge graph visualization with recent architectural changes
-* Regenerate linting and security reports across multiple formats
+- Update Python dependencies in pyproject.toml including pydantic, rich, and anthropic
+- Implement robust BPS/UPS patch validation and error handling in Rust
+- Add comprehensive docstrings to UI panels, bridges, and provider implementations
+- Synchronize knowledge graph visualization with recent architectural changes
+- Regenerate linting and security reports across multiple formats
 
 - Update knowledge graph and workspace configuration (`b59c83b`)
 Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
@@ -531,8 +530,8 @@ Synchronize the Intellicrack knowledge graph with the current project structure 
 
 - Improve NUL file cleaning script efficiency (`f905df9`)
 The `clean_nul.py` script has been refactored for better performance and robustness. It now efficiently skips common non-project directories and correctly identifies Windows reserved names regardless of case or file extension.
-* `scripts/clean_nul.py`:
-* Replaced `Path.rglob` with `os.walk` and a `SKIP_DIRS` set for faster traversal.
+- `scripts/clean_nul.py`:
+- Replaced `Path.rglob` with `os.walk` and a `SKIP_DIRS` set for faster traversal.
 
 - Update dependencies and modernize codebase (`d42780c`)
 - Update `pixi.lock` and `pyproject.toml` to include new dependencies: `PyQt6`, `pefile`, `lief`, `capstone`, `keystone-engine`, `frida`, `r2pipe`, `cxxfilt`, `httpx`, `structlog`, `anthropic`, `openai`, `google-genai`, `transformers`, `ghidra-bridge`, `tomli-w`, and `xxhash`.
@@ -542,10 +541,10 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Clean up `hexpat` interpreter and compiler logic, including improved error handling and type annotations.
 - Fix minor linting issues and modernize Python syntax across core and UI modules.
 - Update test suites to use consistent byte literals and improve test coverage for bridge operations.
-*   **Dependencies**: Added essential reverse engineering and AI integration libraries.
-*   **UI**: Centralized theme-aware color management for hex editor widgets and panels.
-*   **Core**: Improved `HexDisassembler` robustness and `HexPat` compiler stability.
-*   **Tests**: Standardized byte literal formatting and improved E2E test reliability.
+- **Dependencies**: Added essential reverse engineering and AI integration libraries.
+- **UI**: Centralized theme-aware color management for hex editor widgets and panels.
+- **Core**: Improved `HexDisassembler` robustness and `HexPat` compiler stability.
+- **Tests**: Standardized byte literal formatting and improved E2E test reliability.
 
 - Update commit message generator and project metadata (`a14c8c2`)
 - Refactor `scripts/generate_commit_message.py` to improve logic and robustness.
@@ -559,7 +558,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
 
 ### Documentation
 
@@ -622,7 +620,6 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 - Fix docstring findings in tests/test_hexpat + test_scripts  (`09ee9c1`)
 
 - Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
-
 
 ### Fixed
 
@@ -699,27 +696,27 @@ user or AI / CLI callers.
 
 - **bridges:** F-0008/F-0019/F-0035/F-0037/F-0044 process bridge audit7  (`df27f12`)
 Resolve five PARTIAL audit2/bridges-process findings:
-* F-0008: get_seh_chain now uses 4-byte pointers for WOW64 targets via
+- F-0008: get_seh_chain now uses 4-byte pointers for WOW64 targets via
 the new _PTR_SIZE_32 constant. The previous code derived ptr_size
 from struct.calcsize("P") on the host interpreter, which silently
 produced 16-byte SEH reads for WOW64 (32-bit) processes on a 64-bit
 Python and corrupted every returned address.
-* F-0019: get_handles now resolves ObjectTypeIndex to a type_name
+- F-0019: get_handles now resolves ObjectTypeIndex to a type_name
 string via the cached NtQueryObject(ObjectAllTypesInformation) map
 built by _build_handle_type_map. The raw type_index integer is kept
 as a sibling field. Tool-def returns text updated to advertise the
-new schema. The _modules_tab.py UI consumer prefers the resolved
+new schema. The_modules_tab.py UI consumer prefers the resolved
 name when present.
-* F-0035: search_pattern dispatches each per-region scan through
+- F-0035: search_pattern dispatches each per-region scan through
 asyncio.to_thread and yields via asyncio.sleep(0) between regions
 so the event loop remains responsive while large processes are
 scanned.
-* F-0037: query_system_info now returns a hex string (return type
+- F-0037: query_system_info now returns a hex string (return type
 annotation switched to str) so the tool-def contract is honoured
 and JSON tool responses are serialisable. The _system_tab.py UI
 consumer accepts the hex-string output and renders the hex dump
 via bytes.fromhex.
-* F-0044: pipe_connect and device_open register their handles into
+- F-0044: pipe_connect and device_open register their handles into
 _pipe_handles / _device_handles on success so shutdown can release
 them; the corresponding *_close methods pop the entry on a
 successful close. Closes the handle leaks that previously left both
@@ -737,19 +734,19 @@ x64dbg console wrappers that returned hardcoded ``{"success": True}``
 immediately after queuing an asynchronous command, without inspecting
 whether the debugger actually applied the change.
 Each wrapper now performs an operation-appropriate verification:
-* set_label / set_comment - readback compare via ``lbl_list`` /
+- set_label / set_comment - readback compare via ``lbl_list`` /
 ``cmt_list``.
-* enable_breakpoint / disable_breakpoint - poll ``bp_list`` for the
+- enable_breakpoint / disable_breakpoint - poll ``bp_list`` for the
 expected ``enabled`` flag.
-* suspend_thread / resume_thread / switch_thread / set_thread_name -
+- suspend_thread / resume_thread / switch_thread / set_thread_name -
 poll ``thread_detail`` until the post-condition (suspended state,
 thread listed, or new name) is observed.
-* trace_into / trace_over / step_count / animate_start / animate_stop -
+- trace_into / trace_over / step_count / animate_start / animate_stop -
 poll ``status`` until the debugger's running flag flips to the
 expected value.
-* script_load / script_run / script_cmd / script_abort - query
+- script_load / script_run / script_cmd / script_abort - query
 ``script.iserror()`` via the expression evaluator.
-* plugin_load / plugin_unload - check ``plugin_list`` with a
+- plugin_load / plugin_unload - check ``plugin_list`` with a
 ``plugin.find()`` fallback.
 Each wrapper raises ``ToolError`` on verification failure with a
 structured ``x64dbg_error_code`` detail (no fake-success returns,
@@ -768,14 +765,14 @@ script the new verification RPCs in their fake-pipe responder.
 
 - **ui-app-core:** F-0021 wire wire_sandbox_backend through MainWindow + startup helper  (`2212fb3`)
 Adds the missing production call sites for `ToolOutputPanel.wire_sandbox_backend`:
-* `MainWindow.wire_sandbox_backend(sandbox, manager=None)` exposes the public
+- `MainWindow.wire_sandbox_backend(sandbox, manager=None)` exposes the public
 plugin/CLI injection surface, forwards to the tool panel, and installs the
 resulting manager onto `MainWindow.sandbox_manager` so dialog/teardown paths
 observe the same instance.
-* `intellicrack.main._wire_preregistered_sandbox` runs from `_create_main_window`
+- `intellicrack.main._wire_preregistered_sandbox` runs from `_create_main_window`
 at startup and forwards any pre-registered `SandboxBridge` instance from the
 orchestrator's tool registry into `MainWindow.wire_sandbox_backend`.
-* `ToolOutputPanel.get_sandbox_bridge` now also surfaces the deferred bridge
+- `ToolOutputPanel.get_sandbox_bridge` now also surfaces the deferred bridge
 before the sandbox panel is constructed.
 Regression tests cover the public method, manager reuse, single-invocation
 forwarding, type validation, the startup helper's wiring path, and its no-op
@@ -817,7 +814,7 @@ ToolStatusDialog, which immediately spawned six fresh
 ToolStatusCheckWorker QThreads to do the same work — doubling the
 work and delaying first paint.
 Add a typed tool_statuses parameter (TypedDict ToolStatusEntry) to
-ToolStatusDialog.__init__. When supplied, the dialog populates its
+ToolStatusDialog.**init**. When supplied, the dialog populates its
 list view directly from the snapshot and skips the initial worker
 batch entirely. The Refresh button is still wired to _refresh_status
 so explicit user-initiated refreshes always re-spawn workers.
@@ -849,14 +846,14 @@ the generated execution script only wrote the exit code to the shared
 folder. Any command run through that path returned (exit_code, "", ""),
 making it impossible for callers to diagnose failures or capture analysis
 output.
-* `_generate_execution_script` now redirects stdout and stderr to per-id
+- `_generate_execution_script` now redirects stdout and stderr to per-id
 sidecar files (`<id>.stdout`, `<id>.stderr`) under the guest's shared
 `output` folder before writing the exit-code sentinel. The redirection
 closes both descriptors before the result file is written so the host
 only observes the exit code once stdout/stderr are fully flushed.
-* `_poll_for_result` now reads both sidecars via the new `_read_sidecar`
+- `_poll_for_result` now reads both sidecars via the new `_read_sidecar`
 helper once the exit-code file appears and returns their content.
-* `_cleanup_result_artifacts` removes the script, result, and sidecar
+- `_cleanup_result_artifacts` removes the script, result, and sidecar
 files after a successful read so the shared folder no longer
 accumulates per-invocation artefacts.
 Adds 5 regression tests covering: stdout/stderr propagation from
@@ -864,7 +861,7 @@ sidecars, missing-sidecar returns empty string without raising, cleanup
 of all per-invocation files, and OS-specific script generation for
 Windows (.cmd) and Linux (.sh).
 
-- **xml:** F-0011 replace __import__ obfuscation with direct xml.etree import  (`caf2ca5`)
+- **xml:** F-0011 replace **import** obfuscation with direct xml.etree import  (`caf2ca5`)
 Replace the obfuscated ``__import__("xml" + ".etree.ElementTree")`` loader
 in ``intellicrack.core._xml_gen`` with a plain
 ``from xml.etree.ElementTree import ...``. Move the bandit B405 suppression
@@ -878,9 +875,9 @@ payload round-trip to confirm the write-side API still works.
 
 - **process-panel:** F-0022/F-0023 add PID guards and user-visible error dialogs to SystemTab  (`0002a6a`)
 
-- **providers:** F-0023 drop dead re-exports from package __init__  (`7cc58f9`)
+- **providers:** F-0023 drop dead re-exports from package **init**  (`7cc58f9`)
 Remove DiscoveryEvent, DtypeOption, and ModelConfig from
-intellicrack.providers.__all__ and the package-level re-exports.
+intellicrack.providers.**all** and the package-level re-exports.
 No production code or test imports them via intellicrack.providers.<name>
 - callers use the canonical submodules
 (intellicrack.providers.discovery / intellicrack.providers.model_loader)
@@ -888,7 +885,7 @@ directly. Removing the dead re-exports trims the documented public
 surface and keeps implementation-detail types from leaking through the
 package facade.
 Add a regression test asserting the three names are absent from both
-__all__ and the package's attribute table while remaining exported from
+**all** and the package's attribute table while remaining exported from
 their canonical source modules.
 
 - **qemu:** F-0007 wrap extract_dropped_files commands and add host fallback (`185f6d7`)
@@ -977,7 +974,7 @@ passed, 4 deselected (all 4 pre-existing failures unrelated to this
 unit; verified against clean main).
 
 - **ghidra:** Audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)  (`5d1cc1c`)
-* chore(repo): untrack personal CLI launcher (config.toml + .lnk + Launcher/Scripts)
+- chore(repo): untrack personal CLI launcher (config.toml + .lnk + Launcher/Scripts)
 The `CLI Coding/` folder and root `CLI Launcher.lnk` are per-user
 developer tooling, not part of the Intellicrack project. Tracking them
 caused local edits (e.g. removing `--dangerously-skip-permissions` from
@@ -985,7 +982,7 @@ the Claude Code launcher command in `CLI Coding/config.toml`) to revert
 on every pull/checkout.
 Untrack the entire `CLI Coding/` subtree and the launcher shortcut, and
 add both to `.gitignore` so future modifications stay local.
-* fix(ghidra): audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)
+- fix(ghidra): audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)
 
 - **x64dbg:** Audit6 X64DBG-D - concurrency/breakpoints (7 findings)  (`8c390b2`)
 
@@ -1028,33 +1025,33 @@ F-0014 (evaluate_expression failure semantics), F-0016 (logging
 downgrade), F-0028 (fallback only for missing-RPC failures), and F-0029
 (get_status protocol-violation handling).
 Key changes:
-* _send_pipe_command now attaches a structured x64dbg_error_code via
+- _send_pipe_command now attaches a structured x64dbg_error_code via
 ToolError.details so callers can branch on the actual failure mode
 (plugin_unavailable / pipe_disconnected / timeout / unknown_command /
 remote_error / protocol_violation) instead of substring-matching the
 message text. Legacy plugins that emit plain error strings are
 classified once via _classify_legacy_error.
-* _is_recoverable_pipe_error now returns True only for
+- _is_recoverable_pipe_error now returns True only for
 unknown_command codes - "no pipe at all" no longer falls back to
 _send_command on the same broken pipe (F-0028).
-* _is_local_fallback_eligible covers the case where the fallback uses
+- _is_local_fallback_eligible covers the case where the fallback uses
 an in-process library (Capstone) rather than the pipe; disassemble_at
 switched to it so capstone fallback survives a missing plugin.
-* set_breakpoint verifies the breakpoint via bp_list before mutating
+- set_breakpoint verifies the breakpoint via bp_list before mutating
 local state; the wrapper used to return a synthetic id even when the
 plugin had ignored the request.
-* run_to polls reg_get rip with a bounded timeout to confirm the
+- run_to polls reg_get rip with a bounded timeout to confirm the
 debugger reached the target before claiming success.
-* patch_instruction reads memory back to confirm bytes changed;
+- patch_instruction reads memory back to confirm bytes changed;
 nop_range reads back and verifies every byte is 0x90. Both surface
 verified=False when the bridge cannot read back rather than
 fabricating success.
-* evaluate_expression raises ToolError on non-int / non-string / bool /
+- evaluate_expression raises ToolError on non-int / non-string / bool /
 unparseable responses so a real evaluation failure is no longer
 conflated with a legitimate value of 0.
-* get_status raises ToolError on non-dict payloads instead of
+- get_status raises ToolError on non-dict payloads instead of
 returning a degenerate "everything False" dict.
-* Fire-and-forget exec wrappers downgrade their INFO logs to DEBUG
+- Fire-and-forget exec wrappers downgrade their INFO logs to DEBUG
 with the explicit "x64dbg_command_queued" event name so log readers
 can tell queued events apart from verified ones.
 
@@ -1079,7 +1076,7 @@ so on-disk state stays at the last successful turn.
 instead of just logging a warning while forwarding the bad payload to
 the provider. Warning-severity diagnostics still log without aborting.
 - F-0019: trim_messages_to_context_window raises ToolError when no
-context_window is supplied, and _run_agent_loop now resolves it via
+context_window is supplied, and_run_agent_loop now resolves it via
 _require_model_context_window (raises ToolError when the override is
 unset and the provider does not advertise one) so unbounded history
 cannot be sent silently.
@@ -1124,9 +1121,10 @@ Tests
 threads, env scrub, and cleanup end-to-end.
 
 - **core:** Audit6 CORE-D — config/process/tools/logging (9 findings)  (`db5ba3d`)
-* fix(core): audit6 CORE-D — config/process/tools/logging (9 findings)
+- fix(core): audit6 CORE-D — config/process/tools/logging (9 findings)
 Fixes Audit 6 unit CORE-D — F-0010, F-0014, F-0016, F-0017, F-0018, F-0020,
 F-0021, F-0023, F-0025.
+
 - config.py: HUGGINGFACE/GROK added to provider defaults; parse_providers
 retains user-defined providers across round-trip.
 - process_manager.py: register_external_pid verifies PID existence via
@@ -1139,7 +1137,7 @@ _bridges.
 Tests in tests/test_core/test_*_audit6.py exercise each defect; existing
 test_process_manager.py and test_cutter_bridge.py updated to use real OS
 PIDs (the new register_external_pid rejects synthetic PIDs).
-* fix(core): audit6 CORE-D pydoclint findings
+- fix(core): audit6 CORE-D pydoclint findings
 
 - **core/session:** Audit6 CORE-A - persistence/types (6 findings)  (`b56fdd6`)
 F-0006 wraps SessionManager._auto_save_loop in a try/except guard so a
@@ -1151,7 +1149,7 @@ Session.add_tag, and Session.remove_tag as the canonical writers for
 those persisted fields, replacing dead-stored data with concrete
 mutation paths that round-trip through SessionStore.
 F-0009 deletes the duplicate Session dataclass shadowed in types.py and
-prunes "Session" from __all__ so the only Session is the real one in
+prunes "Session" from **all** so the only Session is the real one in
 core.session.
 F-0022 collapses HexDocumentLike/HexDocumentFull Protocol method bodies
 to declarative ellipsis only; concrete return values that violated
@@ -1181,15 +1179,15 @@ frida.get_hooks (read-only) and false negatives on sandbox.destroy,
 sandbox.snapshot_restore, process.terminate. Unknown bridges fail safe.
 - F-0013: shutdown() and cancel() now marshal pending confirmation
 futures via _marshal_pending_confirmations(), cancelling each pending
-Future cleanly. _request_confirmation translates CancelledError into
+Future cleanly._request_confirmation translates CancelledError into
 False so awaiters do not leak. shutdown() additionally sets a
 _shutdown_event so confirmations requested after shutdown short-circuit.
 
 - **x64dbg:** Audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)  (`3796abb`)
-* fix(x64dbg): audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)
+- fix(x64dbg): audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)
 Addresses audit6.md F-0003, F-0024, F-0025, F-0027 in
 src/intellicrack/bridges/x64dbg.py.
-* F-0003: patch_anti_debug now plumbs PEB base via the documented
+- F-0003: patch_anti_debug now plumbs PEB base via the documented
 `address` field, broadens the supported patch set to include
 process default heap flags (HeapFlags + ForceFlags), and rejects
 unsupported check names with a per-check error rather than a
@@ -1198,16 +1196,16 @@ description now advertises every key the plugin actually sends
 (`address`, `processParameters`, `ldr`, etc.). A new
 SUPPORTED_ANTI_DEBUG_PATCHES class-level tuple documents the
 fixed contract and lets callers introspect what is supported.
-* F-0024: `_read_unicode_string_from_params` rejects odd Length
+- F-0024: `_read_unicode_string_from_params` rejects odd Length
 values (UTF-16 strings have even byte counts; an odd Length
 indicates corrupt PEB read) and rejects Length > MaximumLength.
 Both paths log at debug and return None instead of silently
 trimming the byte and decoding garbage.
-* F-0025: WIN_NO_INHERIT_HANDLE module constant is removed; the
+- F-0025: WIN_NO_INHERIT_HANDLE module constant is removed; the
 five OpenProcess call sites now use the local
 `inherit_handle = False` idiom that already existed elsewhere
 in the file (matches lines 398 and 2303 patterns).
-* F-0027: get_process_info now raises ToolError with
+- F-0027: get_process_info now raises ToolError with
 "not attached" instead of returning None, so LLM consumers can
 distinguish "no attached process" from a real tool failure. The
 return annotation is now ProcessInfo (no Optional).
@@ -1254,28 +1252,28 @@ stdlib reachable only through dead code paths and shipped reflection,
 print, array-index, endian, and base-address surfaces permanently
 disabled.
 Key changes:
-* Interpreter now wires the stdlib to the evaluator on every execute
+- Interpreter now wires the stdlib to the evaluator on every execute
 call: print sink, array-index provider, endian listener, and an
 evaluator-backed reflection provider that answers std::core::*.
-* Stdlib's BuiltinFunctions accepts a PragmaInfo; std::mem::base_address
+- Stdlib's BuiltinFunctions accepts a PragmaInfo; std::mem::base_address
 honours #pragma base_address, std::mem::read_bits / find_string_in_range
 / create_section / delete_section / get_section_size / set_section_size
 / copy_to_section / copy_value_to_section / current_bit_offset are now
 registered, and std::string::parse_int / parse_float replace the
 mis-named to_int.
-* Evaluator namespace-access lookup reconstructs the full
+- Evaluator namespace-access lookup reconstructs the full
 builtin::std::*::name path so std-lib trampolines resolve, and
 bare-name print/format defer to the stdlib pipeline (no more no-op
 shadows).
-* Variadic auto-... parameters now capture trailing arguments as a
+- Variadic auto-... parameters now capture trailing arguments as a
 pack PatternValue; generic struct templates propagate template
 arguments; using aliases accept array/pointer/padding targets.
-* Type registry registers structs/unions/enums/bitfields under both
+- Type registry registers structs/unions/enums/bitfields under both
 their local name and their fully qualified namespace path, so
 cross-namespace local-name collisions no longer overwrite each other.
-* break/continue inside legitimate loop exits log at DEBUG, not
+- break/continue inside legitimate loop exits log at DEBUG, not
 WARNING.
-* compile_to_json no longer downgrades native HexPatError subclasses to
+- compile_to_json no longer downgrades native HexPatError subclasses to
 a generic HexPatError; only ImportError is wrapped.
 
 - **bridges-cutter:** Audit5 u1 - 15 findings  (`94bb646`)
@@ -1293,7 +1291,7 @@ rizin command-injection vectors (F-0016)
 - _cmd_json raises ToolError on JSON parse failure (F-0017)
 - get_function_address resolves via `afij <name>` directly instead of
 enumerating every analysed function (F-0019)
-- search_strings drops the unnecessary _analyzed precondition (F-0020)
+- search_strings drops the unnecessary_analyzed precondition (F-0020)
 - shutdown wraps cleanup in try/finally so super().shutdown() always
 runs and routes through the public r2 setter (F-0024 cutter half,
 F-0025)
@@ -1309,14 +1307,14 @@ honours register-resident arguments (F-0031)
 (F-0032)
 
 - **bridges-frida:** Audit5 u2 — F-0005..F-0030 (18 findings)  (`fe01518`)
-* fix(bridges-frida): audit5 u2 — frida_bridge findings (F-0005..F-0030)
+- fix(bridges-frida): audit5 u2 — frida_bridge findings (F-0005..F-0030)
 Drives 18 audit5 findings in src/intellicrack/bridges/frida_bridge.py to
 root-cause fixes. Each finding has a regression test under
 tests/test_audit5/u2_bridges_frida that fails on the unfixed code and passes
 after the fix.
 
 - **hexpat-aux:** Audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)  (`ee754c5`)
-* fix(hexpat-aux): audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)
+- fix(hexpat-aux): audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)
 F-0023 (parser): Parser previously collected every recovered parse error
 into self._errors but only re-raised the first one wrapped in a fresh
 HexPatParseError, silently losing every secondary failure. parse() now
@@ -1351,7 +1349,7 @@ so the dataclass and preprocessor share a single source of truth.
 - **ui-confirmation:** Audit5 u9 - wire remember_similar through signal + cache (F-0020)  (`2294ae3`)
 
 - **ui-config-paths:** Audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)  (`39eb976`)
-* fix(ui-config-paths): audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)
+- fix(ui-config-paths): audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)
 Replace hardcoded D:/Intellicrack/tools and D:/Intellicrack/sandbox_shared
 defaults in ToolConfigDialog and SandboxConfigDialog with values derived
 from get_project_root(). The dialogs now compute defaults relative to the
@@ -1359,7 +1357,7 @@ actual installation root so they work on any machine.
 Add regression tests in tests/test_audit5/u8_ui_config_paths/ covering
 default resolution, explicit overrides, missing config files, and config
 files lacking the shared_folder key.
-* test(u8): add module docstring + copyright to test __init__ files
+- test(u8): add module docstring + copyright to test **init** files
 
 - **ui-providerconfig:** Audit5 u7 - wire provider-specific resource links (F-0022)  (`8b44b6d`)
 
@@ -1368,7 +1366,7 @@ Three findings across two audit4 units:
 B3 / F-0011: ThreadsTab._on_tls used the Fiber combo's TID instead of
 its own TLS thread selector, so TLS lookups silently targeted whichever
 thread the Fiber tab had selected. Fix: a separate _tls_thread_combo
-populated alongside the Fiber combo and read by _on_tls.
+populated alongside the Fiber combo and read by_on_tls.
 B3 / F-0019: ThreadsTab._on_write_registers read only the Hex column,
 silently dropping edits the user made in the Decimal column. Fix:
 cellChanged sync mirrors edits between Hex and Decimal columns and
@@ -1384,7 +1382,7 @@ error.
 Tests under tests/test_audit4/b3_threads_tab/ and
 tests/test_audit4/b7_process_panel_workers/ verify each finding's
 remediation behaves as the audit requires:
-- _on_tls reads TID from _tls_thread_combo, not _fiber_combo (3 tests)
+- _on_tls reads TID from _tls_thread_combo, not_fiber_combo (3 tests)
 - _on_write_registers honours the last-edited column for both Hex and
 Decimal edits and keeps the columns in sync (5 tests)
 - Worker emits refresh_error with the canonical "Refresh failed:"
@@ -1394,12 +1392,13 @@ All 12 tests pass; ruff/pydoclint/pydocstyle clean on all modified files.
 - **process-panel:** Audit4 B1 - base status+controls (F-0001+F-0002+F-0025)  (`0c10379`)
 
 - **process-panel:** Audit4 B2 process tab (6 findings)  (`de421a0`)
-* fix(process-panel): audit4 resolves F-0013 F-0014 F-0015 F-0016 F-0017 F-0018
-* test(process-tab): audit4 B2 -- production-grade tests for F-0013 through F-0018
+- fix(process-panel): audit4 resolves F-0013 F-0014 F-0015 F-0016 F-0017 F-0018
+- test(process-tab): audit4 B2 -- production-grade tests for F-0013 through F-0018
 Add 12 tests in tests/test_audit4/b2_process_tab/test_process_tab.py covering:
-- F-0013: _on_inject_dll guards on _attached_pid=None and shows warning dialog
+
+- F-0013: _on_inject_dll guards on_attached_pid=None and shows warning dialog
 - F-0014: _on_filter_changed uses trailing-edge debounce timer, not immediate
-bridge round-trip; marks _filter_refresh_pending when a refresh is in flight
+bridge round-trip; marks_filter_refresh_pending when a refresh is in flight
 - F-0015: _on_attach routes bridge failure to QMessageBox warning; success
 sets _attached_pid to the target PID
 - F-0016: _on_suspend and _on_resume both wire error callbacks that surface
@@ -1410,8 +1409,8 @@ via QTimer.singleShot
 currently attached PID; does not clear it for unrelated PIDs
 
 - **sandbox-qemu:** Audit4 A3 (16 findings)  (`1c3bd18`)
-* fix(sandbox-qemu): audit4 resolves F-0002 F-0003 F-0004 F-0005 F-0006 F-0007 F-0009 F-0015 F-0016 F-0022 F-0023 F-0025 F-0028 F-0029 F-0031 F-0035
-* test(sandbox-qemu): audit4 A3 -- production-grade tests for 16 findings
+- fix(sandbox-qemu): audit4 resolves F-0002 F-0003 F-0004 F-0005 F-0006 F-0007 F-0009 F-0015 F-0016 F-0022 F-0023 F-0025 F-0028 F-0029 F-0031 F-0035
+- test(sandbox-qemu): audit4 A3 -- production-grade tests for 16 findings
 Add 29 tests in tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py covering
 F-0002 agent connect, F-0003 poll-for-result exit-code parsing, F-0004 TCG cpu arg,
 F-0005 shared folder fat:rw, F-0006 agent script startup, F-0007 dropped-file extraction,
@@ -1420,17 +1419,18 @@ F-0022/F-0029 anti-evasion profile routing, F-0023 snapshot list parsing,
 F-0025 stop() clears active captures, F-0028 yara_scan zip-only (no input fallback),
 F-0031 run_binary no fixed sleep, F-0035 exit_code drives result field.
 Fix three incomplete implementation gaps exposed by the tests:
+
 - stop(): add self._active_captures.clear() (F-0025)
 - run_binary(): result = "success" if exit_code == 0 else "error" (F-0035)
 - yara_scan(): remove input_dir fallback scan; use empty list when no zips (F-0028)
-* fix(sandbox-qemu): route subprocess via core._subprocess wrapper, address ruff S404/S603/S607/PLR6201
+- fix(sandbox-qemu): route subprocess via core._subprocess wrapper, address ruff S404/S603/S607/PLR6201
 
 - **ui:** Audit4 C3 - hex data inspector F-0003/F-0011/F-0016  (`3ad3060`)
 
 - **sandbox-windows:** Audit4 A4 — 15 findings (windows sandbox hardening)  (`d5546a4`)
-* fix(audit4): C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)
+- fix(audit4): C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)
 C10 / F-0020: _DocAPI.search_text hard-coded UTF-8 and ignored the panel's
-encoding combo. Fix threads the encoding through _DocAPI.__init__ so any
+encoding combo. Fix threads the encoding through _DocAPI.**init** so any
 encoding the panel exposes (UTF-8, latin-1, cp1252, etc.) reaches the
 document's search_text. _ReadOnlyDocAPI proxies the encoding unchanged.
 C10 / F-0021: execute_script's print() output was lost when the user
@@ -1447,6 +1447,7 @@ leaving only the genuine runtime requirements (keyring, psutil,
 yara-python) in [project].dependencies.
 Tests under tests/test_audit4/c10_hex_scripting/ and
 tests/test_audit4/d1_pyproject/ verify:
+
 - _DocAPI.search_text forwards the panel's encoding to the document
 - _ReadOnlyDocAPI.search_text preserves the encoding through delegation
 - execute_script captures print() output via stdout swap
@@ -1456,13 +1457,13 @@ tests/test_audit4/d1_pyproject/ verify:
 - canonical dev tools are present in optional-dependencies.dev
 - pyproject.toml remains a valid TOML doc under the active interpreter
 19 tests pass; ruff/basedpyright/pydoclint/pydocstyle clean.
-* fix(sandbox-windows): audit4 A4 — 15 findings (windows sandbox hardening)
+- fix(sandbox-windows): audit4 A4 — 15 findings (windows sandbox hardening)
 Comprehensive Windows-sandbox cleanup covering 15 audit4 findings in
 src/intellicrack/sandbox/windows.py:
 
 - **audit4:** C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)  (`8eadebc`)
 C10 / F-0020: _DocAPI.search_text hard-coded UTF-8 and ignored the panel's
-encoding combo. Fix threads the encoding through _DocAPI.__init__ so any
+encoding combo. Fix threads the encoding through _DocAPI.**init** so any
 encoding the panel exposes (UTF-8, latin-1, cp1252, etc.) reaches the
 document's search_text. _ReadOnlyDocAPI proxies the encoding unchanged.
 C10 / F-0021: execute_script's print() output was lost when the user
@@ -1523,9 +1524,9 @@ TemplatesMixin:
 - _notify_state_template_removed
 - _notify_state_data_modified
 - _notify_state_pattern_executed
-and calls them from _on_apply_template, _on_import_template,
-_on_remove_template, _bookmark_pe_structure, _bookmark_pe_sections,
-and _bookmark_elf_structure.
+and calls them from _on_apply_template,_on_import_template,
+_on_remove_template,_bookmark_pe_structure, _bookmark_pe_sections,
+and_bookmark_elf_structure.
 
 - **hex-editor:** Audit4 C13 (F-0007) — route export/import patches through bridge  (`b9f30fd`)
 PatchesMixin._on_export_patches and _on_import_patches previously called
@@ -1588,6 +1589,7 @@ synchronously on every cursor move. Holding an arrow key streams hundreds
 of cursor events per second, each becoming a bridge disassemble call; the
 bridge worker thread saturated and the GUI froze.
 Fix introduces three production-grade safeguards in concert:
+
 1. Debounce (150 ms single-shot QTimer): each cursor move re-arms the
 timer; only the most recent offset survives the wait window.
 2. In-flight guard: while a previous bridge call is outstanding the
@@ -1597,6 +1599,7 @@ handlers re-flush the latest pending offset so nothing is lost.
 last successfully dispatched call the dispatch is suppressed (the
 table already reflects that address).
 Tests under tests/test_audit4/c9_hex_disassembly_debounce/ verify:
+
 - 50-cursor burst collapses to exactly 1 dispatch at the latest offset
 - duplicate offset after completion does not re-dispatch
 - moves that arrive during an in-flight call queue and dispatch on
@@ -1623,7 +1626,7 @@ diff against an unsaved buffer leaked a file in the user's temp directory.
 - **process-panel:** Audit4 resolves F-0020 F-0021 F-0022 F-0023  (`2747027`)
 
 - **ui:** Audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009  (`9920b92`)
-* fix(ui): audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009
+- fix(ui): audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009
 
 - **hex-editor:** Audit4 C14 resolves F-0008 (remove dead _ips module)  (`380434e`)
 
@@ -1634,8 +1637,9 @@ diff against an unsaved buffer leaked a file in the user's temp directory.
 - **sandbox:** Audit3 U7 - kernel+start monitors (F-0010 F-0021 F-0022 F-0023 F-0024 F-0025)  (`9da1dcf`)
 
 - **ui:** Audit3 U11 - sandbox panel + vnc widget  (`89e7925`)
-* fix(ui): audit3 U11 - sandbox panel + vnc widget (F-0002 F-0003 F-0004 F-0007 F-0008)
-* fix(vnc): replace zlib._Decompress with local Protocol and fix scanLine bytes conversion
+- fix(ui): audit3 U11 - sandbox panel + vnc widget (F-0002 F-0003 F-0004 F-0007 F-0008)
+- fix(vnc): replace zlib._Decompress with local Protocol and fix scanLine bytes conversion
+
 - Define a structural Protocol mirroring zlib.decompressobj()'s public surface to
 avoid referencing the private zlib._Decompress alias from typeshed
 (reportPrivateUsage on lines 198/199).
@@ -1648,11 +1652,12 @@ Reduces basedpyright errors in vnc_widget.py from 6 to baseline 2 with no
 new findings introduced.
 
 - **core:** Audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)  (`9fa6af9`)
-* fix(core): audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)
-* test(audit3): add U10 regression tests + restructure xml_gen S405 fix
+- fix(core): audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)
+- test(audit3): add U10 regression tests + restructure xml_gen S405 fix
 Drops misplaced U9 test files (test_analysis_aggregator.py +
 test_template_manager.py) that referenced symbols not present in this
 branch. Adds proper U10 regression tests for the actual source changes:
+
 - test_disassembler.py covers F-0002 (UnsupportedArchitectureError on
 unknown arch instead of silent x86_64 fallback) and F-0009
 (disassemble_to_lines must omit binary_path for buffer input,
@@ -1660,8 +1665,8 @@ no <bytes-buffer> placeholder leak).
 - test_xml_gen.py covers F-0011 (regression guard: source must contain
 no importlib.import_module references) plus functional re-export
 surface checks.
-Reworks _xml_gen.py to satisfy ruff S405 without per-file-ignore: the
-stdlib xml.etree.ElementTree module is loaded via __import__ inside a
+Reworks_xml_gen.py to satisfy ruff S405 without per-file-ignore: the
+stdlib xml.etree.ElementTree module is loaded via **import** inside a
 small helper, with TYPE_CHECKING-only imports for annotation typing.
 The audit boundary remains statically grep-able (F-0011 regression
 guard still passes) and no security-rule suppression is added.
@@ -1669,18 +1674,18 @@ guard still passes) and no security-rule suppression is added.
 - **ui:** Audit3 U13 - wire HxDPanel through panels package and MainWindow (F-0001)  (`0de7136`)
 
 - **core:** Audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)  (`d7cede6`)
-* fix(core): audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)
-* test(audit3): U9 aggregator+template tests for F-0005 F-0008 F-0015
+- fix(core): audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)
+- test(audit3): U9 aggregator+template tests for F-0005 F-0008 F-0015
 Drop the misfiled test_disassembler.py and test_xml_gen.py (which
 target U10 findings, not U9), and add proper unit tests covering the
 U9 source changes:
-* test_analysis_aggregator.py exercises ``AnalysisAggregator.aggregate``
+- test_analysis_aggregator.py exercises ``AnalysisAggregator.aggregate``
 to confirm imports/exports dedup keys on
 ``(dll, function, ordinal)`` / ``(name, ordinal, address)`` rather
 than address alone (F-0005), and that
 ``BridgeAnalysisSummary.complete`` defaults to False when no real
 analysis bridge contributed (F-0015).
-* test_template_manager.py monkey-patches ``Path.write_text`` to
+- test_template_manager.py monkey-patches ``Path.write_text`` to
 raise OSError and asserts ``TemplateManager`` no longer emits
 ``*_template_file_written`` events ahead of a successful write,
 and emits the corresponding ``*_template_write_failed`` event
@@ -1693,34 +1698,37 @@ exactly once at the final catch site, while the non-re-raise site in
 the traceback to the failure event.
 
 - **sandbox:** Audit3 U4 - resource+service monitors (F-0005..F-0009)  (`b00837c`)
-* fix(sandbox): audit3 U4 - resource+service monitors (F-0005 F-0006 F-0007 F-0008 F-0009)
-* fix(tests): audit3 U4 verification fixes (CRLF init, type narrowing)
+- fix(sandbox): audit3 U4 - resource+service monitors (F-0005 F-0006 F-0007 F-0008 F-0009)
+- fix(tests): audit3 U4 verification fixes (CRLF init, type narrowing)
 Resolves reviewer findings on PR #303:
-- LINT_FAIL: convert tests/test_audit3/__init__.py and
-tests/test_audit3/sandbox/__init__.py blobs to CRLF line endings to
+
+- LINT_FAIL: convert tests/test_audit3/**init**.py and
+tests/test_audit3/sandbox/**init**.py blobs to CRLF line endings to
 satisfy ruff format.line-ending = "cr-lf".
-- TYPE_FAIL: narrow json.loads result in _read_jsonl helper. After
+- TYPE_FAIL: narrow json.loads result in_read_jsonl helper. After
 isinstance(obj, dict), explicitly cast to dict[object, object] and
 build a typed dict[str, object] from its items so basedpyright stops
 reporting reportUnknownArgumentType at records.append.
 
 - **core:** Audit3 U8 - script_gen.py 9 findings  (`4db9b48`)
-* fix(core): audit3 U8 - script_gen.py 9 findings (F-0001 F-0003 F-0004 F-0006 F-0007 F-0010 F-0012 F-0013 F-0014)
-* fix(audit3 u8): resolve verification failures on script_gen branch
-- Format tests/test_audit3/__init__.py via ruff format
-- Rename _strip_java_strings_and_comments to public strip_java_strings_and_comments and _build_execute_command to build_execute_command so audit3 tests can exercise them without reportPrivateUsage
+- fix(core): audit3 U8 - script_gen.py 9 findings (F-0001 F-0003 F-0004 F-0006 F-0007 F-0010 F-0012 F-0013 F-0014)
+- fix(audit3 u8): resolve verification failures on script_gen branch
+
+- Format tests/test_audit3/**init**.py via ruff format
+- Rename _strip_java_strings_and_comments to public strip_java_strings_and_comments and_build_execute_command to build_execute_command so audit3 tests can exercise them without reportPrivateUsage
 - Use Sequence[Mapping[str, Any]] for _event_names so capture_logs result type is accepted
 - Document LANGUAGE_API_MAP ClassVar in ScriptContext docstring (DOC601/DOC603)
 - Re-raise TimeoutExpired explicitly in ScriptManager.execute so the documented contract matches the body (DOC503)
 
 - **ui:** Audit3 U12 - ghidra panel + script_manager template  (`d2d6c0e`)
-* fix(ui): audit3 U12 - ghidra panel + script_manager template (F-0005 F-0006)
-* fix(audit3): resolve verification failures on ghidra+script branch
+- fix(ui): audit3 U12 - ghidra panel + script_manager template (F-0005 F-0006)
+- fix(audit3): resolve verification failures on ghidra+script branch
+
 - conftest.py: top-level PyQt6 import (PLC0415), Iterator return for fixture
 - test_ghidra_panel.py: move GhidraBridge import to TYPE_CHECKING (TC001),
 expose label_addr_input and refresh_labels_btn via objectName + findChild
-to remove reportPrivateUsage on private member access, drive _run_async
-substitution via setattr, and switch _RecordingBridge attribute docs
+to remove reportPrivateUsage on private member access, drive_run_async
+substitution via setattr, and switch_RecordingBridge attribute docs
 to plain instance annotations (DOC602/DOC603)
 - ghidra_panel.py: setObjectName on label_addr_input QLineEdit and the
 Refresh Labels QPushButton so tests can locate them publicly
@@ -1742,18 +1750,18 @@ Resolves all 28 audit3 findings against bridges-installer.
 - **sandbox:** Audit3 U3 — clipboard_monitor.ps1 (F-0001 F-0002 F-0003 F-0004)  (`bb042fc`)
 Restructure clipboard_monitor.ps1 so failures are visible and the
 fallback path is reachable.
-* F-0001: extract the polling fallback into Invoke-FallbackPolling and
+- F-0001: extract the polling fallback into Invoke-FallbackPolling and
 invoke it from both the Add-Type catch branch and a top-level catch
 around the event-driven monitor. Without the file-level
 SilentlyContinue the catches now actually fire.
-* F-0002: replace `$ErrorActionPreference = 'SilentlyContinue'` with
+- F-0002: replace `$ErrorActionPreference = 'SilentlyContinue'` with
 `'Stop'` and wrap every tolerable failure in an explicit try/catch
 that calls Write-StructuredError, emitting a single-line JSON record
 (timestamp/event/error/extra) into the log file.
-* F-0003: declare `[Parameter()][string]$LogDir` with the same default
+- F-0003: declare `[Parameter()][string]$LogDir` with the same default
 start_monitors.cmd uses (`$env:USERPROFILE\Desktop\Shared\logs`) and
 route every Add-Content through `$script:LogPath`.
-* F-0004: rename the user-supplied pid in the event handler to
+- F-0004: rename the user-supplied pid in the event handler to
 `$ownerPid` so the script no longer assigns to the read-only
 automatic variable `$pid`. Also rename `$sender`/`$eventArgs` to
 avoid the corresponding PSScriptAnalyzer warnings.
@@ -1781,16 +1789,16 @@ DynamicCode, StrictHandleCheck, SystemCallDisable, CFG,
 BinarySignature, FontDisable, ImageLoad). New helper
 _decode_mitigation_flags exposes named bits ("Enable",
 "EnableBottomUpRandomization", "EnableControlFlowGuard", etc.)
-+ reserved-bit residue + flags hex. Replaces blanket
+- reserved-bit residue + flags hex. Replaces blanket
 bool(flags & 1) for every policy.
 F-0030: _parse_registry_path adds HKU/HKEY_USERS and HKCC/HKEY_CURRENT_CONFIG.
 New constants HKEY_USERS=0x80000003, HKEY_CURRENT_CONFIG=0x80000005
-in _win32_types.
+in_win32_types.
 F-0031: reg_read_value (and read_registry) now grow the buffer on
 ERROR_MORE_DATA via shared _reg_query_value_grow helper.
 Bounded by _REG_MAX_BUF_SIZE=16 MiB and _REG_GROWTH_RETRY_LIMIT=8.
 F-0035: get_handles and enum_handles now offload the handle-table
-iteration to asyncio.to_thread via _sync_iterate_handles_for_pid
+iteration to asyncio.to_thread via_sync_iterate_handles_for_pid
 and _sync_enum_handles helpers, so the asyncio event loop is
 not blocked while iterating tens of thousands of entries.
 F-0043: query_system_info retries on STATUS_BUFFER_OVERFLOW (0x80000005)
@@ -1802,12 +1810,12 @@ F-0029: Demoted every per-call _logger.info("..._started") emit (50
 sites) to debug-level. Meaningful event names like
 process_attached / process_opened / section_created remain at
 info.
-F-0044: shutdown() now iterates _section_views (calling unmap_section),
+F-0044: shutdown() now iterates_section_views (calling unmap_section),
 _section_handles, _pipe_handles, and _device_handles, closing
 each handle before clearing the tracking dicts and releasing
 the DLL refs. Closes the leak audit2 documented.
 F-0045: list / list_detailed / open dispatch shims no longer emit
-their own _started log events; the underlying impl emits a
+their own_started log events; the underlying impl emits a
 single event so consumers no longer see double dispatches.
 Unit 4 (process-memory-and-sections):
 F-0038: create_section now sets CreateFileMappingW.restype = HANDLE
@@ -1818,6 +1826,7 @@ use_last_error=True at WinDLL load). The
 ERROR_ALREADY_EXISTS / SECTION_NAME_COLLISION distinction is
 now actually reachable for named sections.
 Tests added (per-finding TestF#### classes):
+
 - TestF0038SectionCreateFileMappingHandle
 - TestF0030RegistryHives
 - TestF0031RegReadValueGrows
@@ -1847,7 +1856,7 @@ F-0010 inject_dll:
 - Declare GetExitCodeThread.restype = wintypes.BOOL, check return value
 and raise ToolError with GetLastError before falling through to
 exit_code==0 (LoadLibraryW returned NULL HMODULE) check
-F-0020 _query_thread_state:
+F-0020_query_thread_state:
 - GetCurrentThreadId() guard prevents deadlock when probing the
 asyncio event-loop thread
 - try/finally around ResumeThread so the thread is never stuck
@@ -1857,7 +1866,7 @@ F-0047 get_modules:
 _query_module_entry_point helper with explicit argtypes (c_void_p
 for HMODULE so 64-bit handles do not OverflowError)
 F-0048 get_threads:
-- Populate current_pc via new _query_thread_current_pc helper
+- Populate current_pc via new_query_thread_current_pc helper
 - Opens thread with THREAD_GET_CONTEXT|THREAD_SUSPEND_RESUME, suspends,
 reads Rip (x64) or Eip (WOW64/x86), resumes in finally
 Per-target-pid WOW64:
@@ -1866,7 +1875,7 @@ handle so cross-arch get_threads(target_pid) selects the correct
 CONTEXT struct
 - _query_thread_current_pc and _query_thread_pc_and_state accept
 owner_pid and route through _pid_is_wow64 when supplied
-- Stack-walking keeps _target_is_wow64 (operates on attached _process_handle)
+- Stack-walking keeps _target_is_wow64 (operates on attached_process_handle)
 
 - **bridges:** Correct PEB/TEB struct sizes, TLS array offsets, env block reads, WOW64 detection (audit F-0011/F-0012/F-0021/F-0022/F-0028/F-0033/F-0034/F-0046)  (`9a961cf`)
 - F-0034: _target_is_64bit/_target_is_wow64 raise ToolError when both WOW64 APIs unavailable
@@ -1887,10 +1896,10 @@ list[{server_type, path}] instead of mutating caller state (F-0032)
 - detect_dotnet reads PE COR20 header (IMAGE_COR20_HEADER) from each
 loaded module via ReadProcessMemory; non-zero COM Descriptor directory
 entry at index 14 indicates managed; reads MetaData StorageHeader
-version string via _read_metadata_version (F-0015)
+version string via_read_metadata_version (F-0015)
 - extract _parse_pe_com_descriptor static helper to keep _read_cor20_version
 under PLR0914 local variable limit
-- add constants _PE_DATA_DIR_COM_DESCRIPTOR, _DOTNET_METADATA_SIGNATURE,
+- add constants _PE_DATA_DIR_COM_DESCRIPTOR,_DOTNET_METADATA_SIGNATURE,
 _DOTNET_MIN_HEADER_READ, _DOTNET_METADATA_VERSION_MAX,
 _DOTNET_COR20_HEADER_SIZE, _DOTNET_METADATA_MIN_SIZE
 Tests (test_process_bridge.py):
@@ -1903,16 +1912,16 @@ asserts InprocServer32 and LocalServer32 both returned
 available to confirm managed=True detection
 
 - **audit1:** All 7 units consolidated (88 findings + 1 escalated)  (`055758d`)
-* wip(audit1/hex-editor-top): preserve agent progress before resume
-* wip(audit1/hex-editor-bottom): preserve agent progress before resume
-* wip(audit1/hex-state): preserve agent progress before resume
-* wip(audit1/bridges-core): preserve agent progress before resume
-* wip(audit1/providers-local): preserve agent progress before resume
-* wip(audit1/hexcore-rust): preserve agent progress before resume
-* wip(audit1/hex-editor-bottom): preserve resume progress (round 2)
-* wip(audit1/hex-state): preserve resume progress (round 2)
-* wip(audit1/providers-cloud): F-0005, F-0007, F-0009, F-0010
-* test(audit1): align providers-local tests with project lint conventions
+- wip(audit1/hex-editor-top): preserve agent progress before resume
+- wip(audit1/hex-editor-bottom): preserve agent progress before resume
+- wip(audit1/hex-state): preserve agent progress before resume
+- wip(audit1/bridges-core): preserve agent progress before resume
+- wip(audit1/providers-local): preserve agent progress before resume
+- wip(audit1/hexcore-rust): preserve agent progress before resume
+- wip(audit1/hex-editor-bottom): preserve resume progress (round 2)
+- wip(audit1/hex-state): preserve resume progress (round 2)
+- wip(audit1/providers-cloud): F-0005, F-0007, F-0009, F-0010
+- test(audit1): align providers-local tests with project lint conventions
 Moves all private-attribute access in test bodies behind getattr-based
 helpers (mirroring tests/test_providers/test_local_xpu_e2e.py), and
 updates F-0003 / F-0004 to drive the public 'connected' attribute and
@@ -1920,8 +1929,9 @@ inspect the structlog BoundLogger context directly. Resolves all ruff
 findings (PLC2701/SLF001/PLC2801/PLC1901/COM812/D301/B010) so the
 audit1 suite is fully lint-clean while preserving every red/green
 assertion for F-0001..F-0007.
-* fix(audit1): hex-state F-0036/F-0037/F-0038/F-0039/F-0058
+- fix(audit1): hex-state F-0036/F-0037/F-0038/F-0039/F-0058
 Apply root-cause fixes from audit1.md to HexDocumentState:
+
 - F-0036: Replace single-shot _notify_guard (which silently dropped
 events) with per-thread reentrancy queue and bounded depth cap
 (NOTIFY_MAX_DEPTH). Re-entrant emissions are queued and drained in
@@ -1942,14 +1952,15 @@ Adds 13 audit1 regression tests in tests/test_audit1/test_hex_state.py
 using real threading.Thread interleavings and HexDocumentFull-protocol
 compliant test doubles. Updates the existing reentrancy-guard test in
 the hexcore e2e suite to match the new queue-based contract.
-* wip(audit1/providers-cloud): F-0001/0002/0003/0004/0006/0008 + tests
-* refactor(audit1): simplify _accumulate_openai_tool_call_deltas branches
+- wip(audit1/providers-cloud): F-0001/0002/0003/0004/0006/0008 + tests
+- refactor(audit1): simplify _accumulate_openai_tool_call_deltas branches
 Collapse the redundant string-fragment defensive branch in
 _accumulate_openai_tool_call_deltas: when args_val is a non-empty string
 and the already-captured arguments are still a string, concatenate; when
 args_val is a dict, replace; in every other case (empty string, dict
 already locked) skip implicitly. Equivalent semantics, fewer branches.
-* fix(audit1): bridges-core findings F-0001..F-0007
+- fix(audit1): bridges-core findings F-0001..F-0007
+
 - F-0001: normalize_type emits schema_type_fallback warning instead of
 silently coercing unknown types to 'string'.
 - F-0002: validate_tool_parameter checks via is_recognized_type before
@@ -1957,8 +1968,8 @@ normalisation so genuinely malformed types surface diagnostics.
 - F-0003: orchestrator routes through new validate_tool_for_provider
 pure-validation pass; per-provider schema dicts are no longer
 allocated only to be discarded.
-- F-0004: bridges/__init__.py exposes heavy bridge submodules through
-PEP 562 __getattr__ so 'import intellicrack.bridges' no longer drags
+- F-0004: bridges/**init**.py exposes heavy bridge submodules through
+PEP 562 **getattr** so 'import intellicrack.bridges' no longer drags
 in frida, r2pipe, ctypes Win32 layer, or hexcore.
 - F-0005: redesign protection_to_string contract via MemoryProtectionFlags
 TypedDict + decode_protection helper; keep protection_to_string as
@@ -1969,7 +1980,7 @@ and emit unknown_memory_state / unknown_memory_type debug logs.
 body extracted into _finalize_shutdown helper; sandbox_bridge now
 calls super().shutdown() like the other six concrete bridges.
 Adds tests/test_audit1/test_bridges_core.py with 21 red/green tests.
-* fix(audit1/hexcore): add Python-side swap_blocks length check + audit1 tests
+- fix(audit1/hexcore): add Python-side swap_blocks length check + audit1 tests
 
 - **process:** Resolve F-0002 F-0003 F-0019 F-0040 audit findings  (`eab6475`)
 
@@ -1981,23 +1992,26 @@ Adds tests/test_audit1/test_bridges_core.py with 21 red/green tests.
 - Add tests: TestF0017PipeHandleType, TestF0017DeviceHandleType, TestF0016PipeCloseResult, TestF0016DeviceCloseResult, TestF0018DeviceIoctlHexInput, TestF0037PipeReadHex, TestF0037DeviceIoctlOutputHex
 
 - **sandbox-bridge:** Resolve audit findings F-0001 through F-0016  (`365af1c`)
-* wip(sandbox): F-0001 to F-0016 all fixes applied to sandbox_bridge + qemu public accessors
-* fix(sandbox-bridge): ruff compliance and test coverage for F-0001 to F-0016
+- wip(sandbox): F-0001 to F-0016 all fixes applied to sandbox_bridge + qemu public accessors
+- fix(sandbox-bridge): ruff compliance and test coverage for F-0001 to F-0016
+
 - Rename _json_safe and _dataclass_to_dict to public names (json_safe, dataclass_to_dict)
 - Add json import at top level; move types to TYPE_CHECKING; replace timezone.utc with UTC
 - Add B010 and SLF001 to test per-file-ignores (needed for implementation-detail testing)
 - Add test_sandbox_bridge.py: one test class per audit finding F-0001 through F-0016
-* fix(sandbox-bridge): type safety and test correctness for F-0001 to F-0016
+- fix(sandbox-bridge): type safety and test correctness for F-0001 to F-0016
+
 - Extend ToolParameter.default and JSON schema TypedDicts to accept list defaults
 - Use cast() in json_safe() to resolve basedpyright Unknown type warnings
 - Fix dataclass_to_dict to cast obj to Any before dataclasses.asdict()
-- Fix counting_import() signature (no args) to match _get_analysis_module() call site
+- Fix counting_import() signature (no args) to match_get_analysis_module() call site
 - All 65 tests pass with worktree src on PYTHONPATH
-* refactor(sandbox-bridge): remove ruff per-file-ignores; expose public manager API
+- refactor(sandbox-bridge): remove ruff per-file-ignores; expose public manager API
 Remove the B010 and SLF001 entries from tests/** per-file-ignores; restore
 pyproject.toml to its prior content. Tests now pass ruff without any
 suppressions (inline or config-level).
 Bridge changes (public API additions):
+
 - Add SandboxBridge.manager (read-only property) — public read access for the
 underlying SandboxManager (or None when not initialized).
 - Add SandboxBridge.manager_destroyed (read-only property) — public read access
@@ -2015,7 +2029,7 @@ mocking the manager is structurally required (does not trigger B010 or
 SLF001 because monkeypatch.setattr is not the builtin setattr and is not a
 private-attribute-access expression).
 - Use monkeypatch.setattr(sandbox, '_qmp', mock, raising=False) for QEMUSandbox
-state injection on freshly-allocated (__new__) instances.
+state injection on freshly-allocated (**new**) instances.
 - F-0009 destroyed-state test exercises the destroyed state through the actual
 public path: shutdown() then assert ensure_manager() raises ToolError.
 All 65 tests pass; ruff/pydoclint/pydocstyle clean; basedpyright shows only
@@ -2024,11 +2038,12 @@ pre-existing structlog Unknown-type issues present across all bridges.
 - **bridges:** Resolve audit2 process F-0006/F-0007/F-0037/F-0038/F-0039 (memory/sections)  (`81c910d`)
 
 - **providers:** Resolve audit2 providers F-0001..F-0024  (`2bcf2c7`)
-* fix(providers): resolve audit2 providers F-0001..F-0024 (registry/discovery)
+- fix(providers): resolve audit2 providers F-0001..F-0024 (registry/discovery)
 
 - **bridges:** Process control suspend/service audit fixes (F-0004/F-0005/F-0023/F-0026)  (`24f4e8a`)
-* wip: fix F-0004/F-0005/F-0023/F-0026 process control audit findings
-* fix: resolve service enumeration AV and use ENUM_SERVICE_STATUS_PROCESSW struct
+- wip: fix F-0004/F-0005/F-0023/F-0026 process control audit findings
+- fix: resolve service enumeration AV and use ENUM_SERVICE_STATUS_PROCESSW struct
+
 - Add proper argtypes/restype to OpenSCManagerW, EnumServicesStatusExW, and
 CloseServiceHandle to avoid 64-bit handle truncation that caused the AV.
 - Replace manual pointer arithmetic in _parse_service_entries with
@@ -2061,7 +2076,7 @@ Resolves semgrep-logging findings in src/intellicrack/bridges/hex_editor.py. FP_
 Resolves semgrep-logging findings in src/intellicrack/ui/. FP_REPORT-ui-toplevel.md committed at worktree root.
 
 - **semgrep-logging:** Main-entry  (`2ec8641`)
-Resolves semgrep-logging findings in src/intellicrack/main.py and __main__.py. FP_REPORT-main-entry.md committed at worktree root.
+Resolves semgrep-logging findings in src/intellicrack/main.py and **main**.py. FP_REPORT-main-entry.md committed at worktree root.
 
 - **semgrep-logging:** Core-toplevel  (`9f656b5`)
 Resolves semgrep-logging findings in src/intellicrack/core/. FP_REPORT-core-toplevel.md committed at worktree root.
@@ -2081,20 +2096,21 @@ Rules touched: a3-get-logger-requires-dunder-name, a4-module-uses-undefined-self
 FP_REPORT.md committed with 0 flagged FPs.
 
 - **semgrep-logging:** Rule-design adjustments to eliminate ~125 false positives  (`c392f97`)
-* chore: untrack gitignored artifacts and drop git-add from generator hooks
+- chore: untrack gitignored artifacts and drop git-add from generator hooks
 Remove `git add` from `generate-structure-files` and `generate-knowledge-graph`
 pre-commit entries so they regenerate locally without conflicting with
 `.gitignore` (which already lists IntellicrackStructure.hta/txt and
 IntellicrackKnowledgeGraph.{html,graphml,dot}). Untrack reports/,
 .complexipy_cache/, GEMINI.md, QWEN.md, and tools/AdobeInjector/config.ini —
 all matched gitignore rules but were tracked from earlier commits.
-* fix(semgrep-logging): rule-design adjustments + pre-commit path fix
+- fix(semgrep-logging): rule-design adjustments + pre-commit path fix
 Adjusts six rules in .semgrep/logging/ following independent verification of
 FP claims raised by all 14 semgrep-logging worker units. Each edit either adds
 a missing carve-out (paths.exclude / pattern-not / metavariable-regex) or
 narrows a class-name regex so the rule fires only where its intent applies.
 Rule changes:
-- a3 (get_logger requires __name__): add paths.exclude for
+
+- a3 (get_logger requires **name**): add paths.exclude for
 intellicrack/core/logging.py (matches a1/a6 pattern).
 - d6 (Bridge method no entry log): add pattern-not for @abstractmethod
 declarations and for trivial dataclass methods of shape
@@ -2106,7 +2122,7 @@ info/warning/error/exception log call.
 - e4 (critical outside allowlist): add pattern-not for QMessageBox.critical
 variants so Qt severity-styled UI dialogs are not treated as logger calls.
 - g5 (dynamic log level): add pattern-not for math.log / math.log2 /
-math.log10 / math.log1p / numpy.log* / np.log* arithmetic.
+math.log10 / math.log1p / numpy.log*/ np.log* arithmetic.
 - i5 (provider completion without model): add metavariable-regex restricting
 to provider classes, plus pattern-not for @abstractmethod.
 - i8 (sandbox lifecycle without log): tighten metavariable-regex to
@@ -2158,22 +2174,22 @@ extraction; on failure set binary_loaded=False, target_path=None, last_error.
 manage_external_references -> get_external_references; update tool_definitions
 and tests.
 - A14: populate ModuleInfo.entry_point by parsing in-memory PE header via
-new _read_module_entry_point (DOS e_lfanew -> NT OptionalHeader.AddressOfEntryPoint).
+new_read_module_entry_point (DOS e_lfanew -> NT OptionalHeader.AddressOfEntryPoint).
 - A18: centralize Win32 API restype/argtypes via _configure_win32_apis; declare
 OpenProcess, ReadProcessMemory, WriteProcessMemory, VirtualAllocEx/FreeEx,
 VirtualQueryEx, IsWow64Process, CreateToolhelp32Snapshot, Thread32/Module32/Process32
 family, WaitNamedPipeW, CloseHandle, GetCurrentProcess, OpenProcessToken.
 INVALID_HANDLE_VALUE derived from wintypes.HANDLE(-1).value.
 - A21: scan_memory raises ToolError for empty or below-MIN_PATTERN_LENGTH patterns.
-- A26: _get_export_names classifies errors via _is_recoverable_pipe_error;
+- A26: _get_export_names classifies errors via_is_recoverable_pipe_error;
 re-raises non-pipe errors, tracks recoverable ones in last_error.
 - A32: Frida enumerate_exports/imports JS emits {error: 'module_not_found'}
 payload; Python handles it.
 - A33: wire Frida Cancellable through attach_by_name, spawn, execute_script,
-compile_typescript via _attach_with_cancellable / _spawn_with_cancellable /
+compile_typescript via _attach_with_cancellable /_spawn_with_cancellable /
 _create_script_with_cancellable / _compiler_build_with_cancellable.
 - A35: write_code accepts configurable max_size parameter.
-- A41: _VALID_PROTECTION_FLAGS set and _validate_protection called upfront
+- A41: _VALID_PROTECTION_FLAGS set and_validate_protection called upfront
 before any JS injection.
 - A44: drop fake ThreadInfo.priority; add current_pc split from start_address;
 Frida reads t.context.pc, x64dbg/process fill start_address via Toolhelp32
@@ -2189,22 +2205,22 @@ before nulling self.document.
 - **core+hexpat:** Remediate audit items B12, B18, B21, B22, B24, B25 (`86f6f4f`)
 Squash merge of worktree-agent-ab0a24d9a626e051b (Group B).
 - B12: main.py now forwards config.logs_directory to setup_logging via log_dir
-kwarg. _SetupLoggingFn Protocol preserves keyword-arg type fidelity.
+kwarg._SetupLoggingFn Protocol preserves keyword-arg type fidelity.
 - B18: deleted unused get_structlog_logger from core/logging.py and pruned
 all dead-code allowlist entries.
 - B24: BitAndZero condition opcode added to hexcore templates/mod.rs and
 evaluated in eval.rs. Python compiler now lowers bit-mask if/else to
 paired BitAnd + BitAndZero, and bitwise OR/XOR/AND parser levels added.
-- B21/B22/B25: _init_script_engine returns ScriptGenerator, _init_template_manager
+- B21/B22/B25: _init_script_engine returns ScriptGenerator,_init_template_manager
 constructs TemplateManager and runs bootstrap_builtins on a headless
 HexDocument. MainWindow gains set_script_generator and set_template_manager.
 TemplateBootstrapError handled explicitly.
 
 - Improve ghidra error handling and logging initialization (`461d962`)
 Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
-* Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
-* Fix type signature and call site for logging setup to correctly pass the log directory
-* Replace legacy fix tracking with formal remediation audit results
+- Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
+- Fix type signature and call site for logging setup to correctly pass the log directory
+- Replace legacy fix tracking with formal remediation audit results
 
 - **ui/ghidra_panel:** Dataclass program info, scoped refresh errors, non-empty xrefs, JSON analyzer options, batched comments (E31,E33-E37g,E41) (`765b774`)
 
@@ -2317,7 +2333,7 @@ pytest. No ignore comments.
 - **providers/local:** Rename _connected → connected, fix device fallback + usage tracking (C20-C24)  (`0e76aa8`)
 - C20: Rename all self._connected sites to self.connected to align
 with LLMProviderBase.
-- C21: Move torch.inference_mode context inside _forward_pass closure
+- C21: Move torch.inference_mode context inside_forward_pass closure
 so the thread-local optimization takes effect inside the
 asyncio.to_thread worker. Replace no_grad with inference_mode on
 _generate_sync for the same reason.
@@ -2358,8 +2374,8 @@ does not touch private attributes.
 
 - **installer:** Unit 9 A76 follow-up — remove DOC304 class-docstring Args (`50afea1`)
 The ToolInstaller class docstring carried an Args: block describing
-tools_directory which belongs on the __init__ docstring (pydoclint DOC304).
-__init__ already has its own Args block, so removing the duplicate from
+tools_directory which belongs on the **init** docstring (pydoclint DOC304).
+**init** already has its own Args block, so removing the duplicate from
 the class docstring fixes the finding without dropping any information.
 Validators (bridges/installer.py): ruff clean, basedpyright 0/0/0,
 pydocstyle clean.
@@ -2378,7 +2394,7 @@ new Function(...) and installs the hook or replacement.
 - Install completion gated by a per-call asyncio.Event, eliminating
 the prior asyncio.sleep(0.1) guess.
 - Extracted _make_install_waiter (message buffer + terminal-event setter)
-and _resolve_install_address (post-install message scan) to keep both
+and_resolve_install_address (post-install message scan) to keep both
 call sites under the per-function local-variable budget.
 Side fix: add missing cast import in tests/test_bridges/test_frida_bridge.py
 so the e2e tests can import and run (pre-existing NameError blocked the
@@ -2471,7 +2487,7 @@ invoked directly against this file.
 exceptions or hardcoded returns.
 - A2: _detect_architecture now covers PE (x86/x86_64/ARM/ARM64/MIPS/PPC/
 RISC-V), ELF (x86/x86_64/ARM/AArch64/MIPS/PPC/PPC64/RISC-V), and Mach-O
-(x86/x86_64/ARM/ARM64/PPC/PPC64); adds _query_ghidra_arch + _resolve_
+(x86/x86_64/ARM/ARM64/PPC/PPC64); adds_query_ghidra_arch + _resolve_
 architecture RPC fallback.
 - A3: write_bytes sign-folds bytes, wraps the write in a Ghidra
 transaction, reads back, and raises ToolError on readback mismatch.
@@ -2603,13 +2619,13 @@ them. All existing concrete subclasses already satisfy the interface.
 - **hexpat:** Normalize document.length callable/property (B35)  (`ee6a60c`)
 HexDocumentLike declares length() as a method, but some adapter shims
 expose it as a plain attribute or property. DataReader.from_document
-now routes through a new _resolve_length helper that tolerates both
+now routes through a new_resolve_length helper that tolerates both
 shapes, validates the result is an int, and raises HexPatRuntimeError
 with a clear message when the attribute is missing or the resolved
 value cannot be coerced.
 
 - **hexcore:** Case-insensitive search handles mixed-case; strict ASCII encoder  (`5160a21`)
-* fix(hexcore): normalize-at-comparison case-insensitive search, strict ASCII encoder
+- fix(hexcore): normalize-at-comparison case-insensitive search, strict ASCII encoder
 Replace variant-generation case-insensitive search (which missed mixed-case
 inputs like "HeLLo") with normalize-at-comparison: decode each sliding window
 via encoding_rs and compare via str::to_lowercase. Reject non-ASCII input in
@@ -2648,5 +2664,3 @@ Refactor the Rust `bps_ups` implementation to use modular helper functions for p
 - Fix stale search result clearing when switching hex editor search modes
 - Update test suites to use temporary directories and improve floating-point assertions
 - Standardize internal imports and remove redundant type annotations in tests
-
-

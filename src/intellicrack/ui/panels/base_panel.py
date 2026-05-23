@@ -16,6 +16,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
     QToolBar,
     QVBoxLayout,
@@ -28,6 +29,8 @@ from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+
+    import structlog
 
 
 _logger = get_logger(__name__)
@@ -242,6 +245,46 @@ class AnalysisPanelBase(QWidget):
         """
         if self.status_label is not None:
             self.status_label.setText(text)
+
+    def _invalid_input(
+        self,
+        event: str,
+        *,
+        input_text: str,
+        console_msg: str,
+        logger: structlog.stdlib.BoundLogger,
+        **context: object,
+    ) -> None:
+        """Log a structured user-input parse failure and surface a message on the panel console.
+
+        Centralises the pattern used across analysis panels where a ``ValueError`` raised
+        while parsing user input must both be logged structurally for diagnostics and
+        surfaced as a human-readable line on the panel console widget. The console widget
+        is discovered by attribute name (``_console_output``, ``_console``, ``_output``)
+        so panels with differing naming conventions can share this helper. If none of
+        those attributes exist or the resolved attribute is not a ``QPlainTextEdit``,
+        the message is logged but no console line is appended.
+
+        Args:
+            event: Snake_case structured-log event name
+                (e.g. ``"x64dbg_run_to_invalid_address"``).
+            input_text: The raw input text that failed to parse. Stored under the
+                ``input_text`` structured key for later querying.
+            console_msg: Human-readable message appended verbatim to the resolved
+                panel console widget.
+            logger: The calling module's ``_logger`` instance. Passed explicitly so the
+                emitted event is attributed to the call site, not to ``base_panel``.
+            **context: Additional structured kwargs (``operation``, ``field``,
+                ``trace_id``, etc.) forwarded to the logger as keyword arguments.
+        """
+        logger.warning(event, input_text=input_text, **context)
+        console: object | None = (
+            getattr(self, "_console_output", None)
+            or getattr(self, "_console", None)
+            or getattr(self, "_output", None)
+        )
+        if isinstance(console, QPlainTextEdit):
+            console.appendPlainText(console_msg)
 
     def _run_async(
         self,

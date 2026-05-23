@@ -104,6 +104,7 @@ GRAY = f"{ESC}[90m"
 BRAND = f"{ESC}[38;2;228;0;43m"
 BOLD_PURPLE = f"{ESC}[1;95m"
 FINDINGS_RE = re.compile(r"(\d+)\s+findings")
+TOOL_SECONDS_RE = re.compile(r"TOOL_ELAPSED_SECONDS=([0-9]+(?:\.[0-9]+)?)")
 
 
 class Tool(NamedTuple):
@@ -172,6 +173,7 @@ class ToolResult(NamedTuple):
     recipe: str
     findings: int
     duration: float
+    recipe_seconds: float
     success: bool
     is_formatter: bool
 
@@ -256,6 +258,27 @@ def _parse_findings(output: str) -> int:
     return int(match.group(1)) if match else 0
 
 
+def _parse_tool_seconds(output: str, fallback: float) -> float:
+    """Extract the tool's own execution time from wrapper output.
+
+    The ``run-lint-tool.ps1`` wrapper emits a ``TOOL_ELAPSED_SECONDS``
+    marker that measures only the linter invocation, excluding ``just``,
+    ``pwsh``, and ``pixi`` startup as well as report generation.
+
+    Args:
+        output: Combined stdout and stderr from the recipe.
+        fallback: Recipe wall-clock duration used when no marker is found.
+
+    Returns:
+        float: The tool's execution time in seconds, or the fallback when
+            the wrapper did not emit a marker.
+    """
+    match = TOOL_SECONDS_RE.search(output)
+    if match is None:
+        return fallback
+    return round(float(match.group(1)), 1)
+
+
 def _read_report_findings(recipe: str) -> int | None:
     """Try to read findings from JSON report file as fallback.
 
@@ -311,13 +334,15 @@ def run_tool(tool: Tool) -> ToolResult:
         tool: The tool definition to execute.
 
     Returns:
-        ToolResult: Result containing name, findings, duration, and status.
+        ToolResult: Result containing name, findings, the tool's own
+            execution time, the full recipe wall time, and status.
     """
     start = time.monotonic()
     try:
         result = _run_just(tool.recipe)
-        duration = round(time.monotonic() - start, 1)
+        recipe_seconds = round(time.monotonic() - start, 1)
         output = (result.stdout or "") + (result.stderr or "")
+        duration = _parse_tool_seconds(output, recipe_seconds)
         findings = 0
         if not tool.is_formatter:
             findings = _parse_findings(output)
@@ -326,19 +351,19 @@ def run_tool(tool: Tool) -> ToolResult:
                 if report_findings is not None and report_findings > 0:
                     findings = report_findings
         return ToolResult(
-            tool.name, tool.recipe, findings, duration,
+            tool.name, tool.recipe, findings, duration, recipe_seconds,
             success=True, is_formatter=tool.is_formatter,
         )
     except subprocess.TimeoutExpired:
-        duration = round(time.monotonic() - start, 1)
+        recipe_seconds = round(time.monotonic() - start, 1)
         return ToolResult(
-            tool.name, tool.recipe, 0, duration,
+            tool.name, tool.recipe, 0, recipe_seconds, recipe_seconds,
             success=False, is_formatter=tool.is_formatter,
         )
     except OSError:
-        duration = round(time.monotonic() - start, 1)
+        recipe_seconds = round(time.monotonic() - start, 1)
         return ToolResult(
-            tool.name, tool.recipe, 0, duration,
+            tool.name, tool.recipe, 0, recipe_seconds, recipe_seconds,
             success=False, is_formatter=tool.is_formatter,
         )
 
@@ -468,7 +493,7 @@ class ProgressTracker:
             self._active_workers = max(0, self._active_workers - 1)
             self._all_remaining.discard(result.recipe)
             self._linter_recipes.discard(result.recipe)
-            self._durations[result.recipe] = result.duration
+            self._durations[result.recipe] = result.recipe_seconds
 
             if self._is_tty:
                 sys.stdout.write(f"\r{CLEAR_EOL}")
@@ -782,7 +807,7 @@ def main() -> None:
         os._exit(130)
 
     _print_summary(results, time.monotonic() - global_start)
-    durations.update({r.recipe: r.duration for r in results.values()})
+    durations.update({r.recipe: r.recipe_seconds for r in results.values()})
     _save_durations(durations)
 
 
