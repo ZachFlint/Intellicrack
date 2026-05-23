@@ -1426,7 +1426,7 @@ class WindowsSandbox(SandboxBase):
             )
             result = "success" if exit_code == _RETURNCODE_SUCCESS else "error"
         except SandboxTimeoutError as e:
-            _logger.warning(
+            _logger.exception(
                 "sandbox_execution_timeout",
                 binary=binary_path.name,
                 timeout=effective_timeout,
@@ -1436,10 +1436,9 @@ class WindowsSandbox(SandboxBase):
             stderr = str(e)
             stdout = ""
         except SandboxError as e:
-            _logger.warning(
+            _logger.exception(
                 "sandbox_execution_error",
                 binary=binary_path.name,
-                error=str(e),
             )
             exit_code = _RETURNCODE_FAILURE
             result = "error"

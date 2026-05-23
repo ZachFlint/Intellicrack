@@ -995,10 +995,10 @@ class OAuthManager:
             try:
                 token = await self.refresh_token(provider, effective_config)
             except OAuthTokenRefreshError:
-                _logger.warning("token_refresh_auth_failed", provider=provider.value)
+                _logger.exception("token_refresh_auth_failed", provider=provider.value)
                 return None
             except OAuthTokenError:
-                _logger.warning("token_refresh_failed", provider=provider.value)
+                _logger.exception("token_refresh_failed", provider=provider.value)
                 return token if not token.is_expired else None
 
         return None if token.is_expired else token

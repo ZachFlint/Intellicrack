@@ -735,14 +735,14 @@ class OperationTimer:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        _exc_tb: TracebackType | None,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Stop the timer and log operation completion.
 
         Args:
             exc_type: Exception type if an exception occurred.
             exc_val: Exception value if an exception occurred.
-            _exc_tb: Exception traceback if an exception occurred.
+            exc_tb: Exception traceback if an exception occurred.
         """
         duration_ms = (time.perf_counter() - self._start_time) * 1000
 
@@ -751,7 +751,7 @@ class OperationTimer:
                 "operation_failed",
                 operation=self.operation,
                 duration_ms=round(duration_ms, 2),
-                error=str(exc_val) if exc_val else str(exc_type),
+                exc_info=(exc_type, exc_val, exc_tb),
                 **self.context,
             )
         else:

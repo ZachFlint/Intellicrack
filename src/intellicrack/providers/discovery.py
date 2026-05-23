@@ -307,8 +307,8 @@ class DiscoveryCache:
                 json_text = json.dumps(data, indent=2)
                 await asyncio.to_thread(path.write_text, json_text, "utf-8")
                 _cache_logger.info("cache_saved", path=str(path))
-            except (OSError, ValueError, TypeError) as exc:
-                _cache_logger.warning("cache_save_failed", cache_path=str(path), error=str(exc))
+            except (OSError, ValueError, TypeError):
+                _cache_logger.exception("cache_save_failed", cache_path=str(path))
 
     @staticmethod
     def _parse_cache_entries(
@@ -403,8 +403,8 @@ class DiscoveryCache:
             except json.JSONDecodeError:
                 _cache_logger.exception("cache_parse_failed", cache_path=str(path))
                 return
-            except (OSError, ValueError, TypeError) as exc:
-                _cache_logger.warning("cache_load_failed", cache_path=str(path), error=str(exc))
+            except (OSError, ValueError, TypeError):
+                _cache_logger.exception("cache_load_failed", cache_path=str(path))
                 return
 
             if not isinstance(raw_data, dict):
@@ -426,11 +426,10 @@ class DiscoveryCache:
             now = time.time()
             try:
                 staged = self._parse_cache_entries(entries_dict, now)
-            except (ValueError, KeyError, TypeError) as exc:
-                _cache_logger.warning(
+            except (ValueError, KeyError, TypeError):
+                _cache_logger.exception(
                     "cache_load_aborted_existing_preserved",
                     cache_path=str(path),
-                    error=str(exc),
                 )
                 return
 
@@ -640,10 +639,9 @@ class ModelDiscovery:
                 )
             except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
                 duration_ms = (time.time() - start_time) * 1000
-                _logger.warning(
+                _logger.exception(
                     "discovery_failed",
                     provider=provider_name.value,
-                    error=str(exc),
                 )
                 if write_cache:
                     await self._cache.ainvalidate(provider_name)
@@ -756,8 +754,8 @@ class ModelDiscovery:
             )
             await self._cache.ainvalidate(provider)
             return []
-        except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
-            _logger.warning("discovery_failed", provider=provider.value, error=str(exc))
+        except (ConnectionError, OSError, RuntimeError, ValueError):
+            _logger.exception("discovery_failed", provider=provider.value)
             await self._cache.ainvalidate(provider)
             return []
 

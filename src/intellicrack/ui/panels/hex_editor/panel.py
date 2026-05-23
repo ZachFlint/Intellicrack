@@ -637,7 +637,7 @@ class HexEditorPanel(
                 self.state_holder.set_document(self.document, path, source="panel")
 
         except OSError as exc:
-            _logger.warning("file_load_failed", path=str(path))
+            _logger.exception("file_load_failed", path=str(path))
             show_warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
         else:
