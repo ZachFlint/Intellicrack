@@ -368,7 +368,7 @@ class DataInspectorMixin:
         try:
             hex_str = run_bridge_coroutine(bridge.encode_text(text, encoding))
         except (AttributeError, ValueError, OverflowError, RuntimeError) as exc:
-            _logger.warning("encode_text_bridge_failed", encoding=encoding)
+            _logger.exception("encode_text_bridge_failed", encoding=encoding, error=str(exc))
             self._encode_output.setText(f"Error: {exc}")
             return
 

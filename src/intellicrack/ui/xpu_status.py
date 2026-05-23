@@ -233,7 +233,7 @@ class XPUStatusDialog(QDialog):
         try:
             available = is_xpu_available()
         except (RuntimeError, OSError):
-            _logger.debug("xpu_availability_check_failed", exc_info=True)
+            _logger.exception("xpu_availability_check_failed")
             available = False
 
         if not available:
@@ -261,7 +261,7 @@ class XPUStatusDialog(QDialog):
         try:
             info: XPUDeviceInfo | None = get_xpu_device_info(0)
         except (RuntimeError, OSError):
-            _logger.debug("xpu_device_info_failed", exc_info=True)
+            _logger.exception("xpu_device_info_failed")
             return
 
         if info is None:
@@ -289,7 +289,7 @@ class XPUStatusDialog(QDialog):
             dtype = get_optimal_dtype_for_xpu()
             self._dtype_label.setText(dtype)
         except (RuntimeError, OSError):
-            _logger.debug("xpu_dtype_detection_failed", exc_info=True)
+            _logger.exception("xpu_dtype_detection_failed")
             self._dtype_label.setText("Detection failed")
 
     def _refresh_live_data(self) -> None:
@@ -315,7 +315,7 @@ class XPUStatusDialog(QDialog):
 
             allocated, total = get_xpu_memory_info(0)
         except (RuntimeError, OSError):
-            _logger.debug("xpu_memory_info_failed", exc_info=True)
+            _logger.exception("xpu_memory_info_failed")
             self.memory_bar.setValue(0)
             self.memory_text.setText("Failed to read memory")
             return
@@ -356,7 +356,7 @@ class XPUStatusDialog(QDialog):
             _restyle(self.cache_usage_label)
             self.cache_limit_label.setText(f"{limit_mb:.0f} MB")
         except (RuntimeError, AttributeError):
-            _logger.debug("cache_info_failed", exc_info=True)
+            _logger.exception("cache_info_failed")
             self.cache_usage_label.setText("Error reading cache")
             self.cache_limit_label.setText("Error")
 
@@ -372,7 +372,7 @@ class XPUStatusDialog(QDialog):
         try:
             all_met, warnings = check_windows_requirements()
         except (RuntimeError, OSError):
-            _logger.debug("requirements_check_failed", exc_info=True)
+            _logger.exception("requirements_check_failed")
             self.requirements_text.setPlainText("Failed to check requirements.")
             return
 

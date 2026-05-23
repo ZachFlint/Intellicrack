@@ -116,8 +116,8 @@ class FontManager:
                 self._setup_fonts_from_loaded()
                 fonts_loaded = True
 
-        except (FileNotFoundError, PermissionError) as e:
-            _logger.warning("font_loading_error", error=str(e))
+        except (FileNotFoundError, PermissionError):
+            _logger.exception("font_loading_error")
             self._setup_fallback_fonts()
             fonts_loaded = False
 

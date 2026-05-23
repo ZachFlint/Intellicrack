@@ -920,7 +920,7 @@ class TransformsMixin:
                 bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count),
             )
         except (RuntimeError, OSError, ValueError, TypeError, AttributeError) as exc:
-            _logger.warning(
+            _logger.exception(
                 "arithmetic_bridge_failed",
                 operation=op_short,
                 selection_start=sel_start,

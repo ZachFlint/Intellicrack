@@ -1805,7 +1805,7 @@ def _cmake_timeout(env_var: str, default_s: int) -> int:
     try:
         value = int(raw)
     except ValueError:
-        _logger.warning("cmake_timeout_env_invalid", env_var=env_var, value=raw)
+        _logger.exception("cmake_timeout_env_invalid", env_var=env_var, value=raw)
         return default_s
     return max(value, default_s)
 

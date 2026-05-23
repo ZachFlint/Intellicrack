@@ -3941,8 +3941,8 @@ class HexEditorBridge(ToolBridgeBase):
                 }
                 for section in iterate_section_headers(section_bytes, 0, count)
             ]
-        except (struct.error, RuntimeError, OSError) as exc:
-            _logger.warning("get_pe_sections_failed", error=str(exc))
+        except (struct.error, RuntimeError, OSError):
+            _logger.exception("get_pe_sections_failed")
             return []
         else:
             _logger.debug("get_pe_sections_completed", count=len(sections))
@@ -3991,8 +3991,8 @@ class HexEditorBridge(ToolBridgeBase):
             else:
                 data = self._read_all_doc_bytes()
                 pe = _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError) as exc:
-            _logger.warning("get_pe_imports_failed_parse", error=str(exc))
+        except (AttributeError, ValueError, OSError):
+            _logger.exception("get_pe_imports_failed_parse")
             return []
 
         results: list[dict[str, Any]] = []
@@ -4003,8 +4003,8 @@ class HexEditorBridge(ToolBridgeBase):
             if import_dir is not None:
                 for entry in import_dir:
                     results.extend(_collect_import_entries(entry))
-        except (AttributeError, ValueError) as exc:
-            _logger.warning("get_pe_imports_failed_walk", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("get_pe_imports_failed_walk")
             results = []
         finally:
             pe.close()
@@ -4053,8 +4053,8 @@ class HexEditorBridge(ToolBridgeBase):
             else:
                 data = self._read_all_doc_bytes()
                 pe = _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError) as exc:
-            _logger.warning("get_pe_exports_failed_parse", error=str(exc))
+        except (AttributeError, ValueError, OSError):
+            _logger.exception("get_pe_exports_failed_parse")
             return []
 
         results: list[dict[str, Any]] = []
@@ -4077,8 +4077,8 @@ class HexEditorBridge(ToolBridgeBase):
                             "ordinal": ordinal_val,
                         },
                     )
-        except (AttributeError, ValueError) as exc:
-            _logger.warning("get_pe_exports_failed_walk", error=str(exc))
+        except (AttributeError, ValueError):
+            _logger.exception("get_pe_exports_failed_walk")
             results = []
         finally:
             pe.close()
@@ -5854,8 +5854,8 @@ class HexEditorBridge(ToolBridgeBase):
 
         try:
             mappings = self._collect_macho_segment_mappings(magic)
-        except (struct.error, RuntimeError, OSError, ValueError) as exc:
-            _logger.warning("macho_va_detection_failed", error=str(exc))
+        except (struct.error, RuntimeError, OSError, ValueError):
+            _logger.exception("macho_va_detection_failed")
             return []
 
         _logger.info("macho_va_mappings_detected", count=len(mappings))
@@ -5973,8 +5973,8 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.info("pe_va_mappings_detected", count=len(mappings))
             if self.state_holder is not None:
                 self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
-        except (struct.error, RuntimeError, OSError) as exc:
-            _logger.warning("pe_va_detection_failed", error=str(exc))
+        except (struct.error, RuntimeError, OSError):
+            _logger.exception("pe_va_detection_failed")
             return []
         else:
             return mappings
@@ -6035,8 +6035,8 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.info("elf_va_mappings_detected", count=len(mappings))
             if self.state_holder is not None:
                 self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
-        except (struct.error, RuntimeError, OSError) as exc:
-            _logger.warning("elf_va_detection_failed", error=str(exc))
+        except (struct.error, RuntimeError, OSError):
+            _logger.exception("elf_va_detection_failed")
             return []
         else:
             return mappings
@@ -6378,10 +6378,9 @@ class HexEditorBridge(ToolBridgeBase):
         try:
             self._bookmark_macho_load_commands(magic, bookmarks, added_indices)
             _logger.info("macho_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError, ValueError) as exc:
-            _logger.warning(
+        except (struct.error, RuntimeError, OSError, ValueError):
+            _logger.exception(
                 "macho_structure_bookmark_failed",
-                error=str(exc),
                 rolled_back=len(added_indices),
             )
             self._rollback_bookmark_indices(added_indices)
@@ -6478,10 +6477,9 @@ class HexEditorBridge(ToolBridgeBase):
             self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, added_indices, colors[3])
 
             _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError, ValueError) as exc:
-            _logger.warning(
+        except (struct.error, RuntimeError, OSError, ValueError):
+            _logger.exception(
                 "pe_structure_bookmark_failed",
-                error=str(exc),
                 rolled_back=len(added_indices),
             )
             self._rollback_bookmark_indices(added_indices)
@@ -6606,10 +6604,9 @@ class HexEditorBridge(ToolBridgeBase):
                 )
 
             _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
-        except (struct.error, RuntimeError, OSError, ValueError) as exc:
-            _logger.warning(
+        except (struct.error, RuntimeError, OSError, ValueError):
+            _logger.exception(
                 "elf_structure_bookmark_failed",
-                error=str(exc),
                 rolled_back=len(added_indices),
             )
             self._rollback_bookmark_indices(added_indices)

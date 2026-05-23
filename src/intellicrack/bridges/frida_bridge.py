@@ -1564,12 +1564,10 @@ class FridaBridge(InstrumentationBridge):
         except (OSError, RuntimeError, frida.TransportError) as e:
             try:
                 await asyncio.to_thread(device.kill, pid)
-            except (OSError, RuntimeError, frida.TransportError) as kill_err:
-                _logger.warning(
+            except (OSError, RuntimeError, frida.TransportError):
+                _logger.exception(
                     "failed_to_kill_leaked_process",
                     pid=pid,
-                    error=str(kill_err),
-                    error_type=type(kill_err).__name__,
                 )
             raise ToolError(
                 _ERR_ATTACH_FAILED,
@@ -6762,7 +6760,7 @@ class FridaBridge(InstrumentationBridge):
                     cancellable,
                 )
             except Exception as e:
-                _logger.warning("typescript_compile_failed", error=str(e))
+                _logger.exception("typescript_compile_failed")
                 raise ToolError(_ERR_COMPILE_FAILED) from e
         finally:
             if temp_path is not None:
