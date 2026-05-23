@@ -521,7 +521,7 @@ class _DigramMatrixWidget(QWidget):
         """
         super().__init__(parent)
         self._matrix = matrix_data
-        self._max_val = max(matrix_data) if matrix_data else 1
+        self._max_val = max(matrix_data, default=1)
         self.setMinimumSize(QSize(_DIGRAM_MIN_WIDGET_SIZE, _DIGRAM_MIN_WIDGET_SIZE))
         self.setMouseTracking(enable=True)
 

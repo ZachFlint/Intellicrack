@@ -304,9 +304,10 @@ class NamedPipeClient:
         futures with a ``ToolError`` so awaiting ``send_command`` callers do not hang, and then closes the underlying Windows handle on the
         asyncio thread pool via ``asyncio.to_thread``. Safe to call when the client is not connected.
         """
+        _logger.info("pipe_close_invoked")
         async with self._close_lock:
             if self._handle is None:
-                _logger.debug("pipe_close_noop_already_disconnected")
+                _logger.debug("pipe_disconnect_skipped_already_inactive")
                 return
             pipe_name = self._config.pipe_name
             _logger.info("pipe_disconnecting", pipe_name=pipe_name)
@@ -320,7 +321,7 @@ class NamedPipeClient:
                 try:
                     await reader
                 except asyncio.CancelledError as exc:
-                    _logger.debug("pipe_reader_cancelled_on_close", error=str(exc))
+                    _logger.warning("pipe_reader_cancelled_on_close", error=str(exc))
                 except (ToolError, OSError) as exc:
                     _logger.warning("pipe_reader_error_on_close", error=str(exc))
                 except Exception:
@@ -419,8 +420,10 @@ class NamedPipeClient:
         Returns:
             int: A positive request id in ``[1, 2 ** 31 - 1]``.
         """
+        _logger.debug("request_id_allocate_invoked")
         async with self._id_lock:
             self._next_id = (self._next_id % _REQUEST_ID_MAX) + 1
+            _logger.debug("request_id_allocated", request_id=self._next_id)
             return self._next_id
 
     async def _reader_loop(self) -> None:
@@ -832,7 +835,7 @@ class NamedPipeClient:
 
         total = len(data)
         offset = 0
-        _logger.debug("pipe_write_started", total_bytes=total)
+        _logger.info("pipe_write_started", total_bytes=total)
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
@@ -856,13 +859,13 @@ class NamedPipeClient:
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)
             _logger.debug(
-                "pipe_write_chunk",
+                "pipe_chunk_progress",
                 chunk_bytes=bytes_written.value,
                 offset=offset + bytes_written.value,
             )
             offset += bytes_written.value
 
-        _logger.debug("pipe_write_complete", total_bytes=total)
+        _logger.info("pipe_write_complete", total_bytes=total)
 
     def _cancel_io(self) -> None:
         """Cancel any in-flight pipe I/O on supported Windows builds.

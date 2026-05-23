@@ -58,10 +58,7 @@ def _default_log_dir() -> Path:
         return configured
 
     config_dir = _resolve_log_dir_from_config()
-    if config_dir is not None:
-        return config_dir
-
-    return Path.cwd() / "logs"
+    return config_dir if config_dir is not None else Path.cwd() / "logs"
 
 
 def _resolve_log_dir_from_config() -> Path | None:
@@ -78,7 +75,7 @@ def _resolve_log_dir_from_config() -> Path | None:
     try:
         config_module = importlib.import_module("intellicrack.core.config")
     except ImportError as exc:
-        structlog.get_logger("intellicrack.core.logging").debug("config_module_import_failed", error=str(exc))
+        structlog.get_logger("intellicrack.core.logging").warning("config_module_import_failed", error=str(exc))
         return None
 
     config_cls = getattr(config_module, "Config", None)
@@ -89,7 +86,7 @@ def _resolve_log_dir_from_config() -> Path | None:
     try:
         config_dir = cast("Path", get_config_dir_fn())
     except (OSError, RuntimeError) as exc:
-        structlog.get_logger("intellicrack.core.logging").debug("config_dir_resolution_failed", error=str(exc))
+        structlog.get_logger("intellicrack.core.logging").warning("config_dir_resolution_failed", error=str(exc))
         return None
 
     config_path = config_dir / "config.toml"
@@ -99,13 +96,11 @@ def _resolve_log_dir_from_config() -> Path | None:
     try:
         config = config_cls.load(config_path)
     except (OSError, ValueError, KeyError) as exc:
-        structlog.get_logger("intellicrack.core.logging").debug("config_load_failed", error=str(exc))
+        structlog.get_logger("intellicrack.core.logging").warning("config_load_failed", error=str(exc))
         return None
 
     logs_directory = getattr(config, "logs_directory", None)
-    if isinstance(logs_directory, Path):
-        return logs_directory
-    return None
+    return logs_directory if isinstance(logs_directory, Path) else None
 
 
 class ColoredConsoleRenderer:

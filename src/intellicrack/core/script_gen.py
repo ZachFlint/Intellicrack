@@ -145,13 +145,12 @@ def strip_java_strings_and_comments(content: str) -> str:
             j = content.find("*/", i + 2)
             if j == -1:
                 segment = content[i:]
-                out.append("".join(c if c == "\n" else " " for c in segment))
                 i = n
             else:
                 end = j + 2
                 segment = content[i:end]
-                out.append("".join(c if c == "\n" else " " for c in segment))
                 i = end
+            out.append("".join(c if c == "\n" else " " for c in segment))
             continue
 
         if ch == '"':
@@ -566,7 +565,7 @@ class ScriptValidator:
             stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
             return False, stderr_text
         finally:
-            _logger.debug("temp_file_unlink_attempt", path=temp_path)
+            _logger.info("temp_file_unlink_attempt", path=temp_path)
             try:
                 Path(temp_path).unlink(missing_ok=True)
             except OSError as exc:

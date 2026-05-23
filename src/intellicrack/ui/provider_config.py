@@ -1806,8 +1806,7 @@ class ProviderSettingsWidget(QFrame):
             url: The URL to open.
             label: Human-readable label for the link, used for logging.
         """
-        opened = QDesktopServices.openUrl(url)
-        if opened:
+        if opened := QDesktopServices.openUrl(url):
             _logger.info(
                 "provider_resource_opened",
                 provider=self.provider_id,

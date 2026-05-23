@@ -42,6 +42,7 @@ _logger = get_logger(__name__)
 ```
 
 Then wrap document calls in try/except with logs (see F26 for the actual coverage additions):
+
 - L74 `self.document.add_bookmark(...)` → log `bookmark_added` info
 - L96 `self.document.remove_bookmark(...)` → log `bookmark_removed` info
 - L89/L106 `self.document.list_bookmarks()` → wrap with try/except, log on failure
@@ -60,6 +61,7 @@ _logger = get_logger(__name__)
 ```
 
 Then add debug logs in each except (these are defensive UI fallbacks but per §2.2 must log):
+
 - L106 `_logger.debug("calc_input_parse_failed", text=text, error=str(exc))`
 - L140 `_logger.debug("calc_int_overflow", label=label, value=value)`
 - L150 `_logger.debug("calc_float_pack_failed", label=label)`

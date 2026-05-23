@@ -375,7 +375,7 @@ class TemplatesMixin:
         try:
             magic_raw: object = self.document.read(0, 4)
         except (AttributeError, ValueError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "auto_bookmark_magic_read_failed",
                 exc_type=type(exc).__name__,
                 error=str(exc),
@@ -422,7 +422,7 @@ class TemplatesMixin:
             else:
                 return
         except (AttributeError, ValueError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "pe_bookmark_dos_header_read_failed",
                 exc_type=type(exc).__name__,
                 error=str(exc),
@@ -447,7 +447,7 @@ class TemplatesMixin:
             else:
                 return
         except (AttributeError, ValueError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "pe_bookmark_coff_header_read_failed",
                 e_lfanew=e_lfanew,
                 exc_type=type(exc).__name__,
@@ -503,7 +503,7 @@ class TemplatesMixin:
                 else:
                     sec_name = f"Section {i}"
             except (AttributeError, ValueError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "pe_bookmark_section_read_failed",
                     section_index=i,
                     section_offset=sec_off,
@@ -534,7 +534,7 @@ class TemplatesMixin:
             else:
                 return
         except (AttributeError, ValueError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "elf_bookmark_ei_class_read_failed",
                 exc_type=type(exc).__name__,
                 error=str(exc),
@@ -555,14 +555,14 @@ class TemplatesMixin:
                 else:
                     return
             except (AttributeError, ValueError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "elf64_bookmark_header_read_failed",
                     exc_type=type(exc).__name__,
                     error=str(exc),
                 )
                 return
 
-            ph_offset = int.from_bytes(hdr[0:8], "little")
+            ph_offset = int.from_bytes(hdr[:8], "little")
             sh_offset = int.from_bytes(hdr[8:16], "little")
 
             try:
@@ -576,14 +576,14 @@ class TemplatesMixin:
                 else:
                     return
             except (AttributeError, ValueError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "elf64_bookmark_header_counts_read_failed",
                     exc_type=type(exc).__name__,
                     error=str(exc),
                 )
                 return
 
-            ph_count = int.from_bytes(count_data[0:2], "little")
+            ph_count = int.from_bytes(count_data[:2], "little")
             sh_count = int.from_bytes(count_data[2:4], "little")
         else:
             try:
@@ -597,14 +597,14 @@ class TemplatesMixin:
                 else:
                     return
             except (AttributeError, ValueError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "elf32_bookmark_header_read_failed",
                     exc_type=type(exc).__name__,
                     error=str(exc),
                 )
                 return
 
-            ph_offset = int.from_bytes(hdr[0:4], "little")
+            ph_offset = int.from_bytes(hdr[:4], "little")
             sh_offset = int.from_bytes(hdr[4:8], "little")
             ph_count = 0
             sh_count = 0

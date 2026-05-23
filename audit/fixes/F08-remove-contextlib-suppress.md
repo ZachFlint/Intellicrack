@@ -9,6 +9,7 @@
 ### `src/intellicrack/bridges/x64dbg.py:L2564`
 
 Current:
+
 ```python
 with contextlib.suppress(ValueError):
     self._step_waiters.remove(waiter)
@@ -17,6 +18,7 @@ with contextlib.suppress(ValueError):
 (In `_cancel_step_waiter()`)
 
 Fix:
+
 ```python
 try:
     self._step_waiters.remove(waiter)

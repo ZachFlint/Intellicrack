@@ -294,7 +294,7 @@ class DisassemblyMixin:
         """
         if self._disasm_follow_cursor is None or not self._disasm_follow_cursor.isChecked():
             return
-        self._disasm_pending_offset = int(offset)
+        self._disasm_pending_offset = offset
         if self._disasm_follow_timer is None:
             self._on_follow_cursor_debounced()
             return

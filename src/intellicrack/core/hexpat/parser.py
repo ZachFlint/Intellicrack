@@ -141,6 +141,7 @@ class HexPatAggregateParseError(HexPatParseError):
         """
         if not errors:
             msg = "HexPatAggregateParseError requires at least one collected error"
+            _logger.warning("hexpat_aggregate_parse_error_empty_errors")
             raise ValueError(msg)
         self.errors: tuple[HexPatParseError, ...] = errors
         first: HexPatParseError = errors[0]
@@ -229,7 +230,7 @@ class HexPatParser:
             try:
                 node = self._parse_top_level_node()
             except HexPatParseError as err:
-                _logger.debug(
+                _logger.warning(
                     "hexpat_parse_recover",
                     error=err.message,
                     line=err.line,
@@ -780,7 +781,7 @@ class HexPatParser:
                     self._restore(saved)
                     target = self._parse_expression()
             except HexPatParseError:
-                _logger.debug("hexpat_parser_backtrack", context="sizeof", line=tok.line, column=tok.column)
+                _logger.warning("hexpat_parser_backtrack", context="sizeof", line=tok.line, column=tok.column)
                 self._restore(saved)
                 target = self._parse_expression()
             self._expect(TokenType.RPAREN)
@@ -996,7 +997,7 @@ class HexPatParser:
                 in_struct_body=allow_fields,
             )
         except HexPatParseError:
-            _logger.debug("hexpat_parser_backtrack", context="placement_vs_expr")
+            _logger.warning("hexpat_parser_backtrack", context="placement_vs_expr")
             self._restore(saved)
             return self._parse_expr_stmt()
         else:
@@ -1042,7 +1043,7 @@ class HexPatParser:
                     in_struct_body=False,
                 )
             except HexPatParseError:
-                _logger.debug("hexpat_parser_backtrack", context="top_level_placement")
+                _logger.warning("hexpat_parser_backtrack", context="top_level_placement")
                 self._restore(saved)
             else:
                 return field_stmt
@@ -1064,7 +1065,7 @@ class HexPatParser:
                 self._restore(saved)
                 type_node = None
         except HexPatParseError:
-            _logger.debug("hexpat_parser_backtrack", context="typed_const")
+            _logger.warning("hexpat_parser_backtrack", context="typed_const")
             self._restore(saved)
             type_node = None
 

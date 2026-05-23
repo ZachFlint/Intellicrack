@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Optional third-party module imports for Intellicrack.
 
-This module provides helpers for importing third-party libraries that may not
-be installed in all environments, with consistent structured logging and error
-handling.
+This module provides helpers for importing third-party libraries that may not be installed in all environments, with consistent structured
+logging and error handling.
 """
 
 import importlib

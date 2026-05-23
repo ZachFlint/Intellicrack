@@ -355,12 +355,10 @@ class OllamaProvider(LLMProviderBase):
         try:
             text = response.text
         except (httpx.HTTPError, RuntimeError, UnicodeDecodeError):
-            _logger.debug("ollama_response_text_unreadable")
+            _logger.warning("ollama_response_text_unreadable")
             return ""
         max_len = 512
-        if len(text) > max_len:
-            return text[:max_len] + "..."
-        return text
+        return f"{text[:max_len]}..." if len(text) > max_len else text
 
     async def list_models(self) -> list[ModelInfo]:
         """Fetch available models from both local and cloud Ollama.
@@ -688,14 +686,16 @@ class OllamaProvider(LLMProviderBase):
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
         normalized = source.lower()
-        if normalized == "local":
-            if not self._local_available or not self._local_client:
-                raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
-            return self._local_client, self._local_url
         if normalized == "cloud":
-            if not self._cloud_available or not self._cloud_client:
+            if self._cloud_available and self._cloud_client:
+                return self._cloud_client, self.CLOUD_API_URL
+            else:
                 raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
-            return self._cloud_client, self.CLOUD_API_URL
+        elif normalized == "local":
+            if self._local_available and self._local_client:
+                return self._local_client, self._local_url
+            else:
+                raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
         msg = _ERR_UNKNOWN_SOURCE % source
         raise ProviderError(msg, provider_name="ollama")
 
@@ -1101,7 +1101,7 @@ class OllamaProvider(LLMProviderBase):
             completion_tokens = int(usage_obj.get("completion_tokens", 0) or 0)
             total_tokens = int(usage_obj.get("total_tokens", 0) or 0) or (prompt_tokens + completion_tokens)
         except (TypeError, ValueError) as exc:
-            self._logger.debug("openai_usage_parse_failed", error=str(exc))
+            self._logger.warning("openai_usage_parse_failed", error=str(exc))
             return
         if prompt_tokens == 0 and completion_tokens == 0:
             return
@@ -1203,12 +1203,12 @@ class OllamaProvider(LLMProviderBase):
         try:
             prompt_tokens = int(data.get("prompt_eval_count", 0))
         except (TypeError, ValueError) as exc:
-            self._logger.debug("usage_prompt_tokens_parse_failed", error=str(exc))
+            self._logger.warning("usage_prompt_tokens_parse_failed", error=str(exc))
             prompt_tokens = 0
         try:
             completion_tokens = int(data.get("eval_count", 0))
         except (TypeError, ValueError) as exc:
-            self._logger.debug("usage_completion_tokens_parse_failed", error=str(exc))
+            self._logger.warning("usage_completion_tokens_parse_failed", error=str(exc))
             completion_tokens = 0
         if prompt_tokens == 0 and completion_tokens == 0:
             return

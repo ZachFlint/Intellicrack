@@ -1322,7 +1322,7 @@ class FridaBridge(InstrumentationBridge):
         try:
             await asyncio.to_thread(frida.get_local_device)
         except (OSError, RuntimeError) as e:
-            _logger.debug("frida_availability_check_failed", error=str(e))
+            _logger.warning("frida_availability_check_failed", error=str(e))
             return False
         else:
             return True
@@ -2531,12 +2531,12 @@ class FridaBridge(InstrumentationBridge):
                 event.set()
                 return
         if loop.is_closed():
-            _logger.debug("frida_event_loop_closed_drop_signal")
+            _logger.debug("frida_event_loop_inactive_signal_skipped")
             return
         try:
             loop.call_soon_threadsafe(event.set)
         except RuntimeError:
-            _logger.debug("frida_event_loop_signal_runtime_error")
+            _logger.warning("frida_event_loop_signal_runtime_error")
 
     async def _unload_script(self, script_id: str) -> None:
         """Unload a script and reap every registry that referenced it.
@@ -3473,8 +3473,7 @@ class FridaBridge(InstrumentationBridge):
         details: dict[str, object] = {
             "frida_error": str(exc),
             "frida_error_type": type(exc).__name__,
-        }
-        details.update(extra)
+        } | extra
         return details
 
     @staticmethod
@@ -3510,7 +3509,7 @@ class FridaBridge(InstrumentationBridge):
             if cell == "??":
                 cells.append("??")
                 continue
-            if not all(ch in string.hexdigits for ch in cell):
+            if any(ch not in string.hexdigits for ch in cell):
                 raise ToolError(
                     _ERR_READ_FAILED,
                     details={"reason": f"invalid scan pattern cell: {cell!r}"},
@@ -3540,6 +3539,7 @@ class FridaBridge(InstrumentationBridge):
             ToolError: If ``value`` is not an exact integer.
         """
         if isinstance(value, bool) or not isinstance(value, int):
+            _logger.warning("validate_js_int_invalid_type", arg_name=name, value_type=type(value).__name__)
             raise ToolError(
                 _ERR_CALL_FAILED,
                 details={"reason": f"{name} must be int, got {type(value).__name__}"},
@@ -5135,6 +5135,7 @@ class FridaBridge(InstrumentationBridge):
         """
         device = self._device
         if device is None:
+            _logger.warning("enumerate_applications_no_device")
             raise ToolError(
                 _ERR_NO_DEVICE,
                 details={"reason": "bridge not initialised; call initialize() first"},
@@ -5776,9 +5777,13 @@ class FridaBridge(InstrumentationBridge):
         escaped_code = self._escape_js_string(code)
         symbols_js = "null"
         if symbols:
-            validated_pairs: list[tuple[str, int]] = []
-            for k, v in symbols.items():
-                validated_pairs.append((self._escape_js_string(k), self._validate_js_int(v, name=f"symbols[{k!r}]")))
+            validated_pairs: list[tuple[str, int]] = [
+                (
+                    self._escape_js_string(k),
+                    self._validate_js_int(v, name=f"symbols[{k!r}]"),
+                )
+                for k, v in symbols.items()
+            ]
             sym_entries = ", ".join(f"'{k}': ptr({v})" for k, v in validated_pairs)
             symbols_js = f"{{ {sym_entries} }}"
 

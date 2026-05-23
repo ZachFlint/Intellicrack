@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/core/__init__.py — LOC 153
+### src/intellicrack/core/**init**.py — LOC 153
 
 **Logger status**: imports `get_logger` for re-export only; no module-level `_logger` needed.
 

@@ -194,13 +194,10 @@ class KernelObjectActivity(TypedDict):
 class DllLoadEvent(TypedDict):
     """Represents a DLL load event in the sandbox.
 
-    The trailing ``event_id`` and ``payload_schema`` fields are populated by
-    the F-0019 dll_monitor.ps1 image-load handler. For parsed image-load
-    events ``dll_path`` is non-empty, ``event_id`` carries the ETW event ID,
-    and ``payload_schema`` is empty. For F-0019 unparsed records ``dll_path``
-    is empty and ``payload_schema`` carries the observed payload field names,
-    so the report consumer can still see the dropped event and the host can
-    tune its heuristics.
+    The trailing ``event_id`` and ``payload_schema`` fields are populated by the F-0019 dll_monitor.ps1 image-load handler. For parsed
+    image-load events ``dll_path`` is non-empty, ``event_id`` carries the ETW event ID, and ``payload_schema`` is empty. For F-0019 unparsed
+    records ``dll_path`` is empty and ``payload_schema`` carries the observed payload field names, so the report consumer can still see the
+    dropped event and the host can tune its heuristics.
     """
 
     timestamp: str

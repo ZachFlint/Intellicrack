@@ -482,8 +482,7 @@ class RFBClient:
             if msg_type == 1:
                 await self._reader.readexactly(5)
                 count_data = await self._reader.readexactly(2)
-                count = struct.unpack("!H", count_data)[0]
-                if count:
+                if count := struct.unpack("!H", count_data)[0]:
                     await self._reader.readexactly(count * 6)
                 return True
 
@@ -493,8 +492,7 @@ class RFBClient:
             if msg_type == _MSG_SERVER_CUT_TEXT:
                 await self._reader.readexactly(3)
                 length_data = await self._reader.readexactly(4)
-                length = struct.unpack("!I", length_data)[0]
-                if length:
+                if length := struct.unpack("!I", length_data)[0]:
                     await self._reader.readexactly(length)
                 return True
 

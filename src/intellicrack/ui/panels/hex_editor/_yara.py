@@ -127,8 +127,8 @@ class YaraMixin:
         """Compile YARA rules and scan the current document via the bridge.
 
         Routes the request through :meth:`HexEditorBridge.yara_scan` (or :meth:`HexEditorBridge.yara_scan_files` when no inline source is
-        present) via :func:`run_bridge_coroutine_logged`. Results and errors are delivered back via signal callbacks so the Qt main thread is
-        never blocked while compiling rules or scanning very large documents.
+        present) via :func:`run_bridge_coroutine_logged`. Results and errors are delivered back via signal callbacks so the Qt main thread
+        is never blocked while compiling rules or scanning very large documents.
         """
         if self.document is None or self._yara_results_tree is None:
             return

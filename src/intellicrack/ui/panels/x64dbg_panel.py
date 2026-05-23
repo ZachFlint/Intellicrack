@@ -2825,18 +2825,18 @@ class X64DbgPanel(AnalysisPanelBase):
         """Evaluate an expression."""
         if self._bridge is None:
             return
-        expr = self._eval_input.text().strip()
-        if not expr:
+        if expr := self._eval_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.evaluate_expression(expr),
+                on_success=lambda r: self._console_output.appendPlainText(f"[+] {expr} = {hex(r) if isinstance(r, int) else r}"),
+                on_error=lambda e: self._on_generic_error("Eval", e),
+                parent=self,
+                event="x64dbg_evaluate_expression",
+                logger=_logger,
+                expression=expr,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.evaluate_expression(expr),
-            on_success=lambda r: self._console_output.appendPlainText(f"[+] {expr} = {hex(r) if isinstance(r, int) else r}"),
-            on_error=lambda e: self._on_generic_error("Eval", e),
-            parent=self,
-            event="x64dbg_evaluate_expression",
-            logger=_logger,
-            expression=expr,
-        )
 
     def _on_set_exception_config(self) -> None:
         """Configure exception handling."""

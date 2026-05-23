@@ -71,7 +71,6 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
-
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")

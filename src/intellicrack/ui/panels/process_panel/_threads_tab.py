@@ -371,9 +371,7 @@ class ThreadsTab(QWidget):
             return None
         row = indexes[0].row()
         item = self._thread_table.item(row, 0)
-        if item is None:
-            return None
-        return int(item.data(Qt.ItemDataRole.DisplayRole))
+        return None if item is None else int(item.data(Qt.ItemDataRole.DisplayRole))
 
     def _refresh_threads(self) -> None:
         """Refresh the thread list from bridge."""
@@ -515,7 +513,8 @@ class ThreadsTab(QWidget):
         raw = item.text().strip()
         try:
             int_val = int(raw, 16) if col == 1 else int(raw)
-        except ValueError:
+        except ValueError as exc:
+            _logger.warning("register_table_value_unparseable", row=row, col=col, raw_text=raw, error=str(exc))
             return
         self._reg_last_edited_col[row] = col
         self._reg_sync_active = True

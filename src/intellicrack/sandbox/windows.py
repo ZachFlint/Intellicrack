@@ -321,12 +321,11 @@ def _assert_wmi_hijack_matches(
         "BIOSVendor": evasion_profile.bios_vendor,
         "BIOSVersion": evasion_profile.bios_version,
     }
-    mismatches: list[str] = [
+    if mismatches := [
         f"{key.lower()}={observed.get(key, '')!r}!={expected_value!r}"
         for key, expected_value in expected.items()
         if observed.get(key, "") != expected_value
-    ]
-    if mismatches:
+    ]:
         _logger.warning("wmi_hijack_verification_value_mismatch", mismatches=mismatches)
         mismatch_summary = "; ".join(mismatches)
         err_msg = f"{_ERR_WMI_HIJACK_VERIFY_FAILED}: {mismatch_summary}"
@@ -748,8 +747,7 @@ class WindowsSandbox(SandboxBase):
                 await asyncio.sleep(_WORKER_PID_POLL_INTERVAL)
                 continue
 
-            raw = (result.stdout or "").strip()
-            if raw:
+            if raw := (result.stdout or "").strip():
                 try:
                     data: object = json.loads(raw)
                 except (ValueError, TypeError) as parse_err:
@@ -1366,7 +1364,7 @@ class WindowsSandbox(SandboxBase):
                     if await asyncio.to_thread(ticket_path.exists):
                         await asyncio.to_thread(ticket_path.unlink, missing_ok=True)
                 except OSError as del_err:
-                    _logger.debug(
+                    _logger.warning(
                         "ticket_file_cleanup_failed",
                         path=str(ticket_path),
                         error=str(del_err),
@@ -1909,7 +1907,7 @@ class WindowsSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_WMI_HIJACK_VERIFY_FAILED) from parse_err
         if not isinstance(parsed_obj, dict):
-            _logger.warning("wmi_hijack_verification_unexpected_payload", payload=str(parsed_obj)[:500])
+            _logger.warning("wmi_hijack_verification_unexpected_payload", payload_preview=str(parsed_obj)[:500])
             raise SandboxError(_ERR_WMI_HIJACK_VERIFY_FAILED)
 
         observed = cast("dict[str, Any]", parsed_obj)

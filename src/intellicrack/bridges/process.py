@@ -1291,7 +1291,7 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 self._elevate_debug_privilege()
             except ToolError:
-                _logger.debug("se_debug_privilege_skipped")
+                _logger.warning("se_debug_privilege_skipped")
 
             self.state = BridgeState(
                 connected=True,
@@ -1405,7 +1405,7 @@ class ProcessBridge(ToolBridgeBase):
             finally:
                 self._kernel32.CloseHandle(token_handle)
         except ToolError as exc:
-            _logger.debug(
+            _logger.warning(
                 "se_debug_privilege_known_failure",
                 error=str(exc),
             )
@@ -1436,7 +1436,7 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 await self.unmap_section(base_address)
             except ToolError:
-                _logger.debug("shutdown_unmap_section_failed", base_address=hex(base_address))
+                _logger.warning("shutdown_unmap_section_failed", base_address=hex(base_address))
 
         if self._kernel32 is not None:
             close_handle = getattr(self._kernel32, "CloseHandle", None)
@@ -1475,7 +1475,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             _ = ctypes.windll.kernel32
         except AttributeError as e:
-            _logger.debug("kernel32_check_failed", error=str(e))
+            _logger.warning("kernel32_check_failed", error=str(e))
             return False
         else:
             return True
@@ -1571,7 +1571,7 @@ class ProcessBridge(ToolBridgeBase):
             if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
                 error_code: int = ctypes.get_last_error()
                 if error_code != _ERROR_NO_MORE_FILES:
-                    msg = _ERR_SNAPSHOT_FAILED + f" (Process32First: {error_code})"
+                    msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
                     raise ToolError(msg)
                 return processes
             while True:
@@ -1709,11 +1709,9 @@ class ProcessBridge(ToolBridgeBase):
             return "Unknown"
 
         inherit_handle = False
-        handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid)
+        handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid) or self._kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, inherit_handle, pid)
         if not handle:
-            handle = self._kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, inherit_handle, pid)
-            if not handle:
-                return "Unknown"
+            return "Unknown"
 
         try:
             arch = self._detect_arch_via_iswow64process2(handle)
@@ -1790,10 +1788,7 @@ class ProcessBridge(ToolBridgeBase):
         process_machine, native_machine = result
         if process_machine == IMAGE_FILE_MACHINE_UNKNOWN:
             native = self._machine_to_arch_string(native_machine)
-            if native == "Unknown":
-                return "Unknown"
-            return native
-
+            return "Unknown" if native == "Unknown" else native
         return self._machine_to_arch_string(process_machine)
 
     @staticmethod
@@ -1816,9 +1811,7 @@ class ProcessBridge(ToolBridgeBase):
                 or ``'Unknown'``.
         """
         arch, _is_64bit = pe_machine_to_arch(machine)
-        if arch == "unknown":
-            return "Unknown"
-        return arch
+        return "Unknown" if arch == "unknown" else arch
 
     def _detect_arch_via_pe_header(self, pid: int) -> str | None:
         """Detect architecture by parsing the PE header of the main module.
@@ -2055,8 +2048,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
+        inherit_handle = False
         for thread in threads:
-            inherit_handle = False
             th_handle: int = self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid)
             if not th_handle:
                 failed_tids.append(thread.tid)
@@ -2096,8 +2089,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         failed_tids: list[int] = []
+        inherit_handle = False
         for thread in threads:
-            inherit_handle = False
             th_handle: int = self._kernel32.OpenThread(THREAD_SUSPEND_RESUME, inherit_handle, thread.tid)
             if not th_handle:
                 failed_tids.append(thread.tid)
@@ -2139,8 +2132,10 @@ class ProcessBridge(ToolBridgeBase):
             ToolError: If read fails.
         """
         if self._process_handle is None:
+            _logger.warning("read_memory_no_attached_process", address=hex(address), size=size)
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
+            _logger.warning("read_memory_no_kernel32", address=hex(address), size=size)
             raise ToolError(_ERR_KERNEL32_NA)
         _logger.debug("memory_read_starting", address=hex(address), size=size)
         return self._sync_read_memory(address, size).hex()
@@ -2468,14 +2463,14 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 data_bytes = self._sync_read_memory(chunk_address, chunk_size)
             except (ToolError, OSError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "pattern_search_chunk_read_failed",
                     address=hex(chunk_address),
                     size=chunk_size,
                     error=str(exc),
                 )
                 if not self._region_still_committed(chunk_address):
-                    _logger.debug(
+                    _logger.warning(
                         "pattern_search_region_freed",
                         address=hex(chunk_address),
                     )
@@ -2518,9 +2513,7 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(mbi),
             ctypes.sizeof(mbi),
         )
-        if result == 0:
-            return False
-        return mbi.State == MEM_COMMIT
+        return False if result == 0 else mbi.State == MEM_COMMIT
 
     def _sync_read_memory(self, address: int, size: int) -> bytes:
         """Read process memory synchronously via ``ReadProcessMemory``.
@@ -2613,12 +2606,10 @@ class ProcessBridge(ToolBridgeBase):
         if self._psapi is not None:
             inherit_handle = False
             proc_handle = self._kernel32.OpenProcess(
-                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                inherit_handle,
-                target_pid,
-            )
-            if not proc_handle:
-                proc_handle = None
+                            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                            inherit_handle,
+                            target_pid,
+                        ) or None
 
         try:
             if self._kernel32.Module32First(snapshot, ctypes.byref(entry)):
@@ -2815,7 +2806,7 @@ class ProcessBridge(ToolBridgeBase):
                         self._kernel32.ResumeThread(handle)
                     return result
         except (OSError, ctypes.ArgumentError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "thread_state_probe_failed",
                 tid=tid,
                 error=str(exc),
@@ -2895,7 +2886,7 @@ class ProcessBridge(ToolBridgeBase):
                     finally:
                         self._kernel32.ResumeThread(handle)
         except (OSError, ctypes.ArgumentError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "thread_pc_and_state_probe_failed",
                 tid=tid,
                 error=str(exc),
@@ -2989,9 +2980,7 @@ class ProcessBridge(ToolBridgeBase):
                     wow64_get_ctx.restype = wintypes.BOOL
                     ctx32 = WOW64_CONTEXT()
                     ctx32.ContextFlags = CONTEXT_I386_ALL
-                    if wow64_get_ctx(handle, ctypes.byref(ctx32)):
-                        return int(ctx32.Eip)
-                    return 0
+                    return int(ctx32.Eip) if wow64_get_ctx(handle, ctypes.byref(ctx32)) else 0
                 ctx64 = CONTEXT64()
                 ctx64.ContextFlags = CONTEXT_ALL
                 if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
@@ -3000,7 +2989,7 @@ class ProcessBridge(ToolBridgeBase):
             finally:
                 self._kernel32.ResumeThread(handle)
         except (OSError, ctypes.ArgumentError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "thread_current_pc_query_exception",
                 tid=tid,
                 error=str(exc),
@@ -3126,6 +3115,7 @@ class ProcessBridge(ToolBridgeBase):
         Args:
             callback: Zero-argument callable invoked after a privilege mutation.
         """
+        _logger.info("add_privileges_changed_callback_started")
         if callback not in self._privileges_changed_callbacks:
             self._privileges_changed_callbacks.append(callback)
 
@@ -3138,7 +3128,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             self._privileges_changed_callbacks.remove(callback)
         except ValueError:
-            _logger.debug("privileges_changed_callback_not_registered")
+            _logger.warning("privileges_changed_callback_not_registered")
 
     def _notify_privileges_changed(self) -> None:
         """Invoke all registered privileges-changed callbacks."""
@@ -3396,7 +3386,7 @@ class ProcessBridge(ToolBridgeBase):
                 buf_size *= 2
                 continue
             if status < 0:
-                msg = _ERR_NTQUERY_SYS + f"{status & 0xFFFFFFFF:08X}"
+                msg = f"{_ERR_NTQUERY_SYS}{status & 4294967295:08X}"
                 raise ToolError(msg)
             break
         else:
@@ -3470,6 +3460,7 @@ class ProcessBridge(ToolBridgeBase):
                 :meth:`_query_extended_handles_buffer` fails.
         """
         if self._ntdll is None:
+            _logger.warning("sync_iterate_handles_for_pid_no_ntdll", pid=target_pid)
             raise ToolError(_ERR_NTDLL_NA)
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         header_size = ctypes.sizeof(ctypes.c_void_p) * 2
@@ -3530,7 +3521,7 @@ class ProcessBridge(ToolBridgeBase):
             raw = bytes(buffer[str_offset : str_offset + length])
             return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
         except (ValueError, OSError, ctypes.ArgumentError) as exc:
-            _logger.debug(
+            _logger.warning(
                 "object_type_name_decode_failed",
                 offset=str_offset,
                 error=str(exc),
@@ -3615,14 +3606,13 @@ class ProcessBridge(ToolBridgeBase):
                 buffer = ctypes.create_string_buffer(buf_size)
                 continue
             if status < 0:
-                _logger.warning("ntquery_object_types_failed", status=f"{status & 0xFFFFFFFF:08X}")
+                _logger.warning("ntquery_object_types_failed", status=status, status_hex=format(status & 0xFFFFFFFF, "08X"))
                 return self._handle_type_cache
             break
         else:
             return self._handle_type_cache
 
-        type_map = self._parse_type_info_buffer(buffer, buf_size)
-        if type_map:
+        if type_map := self._parse_type_info_buffer(buffer, buf_size):
             self._handle_type_cache = type_map
         return self._handle_type_cache
 
@@ -3677,6 +3667,7 @@ class ProcessBridge(ToolBridgeBase):
                 :meth:`_query_extended_handles_buffer` fails.
         """
         if self._ntdll is None:
+            _logger.warning("sync_enum_handles_no_ntdll", pid=pid)
             raise ToolError(_ERR_NTDLL_NA)
         buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         header_size = ctypes.sizeof(ctypes.c_void_p) * 2
@@ -4024,7 +4015,7 @@ class ProcessBridge(ToolBridgeBase):
             ctypes.byref(return_length),
         )
         if status < 0:
-            msg = _ERR_NTQUERY_PROC + f"{status & 0xFFFFFFFF:08X}"
+            msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
             raise ToolError(msg)
 
         peb_address = pbi.PebBaseAddress or 0
@@ -4092,10 +4083,7 @@ class ProcessBridge(ToolBridgeBase):
             proc_handle,
             ctypes.byref(is_wow64),
         ):
-            if is_wow64.value:
-                return False
-            return struct.calcsize("P") == _PTR_SIZE_64
-
+            return False if is_wow64.value else struct.calcsize("P") == _PTR_SIZE_64
         raise ToolError(_ERR_WOW64_UNAVAILABLE)
 
     def _read_wow64_peb(
@@ -4279,7 +4267,7 @@ class ProcessBridge(ToolBridgeBase):
             )
 
             if status < 0:
-                msg = _ERR_NTQUERY_THREAD + f"{status & 0xFFFFFFFF:08X}"
+                msg = f"{_ERR_NTQUERY_THREAD}{status & 4294967295:08X}"
                 raise ToolError(msg)
 
             teb_address = tbi.TebBaseAddress or 0
@@ -4457,9 +4445,7 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
             try:
-                is_wow64_target = self._target_is_wow64()
-
-                if is_wow64_target:
+                if is_wow64_target := self._target_is_wow64():
                     wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
                     if wow64_get_ctx is None:
                         raise ToolError(_ERR_CONTEXT_GET_FAILED)
@@ -4567,9 +4553,7 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
             try:
-                is_wow64_target = self._target_is_wow64()
-
-                if is_wow64_target:
+                if is_wow64_target := self._target_is_wow64():
                     wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
                     wow64_set_ctx = getattr(self._kernel32, "Wow64SetThreadContext", None)
                     if wow64_get_ctx is None or wow64_set_ctx is None:
@@ -5028,8 +5012,7 @@ class ProcessBridge(ToolBridgeBase):
 
         target_is_wow64 = self._target_is_wow64()
         if not target_is_wow64 and self._kernel32 is not None:
-            target_is_64bit = self._target_is_64bit(self._process_handle)
-            if target_is_64bit:
+            if target_is_64bit := self._target_is_64bit(self._process_handle):
                 raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
 
         teb = await self.read_teb(tid)
@@ -5131,7 +5114,7 @@ class ProcessBridge(ToolBridgeBase):
                     else:
                         policies[name] = {"enabled": False, "error": "query failed"}
                 except (OSError, ctypes.ArgumentError) as exc:
-                    _logger.debug(
+                    _logger.warning(
                         "mitigation_policy_query_unsupported",
                         policy=name,
                         exc_type=type(exc).__name__,
@@ -5184,8 +5167,7 @@ class ProcessBridge(ToolBridgeBase):
             decoded[field_name] = bool(flags_val & (1 << bit_index))
             consumed_mask |= 1 << bit_index
 
-        residue = flags_val & ~consumed_mask
-        if residue:
+        if residue := flags_val & ~consumed_mask:
             decoded["reserved"] = residue
 
         primary_field = _MITIGATION_PRIMARY_FLAG.get(policy_name)
@@ -5230,7 +5212,7 @@ class ProcessBridge(ToolBridgeBase):
             if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
                 error_code: int = ctypes.get_last_error()
                 if error_code != _ERROR_NO_MORE_FILES:
-                    msg = _ERR_SNAPSHOT_FAILED + f" (Process32First: {error_code})"
+                    msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
                     raise ToolError(msg)
                 return results
             while True:
@@ -5453,7 +5435,7 @@ class ProcessBridge(ToolBridgeBase):
         handle: int = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
         if not handle:
             error_code: int = ctypes.get_last_error()
-            msg = _ERR_THREAD_OPEN_FAILED + f" (tid={tid}, error={error_code})"
+            msg = f"{_ERR_THREAD_OPEN_FAILED} (tid={tid}, error={error_code})"
             raise ToolError(msg)
 
         try:
@@ -5553,7 +5535,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If the process or token cannot be opened.
         """
-        _logger.debug("remove_privilege_started", pid=pid, privilege_name=privilege_name)
+        _logger.info("remove_privilege_started", pid=pid, privilege_name=privilege_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -5719,7 +5701,7 @@ class ProcessBridge(ToolBridgeBase):
         proc_handle: int = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid)
         if not proc_handle:
             error_code: int = ctypes.get_last_error()
-            msg = _ERR_OPEN_FAILED + f" (pid={pid}, error={error_code})"
+            msg = f"{_ERR_OPEN_FAILED} (pid={pid}, error={error_code})"
             raise ToolError(msg)
 
         try:
@@ -5733,7 +5715,7 @@ class ProcessBridge(ToolBridgeBase):
                 ctypes.byref(return_length),
             )
             if status < 0:
-                msg = _ERR_NTQUERY_PROC + f"{status & 0xFFFFFFFF:08X}"
+                msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
                 raise ToolError(msg)
             return bool(debug_port.value)
         finally:
@@ -5770,8 +5752,8 @@ class ProcessBridge(ToolBridgeBase):
         close_handle = False
         proc_handle: int | None = None
 
-        no_inherit: int = 0
         if target_pid is not None and target_pid != self._attached_pid:
+            no_inherit: int = 0
             proc_handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, no_inherit, target_pid)
             close_handle = True
         elif self._process_handle is not None:
@@ -5792,7 +5774,7 @@ class ProcessBridge(ToolBridgeBase):
                 ):
                     sehop_mask = mask_buf[0]
             except (OSError, ctypes.ArgumentError) as exc:
-                _logger.debug(
+                _logger.warning(
                     "sehop_mask_query_failed",
                     pid=target_pid,
                     error=str(exc),
@@ -5801,9 +5783,6 @@ class ProcessBridge(ToolBridgeBase):
             finally:
                 if close_handle and proc_handle:
                     self._kernel32.CloseHandle(proc_handle)
-        elif close_handle and proc_handle:
-            self._kernel32.CloseHandle(proc_handle)
-
         return {
             "dep": dep_flags.get("enabled", False),
             "aslr": aslr_flags.get("enabled", False),
@@ -5857,7 +5836,7 @@ class ProcessBridge(ToolBridgeBase):
                     ):
                         disabled = bool(policy_buf.value & 1)
                 except (OSError, ctypes.ArgumentError) as exc:
-                    _logger.debug(
+                    _logger.warning(
                         "extension_policy_query_failed",
                         pid=target_pid,
                         error=str(exc),
@@ -6105,7 +6084,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If write fails.
         """
-        _logger.debug("process_pipe_write_started", handle=handle, data_size=len(data))
+        _logger.info("process_pipe_write_started", handle=handle, data_size=len(data))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_write")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6129,7 +6108,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.debug("process_pipe_close_started", handle=handle)
+        _logger.info("process_pipe_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6326,8 +6305,7 @@ class ProcessBridge(ToolBridgeBase):
                 )
                 == 0
             ):
-                path = val_buf.value
-                if path:
+                if path := val_buf.value:
                     results.append({"server_type": key_name, "path": path})
 
             self._advapi32.RegCloseKey(server_key)
@@ -6493,7 +6471,7 @@ class ProcessBridge(ToolBridgeBase):
             sections_off = nt_offset + PE_OPTIONAL_HEADER_OFFSET + size_of_optional_header
             sections = list(iterate_section_headers(data, sections_off, num_sections))
         except struct.error as exc:
-            _logger.debug(
+            _logger.warning(
                 "cor20_pe_descriptor_parse_failed",
                 error=str(exc),
             )
@@ -6552,7 +6530,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             meta_rva = int(struct.unpack_from("<I", cor20_buf.raw, 8)[0])
         except struct.error as exc:
-            _logger.debug(
+            _logger.warning(
                 "cor20_meta_rva_parse_failed",
                 base_address=hex(base_address),
                 error=str(exc),
@@ -6617,7 +6595,7 @@ class ProcessBridge(ToolBridgeBase):
             version_bytes = meta_data[16 : 16 + version_length]
             version_str = version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
         except struct.error as exc:
-            _logger.debug(
+            _logger.warning(
                 "dotnet_metadata_header_parse_failed",
                 meta_va=hex(meta_va),
                 error=str(exc),
@@ -6739,7 +6717,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.debug("process_device_close_started", handle=handle)
+        _logger.info("process_device_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="device_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -6808,7 +6786,7 @@ class ProcessBridge(ToolBridgeBase):
             result: dict[str, object] = {"in_job": bool(is_in_job.value)}
 
             if is_in_job.value:
-                result.update(self._query_job_details(proc_handle))
+                result |= self._query_job_details(proc_handle)
 
             return result
         finally:
@@ -6880,11 +6858,10 @@ class ProcessBridge(ToolBridgeBase):
         if target_pid == 0:
             return None
 
-        job_indices = self._lookup_job_type_indices()
-        if not job_indices:
+        if job_indices := self._lookup_job_type_indices():
+            return self._duplicate_job_handle_from_target(target_pid, job_indices)
+        else:
             return None
-
-        return self._duplicate_job_handle_from_target(target_pid, job_indices)
 
     def _get_target_pid_for_handle(self, proc_handle: int) -> int:
         """Return the PID owning ``proc_handle`` via ``GetProcessId``.
@@ -6914,10 +6891,10 @@ class ProcessBridge(ToolBridgeBase):
         """
         if not self._handle_type_cache:
             self._build_handle_type_map()
-        type_map = self._handle_type_cache
-        if not type_map:
+        if type_map := self._handle_type_cache:
+            return {idx for idx, name in type_map.items() if name.lower() == "job"}
+        else:
             return set()
-        return {idx for idx, name in type_map.items() if name.lower() == "job"}
 
     def _duplicate_job_handle_from_target(
         self,
@@ -6952,7 +6929,7 @@ class ProcessBridge(ToolBridgeBase):
         try:
             buffer, num_handles, entry_size = self._query_extended_handles_buffer()
         except ToolError as exc:
-            _logger.debug(
+            _logger.warning(
                 "job_handle_dup_buffer_query_failed",
                 target_pid=target_pid,
                 error=str(exc),
@@ -7052,8 +7029,7 @@ class ProcessBridge(ToolBridgeBase):
                 inherit_handle,
                 options,
             ):
-                handle_int = int(duplicated.value or 0)
-                if handle_int:
+                if handle_int := int(duplicated.value or 0):
                     return handle_int
         return None
 
@@ -7780,7 +7756,7 @@ class ProcessBridge(ToolBridgeBase):
                 continue
 
             if status < 0:
-                msg = _ERR_NTQUERY_SYS + f"{status & 0xFFFFFFFF:08X}"
+                msg = f"{_ERR_NTQUERY_SYS}{status & 4294967295:08X}"
                 raise ToolError(msg)
 
             return buffer.raw[: return_length.value].hex()

@@ -388,20 +388,15 @@ def _crc_over_chunks(
     table = _build_crc_table(width, poly)
     crc = init & mask
     shift = width - 8
-    if ref_in:
-        for chunk in chunks:
-            if not chunk:
-                continue
-            for byte in chunk:
+    for chunk in chunks:
+        if not chunk:
+            continue
+        for byte in chunk:
+            if ref_in:
                 idx = (_reflect_bits(byte, 8) ^ (crc >> shift)) & 0xFF
-                crc = ((crc << 8) ^ table[idx]) & mask
-    else:
-        for chunk in chunks:
-            if not chunk:
-                continue
-            for byte in chunk:
+            else:
                 idx = (byte ^ (crc >> shift)) & 0xFF
-                crc = ((crc << 8) ^ table[idx]) & mask
+            crc = ((crc << 8) ^ table[idx]) & mask
     if ref_out:
         crc = _reflect_bits(crc, width)
     return (crc ^ xor_out) & mask

@@ -115,6 +115,68 @@ def fn_c5_ok() -> None:
         _logger.exception("process_op_failed")
 
 
+def fn_c5_ok_else() -> None:
+    try:
+        raise ValueError("x")
+    except ValueError:
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_else")
+    else:
+        _logger.info("process_op_ok")
+
+
+def fn_c5_ok_finally() -> None:
+    try:
+        raise ValueError("x")
+    except ValueError:
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_finally")
+    finally:
+        _logger.info("process_op_cleanup")
+
+
+def fn_c5_ok_else_finally() -> None:
+    try:
+        raise ValueError("x")
+    except ValueError:
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_else_finally")
+    else:
+        _logger.info("process_op_ok")
+    finally:
+        _logger.info("process_op_cleanup")
+
+
+def fn_c5_ok_multi_except() -> None:
+    try:
+        raise ValueError("x")
+    except ImportError:
+        _logger.warning("process_missing_dep")
+    except ValueError:
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_multi")
+
+
+def fn_c5_ok_tuple_else() -> None:
+    try:
+        raise ValueError("x")
+    except (ValueError, RuntimeError, OSError):
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_tuple_else")
+    else:
+        _logger.info("process_op_ok")
+
+
+def fn_c5_ok_tuple_finally() -> None:
+    try:
+        raise ValueError("x")
+    except (ValueError, RuntimeError, OSError, KeyError):
+        # ok: intellicrack-logging-c5-exception-call-outside-except
+        _logger.exception("process_op_failed_tuple_finally")
+    finally:
+        _logger.info("process_op_cleanup")
+
+
 def fn_c6_bad() -> None:
     try:
         raise ValueError("x")

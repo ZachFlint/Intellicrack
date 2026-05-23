@@ -211,12 +211,12 @@ class GoogleProvider(LLMProviderBase):
                         name=display_name or model_id,
                         provider=ProviderName.GOOGLE,
                         context_window=input_limit,
-                        supports_tools=supports_tools,
+                        supports_vision=supports_vision,
                         supports_vision=supports_vision,
                         supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    ),
+                    )
                 )
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
             self._logger.info(
@@ -340,8 +340,7 @@ class GoogleProvider(LLMProviderBase):
 
             content, tool_calls = self._parse_response(response)
             self._pending_usage = self._extract_usage(response)
-            thinking_text = self._extract_thinking_text(response)
-            if thinking_text:
+            if thinking_text := self._extract_thinking_text(response):
                 self._pending_thinking.append(thinking_text)
 
             for tc in tool_calls:
@@ -497,11 +496,9 @@ class GoogleProvider(LLMProviderBase):
                     break
                 last_chunk = chunk
                 self._check_safety_block(chunk)
-                chunk_thinking = self._extract_thinking_text(chunk)
-                if chunk_thinking:
+                if chunk_thinking := self._extract_thinking_text(chunk):
                     thinking_parts.append(chunk_thinking)
-                visible_text = self._extract_visible_chunk_text(chunk)
-                if visible_text:
+                if visible_text := self._extract_visible_chunk_text(chunk):
                     chunk_count += 1
                     yield visible_text
 

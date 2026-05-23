@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/providers/__init__.py — LOC 100
+### src/intellicrack/providers/**init**.py — LOC 100
 
 **Logger status**: `missing` (file is pure re-exports — exempt per §4)
 

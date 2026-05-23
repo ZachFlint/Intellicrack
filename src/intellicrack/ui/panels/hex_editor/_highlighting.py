@@ -310,7 +310,7 @@ class HighlightingMixin:
         Args:
             result: Boolean indicating whether the rule was found and removed.
         """
-        _logger.debug("highlight_rule_bridge_remove_ok", result=result)
+        _logger.info("highlight_rule_bridge_remove_ok", result=result)
 
     def _on_bridge_rule_remove_error(self, exc: object) -> None:
         """Handle bridge remove_highlight_rule failure.
@@ -369,7 +369,7 @@ class HighlightingMixin:
         if callable(update_fn):
             update_fn()
 
-        _logger.debug("highlight_rule_applied_to_widget", rule_id=rule_id, condition_type=condition_type)
+        _logger.info("highlight_rule_applied_to_widget", rule_id=rule_id, condition_type=condition_type)
 
     def _apply_bridge_highlight_rule_removed(self, rule_id: str) -> None:
         """Remove a bridge-confirmed highlight rule from the local widget and list.
@@ -401,7 +401,7 @@ class HighlightingMixin:
         if callable(update_fn):
             update_fn()
 
-        _logger.debug("highlight_rule_removed_from_widget", rule_id=rule_id)
+        _logger.info("highlight_rule_removed_from_widget", rule_id=rule_id)
 
     def _on_clear_highlight_rules(self) -> None:
         """Remove all active highlight rules."""

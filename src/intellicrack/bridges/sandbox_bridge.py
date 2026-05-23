@@ -165,17 +165,13 @@ def dataclass_to_dict(obj: object) -> dict[str, Any]:
 class _StateTracker:
     """Async context manager that maintains ``BridgeState.last_error`` lifecycle.
 
-    Wrapping a bridge operation in :class:`_StateTracker` ensures that
-    ``last_error`` is cleared on success and set to the failing exception's
-    text on failure, while preserving the rest of ``BridgeState``
-    (``connected``, ``tool_running``, ``binary_loaded``, ``process_attached``,
-    ``target_path``, ``target_pid``). This eliminates stale ``last_error``
-    readings after a successful operation following a prior failure.
+    Wrapping a bridge operation in :class:`_StateTracker` ensures that ``last_error`` is cleared on success and set to the failing
+    exception's text on failure, while preserving the rest of ``BridgeState`` (``connected``, ``tool_running``, ``binary_loaded``,
+    ``process_attached``, ``target_path``, ``target_pid``). This eliminates stale ``last_error`` readings after a successful operation
+    following a prior failure.
 
-    The tracker re-raises the original exception unchanged so callers can
-    convert ``SandboxError`` to ``ToolError`` (or any other transformation)
-    in the normal ``except``/``raise from`` flow. See :meth:`__init__` for
-    constructor arguments.
+    The tracker re-raises the original exception unchanged so callers can convert ``SandboxError`` to ``ToolError`` (or any other
+    transformation) in the normal ``except``/``raise from`` flow. See :meth:`__init__` for constructor arguments.
     """
 
     __slots__ = ("apply_outcome", "operation")
@@ -203,6 +199,7 @@ class _StateTracker:
             None: The tracker does not expose any value to the ``async
             with`` block; only the exit-side state update matters.
         """
+        _logger.debug("state_tracker_entered", operation=self.operation)
         return
 
     async def __aexit__(
@@ -254,6 +251,7 @@ class SandboxBridge(ToolBridgeBase):
             supported_architectures=["x86", "x86_64"],
             supported_formats=["pe", "elf"],
         )
+        _logger.info("sandbox_bridge_constructed", bridge="sandbox")
 
     def _set_state_outcome(self, error: str | None) -> None:
         """Update ``BridgeState.last_error`` while preserving other fields.
@@ -276,6 +274,7 @@ class SandboxBridge(ToolBridgeBase):
         current = self._state
         if current.last_error == error:
             return
+        _logger.debug("sandbox_bridge_state_outcome_changed", error=error)
         self.state = dataclasses.replace(current, last_error=error)
 
     def _track_state(self, operation: str) -> _StateTracker:
@@ -989,6 +988,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             bool: True if at least one sandbox type is available.
         """
+        _logger.info("is_available_started")
         if self._manager is None:
             self._manager = SandboxManager()
             self._manager_destroyed = False
@@ -1005,6 +1005,7 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If the manager was previously shut down via ``shutdown()``.
         """
+        _logger.info("ensure_manager_started")
         if self._manager is None:
             if self._manager_destroyed:
                 raise ToolError(_ERR_MANAGER_DESTROYED)
@@ -1295,6 +1296,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
+        _logger.info("copy_to_started")
+
         async with self._track_state("copy_to"):
             manager = self.ensure_manager()
 
@@ -1343,6 +1346,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If copy fails.
         """
+        _logger.info("copy_from_started")
+
         async with self._track_state("copy_from"):
             manager = self.ensure_manager()
 
@@ -1375,6 +1380,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Status dictionary with available types and instance info.
         """
+        _logger.info("status_started")
         manager = self.ensure_manager()
         return dict(await manager.get_status())
 
@@ -1384,6 +1390,7 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             list[dict[str, Any]]: List of instance information dictionaries.
         """
+        _logger.info("list_started")
         manager = self.ensure_manager()
 
         return [
@@ -1415,6 +1422,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If snapshot fails or not supported.
         """
+        _logger.info("snapshot_create_started")
+
         async with self._track_state("snapshot_create"):
             manager = self.ensure_manager()
 
@@ -1458,6 +1467,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If restore fails or not supported.
         """
+        _logger.info("snapshot_restore_started")
+
         async with self._track_state("snapshot_restore"):
             manager = self.ensure_manager()
 
@@ -1499,6 +1510,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If listing fails or not supported.
         """
+        _logger.info("snapshot_list_started")
+
         async with self._track_state("snapshot_list"):
             manager = self.ensure_manager()
 
@@ -1545,6 +1558,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If deletion fails or not supported.
         """
+        _logger.info("snapshot_delete_started")
+
         async with self._track_state("snapshot_delete"):
             manager = self.ensure_manager()
 
@@ -1699,6 +1714,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be started or sandbox is not QEMU.
         """
+        _logger.info("pcap_start_started")
+
         async with self._track_state("pcap_start"):
             manager = self.ensure_manager()
 
@@ -1745,6 +1762,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If capture cannot be stopped.
         """
+        _logger.info("pcap_stop_started")
+
         async with self._track_state("pcap_stop"):
             manager = self.ensure_manager()
 
@@ -1873,6 +1892,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If screenshot cannot be captured or sandbox is not QEMU.
         """
+        _logger.info("screenshot_started")
+
         async with self._track_state("screenshot"):
             manager = self.ensure_manager()
 
@@ -1918,6 +1939,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If anti-evasion cannot be applied or sandbox is not QEMU.
         """
+        _logger.info("anti_evasion_started")
+
         async with self._track_state("anti_evasion"):
             manager = self.ensure_manager()
 
@@ -1972,6 +1995,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If memory dump fails or required arguments are missing.
         """
+        _logger.info("memory_dump_started")
+
         async with self._track_state("memory_dump"):
             manager = self.ensure_manager()
 
@@ -2030,6 +2055,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If extraction fails or sandbox is not QEMU.
         """
+        _logger.info("extract_dropped_files_started")
+
         async with self._track_state("extract_dropped_files"):
             manager = self.ensure_manager()
 
@@ -2077,6 +2104,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If scan_target is invalid or scan fails.
         """
+        _logger.info("yara_scan_started")
+
         async with self._track_state("yara_scan"):
             if scan_target not in _VALID_YARA_MODES:
                 msg = f"{_ERR_YARA_INVALID_MODE}: {scan_target!r}"
@@ -2116,6 +2145,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If extraction fails or no report available.
         """
+        _logger.info("extract_iocs_started")
+
         async with self._track_state("extract_iocs"):
             analysis = _get_analysis_module()
             extract_fn = analysis.extract_iocs
@@ -2165,6 +2196,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If timeline generation fails or no report available.
         """
+        _logger.info("timeline_started")
+
         async with self._track_state("timeline"):
             analysis = _get_analysis_module()
             timeline_fn = analysis.generate_timeline
@@ -2221,6 +2254,8 @@ class SandboxBridge(ToolBridgeBase):
                 is not valid YAML, the YAML top-level is not a list,
                 detection fails, or no report is available.
         """
+        _logger.info("detect_behaviors_started")
+
         async with self._track_state("detect_behaviors"):
             analysis = _get_analysis_module()
             behaviors_fn = analysis.match_behaviors
@@ -2285,6 +2320,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If detection fails or no report available.
         """
+        _logger.info("detect_c2_started")
+
         async with self._track_state("detect_c2"):
             analysis = _get_analysis_module()
             c2_fn = analysis.detect_c2_patterns
@@ -2334,6 +2371,8 @@ class SandboxBridge(ToolBridgeBase):
         Raises:
             ToolError: If comparison fails or reports unavailable.
         """
+        _logger.info("diff_started")
+
         async with self._track_state("diff"):
             analysis = _get_analysis_module()
             diff_fn = analysis.diff_reports

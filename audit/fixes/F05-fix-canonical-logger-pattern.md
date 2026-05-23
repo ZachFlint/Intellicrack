@@ -3,6 +3,7 @@
 ## Fix description
 
 Per §1, modules must use:
+
 - Module-level `_logger = get_logger(__name__)` from `intellicrack.core.logging`
 - Instance-level `self._logger` permitted ONLY in `LLMProviderBase` subclasses
 
@@ -15,6 +16,7 @@ Sites below violate one or both rules.
 `src/intellicrack/__init__.py:L87`
 
 Current:
+
 ```python
 def __getattr__(name: str) -> Any:
     ...
@@ -22,6 +24,7 @@ def __getattr__(name: str) -> Any:
 ```
 
 Fix: add module-level `_logger`:
+
 ```python
 from intellicrack.core.logging import get_logger
 _logger = get_logger(__name__)
@@ -47,6 +50,7 @@ Then call `_logger.debug("lazy_import_resolved", attribute=name)` inside `__geta
 Fix: replace the instance attribute with module-level `_logger`:
 
 Before:
+
 ```python
 class DiscoveryCache:
     def __init__(self, ...):
@@ -55,6 +59,7 @@ class DiscoveryCache:
 ```
 
 After:
+
 ```python
 _logger = get_logger(__name__)  # at module level, after imports
 

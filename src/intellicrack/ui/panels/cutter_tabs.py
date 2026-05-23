@@ -665,7 +665,6 @@ class HexdumpTab(QWidget):
         except ValueError:
             _logger.warning(
                 "cutter_hexdump_invalid_input",
-                input_text=f"{addr_text} | {self._len_input.text()}",
                 address_text=addr_text,
                 length_text=self._len_input.text(),
             )

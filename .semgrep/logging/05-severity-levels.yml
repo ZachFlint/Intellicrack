@@ -57,9 +57,23 @@ rules:
               $L.debug(...)
       - pattern-not: |
           try:
+              import $M
+              ...
+          except ImportError as $X:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
               from $M import $X
               ...
           except ImportError:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import $X
+              ...
+          except ImportError as $Y:
               ...
               $L.debug(...)
       - pattern-not: |
@@ -71,6 +85,13 @@ rules:
               $L.debug(...)
       - pattern-not: |
           try:
+              from $M import $X as $Y
+              ...
+          except ImportError as $Z:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
               import $M
               ...
           except (ImportError, $E2):
@@ -78,6 +99,13 @@ rules:
               $L.debug(...)
       - pattern-not: |
           try:
+              import $M
+              ...
+          except (ImportError, $E2) as $EXC:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
               from $M import $X
               ...
           except (ImportError, $E2):
@@ -86,6 +114,34 @@ rules:
       - pattern-not: |
           try:
               from $M import $X
+              ...
+          except (ImportError, $E2) as $EXC:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import ($X as $A, $Y as $B)
+              ...
+          except ImportError:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import ($X as $A, $Y as $B)
+              ...
+          except ImportError as $EXC:
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import ($X as $A, $Y as $B)
+              ...
+          except (ImportError, $E2):
+              ...
+              $L.debug(...)
+      - pattern-not: |
+          try:
+              from $M import ($X as $A, $Y as $B)
               ...
           except (ImportError, $E2) as $EXC:
               ...

@@ -79,9 +79,9 @@ class BookmarksMixin:
         try:
             self.document.add_bookmark(cursor_offset, 1, name, color.name())
         except (RuntimeError, OSError, ValueError, IndexError, TypeError):
-            _logger.exception("bookmark_add_failed", offset=cursor_offset, name=name)
+            _logger.exception("bookmark_add_failed", offset=cursor_offset, bookmark_name=name)
             return
-        _logger.info("bookmark_added", offset=cursor_offset, name=name, color=color.name())
+        _logger.info("bookmark_added", offset=cursor_offset, bookmark_name=name, color=color.name())
 
         self._notify_state_data_modified(cursor_offset, 1, source="hex-editor.bookmarks.add")
         self._refresh_bookmarks()

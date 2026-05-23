@@ -9,11 +9,13 @@
 ## Fix template
 
 Before:
+
 ```python
 _logger.debug("file_copied_to_sandbox", extra={"source": str(source), "dest": str(dest)})
 ```
 
 After:
+
 ```python
 _logger.debug("file_copied_to_sandbox", source=str(source), dest=str(dest))
 ```

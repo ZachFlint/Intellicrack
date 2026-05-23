@@ -243,7 +243,7 @@ class SandboxManager:
         """
         if sandbox_type is None:
             self._availability_cache.clear()
-            _logger.debug("sandbox_availability_cache_cleared")
+            _logger.info("sandbox_availability_cache_cleared")
         else:
             self._availability_cache.pop(sandbox_type, None)
             _logger.debug("sandbox_availability_cache_invalidated", sandbox_type=sandbox_type)

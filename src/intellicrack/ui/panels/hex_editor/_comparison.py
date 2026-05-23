@@ -192,7 +192,7 @@ class ComparisonMixin:
         try:
             path.unlink()
         except FileNotFoundError:
-            pass
+            _logger.warning("diff_temp_already_absent", path=str(path))
         except OSError:
             _logger.warning("diff_temp_unlink_failed", path=str(path))
 

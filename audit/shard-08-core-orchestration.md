@@ -21,6 +21,7 @@
 Overall, the shard is in very good shape on the logging coverage axis. The canonical `from intellicrack.core.logging import get_logger` + module-level `_logger = get_logger(__name__)` pattern is used uniformly. All log calls use structured kwargs — no f-string / `%` / `.format` formatting was found inside any logger call. No stdlib `logging`, no `print(`, no `contextlib.suppress`, no `# type: ignore` or `# noqa` used for logging suppressions. Only `# noqa: PLW0603` (global statement, unrelated to logging) appears once.
 
 The findings concentrate on:
+
 - A short OS-PID-existence probe (`_pid_exists_posix`) that uses `except`/`return` as the canonical existence check on POSIX. Strict criteria require a log call in every `except`; this is the only HIGH cluster.
 - A handful of public mutator methods on `Session` (data class) that update state without emitting logs (write surface for orchestrator-level state).
 - Several public lifecycle/getter helpers in `SessionManager` and `ScriptManager` without entry-log records where the action is non-trivial.

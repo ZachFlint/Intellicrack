@@ -52,13 +52,13 @@ def show_error(
         _logger.error(
             "dialog_error",
             title=title,
-            message=message,
+            dialog_message=message,
             error_type=type(exc).__name__,
             error=str(exc),
             exc_info=exc,
         )
     else:
-        _logger.warning("dialog_error", title=title, message=message)
+        _logger.warning("dialog_error", title=title, dialog_message=message)
     return QMessageBox.critical(parent, title, message)
 
 
@@ -89,13 +89,13 @@ def show_warning(
         _logger.warning(
             "dialog_warning",
             title=title,
-            message=message,
+            dialog_message=message,
             error_type=type(exc).__name__,
             error=str(exc),
             exc_info=exc,
         )
     else:
-        _logger.warning("dialog_warning", title=title, message=message)
+        _logger.warning("dialog_warning", title=title, dialog_message=message)
     return QMessageBox.warning(parent, title, message)
 
 
@@ -117,5 +117,5 @@ def show_info(
             user when they dismiss the dialog. Mirrors the return value
             of :meth:`QMessageBox.information`.
     """
-    _logger.info("dialog_info", title=title, message=message)
+    _logger.info("dialog_info", title=title, dialog_message=message)
     return QMessageBox.information(parent, title, message)

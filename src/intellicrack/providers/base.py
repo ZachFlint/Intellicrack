@@ -761,6 +761,7 @@ class LLMProviderBase(ABC):
             return "required"
         function_name = tool_choice.function_name
         if not function_name:
+            _logger.warning("tool_choice_specific_missing_function_name")
             msg = "ToolChoiceMode.SPECIFIC requires a non-empty function_name"
             raise ProviderError(msg)
         return {
@@ -995,23 +996,19 @@ class LLMProviderBase(ABC):
             RateLimitError: When the SDK reports rate limiting.
         """
         extra: dict[str, object] = dict(log_extra) if log_extra else {}
-        auth_event = log_prefix + "_auth_failed"
-        rate_event = log_prefix + "_rate_limited"
-        api_event = log_prefix + "_api_error"
-        failed_event = log_prefix + "_failed"
         try:
             yield
         except openai.AuthenticationError as exc:
-            self._logger.warning(auth_event, error=str(exc), **extra)
+            self._logger.warning("provider_call_auth_failed", log_prefix=log_prefix, error=str(exc), **extra)
             raise AuthenticationError(messages.auth_invalid % exc) from exc
         except openai.RateLimitError as exc:
-            self._logger.warning(rate_event, error=str(exc), **extra)
+            self._logger.warning("provider_call_rate_limited", log_prefix=log_prefix, error=str(exc), **extra)
             raise RateLimitError(messages.rate_limited % exc) from exc
         except openai.APIError as exc:
-            self._logger.warning(api_event, error=str(exc), **extra)
+            self._logger.warning("provider_call_api_error", log_prefix=log_prefix, error=str(exc), **extra)
             raise ProviderError(messages.api_error % exc) from exc
         except (ConnectionError, TimeoutError, OSError, ValueError) as exc:
-            self._logger.warning(failed_event, error=str(exc), **extra)
+            self._logger.warning("provider_call_failed", log_prefix=log_prefix, error=str(exc), **extra)
             raise ProviderError(messages.request_failed % exc) from exc
 
     @staticmethod
@@ -1050,11 +1047,9 @@ class LLMProviderBase(ABC):
         try:
             decoded: object = json.loads(line)
         except json.JSONDecodeError as exc:
-            logger.warning(event, error=str(exc))
+            logger.warning("stream_json_parse_skipped", caller_event=event, error=str(exc))
             return None
-        if not isinstance(decoded, dict):
-            return None
-        return cast("dict[str, Any]", decoded)
+        return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else None
 
 
 class ToolCallBufferManager:

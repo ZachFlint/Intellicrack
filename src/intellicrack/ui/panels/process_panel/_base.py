@@ -256,7 +256,8 @@ class ProcessPanel(AnalysisPanelBase):
         async def _detect() -> str | None:
             try:
                 return await bridge.detect_architecture(pid)
-            except ToolError:
+            except ToolError as exc:
+                _logger.warning("process_detect_architecture_failed", pid=pid, error=str(exc))
                 return None
 
         def _on_arch(result: object) -> None:
@@ -284,7 +285,8 @@ class ProcessPanel(AnalysisPanelBase):
         async def _fetch_privs() -> list[dict[str, object]] | None:
             try:
                 return await bridge.get_token_privileges(pid)
-            except ToolError:
+            except ToolError as exc:
+                _logger.warning("process_fetch_privileges_failed", pid=pid, error=str(exc))
                 return None
 
         def _on_privs(result: object) -> None:

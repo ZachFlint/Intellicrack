@@ -1007,17 +1007,14 @@ class GhidraPanel(AnalysisPanelBase):
             return
 
         parts: list[str] = []
-        name = getattr(result, "name", None)
-        if name:
+        if name := getattr(result, "name", None):
             parts.append(f"Name: {name}")
-        category = getattr(result, "category", None)
-        if category:
+        if category := getattr(result, "category", None):
             parts.append(f"Category: {category}")
         size = getattr(result, "size", None)
         if size is not None:
             parts.append(f"Size: {size}")
-        description = getattr(result, "description", None)
-        if description:
+        if description := getattr(result, "description", None):
             parts.append(f"Description: {description}")
 
         self._dt_result_view.setPlainText("\n".join(parts) if parts else str(result))
@@ -1156,9 +1153,7 @@ class GhidraPanel(AnalysisPanelBase):
         """
         try:
             text = text.strip()
-            if text.startswith(("0x", "0X")):
-                return int(text, 16)
-            return int(text)
+            return int(text, 16) if text.startswith(("0x", "0X")) else int(text)
         except (ValueError, TypeError):
             _logger.warning("ghidra_parse_address_invalid_input", input_text=text)
             return None
@@ -1842,14 +1837,12 @@ class GhidraPanel(AnalysisPanelBase):
                 lines2.append(f"Block: 0x{blk_start:X} - 0x{blk_end:X}")
                 srcs = blk.get("sources", [])
                 if isinstance(srcs, list):
-                    src_list = cast("list[int]", srcs)
-                    if src_list:
+                    if src_list := cast("list[int]", srcs):
                         src_strs = [f"0x{s:X}" for s in src_list]
                         lines2.append(f"  Sources: {', '.join(src_strs)}")
                 dsts = blk.get("destinations", [])
                 if isinstance(dsts, list):
-                    dst_list = cast("list[int]", dsts)
-                    if dst_list:
+                    if dst_list := cast("list[int]", dsts):
                         dst_strs = [f"0x{d:X}" for d in dst_list]
                         lines2.append(f"  Destinations: {', '.join(dst_strs)}")
             self._cfg_view.setPlainText("\n".join(lines2))
@@ -1869,8 +1862,7 @@ class GhidraPanel(AnalysisPanelBase):
             f"Address: 0x{int(cast('int', body.get('address', 0))):X}",
             f"Size: {body.get('total_size', 0)} bytes",
         ]
-        is_thunk = body.get("is_thunk", False)
-        if is_thunk:
+        if is_thunk := body.get("is_thunk", False):
             thunked = body.get("thunked_function", "")
             lines.append(f"Thunk -> {thunked}")
         ranges = body.get("ranges", [])

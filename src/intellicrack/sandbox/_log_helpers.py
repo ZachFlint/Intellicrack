@@ -22,7 +22,6 @@ YARA_MATCH_MIN_FIELDS: Final[int] = 3
 Each entry is expected to be ``(offset, identifier, data)``; entries with fewer than three positional members are skipped.
 """
 
-
 def split_addr_port(value: str) -> tuple[str, int]:
     """Split an ``address:port`` literal into its components.
 
@@ -45,9 +44,7 @@ def split_addr_port(value: str) -> tuple[str, int]:
         addr = addr.lstrip("[")
         return (addr, safe_int(port_str))
     addr, sep, port_str = value.rpartition(":")
-    if not sep:
-        return (value, 0)
-    return (addr, safe_int(port_str))
+    return (addr, safe_int(port_str)) if sep else (value, 0)
 
 
 def coerce_protocol(value: str) -> Literal["tcp", "udp", "icmp", "other"]:
@@ -69,9 +66,7 @@ def coerce_protocol(value: str) -> Literal["tcp", "udp", "icmp", "other"]:
         return "tcp"
     if lowered == "udp":
         return "udp"
-    if lowered == "icmp":
-        return "icmp"
-    return "other"
+    return "icmp" if lowered == "icmp" else "other"
 
 
 def infer_direction(state: str) -> Literal["inbound", "outbound"]:
@@ -89,9 +84,7 @@ def infer_direction(state: str) -> Literal["inbound", "outbound"]:
         states, ``outbound`` otherwise.
     """
     normalized = state.strip().lower()
-    if normalized in {"listen", "bound"}:
-        return "inbound"
-    return "outbound"
+    return "inbound" if normalized in {"listen", "bound"} else "outbound"
 
 
 def safe_int(value: str) -> int:

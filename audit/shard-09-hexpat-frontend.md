@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/core/hexpat/__init__.py — LOC 24
+### src/intellicrack/core/hexpat/**init**.py — LOC 24
 
 **Logger status**: not required (pure re-export)
 

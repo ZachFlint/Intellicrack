@@ -641,8 +641,8 @@ class SplashScreen(QSplashScreen):
                 pixmap = QPixmap(str(icon_path))
                 if not pixmap.isNull():
                     return pixmap
-        except (FileNotFoundError, OSError):
-            _logger.debug("brain_icon_not_found")
+        except OSError:
+            _logger.warning("brain_icon_not_found")
         return None
 
     def _draw_brain_icon(self, painter: QPainter, rect: QRectF) -> None:

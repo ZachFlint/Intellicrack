@@ -178,7 +178,6 @@ Callers that need a different convention (for example ``"x64"`` instead
 of ``"x86_64"``) translate the helper's output at the call site.
 """
 
-
 def pe_machine_to_arch(machine: int) -> tuple[str, bool]:
     """Translate an ``IMAGE_FILE_MACHINE_*`` value to an architecture tuple.
 
@@ -595,9 +594,7 @@ def detect_format(data: bytes) -> FormatName:
         return "elf"
     if head4 in _MACHO_MAGICS:
         return "macho"
-    if head4 == ZIP_MAGIC:
-        return "zip"
-    return "raw"
+    return "zip" if head4 == ZIP_MAGIC else "raw"
 
 
 def _detect_pe_arch(data: bytes) -> tuple[str, bool] | None:

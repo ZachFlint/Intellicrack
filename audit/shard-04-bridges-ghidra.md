@@ -27,6 +27,7 @@
 **Imports `from intellicrack.core.logging import get_logger`**: yes (L42)
 
 **Notes on scope**:
+
 - The file uses extensive Jython script strings transmitted via the
   `ghidra_bridge` RPC. `except` clauses, `print`-like calls, and similar
   inside triple-quoted Jython payloads run inside Ghidra's embedded JVM

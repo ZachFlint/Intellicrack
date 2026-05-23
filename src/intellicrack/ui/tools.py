@@ -982,9 +982,7 @@ class ToolOutputPanel(QFrame):
             str: Human-readable description like ``"call <function>"``.
         """
         label = ref.from_function if source else ref.to_function
-        if label:
-            return f"{ref.ref_type} {label}"
-        return ref.ref_type
+        return f"{ref.ref_type} {label}" if label else ref.ref_type
 
     def populate_xrefs_for_address(self, address: int) -> None:
         """Populate the xref panel with cross-references for ``address``.
@@ -2078,9 +2076,7 @@ class ToolOutputPanel(QFrame):
         if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "get_bridge"):
             return self.sandbox_panel.get_bridge()
         pending = self._pending_sandbox_bridge
-        if pending is None:
-            return None
-        return cast("SandboxBridge", pending)
+        return None if pending is None else cast("SandboxBridge", pending)
 
     def get_sandbox_backend(self) -> SandboxBase | None:
         """Get the sandbox backend from the sandbox panel (deprecated).
@@ -2141,9 +2137,7 @@ class ToolOutputPanel(QFrame):
         if code_display is None:
             return None
         doc = code_display.document()
-        if doc is None:
-            return None
-        return doc.findChild(QSyntaxHighlighter)
+        return None if doc is None else doc.findChild(QSyntaxHighlighter)
 
     def _wire_hex_editor_state(self, panel_widget: HexEditorPanel) -> None:
         """Create a shared HexDocumentState and wire it to the bridge and panel.

@@ -41,7 +41,6 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
 
-
 @runtime_checkable
 class _StringsSource(Protocol):
     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""
@@ -194,8 +193,8 @@ class SectionsMixin:
     def _populate_imports(self) -> None:
         """Populate the imports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_imports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge event
-        loop. Bridge results are rendered on the Qt main thread through the success callback.
+        Calls :meth:`HexEditorBridge.get_pe_imports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge
+        event loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._imports_tree is None:
             return
@@ -252,8 +251,8 @@ class SectionsMixin:
     def _populate_exports(self) -> None:
         """Populate the exports tree by routing through the hex editor bridge.
 
-        Calls :meth:`HexEditorBridge.get_pe_exports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge event
-        loop. Bridge results are rendered on the Qt main thread through the success callback.
+        Calls :meth:`HexEditorBridge.get_pe_exports` via :func:`run_bridge_coroutine_logged` so the parse runs on the persistent bridge
+        event loop. Bridge results are rendered on the Qt main thread through the success callback.
         """
         if self._exports_tree is None:
             return

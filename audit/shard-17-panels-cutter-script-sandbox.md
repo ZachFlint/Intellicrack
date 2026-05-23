@@ -20,7 +20,7 @@
 
 ## Findings by file
 
-### src/intellicrack/ui/panels/__init__.py — LOC 49
+### src/intellicrack/ui/panels/**init**.py — LOC 49
 
 **Logger status**: missing (exempt — pure re-exports only, no executable logic)
 

@@ -153,9 +153,7 @@ class SandboxMixin:
 
         file_path = Path(self.file_path)
         src = str(file_path)
-        dest_path = self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else ""
-        if not dest_path:
-            dest_path = posixpath.join(_CONTAINER_TMP_PREFIX, file_path.name)
+        dest_path = (self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else "") or posixpath.join(_CONTAINER_TMP_PREFIX, file_path.name)
         timeout = self._sandbox_timeout_spin.value() if self._sandbox_timeout_spin else _DEFAULT_TIMEOUT
 
         if self._sandbox_status is not None:
@@ -206,6 +204,7 @@ class SandboxMixin:
         Raises:
             TimeoutError: If the copy operation exceeds ``time_limit`` seconds.
         """
+
         async with asyncio.timeout(time_limit):
             return await bridge.copy_to(instance_id, source, dest)
 
@@ -228,9 +227,7 @@ class SandboxMixin:
             QMessageBox.warning(parent, "Sandbox", "No sandbox instance ID specified.")
             return
 
-        dest_path = self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else ""
-        if not dest_path:
-            dest_path = posixpath.join(_CONTAINER_TMP_PREFIX, self.file_path.name)
+        dest_path = (self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else "") or posixpath.join(_CONTAINER_TMP_PREFIX, self.file_path.name)
         command_args = self._sandbox_args_input.text().strip() if self._sandbox_args_input else ""
         timeout = self._sandbox_timeout_spin.value() if self._sandbox_timeout_spin else _DEFAULT_TIMEOUT
 

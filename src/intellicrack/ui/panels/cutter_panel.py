@@ -768,9 +768,7 @@ class CutterPanel(AnalysisPanelBase):
             return None
         lowered = stripped.lower()
         try:
-            if lowered.startswith("0x"):
-                return int(stripped, 16)
-            return int(stripped)
+            return int(stripped, 16) if lowered.startswith("0x") else int(stripped)
         except ValueError:
             _logger.warning("cutter_address_parse_failed", input_text=stripped)
             return None
@@ -1261,19 +1259,18 @@ class CutterPanel(AnalysisPanelBase):
             self._set_status("No bridge configured")
             return
 
-        name = self._find_func_input.text().strip()
-        if not name:
+        if name := self._find_func_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.get_function_address(name),
+                on_success=lambda addr: self._on_find_func_result(name, addr),
+                on_error=lambda e: self._set_status(f"Find failed: {e}"),
+                parent=self,
+                event="cutter_get_function_address",
+                logger=_logger,
+                function_name=name,
+            )
+        else:
             return
-
-        run_bridge_coroutine_logged(
-            self._bridge.get_function_address(name),
-            on_success=lambda addr: self._on_find_func_result(name, addr),
-            on_error=lambda e: self._set_status(f"Find failed: {e}"),
-            parent=self,
-            event="cutter_get_function_address",
-            logger=_logger,
-            function_name=name,
-        )
 
     def _on_find_func_result(self, name: str, addr: object) -> None:
         """Handle function address lookup result.
