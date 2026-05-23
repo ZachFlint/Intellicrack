@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import (
     get_current_tree_item,
@@ -522,10 +522,15 @@ class SandboxPanel(AnalysisPanelBase):
         sandbox_type = self._selected_sandbox_type()
         _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type)
         self.create_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.create(sandbox_type=sandbox_type),
             on_success=self._on_bridge_create_success,
             on_error=self._on_create_error,
+            parent=self,
+            event="sandbox_create",
+            logger=_logger,
+            level="info",
+            sandbox_type=sandbox_type,
         )
 
     def _on_bridge_create_success(self, result: object) -> None:
@@ -577,10 +582,15 @@ class SandboxPanel(AnalysisPanelBase):
 
         _logger.info("sandbox_destroy_started", sandbox_id=self.sandbox_id)
         self.destroy_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.destroy(self.sandbox_id),
             on_success=self._on_destroy_success,
             on_error=self._on_destroy_error,
+            parent=self,
+            event="sandbox_destroy",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_destroy_success(self, _result: object) -> None:
@@ -619,10 +629,15 @@ class SandboxPanel(AnalysisPanelBase):
 
         _logger.debug("sandbox_restart_started", sandbox_id=self.sandbox_id)
         self.restart_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.destroy(self.sandbox_id),
             on_success=self._on_restart_destroy_success,
             on_error=self._on_restart_error,
+            parent=self,
+            event="sandbox_restart_destroy",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_restart_destroy_success(self, _result: object) -> None:
@@ -636,10 +651,15 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         sandbox_type = self._selected_sandbox_type()
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.create(sandbox_type=sandbox_type),
             on_success=self._on_restart_create_success,
             on_error=self._on_restart_error,
+            parent=self,
+            event="sandbox_restart_create",
+            logger=_logger,
+            level="info",
+            sandbox_type=sandbox_type,
         )
 
     def _on_restart_create_success(self, result: object) -> None:
@@ -703,7 +723,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_binary = binary
         _logger.debug("sandbox_binary_execution_started", binary=binary.name, exec_args=args)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.run_binary(
                 binary_path=binary_path,
                 args=args_list,
@@ -711,6 +731,13 @@ class SandboxPanel(AnalysisPanelBase):
             ),
             on_success=self._on_run_binary_success,
             on_error=self._on_run_binary_error,
+            parent=self,
+            event="sandbox_run_binary",
+            logger=_logger,
+            level="info",
+            binary_path=str(binary_path),
+            arg_count=len(args_list),
+            sandbox_type=sandbox_type,
         )
 
     def _on_run_binary_success(self, result: object) -> None:
@@ -993,10 +1020,16 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_snapshot_label = snapshot_label
 
         self.snapshot_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.snapshot_create(self.sandbox_id, snapshot_label),
             on_success=self._on_take_snapshot_success,
             on_error=self._on_take_snapshot_error,
+            parent=self,
+            event="sandbox_snapshot_create",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            label=snapshot_label,
         )
 
     def _on_take_snapshot_success(self, result: object) -> None:
@@ -1050,10 +1083,16 @@ class SandboxPanel(AnalysisPanelBase):
         snapshot_id = selected.text(0)
         self.restore_btn.setEnabled(False)
         self._pending_snapshot_id = snapshot_id
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.snapshot_restore(self.sandbox_id, snapshot_id),
             on_success=self._on_restore_snapshot_success,
             on_error=self._on_restore_snapshot_error,
+            parent=self,
+            event="sandbox_snapshot_restore",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            snapshot_id=snapshot_id,
         )
 
     def _on_restore_snapshot_success(self, _result: object) -> None:
@@ -1084,10 +1123,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.screenshot_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.screenshot(self.sandbox_id),
             on_success=self._on_screenshot_success,
             on_error=self._on_screenshot_error,
+            parent=self,
+            event="sandbox_screenshot",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_screenshot_success(self, result: object) -> None:
@@ -1119,17 +1163,28 @@ class SandboxPanel(AnalysisPanelBase):
 
         if self._pcap_capture_id is None:
             self.pcap_btn.setEnabled(False)
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.pcap_start(self.sandbox_id),
                 on_success=self._on_pcap_start_success,
                 on_error=self._on_pcap_start_error,
+                parent=self,
+                event="sandbox_pcap_start",
+                logger=_logger,
+                level="info",
+                sandbox_id=self.sandbox_id,
             )
         else:
             self.pcap_btn.setEnabled(False)
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.pcap_stop(self.sandbox_id, self._pcap_capture_id),
                 on_success=self._on_pcap_stop_success,
                 on_error=self._on_pcap_stop_error,
+                parent=self,
+                event="sandbox_pcap_stop",
+                logger=_logger,
+                level="info",
+                sandbox_id=self.sandbox_id,
+                capture_id=self._pcap_capture_id,
             )
 
     def _on_pcap_start_success(self, result: object) -> None:
@@ -1187,10 +1242,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.memdump_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.memory_dump(self.sandbox_id),
             on_success=self._on_memory_dump_success,
             on_error=self._on_memory_dump_error,
+            parent=self,
+            event="sandbox_memory_dump",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_memory_dump_success(self, result: object) -> None:
@@ -1220,10 +1280,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.extract_files_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.extract_dropped_files(self.sandbox_id),
             on_success=self._on_extract_files_success,
             on_error=self._on_extract_files_error,
+            parent=self,
+            event="sandbox_extract_dropped_files",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_extract_files_success(self, result: object) -> None:
@@ -1253,10 +1318,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.yara_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.yara_scan(self.sandbox_id),
             on_success=self._on_yara_scan_success,
             on_error=self._on_yara_scan_error,
+            parent=self,
+            event="sandbox_yara_scan",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_yara_scan_success(self, result: object) -> None:
@@ -1295,10 +1365,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.iocs_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.extract_iocs(self.sandbox_id),
             on_success=self._on_extract_iocs_success,
             on_error=self._on_extract_iocs_error,
+            parent=self,
+            event="sandbox_extract_iocs",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_extract_iocs_success(self, result: object) -> None:
@@ -1342,10 +1417,14 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.timeline_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.timeline(self.sandbox_id),
             on_success=self._on_timeline_success,
             on_error=self._on_timeline_error,
+            parent=self,
+            event="sandbox_timeline",
+            logger=_logger,
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_timeline_success(self, result: object) -> None:
@@ -1388,10 +1467,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.behaviors_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.detect_behaviors(self.sandbox_id),
             on_success=self._on_detect_behaviors_success,
             on_error=self._on_detect_behaviors_error,
+            parent=self,
+            event="sandbox_detect_behaviors",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_detect_behaviors_success(self, result: object) -> None:
@@ -1456,10 +1540,17 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_copy_in_source = source_path
         self._pending_copy_in_dest = dest_path
         self.copy_in_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.copy_to(self.sandbox_id, source_path, dest_path),
             on_success=self._on_copy_in_success,
             on_error=self._on_copy_in_error,
+            parent=self,
+            event="sandbox_copy_to",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            source=source_path,
+            dest=dest_path,
         )
 
     def _on_copy_in_success(self, _result: object) -> None:
@@ -1505,10 +1596,17 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_copy_out_source = sandbox_path
         self._pending_copy_out_dest = dest_path
         self.copy_out_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.copy_from(self.sandbox_id, sandbox_path, dest_path),
             on_success=self._on_copy_out_success,
             on_error=self._on_copy_out_error,
+            parent=self,
+            event="sandbox_copy_from",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            source=sandbox_path,
+            dest=dest_path,
         )
 
     def _on_copy_out_success(self, _result: object) -> None:
@@ -1534,10 +1632,15 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None or self.sandbox_id is None:
             return
         self.continue_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.cont(self.sandbox_id),
             on_success=self._on_continue_vm_success,
             on_error=self._on_continue_vm_error,
+            parent=self,
+            event="sandbox_cont",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_continue_vm_success(self, _result: object) -> None:
@@ -1571,10 +1674,16 @@ class SandboxPanel(AnalysisPanelBase):
         snapshot_name = selected.text(0)
         self._pending_snapshot_id = snapshot_name
         self.delete_snap_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.snapshot_delete(self.sandbox_id, snapshot_name),
             on_success=self._on_delete_snapshot_success,
             on_error=self._on_delete_snapshot_error,
+            parent=self,
+            event="sandbox_snapshot_delete",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            snapshot_name=snapshot_name,
         )
 
     def _on_delete_snapshot_success(self, _result: object) -> None:
@@ -1613,10 +1722,16 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._exec_cmd_btn.setEnabled(False)
         self._log(f"[*] Executing command: {command}")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.execute(self.sandbox_id, command),
             on_success=self._on_execute_command_success,
             on_error=self._on_execute_command_error,
+            parent=self,
+            event="sandbox_execute",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            command=command,
         )
 
     def _on_execute_command_success(self, result: object) -> None:
@@ -1653,10 +1768,13 @@ class SandboxPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.status(),
             on_success=self._on_poll_status_success,
             on_error=self._on_poll_status_error,
+            parent=self,
+            event="sandbox_status",
+            logger=_logger,
         )
 
     def _on_poll_status_success(self, result: object) -> None:
@@ -1743,10 +1861,14 @@ class SandboxPanel(AnalysisPanelBase):
         if self._vnc_widget is None or self._bridge is None or self.sandbox_id is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_vnc_port(self.sandbox_id),
             on_success=self._on_vnc_port_received,
             on_error=lambda _: _logger.debug("vnc_port_query_failed"),
+            parent=self,
+            event="sandbox_get_vnc_port",
+            logger=_logger,
+            sandbox_id=self.sandbox_id,
         )
 
     def _on_vnc_port_received(self, result: object) -> None:

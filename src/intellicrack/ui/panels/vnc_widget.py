@@ -29,7 +29,7 @@ from PyQt6.QtGui import QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPaint
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine, run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -1889,9 +1889,15 @@ class VNCWidget(QWidget):
         if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self.client.send_pointer_event(x, y, VNCWidget.button_mask(a0)),
+            on_success=None,
+            on_error=None,
             parent=self,
+            event="vnc_pointer_move",
+            logger=_logger,
+            x=x,
+            y=y,
         )
 
     @override
@@ -1904,9 +1910,16 @@ class VNCWidget(QWidget):
         if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self.client.send_pointer_event(x, y, VNCWidget.button_mask(a0)),
+            on_success=None,
+            on_error=None,
             parent=self,
+            event="vnc_pointer_press",
+            logger=_logger,
+            x=x,
+            y=y,
+            button_mask=VNCWidget.button_mask(a0),
         )
 
     @override
@@ -1919,9 +1932,15 @@ class VNCWidget(QWidget):
         if a0 is None or not self.client.connected:
             return
         x, y = self._scale_coords(a0)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self.client.send_pointer_event(x, y, 0),
+            on_success=None,
+            on_error=None,
             parent=self,
+            event="vnc_pointer_release",
+            logger=_logger,
+            x=x,
+            y=y,
         )
 
     @override
@@ -1934,9 +1953,14 @@ class VNCWidget(QWidget):
         if a0 is None or not self.client.connected:
             return
         keysym = _qt_key_to_x11(a0.key(), a0.text())
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self.client.send_key_event(keysym, down=True),
+            on_success=None,
+            on_error=None,
             parent=self,
+            event="vnc_key_press",
+            logger=_logger,
+            keysym=keysym,
         )
 
     @override
@@ -1949,7 +1973,12 @@ class VNCWidget(QWidget):
         if a0 is None or not self.client.connected:
             return
         keysym = _qt_key_to_x11(a0.key(), a0.text())
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self.client.send_key_event(keysym, down=False),
+            on_success=None,
+            on_error=None,
             parent=self,
+            event="vnc_key_release",
+            logger=_logger,
+            keysym=keysym,
         )
