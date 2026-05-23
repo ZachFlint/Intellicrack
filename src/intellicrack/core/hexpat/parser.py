@@ -229,11 +229,19 @@ class HexPatParser:
             try:
                 node = self._parse_top_level_node()
             except HexPatParseError as err:
+                _logger.debug(
+                    "hexpat_parse_recover",
+                    error=err.message,
+                    line=err.line,
+                    column=err.column,
+                    file_path=self.file_path,
+                )
                 self._errors.append(err)
                 self._synchronise()
                 continue
             nodes.append(node)
         if self._errors:
+            _logger.warning("hexpat_parse_failed", error_count=len(self._errors), file_path=self.file_path)
             raise HexPatAggregateParseError(tuple(self._errors))
         return nodes
 
@@ -772,6 +780,7 @@ class HexPatParser:
                     self._restore(saved)
                     target = self._parse_expression()
             except HexPatParseError:
+                _logger.debug("hexpat_parser_backtrack", context="sizeof", line=tok.line, column=tok.column)
                 self._restore(saved)
                 target = self._parse_expression()
             self._expect(TokenType.RPAREN)
@@ -987,6 +996,7 @@ class HexPatParser:
                 in_struct_body=allow_fields,
             )
         except HexPatParseError:
+            _logger.debug("hexpat_parser_backtrack", context="placement_vs_expr")
             self._restore(saved)
             return self._parse_expr_stmt()
         else:
@@ -1032,6 +1042,7 @@ class HexPatParser:
                     in_struct_body=False,
                 )
             except HexPatParseError:
+                _logger.debug("hexpat_parser_backtrack", context="top_level_placement")
                 self._restore(saved)
             else:
                 return field_stmt
@@ -1053,6 +1064,7 @@ class HexPatParser:
                 self._restore(saved)
                 type_node = None
         except HexPatParseError:
+            _logger.debug("hexpat_parser_backtrack", context="typed_const")
             self._restore(saved)
             type_node = None
 

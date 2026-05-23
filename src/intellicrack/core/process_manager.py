@@ -139,10 +139,13 @@ def _pid_exists_posix(pid: int) -> bool:
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
+        _logger.debug("pid_probe_no_such_process", pid=pid)
         return False
     except PermissionError:
+        _logger.debug("pid_probe_permission_denied", pid=pid)
         return True
-    except OSError:
+    except OSError as exc:
+        _logger.debug("pid_probe_oserror", pid=pid, error=str(exc))
         return False
     return True
 

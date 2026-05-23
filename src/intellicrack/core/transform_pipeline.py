@@ -408,6 +408,7 @@ class RegexReplaceNode(TransformNode):
         try:
             compiled = re.compile(raw_pattern.encode("latin-1"))
         except re.error as exc:
+            _logger.warning("regex_compile_failed", pattern=raw_pattern, error=str(exc))
             detail = f"invalid regex: {exc}"
             raise TransformParamError(_NODE_REGEX, detail) from exc
 
@@ -485,6 +486,7 @@ class CustomExpressionNode(TransformNode):
         try:
             tree = ast.parse(expression, mode="eval")
         except SyntaxError as exc:
+            _logger.warning("expression_parse_failed", expression=expression, error=str(exc))
             detail = f"bad syntax: {exc}"
             raise TransformParamError(_NODE_EXPR, detail) from exc
 
@@ -548,6 +550,7 @@ class RepeatNode(TransformNode):
         try:
             count = int(raw_count)
         except (TypeError, ValueError) as exc:
+            _logger.warning("repeat_param_failed", count_raw=raw_count, error=str(exc))
             detail = f"'count' not int: {raw_count!r}"
             raise TransformParamError(_NODE_REPEAT, detail) from exc
 
@@ -613,6 +616,7 @@ class TruncateNode(TransformNode):
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
+            _logger.warning("truncate_param_failed", length_raw=raw_length, error=str(exc))
             detail = f"'length' not int: {raw_length!r}"
             raise TransformParamError(_NODE_TRUNCATE, detail) from exc
 
@@ -684,6 +688,7 @@ class PadNode(TransformNode):
         try:
             length = int(raw_length)
         except (TypeError, ValueError) as exc:
+            _logger.warning("pad_length_param_failed", error=str(exc))
             detail = f"'length' not int: {raw_length!r}"
             raise TransformParamError(_NODE_PAD, detail) from exc
 
@@ -695,6 +700,7 @@ class PadNode(TransformNode):
         try:
             fill_byte = int(raw_byte)
         except (TypeError, ValueError) as exc:
+            _logger.warning("pad_byte_param_failed", error=str(exc))
             detail = f"'byte' not int: {raw_byte!r}"
             raise TransformParamError(_NODE_PAD, detail) from exc
 
