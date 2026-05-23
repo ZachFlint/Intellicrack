@@ -8,13 +8,13 @@ An AI-powered reverse engineering orchestration platform that provides a unified
 
 ## Overview
 
-Intellicrack (v0.1.0a1) is designed for analyzing and defeating software licensing protections. It serves as a unified orchestration layer where an LLM provider acts as central intelligence, coordinating between the user interface, tool bridges, and analysis modules.
+Intellicrack (v0.1.0a1) is a unified workspace for reverse engineering and binary analysis. It serves as an orchestration layer where an LLM provider acts as central intelligence, coordinating between the user interface, tool bridges, and analysis modules so that disassemblers, debuggers, runtime instrumentation, and sandboxes operate against a shared analysis context. Workflows range from general binary inspection and vulnerability research to protocol reversing, malware triage, and software protection analysis.
 
 ### What Intellicrack Does
 
-- **License Protection Analysis**: Detects algorithm types (MD5, SHA256, RSA, AES, HWID, time-based), validation functions, crypto API calls, and magic constants
-- **Binary Analysis**: PE/ELF/Mach-O parsing, section enumeration, entropy analysis, import/export extraction, string extraction
+- **Static Binary Analysis**: PE/ELF/Mach-O parsing, section enumeration, entropy analysis, import/export extraction, string extraction, and disassembly/decompilation through integrated tooling
 - **Dynamic Analysis**: Process attachment, function hooking, memory read/write, breakpoint management, register inspection
+- **Algorithm & Protection Detection**: Identifies crypto primitives (MD5, SHA256, RSA, AES), HWID/time-based checks, validation routines, crypto API calls, and magic constants for use in vulnerability research, malware triage, and software protection analysis
 - **Script Generation**: AI-generated Frida hooks, Ghidra plugins, Cutter/Rizin commands, x64dbg scripts
 - **Sandbox Execution**: Windows Sandbox integration with process/file/registry/network activity monitoring
 - **Binary Patching**: Direct modification with offset/RVA support and patch tracking
@@ -25,7 +25,7 @@ Intellicrack (v0.1.0a1) is designed for analyzing and defeating software licensi
 
 - **Orchestrator** (`core/orchestrator.py`): Manages conversation flow, tool calling with confirmation workflow, and iterative tool execution
 - **Session Manager** (`core/session.py`): SQLite-based persistence for conversations, loaded binaries, tool states, and patches
-- **License Analyzer** (`core/license_analyzer.py`): Specialized module for detecting protection algorithms, validation functions, and crypto API usage
+- **License Analyzer** (`core/license_analyzer.py`): Specialized module for detecting protection algorithms, validation functions, and crypto API usage encountered during reverse engineering
 - **Config** (`core/config.py`): TOML-based configuration management
 - **Types** (`core/types.py`): Comprehensive type system with 70+ dataclasses
 
@@ -60,7 +60,7 @@ PyQt6-based GUI featuring:
 - Provider/model selection and configuration dialogs
 - Embedded tool widgets (x64dbg, Cutter, HxD)
 - Session management for saving/loading analysis sessions
-- Licensing analysis panel displaying detected protections
+- Protection analysis panel displaying detected algorithms, validation routines, and crypto usage
 
 ## Requirements
 
@@ -147,4 +147,4 @@ GNU General Public License v3.0 - see [LICENSE](LICENSE)
 
 ## Disclaimer
 
-Intellicrack is developed for defensive security research to help software developers identify weaknesses in their own licensing protection mechanisms, test robustness of protection implementations, and strengthen defenses by understanding bypass techniques. This tool operates in controlled research environments for authorized security assessment.
+Intellicrack is developed for reverse engineering, vulnerability research, and defensive security work. Typical uses include understanding unknown binaries, auditing third-party code, researching software protection mechanisms, and helping developers identify weaknesses in their own implementations. This tool is intended for controlled research environments and authorized security assessment.
