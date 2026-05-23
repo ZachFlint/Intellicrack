@@ -1102,6 +1102,7 @@ class BuiltinFunctions:
         try:
             result = int(s, base)
         except ValueError as exc:
+            _logger.exception("hexpat_string_parse_int_failed", input=s, base=base)
             msg = f"std::string::parse_int: cannot parse {s!r} as base-{base} integer"
             raise HexPatRuntimeError(msg) from exc
         return PatternValue(value=result)
@@ -1125,6 +1126,7 @@ class BuiltinFunctions:
         try:
             result = float(s)
         except ValueError as exc:
+            _logger.exception("hexpat_string_parse_float_failed", input=s)
             msg = f"std::string::parse_float: cannot parse {s!r} as float"
             raise HexPatRuntimeError(msg) from exc
         return PatternValue(value=result)

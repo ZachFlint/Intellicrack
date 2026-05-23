@@ -803,14 +803,7 @@ class HexPatCompiler:
         try:
             processed_source, pragma = preprocessor.process(source)
         except HexPatError as exc:
-            _logger.warning(
-                "hexpat_compile_preprocess_failed",
-                message=exc.message,
-                line=exc.line,
-                column=exc.column,
-                file=exc.file,
-                error_type=type(exc).__name__,
-            )
+            _logger.exception("hexpat_compile_preprocess_failed", file=exc.file, line=exc.line)
             raise HexPatError(exc.message, exc.line, exc.column, exc.file) from exc
 
         lexer = HexPatLexer(processed_source)
@@ -819,14 +812,7 @@ class HexPatCompiler:
         try:
             declarations = parser.parse()
         except HexPatParseError as exc:
-            _logger.warning(
-                "hexpat_compile_parse_failed",
-                message=exc.message,
-                line=exc.line,
-                column=exc.column,
-                file=exc.file,
-                error_type=type(exc).__name__,
-            )
+            _logger.exception("hexpat_compile_parse_failed", file=exc.file, line=exc.line)
             raise HexPatError(exc.message, exc.line, exc.column, exc.file) from exc
         codegen = HexPatCodegen(list(declarations), pragma=pragma)
         result = codegen.generate()

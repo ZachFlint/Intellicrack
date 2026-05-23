@@ -964,6 +964,7 @@ class HexPatEvaluator:
             for stmt in node.try_body:
                 self._eval_stmt(stmt)
         except (HexPatRuntimeError, HexPatTypeError):
+            _logger.debug("hexpat_try_caught", line=node.line, column=node.column)
             for stmt in node.catch_body:
                 self._eval_stmt(stmt)
 
@@ -2587,6 +2588,7 @@ class HexPatEvaluator:
         try:
             cond = self._eval_expr(stmt.condition)
         except (HexPatRuntimeError, HexPatTypeError):
+            _logger.debug("hexpat_sizeof_conditional_eval_failed", line=stmt.line)
             return 0
         branch = stmt.true_fields if _truthy(cond) else stmt.false_fields
         total = 0
@@ -2734,6 +2736,7 @@ class HexPatEvaluator:
             try:
                 int_val = int(raw)
             except (OverflowError, ValueError) as exc:
+                _logger.warning("hexpat_float_to_int_conversion_failed", target_type=target_prim.name, error=str(exc))
                 msg = f"cannot convert float to integer type '{target_prim.name}': {exc}"
                 raise HexPatRuntimeError(msg, line, column) from exc
         elif isinstance(raw, int):
