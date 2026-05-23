@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, cast
 
+from intellicrack.core._optional_imports import require_yara
 from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
 from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.core.logging import get_logger, log_sandbox_operation
@@ -1499,6 +1500,7 @@ class WindowsSandbox(SandboxBase):
                     lambda: sum(f.stat().st_size for f in logs_folder.glob("*.log") if f.is_file()),
                 )
             except OSError:
+                _logger.warning("monitor_quiescence_stat_failed")
                 break
             if total == prev_size:
                 return
@@ -2190,10 +2192,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If scan fails.
         """
-        try:
-            import yara  # noqa: PLC0415
-        except ImportError as exc:
-            raise SandboxError(_ERR_YARA_NOT_AVAILABLE) from exc
+        yara = require_yara()
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
@@ -2476,4 +2475,5 @@ def _win_handle_from_file(file_obj: IO[bytes]) -> int | None:
     try:
         return get_osfhandle(file_obj.fileno())
     except (OSError, ValueError, AttributeError):
+        _logger.warning("win_handle_from_file_failed", exc_info=True)
         return None
