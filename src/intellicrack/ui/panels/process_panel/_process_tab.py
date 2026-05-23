@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.process_panel._workers import TrackedRefreshWorker
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
@@ -352,11 +352,14 @@ class ProcessTab(QWidget):
             if self._filter_refresh_pending:
                 self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.list_processes_detailed(current_filter),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_list_processes_detailed",
+            logger=_logger,
+            filter=current_filter,
         )
 
     def _populate_process_table(self, processes: list[object]) -> None:
@@ -478,11 +481,15 @@ class ProcessTab(QWidget):
             _logger.warning("process_attach_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Attach Failed", f"Failed to attach to PID {pid}:\n{exc}")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.open_process(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_open_process",
+            logger=_logger,
+            level="info",
+            pid=pid,
         )
 
     def _on_detach(self) -> None:
@@ -498,7 +505,15 @@ class ProcessTab(QWidget):
             _logger.warning("process_detach_failed", error=str(exc))
             QMessageBox.warning(self, "Detach Failed", f"Failed to detach:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.close(), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.close(),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_close",
+            logger=_logger,
+            level="info",
+        )
 
     def _on_suspend(self) -> None:
         """Suspend the selected process."""
@@ -510,7 +525,16 @@ class ProcessTab(QWidget):
             _logger.warning("process_suspend_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Suspend Failed", f"Failed to suspend PID {pid}:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.suspend(pid), None, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.suspend(pid),
+            on_success=None,
+            on_error=_on_error,
+            parent=self,
+            event="process_suspend",
+            logger=_logger,
+            level="info",
+            pid=pid,
+        )
 
     def _on_resume(self) -> None:
         """Resume the selected process."""
@@ -522,7 +546,16 @@ class ProcessTab(QWidget):
             _logger.warning("process_resume_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Resume Failed", f"Failed to resume PID {pid}:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.resume(pid), None, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.resume(pid),
+            on_success=None,
+            on_error=_on_error,
+            parent=self,
+            event="process_resume",
+            logger=_logger,
+            level="info",
+            pid=pid,
+        )
 
     def _on_terminate(self) -> None:
         """Terminate the selected process with confirmation."""
@@ -554,7 +587,16 @@ class ProcessTab(QWidget):
             _logger.warning("process_terminate_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Terminate Failed", f"Failed to terminate PID {pid}:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.terminate(pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.terminate(pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_terminate",
+            logger=_logger,
+            level="info",
+            pid=pid,
+        )
 
     def _on_inject_dll(self) -> None:
         """Inject a DLL into the attached process with file dialog."""
@@ -593,7 +635,17 @@ class ProcessTab(QWidget):
             _logger.warning("dll_inject_failed", path=path, pid=attached_pid, error=str(exc))
             QMessageBox.warning(self, "Inject Failed", f"Failed to inject {path} into PID {attached_pid}:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.inject_dll(path), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.inject_dll(path),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_inject_dll",
+            logger=_logger,
+            level="info",
+            dll_path=path,
+            pid=attached_pid,
+        )
 
     def _load_process_info(self, pid: int) -> None:
         """Load detailed process info and environment into info tab.
@@ -623,7 +675,15 @@ class ProcessTab(QWidget):
             _logger.warning("process_info_load_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Info Load Failed", f"Failed to load info for PID {pid}:\n{exc}")
 
-        run_bridge_coroutine_async(self._bridge.get_process_info(pid), _on_info, _on_info_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_process_info(pid),
+            on_success=_on_info,
+            on_error=_on_info_error,
+            parent=self,
+            event="process_get_process_info",
+            logger=_logger,
+            pid=pid,
+        )
 
         def _on_env(result: object) -> None:
             self._env_table.setRowCount(0)
@@ -639,7 +699,15 @@ class ProcessTab(QWidget):
         def _on_env_error(exc: object) -> None:
             _logger.warning("process_env_load_failed", pid=pid, error=str(exc))
 
-        run_bridge_coroutine_async(self._bridge.get_environment(pid), _on_env, _on_env_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_environment(pid),
+            on_success=_on_env,
+            on_error=_on_env_error,
+            parent=self,
+            event="process_get_environment",
+            logger=_logger,
+            pid=pid,
+        )
 
     def _on_tab_changed(self, index: int) -> None:
         """Handle sub-tab changes.

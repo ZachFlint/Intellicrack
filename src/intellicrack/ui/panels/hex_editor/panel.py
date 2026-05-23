@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.hex_editor._base import (
     CURSOR_CONTEXT_BYTES,
@@ -876,10 +876,13 @@ class HexEditorPanel(
         state_holder.register_callback(on_state_event, source_id="panel")
 
         if self._bridge is not None:
-            run_bridge_coroutine_async(
+            run_bridge_coroutine_logged(
                 self._bridge.list_highlight_rules(),
                 on_success=self.seed_highlights_from_bridge,
+                on_error=None,
                 parent=self,
+                event="hex_editor_list_highlight_rules",
+                logger=_logger,
             )
 
     def _on_selection_changed(self, start: int, end: int) -> None:

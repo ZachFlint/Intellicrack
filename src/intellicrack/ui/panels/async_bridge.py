@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Literal, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -26,6 +26,7 @@ __all__ = [
     "GenericCallableWorker",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
+    "run_bridge_coroutine_logged",
     "shutdown_bridge_loop",
 ]
 
@@ -33,6 +34,7 @@ __all__ = [
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
+    import structlog
     from PyQt6.QtCore import QObject
 
 _logger = get_logger(__name__)
@@ -301,6 +303,63 @@ def run_bridge_coroutine_async(
     if on_error is not None:
         _ = worker.call_error.connect(on_error)
     worker.start()
+
+
+def run_bridge_coroutine_logged(
+    coro: Coroutine[object, object, object],
+    on_success: Callable[[object], None] | None,
+    on_error: Callable[[object], None] | None,
+    parent: QObject | None,
+    *,
+    event: str,
+    logger: structlog.stdlib.BoundLogger,
+    level: Literal["debug", "info"] = "debug",
+    **context: object,
+) -> None:
+    """Run a bridge coroutine with structured entry / success / failure logs.
+
+    Emits ``<event>_started`` before dispatch, ``<event>_succeeded`` after
+    success (in addition to invoking ``on_success``), and ``<event>_failed``
+    on failure (in addition to invoking ``on_error``). State-mutation sites
+    should pass ``level="info"`` to surface entry/success at info level;
+    refresh and query sites use the default ``level="debug"``. Failures are
+    always logged at warning level.
+
+    Args:
+        coro: Bridge coroutine to execute.
+        on_success: Optional caller success callback invoked after the success log.
+        on_error: Optional caller error callback invoked after the failure log.
+        parent: Qt parent for worker lifetime management.
+        event: Snake-case base event name (e.g. ``"ghidra_rename_function"``).
+            ``_started``/``_succeeded``/``_failed`` are appended automatically.
+        logger: Caller's module-level ``BoundLogger`` to emit on.
+        level: ``"info"`` for state-mutation sites, ``"debug"`` for read-only
+            refresh and query operations.
+        **context: Structured kwargs included in every emitted log entry.
+    """
+    emit = logger.info if level == "info" else logger.debug
+    started_event = event + "_started"
+    succeeded_event = event + "_succeeded"
+    failed_event = event + "_failed"
+    emit(started_event, **context)
+
+    def _logged_success(result: object) -> None:
+        emit(succeeded_event, **context)
+        if on_success is not None:
+            on_success(result)
+
+    def _logged_error(exc: object) -> None:
+        error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+        logger.warning(
+            failed_event,
+            error=str(error_obj),
+            error_type=type(error_obj).__name__,
+            **context,
+        )
+        if on_error is not None:
+            on_error(exc)
+
+    run_bridge_coroutine_async(coro, _logged_success, _logged_error, parent)
 
 
 def shutdown_bridge_loop() -> None:

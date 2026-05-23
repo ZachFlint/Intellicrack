@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor._base import YARA_MATCH_DISPLAY_BYTES
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -127,7 +127,7 @@ class YaraMixin:
         """Compile YARA rules and scan the current document via the bridge.
 
         Routes the request through :meth:`HexEditorBridge.yara_scan` (or :meth:`HexEditorBridge.yara_scan_files` when no inline source is
-        present) via :func:`run_bridge_coroutine_async`. Results and errors are delivered back via signal callbacks so the Qt main thread is
+        present) via :func:`run_bridge_coroutine_logged`. Results and errors are delivered back via signal callbacks so the Qt main thread is
         never blocked while compiling rules or scanning very large documents.
         """
         if self.document is None or self._yara_results_tree is None:
@@ -149,21 +149,27 @@ class YaraMixin:
 
         parent_obj = self if isinstance(self, QWidget) else None
         if inline_source:
-            run_bridge_coroutine_async(
+            run_bridge_coroutine_logged(
                 bridge.yara_scan(inline_source),
                 on_success=self._on_yara_scan_success,
                 on_error=self._on_yara_scan_error,
                 parent=parent_obj,
+                event="hex_editor_yara_scan",
+                logger=_logger,
+                source_length=len(inline_source),
             )
             return
 
         if self._yara_rule_files:
             rule_paths_arg = ",".join(self._yara_rule_files)
-            run_bridge_coroutine_async(
+            run_bridge_coroutine_logged(
                 bridge.yara_scan_files(rule_paths_arg),
                 on_success=self._on_yara_scan_success,
                 on_error=self._on_yara_scan_error,
                 parent=parent_obj,
+                event="hex_editor_yara_scan_files",
+                logger=_logger,
+                file_count=len(self._yara_rule_files),
             )
 
     @staticmethod
@@ -197,6 +203,11 @@ class YaraMixin:
             try:
                 offset_int = int(offset_raw)
             except (TypeError, ValueError):
+                _logger.warning(
+                    "hex_editor_yara_match_invalid_offset",
+                    input_text=str(offset_raw),
+                    rule_name=str(match.get("rule", "")),
+                )
                 continue
             identifier = str(entry.get("identifier", ""))
             data_hex = str(entry.get("data", ""))
@@ -273,6 +284,6 @@ class YaraMixin:
         try:
             offset = int(offset_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_yara_result_invalid_offset", input_text=offset_text)
         else:
             self.goto_offset(offset)

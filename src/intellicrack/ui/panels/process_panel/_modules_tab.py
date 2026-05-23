@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.qt_compat import set_header_labels
 
 
@@ -329,7 +329,15 @@ class ModulesTab(QWidget):
             _logger.warning("Module enumeration failed: %s", exc)
             QMessageBox.warning(self, "Module Enumeration Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.get_modules(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_modules(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_modules",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
 
     def _on_browse_dll(self) -> None:
         """Open file dialog to select a DLL."""
@@ -370,7 +378,16 @@ class ModulesTab(QWidget):
             self._inject_log.setItem(row, 1, QTableWidgetItem("Failed"))
             self._inject_log.setItem(row, 2, QTableWidgetItem(str(exc)))
 
-        run_bridge_coroutine_async(self._bridge.inject_dll(path), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.inject_dll(path),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_inject_dll",
+            logger=_logger,
+            level="info",
+            dll_path=path,
+        )
 
     def _refresh_handles(self) -> None:
         """Refresh handle list from bridge."""
@@ -405,7 +422,15 @@ class ModulesTab(QWidget):
         def _on_error(exc: object) -> None:
             QMessageBox.warning(self, "Handle Enumeration Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.get_handles(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_handles(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_handles",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
 
     def _refresh_heaps(self) -> None:
         """Refresh heap list from bridge."""
@@ -431,7 +456,15 @@ class ModulesTab(QWidget):
         def _on_error(exc: object) -> None:
             QMessageBox.warning(self, "Heap Enumeration Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.get_heaps(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_heaps(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_heaps",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
 
     def _refresh_com(self) -> None:
         """Refresh COM server list from bridge."""
@@ -455,7 +488,15 @@ class ModulesTab(QWidget):
         def _on_error(exc: object) -> None:
             QMessageBox.warning(self, "COM Enumeration Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.enumerate_com_servers(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.enumerate_com_servers(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_enumerate_com_servers",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
 
     def _refresh_dotnet(self) -> None:
         """Detect .NET CLR in the attached process."""
@@ -479,4 +520,12 @@ class ModulesTab(QWidget):
         def _on_error(exc: object) -> None:
             QMessageBox.warning(self, ".NET Detection Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.detect_dotnet(self._attached_pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.detect_dotnet(self._attached_pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_detect_dotnet",
+            logger=_logger,
+            pid=self._attached_pid,
+        )
