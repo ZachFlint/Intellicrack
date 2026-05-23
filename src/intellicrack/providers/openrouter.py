@@ -65,6 +65,9 @@ _REST_HTTP_MSGS = HttpErrorMessages(
 )
 
 
+_logger = get_logger(__name__)
+
+
 class OpenRouterProvider(LLMProviderBase):
     """OpenRouter API provider implementation.
 
@@ -571,7 +574,8 @@ class OpenRouterProvider(LLMProviderBase):
             prompt = int(usage_dict.get("prompt_tokens") or 0)
             completion = int(usage_dict.get("completion_tokens") or 0)
             total = int(usage_dict.get("total_tokens") or 0) or (prompt + completion)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
+            _logger.warning("openrouter_usage_parse_failed", error_type=type(exc).__name__)
             return None
         return UsageInfo(
             prompt_tokens=prompt,

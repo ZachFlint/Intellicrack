@@ -355,6 +355,7 @@ class OllamaProvider(LLMProviderBase):
         try:
             text = response.text
         except (httpx.HTTPError, RuntimeError, UnicodeDecodeError):
+            _logger.debug("ollama_response_text_unreadable")
             return ""
         max_len = 512
         if len(text) > max_len:
@@ -1099,7 +1100,8 @@ class OllamaProvider(LLMProviderBase):
             prompt_tokens = int(usage_obj.get("prompt_tokens", 0) or 0)
             completion_tokens = int(usage_obj.get("completion_tokens", 0) or 0)
             total_tokens = int(usage_obj.get("total_tokens", 0) or 0) or (prompt_tokens + completion_tokens)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
+            self._logger.debug("openai_usage_parse_failed", error=str(exc))
             return
         if prompt_tokens == 0 and completion_tokens == 0:
             return
@@ -1200,11 +1202,13 @@ class OllamaProvider(LLMProviderBase):
         """
         try:
             prompt_tokens = int(data.get("prompt_eval_count", 0))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
+            self._logger.debug("usage_prompt_tokens_parse_failed", error=str(exc))
             prompt_tokens = 0
         try:
             completion_tokens = int(data.get("eval_count", 0))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
+            self._logger.debug("usage_completion_tokens_parse_failed", error=str(exc))
             completion_tokens = 0
         if prompt_tokens == 0 and completion_tokens == 0:
             return
