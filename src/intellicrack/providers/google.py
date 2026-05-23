@@ -20,6 +20,7 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger, log_provider_request, log_provider_response
 from intellicrack.core.types import (
     AuthenticationError,
@@ -372,7 +373,14 @@ class GoogleProvider(LLMProviderBase):
                 content_length=len(content),
             )
 
-        except (AuthenticationError, ProviderError, RateLimitError):
+        except (AuthenticationError, ProviderError, RateLimitError) as exc:
+            log_passthrough(
+                self._logger,
+                "google_chat_passthrough",
+                exc,
+                provider="google",
+                model=model,
+            )
             raise
         except APIError as e:
             self._logger.warning(
@@ -508,7 +516,15 @@ class GoogleProvider(LLMProviderBase):
                     chunks_received=chunk_count,
                 )
 
-        except (AuthenticationError, ProviderError, RateLimitError):
+        except (AuthenticationError, ProviderError, RateLimitError) as exc:
+            log_passthrough(
+                self._logger,
+                "google_chat_stream_passthrough",
+                exc,
+                provider="google",
+                model=model,
+                chunks_received=chunk_count,
+            )
             raise
         except APIError as e:
             self._logger.warning(
@@ -670,6 +686,14 @@ class GoogleProvider(LLMProviderBase):
                     error=str(exc),
                 )
                 raise RateLimitError(_MSG_RATE_LIMITED) from exc
+            log_passthrough(
+                self._logger,
+                "google_generate_content_passthrough",
+                exc,
+                provider="google",
+                model=model,
+                code=code,
+            )
             raise
 
     @staticmethod

@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import httpx
 
+from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     Message,
@@ -525,9 +526,18 @@ class LocalTransformersProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
         """
         if not self.connected:
+            self._logger.warning(
+                "local_transformers_chat_not_connected",
+                provider="local_transformers",
+                model=model,
+            )
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         if not model:
+            self._logger.warning(
+                "local_transformers_chat_empty_model",
+                provider="local_transformers",
+            )
             raise ProviderError(_ERR_EMPTY_MODEL)
 
         self._cancel_requested = False
@@ -543,6 +553,11 @@ class LocalTransformersProvider(LLMProviderBase):
         await self._ensure_model_loaded(model_id)
 
         if self._loaded_model is None:
+            self._logger.warning(
+                "local_transformers_chat_no_model_loaded",
+                provider="local_transformers",
+                model=model_id,
+            )
             raise ProviderError(_MSG_NO_MODEL_LOADED)
 
         start_time = time.perf_counter()
@@ -628,9 +643,18 @@ class LocalTransformersProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
         """
         if not self.connected:
+            self._logger.warning(
+                "local_transformers_stream_not_connected",
+                provider="local_transformers",
+                model=model,
+            )
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         if not model:
+            self._logger.warning(
+                "local_transformers_stream_empty_model",
+                provider="local_transformers",
+            )
             raise ProviderError(_ERR_EMPTY_MODEL)
 
         self._cancel_requested = False
@@ -646,6 +670,11 @@ class LocalTransformersProvider(LLMProviderBase):
         await self._ensure_model_loaded(model_id)
 
         if self._loaded_model is None:
+            self._logger.warning(
+                "local_transformers_stream_no_model_loaded",
+                provider="local_transformers",
+                model=model_id,
+            )
             raise ProviderError(_MSG_NO_MODEL_LOADED)
 
         try:
@@ -867,13 +896,20 @@ class LocalTransformersProvider(LLMProviderBase):
             )
             model = model.to(device)
             model.eval()
-        except (RuntimeError, ImportError, ValueError, OSError):
+        except (RuntimeError, ImportError, ValueError, OSError) as exc:
             try:
                 empty_cache = getattr(cuda_module, "empty_cache", None)
                 if callable(empty_cache):
                     empty_cache()
             except (RuntimeError, OSError, AttributeError) as cleanup_exc:
                 _logger.warning("cuda_cache_clear_after_failure", error=str(cleanup_exc))
+            log_passthrough(
+                self._logger,
+                "cuda_load_model_passthrough",
+                exc,
+                provider="local_transformers",
+                model_id=config.model_id,
+            )
             raise
 
         load_time = time.perf_counter() - start_time

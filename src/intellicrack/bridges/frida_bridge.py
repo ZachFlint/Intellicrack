@@ -4826,6 +4826,13 @@ class FridaBridge(InstrumentationBridge):
         try:
             script = await asyncio.to_thread(self._session.create_script, script_code)
         except Exception as e:
+            _logger.warning(
+                "frida_set_exception_handler_failed",
+                bridge="frida",
+                script_id=script_id,
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             raise ToolError(_ERR_EXCEPTION_HANDLER_FAILED) from e
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
@@ -5073,6 +5080,15 @@ class FridaBridge(InstrumentationBridge):
         try:
             script = await asyncio.to_thread(self._session.create_script, script_code)
         except Exception as e:
+            _logger.warning(
+                "frida_stalker_add_call_probe_failed",
+                bridge="frida",
+                script_id=script_id,
+                probe_id=probe_id,
+                address=hex(address),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             raise ToolError(_ERR_PROBE_FAILED) from e
 
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
