@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
 
@@ -446,7 +446,14 @@ class MemoryTab(QWidget):
             _logger.warning("memory_map_failed", error=str(exc))
             QMessageBox.warning(self, "Memory Map Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.get_memory_map(resolve_names=True), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_memory_map(resolve_names=True),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_memory_map",
+            logger=_logger,
+        )
 
     def _on_read(self) -> None:
         """Read memory and display formatted output."""
@@ -475,7 +482,16 @@ class MemoryTab(QWidget):
             self._read_output.setPlainText(f"Error: {exc}")
             QMessageBox.warning(self, "Read Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.read_memory(addr, size), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.read_memory(addr, size),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_read_memory",
+            logger=_logger,
+            address=hex(addr),
+            size=size,
+        )
 
     @staticmethod
     def _format_memory(data: bytes | bytearray, base_addr: int, fmt: str) -> str:
@@ -544,7 +560,17 @@ class MemoryTab(QWidget):
             self._write_status.setText("Write failed")
             QMessageBox.warning(self, "Write Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.write_memory(addr, data), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.write_memory(addr, data),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_write_memory",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            size=len(data),
+        )
 
     def _on_allocate(self) -> None:
         """Allocate memory in the attached process."""
@@ -571,7 +597,17 @@ class MemoryTab(QWidget):
             _logger.warning("memory_allocate_failed", error=str(exc))
             QMessageBox.warning(self, "Allocate Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.allocate(size, prot), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.allocate(size, prot),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_allocate_memory",
+            logger=_logger,
+            level="info",
+            size=size,
+            protection=prot,
+        )
 
     def _on_free(self) -> None:
         """Free allocated memory and remove the matching allocation row."""
@@ -618,7 +654,16 @@ class MemoryTab(QWidget):
             _logger.warning("memory_free_failed", error=str(exc))
             QMessageBox.warning(self, "Free Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.free(addr), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.free(addr),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_free_memory",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+        )
 
     def _on_protect(self) -> None:
         """Change memory protection with confirmation."""
@@ -661,7 +706,18 @@ class MemoryTab(QWidget):
             _logger.warning("memory_protect_failed", error=str(exc))
             QMessageBox.warning(self, "Protect Error", str(exc))
 
-        run_bridge_coroutine_async(self._bridge.protect(addr, size, prot), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.protect(addr, size, prot),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_protect_memory",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            size=size,
+            protection=prot,
+        )
 
     def _on_search(self) -> None:
         """Search for a byte pattern in process memory."""
@@ -700,4 +756,12 @@ class MemoryTab(QWidget):
             _logger.warning("search_failed", error=str(exc))
             QMessageBox.critical(self, "Search Failed", f"Pattern search failed: {exc}")
 
-        run_bridge_coroutine_async(self._bridge.search_pattern(pattern), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.search_pattern(pattern),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_search_pattern",
+            logger=_logger,
+            pattern_length=len(pattern),
+        )

@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
@@ -164,11 +164,18 @@ class SandboxMixin:
         _logger.info("sandbox_save_dispatched", instance_id=instance_id, source=src, dest=dest_path)
 
         copy_to_fn: SandboxBridge = cast("SandboxBridge", bridge)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._copy_to_with_timeout(copy_to_fn, instance_id, src, dest_path, timeout),
             on_success=self._on_sandbox_finished_obj,
             on_error=self._on_sandbox_error_obj,
             parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_sandbox_copy_to",
+            logger=_logger,
+            level="info",
+            instance_id=instance_id,
+            source=src,
+            dest=dest_path,
+            timeout_s=timeout,
         )
 
     @staticmethod
@@ -237,11 +244,17 @@ class SandboxMixin:
         _logger.info("sandbox_test_dispatched", instance_id=instance_id, command=command)
 
         execute_fn: SandboxBridge = cast("SandboxBridge", bridge)
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             execute_fn.execute(instance_id, command, time_limit=timeout),
             on_success=self._on_sandbox_finished_obj,
             on_error=self._on_sandbox_error_obj,
             parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_sandbox_execute",
+            logger=_logger,
+            level="info",
+            instance_id=instance_id,
+            command=command,
+            timeout_s=timeout,
         )
 
     def _on_sandbox_finished_obj(self, result: object) -> None:

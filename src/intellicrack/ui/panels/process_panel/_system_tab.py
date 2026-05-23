@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
@@ -540,11 +540,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Query Privileges Error", exc, log_event="system_tab_privileges_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_token_privileges(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_token_privileges",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_enable_debug(self) -> None:
@@ -558,11 +561,17 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Enable Debug Privilege Error", exc, log_event="system_tab_enable_debug_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.adjust_token_privilege("SeDebugPrivilege", enable=True, pid=pid),
-            None,
-            _on_error,
-            self,
+            on_success=None,
+            on_error=_on_error,
+            parent=self,
+            event="process_adjust_token_privilege",
+            logger=_logger,
+            level="info",
+            pid=pid,
+            privilege="SeDebugPrivilege",
+            enabled=True,
         )
 
     def _refresh_windows(self) -> None:
@@ -593,7 +602,15 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Enumerate Windows Error", exc, log_event="system_tab_windows_failed")
 
-        run_bridge_coroutine_async(self._bridge.get_windows(pid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.get_windows(pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_windows",
+            logger=_logger,
+            pid=pid,
+        )
 
     def _refresh_services(self) -> None:
         """Enumerate services for the attached process."""
@@ -622,11 +639,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Enumerate Services Error", exc, log_event="system_tab_services_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.list_services(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_list_services",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_read_peb(self) -> None:
@@ -649,11 +669,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Read PEB Error", exc, log_event="system_tab_read_peb_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.read_peb(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_read_peb",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_read_teb(self) -> None:
@@ -677,7 +700,15 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Read TEB Error", exc, log_event="system_tab_read_teb_failed")
 
-        run_bridge_coroutine_async(self._bridge.read_teb(tid), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.read_teb(tid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_read_teb",
+            logger=_logger,
+            tid=tid,
+        )
 
     def _on_pipe_connect(self) -> None:
         """Connect to a named pipe."""
@@ -700,7 +731,16 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Connect Pipe Error", exc, log_event="system_tab_pipe_connect_failed")
 
-        run_bridge_coroutine_async(self._bridge.pipe_connect(name), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.pipe_connect(name),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_pipe_connect",
+            logger=_logger,
+            level="info",
+            pipe_name=name,
+        )
 
     def _on_pipe_close(self) -> None:
         """Close the selected pipe."""
@@ -737,7 +777,17 @@ class SystemTab(QWidget):
             _logger.warning("system_tab_pipe_close_failed", pipe=pipe_name, exc=message)
             QMessageBox.warning(self, "Close Pipe Error", f"{pipe_name}: {message}")
 
-        run_bridge_coroutine_async(self._bridge.pipe_close(handle), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.pipe_close(handle),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_pipe_close",
+            logger=_logger,
+            level="info",
+            pipe_name=pipe_name,
+            handle=hex(handle),
+        )
 
     def _refresh_mitigations(self) -> None:
         """Query mitigation policies for the attached process."""
@@ -766,11 +816,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Query Mitigations Error", exc, log_event="system_tab_mitigations_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_mitigation_policies(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_mitigation_policies",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_reg_read(self) -> None:
@@ -794,7 +847,16 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Read Registry Value Error", exc, log_event="system_tab_reg_read_failed")
 
-        run_bridge_coroutine_async(self._bridge.reg_read_value(key, name), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.reg_read_value(key, name),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_reg_read_value",
+            logger=_logger,
+            key=key,
+            value_name=name,
+        )
 
     def _on_reg_enum_keys(self) -> None:
         """Enumerate registry subkeys."""
@@ -815,7 +877,15 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Enumerate Registry Keys Error", exc, log_event="system_tab_reg_enum_keys_failed")
 
-        run_bridge_coroutine_async(self._bridge.reg_enum_keys(key), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.reg_enum_keys(key),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_reg_enum_keys",
+            logger=_logger,
+            key=key,
+        )
 
     def _on_reg_enum_values(self) -> None:
         """Enumerate registry values."""
@@ -836,7 +906,15 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Enumerate Registry Values Error", exc, log_event="system_tab_reg_enum_values_failed")
 
-        run_bridge_coroutine_async(self._bridge.reg_enum_values(key), _on_success, _on_error, self)
+        run_bridge_coroutine_logged(
+            self._bridge.reg_enum_values(key),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_reg_enum_values",
+            logger=_logger,
+            key=key,
+        )
 
     def _on_gui_resources(self) -> None:
         """Query GUI resource counts."""
@@ -857,11 +935,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Get GUI Resources Error", exc, log_event="system_tab_gui_resources_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_gui_resources(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_gui_resources",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_job_info(self) -> None:
@@ -883,11 +964,14 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Get Job Info Error", exc, log_event="system_tab_job_info_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_job_info(pid),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_job_info",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_raw_query(self) -> None:
@@ -920,9 +1004,13 @@ class SystemTab(QWidget):
         def _on_error(exc: object) -> None:
             self._show_error("Raw Query Error", exc, log_event="system_tab_raw_query_failed")
 
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             self._bridge.query_system_info(info_class, buf_size),
-            _on_success,
-            _on_error,
-            self,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_query_system_info",
+            logger=_logger,
+            info_class=info_class,
+            buffer_size=buf_size,
         )

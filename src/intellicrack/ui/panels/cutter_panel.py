@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import AssemblySyntaxHighlighter, CSyntaxHighlighter
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.cutter_tabs import (
     AllStringsTab,
@@ -446,10 +446,15 @@ class CutterPanel(AnalysisPanelBase):
         self._set_status(f"Loading: {binary_path.name}")
         self._load_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.load_binary(binary_path),
             on_success=lambda _: self._on_binary_loaded(binary_path),
             on_error=lambda e: self._on_binary_load_error(binary_path, e),
+            parent=self,
+            event="cutter_load_binary",
+            logger=_logger,
+            level="info",
+            binary_path=str(binary_path),
         )
         return True
 
@@ -467,10 +472,14 @@ class CutterPanel(AnalysisPanelBase):
             return True
 
         self._set_status("Initializing...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.initialize(),
             on_success=lambda _: self._on_initialize_success(),
             on_error=self._on_initialize_error,
+            parent=self,
+            event="cutter_initialize",
+            logger=_logger,
+            level="info",
         )
         return True
 
@@ -539,10 +548,14 @@ class CutterPanel(AnalysisPanelBase):
         self._set_status("Analyzing...")
         self._analyze_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.analyze(),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
+            parent=self,
+            event="cutter_analyze",
+            logger=_logger,
+            level="info",
         )
 
     def _on_analysis_complete(self) -> None:
@@ -574,10 +587,14 @@ class CutterPanel(AnalysisPanelBase):
         filter_text = self._func_filter.text().strip() or None
         self._refresh_funcs_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_functions(filter_text),
             on_success=self._apply_functions,
             on_error=lambda _: self._on_refresh_funcs_error(),
+            parent=self,
+            event="cutter_get_functions",
+            logger=_logger,
+            filter=filter_text,
         )
 
     def _apply_functions(self, result: object) -> None:
@@ -636,22 +653,34 @@ class CutterPanel(AnalysisPanelBase):
             offset=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
             on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
+            parent=self,
+            event="cutter_decompile",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.disassemble(address),
             on_success=self._apply_disassembly,
             on_error=lambda _: _logger.warning("cutter_disassemble_failed", address=hex(address)),
+            parent=self,
+            event="cutter_disassemble",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
             on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
+            parent=self,
+            event="cutter_get_function_graph",
+            logger=_logger,
+            address=hex(address),
         )
 
         self._show_xrefs(address)
@@ -674,10 +703,14 @@ class CutterPanel(AnalysisPanelBase):
             offset=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
             on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
+            parent=self,
+            event="cutter_decompile",
+            logger=_logger,
+            address=hex(address),
         )
         self._code_tabs.setCurrentIndex(1)
 
@@ -692,10 +725,14 @@ class CutterPanel(AnalysisPanelBase):
             self._set_status("No function selected")
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
             on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
+            parent=self,
+            event="cutter_get_function_graph",
+            logger=_logger,
+            address=hex(address),
         )
         self._code_tabs.setCurrentIndex(2)
 
@@ -781,10 +818,13 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_imports(),
             on_success=self._apply_imports,
             on_error=self._on_refresh_imports_error,
+            parent=self,
+            event="cutter_get_imports",
+            logger=_logger,
         )
 
     def _on_refresh_imports_error(self, exc: object) -> None:
@@ -817,10 +857,13 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_exports(),
             on_success=self._apply_exports,
             on_error=self._on_refresh_exports_error,
+            parent=self,
+            event="cutter_get_exports",
+            logger=_logger,
         )
 
     def _on_refresh_exports_error(self, exc: object) -> None:
@@ -853,10 +896,13 @@ class CutterPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_sections(),
             on_success=self._apply_sections,
             on_error=self._on_refresh_sections_error,
+            parent=self,
+            event="cutter_get_sections",
+            logger=_logger,
         )
 
     def _on_refresh_sections_error(self, exc: object) -> None:
@@ -917,10 +963,14 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         self._string_search_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.search_strings(pattern),
             on_success=self._apply_strings,
             on_error=lambda _: self._on_string_search_error(pattern),
+            parent=self,
+            event="cutter_search_strings",
+            logger=_logger,
+            pattern=pattern,
         )
 
     def _apply_strings(self, result: object) -> None:
@@ -966,16 +1016,24 @@ class CutterPanel(AnalysisPanelBase):
 
         self._xrefs_tree.clear()
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_xrefs_to(address),
             on_success=self._apply_xrefs_to,
             on_error=lambda _: _logger.warning("cutter_xrefs_to_failed", address=hex(address)),
+            parent=self,
+            event="cutter_get_xrefs_to",
+            logger=_logger,
+            address=hex(address),
         )
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_xrefs_from(address),
             on_success=self._apply_xrefs_from,
             on_error=lambda _: _logger.warning("cutter_xrefs_from_failed", address=hex(address)),
+            parent=self,
+            event="cutter_get_xrefs_from",
+            logger=_logger,
+            address=hex(address),
         )
 
     def _apply_xrefs_to(self, result: object) -> None:
@@ -1032,10 +1090,15 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         self._console_run_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.execute_command(command),
             on_success=self._apply_command_result,
             on_error=self._on_command_error,
+            parent=self,
+            event="cutter_execute_command",
+            logger=_logger,
+            level="info",
+            command=command,
         )
 
     def _apply_command_result(self, result: object) -> None:
@@ -1093,10 +1156,15 @@ class CutterPanel(AnalysisPanelBase):
             return
 
         self._set_status("Saving...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.save_binary(file_path),
             on_success=lambda _: self._set_status(f"Saved: {file_path}"),
             on_error=lambda e: self._set_status(f"Save failed: {e}"),
+            parent=self,
+            event="cutter_save_binary",
+            logger=_logger,
+            level="info",
+            file_path=file_path,
         )
 
     def _on_patch_dialog(self) -> None:
@@ -1125,10 +1193,16 @@ class CutterPanel(AnalysisPanelBase):
             offset=hex(address),
             byte_count=len(hex_data.replace(" ", "")) // 2,
         )
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.write_bytes(address, hex_data),
             on_success=lambda _: self._set_status(f"Patched @ 0x{address:X}"),
             on_error=lambda e: self._set_status(f"Patch failed: {e}"),
+            parent=self,
+            event="cutter_write_bytes",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            byte_count=len(hex_data.replace(" ", "")) // 2,
         )
 
     def _on_goto_address(self) -> None:
@@ -1146,10 +1220,14 @@ class CutterPanel(AnalysisPanelBase):
             self._set_status("Invalid address")
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.seek(address),
             on_success=lambda _: self._on_goto_complete(address),
             on_error=lambda e: self._set_status(f"Seek failed: {e}"),
+            parent=self,
+            event="cutter_seek",
+            logger=_logger,
+            address=hex(address),
         )
 
     def _on_goto_complete(self, address: int) -> None:
@@ -1167,10 +1245,14 @@ class CutterPanel(AnalysisPanelBase):
             binary_path=binary_path,
             offset=hex(address),
         )
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.disassemble(address),
             on_success=self._apply_disassembly,
             on_error=lambda _: _logger.warning("cutter_disassemble_failed", address=hex(address)),
+            parent=self,
+            event="cutter_disassemble",
+            logger=_logger,
+            address=hex(address),
         )
 
     def _on_find_function(self) -> None:
@@ -1183,10 +1265,14 @@ class CutterPanel(AnalysisPanelBase):
         if not name:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_function_address(name),
             on_success=lambda addr: self._on_find_func_result(name, addr),
             on_error=lambda e: self._set_status(f"Find failed: {e}"),
+            parent=self,
+            event="cutter_get_function_address",
+            logger=_logger,
+            function_name=name,
         )
 
     def _on_find_func_result(self, name: str, addr: object) -> None:
@@ -1256,10 +1342,16 @@ class CutterPanel(AnalysisPanelBase):
         new_name, ok = QInputDialog.getText(self, "Rename Function", "New name:")
         if not ok or not new_name:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.rename_function(address, new_name),
             on_success=lambda _: self._on_rename_complete(address, new_name),
             on_error=lambda e: self._set_status(f"Rename failed: {e}"),
+            parent=self,
+            event="cutter_rename_function",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            new_name=new_name,
         )
 
     def _on_rename_complete(self, address: int, new_name: str) -> None:
@@ -1283,10 +1375,16 @@ class CutterPanel(AnalysisPanelBase):
         comment, ok = QInputDialog.getText(self, "Add Comment", "Comment:")
         if not ok or not comment:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.add_comment(address, comment),
             on_success=lambda _: self._set_status(f"Comment added @ 0x{address:X}"),
             on_error=lambda e: self._set_status(f"Comment failed: {e}"),
+            parent=self,
+            event="cutter_add_comment",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            comment_length=len(comment),
         )
 
     def _ctx_copy_address(self, address: int) -> None:
@@ -1311,10 +1409,15 @@ class CutterPanel(AnalysisPanelBase):
         count, ok = QInputDialog.getInt(self, "Read Bytes", "Count:", 16, 1, 4096)
         if not ok:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.read_bytes(address, count),
             on_success=lambda data: self._show_read_bytes(address, data),
             on_error=lambda e: self.console_output.appendPlainText(f"[error] Read failed: {e}"),
+            parent=self,
+            event="cutter_read_bytes",
+            logger=_logger,
+            address=hex(address),
+            count=count,
         )
 
     def _show_read_bytes(self, address: int, data: object) -> None:

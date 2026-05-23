@@ -1186,10 +1186,13 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_devices(),
             on_success=self._populate_device_combo,
             on_error=lambda e: _logger.debug("device_enum_failed", error=str(e)),
+            parent=self,
+            event="frida_enumerate_devices",
+            logger=_logger,
         )
 
     def _populate_device_combo(self, result: object) -> None:
@@ -1242,10 +1245,16 @@ class FridaPanel(AnalysisPanelBase):
             spawn_args = args_str.strip().split()
 
         self._spawn_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.spawn(Path(path_str.strip()), spawn_args),
             on_success=lambda pid: self._on_spawn_success(int(pid) if isinstance(pid, (int, float)) else 0),
             on_error=self._on_spawn_error,
+            parent=self,
+            event="frida_spawn",
+            logger=_logger,
+            level="info",
+            target_path=path_str.strip(),
+            spawn_args=spawn_args,
         )
 
     def _on_spawn_success(self, pid: int) -> None:
@@ -1279,10 +1288,14 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         self._resume_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.resume(),
             on_success=lambda _: self._on_resume_success(),
             on_error=self._on_resume_error,
+            parent=self,
+            event="frida_resume",
+            logger=_logger,
+            level="info",
         )
 
     def _on_resume_success(self) -> None:
@@ -1314,12 +1327,18 @@ class FridaPanel(AnalysisPanelBase):
         if not val_accepted:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.intercept_return(target.strip(), ret_val),
             on_success=lambda _: self._console.appendPlainText(
                 f"[+] Intercept return installed for {target.strip()} -> {ret_val}",
             ),
             on_error=lambda e: self._console.appendPlainText(f"[-] Intercept return failed: {e}"),
+            parent=self,
+            event="frida_intercept_return",
+            logger=_logger,
+            level="info",
+            target=target.strip(),
+            return_value=ret_val,
         )
 
     def _on_replace_function(self) -> None:
@@ -1340,10 +1359,16 @@ class FridaPanel(AnalysisPanelBase):
         if not code_accepted or not code.strip():
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.replace_function(target.strip(), code.strip()),
             on_success=lambda _: self._console.appendPlainText(f"[+] Function replaced: {target.strip()}"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Replace function failed: {e}"),
+            parent=self,
+            event="frida_replace_function",
+            logger=_logger,
+            level="info",
+            target=target.strip(),
+            replacement_size=len(code.strip()),
         )
 
     def _on_refresh_hooks(self) -> None:
@@ -1352,10 +1377,13 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         self._refresh_hooks_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_hooks(),
             on_success=self._populate_hooks_from_bridge,
             on_error=self._on_refresh_hooks_error,
+            parent=self,
+            event="frida_get_hooks",
+            logger=_logger,
         )
 
     def _populate_hooks_from_bridge(self, result: object) -> None:
@@ -1469,10 +1497,13 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         self._refresh_modules_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_modules(),
             on_success=self._populate_modules_table,
             on_error=self._on_modules_error,
+            parent=self,
+            event="frida_enumerate_modules",
+            logger=_logger,
         )
 
     def _populate_modules_table(self, result: object) -> None:
@@ -1514,10 +1545,14 @@ class FridaPanel(AnalysisPanelBase):
         module_name = self._module_combo.currentText()
         if not module_name:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_exports(module_name),
             on_success=self._populate_exports_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] Exports failed: {e}"),
+            parent=self,
+            event="frida_enumerate_exports",
+            logger=_logger,
+            module=module_name,
         )
 
     def _populate_exports_table(self, result: object) -> None:
@@ -1546,10 +1581,14 @@ class FridaPanel(AnalysisPanelBase):
         module_name = self._module_combo.currentText()
         if not module_name:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_imports(module_name),
             on_success=self._populate_imports_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] Imports failed: {e}"),
+            parent=self,
+            event="frida_enumerate_imports",
+            logger=_logger,
+            module=module_name,
         )
 
     def _populate_imports_table(self, result: object) -> None:
@@ -1719,10 +1758,15 @@ class FridaPanel(AnalysisPanelBase):
             return
         size = self._mem_read_size.value()
         captured_addr = addr
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.read_memory(addr, size),
             on_success=lambda r: self._on_read_memory_success(captured_addr, r),
             on_error=lambda e: self._console.appendPlainText(f"[-] Read failed: {e}"),
+            parent=self,
+            event="frida_read_memory",
+            logger=_logger,
+            address=hex(addr),
+            size=size,
         )
 
     def _on_read_memory_success(self, base_addr: int, result: object) -> None:
@@ -1758,10 +1802,16 @@ class FridaPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.write_memory(addr, data),
             on_success=lambda _: self._console.appendPlainText(f"[+] Wrote {len(data)} bytes to 0x{addr:X}"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Write failed: {e}"),
+            parent=self,
+            event="frida_write_memory",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            size=len(data),
         )
 
     def _on_allocate_memory(self) -> None:
@@ -1769,10 +1819,15 @@ class FridaPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         size = self._mem_alloc_size.value()
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.allocate_memory(size),
             on_success=lambda r: self._mem_alloc_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
             on_error=lambda e: self._console.appendPlainText(f"[-] Allocate failed: {e}"),
+            parent=self,
+            event="frida_allocate_memory",
+            logger=_logger,
+            level="info",
+            size=size,
         )
 
     def _on_scan_memory(self) -> None:
@@ -1793,10 +1848,14 @@ class FridaPanel(AnalysisPanelBase):
             )
             return
         self._mem_scan_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.scan_memory(pattern_bytes),
             on_success=self._populate_scan_table,
             on_error=self._on_scan_error,
+            parent=self,
+            event="frida_scan_memory",
+            logger=_logger,
+            pattern_length=len(pattern_bytes),
         )
 
     def _populate_scan_table(self, result: object) -> None:
@@ -1832,10 +1891,14 @@ class FridaPanel(AnalysisPanelBase):
             return
         protection = self._mem_prot_combo.currentText()
         self._mem_regions_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_memory_regions(protection),
             on_success=self._populate_regions_table,
             on_error=self._on_regions_error,
+            parent=self,
+            event="frida_get_memory_regions",
+            logger=_logger,
+            protection_filter=protection,
         )
 
     def _populate_regions_table(self, result: object) -> None:
@@ -1882,10 +1945,17 @@ class FridaPanel(AnalysisPanelBase):
             return
         size = self._mem_prot_size.value()
         protection = self._mem_prot_set_combo.currentText()
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.protect_memory(addr, size, protection),
             on_success=lambda r: self._mem_prot_result.setText("OK" if r else "Failed"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Set protection failed: {e}"),
+            parent=self,
+            event="frida_protect_memory",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            size=size,
+            protection=protection,
         )
 
     @staticmethod
@@ -1993,10 +2063,14 @@ class FridaPanel(AnalysisPanelBase):
         module_name = self._sym_module_input.text().strip()
         if not module_name:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.find_base_address(module_name),
             on_success=lambda r: self._sym_base_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
             on_error=lambda e: self._console.appendPlainText(f"[-] Find base failed: {e}"),
+            parent=self,
+            event="frida_find_base_address",
+            logger=_logger,
+            module=module_name,
         )
 
     def _on_resolve_symbol(self) -> None:
@@ -2007,10 +2081,14 @@ class FridaPanel(AnalysisPanelBase):
         if addr is None:
             self._console.appendPlainText("[-] Invalid address")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.resolve_symbol(addr),
             on_success=self._on_symbol_resolved,
             on_error=lambda e: self._console.appendPlainText(f"[-] Resolve failed: {e}"),
+            parent=self,
+            event="frida_resolve_symbol",
+            logger=_logger,
+            address=hex(addr),
         )
 
     def _on_symbol_resolved(self, result: object) -> None:
@@ -2031,10 +2109,14 @@ class FridaPanel(AnalysisPanelBase):
         name = self._sym_func_input.text().strip()
         if not name:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.find_functions_named(name),
             on_success=self._populate_sym_results_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] Find functions failed: {e}"),
+            parent=self,
+            event="frida_find_functions_named",
+            logger=_logger,
+            function_name=name,
         )
 
     def _populate_sym_results_table(self, result: object) -> None:
@@ -2066,10 +2148,14 @@ class FridaPanel(AnalysisPanelBase):
         query = self._sym_api_input.text().strip()
         if not query:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.resolve_api(query),
             on_success=self._populate_api_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] API resolve failed: {e}"),
+            parent=self,
+            event="frida_resolve_api",
+            logger=_logger,
+            query=query,
         )
 
     def _populate_api_table(self, result: object) -> None:
@@ -2223,40 +2309,59 @@ class FridaPanel(AnalysisPanelBase):
             arg_types = [t.strip() for t in arg_types_text.split(",")]
         cc = self._adv_cc.currentText()
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.call_function(addr, args, return_type=ret_type, arg_types=arg_types, calling_convention=cc),
             on_success=lambda r: self._adv_call_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
             on_error=lambda e: self._console.appendPlainText(f"[-] Call failed: {e}"),
+            parent=self,
+            event="frida_call_function",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            return_type=ret_type,
+            arg_count=len(args) if args is not None else 0,
+            calling_convention=cc,
         )
 
     def _on_enable_child_gating(self) -> None:
         """Enable child process gating."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enable_child_gating(),
             on_success=lambda _: self._console.appendPlainText("[+] Child gating enabled"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Enable child gating failed: {e}"),
+            parent=self,
+            event="frida_enable_child_gating",
+            logger=_logger,
+            level="info",
         )
 
     def _on_disable_child_gating(self) -> None:
         """Disable child process gating."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.disable_child_gating(),
             on_success=lambda _: self._console.appendPlainText("[+] Child gating disabled"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Disable child gating failed: {e}"),
+            parent=self,
+            event="frida_disable_child_gating",
+            logger=_logger,
+            level="info",
         )
 
     def _on_refresh_children(self) -> None:
         """Refresh the pending children table."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_pending_children(),
             on_success=self._populate_children_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] Refresh children failed: {e}"),
+            parent=self,
+            event="frida_get_pending_children",
+            logger=_logger,
         )
 
     def _populate_children_table(self, result: object) -> None:
@@ -2294,30 +2399,42 @@ class FridaPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("frida_resume_child_pid_parse_failed", input_text=pid_item.text())
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.resume_child(pid),
             on_success=lambda _: self._console.appendPlainText(f"[+] Child {pid} resumed"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Resume child failed: {e}"),
+            parent=self,
+            event="frida_resume_child",
+            logger=_logger,
+            level="info",
+            pid=pid,
         )
 
     def _on_enable_crash_reporting(self) -> None:
         """Enable crash event monitoring."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enable_crash_reporting(),
             on_success=lambda _: self._console.appendPlainText("[+] Crash reporting enabled"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Enable crash reporting failed: {e}"),
+            parent=self,
+            event="frida_enable_crash_reporting",
+            logger=_logger,
+            level="info",
         )
 
     def _on_refresh_crashes(self) -> None:
         """Refresh the crashes table."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_crashes(),
             on_success=self._populate_crashes_table,
             on_error=lambda e: self._console.appendPlainText(f"[-] Refresh crashes failed: {e}"),
+            parent=self,
+            event="frida_get_crashes",
+            logger=_logger,
         )
 
     def _populate_crashes_table(self, result: object) -> None:

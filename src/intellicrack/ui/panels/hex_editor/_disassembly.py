@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor._base import DEFAULT_DISASM_COUNT, MAX_INSN_BYTES
 
 
@@ -148,7 +148,7 @@ class DisassemblyMixin:
     def _on_disassemble(self) -> None:
         """Disassemble bytes at the current cursor offset and populate the table.
 
-        Routes the request through :meth:`HexEditorBridge.disassemble` via :func:`run_bridge_coroutine_async` so the operation runs on the
+        Routes the request through :meth:`HexEditorBridge.disassemble` via :func:`run_bridge_coroutine_logged` so the operation runs on the
         persistent bridge event loop and the Qt main thread stays responsive. Results and errors are delivered back via signal callbacks.
         """
         if self.document is None or self._disasm_table is None:
@@ -214,11 +214,17 @@ class DisassemblyMixin:
         self._disasm_in_flight = True
         self._disasm_last_dispatched_offset = cursor_offset
         parent_obj = self if isinstance(self, QWidget) else None
-        run_bridge_coroutine_async(
+        run_bridge_coroutine_logged(
             bridge.disassemble(cursor_offset, count, arch_str, mode_str),
             on_success=self._on_disassemble_success,
             on_error=self._on_disassemble_error,
             parent=parent_obj,
+            event="hex_editor_disassemble",
+            logger=_logger,
+            offset=cursor_offset,
+            count=count,
+            arch=arch_str,
+            mode=mode_str,
         )
 
     def _on_disassemble_success(self, result: object) -> None:
@@ -350,6 +356,6 @@ class DisassemblyMixin:
         try:
             offset = int(addr_text, 16)
         except ValueError:
-            pass
+            _logger.warning("hex_editor_disasm_row_invalid_address", input_text=addr_text)
         else:
             self.goto_offset(offset)

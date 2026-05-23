@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._hex_format import format_hex_dump
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
@@ -973,10 +973,15 @@ class X64DbgPanel(AnalysisPanelBase):
             return False
 
         self._load_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.load(file_path),
             on_success=lambda _: self._on_load_success(file_path),
             on_error=lambda e: self._on_load_error(file_path, e),
+            parent=self,
+            event="x64dbg_load",
+            logger=_logger,
+            level="info",
+            file_path=str(file_path),
         )
         return True
 
@@ -1081,10 +1086,15 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._attach_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.attach(pid),
             on_success=lambda _: self._on_attach_success(pid),
             on_error=self._on_attach_error,
+            parent=self,
+            event="x64dbg_attach",
+            logger=_logger,
+            level="info",
+            pid=pid,
         )
 
     def _on_attach_success(self, pid: int) -> None:
@@ -1117,10 +1127,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._run_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.run(),
             on_success=lambda _: self._on_run_success(),
             on_error=self._on_run_error,
+            parent=self,
+            event="x64dbg_run",
+            logger=_logger,
+            level="info",
         )
 
     def _on_run_success(self) -> None:
@@ -1145,10 +1159,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._pause_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.pause(),
             on_success=lambda _: self._on_pause_success(),
             on_error=self._on_pause_error,
+            parent=self,
+            event="x64dbg_pause",
+            logger=_logger,
+            level="info",
         )
 
     def _on_pause_success(self) -> None:
@@ -1174,10 +1192,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._stop_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.stop(),
             on_success=lambda _: self._on_stop_success(),
             on_error=self._on_stop_error,
+            parent=self,
+            event="x64dbg_stop",
+            logger=_logger,
+            level="info",
         )
 
     def _on_stop_success(self) -> None:
@@ -1202,10 +1224,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._step_into_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.step_into(),
             on_success=lambda r: self._on_step_success("into", r),
             on_error=lambda e: self._on_step_error("into", e),
+            parent=self,
+            event="x64dbg_step_into",
+            logger=_logger,
+            level="info",
         )
 
     def _on_step_over(self) -> None:
@@ -1214,10 +1240,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._step_over_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.step_over(),
             on_success=lambda r: self._on_step_success("over", r),
             on_error=lambda e: self._on_step_error("over", e),
+            parent=self,
+            event="x64dbg_step_over",
+            logger=_logger,
+            level="info",
         )
 
     def _on_step_out(self) -> None:
@@ -1226,10 +1256,14 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._step_out_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.step_out(),
             on_success=lambda r: self._on_step_success("out", r),
             on_error=lambda e: self._on_step_error("out", e),
+            parent=self,
+            event="x64dbg_step_out",
+            logger=_logger,
+            level="info",
         )
 
     def _on_step_success(self, direction: str, result: object) -> None:
@@ -1300,10 +1334,16 @@ class X64DbgPanel(AnalysisPanelBase):
             bp_type_text if bp_type_text in {"software", "hardware", "memory"} else "software",
         )
         self._add_bp_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_breakpoint(address, bp_type=bp_type),
             on_success=lambda r: self._on_bp_added(address, r),
             on_error=self._on_bp_add_error,
+            parent=self,
+            event="x64dbg_set_breakpoint",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            bp_type=bp_type,
         )
 
     def _on_bp_added(self, address: int, result: object) -> None:
@@ -1348,10 +1388,15 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._remove_bp_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.remove_breakpoint(address),
             on_success=lambda _: self._on_bp_removed(address),
             on_error=self._on_bp_remove_error,
+            parent=self,
+            event="x64dbg_remove_breakpoint",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_bp_removed(self, address: int) -> None:
@@ -1392,10 +1437,15 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._enable_bp_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enable_breakpoint(address),
             on_success=lambda _: self._on_bp_toggle_done("enabled", address),
             on_error=lambda e: self._on_bp_toggle_error("enable", e),
+            parent=self,
+            event="x64dbg_enable_breakpoint",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_disable_breakpoint(self) -> None:
@@ -1415,10 +1465,15 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._disable_bp_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.disable_breakpoint(address),
             on_success=lambda _: self._on_bp_toggle_done("disabled", address),
             on_error=lambda e: self._on_bp_toggle_error("disable", e),
+            parent=self,
+            event="x64dbg_disable_breakpoint",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_bp_toggle_done(self, action: str, address: int) -> None:
@@ -1461,10 +1516,14 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._mod_detail_table.setHorizontalHeaderLabels(_SECTION_DETAIL_COLUMNS)
         self._mod_sections_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_module_sections(module_name),
             on_success=self._apply_module_sections,
             on_error=lambda e: self._on_mod_detail_error("sections", e),
+            parent=self,
+            event="x64dbg_get_module_sections",
+            logger=_logger,
+            module=module_name,
         )
 
     def _apply_module_sections(self, result: object) -> None:
@@ -1501,10 +1560,14 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._mod_detail_table.setHorizontalHeaderLabels(_EXPORT_DETAIL_COLUMNS)
         self._mod_exports_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_module_exports(module_name),
             on_success=self._apply_module_exports,
             on_error=lambda e: self._on_mod_detail_error("exports", e),
+            parent=self,
+            event="x64dbg_get_module_exports",
+            logger=_logger,
+            module=module_name,
         )
 
     def _apply_module_exports(self, result: object) -> None:
@@ -1561,10 +1624,16 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._reg_table.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_register(reg_name, value),
             on_success=lambda _: self._on_reg_set_success(reg_name, value),
             on_error=lambda e: self._on_reg_set_error(reg_name, e),
+            parent=self,
+            event="x64dbg_set_register",
+            logger=_logger,
+            level="info",
+            register=reg_name,
+            value=hex(value),
         )
 
     def _on_reg_set_success(self, reg_name: str, value: int) -> None:
@@ -1614,10 +1683,15 @@ class X64DbgPanel(AnalysisPanelBase):
             size = 256
 
         self._mem_read_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.read_memory(address, size),
             on_success=lambda r: self._on_mem_read_success(address, r),
             on_error=self._on_mem_read_error,
+            parent=self,
+            event="x64dbg_read_memory",
+            logger=_logger,
+            address=hex(address),
+            size=size,
         )
 
     def _on_mem_read_success(self, address: int, result: object) -> None:
@@ -1654,10 +1728,15 @@ class X64DbgPanel(AnalysisPanelBase):
         self._console_input.clear()
         self._console_output.appendPlainText(f"> {cmd}")
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.run_command(cmd),
             on_success=self._on_command_result,
             on_error=self._on_command_error,
+            parent=self,
+            event="x64dbg_run_command",
+            logger=_logger,
+            level="info",
+            command=cmd,
         )
 
     def _on_command_result(self, result: object) -> None:
@@ -1693,10 +1772,13 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_registers(),
             on_success=self._apply_registers,
             on_error=lambda _: _logger.warning("x64dbg_refresh_registers_failed"),
+            parent=self,
+            event="x64dbg_get_registers",
+            logger=_logger,
         )
 
     def _apply_registers(self, result: object) -> None:
@@ -1740,10 +1822,15 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.disassemble_at(address, 30),
             on_success=self._apply_disassembly,
             on_error=lambda _: _logger.warning("x64dbg_refresh_disasm_failed", address=hex(address)),
+            parent=self,
+            event="x64dbg_disassemble_at",
+            logger=_logger,
+            address=hex(address),
+            count=30,
         )
 
     def _apply_disassembly(self, result: object) -> None:
@@ -1772,10 +1859,13 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_breakpoints(),
             on_success=self._apply_breakpoints,
             on_error=lambda _: _logger.warning("x64dbg_refresh_breakpoints_failed"),
+            parent=self,
+            event="x64dbg_get_breakpoints",
+            logger=_logger,
         )
 
     def _apply_breakpoints(self, result: object) -> None:
@@ -1801,10 +1891,13 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_stack_trace(),
             on_success=self._apply_stack,
             on_error=lambda _: _logger.warning("x64dbg_refresh_stack_failed"),
+            parent=self,
+            event="x64dbg_get_stack_trace",
+            logger=_logger,
         )
 
     def _apply_stack(self, result: object) -> None:
@@ -1835,10 +1928,13 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_modules(),
             on_success=self._apply_modules,
             on_error=lambda _: _logger.warning("x64dbg_refresh_modules_failed"),
+            parent=self,
+            event="x64dbg_get_modules",
+            logger=_logger,
         )
 
     def _apply_modules(self, result: object) -> None:
@@ -1863,10 +1959,13 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_threads(),
             on_success=self._apply_threads,
             on_error=lambda _: _logger.warning("x64dbg_refresh_threads_failed"),
+            parent=self,
+            event="x64dbg_get_threads",
+            logger=_logger,
         )
 
     def _apply_threads(self, result: object) -> None:
@@ -1903,10 +2002,14 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         self._detach_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.detach(),
             on_success=lambda _: self._on_detach_success(),
             on_error=lambda e: self._on_generic_error("Detach", e, self._detach_btn),
+            parent=self,
+            event="x64dbg_detach",
+            logger=_logger,
+            level="info",
         )
 
     def _on_detach_success(self) -> None:
@@ -1928,10 +2031,15 @@ class X64DbgPanel(AnalysisPanelBase):
         if not file_path:
             return
         self._spawn_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.spawn(Path(file_path)),
             on_success=lambda r: self._on_spawn_success(file_path, r),
             on_error=lambda e: self._on_generic_error("Spawn", e, self._spawn_btn),
+            parent=self,
+            event="x64dbg_spawn",
+            logger=_logger,
+            level="info",
+            file_path=file_path,
         )
 
     def _on_spawn_success(self, path: str, result: object) -> None:
@@ -1964,30 +2072,43 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.run_to(address),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Running to {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Run To", e),
+            parent=self,
+            event="x64dbg_run_to",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_til_ret(self) -> None:
         """Execute until the current function returns."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.execute_til_return(),
             on_success=lambda _: self._console_output.appendPlainText("[+] Execute til return"),
             on_error=lambda e: self._on_generic_error("Til Return", e),
+            parent=self,
+            event="x64dbg_execute_til_return",
+            logger=_logger,
+            level="info",
         )
 
     def _on_skip(self) -> None:
         """Skip the current instruction."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.skip_instruction(),
             on_success=self._on_skip_success,
             on_error=lambda e: self._on_generic_error("Skip", e),
+            parent=self,
+            event="x64dbg_skip_instruction",
+            logger=_logger,
+            level="info",
         )
 
     def _on_skip_success(self, result: object) -> None:
@@ -2020,10 +2141,15 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_ip(address),
             on_success=lambda _: self._on_set_ip_success(address),
             on_error=lambda e: self._on_generic_error("Set IP", e),
+            parent=self,
+            event="x64dbg_set_ip",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_set_ip_success(self, address: int) -> None:
@@ -2039,20 +2165,28 @@ class X64DbgPanel(AnalysisPanelBase):
         """Save the x64dbg database."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.save_database(),
             on_success=lambda _: self._console_output.appendPlainText("[+] Database saved"),
             on_error=lambda e: self._on_generic_error("Save DB", e),
+            parent=self,
+            event="x64dbg_save_database",
+            logger=_logger,
+            level="info",
         )
 
     def _on_load_db(self) -> None:
         """Load the x64dbg database."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.load_database(),
             on_success=lambda _: self._console_output.appendPlainText("[+] Database loaded"),
             on_error=lambda e: self._on_generic_error("Load DB", e),
+            parent=self,
+            event="x64dbg_load_database",
+            logger=_logger,
+            level="info",
         )
 
     def _on_add_watchpoint(self) -> None:
@@ -2080,10 +2214,17 @@ class X64DbgPanel(AnalysisPanelBase):
             wp_type_text if wp_type_text in {"read", "write", "execute"} else "write",
         )
         self._add_wp_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_watchpoint(address, size, wp_type),
             on_success=lambda r: self._on_wp_added(address, r),
             on_error=lambda e: self._on_generic_error("Add WP", e, self._add_wp_btn),
+            parent=self,
+            event="x64dbg_set_watchpoint",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            size=size,
+            wp_type=wp_type,
         )
 
     def _on_wp_added(self, address: int, result: object) -> None:
@@ -2117,10 +2258,15 @@ class X64DbgPanel(AnalysisPanelBase):
             )
             self._remove_wp_btn.setEnabled(True)
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.remove_watchpoint(wp_id),
             on_success=lambda _: self._on_wp_removed(),
             on_error=lambda e: self._on_generic_error("Remove WP", e, self._remove_wp_btn),
+            parent=self,
+            event="x64dbg_remove_watchpoint",
+            logger=_logger,
+            level="info",
+            wp_id=wp_id,
         )
 
     def _on_wp_removed(self) -> None:
@@ -2139,16 +2285,24 @@ class X64DbgPanel(AnalysisPanelBase):
         mode = self._search_mode_combo.currentText()
         self._search_btn.setEnabled(False)
         if mode == "YARA":
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.yara_scan(rule_text=pattern),
                 on_success=self._on_search_complete,
                 on_error=lambda e: self._on_generic_error("Search", e, self._search_btn),
+                parent=self,
+                event="x64dbg_yara_scan",
+                logger=_logger,
+                rule_length=len(pattern),
             )
         else:
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.find_pattern(pattern),
                 on_success=self._on_search_complete,
                 on_error=lambda e: self._on_generic_error("Search", e, self._search_btn),
+                parent=self,
+                event="x64dbg_find_pattern",
+                logger=_logger,
+                pattern_length=len(pattern),
             )
 
     def _on_search_complete(self, result: object) -> None:
@@ -2177,20 +2331,29 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         condition = self._trace_cond_input.text().strip() or None
         log_text = self._trace_log_input.text().strip() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.trace_start(condition=condition, log_text=log_text),
             on_success=lambda _: self._trace_output.appendPlainText("[+] Trace started"),
             on_error=lambda e: self._on_generic_error("Trace Start", e),
+            parent=self,
+            event="x64dbg_trace_start",
+            logger=_logger,
+            level="info",
+            condition=condition,
         )
 
     def _on_trace_stop(self) -> None:
         """Stop trace recording."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.trace_stop(),
             on_success=lambda _: self._trace_output.appendPlainText("[+] Trace stopped"),
             on_error=lambda e: self._on_generic_error("Trace Stop", e),
+            parent=self,
+            event="x64dbg_trace_stop",
+            logger=_logger,
+            level="info",
         )
 
     def _on_trace_into(self) -> None:
@@ -2198,10 +2361,15 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         condition = self._trace_cond_input.text().strip() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.trace_into(condition=condition),
             on_success=lambda _: self._trace_output.appendPlainText("[+] Trace into started"),
             on_error=lambda e: self._on_generic_error("Trace Into", e),
+            parent=self,
+            event="x64dbg_trace_into",
+            logger=_logger,
+            level="info",
+            condition=condition,
         )
 
     def _on_trace_over(self) -> None:
@@ -2209,10 +2377,15 @@ class X64DbgPanel(AnalysisPanelBase):
         if self._bridge is None:
             return
         condition = self._trace_cond_input.text().strip() or None
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.trace_over(condition=condition),
             on_success=lambda _: self._trace_output.appendPlainText("[+] Trace over started"),
             on_error=lambda e: self._on_generic_error("Trace Over", e),
+            parent=self,
+            event="x64dbg_trace_over",
+            logger=_logger,
+            level="info",
+            condition=condition,
         )
 
     def _on_set_label(self) -> None:
@@ -2233,10 +2406,16 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_label(address, label_text),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Label set at {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Set Label", e),
+            parent=self,
+            event="x64dbg_set_label",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            label=label_text,
         )
 
     def _on_set_comment_btn(self) -> None:
@@ -2257,20 +2436,29 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_comment(address, comment_text),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Comment set at {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Set Comment", e),
+            parent=self,
+            event="x64dbg_set_comment",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            comment_length=len(comment_text),
         )
 
     def _on_refresh_memmap(self) -> None:
         """Refresh the memory map table."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_memory_regions(),
             on_success=self._apply_memmap,
             on_error=lambda _: _logger.warning("x64dbg_refresh_memmap_failed"),
+            parent=self,
+            event="x64dbg_get_memory_regions",
+            logger=_logger,
         )
 
     def _apply_memmap(self, result: object) -> None:
@@ -2313,10 +2501,17 @@ class X64DbgPanel(AnalysisPanelBase):
         path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
         if not path:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.dump_memory_to_file(base, size, path),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Dumped {size} bytes to {path}"),
             on_error=lambda e: self._on_generic_error("Dump Region", e),
+            parent=self,
+            event="x64dbg_dump_memory_region",
+            logger=_logger,
+            level="info",
+            address=hex(base),
+            size=size,
+            path=path,
         )
 
     def _on_alloc_memory(self) -> None:
@@ -2332,10 +2527,16 @@ class X64DbgPanel(AnalysisPanelBase):
             _logger.warning("x64dbg_alloc_memory_invalid_size", input_text=size_text)
             return
         prot = self._alloc_prot_combo.currentText()
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.allocate_memory(size, prot),
             on_success=lambda r: self._console_output.appendPlainText(f"[+] Allocated at {hex(r) if isinstance(r, int) else r}"),
             on_error=lambda e: self._on_generic_error("Alloc", e),
+            parent=self,
+            event="x64dbg_allocate_memory",
+            logger=_logger,
+            level="info",
+            size=size,
+            protection=prot,
         )
 
     def _on_free_memory(self) -> None:
@@ -2355,20 +2556,28 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.free_memory(address),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Freed {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Free", e),
+            parent=self,
+            event="x64dbg_free_memory",
+            logger=_logger,
+            level="info",
+            address=hex(address),
         )
 
     def _on_refresh_procinfo(self) -> None:
         """Refresh process information."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_process_info(),
             on_success=self._apply_procinfo,
             on_error=lambda _: _logger.warning("x64dbg_refresh_procinfo_failed"),
+            parent=self,
+            event="x64dbg_get_process_info",
+            logger=_logger,
         )
 
     def _apply_procinfo(self, result: object) -> None:
@@ -2395,10 +2604,16 @@ class X64DbgPanel(AnalysisPanelBase):
         if not module or not function:
             self._console_output.appendPlainText("[!] Enter module and function name")
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_breakpoint_on_api(module, function),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] API BP set on {module}.{function}"),
             on_error=lambda e: self._on_generic_error("API BP", e),
+            parent=self,
+            event="x64dbg_set_breakpoint_on_api",
+            logger=_logger,
+            level="info",
+            module=module,
+            function=function,
         )
 
     def _on_dump_memory(self) -> None:
@@ -2422,10 +2637,17 @@ class X64DbgPanel(AnalysisPanelBase):
         path, _ = QFileDialog.getSaveFileName(self, "Save Memory Dump", "", "Binary Files (*.bin);;All Files (*)")
         if not path:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.dump_memory_to_file(address, size, path),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Dumped to {path}"),
             on_error=lambda e: self._on_generic_error("Dump", e),
+            parent=self,
+            event="x64dbg_dump_memory_to_file",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            size=size,
+            path=path,
         )
 
     def _on_write_memory(self) -> None:
@@ -2449,10 +2671,16 @@ class X64DbgPanel(AnalysisPanelBase):
                 data_text=data_text,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.write_memory(address, data),
             on_success=lambda r: self._console_output.appendPlainText(f"[+] Wrote {r} bytes at {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Write", e),
+            parent=self,
+            event="x64dbg_write_memory",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            size=len(data),
         )
 
     def _on_assemble(self) -> None:
@@ -2473,10 +2701,16 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.patch_instruction(address, instr),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Assembled '{instr}' at {hex(address)}"),
             on_error=lambda e: self._on_generic_error("Assemble", e),
+            parent=self,
+            event="x64dbg_patch_instruction",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            instruction=instr,
         )
 
     def _on_nop_range(self) -> None:
@@ -2497,10 +2731,16 @@ class X64DbgPanel(AnalysisPanelBase):
                 size_text=size_text,
             )
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.nop_range(address, size),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] NOPed {size} bytes at {hex(address)}"),
             on_error=lambda e: self._on_generic_error("NOP", e),
+            parent=self,
+            event="x64dbg_nop_range",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            size=size,
         )
 
     def _on_suspend_thread(self) -> None:
@@ -2518,10 +2758,15 @@ class X64DbgPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("x64dbg_suspend_thread_invalid_tid", input_text=tid_item.text())
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.suspend_thread(tid),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Thread {tid} suspended"),
             on_error=lambda e: self._on_generic_error("Suspend Thread", e),
+            parent=self,
+            event="x64dbg_suspend_thread",
+            logger=_logger,
+            level="info",
+            tid=tid,
         )
 
     def _on_resume_thread(self) -> None:
@@ -2539,10 +2784,15 @@ class X64DbgPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("x64dbg_resume_thread_invalid_tid", input_text=tid_item.text())
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.resume_thread(tid),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Thread {tid} resumed"),
             on_error=lambda e: self._on_generic_error("Resume Thread", e),
+            parent=self,
+            event="x64dbg_resume_thread",
+            logger=_logger,
+            level="info",
+            tid=tid,
         )
 
     def _on_switch_thread(self) -> None:
@@ -2560,10 +2810,15 @@ class X64DbgPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("x64dbg_switch_thread_invalid_tid", input_text=tid_item.text())
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.switch_thread(tid),
             on_success=lambda _: (self._console_output.appendPlainText(f"[+] Switched to thread {tid}"), self._refresh_state())[0],
             on_error=lambda e: self._on_generic_error("Switch Thread", e),
+            parent=self,
+            event="x64dbg_switch_thread",
+            logger=_logger,
+            level="info",
+            tid=tid,
         )
 
     def _on_eval_expression(self) -> None:
@@ -2573,10 +2828,14 @@ class X64DbgPanel(AnalysisPanelBase):
         expr = self._eval_input.text().strip()
         if not expr:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.evaluate_expression(expr),
             on_success=lambda r: self._console_output.appendPlainText(f"[+] {expr} = {hex(r) if isinstance(r, int) else r}"),
             on_error=lambda e: self._on_generic_error("Eval", e),
+            parent=self,
+            event="x64dbg_evaluate_expression",
+            logger=_logger,
+            expression=expr,
         )
 
     def _on_set_exception_config(self) -> None:
@@ -2597,20 +2856,29 @@ class X64DbgPanel(AnalysisPanelBase):
             )
             return
         handling = self._exc_handling_combo.currentText()
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.set_exception_config(code, handling),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Exception {hex(code)} -> {handling}"),
             on_error=lambda e: self._on_generic_error("Exception Config", e),
+            parent=self,
+            event="x64dbg_set_exception_config",
+            logger=_logger,
+            level="info",
+            exception_code=hex(code),
+            handling=handling,
         )
 
     def _refresh_watchpoints(self) -> None:
         """Refresh the watchpoints table from bridge."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_watchpoints(),
             on_success=self._apply_watchpoints,
             on_error=lambda _: _logger.warning("x64dbg_refresh_watchpoints_failed"),
+            parent=self,
+            event="x64dbg_get_watchpoints",
+            logger=_logger,
         )
 
     def _apply_watchpoints(self, result: object) -> None:
@@ -2636,8 +2904,11 @@ class X64DbgPanel(AnalysisPanelBase):
         """Refresh the memory map table from bridge."""
         if self._bridge is None:
             return
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.get_memory_regions(),
             on_success=self._apply_memmap,
             on_error=lambda _: _logger.warning("x64dbg_refresh_memmap_failed"),
+            parent=self,
+            event="x64dbg_get_memory_regions",
+            logger=_logger,
         )

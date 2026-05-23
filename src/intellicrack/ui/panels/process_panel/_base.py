@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.process_panel._memory_tab import MemoryTab
 from intellicrack.ui.panels.process_panel._modules_tab import ModulesTab
@@ -263,7 +263,15 @@ class ProcessPanel(AnalysisPanelBase):
             arch = str(result) if result is not None else "Unknown"
             self._status_arch.setText(f"Arch: {arch}")
 
-        run_bridge_coroutine_async(_detect(), _on_arch, None, self)
+        run_bridge_coroutine_logged(
+            _detect(),
+            on_success=_on_arch,
+            on_error=None,
+            parent=self,
+            event="process_detect_architecture",
+            logger=_logger,
+            pid=pid,
+        )
 
     def _refresh_privilege_label(self) -> None:
         """Fetch token privileges from the bridge and update the privilege status label."""
@@ -292,7 +300,15 @@ class ProcessPanel(AnalysisPanelBase):
             )
             self._status_priv.setText(f"Privilege: {'Debug' if has_debug else 'Standard'}")
 
-        run_bridge_coroutine_async(_fetch_privs(), _on_privs, None, self)
+        run_bridge_coroutine_logged(
+            _fetch_privs(),
+            on_success=_on_privs,
+            on_error=None,
+            parent=self,
+            event="process_get_token_privileges",
+            logger=_logger,
+            pid=pid,
+        )
 
     def _on_privileges_changed(self) -> None:
         """Handle bridge notification that token privileges have changed."""
