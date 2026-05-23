@@ -31,6 +31,7 @@ $tmpFile = [System.IO.Path]::GetTempFileName()
 try {
     if ($WorkDir) { Push-Location $WorkDir }
 
+    $toolStart = Get-Date
     if ($JsonDirect) {
         $actualCmd = $Command -replace '\{TMPFILE\}', $tmpFile
         Invoke-Expression $actualCmd 2>&1 | Out-Null
@@ -40,6 +41,9 @@ try {
         $captured = Invoke-Expression "$Command 2>&1"
         $captured | Out-File -FilePath $tmpFile -Encoding utf8
     }
+    $toolSeconds = [Math]::Round(((Get-Date) - $toolStart).TotalSeconds, 2)
+    $toolSecondsText = $toolSeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)
+    Write-Host "TOOL_ELAPSED_SECONDS=$toolSecondsText"
 
     if ($WorkDir) { Pop-Location }
 

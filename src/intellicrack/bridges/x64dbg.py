@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
+from intellicrack.bridges._parse_helpers import safe_int_from_str
 from intellicrack.bridges._pe_format import (
     PE32_OPTIONAL_HEADER_SIZE,
     PE32PLUS_OPTIONAL_HEADER_SIZE,
@@ -411,10 +412,7 @@ def _coerce_address(value: object) -> int | None:
         candidate = value.strip()
         if not candidate:
             return None
-        try:
-            return int(candidate, 0)
-        except ValueError:
-            return None
+        return safe_int_from_str(candidate, base=0, context="x64dbg_safe_int_or_none")
     return None
 
 
@@ -2496,10 +2494,8 @@ class X64DbgBridge(DebuggerBridge):
         if isinstance(raw, int):
             return raw
         if isinstance(raw, str):
-            try:
-                return int(raw, 0)
-            except ValueError:
-                return 0
+            parsed = safe_int_from_str(raw, base=0, context="x64dbg_coerce_address", default=0)
+            return 0 if parsed is None else parsed
         return 0
 
     def _resolve_step_waiters(self, address: int) -> None:
@@ -3242,9 +3238,8 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(raw_addr, int):
                 entry_addr = raw_addr
             elif isinstance(raw_addr, str):
-                try:
-                    entry_addr = int(raw_addr, 0)
-                except ValueError:
+                entry_addr = safe_int_from_str(raw_addr, base=0, context="x64dbg_verify_breakpoint_applied")
+                if entry_addr is None:
                     continue
             if entry_addr == address:
                 return
@@ -5031,10 +5026,7 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(rip_result, int):
                 ip_value = rip_result
             elif isinstance(rip_result, str):
-                try:
-                    ip_value = int(rip_result, 0)
-                except ValueError:
-                    ip_value = None
+                ip_value = safe_int_from_str(rip_result, base=0, context="x64dbg_wait_for_ip")
             if ip_value is not None:
                 last_ip = ip_value
                 if ip_value == target:
@@ -5080,9 +5072,8 @@ class X64DbgBridge(DebuggerBridge):
             raw_text = entry.get("text")
             addr_str = raw_addr if isinstance(raw_addr, str) else ""
             text = raw_text if isinstance(raw_text, str) else ""
-            try:
-                addr_val = int(addr_str, 0)
-            except ValueError:
+            addr_val = safe_int_from_str(addr_str, base=0, context="x64dbg_lookup_annotation_text")
+            if addr_val is None:
                 continue
             if addr_val == address:
                 return text

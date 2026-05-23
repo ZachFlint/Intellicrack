@@ -1957,7 +1957,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_run_to_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.run_to(address),
@@ -2008,7 +2013,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_set_ip_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.set_ip(address),
@@ -2056,7 +2066,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_add_watchpoint_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         size = int(size_text) if size_text else 4
         wp_type_text = self._wp_type_combo.currentText()
@@ -2094,6 +2109,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             wp_id = int(addr_item.data(Qt.ItemDataRole.UserRole) or 0)
         except (TypeError, ValueError):
+            self._invalid_input(
+                "x64dbg_remove_watchpoint_invalid_id",
+                input_text=str(addr_item.data(Qt.ItemDataRole.UserRole)),
+                console_msg=f"[!] Invalid watchpoint ID: {addr_item.data(Qt.ItemDataRole.UserRole)}",
+                logger=_logger,
+            )
             self._remove_wp_btn.setEnabled(True)
             return
         self._run_async(
@@ -2205,7 +2226,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_set_label_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.set_label(address, label_text),
@@ -2224,7 +2250,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_set_comment_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.set_comment(address, comment_text),
@@ -2317,7 +2348,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_free_memory_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.free_memory(address),
@@ -2404,7 +2440,14 @@ class X64DbgPanel(AnalysisPanelBase):
             address = int(addr_text, 0)
             data = bytes.fromhex(data_text.replace(" ", ""))
         except ValueError:
-            self._console_output.appendPlainText("[!] Invalid address or hex data")
+            self._invalid_input(
+                "x64dbg_write_memory_invalid_input",
+                input_text=f"{addr_text} | {data_text}",
+                console_msg="[!] Invalid address or hex data",
+                logger=_logger,
+                address_text=addr_text,
+                data_text=data_text,
+            )
             return
         self._run_async(
             self._bridge.write_memory(address, data),
@@ -2423,7 +2466,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             address = int(addr_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            self._invalid_input(
+                "x64dbg_assemble_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.patch_instruction(address, instr),
@@ -2541,7 +2589,12 @@ class X64DbgPanel(AnalysisPanelBase):
         try:
             code = int(code_text, 0)
         except ValueError:
-            self._console_output.appendPlainText(f"[!] Invalid exception code: {code_text}")
+            self._invalid_input(
+                "x64dbg_set_exception_config_invalid_code",
+                input_text=code_text,
+                console_msg=f"[!] Invalid exception code: {code_text}",
+                logger=_logger,
+            )
             return
         handling = self._exc_handling_combo.currentText()
         self._run_async(

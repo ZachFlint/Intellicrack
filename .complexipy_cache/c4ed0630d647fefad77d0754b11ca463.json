@@ -13273,6 +13273,54 @@
       "path": "src\\intellicrack\\providers\\google.py"
     },
     {
+      "complexity": 1,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_Cfgmgr32::__init__",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_locate_devnode",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "max_memory_bar_bytes",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_load_cfgmgr",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_read_descriptor_bytes",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "enumerate_pci_memory_bars",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_parse_mem_descriptor",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 18,
+      "file_name": "gpu_pci_resources.py",
+      "function_name": "_enumerate_bars_for_log_conf",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
       "complexity": 0,
       "file_name": "grok.py",
       "function_name": "GrokProvider::__init__",
@@ -16023,6 +16071,12 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_initial_discovery_error",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_model_selected_from_browse",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16107,6 +16161,12 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_tool_status",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_view_analysis",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16185,6 +16245,12 @@
     {
       "complexity": 0,
       "file_name": "app.py",
+      "function_name": "MainWindow::on_open_hxd",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "app.py",
       "function_name": "MainWindow::on_open_x64dbg",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16227,12 +16293,6 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_load_binary",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_browse_models",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16263,12 +16323,6 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_tool_status",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_tool_status_changed",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16276,6 +16330,12 @@
       "complexity": 1,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_user_message",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_prompt_provider_not_connected",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16329,12 +16389,6 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_setup_toolbar",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "app.py",
       "function_name": "MainWindow::_setup_view_menu",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16348,6 +16402,18 @@
       "complexity": 2,
       "file_name": "app.py",
       "function_name": "MainWindow::_build_sandbox_config",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_kickoff_initial_discovery",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_load_binary",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16425,6 +16491,12 @@
     {
       "complexity": 3,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_model_combo_text_committed",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_models_refresh_finished",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16485,6 +16557,12 @@
     {
       "complexity": 3,
       "file_name": "app.py",
+      "function_name": "MainWindow::_setup_toolbar",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "app.py",
       "function_name": "MainWindow::_wire_sandbox_monitor_widgets",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16492,12 +16570,6 @@
       "complexity": 4,
       "file_name": "app.py",
       "function_name": "MainWindow::_configure_orchestrator",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_provider_changed",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16563,13 +16635,7 @@
     {
       "complexity": 7,
       "file_name": "app.py",
-      "function_name": "MainWindow::_refresh_system_status",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "app.py",
-      "function_name": "MainWindow::on_open_hxd",
+      "function_name": "MainWindow::_on_open_hxd",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16611,6 +16677,12 @@
     {
       "complexity": 9,
       "file_name": "app.py",
+      "function_name": "MainWindow::_accumulate_usage_from_payload",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "app.py",
       "function_name": "MainWindow::_get_or_create_sandbox_bridge",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16624,6 +16696,12 @@
       "complexity": 9,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_tool_result",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_initial_discovery_done",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16645,6 +16723,12 @@
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
+      "complexity": 11,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_provider_changed",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
       "complexity": 12,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_process_attached",
@@ -16654,6 +16738,12 @@
       "complexity": 13,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_refresh_models",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_refresh_system_status",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -17240,6 +17330,66 @@
     },
     {
       "complexity": 0,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::__init__",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::actionEvent",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::resizeEvent",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_show_overflow_menu",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_add_proxy_action",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_hook_extension_button",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_widget_text",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::eventFilter",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_wire_proxy",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 14,
+      "file_name": "overflow_toolbar.py",
+      "function_name": "OverflowToolBar::_populate_overflow_menu",
+      "path": "src\\intellicrack\\ui\\overflow_toolbar.py"
+    },
+    {
+      "complexity": 0,
       "file_name": "panel_dock.py",
       "function_name": "DetachedPanelWindow::__init__",
       "path": "src\\intellicrack\\ui\\panel_dock.py"
@@ -17341,6 +17491,12 @@
       "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
     },
     {
+      "complexity": 0,
+      "file_name": "analysis_panel.py",
+      "function_name": "BridgeAnalysisPanel::set_analysis",
+      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
+    },
+    {
       "complexity": 1,
       "file_name": "analysis_panel.py",
       "function_name": "BridgeAnalysisPanel::_populate_exports",
@@ -17368,12 +17524,6 @@
       "complexity": 2,
       "file_name": "analysis_panel.py",
       "function_name": "BridgeAnalysisPanel::_create_table",
-      "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "analysis_panel.py",
-      "function_name": "BridgeAnalysisPanel::set_analysis",
       "path": "src\\intellicrack\\ui\\panels\\analysis_panel.py"
     },
     {
@@ -20059,15 +20209,15 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
     },
     {
-      "complexity": 0,
+      "complexity": 2,
       "file_name": "_disassembly.py",
-      "function_name": "DisassemblyMixin::goto_offset",
+      "function_name": "DisassemblyMixin::_flush_pending_follow_cursor",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
     },
     {
       "complexity": 2,
       "file_name": "_disassembly.py",
-      "function_name": "DisassemblyMixin::_flush_pending_follow_cursor",
+      "function_name": "DisassemblyMixin::goto_offset",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_disassembly.py"
     },
     {
@@ -20289,24 +20439,6 @@
     {
       "complexity": 0,
       "file_name": "_pattern_editor.py",
-      "function_name": "PatternEditorMixin::_highlight_template_fields",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "_pattern_editor.py",
-      "function_name": "PatternEditorMixin::_populate_template_combo",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "_pattern_editor.py",
-      "function_name": "PatternEditorMixin::_populate_template_tree",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "_pattern_editor.py",
       "function_name": "PatternEditorMixin::_refresh_template_combo",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
     },
@@ -20314,6 +20446,12 @@
       "complexity": 1,
       "file_name": "_pattern_editor.py",
       "function_name": "PatternEditorMixin::_append_pattern_print_line",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "_pattern_editor.py",
+      "function_name": "_get_default_pattern_field_color",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
     },
     {
@@ -20329,6 +20467,12 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
     },
     {
+      "complexity": 6,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_template_tree",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
       "complexity": 7,
       "file_name": "_pattern_editor.py",
       "function_name": "PatternEditorMixin::_toggle_pattern_editor",
@@ -20338,6 +20482,18 @@
       "complexity": 9,
       "file_name": "_pattern_editor.py",
       "function_name": "PatternEditorMixin::_on_pattern_library_clicked",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_highlight_template_fields",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "_pattern_editor.py",
+      "function_name": "PatternEditorMixin::_populate_template_combo",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_pattern_editor.py"
     },
     {
@@ -20435,6 +20591,12 @@
       "file_name": "_process_memory.py",
       "function_name": "ProcessMemoryDialog::_list_regions_procfs",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_process_memory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_sandbox.py",
+      "function_name": "SandboxMixin::_copy_to_with_timeout",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sandbox.py"
     },
     {
       "complexity": 0,
@@ -21411,12 +21573,6 @@
     {
       "complexity": 0,
       "file_name": "_transforms.py",
-      "function_name": "TransformsMixin::_on_data_changed",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
-    },
-    {
-      "complexity": 0,
-      "file_name": "_transforms.py",
       "function_name": "_BlockCopyMoveDialog::__init__",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
     },
@@ -21472,6 +21628,18 @@
       "complexity": 3,
       "file_name": "_transforms.py",
       "function_name": "TransformsMixin::_refresh_widget",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_data_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_resolve_pipeline_region",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
     },
     {
@@ -21543,7 +21711,25 @@
     {
       "complexity": 8,
       "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_execute",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_transforms.py",
       "function_name": "TransformsMixin::_on_transform_node_changed",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_read_pipeline_input",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_write_pipeline_output",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
     },
     {
@@ -21574,12 +21760,6 @@
       "complexity": 31,
       "file_name": "_transforms.py",
       "function_name": "_load_transform_descriptors",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
-    },
-    {
-      "complexity": 34,
-      "file_name": "_transforms.py",
-      "function_name": "TransformsMixin::_on_pipeline_execute",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
     },
     {
@@ -24454,6 +24634,12 @@
       "complexity": 1,
       "file_name": "stack_viewer.py",
       "function_name": "StackViewerPanel::add_source",
+      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "stack_viewer.py",
+      "function_name": "StackViewerPanel::closeEvent",
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
     },
     {

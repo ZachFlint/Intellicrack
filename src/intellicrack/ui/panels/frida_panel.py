@@ -38,7 +38,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
@@ -508,17 +508,27 @@ class FridaPanel(AnalysisPanelBase):
             pid = int(target)
         except ValueError:
             _logger.warning("frida_attach_by_name_fallback", target=target)
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.attach_by_name(target),
                 on_success=lambda _: self._on_attach_name_success(target),
                 on_error=lambda e: self._on_attach_failed(target, e),
+                parent=self,
+                event="frida_attach_by_name",
+                logger=_logger,
+                level="info",
+                target=target,
             )
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.attach(pid),
             on_success=lambda _: self._on_attach_pid_success(pid),
             on_error=lambda e: self._on_attach_failed(target, e),
+            parent=self,
+            event="frida_attach",
+            logger=_logger,
+            level="info",
+            pid=pid,
         )
 
     def _on_attach_pid_success(self, pid: int) -> None:
@@ -569,10 +579,15 @@ class FridaPanel(AnalysisPanelBase):
         _logger.info("frida_detach_started", pid=self._attached_pid)
         self._detach_btn.setEnabled(False)
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.detach(),
             on_success=lambda _: self._on_detach_success(),
             on_error=self._on_detach_error,
+            parent=self,
+            event="frida_detach",
+            logger=_logger,
+            level="info",
+            pid=self._attached_pid,
         )
 
     def _on_detach_success(self) -> None:
@@ -614,17 +629,27 @@ class FridaPanel(AnalysisPanelBase):
         self.run_btn.setEnabled(False)
 
         if self._oneshot_script_cb.isChecked():
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.execute_script(source),
                 on_success=lambda r: self._on_oneshot_script_success(len(source), r),
                 on_error=self._on_run_script_error,
+                parent=self,
+                event="frida_execute_script",
+                logger=_logger,
+                level="info",
+                script_size=len(source),
             )
             return
 
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.execute_persistent_script(source),
             on_success=lambda r: self._on_run_script_success(len(source), r),
             on_error=self._on_run_script_error,
+            parent=self,
+            event="frida_execute_persistent_script",
+            logger=_logger,
+            level="info",
+            script_size=len(source),
         )
 
     def _on_run_script_success(self, script_size: int, result: object) -> None:
@@ -681,10 +706,15 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         self._stop_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.unload_script(self._active_script_id),
             on_success=lambda _: self._on_stop_script_success(),
             on_error=self._on_stop_script_error,
+            parent=self,
+            event="frida_unload_script",
+            logger=_logger,
+            level="info",
+            script_id=self._active_script_id,
         )
 
     def _on_stop_script_success(self) -> None:
@@ -732,10 +762,15 @@ class FridaPanel(AnalysisPanelBase):
         self._hook_ids.append("")
 
         self._add_hook_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.hook_function(target),
             on_success=lambda result: self._on_hook_installed(row, target, result),
             on_error=lambda exc: self._on_hook_install_error(row, exc),
+            parent=self,
+            event="frida_hook_function",
+            logger=_logger,
+            level="info",
+            target=target,
         )
 
     def _on_hook_installed(self, row: int, target: str, result: object) -> None:
@@ -803,10 +838,15 @@ class FridaPanel(AnalysisPanelBase):
         if selected < len(self._hook_ids) and self._bridge is not None:
             hook_id = self._hook_ids[selected]
             self._remove_hook_btn.setEnabled(False)
-            self._run_async(
+            run_bridge_coroutine_logged(
                 self._bridge.remove_hook(hook_id),
                 on_success=lambda _: self._on_hook_removed(selected, hook_id),
                 on_error=lambda e: self._on_hook_remove_error(hook_id, e),
+                parent=self,
+                event="frida_remove_hook",
+                logger=_logger,
+                level="info",
+                hook_id=hook_id,
             )
             return
 
@@ -882,10 +922,16 @@ class FridaPanel(AnalysisPanelBase):
             device_type = "usb"
 
         self._console.appendPlainText(f"[*] Switching to {device_type} device...")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.connect_device(device_type, host),
             on_success=lambda r: self._console.appendPlainText(f"[+] Connected to device: {getattr(r, 'name', device_type)}"),
             on_error=lambda e: self._console.appendPlainText(f"[-] Device switch failed: {e}"),
+            parent=self,
+            event="frida_connect_device",
+            logger=_logger,
+            level="info",
+            device_type=device_type,
+            host=host,
         )
 
     def _on_refresh_processes(self) -> None:
@@ -895,10 +941,13 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         self._refresh_procs_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_processes(),
             on_success=self._populate_process_table,
             on_error=self._on_refresh_processes_error,
+            parent=self,
+            event="frida_enumerate_processes",
+            logger=_logger,
         )
 
     def _populate_process_table(self, result: object) -> None:
@@ -950,10 +999,13 @@ class FridaPanel(AnalysisPanelBase):
             return
 
         self._refresh_threads_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.enumerate_threads(),
             on_success=self._populate_threads_table,
             on_error=self._on_refresh_threads_error,
+            parent=self,
+            event="frida_enumerate_threads",
+            logger=_logger,
         )
 
     def _populate_threads_table(self, result: object) -> None:
@@ -1021,7 +1073,12 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 thread_id = int(tid_text)
             except ValueError:
-                self._console.appendPlainText(f"[-] Invalid thread ID: {tid_text}")
+                self._invalid_input(
+                    "frida_stalker_start_invalid_tid",
+                    input_text=tid_text,
+                    console_msg=f"[-] Invalid thread ID: {tid_text}",
+                    logger=_logger,
+                )
                 return
 
         events = self._get_stalker_events_string()
@@ -1029,10 +1086,17 @@ class FridaPanel(AnalysisPanelBase):
 
         self._stalker_start_btn.setEnabled(False)
         self._console.appendPlainText(f"[*] Starting Stalker trace (tid={thread_id or 'current'}, events={events}, limit={limit})")
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.stalker_follow(thread_id=thread_id, events=events, limit=limit),
             on_success=self._on_stalker_started,
             on_error=self._on_stalker_start_error,
+            parent=self,
+            event="frida_stalker_follow",
+            logger=_logger,
+            level="info",
+            thread_id=thread_id,
+            events=events,
+            limit=limit,
         )
 
     def _on_stalker_started(self, result: object) -> None:
@@ -1072,10 +1136,15 @@ class FridaPanel(AnalysisPanelBase):
                 return
 
         self._stalker_stop_btn.setEnabled(False)
-        self._run_async(
+        run_bridge_coroutine_logged(
             self._bridge.stalker_unfollow(thread_id=thread_id),
             on_success=self._on_stalker_stopped,
             on_error=self._on_stalker_stop_error,
+            parent=self,
+            event="frida_stalker_unfollow",
+            logger=_logger,
+            level="info",
+            thread_id=thread_id,
         )
 
     def _on_stalker_stopped(self, result: object) -> None:
@@ -1682,7 +1751,12 @@ class FridaPanel(AnalysisPanelBase):
         try:
             data = bytes.fromhex(hex_str.replace(" ", ""))
         except ValueError:
-            self._console.appendPlainText("[-] Invalid hex data")
+            self._invalid_input(
+                "frida_write_memory_invalid_hex",
+                input_text=hex_str,
+                console_msg="[-] Invalid hex data",
+                logger=_logger,
+            )
             return
         self._run_async(
             self._bridge.write_memory(addr, data),
@@ -1711,7 +1785,12 @@ class FridaPanel(AnalysisPanelBase):
         try:
             pattern_bytes = bytes.fromhex(pattern_str.replace("??", "00").replace(" ", ""))
         except ValueError:
-            self._console.appendPlainText("[-] Invalid pattern")
+            self._invalid_input(
+                "frida_scan_memory_invalid_pattern",
+                input_text=pattern_str,
+                console_msg="[-] Invalid pattern",
+                logger=_logger,
+            )
             return
         self._mem_scan_btn.setEnabled(False)
         self._run_async(
@@ -2129,7 +2208,12 @@ class FridaPanel(AnalysisPanelBase):
             try:
                 args = [int(a.strip(), 0) for a in args_text.split(",")]
             except ValueError:
-                self._console.appendPlainText("[-] Invalid arguments")
+                self._invalid_input(
+                    "frida_call_function_invalid_args",
+                    input_text=args_text,
+                    console_msg="[-] Invalid arguments",
+                    logger=_logger,
+                )
                 return
 
         ret_type = self._adv_ret_type.currentText()
