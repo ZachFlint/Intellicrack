@@ -421,7 +421,8 @@ def _is_user_admin() -> bool:
         return False
     try:
         return bool(is_admin_fn())
-    except OSError:
+    except OSError as exc:
+        _logger.debug("is_user_admin_check_failed", error=str(exc))
         return False
 
 
@@ -509,7 +510,8 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
                     if raw_value:
                         try:
                             return raw_value.decode("utf-8", errors="replace").strip()
-                        except (AttributeError, UnicodeError):
+                        except (AttributeError, UnicodeError) as exc:
+                            _logger.debug("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
                             continue
 
         vs_fixed_attr: Any = getattr(pe, "VS_FIXEDFILEINFO", None) or []
@@ -1775,7 +1777,8 @@ def _detect_vs_generator(cmake_path: Path) -> str | None:
             text=True,
             timeout=_VSWHERE_TIMEOUT_S,
         )
-    except (OSError, TimeoutExpired):
+    except (OSError, TimeoutExpired) as exc:
+        _logger.warning("cmake_help_failed", cmake_path=str(cmake_path), error=str(exc))
         return None
 
     best: str | None = None
@@ -2177,7 +2180,8 @@ def _path_requires_admin(target: Path) -> bool:
         return False
     try:
         resolved = target.resolve()
-    except OSError:
+    except OSError as exc:
+        _logger.debug("path_requires_admin_resolve_failed", target=str(target), error=str(exc))
         return False
     candidates: list[str] = []
     for env_key in ("PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432"):
@@ -2187,7 +2191,8 @@ def _path_requires_admin(target: Path) -> bool:
     for prefix in candidates:
         try:
             resolved.relative_to(Path(prefix).resolve())
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            _logger.debug("path_requires_admin_prefix_check_failed", prefix=prefix, error=str(exc))
             continue
         return True
     return False
@@ -2204,7 +2209,6 @@ run_cmake_step = _run_cmake_step
 find_cmake = _find_cmake
 PLUGIN_ARCHS = _PLUGIN_ARCHS
 ToolInstallerVersion = _ToolInstallerVersion
-logger = _logger
 
 
 def pefile_available() -> bool:
