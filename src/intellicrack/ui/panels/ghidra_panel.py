@@ -3338,7 +3338,7 @@ class GhidraPanel(AnalysisPanelBase):
             level="info",
             library=library,
             function_name=func_name,
-            address=hex(addr),
+            address=hex(addr) if addr is not None else None,
         )
 
     # ------------------------------------------------------------------

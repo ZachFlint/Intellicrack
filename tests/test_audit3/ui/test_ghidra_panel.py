@@ -18,6 +18,7 @@ import pytest
 from PyQt6.QtWidgets import QLineEdit, QPushButton
 
 from intellicrack.bridges.base import BridgeState
+from intellicrack.ui.panels import ghidra_panel as ghidra_module
 from intellicrack.ui.panels.ghidra_panel import GhidraPanel
 
 
@@ -67,26 +68,57 @@ def _attach_bridge(panel: GhidraPanel, bridge: _RecordingBridge) -> None:
     panel.set_bridge(cast("GhidraBridge", bridge))
 
 
-def _install_sync_run_async(panel: GhidraPanel, captured: list[Coroutine[Any, Any, Any]]) -> None:
-    """Replace the panel's _run_async with a synchronous capture-and-drive sink.
+def _install_sync_run_async(
+    panel: GhidraPanel,
+    captured: list[Coroutine[Any, Any, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Patch run_bridge_coroutine_logged with a synchronous capture-and-drive sink.
 
     The real implementation hands the coroutine off to a background thread;
     tests need deterministic, in-thread observation. Each captured coroutine is
     driven to completion synchronously via asyncio.new_event_loop().run_until_complete
     so the bridge stub records the call and no "coroutine was never awaited"
-    warning is emitted.
+    warning is emitted. The legacy _run_async indirection is also patched for
+    any call site that still routes through the panel base class.
 
     Args:
         panel: The GhidraPanel under test.
-        captured: List that receives every coroutine handed to _run_async.
+        captured: List that receives every coroutine handed to the dispatcher.
+        monkeypatch: Pytest monkeypatch fixture used to restore the module-level
+            ``run_bridge_coroutine_logged`` reference after the test.
     """
 
-    def _capture(
+    def _capture_logged(
+        coro: Coroutine[Any, Any, Any],
+        on_success: object = None,
+        on_error: object = None,
+        parent: object = None,
+        **kwargs: object,
+    ) -> None:
+        """Capture and synchronously drive the coroutine to completion.
+
+        Args:
+            coro: Coroutine produced by the bridge call.
+            on_success: Unused success callback.
+            on_error: Unused error callback.
+            parent: Unused Qt parent argument.
+            **kwargs: Remaining wrapper arguments (event, logger, level, context).
+        """
+        del on_success, on_error, parent, kwargs
+        captured.append(coro)
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(coro)
+        finally:
+            loop.close()
+
+    def _capture_legacy(
         coro: Coroutine[Any, Any, Any],
         on_success: object = None,
         on_error: object = None,
     ) -> None:
-        """Capture and synchronously drive the coroutine to completion.
+        """Capture coroutines dispatched through the legacy panel ``_run_async``.
 
         Args:
             coro: Coroutine produced by the bridge call.
@@ -101,7 +133,8 @@ def _install_sync_run_async(panel: GhidraPanel, captured: list[Coroutine[Any, An
         finally:
             loop.close()
 
-    setattr(panel, "_run_async", _capture)
+    monkeypatch.setattr(ghidra_module, "run_bridge_coroutine_logged", _capture_logged)
+    setattr(panel, "_run_async", _capture_legacy)
 
 
 def _get_label_addr_input(panel: GhidraPanel) -> QLineEdit:
@@ -134,13 +167,17 @@ class TestGhidraPanelRefreshLabels:
     """Audit3 F-0005: empty/invalid address must not invoke the bridge."""
 
     @staticmethod
-    def test_empty_address_does_not_call_bridge() -> None:
-        """Empty input must short-circuit and not produce a get_labels call."""
+    def test_empty_address_does_not_call_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty input must short-circuit and not produce a get_labels call.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for patching the bridge dispatcher.
+        """
         panel = GhidraPanel()
         bridge = _RecordingBridge()
         _attach_bridge(panel, bridge)
         captured: list[Coroutine[Any, Any, Any]] = []
-        _install_sync_run_async(panel, captured)
+        _install_sync_run_async(panel, captured, monkeypatch)
 
         _get_label_addr_input(panel).setText("")
         _click_refresh_labels(panel)
@@ -149,13 +186,17 @@ class TestGhidraPanelRefreshLabels:
         assert captured == []
 
     @staticmethod
-    def test_empty_address_sets_status_error() -> None:
-        """Empty input must surface a UI error via the status label."""
+    def test_empty_address_sets_status_error(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty input must surface a UI error via the status label.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for patching the bridge dispatcher.
+        """
         panel = GhidraPanel()
         bridge = _RecordingBridge()
         _attach_bridge(panel, bridge)
         captured: list[Coroutine[Any, Any, Any]] = []
-        _install_sync_run_async(panel, captured)
+        _install_sync_run_async(panel, captured, monkeypatch)
 
         _get_label_addr_input(panel).setText("   ")
         _click_refresh_labels(panel)
@@ -167,13 +208,17 @@ class TestGhidraPanelRefreshLabels:
         assert bridge.calls == []
 
     @staticmethod
-    def test_invalid_address_does_not_call_bridge() -> None:
-        """Unparsable input must short-circuit and not produce a get_labels call."""
+    def test_invalid_address_does_not_call_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+        """Unparsable input must short-circuit and not produce a get_labels call.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for patching the bridge dispatcher.
+        """
         panel = GhidraPanel()
         bridge = _RecordingBridge()
         _attach_bridge(panel, bridge)
         captured: list[Coroutine[Any, Any, Any]] = []
-        _install_sync_run_async(panel, captured)
+        _install_sync_run_async(panel, captured, monkeypatch)
 
         _get_label_addr_input(panel).setText("not-a-hex-address")
         _click_refresh_labels(panel)
@@ -184,13 +229,17 @@ class TestGhidraPanelRefreshLabels:
         assert "invalid" in panel.status_label.text().lower()
 
     @staticmethod
-    def test_valid_hex_address_invokes_bridge() -> None:
-        """A non-empty hex address must be passed verbatim to the bridge."""
+    def test_valid_hex_address_invokes_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+        """A non-empty hex address must be passed verbatim to the bridge.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for patching the bridge dispatcher.
+        """
         panel = GhidraPanel()
         bridge = _RecordingBridge()
         _attach_bridge(panel, bridge)
         captured: list[Coroutine[Any, Any, Any]] = []
-        _install_sync_run_async(panel, captured)
+        _install_sync_run_async(panel, captured, monkeypatch)
 
         _get_label_addr_input(panel).setText("0x401000")
         _click_refresh_labels(panel)
@@ -199,13 +248,17 @@ class TestGhidraPanelRefreshLabels:
         assert len(captured) == 1
 
     @staticmethod
-    def test_valid_decimal_address_invokes_bridge() -> None:
-        """A non-empty decimal address must be parsed and forwarded."""
+    def test_valid_decimal_address_invokes_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+        """A non-empty decimal address must be parsed and forwarded.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for patching the bridge dispatcher.
+        """
         panel = GhidraPanel()
         bridge = _RecordingBridge()
         _attach_bridge(panel, bridge)
         captured: list[Coroutine[Any, Any, Any]] = []
-        _install_sync_run_async(panel, captured)
+        _install_sync_run_async(panel, captured, monkeypatch)
 
         _get_label_addr_input(panel).setText("4198400")
         _click_refresh_labels(panel)

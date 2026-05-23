@@ -736,7 +736,7 @@ class SandboxPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
             binary_path=str(binary_path),
-            arg_count=len(args_list),
+            arg_count=len(args_list) if args_list is not None else 0,
             sandbox_type=sandbox_type,
         )
 
