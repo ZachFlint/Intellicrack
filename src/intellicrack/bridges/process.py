@@ -4445,7 +4445,7 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
             try:
-                if is_wow64_target := self._target_is_wow64():
+                if self._target_is_wow64():
                     wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
                     if wow64_get_ctx is None:
                         raise ToolError(_ERR_CONTEXT_GET_FAILED)
@@ -4553,7 +4553,7 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
             try:
-                if is_wow64_target := self._target_is_wow64():
+                if self._target_is_wow64():
                     wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
                     wow64_set_ctx = getattr(self._kernel32, "Wow64SetThreadContext", None)
                     if wow64_get_ctx is None or wow64_set_ctx is None:
@@ -5012,7 +5012,7 @@ class ProcessBridge(ToolBridgeBase):
 
         target_is_wow64 = self._target_is_wow64()
         if not target_is_wow64 and self._kernel32 is not None:
-            if target_is_64bit := self._target_is_64bit(self._process_handle):
+            if self._target_is_64bit(self._process_handle):
                 raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
 
         teb = await self.read_teb(tid)

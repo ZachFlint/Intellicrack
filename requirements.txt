@@ -22,7 +22,7 @@ bandit==1.9.4
 basedpyright==1.39.5
 bitsandbytes==0.49.2
 black==26.5.1
-blessed==1.42.0
+blessed==1.44.0
 blinter==1.0.112
 boolean-py==5.0
 build==1.5.0
@@ -78,7 +78,7 @@ findpython==0.8.0
 flake8==7.3.0
 flake8-pyproject==1.2.4
 freezegun==1.5.5
-frida==17.9.10
+frida==17.9.11
 frida-tools==14.8.2
 fsspec==2026.4.0
 future==1.0.0
@@ -122,10 +122,10 @@ jaraco-functools==4.5.0
 jedi==0.20.0
 jfx-bridge==1.0.0
 jinja2==3.1.6
-jinxed==2.0.3
+jinxed==2.0.4
 jiter==0.15.0
 joblib==1.5.3
-joserfc==1.6.5
+joserfc==1.6.7
 jsonlint==0.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
@@ -214,7 +214,7 @@ pyannotate==1.2.0
 pyasn1==0.6.3
 pyasn1-modules==0.4.2
 pycallgraph2==1.1.3
-pyclean==3.6.0
+pyclean==3.7.0
 pycodestyle==2.14.0
 pycparser==3.0
 pydantic==2.13.4
@@ -316,7 +316,7 @@ sphinxcontrib-qthelp==2.0.0
 sphinxcontrib-serializinghtml==2.0.0
 sse-starlette==3.4.4
 stack-data==0.6.3
-starlette==1.0.1
+starlette==1.1.0
 stevedore==5.8.0
 structlog==25.5.0
 sympy==1.14.0
