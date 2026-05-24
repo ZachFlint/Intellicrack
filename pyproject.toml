@@ -414,7 +414,7 @@ lint.ignore = [
   "S405",    # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core._xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
 ]
 lint.per-file-ignores.".claude/**" = [ "S404" ]
-lint.per-file-ignores."scripts/**" = [ "S404", "S603", "T201" ]
+lint.per-file-ignores."scripts/**" = [ "N999", "S404", "S603", "S607", "T201" ]
 lint.per-file-ignores."src/intellicrack/bridges/_win32_types.py" = [ "N801" ]
 lint.per-file-ignores."src/intellicrack/bridges/frida_bridge.py" = [ "PLR0904" ]
 lint.per-file-ignores."src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
