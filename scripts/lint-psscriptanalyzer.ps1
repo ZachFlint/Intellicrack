@@ -3,6 +3,15 @@ param(
     [string]$Flags = ''
 )
 
+if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+    if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+    }
+    Import-Module PSScriptAnalyzer
+    Get-Help Invoke-ScriptAnalyzer -Detailed
+    exit 0
+}
+
 Write-Host "[PSScriptAnalyzer] Running..."
 
 @('txt', 'json', 'xml') | ForEach-Object {

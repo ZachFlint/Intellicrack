@@ -3,6 +3,11 @@ param(
     [string]$Flags = ''
 )
 
+if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+    Invoke-Expression "$Pixi shellcheck --help"
+    exit $LASTEXITCODE
+}
+
 Write-Host "[ShellCheck] Running..."
 
 @('txt', 'json', 'xml') | ForEach-Object {

@@ -3,6 +3,11 @@ param(
     [string]$Flags = ''
 )
 
+if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+    & node_modules/.bin/jsonlint --help
+    exit $LASTEXITCODE
+}
+
 Write-Host "[JSONLint] Running..."
 
 @('txt', 'json', 'xml') | ForEach-Object {
