@@ -378,6 +378,9 @@ class ThreadsTab(QWidget):
         if self._bridge is None or self._attached_pid is None:
             return
 
+        pid = self._attached_pid
+        _logger.debug("threads_refresh_starting", pid=pid)
+
         def _on_success(result: object) -> None:
             if not isinstance(result, list):
                 return
@@ -404,14 +407,17 @@ class ThreadsTab(QWidget):
             if self._system_tab is not None:
                 self._system_tab.update_thread_list(thread_list)
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("threads_refresh_failed", pid=pid, error=str(exc))
+
         run_bridge_coroutine_logged(
-            self._bridge.get_threads(self._attached_pid),
+            self._bridge.get_threads(pid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_get_threads",
             logger=_logger,
-            pid=self._attached_pid,
+            pid=pid,
         )
 
     def _on_auto_refresh_toggled(self, *, checked: bool) -> None:
@@ -429,36 +435,47 @@ class ThreadsTab(QWidget):
 
     def cleanup(self) -> None:
         """Stop the auto-refresh timer on panel teardown."""
+        _logger.info("threads_tab_cleanup", attached_pid=self._attached_pid)
         self._auto_refresh_timer.stop()
 
     def _on_suspend_thread(self) -> None:
         """Suspend every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
+        pid = self._attached_pid
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_suspend_failed", pid=pid, error=str(exc))
+
         run_bridge_coroutine_logged(
-            self._bridge.suspend(self._attached_pid),
+            self._bridge.suspend(pid),
             on_success=None,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_suspend",
             logger=_logger,
             level="info",
-            pid=self._attached_pid,
+            pid=pid,
         )
 
     def _on_resume_thread(self) -> None:
         """Resume every thread in the attached process."""
         if self._bridge is None or self._attached_pid is None:
             return
+        pid = self._attached_pid
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("process_resume_failed", pid=pid, error=str(exc))
+
         run_bridge_coroutine_logged(
-            self._bridge.resume(self._attached_pid),
+            self._bridge.resume(pid),
             on_success=None,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_resume",
             logger=_logger,
             level="info",
-            pid=self._attached_pid,
+            pid=pid,
         )
 
     def _refresh_registers(self) -> None:
@@ -482,10 +499,13 @@ class ThreadsTab(QWidget):
                 self._reg_table.setItem(row, 1, QTableWidgetItem(f"0x{int_val:X}"))
                 self._reg_table.setItem(row, 2, QTableWidgetItem(str(int_val)))
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("thread_context_fetch_failed", tid=tid, error=str(exc))
+
         run_bridge_coroutine_logged(
             self._bridge.get_thread_context(tid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_get_thread_context",
             logger=_logger,
@@ -570,10 +590,25 @@ class ThreadsTab(QWidget):
                     )
                     continue
 
+        def _on_success(_result: object) -> None:
+            _logger.info(
+                "thread_context_written",
+                tid=tid,
+                register_count=len(regs),
+            )
+
+        def _on_error(exc: object) -> None:
+            _logger.warning(
+                "thread_context_write_failed",
+                tid=tid,
+                register_count=len(regs),
+                error=str(exc),
+            )
+
         run_bridge_coroutine_logged(
             self._bridge.set_thread_context(tid, regs),
-            on_success=None,
-            on_error=None,
+            on_success=_on_success,
+            on_error=_on_error,
             parent=self,
             event="process_set_thread_context",
             logger=_logger,
@@ -613,10 +648,13 @@ class ThreadsTab(QWidget):
                 disp = disp_raw if isinstance(disp_raw, int) else 0
                 self._stack_table.setItem(row, 4, QTableWidgetItem(f"0x{disp:X}"))
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("stack_walk_failed", tid=tid, error=str(exc))
+
         run_bridge_coroutine_logged(
             self._bridge.stack_walk(tid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_stack_walk",
             logger=_logger,
@@ -651,10 +689,13 @@ class ThreadsTab(QWidget):
                 self._seh_table.setItem(row, 1, QTableWidgetItem(f"0x{handler_val:X}"))
                 self._seh_table.setItem(row, 2, QTableWidgetItem(f"0x{next_val:X}"))
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("seh_enumerate_failed", tid=tid, error=str(exc))
+
         run_bridge_coroutine_logged(
             self._bridge.get_seh_chain(tid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_get_seh_chain",
             logger=_logger,
@@ -681,10 +722,13 @@ class ThreadsTab(QWidget):
                 val_str = f"0x{val:X}" if isinstance(val, int) else str(val)
                 self._fiber_table.setItem(row, 1, QTableWidgetItem(val_str))
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("fiber_data_fetch_failed", tid=tid, error=str(exc))
+
         run_bridge_coroutine_logged(
             self._bridge.get_fiber_data(tid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_get_fiber_data",
             logger=_logger,
@@ -717,10 +761,13 @@ class ThreadsTab(QWidget):
                 tls_val = tls_raw if isinstance(tls_raw, int) else 0
                 self._tls_table.setItem(row, 1, QTableWidgetItem(f"0x{tls_val:X}"))
 
+        def _on_error(exc: object) -> None:
+            _logger.warning("tls_values_fetch_failed", tid=tid, error=str(exc))
+
         run_bridge_coroutine_logged(
             self._bridge.get_tls_values(tid),
             on_success=_on_success,
-            on_error=None,
+            on_error=_on_error,
             parent=self,
             event="process_get_tls_values",
             logger=_logger,

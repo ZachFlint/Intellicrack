@@ -343,6 +343,7 @@ class ModulesTab(QWidget):
         """Open file dialog to select a DLL."""
         path, _ = QFileDialog.getOpenFileName(self, "Select DLL", "", "DLL Files (*.dll)")
         if path:
+            _logger.info("dll_injection_target_selected", path=path, pid=self._attached_pid)
             self._inject_path.setText(path)
 
     def _on_inject(self) -> None:
@@ -365,6 +366,7 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            _logger.info("dll_injected", path=path, pid=self._attached_pid)
             row = self._inject_log.rowCount()
             self._inject_log.insertRow(row)
             self._inject_log.setItem(row, 0, QTableWidgetItem(path))
@@ -372,6 +374,12 @@ class ModulesTab(QWidget):
             self._inject_log.setItem(row, 2, QTableWidgetItem(""))
 
         def _on_error(exc: object) -> None:
+            _logger.warning(
+                "dll_inject_failed",
+                path=path,
+                pid=self._attached_pid,
+                error=str(exc),
+            )
             row = self._inject_log.rowCount()
             self._inject_log.insertRow(row)
             self._inject_log.setItem(row, 0, QTableWidgetItem(path))

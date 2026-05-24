@@ -746,7 +746,7 @@ class MemoryTab(QWidget):
                     self._search_results.insertRow(row)
                     self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
                 self._search_status.setText(f"{len(typed_result)} matches")
-            except Exception as exc:
+            except (RuntimeError, ValueError, TypeError) as exc:
                 _logger.warning("search_display_failed", error=str(exc))
                 self._search_status.setText("Error displaying results")
                 raise
