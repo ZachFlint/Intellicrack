@@ -950,15 +950,18 @@ class TestSplashImageCompositing:
 
     @staticmethod
     def test_splash_image_loaded(splash_screen: SplashScreen) -> None:
-        """Splash image is loaded if splash.png exists.
+        """Splash image is loaded when splash.png exists and the brain icon is absent.
 
         Args:
             splash_screen: SplashScreen fixture instance.
         """
         assets = get_assets_path()
         splash_path = assets / "splash.png"
+        brain_icon = getattr(splash_screen, "_brain_icon")
         splash_image = getattr(splash_screen, "_splash_image")
-        if splash_path.exists():
+        if brain_icon is not None:
+            assert splash_image is None
+        elif splash_path.exists():
             assert splash_image is not None
         else:
             assert splash_image is None

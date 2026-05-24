@@ -135,7 +135,7 @@ class SystemTab(QWidget):
             log_event: Structured log event name identifying the failing action.
         """
         message = str(exc)
-        _logger.warning("system_tab_action_failed", op_event=log_event, error=message)
+        _logger.warning(log_event, error=message)
         QMessageBox.warning(self, title, message)
 
     def _setup_ui(self) -> None:
@@ -558,12 +558,19 @@ class SystemTab(QWidget):
         if pid is None:
             return
 
+        def _on_success(_result: object) -> None:
+            _logger.info(
+                "sedebug_privilege_enabled",
+                pid=pid,
+                privilege="SeDebugPrivilege",
+            )
+
         def _on_error(exc: object) -> None:
             self._show_error("Enable Debug Privilege Error", exc, log_event="system_tab_enable_debug_failed")
 
         run_bridge_coroutine_logged(
             self._bridge.adjust_token_privilege("SeDebugPrivilege", enable=True, pid=pid),
-            on_success=None,
+            on_success=_on_success,
             on_error=_on_error,
             parent=self,
             event="process_adjust_token_privilege",
@@ -722,6 +729,11 @@ class SystemTab(QWidget):
         def _on_success(result: object) -> None:
             if not isinstance(result, int):
                 return
+            _logger.info(
+                "named_pipe_connected",
+                pipe_name=name,
+                handle=hex(result),
+            )
             self._pipe_handles[name] = result
             row = self._pipe_table.rowCount()
             self._pipe_table.insertRow(row)
@@ -762,6 +774,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            _logger.info(
+                "named_pipe_closed",
+                pipe_name=pipe_name,
+                handle=hex(handle),
+            )
             self._pipe_handles.pop(pipe_name, None)
             target_row = -1
             for r in range(self._pipe_table.rowCount()):
@@ -774,7 +791,11 @@ class SystemTab(QWidget):
 
         def _on_error(exc: object) -> None:
             message = str(exc)
-            _logger.warning("system_tab_pipe_close_failed", pipe=pipe_name, exc=message)
+            _logger.warning(
+                "system_tab_pipe_close_failed",
+                pipe_name=pipe_name,
+                error=message,
+            )
             QMessageBox.warning(self, "Close Pipe Error", f"{pipe_name}: {message}")
 
         run_bridge_coroutine_logged(
@@ -987,7 +1008,11 @@ class SystemTab(QWidget):
                 try:
                     data = bytes.fromhex(result)
                 except ValueError:
-                    _logger.debug("raw_query_hex_parse_failed", length=len(result))
+                    _logger.debug(
+                        "raw_query_hex_parse_failed",
+                        length=len(result),
+                        info_class=info_class,
+                    )
                     self._raw_output.setPlainText(result)
                     return
             elif isinstance(result, (bytes, bytearray)):

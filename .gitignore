@@ -396,6 +396,10 @@ backup/
 *.jpg
 *.jpeg
 *.gif
+!src/intellicrack/assets/**/*.png
+!src/intellicrack/assets/**/*.jpg
+!src/intellicrack/assets/**/*.jpeg
+!src/intellicrack/assets/**/*.gif
 
 # Docker and containerization
 .docker/

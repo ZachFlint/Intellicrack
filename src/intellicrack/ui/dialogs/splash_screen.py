@@ -223,8 +223,8 @@ class SplashScreen(QSplashScreen):
         Returns:
             QPixmap | None: Loaded and scaled splash image, or None if unavailable.
         """
+        splash_path = get_assets_path() / "splash.png"
         try:
-            splash_path = get_assets_path() / "splash.png"
             if splash_path.exists():
                 pixmap = QPixmap(str(splash_path))
                 if not pixmap.isNull():
@@ -235,7 +235,7 @@ class SplashScreen(QSplashScreen):
                         Qt.TransformationMode.SmoothTransformation,
                     )
         except FileNotFoundError:
-            _logger.warning("splash_image_not_found")
+            _logger.warning("splash_image_not_found", path=str(splash_path))
         return None
 
     @staticmethod
@@ -424,6 +424,7 @@ class SplashScreen(QSplashScreen):
 
     def show_animated(self) -> None:
         """Show the splash screen with a fade-in animation and start visual effects."""
+        _logger.info("splash_show_starting", fade_duration_ms=FADE_DURATION_MS)
         self.setWindowOpacity(0.0)
         self.show()
 
@@ -442,6 +443,11 @@ class SplashScreen(QSplashScreen):
         Args:
             window: Main window to show after fade-out completes.
         """
+        _logger.info(
+            "splash_finish_starting",
+            fade_duration_ms=FADE_DURATION_MS,
+            target=type(window).__name__,
+        )
         self._finish_target = window
 
         self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
@@ -456,7 +462,12 @@ class SplashScreen(QSplashScreen):
         """Handle fade-out animation completion."""
         self._animation_timer.stop()
         if self._finish_target is not None:
+            _logger.info(
+                "splash_mainwindow_transition",
+                target=type(self._finish_target).__name__,
+            )
             self._finish_target.show()
+        _logger.info("splash_closed")
         self.close()
 
     def _on_animation_tick(self) -> None:
@@ -475,12 +486,24 @@ class SplashScreen(QSplashScreen):
         for i, (threshold_start, threshold_end) in enumerate(_STAGE_THRESHOLDS):
             if self._stage_states[i] == _StageState.FAILED:
                 continue
+            previous_state = self._stage_states[i]
             if threshold_end <= progress:
-                self._stage_states[i] = _StageState.COMPLETE
+                new_state = _StageState.COMPLETE
             elif threshold_start <= progress < threshold_end:
-                self._stage_states[i] = _StageState.ACTIVE
+                new_state = _StageState.ACTIVE
             else:
-                self._stage_states[i] = _StageState.PENDING
+                new_state = _StageState.PENDING
+
+            self._stage_states[i] = new_state
+
+            if new_state != previous_state and new_state in {_StageState.ACTIVE, _StageState.COMPLETE}:
+                _logger.info(
+                    "splash_stage_transition",
+                    stage_index=i,
+                    stage=_STAGE_LABELS[i],
+                    state=new_state.name,
+                    progress=progress,
+                )
 
     def mark_stage_failed(self, stage_index: int) -> None:
         """Mark a pipeline stage as failed.
@@ -490,6 +513,11 @@ class SplashScreen(QSplashScreen):
         """
         if 0 <= stage_index < _STAGE_COUNT:
             self._stage_states[stage_index] = _StageState.FAILED
+            _logger.error(
+                "splash_stage_failed",
+                stage_index=stage_index,
+                stage=_STAGE_LABELS[stage_index],
+            )
 
     def set_progress(self, value: int, message: str = "") -> None:
         """Update the progress bar and status message.

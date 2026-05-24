@@ -253,20 +253,49 @@ class CredentialSourceDetector:
         ]
 
         for env_path in env_paths:
-            try:
-                with env_path.open("r", encoding="utf-8") as f:
-                    for line in f:
-                        stripped = line.strip()
-                        if stripped and not stripped.startswith("#") and "=" in stripped:
-                            key = stripped.split("=", 1)[0].strip()
-                            if key.startswith("export "):
-                                key = key[7:].strip()
-                            if key:
-                                self._env_file_vars.add(key)
-                break
-            except OSError:
-                _logger.warning("env_file_read_failed", path=str(env_path))
+            _logger.debug("env_file_scanning", path=str(env_path))
+            if not self._parse_env_file(env_path):
                 continue
+            _logger.info(
+                "env_file_loaded",
+                path=str(env_path),
+                keys=len(self._env_file_vars),
+            )
+            break
+
+    def _parse_env_file(self, env_path: Path) -> bool:
+        """Extract variable names from a single ``.env`` file into ``_env_file_vars``.
+
+        Args:
+            env_path: Filesystem path to the candidate ``.env`` file.
+
+        Returns:
+            bool: ``True`` if the file was opened and parsed, ``False`` if the file
+            could not be opened (in which case the caller should try the next path).
+        """
+        try:
+            with env_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    self._collect_env_var_name(line)
+        except OSError:
+            _logger.warning("env_file_read_failed", path=str(env_path))
+            return False
+        return True
+
+    def _collect_env_var_name(self, line: str) -> None:
+        """Add the variable name from a single ``.env`` line to ``_env_file_vars``.
+
+        Args:
+            line: One raw line from the ``.env`` file (including leading/trailing whitespace).
+        """
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            return
+        key = stripped.split("=", 1)[0].strip()
+        if key.startswith("export "):
+            key = key[7:].strip()
+        if key:
+            self._env_file_vars.add(key)
 
     def detect_source(self, provider_id: str, current_key: str) -> str:
         """Detect the source of credentials for a provider.
@@ -294,6 +323,11 @@ class CredentialSourceDetector:
             return CredentialSource.ENVIRONMENT
 
         if self._config_path.exists():
+            _logger.debug(
+                "provider_config_probing",
+                config_path=str(self._config_path),
+                provider=provider_id,
+            )
             try:
                 with self._config_path.open("r", encoding="utf-8") as f:
                     config = json.load(f)
@@ -365,6 +399,48 @@ class ConnectionTestWorker(QThread):
             success = False
             self.test_finished.emit(success, f"Connection error: {e}")
 
+    @staticmethod
+    def _classify_probe_response(
+        provider: str,
+        status_code: int,
+        success_message: str,
+        *,
+        invalid_key_status: int = HTTP_UNAUTHORIZED,
+        invalid_key_message: str = "Invalid API key",
+    ) -> tuple[bool, str]:
+        """Map an HTTP probe status code to a (success, message) tuple and log the outcome.
+
+        Args:
+            provider: Provider identifier used in structured logs.
+            status_code: HTTP status code returned by the probe call.
+            success_message: User-facing message returned on HTTP 200.
+            invalid_key_status: Status code interpreted as an invalid credential.
+            invalid_key_message: User-facing message returned for an invalid credential.
+
+        Returns:
+            tuple[bool, str]: Tuple of (success, message).
+        """
+        if status_code == HTTP_OK:
+            _logger.info(
+                "provider_http_probe_succeeded",
+                provider=provider,
+                status_code=status_code,
+            )
+            return True, success_message
+        if status_code == invalid_key_status:
+            _logger.warning(
+                "provider_http_probe_unauthorized",
+                provider=provider,
+                status_code=status_code,
+            )
+            return False, invalid_key_message
+        _logger.warning(
+            "provider_http_probe_http_error",
+            provider=provider,
+            status_code=status_code,
+        )
+        return False, f"API error: {status_code}"
+
     def _test_provider_connection(self) -> tuple[bool, str]:
         """Test the connection to the provider.
 
@@ -372,6 +448,11 @@ class ConnectionTestWorker(QThread):
             tuple[bool, str]: Tuple of (success, message).
         """
         timeout = httpx.Timeout(10.0)
+
+        _logger.info(
+            "provider_connection_test_starting",
+            provider=self.provider_id,
+        )
 
         if self.provider_id == "anthropic":
             return self._test_anthropic(timeout)
@@ -387,6 +468,10 @@ class ConnectionTestWorker(QThread):
             return self._test_huggingface(timeout)
         if self.provider_id == "grok":
             return self._test_grok(timeout)
+        _logger.warning(
+            "provider_connection_test_unknown_provider",
+            provider=self.provider_id,
+        )
         return False, f"Unknown provider: {self.provider_id}"
 
     def _test_anthropic(self, timeout: httpx.Timeout) -> tuple[bool, str]:
@@ -399,26 +484,26 @@ class ConnectionTestWorker(QThread):
             tuple[bool, str]: Tuple of (success, message).
         """
         base_url = (self._api_base or "https://api.anthropic.com").rstrip("/")
+        url = f"{base_url}/v1/models?limit=1"
+        headers = {
+            "x-api-key": self._api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        _logger.debug("provider_http_probe", provider="anthropic", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/v1/models?limit=1",
-                    headers={
-                        "x-api-key": self._api_key,
-                        "anthropic-version": "2023-06-01",
-                    },
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to Anthropic API"
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, "Invalid API key"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="anthropic")
             return False, "Could not connect to Anthropic API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="anthropic", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "anthropic",
+            response.status_code,
+            "Connected to Anthropic API",
+        )
 
     def _test_openai(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test OpenAI API connection.
@@ -430,23 +515,23 @@ class ConnectionTestWorker(QThread):
             tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "https://api.openai.com/v1"
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.debug("provider_http_probe", provider="openai", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to OpenAI API"
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, "Invalid API key"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="openai")
             return False, "Could not connect to OpenAI API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="openai", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "openai",
+            response.status_code,
+            "Connected to OpenAI API",
+        )
 
     def _test_google(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Google Gemini API connection.
@@ -457,23 +542,24 @@ class ConnectionTestWorker(QThread):
         Returns:
             tuple[bool, str]: Tuple of (success, message).
         """
+        url = "https://generativelanguage.googleapis.com/v1beta/models"
+        headers = {"x-goog-api-key": self._api_key}
+        _logger.debug("provider_http_probe", provider="google", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    "https://generativelanguage.googleapis.com/v1beta/models",
-                    headers={"x-goog-api-key": self._api_key},
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to Google Gemini API"
-                if response.status_code == HTTP_BAD_REQUEST:
-                    return False, "Invalid API key"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="google")
             return False, "Could not connect to Google API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="google", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "google",
+            response.status_code,
+            "Connected to Google Gemini API",
+            invalid_key_status=HTTP_BAD_REQUEST,
+        )
 
     def _test_ollama(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Ollama connection.
@@ -485,18 +571,30 @@ class ConnectionTestWorker(QThread):
             tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "http://localhost:11434"
+        url = f"{base_url}/api/tags"
+        _logger.debug("provider_http_probe", provider="ollama", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(f"{base_url}/api/tags")
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to Ollama"
-                return False, f"Ollama error: {response.status_code}"
+                response = client.get(url)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="ollama")
             return False, "Could not connect to Ollama (is it running?)"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="ollama", error=str(e))
             return False, str(e)
+        if response.status_code == HTTP_OK:
+            _logger.info(
+                "provider_http_probe_succeeded",
+                provider="ollama",
+                status_code=response.status_code,
+            )
+            return True, "Connected to Ollama"
+        _logger.warning(
+            "provider_http_probe_http_error",
+            provider="ollama",
+            status_code=response.status_code,
+        )
+        return False, f"Ollama error: {response.status_code}"
 
     def _test_openrouter(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test OpenRouter API connection.
@@ -508,23 +606,23 @@ class ConnectionTestWorker(QThread):
             tuple[bool, str]: Tuple of (success, message).
         """
         base_url = self._api_base or "https://openrouter.ai/api/v1"
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.debug("provider_http_probe", provider="openrouter", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to OpenRouter API"
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, "Invalid API key"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="openrouter")
             return False, "Could not connect to OpenRouter API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="openrouter", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "openrouter",
+            response.status_code,
+            "Connected to OpenRouter API",
+        )
 
     def _test_huggingface(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test HuggingFace Inference API connection.
@@ -535,24 +633,25 @@ class ConnectionTestWorker(QThread):
         Returns:
             tuple[bool, str]: Tuple of (success, message).
         """
+        url = "https://huggingface.co/api/models"
+        params = {"filter": "text-generation", "limit": 1}
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.debug("provider_http_probe", provider="huggingface", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    "https://huggingface.co/api/models",
-                    params={"filter": "text-generation", "limit": 1},
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to HuggingFace API"
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, "Invalid API token"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, params=params, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="huggingface")
             return False, "Could not connect to HuggingFace API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="huggingface", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "huggingface",
+            response.status_code,
+            "Connected to HuggingFace API",
+            invalid_key_message="Invalid API token",
+        )
 
     def _test_grok(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test X.AI Grok API connection.
@@ -599,23 +698,23 @@ class ConnectionTestWorker(QThread):
             return result
 
         base_url = (self._api_base or "https://api.x.ai/v1").rstrip("/")
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.debug("provider_http_probe", provider="grok", method="GET", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    return True, "Connected to Grok API"
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, "Invalid API key"
-                return False, f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
         except httpx.ConnectError:
             _logger.warning("provider_connect_failed", provider="grok")
             return False, "Could not connect to Grok API"
         except (httpx.HTTPError, OSError, ValueError) as e:
             _logger.warning("provider_test_failed", provider="grok", error=str(e))
             return False, str(e)
+        return self._classify_probe_response(
+            "grok",
+            response.status_code,
+            "Connected to Grok API",
+        )
 
 
 class ModelRefreshWorker(QThread):
@@ -713,44 +812,100 @@ class ModelRefreshWorker(QThread):
             "anthropic-version": "2023-06-01",
         }
         base_url = (self._api_base or "https://api.anthropic.com").rstrip("/")
+        url = f"{base_url}/v1/models"
         all_models: list[str] = []
-        after_id: str | None = None
+        page_count = 0
 
+        _logger.info("model_fetch_starting", provider="anthropic", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                for _ in range(10):
-                    params: dict[str, str | int] = {"limit": 100}
-                    if after_id is not None:
-                        params["after_id"] = after_id
-
-                    resp = client.get(
-                        f"{base_url}/v1/models",
-                        headers=headers,
-                        params=params,
-                    )
-                    if resp.status_code == HTTP_UNAUTHORIZED:
-                        return False, [], "Invalid API key"
-                    if resp.status_code >= HTTP_BAD_REQUEST:
-                        return False, [], f"API error {resp.status_code}"
-
-                    data = resp.json()
-                    all_models.extend(model_id for model_entry in data.get("data", []) if (model_id := model_entry.get("id", "")))
-
-                    if not data.get("has_more", False):
-                        break
-                    if last_id := data.get("last_id"):
-                        after_id = last_id
-
-                    else:
-                        break
+                outcome = self._collect_anthropic_pages(client, url, headers, all_models)
         except (httpx.HTTPError, OSError, ValueError, KeyError) as e:
-            _logger.debug("anthropic_models_api_unavailable", error=str(e))
+            _logger.warning(
+                "model_fetch_failed",
+                provider="anthropic",
+                error=str(e),
+                pages_fetched=page_count,
+            )
             return False, [], f"API unavailable: {e}"
-        else:
-            if all_models:
-                all_models.sort()
-                return True, all_models, f"Found {len(all_models)} Anthropic models"
+
+        outcome_kind, message, page_count = outcome
+        if outcome_kind == "unauthorized":
+            return False, [], message
+        if outcome_kind == "http_error":
+            return False, [], message
+        if not all_models:
+            _logger.warning("model_fetch_empty", provider="anthropic", pages=page_count)
             return False, [], "No models returned"
+
+        all_models.sort()
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="anthropic",
+            model_count=len(all_models),
+            pages=page_count,
+        )
+        return True, all_models, f"Found {len(all_models)} Anthropic models"
+
+    @staticmethod
+    def _collect_anthropic_pages(
+        client: httpx.Client,
+        url: str,
+        headers: dict[str, str],
+        all_models: list[str],
+    ) -> tuple[str, str, int]:
+        """Page through Anthropic's models endpoint, mutating ``all_models``.
+
+        Args:
+            client: Open httpx client used to issue paginated GET requests.
+            url: Fully qualified models endpoint URL.
+            headers: Request headers including auth and anthropic-version.
+            all_models: Caller-owned list extended in place with discovered model ids.
+
+        Returns:
+            tuple[str, str, int]: Tuple of (outcome_kind, message, pages_fetched).
+            ``outcome_kind`` is one of ``"ok"``, ``"unauthorized"``, ``"http_error"``.
+        """
+        after_id: str | None = None
+        page_count = 0
+        for _ in range(10):
+            params: dict[str, str | int] = {"limit": 100}
+            if after_id is not None:
+                params["after_id"] = after_id
+
+            page_count += 1
+            _logger.debug(
+                "model_fetch_page",
+                provider="anthropic",
+                page=page_count,
+                after_id=after_id,
+            )
+            resp = client.get(url, headers=headers, params=params)
+            if resp.status_code == HTTP_UNAUTHORIZED:
+                _logger.warning(
+                    "model_fetch_unauthorized",
+                    provider="anthropic",
+                    status_code=resp.status_code,
+                )
+                return "unauthorized", "Invalid API key", page_count
+            if resp.status_code >= HTTP_BAD_REQUEST:
+                _logger.warning(
+                    "model_fetch_http_error",
+                    provider="anthropic",
+                    status_code=resp.status_code,
+                )
+                return "http_error", f"API error {resp.status_code}", page_count
+
+            data = resp.json()
+            all_models.extend(model_id for model_entry in data.get("data", []) if (model_id := model_entry.get("id", "")))
+
+            if not data.get("has_more", False):
+                break
+            last_id = data.get("last_id")
+            if not last_id:
+                break
+            after_id = last_id
+        return "ok", "", page_count
 
     def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenAI models from API.
@@ -762,38 +917,50 @@ class ModelRefreshWorker(QThread):
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "https://api.openai.com/v1"
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.info("model_fetch_starting", provider="openai", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    data = response.json()
-                    non_chat_prefixes = (
-                        "text-embedding-",
-                        "dall-e-",
-                        "whisper-",
-                        "tts-",
-                        "text-moderation-",
-                        "davinci-",
-                        "babbage-",
-                        "canary-",
-                        "codex-",
-                        "text-davinci-",
-                        "text-babbage-",
-                        "text-curie-",
-                        "text-ada-",
-                        "code-davinci-",
-                        "code-cushman-",
-                    )
-                    models = [m["id"] for m in data.get("data", []) if not m["id"].startswith(non_chat_prefixes)]
-                    models.sort(reverse=True)
-                    return True, models[:20], f"Found {len(models)} OpenAI models"
-                return False, [], f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="openai", error=str(e))
             return False, [], str(e)
+
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="openai",
+                status_code=response.status_code,
+            )
+            return False, [], f"API error: {response.status_code}"
+
+        non_chat_prefixes = (
+            "text-embedding-",
+            "dall-e-",
+            "whisper-",
+            "tts-",
+            "text-moderation-",
+            "davinci-",
+            "babbage-",
+            "canary-",
+            "codex-",
+            "text-davinci-",
+            "text-babbage-",
+            "text-curie-",
+            "text-ada-",
+            "code-davinci-",
+            "code-cushman-",
+        )
+        models = [m["id"] for m in data.get("data", []) if not m["id"].startswith(non_chat_prefixes)]
+        models.sort(reverse=True)
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="openai",
+            model_count=len(models),
+        )
+        return True, models[:20], f"Found {len(models)} OpenAI models"
 
     def _fetch_google_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch Google Gemini models from API.
@@ -804,24 +971,36 @@ class ModelRefreshWorker(QThread):
         Returns:
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
+        url = "https://generativelanguage.googleapis.com/v1beta/models"
+        headers = {"x-goog-api-key": self._api_key}
+        _logger.info("model_fetch_starting", provider="google", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    "https://generativelanguage.googleapis.com/v1beta/models",
-                    headers={"x-goog-api-key": self._api_key},
-                )
-                if response.status_code == HTTP_OK:
-                    data = response.json()
-                    models = [
-                        m["name"].replace("models/", "")
-                        for m in data.get("models", [])
-                        if "gemini" in m["name"].lower() and "embedding" not in m["name"].lower()
-                    ]
-                    return True, models, f"Found {len(models)} Gemini models"
-                return False, [], f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="google", error=str(e))
             return False, [], str(e)
+
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="google",
+                status_code=response.status_code,
+            )
+            return False, [], f"API error: {response.status_code}"
+
+        models = [
+            m["name"].replace("models/", "")
+            for m in data.get("models", [])
+            if "gemini" in m["name"].lower() and "embedding" not in m["name"].lower()
+        ]
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="google",
+            model_count=len(models),
+        )
+        return True, models, f"Found {len(models)} Gemini models"
 
     def _fetch_ollama_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch installed Ollama models.
@@ -833,17 +1012,31 @@ class ModelRefreshWorker(QThread):
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "http://localhost:11434"
+        url = f"{base_url}/api/tags"
+        _logger.info("model_fetch_starting", provider="ollama", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(f"{base_url}/api/tags")
-                if response.status_code == HTTP_OK:
-                    data = response.json()
-                    models = [m["name"] for m in data.get("models", [])]
-                    return True, models, f"Found {len(models)} Ollama models"
-                return False, [], f"Ollama error: {response.status_code}"
+                response = client.get(url)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="ollama", error=str(e))
             return False, [], str(e)
+
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="ollama",
+                status_code=response.status_code,
+            )
+            return False, [], f"Ollama error: {response.status_code}"
+
+        models = [m["name"] for m in data.get("models", [])]
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="ollama",
+            model_count=len(models),
+        )
+        return True, models, f"Found {len(models)} Ollama models"
 
     def _fetch_openrouter_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch OpenRouter models from API.
@@ -855,21 +1048,33 @@ class ModelRefreshWorker(QThread):
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
         base_url = self._api_base or "https://openrouter.ai/api/v1"
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.info("model_fetch_starting", provider="openrouter", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    data = response.json()
-                    models = [m["id"] for m in data.get("data", [])]
-                    models.sort()
-                    return True, models[:50], f"Found {len(models)} OpenRouter models"
-                return False, [], f"API error: {response.status_code}"
+                response = client.get(url, headers=headers)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="openrouter", error=str(e))
             return False, [], str(e)
+
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="openrouter",
+                status_code=response.status_code,
+            )
+            return False, [], f"API error: {response.status_code}"
+
+        models = [m["id"] for m in data.get("data", [])]
+        models.sort()
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="openrouter",
+            model_count=len(models),
+        )
+        return True, models[:50], f"Found {len(models)} OpenRouter models"
 
     def _fetch_huggingface_models(
         self,
@@ -883,30 +1088,42 @@ class ModelRefreshWorker(QThread):
         Returns:
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
+        url = "https://huggingface.co/api/models"
+        params = {
+            "filter": "text-generation-inference",
+            "sort": "downloads",
+            "direction": -1,
+            "limit": 50,
+        }
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.info("model_fetch_starting", provider="huggingface", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    "https://huggingface.co/api/models",
-                    params={
-                        "filter": "text-generation-inference",
-                        "sort": "downloads",
-                        "direction": -1,
-                        "limit": 50,
-                    },
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_OK:
-                    data = response.json()
-                    models = [m["id"] for m in data if m.get("pipeline_tag") in {"text-generation", "conversational"}]
-                    return (
-                        True,
-                        models[:30],
-                        f"Found {len(models)} HuggingFace models",
-                    )
-                return False, [], f"API error: {response.status_code}"
+                response = client.get(url, params=params, headers=headers)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError) as e:
             _logger.warning("model_fetch_failed", provider="huggingface", error=str(e))
             return False, [], str(e)
+
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="huggingface",
+                status_code=response.status_code,
+            )
+            return False, [], f"API error: {response.status_code}"
+
+        models = [m["id"] for m in data if m.get("pipeline_tag") in {"text-generation", "conversational"}]
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="huggingface",
+            model_count=len(models),
+        )
+        return (
+            True,
+            models[:30],
+            f"Found {len(models)} HuggingFace models",
+        )
 
     def _fetch_grok_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch X.AI Grok models.
@@ -960,22 +1177,39 @@ class ModelRefreshWorker(QThread):
             return result
 
         base_url = (self._api_base or "https://api.x.ai/v1").rstrip("/")
+        url = f"{base_url}/models"
+        headers = {"Authorization": f"Bearer {self._api_key}"}
+        _logger.info("model_fetch_starting", provider="grok", url=url)
         try:
             with httpx.Client(timeout=timeout) as client:
-                response = client.get(
-                    f"{base_url}/models",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
-                )
-                if response.status_code == HTTP_UNAUTHORIZED:
-                    return False, [], "Invalid API key"
-                if response.status_code != HTTP_OK:
-                    return False, [], f"API error: {response.status_code}"
-                data = response.json()
-                models = sorted(m["id"] for m in data.get("data", []) if m.get("id"))
-                return True, models, f"Found {len(models)} Grok models"
+                response = client.get(url, headers=headers)
+                data = response.json() if response.status_code == HTTP_OK else None
         except (httpx.HTTPError, OSError, KeyError, ValueError) as e:
             _logger.warning("model_fetch_failed", provider="grok", error=str(e))
             return False, [], str(e)
+
+        if response.status_code == HTTP_UNAUTHORIZED:
+            _logger.warning(
+                "model_fetch_unauthorized",
+                provider="grok",
+                status_code=response.status_code,
+            )
+            return False, [], "Invalid API key"
+        if data is None:
+            _logger.warning(
+                "model_fetch_http_error",
+                provider="grok",
+                status_code=response.status_code,
+            )
+            return False, [], f"API error: {response.status_code}"
+
+        models = sorted(m["id"] for m in data.get("data", []) if m.get("id"))
+        _logger.info(
+            "model_fetch_succeeded",
+            provider="grok",
+            model_count=len(models),
+        )
+        return True, models, f"Found {len(models)} Grok models"
 
 
 class ProviderConfigDialog(QDialog):
@@ -1033,34 +1267,47 @@ class ProviderConfigDialog(QDialog):
     def _load_credential_overview(self) -> None:
         """Load credential overview from env_loader and credential store."""
         try:
-            loader = get_credential_loader()
-            configured = loader.list_configured_providers()
-            missing = loader.list_missing_providers()
-            self._credential_overview: dict[str, Any] = {
-                "configured": configured,
-                "missing": missing,
-            }
-            _logger.info(
-                "credential_overview",
-                configured_count=len(configured),
-                missing_count=len(missing),
+            self._refresh_credential_overview()
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning(
+                "credential_overview_load_skipped",
+                error=str(exc),
             )
 
-            store = CredentialStore()
+    def _refresh_credential_overview(self) -> None:
+        """Populate ``_credential_overview`` and log the credential store snapshot."""
+        loader = get_credential_loader()
+        configured = loader.list_configured_providers()
+        missing = loader.list_missing_providers()
+        self._credential_overview: dict[str, Any] = {
+            "configured": configured,
+            "missing": missing,
+        }
+        _logger.info(
+            "credential_overview",
+            configured_count=len(configured),
+            missing_count=len(missing),
+        )
 
-            async def _load_store_credentials() -> None:
-                store_providers = await store.list_providers()
-                for cred in store_providers:
-                    source = await store.get_source(cred.provider)
-                    _logger.debug(
-                        "credential_source",
-                        provider=cred.provider.value,
-                        source=str(source),
-                    )
+        store = CredentialStore()
 
-            run_bridge_coroutine(_load_store_credentials())
-        except (RuntimeError, OSError, ValueError):
-            _logger.debug("credential_overview_load_skipped", exc_info=True)
+        async def _load_store_credentials() -> int:
+            store_providers = await store.list_providers()
+            for cred in store_providers:
+                source = await store.get_source(cred.provider)
+                _logger.debug(
+                    "credential_source",
+                    provider=cred.provider.value,
+                    source=str(source),
+                )
+            return len(store_providers)
+
+        result = run_bridge_coroutine(_load_store_credentials())
+        store_count = result if isinstance(result, int) else 0
+        _logger.info(
+            "credential_store_loaded",
+            store_provider_count=store_count,
+        )
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -1242,8 +1489,8 @@ class ProviderConfigDialog(QDialog):
             return None
         try:
             active = self._registry.active_name
-        except (RuntimeError, AttributeError, ValueError):
-            _logger.debug("active_provider_lookup_failed", exc_info=True)
+        except (RuntimeError, AttributeError, ValueError) as exc:
+            _logger.warning("active_provider_lookup_failed", error=str(exc))
             return None
         else:
             return active.value if active is not None else None
@@ -1263,8 +1510,12 @@ class ProviderConfigDialog(QDialog):
             provider_name = ProviderName(provider_id)
             provider = self._registry.get(provider_name)
             return provider is not None and getattr(provider, "is_connected", False)
-        except (RuntimeError, AttributeError, ValueError):
-            _logger.debug("provider_connection_check_failed", exc_info=True, provider_id=provider_id)
+        except (RuntimeError, AttributeError, ValueError) as exc:
+            _logger.warning(
+                "provider_connection_check_failed",
+                provider_id=provider_id,
+                error=str(exc),
+            )
             return False
 
     def _get_model_count(self, provider_id: str) -> int:
@@ -1282,8 +1533,12 @@ class ProviderConfigDialog(QDialog):
             provider_name = ProviderName(provider_id)
             counts = self._discovery.get_provider_model_count()
             return counts.get(provider_name, 0)
-        except (RuntimeError, AttributeError, ValueError):
-            _logger.debug("model_count_lookup_failed", exc_info=True, provider_id=provider_id)
+        except (RuntimeError, AttributeError, ValueError) as exc:
+            _logger.warning(
+                "model_count_lookup_failed",
+                provider_id=provider_id,
+                error=str(exc),
+            )
             return 0
 
     def _update_active_label(self) -> None:
@@ -1406,6 +1661,7 @@ class ProviderConfigDialog(QDialog):
 
     def refresh_credentials(self) -> None:
         """Reload credentials from env files and credential store."""
+        _logger.info("credential_refresh_starting")
         try:
             loader = get_credential_loader()
             loader.reload()
@@ -1422,27 +1678,29 @@ class ProviderConfigDialog(QDialog):
                 configured=len(configured),
                 missing=len(missing),
             )
-        except (RuntimeError, OSError, ValueError):
-            _logger.debug("credential_refresh_failed", exc_info=True)
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning("credential_refresh_failed", error=str(exc))
         self._load_credential_overview()
 
     def create_env_template(self) -> None:
         """Create a .env template file for credential configuration."""
+        _logger.info("env_template_creation_starting", path=".env")
         try:
             create_env_template(Path(".env"))
             _logger.info("env_template_created", path=".env")
-        except OSError:
-            _logger.debug("env_template_creation_failed", exc_info=True)
+        except OSError as exc:
+            _logger.warning("env_template_creation_failed", error=str(exc))
         self._load_credential_overview()
 
     def migrate_credentials(self) -> None:
         """Migrate credentials from env files to credential store."""
+        _logger.info("credential_migration_starting", source=".env")
         try:
             store = CredentialStore()
             run_bridge_coroutine(store.migrate_from_env())
             _logger.info("credentials_migrated_from_env", source=".env")
-        except (RuntimeError, OSError, ValueError):
-            _logger.debug("credential_migration_failed", exc_info=True)
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning("credential_migration_failed", error=str(exc))
         self._load_credential_overview()
 
     def discover_single_provider(self, provider_name: str) -> None:
@@ -1494,6 +1752,7 @@ class ProviderConfigDialog(QDialog):
             _logger.warning("oauth_no_config", provider=provider_id)
             return
 
+        _logger.info("oauth_flow_starting", provider=provider_id)
         try:
             manager = get_oauth_manager()
 
@@ -1507,8 +1766,10 @@ class ProviderConfigDialog(QDialog):
                 widget = self._provider_widgets.get(provider_id)
                 if widget is not None:
                     widget.set_api_key(creds.api_key)
-        except (RuntimeError, OSError, ValueError):
-            _logger.warning("oauth_flow_failed", provider=provider_id)
+            else:
+                _logger.warning("oauth_credentials_missing", provider=provider_id)
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
         self._load_credential_overview()
 
     def revoke_oauth_token(self, provider_id: str) -> None:
@@ -1517,6 +1778,7 @@ class ProviderConfigDialog(QDialog):
         Args:
             provider_id: The provider whose token to revoke.
         """
+        _logger.info("oauth_revoke_starting", provider=provider_id)
         try:
             manager = get_oauth_manager()
             try:
@@ -1957,7 +2219,7 @@ class ProviderSettingsWidget(QFrame):
         else:
             self._xpu_mem_timer.stop()
             xpu_group.hide()
-            _logger.debug("xpu_unavailable_ui_hidden", provider=self.provider_id)
+            _logger.info("xpu_unavailable_ui_hidden", provider=self.provider_id)
 
     @staticmethod
     def _is_xpu_available() -> bool:
@@ -2464,6 +2726,11 @@ class ProviderSettingsWidget(QFrame):
             )
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
             self._status_label.setText(message)
+            _logger.info(
+                "auto_refresh_models_scheduled",
+                provider=self.provider_id,
+                delay_ms=500,
+            )
             QTimer.singleShot(500, self._auto_refresh_models)
         else:
             _logger.warning(
@@ -2537,6 +2804,12 @@ class ProviderSettingsWidget(QFrame):
         """Save current settings to config file and .env file."""
         self._config_path.parent.mkdir(parents=True, exist_ok=True)
 
+        _logger.info(
+            "provider_settings_save_starting",
+            provider=self.provider_id,
+            config_path=str(self._config_path),
+        )
+
         all_settings: dict[str, dict[str, Any]] = {}
         if self._config_path.exists():
             try:
@@ -2584,21 +2857,53 @@ class ProviderSettingsWidget(QFrame):
         if self.provider_id not in env_var_mapping:
             return
 
+        env_var_name = env_var_mapping[self.provider_id]
+        _logger.info(
+            "env_credential_write_starting",
+            provider=self.provider_id,
+            env_var=env_var_name,
+        )
         try:
-            loader = get_credential_loader()
-            loader.save_to_env_file(env_var_mapping[self.provider_id], api_key)
-
-            if self.provider_id == "ollama" and self._api_base_input:
-                host = self._api_base_input.text().strip()
-                if host and host != "http://localhost:11434":
-                    loader.save_to_env_file("OLLAMA_HOST", host)
+            self._write_env_credentials(env_var_name, api_key)
         except OSError as e:
-            _logger.warning("env_file_update_failed", error=str(e))
+            _logger.warning(
+                "env_file_update_failed",
+                provider=self.provider_id,
+                env_var=env_var_name,
+                error=str(e),
+            )
             show_warning(
                 self,
                 "Save Warning",
                 f"Settings saved but failed to update .env file: {e}",
             )
+
+    def _write_env_credentials(self, env_var_name: str, api_key: str) -> None:
+        """Write the provider's API key (and Ollama host override) to the ``.env`` file.
+
+        Args:
+            env_var_name: Environment variable name that maps to ``provider_id``.
+            api_key: Credential value to persist.
+        """
+        loader = get_credential_loader()
+        loader.save_to_env_file(env_var_name, api_key)
+        _logger.info(
+            "env_credential_written",
+            provider=self.provider_id,
+            env_var=env_var_name,
+        )
+
+        if self.provider_id != "ollama" or not self._api_base_input:
+            return
+        host = self._api_base_input.text().strip()
+        if not host or host == "http://localhost:11434":
+            return
+        loader.save_to_env_file("OLLAMA_HOST", host)
+        _logger.info(
+            "env_credential_written",
+            provider=self.provider_id,
+            env_var="OLLAMA_HOST",
+        )
 
     def get_provider_device_info(self) -> dict[str, Any] | None:
         """Get device info for local transformer providers.

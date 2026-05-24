@@ -253,6 +253,8 @@ class ProcessPanel(AnalysisPanelBase):
 
         bridge = self._bridge
 
+        _logger.debug("process_detect_architecture_starting", pid=pid)
+
         async def _detect() -> str | None:
             try:
                 return await bridge.detect_architecture(pid)
@@ -281,6 +283,8 @@ class ProcessPanel(AnalysisPanelBase):
 
         pid = self._attached_pid
         bridge = self._bridge
+
+        _logger.debug("process_get_token_privileges_starting", pid=pid)
 
         async def _fetch_privs() -> list[dict[str, object]] | None:
             try:
@@ -377,6 +381,7 @@ class ProcessPanel(AnalysisPanelBase):
         Returns:
             bool: True always.
         """
+        _logger.info("process_panel_start_tool", state=self._state.value)
         self._process_tab.start_refresh()
         self.tool_started.emit()
         return True
@@ -388,6 +393,11 @@ class ProcessPanel(AnalysisPanelBase):
         Returns:
             bool: True if cleanup succeeded.
         """
+        _logger.info(
+            "process_panel_stop_tool",
+            state=self._state.value,
+            attached_pid=self._attached_pid,
+        )
         self._cleanup()
         self.tool_closed.emit()
         return True

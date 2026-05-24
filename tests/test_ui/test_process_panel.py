@@ -350,9 +350,9 @@ class TestToolDefinition:
     """Verify ProcessBridge tool definition structure."""
 
     def test_tool_definition_count(self) -> None:
-        """Verify tool definition has 53 functions."""
+        """Verify tool definition has 54 functions."""
         b = ProcessBridge()
-        assert len(b.tool_definition.functions) == 53
+        assert len(b.tool_definition.functions) == 54
 
     def test_all_names_start_with_process(self) -> None:
         """Verify all function names start with 'process.'."""

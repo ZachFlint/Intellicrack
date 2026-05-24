@@ -216,7 +216,7 @@ class GoogleProvider(LLMProviderBase):
                         supports_streaming=supports_streaming,
                         input_cost_per_1m_tokens=None,
                         output_cost_per_1m_tokens=None,
-                    )
+                    ),
                 )
             sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
             self._logger.info(
