@@ -146,7 +146,7 @@ TOOLS: list[Tool] = [
     Tool("Deptry", "deptry", is_formatter=False, group="py"),
     Tool("Vermin", "vermin", is_formatter=False, group="py"),
     Tool("JSONLint", "jsonlint", is_formatter=False, group="json"),
-    Tool("Taplo", "taplo", is_formatter=False, group="toml"),
+    Tool("Tombi", "tombi", is_formatter=False, group="toml"),
     Tool("Markdown", "mdlint", is_formatter=False, group="md"),
     Tool("YAML", "yamllint", is_formatter=False, group="yaml"),
     Tool("ShellCheck", "shellcheck", is_formatter=False, group="sh"),

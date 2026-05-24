@@ -81,7 +81,7 @@ $tools = @(
     @{N = 'Deptry';         R = 'deptry';             F = $false; G = 'py' },
     @{N = 'Vermin';         R = 'vermin';             F = $false; G = 'py' },
     @{N = 'JSONLint';       R = 'jsonlint';           F = $false; G = 'json' },
-    @{N = 'Taplo';          R = 'taplo';              F = $false; G = 'toml' },
+    @{N = 'Tombi';          R = 'tombi';              F = $false; G = 'toml' },
     @{N = 'Markdown';       R = 'mdlint';             F = $false; G = 'md' },
     @{N = 'YAML';           R = 'yamllint';           F = $false; G = 'yaml' },
     @{N = 'ShellCheck';     R = 'shellcheck';         F = $false; G = 'sh' },
