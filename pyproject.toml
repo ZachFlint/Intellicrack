@@ -1,12 +1,11 @@
-[build-system]
-build-backend = "hatchling.build"
-requires = [ "hatchling>=1.27" ]
-
 [project]
 name = "intellicrack"
 version = "0.1.0a1"
 description = "Intellicrack: AI-powered reverse engineering orchestration platform"
 readme = "README.md"
+requires-python = ">=3.13"
+license = "GPL-3.0-or-later"
+authors = [{ name = "Zachary Flint", email = "zach.flint2@gmail.com" }]
 keywords = [
   "ai-orchestration",
   "binary-analysis",
@@ -18,9 +17,6 @@ keywords = [
   "security-research",
   "x64dbg",
 ]
-license = "GPL-3.0-or-later"
-authors = [ { name = "Zachary Flint", email = "zach.flint2@gmail.com" } ]
-requires-python = ">=3.13"
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -40,13 +36,37 @@ classifiers = [
   "Topic :: Software Development :: Disassemblers",
   "Typing :: Typed",
 ]
+urls."Bug Tracker" = "https://github.com/zacharyflint/intellicrack/issues"
+urls.Documentation = "https://intellicrack.readthedocs.io"
+urls.Homepage = "https://github.com/zacharyflint/intellicrack"
+urls."Source Code" = "https://github.com/zacharyflint/intellicrack"
+scripts.intellicrack = "intellicrack.main:main"
+gui-scripts.intellicrack-gui = "intellicrack.main:main"
 dependencies = [
+  "PyQt6>=6.11.0,<7",
+  "anthropic>=0.104.1,<0.105",
+  "capstone>=5.0.8,<6",
   "cryptography>=48.0.0,<49",
+  "frida>=17.9.11,<18",
+  "frida-tools>=14.8.2,<15",
+  "ghidra-bridge>=1.0.0,<2",
+  "google-genai>=2.6.0,<3",
+  "httpx>=0.28.1,<0.29",
   "huggingface-hub>=1.16.1,<2",
   "keyring>=25.7.0,<26",
+  "keystone-engine>=0.9.2,<0.10",
+  "lief>=0.17.6,<0.18",
+  "openai>=2.38.0,<3",
+  "pefile>=2024.8.26,<2025",
   "psutil>=7.2.2,<8",
+  "pydantic>=2.13.4,<3",
   "pyyaml>=6.0.3,<7",
-  "yara-python>=4.5.4,<5", "check-wheel-contents", "docformatter", "pyproject-fmt", "vermin", "wily", "torch", "astor", "autopep8", "bandit", "basedpyright", "black", "blinter", "build", "bumpversion", "codespell", "commitizen", "dead", "deadcode", "deptry", "detect-secrets", "flake8", "flake8-pyproject", "interrogate", "isort", "jsonlint", "mccabe", "monkeytype", "mypy", "mypy-extensions", "nodeenv", "pip-audit", "pipdeptree", "poetry", "pre-commit", "pre-commit-hooks", "pyannotate", "pyclean", "pycodestyle", "pydoclint", "pydocstyle", "pygount", "pylint", "pyroma", "pyupgrade", "radon", "rope", "ruff", "safety", "sourcery", "twine", "ty", "types-pyyaml", "types-requests", "uncalled", "validate-pyproject", "skylos", "validate-pyproject-schema-store", "vulture", "wemake-python-styleguide", "xenon", "yamllint", "yapf", "mkdocs-material", "myst-parser", "pdoc3", "pymdown-extensions", "sphinx", "sphinx-autobuild", "sphinx-autodoc-typehints", "sphinx-copybutton", "sphinx-rtd-theme", "sphinx-tabs", "sphinxcontrib-mermaid", "accelerate", "bitsandbytes", "safetensors", "sentencepiece", "transformers", "ipdb", "line-profiler", "memory-profiler", "py-spy", "pycallgraph2", "pyinstrument", "scalene", "snakeviz", "coverage", "faker", "freezegun", "hypothesis", "nox", "pytest", "pytest-asyncio", "pytest-benchmark", "pytest-cov", "pytest-deadfixtures", "pytest-env", "pytest-html", "pytest-instafail", "pytest-mock", "pytest-qt", "pytest-randomly", "pytest-sugar", "pytest-timeout", "pytest-xdist", "responses", "tox",
+  "r2pipe>=1.9.8,<2",
+  "structlog>=25.5.0,<26",
+  "tiktoken>=0.13.0,<0.14",
+  "tomli-w>=1.2.0,<2",
+  "xxhash>=3.7.0,<4",
+  "yara-python>=4.5.4,<5",
 ]
 optional-dependencies.dev = [
   "astor",
@@ -165,12 +185,6 @@ optional-dependencies.test = [
   "responses",
   "tox",
 ]
-urls."Bug Tracker" = "https://github.com/zacharyflint/intellicrack/issues"
-urls."Source Code" = "https://github.com/zacharyflint/intellicrack"
-urls.Documentation = "https://intellicrack.readthedocs.io"
-urls.Homepage = "https://github.com/zacharyflint/intellicrack"
-scripts.intellicrack = "intellicrack.main:main"
-gui-scripts.intellicrack-gui = "intellicrack.main:main"
 
 [dependency-groups]
 dev = [
@@ -219,6 +233,7 @@ dev = [
   "rope",
   "ruff",
   "safety",
+  "skylos",
   "sourcery",
   "twine",
   "ty",
@@ -226,7 +241,6 @@ dev = [
   "types-requests",
   "uncalled",
   "validate-pyproject",
-  "skylos",
   "validate-pyproject-schema-store",
   "vermin",
   "vulture",
@@ -283,12 +297,33 @@ test = [
   "tox",
 ]
 
-[tool.hatch]
-build.targets.wheel.packages = [ "src/intellicrack" ]
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.bandit]
+exclude_dirs = [
+  "tests",
+  "docs",
+  "tools",
+  ".git",
+  ".github",
+  ".pixi",
+  "node_modules",
+  "CLI Coding",
+  "Screenshots",
+]
+# B405: xml.etree usage is restricted to write-side construction via
+# ``intellicrack.core._xml_gen``. That module never parses untrusted input;
+# untrusted XML parsing must go through ``defusedxml``. ``defusedxml`` does
+# not provide a hardened replacement for write-side ElementTree, so the
+# stdlib import is the correct API and this project-wide skip is the
+# documented, source-clean alternative to inline ``# nosec`` annotations.
+skips = ["B405"]
 
 [tool.black]
 line-length = 140
-target-version = [ "py313" ]
+target-version = ["py313"]
 include = "\\.pyi?$"
 extend-exclude = '''/(
   \.git
@@ -312,243 +347,6 @@ extend-exclude = '''/(
 )/
 '''
 
-[tool.ruff]
-target-version = "py313"
-line-length = 140
-src = [ "." ]
-exclude = [
-  "*.egg-info/",
-  ".claude/",
-  ".git/",
-  ".github/",
-  ".idea/",
-  ".mypy_cache/",
-  ".pixi/",
-  ".pytest_cache/",
-  ".ruff_cache/",
-  ".semgrep/",
-  ".serena/",
-  ".venv/",
-  ".venv*/",
-  ".vscode/",
-  "__pycache__/",
-  "build/",
-  "CLI Coding/",
-  "dist/",
-  "docs/",
-  "notebooks/",
-  "node_modules/",
-  "Screenshots/",
-  "stubs/",
-  "tools/",
-  "typings/",
-  "vendor/",
-  "vulture_whitelist.py",
-]
-force-exclude = true
-preview = true
-format.indent-style = "space"
-format.quote-style = "double"
-format.line-ending = "cr-lf"
-format.skip-magic-trailing-comma = false
-format.docstring-code-format = true
-lint.select = [
-  "A",     # flake8-builtins
-  "ANN",   # flake8-annotations
-  "ARG",   # flake8-unused-arguments
-  "ASYNC", # flake8-async
-  "B",     # flake8-bugbear
-  "BLE",   # flake8-blind-except
-  "C4",    # flake8-comprehensions
-  "C90",   # mccabe complexity
-  "COM",   # flake8-commas
-  "CPY",   # flake8-copyright
-  "D",     # pydocstyle
-  "DOC",   # pydoclint
-  "DTZ",   # flake8-datetimez
-  "E",     # pycodestyle errors
-  "EM",    # flake8-errmsg
-  "ERA",   # eradicate (commented-out code)
-  "F",     # pyflakes
-  "FBT",   # flake8-boolean-trap
-  "FIX",   # flake8-fixme (TODO/FIXME)
-  "FLY",   # flynt (f-string conversion)
-  "FURB",  # refurb (code modernization)
-  "G",     # flake8-logging-format
-  "I",     # isort
-  "ICN",   # flake8-import-conventions
-  "ISC",   # flake8-implicit-str-concat
-  "LOG",   # flake8-logging
-  "N",     # pep8-naming
-  "PERF",  # perflint
-  "PGH",   # pygrep-hooks
-  "PIE",   # flake8-pie
-  "PL",    # pylint
-  "PT",    # flake8-pytest-style
-  "PTH",   # flake8-use-pathlib
-  "PYI",   # flake8-pyi (stub files)
-  "Q",     # flake8-quotes
-  "RET",   # flake8-return
-  "RSE",   # flake8-raise
-  "RUF",   # ruff-specific
-  "S",     # bandit security
-  "SIM",   # flake8-simplify
-  "SLF",   # flake8-self
-  "T10",   # flake8-debugger
-  "T20",   # flake8-print
-  "TC",    # flake8-type-checking
-  "TID",   # flake8-tidy-imports
-  "TRY",   # tryceratops
-  "UP",    # pyupgrade
-  "W",     # pycodestyle warnings
-]
-lint.ignore = [
-  "DOC202",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
-  "DOC502",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
-  "E501",    # line-too-long
-  "PLR0911", # too-many-return-statements
-  "PLR0912", # too-many-branches
-  "PLR0913", # too-many-arguments
-  "PLR0915", # too-many-statements
-  "PLR1702", # too-many-nested-blocks
-  "S405",    # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core._xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
-]
-lint.per-file-ignores.".claude/**" = [ "S404" ]
-lint.per-file-ignores."scripts/**" = [ "N999", "S404", "S603", "S607", "T201" ]
-lint.per-file-ignores."src/intellicrack/bridges/_win32_types.py" = [ "N801" ]
-lint.per-file-ignores."src/intellicrack/bridges/frida_bridge.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/bridges/ghidra.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/bridges/hex_editor.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/bridges/cutter.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/bridges/process.py" = [ "N801", "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/bridges/x64dbg.py" = [ "PLR0904" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
-  "C901",
-  "PLR0914",
-  "PLR2004",
-  "TRY003",
-]
-lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = [ "C901" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = [ "C901", "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = [ "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = [ "PLR2004", "TRY003" ]
-lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/core/tools.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/main.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/ui/app.py" = [ "PLC0415" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = [ "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = [ "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = [ "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = [ "N802" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/panel.py" = [ "PLR0914" ]
-lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
-  "N802",
-  "PLR0914",
-  "S324",
-]
-lint.per-file-ignores."src/intellicrack/ui/tools.py" = [ "PLR0904" ]
-lint.per-file-ignores."tests/**" = [
-  "B009",
-  "B010",
-  "PLC2701",
-  "PLR2004",
-  "PLR6301",
-  "S101",
-  "S102",
-  "S404",
-  "S603",
-  "SLF001",
-  "TC006",
-]
-lint.fixable = [ "ALL" ]
-lint.unfixable = [ "PTH123", "RET503", "RUF013", "RUF022", "TID252", "TRY400" ]
-lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
-lint.isort.combine-as-imports = true
-lint.isort.force-wrap-aliases = true
-lint.isort.known-first-party = [ "intellicrack" ]
-lint.isort.lines-after-imports = 2
-lint.mccabe.max-complexity = 30
-lint.pydocstyle.convention = "google"
-lint.pylint.max-args = 20
-lint.pylint.max-branches = 25
-lint.pylint.max-public-methods = 50
-lint.pylint.max-statements = 100
-
-[tool.flake8]
-max-line-length = 140
-exclude = [
-  ".git",
-  ".github",
-  ".pixi",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".ruff_cache",
-  ".vscode",
-  ".idea",
-  ".claude",
-  ".semgrep",
-  ".serena",
-  "build",
-  "dist",
-  "tools",
-  "docs",
-  "node_modules",
-  "notebooks",
-  "vendor",
-  "CLI Coding",
-  "Screenshots",
-  "typings",
-  "stubs",
-]
-extend-ignore = [
-  "E203",
-  "W503",
-  "WPS110",
-  "WPS111",
-  "WPS114",
-  "WPS115",
-  "WPS122",
-  "WPS201",
-  "WPS202",
-  "WPS204",
-  "WPS210",
-  "WPS213",
-  "WPS214",
-  "WPS220",
-  "WPS221",
-  "WPS226",
-  "WPS229",
-  "WPS231",
-  "WPS232",
-  "WPS235",
-  "WPS237",
-  "WPS238",
-  "WPS300",
-  "WPS301",
-  "WPS332",
-  "WPS336",
-  "WPS338",
-  "WPS339",
-  "WPS356",
-  "WPS358",
-  "WPS407",
-  "WPS410",
-  "WPS412",
-  "WPS420",
-  "WPS430",
-  "WPS432",
-  "WPS462",
-  "WPS476",
-  "WPS501",
-  "WPS504",
-  "WPS505",
-  "WPS529",
-  "WPS602",
-  "WPS615",
-]
-per-file-ignores = [ "tests/*:S101,S102,S404" ]
-
 [tool.codespell]
 skip = """\
   .git,.github,.pixi,.claude,.serena,build,dist,tools,vendor,target,node_modules,CLI \
@@ -556,160 +354,6 @@ skip = """\
   """
 ignore-words-list = "lief,crossreference,thirdparty,nd,lod,connin,regist"
 count = true
-
-[tool.docformatter]
-wrap-summaries = 140
-wrap-descriptions = 140
-pre-summary-newline = false
-close-quotes-on-newline = true
-recursive = true
-exclude = [
-  ".git",
-  ".pixi",
-  "build",
-  "dist",
-  "node_modules",
-  "tools",
-  "vendor",
-  "typings",
-  "stubs",
-]
-
-[tool.pydoclint]
-style = "google"
-arg-type-hints-in-docstring = false
-check-return-types = true
-check-yield-types = true
-allow-init-docstring = true
-
-[tool.pydocstyle]
-convention = "google"
-match-dir = "(?!tests|docs|tools|build|dist|node_modules|\\.).*"
-
-[tool.deptry]
-known_first_party = [ "intellicrack" ]
-pep621_dev_dependency_groups = [ "dev", "test", "docs", "profile" ]
-extend_exclude = [
-  "tests",
-  "docs",
-  "tools",
-  "scripts",
-  "vendor",
-  ".git",
-  ".github",
-  ".pixi",
-  ".claude",
-  "build",
-  "dist",
-  "node_modules",
-  "CLI Coding",
-  "Screenshots",
-  "typings",
-  "stubs",
-]
-per_rule_ignores = { DEP002 = [
-  "accelerate",
-  "bitsandbytes",
-  "sentencepiece",
-  "safetensors",
-  "ghidra-bridge",
-  "tomli-w",
-], DEP003 = [
-  "intellicrack_hexcore",
-] }
-package_module_name_map.keystone-engine = [ "keystone" ]
-package_module_name_map.google-genai = [ "google" ]
-package_module_name_map.ghidra-bridge = [ "ghidra_bridge" ]
-package_module_name_map.tomli-w = [ "tomli_w" ]
-
-[tool.bandit]
-exclude_dirs = [
-  "tests",
-  "docs",
-  "tools",
-  ".git",
-  ".github",
-  ".pixi",
-  "node_modules",
-  "CLI Coding",
-  "Screenshots",
-]
-# B405: xml.etree usage is restricted to write-side construction via
-# ``intellicrack.core._xml_gen``. That module never parses untrusted input;
-# untrusted XML parsing must go through ``defusedxml``. ``defusedxml`` does
-# not provide a hardened replacement for write-side ElementTree, so the
-# stdlib import is the correct API and this project-wide skip is the
-# documented, source-clean alternative to inline ``# nosec`` annotations.
-skips = [ "B405" ]
-
-[tool.mypy]
-python_version = "3.13"
-mypy_path = [ ".", "stubs" ]
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-ignore_missing_imports = true
-follow_imports = "silent"
-show_error_codes = true
-strict = true
-exclude = [
-  "^tools/",
-  "^build/",
-  "^dist/",
-  "^\\.git/",
-  "^\\.github/",
-  "^\\.pixi/",
-  "^docs/",
-  "^\\.mypy_cache/",
-  "^\\.pytest_cache/",
-  "^\\.ruff_cache/",
-  "^\\.claude/",
-  "^\\.serena/",
-  "^\\.idea/",
-  "^\\.vscode/",
-  "^node_modules/",
-  "^CLI Coding/",
-  "^Screenshots/",
-]
-
-[[tool.mypy.overrides]]
-module = [
-  "frida.*",
-  "r2pipe.*",
-  "ghidra_bridge.*",
-  "pefile.*",
-  "lief.*",
-  "transformers.*",
-  "accelerate.*",
-  "bitsandbytes.*",
-]
-follow_imports = "skip"
-
-[tool.pytest]
-ini_options.minversion = "8.0"
-ini_options.testpaths = [ "tests" ]
-ini_options.pythonpath = [ "src" ]
-ini_options.addopts = [ "-ra", "--strict-markers" ]
-ini_options.python_files = [ "test_*.py", "*_test.py" ]
-ini_options.python_classes = [ "Test*" ]
-ini_options.python_functions = [ "test_*" ]
-ini_options.markers = [
-  "slow: Slow running tests",
-  "integration: Integration tests",
-  "unit: Unit tests",
-  "xpu: Tests requiring Intel XPU hardware",
-  "b580: Tests specific to Intel Arc B580 GPU",
-  "spawns_process: Test spawns external OS processes; runs only inside the Docker sandbox",
-]
 
 [tool.coverage]
 run.branch = true
@@ -724,7 +368,7 @@ run.omit = [
   "*/tests/*",
   "*/tools/*",
 ]
-run.source = [ "src/intellicrack" ]
+run.source = ["src/intellicrack"]
 report.exclude_lines = [
   "@(abc\\.)?abstractmethod",
   "def __repr__",
@@ -741,46 +385,8 @@ report.sort = "Cover"
 html.directory = "coverage_html_report"
 html.title = "Intellicrack Coverage Report"
 
-[tool.vulture]
-min_confidence = 80
-ignore_decorators = [
-  "@abstractmethod",
-  "@abc.abstractmethod",
-  "@property",
-  "@*.setter",
-  "@staticmethod",
-  "@classmethod",
-  "@override",
-]
-ignore_names = [
-  "argtypes",
-  "restype",
-  "supports_*",
-  "visit_*",
-  "do_*",
-  "test_*",
-  "setUp",
-  "tearDown",
-  "setUpClass",
-  "tearDownClass",
-]
-exclude = [
-  ".git/",
-  ".github/",
-  ".pixi/",
-  "build/",
-  "dist/",
-  "tools/",
-  "docs/",
-  "node_modules/",
-  "CLI Coding/",
-  "Screenshots/",
-  "typings/",
-  "stubs/",
-]
-
 [tool.deadcode]
-exclude = [ "tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots" ]
+exclude = ["tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
 ignore-names = [
   "argtypes",
   "restype",
@@ -909,6 +515,137 @@ ignore-names-if-inherits-from = [
   "abc.ABC",
 ]
 
+[tool.deptry]
+known_first_party = ["intellicrack"]
+pep621_dev_dependency_groups = ["dev", "test", "docs", "profile"]
+extend_exclude = [
+  "tests",
+  "docs",
+  "tools",
+  "scripts",
+  "vendor",
+  ".git",
+  ".github",
+  ".pixi",
+  ".claude",
+  "build",
+  "dist",
+  "node_modules",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
+]
+per_rule_ignores = { DEP002 = [
+  "accelerate",
+  "bitsandbytes",
+  "sentencepiece",
+  "safetensors",
+  "ghidra-bridge",
+  "tomli-w",
+], DEP003 = [
+  "intellicrack_hexcore",
+] }
+package_module_name_map.keystone-engine = ["keystone"]
+package_module_name_map.google-genai = ["google"]
+package_module_name_map.ghidra-bridge = ["ghidra_bridge"]
+package_module_name_map.tomli-w = ["tomli_w"]
+
+[tool.docformatter]
+wrap-summaries = 140
+wrap-descriptions = 140
+pre-summary-newline = false
+close-quotes-on-newline = true
+recursive = true
+exclude = [
+  ".git",
+  ".pixi",
+  "build",
+  "dist",
+  "node_modules",
+  "tools",
+  "vendor",
+  "typings",
+  "stubs",
+]
+
+[tool.flake8]
+max-line-length = 140
+exclude = [
+  ".git",
+  ".github",
+  ".pixi",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".vscode",
+  ".idea",
+  ".claude",
+  ".semgrep",
+  ".serena",
+  "build",
+  "dist",
+  "tools",
+  "docs",
+  "node_modules",
+  "notebooks",
+  "vendor",
+  "CLI Coding",
+  "Screenshots",
+  "typings",
+  "stubs",
+]
+extend-ignore = [
+  "E203",
+  "W503",
+  "WPS110",
+  "WPS111",
+  "WPS114",
+  "WPS115",
+  "WPS122",
+  "WPS201",
+  "WPS202",
+  "WPS204",
+  "WPS210",
+  "WPS213",
+  "WPS214",
+  "WPS220",
+  "WPS221",
+  "WPS226",
+  "WPS229",
+  "WPS231",
+  "WPS232",
+  "WPS235",
+  "WPS237",
+  "WPS238",
+  "WPS300",
+  "WPS301",
+  "WPS332",
+  "WPS336",
+  "WPS338",
+  "WPS339",
+  "WPS356",
+  "WPS358",
+  "WPS407",
+  "WPS410",
+  "WPS412",
+  "WPS420",
+  "WPS430",
+  "WPS432",
+  "WPS462",
+  "WPS476",
+  "WPS501",
+  "WPS504",
+  "WPS505",
+  "WPS529",
+  "WPS602",
+  "WPS615",
+]
+per-file-ignores = ["tests/*:S101,S102,S404"]
+
+[tool.hatch]
+build.targets.wheel.packages = ["src/intellicrack"]
+
 [tool.interrogate]
 ignore-init-module = false
 ignore-magic = false
@@ -937,42 +674,56 @@ exclude = [
   "stubs",
 ]
 
-[tool.ty.src]
-exclude = [ "notebooks/" ]
-
-[tool.tombi.files]
-include = [ "**/*.toml" ]
+[tool.mypy]
+python_version = "3.13"
+mypy_path = [".", "stubs"]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+ignore_missing_imports = true
+follow_imports = "silent"
+strict = true
 exclude = [
-  ".pixi/**",
-  ".claude/**",
-  "node_modules/**",
-  "build/**",
-  "dist/**",
-  "tools/**",
-  "vendor/**",
-  ".venv*/**",
-  ".pytest_cache/**",
-  "target/**",
+  "^tools/",
+  "^build/",
+  "^dist/",
+  "^\\.git/",
+  "^\\.github/",
+  "^\\.pixi/",
+  "^docs/",
+  "^\\.mypy_cache/",
+  "^\\.pytest_cache/",
+  "^\\.ruff_cache/",
+  "^\\.claude/",
+  "^\\.serena/",
+  "^\\.idea/",
+  "^\\.vscode/",
+  "^node_modules/",
+  "^CLI Coding/",
+  "^Screenshots/",
 ]
 
-[tool.tombi.format.rules]
-line-width = 100
-
-[tool.tombi.lint.rules]
-key-empty = "error"
-dotted-keys-out-of-order = "error"
-tables-out-of-order = "error"
-
-[tool.tombi.extensions."tombi-toml/pyproject"]
-enabled = true
-
-[tool.tombi.extensions."tombi-toml/cargo"]
-enabled = true
-
-# git-cliff configuration lives in cliff.toml at project root.
-# Do NOT add [tool.git-cliff.*] here: configparser-based tools
-# (radon/xenon and similar) read the entire [tool] table and choke on
-# the '%' characters in Tera template strings.
+[[tool.mypy.overrides]]
+module = [
+  "frida.*",
+  "r2pipe.*",
+  "ghidra_bridge.*",
+  "pefile.*",
+  "lief.*",
+  "transformers.*",
+  "accelerate.*",
+  "bitsandbytes.*",
+]
+follow_imports = "skip"
 
 [tool.pixi]
 dependencies.python = "3.13.*"
@@ -1128,7 +879,7 @@ pypi-dependencies.detect-secrets = ">=1.5.0, <2"
 pypi-dependencies.pyannotate = ">=1.2.0, <2"
 pypi-dependencies.flake8-pyproject = ">=1.2.4, <2"
 pypi-dependencies.cxxfilt = ">=0.3.0, <0.4"
-pypi-options.extra-index-urls = [ "https://download.pytorch.org/whl/xpu" ]
+pypi-options.extra-index-urls = ["https://download.pytorch.org/whl/xpu"]
 pypi-options.index-strategy = "unsafe-best-match"
 tasks.dev = "python -m intellicrack"
 tasks.gui = "python -m intellicrack.ui.app"
@@ -1141,7 +892,273 @@ tasks.pyright = "basedpyright"
 workspace.name = "Intellicrack"
 workspace.version = "0.1.0a1"
 workspace.description = "Intellicrack: AI-powered reverse engineering orchestration platform"
-workspace.authors = [ "Zachary Flint <zach.flint2@gmail.com>" ]
-workspace.channels = [ "conda-forge" ]
-workspace.platforms = [ "win-64" ]
-workspace.preview = [ "pixi-build" ]
+workspace.authors = ["Zachary Flint <zach.flint2@gmail.com>"]
+workspace.channels = ["conda-forge"]
+workspace.platforms = ["win-64"]
+workspace.preview = ["pixi-build"]
+
+[tool.pydoclint]
+style = "google"
+arg-type-hints-in-docstring = false
+check-return-types = true
+check-yield-types = true
+allow-init-docstring = true
+
+[tool.pydocstyle]
+convention = "google"
+match-dir = "(?!tests|docs|tools|build|dist|node_modules|\\.).*"
+
+[tool.pytest]
+ini_options.addopts = ["-ra", "--strict-markers"]
+ini_options.markers = [
+  "slow: Slow running tests",
+  "integration: Integration tests",
+  "unit: Unit tests",
+  "xpu: Tests requiring Intel XPU hardware",
+  "b580: Tests specific to Intel Arc B580 GPU",
+  "spawns_process: Test spawns external OS processes; runs only inside the Docker sandbox",
+]
+ini_options.minversion = "8.0"
+ini_options.python_classes = ["Test*"]
+ini_options.python_files = ["test_*.py", "*_test.py"]
+ini_options.python_functions = ["test_*"]
+ini_options.pythonpath = ["src"]
+ini_options.testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 140
+src = ["."]
+exclude = [
+  "*.egg-info/",
+  ".claude/",
+  ".git/",
+  ".github/",
+  ".idea/",
+  ".mypy_cache/",
+  ".pixi/",
+  ".pytest_cache/",
+  ".ruff_cache/",
+  ".semgrep/",
+  ".serena/",
+  ".venv/",
+  ".venv*/",
+  ".vscode/",
+  "__pycache__/",
+  "build/",
+  "CLI Coding/",
+  "dist/",
+  "docs/",
+  "notebooks/",
+  "node_modules/",
+  "Screenshots/",
+  "stubs/",
+  "tools/",
+  "typings/",
+  "vendor/",
+  "vulture_whitelist.py",
+]
+force-exclude = true
+preview = true
+format.indent-style = "space"
+format.quote-style = "double"
+format.line-ending = "cr-lf"
+format.skip-magic-trailing-comma = false
+format.docstring-code-format = true
+lint.select = [
+  "A",  # flake8-builtins
+  "ANN",  # flake8-annotations
+  "ARG",  # flake8-unused-arguments
+  "ASYNC",  # flake8-async
+  "B",  # flake8-bugbear
+  "BLE",  # flake8-blind-except
+  "C4",  # flake8-comprehensions
+  "C90",  # mccabe complexity
+  "COM",  # flake8-commas
+  "CPY",  # flake8-copyright
+  "D",  # pydocstyle
+  "DOC",  # pydoclint
+  "DTZ",  # flake8-datetimez
+  "E",  # pycodestyle errors
+  "EM",  # flake8-errmsg
+  "ERA",  # eradicate (commented-out code)
+  "F",  # pyflakes
+  "FBT",  # flake8-boolean-trap
+  "FIX",  # flake8-fixme (TODO/FIXME)
+  "FLY",  # flynt (f-string conversion)
+  "FURB",  # refurb (code modernization)
+  "G",  # flake8-logging-format
+  "I",  # isort
+  "ICN",  # flake8-import-conventions
+  "ISC",  # flake8-implicit-str-concat
+  "LOG",  # flake8-logging
+  "N",  # pep8-naming
+  "PERF",  # perflint
+  "PGH",  # pygrep-hooks
+  "PIE",  # flake8-pie
+  "PL",  # pylint
+  "PT",  # flake8-pytest-style
+  "PTH",  # flake8-use-pathlib
+  "PYI",  # flake8-pyi (stub files)
+  "Q",  # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "RUF",  # ruff-specific
+  "S",  # bandit security
+  "SIM",  # flake8-simplify
+  "SLF",  # flake8-self
+  "T10",  # flake8-debugger
+  "T20",  # flake8-print
+  "TC",  # flake8-type-checking
+  "TID",  # flake8-tidy-imports
+  "TRY",  # tryceratops
+  "UP",  # pyupgrade
+  "W",  # pycodestyle warnings
+]
+lint.ignore = [
+  "DOC202",  # conflicts with pydoclint DOC201/DOC203 for abstract-style methods that always raise but declare a non-None return type honored by subclasses
+  "DOC502",  # conflicts with pydoclint DOC501/DOC503 for re-raised exceptions caught in except blocks
+  "E501",  # line-too-long
+  "PLR0911",  # too-many-return-statements
+  "PLR0912",  # too-many-branches
+  "PLR0913",  # too-many-arguments
+  "PLR0915",  # too-many-statements
+  "PLR1702",  # too-many-nested-blocks
+  "S405",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core._xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
+]
+lint.per-file-ignores.".claude/**" = ["S404"]
+lint.per-file-ignores."scripts/**" = ["N999", "S404", "S603", "S607", "T201"]
+lint.per-file-ignores."src/intellicrack/bridges/_win32_types.py" = ["N801"]
+lint.per-file-ignores."src/intellicrack/bridges/frida_bridge.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/ghidra.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/hex_editor.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/cutter.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["N801", "PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/x64dbg.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
+  "C901",
+  "PLR0914",
+  "PLR2004",
+  "TRY003",
+]
+lint.per-file-ignores."src/intellicrack/core/hexpat/interpreter.py" = ["PLC0415"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/lexer.py" = ["C901"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/parser.py" = ["C901", "PLR0914"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/preprocessor.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/core/hexpat/stdlib.py" = ["PLR2004", "TRY003"]
+lint.per-file-ignores."src/intellicrack/core/orchestrator.py" = ["PLC0415"]
+lint.per-file-ignores."src/intellicrack/core/tools.py" = ["PLC0415"]
+lint.per-file-ignores."src/intellicrack/main.py" = ["PLC0415"]
+lint.per-file-ignores."src/intellicrack/ui/app.py" = ["PLC0415"]
+lint.per-file-ignores."src/intellicrack/ui/panels/frida_panel.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_disassembly.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_search.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/_widgets.py" = ["N802"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor/panel.py" = ["PLR0914"]
+lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
+  "N802",
+  "PLR0914",
+  "S324",
+]
+lint.per-file-ignores."src/intellicrack/ui/tools.py" = ["PLR0904"]
+lint.per-file-ignores."tests/**" = [
+  "B009",
+  "B010",
+  "PLC2701",
+  "PLR2004",
+  "PLR6301",
+  "S101",
+  "S102",
+  "S404",
+  "S603",
+  "SLF001",
+  "TC006",
+]
+lint.fixable = ["ALL"]
+lint.unfixable = ["PTH123", "RET503", "RUF013", "RUF022", "TID252", "TRY400"]
+lint.dummy-variable-rgx = "^(_+|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.isort.combine-as-imports = true
+lint.isort.force-wrap-aliases = true
+lint.isort.known-first-party = ["intellicrack"]
+lint.isort.lines-after-imports = 2
+lint.mccabe.max-complexity = 30
+lint.pydocstyle.convention = "google"
+lint.pylint.max-args = 20
+lint.pylint.max-branches = 25
+lint.pylint.max-public-methods = 50
+lint.pylint.max-statements = 100
+
+[tool.tombi.files]
+include = ["**/*.toml"]
+exclude = [
+  ".pixi/**",
+  ".claude/**",
+  "node_modules/**",
+  "build/**",
+  "dist/**",
+  "tools/**",
+  "vendor/**",
+  ".venv*/**",
+  ".pytest_cache/**",
+  "target/**",
+]
+
+[tool.tombi.format.rules]
+line-width = 100
+
+[tool.tombi.lint.rules]
+dotted-keys-out-of-order = "error"
+key-empty = "error"
+tables-out-of-order = "error"
+
+[tool.tombi.extensions."tombi-toml/cargo"]
+enabled = true
+
+# git-cliff configuration lives in cliff.toml at project root.
+# Do NOT add [tool.git-cliff.*] here: configparser-based tools
+# (radon/xenon and similar) read the entire [tool] table and choke on
+# the '%' characters in Tera template strings.
+
+[tool.tombi.extensions."tombi-toml/pyproject"]
+enabled = true
+
+[tool.ty.src]
+exclude = ["notebooks/"]
+
+[tool.vulture]
+min_confidence = 80
+ignore_decorators = [
+  "@abstractmethod",
+  "@abc.abstractmethod",
+  "@property",
+  "@*.setter",
+  "@staticmethod",
+  "@classmethod",
+  "@override",
+]
+ignore_names = [
+  "argtypes",
+  "restype",
+  "supports_*",
+  "visit_*",
+  "do_*",
+  "test_*",
+  "setUp",
+  "tearDown",
+  "setUpClass",
+  "tearDownClass",
+]
+exclude = [
+  ".git/",
+  ".github/",
+  ".pixi/",
+  "build/",
+  "dist/",
+  "tools/",
+  "docs/",
+  "node_modules/",
+  "CLI Coding/",
+  "Screenshots/",
+  "typings/",
+  "stubs/",
+]

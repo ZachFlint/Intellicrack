@@ -28,8 +28,10 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QWidget
 
+from intellicrack.bridges.named_pipe_client import NamedPipeClient
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine, run_bridge_coroutine_logged
+from intellicrack.ui.panels.qt_compat import key_event_key
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -292,8 +294,12 @@ class RFBClient:
             self._fb_dirty = True
             self._connected = True
 
-        except (TimeoutError, OSError, struct.error):
-            _logger.exception("vnc_connect_failed", host=host, port=port)
+        except (TimeoutError, OSError, struct.error) as exc:
+            win_err = getattr(exc, "winerror", None)
+            hint = None
+            if win_err is not None:
+                hint = NamedPipeClient.format_error_hint(win_err)
+            _logger.exception("vnc_connect_failed", host=host, port=port, error_hint=hint)
             return False
 
         _logger.info(
@@ -1728,8 +1734,12 @@ class VNCWidget(QWidget):
                 _logger.info("vnc_widget_connected", host=host, port=port)
             else:
                 _logger.warning("vnc_widget_connect_failed", host=host, port=port)
-        except (OSError, struct.error, RuntimeError):
-            _logger.exception("vnc_widget_connect_error", host=host, port=port)
+        except (OSError, struct.error, RuntimeError) as exc:
+            win_err = getattr(exc, "winerror", None)
+            hint = None
+            if win_err is not None:
+                hint = NamedPipeClient.format_error_hint(win_err)
+            _logger.exception("vnc_widget_connect_error", host=host, port=port, error_hint=hint)
         self.connection_status_changed.emit(connected)
 
     def disconnect_from_server(self) -> None:
@@ -1950,7 +1960,8 @@ class VNCWidget(QWidget):
         """
         if a0 is None or not self.client.connected:
             return
-        keysym = _qt_key_to_x11(a0.key(), a0.text())
+        key = key_event_key(a0)
+        keysym = _qt_key_to_x11(key, a0.text())
         run_bridge_coroutine_logged(
             self.client.send_key_event(keysym, down=True),
             on_success=None,
@@ -1970,7 +1981,8 @@ class VNCWidget(QWidget):
         """
         if a0 is None or not self.client.connected:
             return
-        keysym = _qt_key_to_x11(a0.key(), a0.text())
+        key = key_event_key(a0)
+        keysym = _qt_key_to_x11(key, a0.text())
         run_bridge_coroutine_logged(
             self.client.send_key_event(keysym, down=False),
             on_success=None,

@@ -953,10 +953,7 @@ class HexPatParser:
         Returns:
             bool: True when the token sequence looks like a field or placement declaration.
         """
-        saved = self._save()
-        result = self._check_field_lookahead()
-        self._restore(saved)
-        return result
+        return self._check_field_lookahead()
 
     def _check_field_lookahead(self) -> bool:
         """Perform the actual field lookahead check without save/restore.
@@ -964,19 +961,20 @@ class HexPatParser:
         Returns:
             bool: True when the current token sequence matches a field declaration pattern.
         """
-        if self._current().type == TokenType.IDENTIFIER:
-            self._advance()
-            if self._current().type == TokenType.DOUBLE_COLON:
-                self._advance()
-                if self._current().type == TokenType.IDENTIFIER:
-                    self._advance()
+        pos = 0
+        if self._peek(pos).type == TokenType.IDENTIFIER:
+            pos += 1
+            if self._peek(pos).type == TokenType.DOUBLE_COLON:
+                pos += 1
+                if self._peek(pos).type == TokenType.IDENTIFIER:
+                    pos += 1
                 else:
                     return False
-        elif self._current().type in PRIMITIVE_TYPES:
-            self._advance()
+        elif self._peek(pos).type in PRIMITIVE_TYPES:
+            pos += 1
         else:
             return False
-        return self._current().type in {TokenType.IDENTIFIER, TokenType.STAR}
+        return self._peek(pos).type in {TokenType.IDENTIFIER, TokenType.STAR}
 
     def _parse_expr_or_placement_stmt(self, *, allow_fields: bool) -> StmtNode:
         """Parse an expression statement or a top-level placement statement.

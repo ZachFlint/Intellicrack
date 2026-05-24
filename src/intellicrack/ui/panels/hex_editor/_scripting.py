@@ -630,9 +630,8 @@ class _DocAPI:
         if explicit is not None:
             return explicit
 
-        if self._encoding_provider is not None:
-            if panel_encoding := self._encoding_provider():
-                return panel_encoding
+        if self._encoding_provider is not None and (panel_encoding := self._encoding_provider()):
+            return panel_encoding
 
         return "utf-8"
 

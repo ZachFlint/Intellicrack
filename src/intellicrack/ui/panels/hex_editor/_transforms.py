@@ -312,6 +312,9 @@ class TransformsMixin:
         move_down_btn = QPushButton("Move Down")
         move_down_btn.clicked.connect(self._on_pipeline_move_down)
         pipeline_btn_row.addWidget(move_down_btn)
+        reset_btn = QPushButton("Reset Pipeline")
+        reset_btn.clicked.connect(self._on_pipeline_reset)
+        pipeline_btn_row.addWidget(reset_btn)
         return pipeline_btn_row
 
     def _create_block_ops_group(self) -> QGroupBox:
@@ -624,6 +627,14 @@ class TransformsMixin:
         remove_fn: Any = getattr(self._transform_pipeline, "remove_step", None)
         if callable(remove_fn):
             remove_fn(row)
+        self._refresh_pipeline_list()
+
+    def _on_pipeline_reset(self) -> None:
+        """Remove all steps from the pipeline and reset state."""
+        if self._transform_pipeline is not None:
+            clear_fn: Any = getattr(self._transform_pipeline, "clear", None)
+            if callable(clear_fn):
+                clear_fn()
         self._refresh_pipeline_list()
 
     def _on_pipeline_move_up(self) -> None:

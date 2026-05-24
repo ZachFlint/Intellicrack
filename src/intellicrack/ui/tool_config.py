@@ -1088,6 +1088,15 @@ class ToolSettingsWidget(QFrame):
             self._install_btn.setEnabled(False)
             self._auto_install_checkbox.setEnabled(False)
             self._path_input.setToolTip("This tool does not require a path")
+        elif self._tool_id in {"x64dbg", "cutter"}:
+            from intellicrack.bridges.installer import pefile_available
+
+            if not pefile_available():
+                self._install_btn.setEnabled(False)
+                self._install_btn.setToolTip("Installation disabled: 'pefile' dependency is missing.")
+                self._auto_install_checkbox.setEnabled(False)
+                self._auto_install_checkbox.setChecked(False)
+                _logger.warning("tool_row_pe_installer_disabled_no_pefile", tool=self._tool_id)
 
     def _load_from_config(self) -> dict[str, Any]:
         """Load settings from the config file.
@@ -1189,6 +1198,17 @@ class ToolSettingsWidget(QFrame):
                 f"Automatic installation not available for {self._display_name}.\n\nPlease download and install manually.",
             )
             return
+
+        if self._tool_id in {"x64dbg", "cutter"}:
+            from intellicrack.bridges.installer import pefile_available
+
+            if not pefile_available():
+                show_warning(
+                    self,
+                    "Installation",
+                    f"Cannot install {self._display_name} because optional dependency 'pefile' is missing.",
+                )
+                return
 
         install_path = Path(self._path_input.text().strip())
         if not install_path:

@@ -1836,15 +1836,13 @@ class GhidraPanel(AnalysisPanelBase):
                 blk_end = int(cast("int", blk.get("end", 0)))
                 lines2.append(f"Block: 0x{blk_start:X} - 0x{blk_end:X}")
                 srcs = blk.get("sources", [])
-                if isinstance(srcs, list):
-                    if src_list := cast("list[int]", srcs):
-                        src_strs = [f"0x{s:X}" for s in src_list]
-                        lines2.append(f"  Sources: {', '.join(src_strs)}")
+                if isinstance(srcs, list) and (src_list := cast("list[int]", srcs)):
+                    src_strs = [f"0x{s:X}" for s in src_list]
+                    lines2.append(f"  Sources: {', '.join(src_strs)}")
                 dsts = blk.get("destinations", [])
-                if isinstance(dsts, list):
-                    if dst_list := cast("list[int]", dsts):
-                        dst_strs = [f"0x{d:X}" for d in dst_list]
-                        lines2.append(f"  Destinations: {', '.join(dst_strs)}")
+                if isinstance(dsts, list) and (dst_list := cast("list[int]", dsts)):
+                    dst_strs = [f"0x{d:X}" for d in dst_list]
+                    lines2.append(f"  Destinations: {', '.join(dst_strs)}")
             self._cfg_view.setPlainText("\n".join(lines2))
 
     def _show_function_body_info(self, result: object) -> None:

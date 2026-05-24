@@ -518,6 +518,21 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     if not rebar_ok:
         warnings.append(rebar_warning)
 
+    gpus = _get_windows_gpu_info()
+    from intellicrack.providers.gpu_pci_resources import max_memory_bar_bytes
+
+    for gpu in gpus:
+        pnp_id = gpu.get("pnp_device_id", "")
+        if pnp_id:
+            bar_bytes = max_memory_bar_bytes(pnp_id)
+            if bar_bytes > 0:
+                _logger.debug("gpu_bar_size_audited", gpu=gpu.get("name"), bar_size=bar_bytes)
+                if bar_bytes < 512 * 1024 * 1024:
+                    warnings.append(
+                        f"GPU '{gpu.get('name')}' Resizable BAR is disabled or limited ({bar_bytes // 1024 // 1024} MB). "
+                        "Local LLM context profiles exceeding this size will trigger severe CPU-fallback slowdowns."
+                    )
+
     _logger.debug(
         "xpu_windows_requirements_check_complete",
         all_met=all_met,

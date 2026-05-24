@@ -1233,6 +1233,12 @@
     {
       "complexity": 3,
       "file_name": "cutter.py",
+      "function_name": "CutterBridge::_close_existing_r2",
+      "path": "src\\intellicrack\\bridges\\cutter.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "cutter.py",
       "function_name": "CutterBridge::_debug_cmd_json",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
@@ -1264,12 +1270,6 @@
       "complexity": 3,
       "file_name": "cutter.py",
       "function_name": "CutterBridge::search_bytes",
-      "path": "src\\intellicrack\\bridges\\cutter.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "cutter.py",
-      "function_name": "CutterBridge::_close_existing_r2",
       "path": "src\\intellicrack\\bridges\\cutter.py"
     },
     {
@@ -2185,6 +2185,12 @@
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
+      "complexity": 14,
+      "file_name": "frida_bridge.py",
+      "function_name": "FridaBridge::create_cmodule",
+      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
+    },
+    {
       "complexity": 15,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::call_system_function",
@@ -2200,12 +2206,6 @@
       "complexity": 16,
       "file_name": "frida_bridge.py",
       "function_name": "FridaBridge::call_function",
-      "path": "src\\intellicrack\\bridges\\frida_bridge.py"
-    },
-    {
-      "complexity": 16,
-      "file_name": "frida_bridge.py",
-      "function_name": "FridaBridge::create_cmodule",
       "path": "src\\intellicrack\\bridges\\frida_bridge.py"
     },
     {
@@ -3513,13 +3513,13 @@
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::va_to_file_offset",
+      "function_name": "HexEditorBridge::update_selection_from_gui",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
       "complexity": 2,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::write_bytes",
+      "function_name": "HexEditorBridge::va_to_file_offset",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -3657,7 +3657,7 @@
     {
       "complexity": 3,
       "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::update_selection_from_gui",
+      "function_name": "HexEditorBridge::write_bytes",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -3915,6 +3915,12 @@
     {
       "complexity": 8,
       "file_name": "hex_editor.py",
+      "function_name": "HexEditorBridge::_compute_pe_checksum_static",
+      "path": "src\\intellicrack\\bridges\\hex_editor.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::_detect_pe_va_mappings",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
@@ -3946,12 +3952,6 @@
       "complexity": 8,
       "file_name": "hex_editor.py",
       "function_name": "HexEditorBridge::set_bit",
-      "path": "src\\intellicrack\\bridges\\hex_editor.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "hex_editor.py",
-      "function_name": "HexEditorBridge::_compute_pe_checksum_static",
       "path": "src\\intellicrack\\bridges\\hex_editor.py"
     },
     {
@@ -4597,6 +4597,12 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
+      "complexity": 4,
+      "file_name": "installer.py",
+      "function_name": "_path_requires_admin",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
       "complexity": 5,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::_get_ghidra_version",
@@ -4647,12 +4653,6 @@
     {
       "complexity": 7,
       "file_name": "installer.py",
-      "function_name": "_path_requires_admin",
-      "path": "src\\intellicrack\\bridges\\installer.py"
-    },
-    {
-      "complexity": 7,
-      "file_name": "installer.py",
       "function_name": "build_x64dbg_plugin",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
@@ -4687,27 +4687,21 @@
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
-      "complexity": 13,
-      "file_name": "installer.py",
-      "function_name": "ToolInstaller::verify_tool",
-      "path": "src\\intellicrack\\bridges\\installer.py"
-    },
-    {
       "complexity": 14,
       "file_name": "installer.py",
       "function_name": "deploy_x64dbg_plugin_detailed",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
-      "complexity": 17,
+      "complexity": 15,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::find_tool_detailed",
+      "function_name": "ToolInstaller::verify_tool",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
       "complexity": 17,
       "file_name": "installer.py",
-      "function_name": "ToolInstaller::install_tool",
+      "function_name": "ToolInstaller::find_tool_detailed",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -4720,6 +4714,12 @@
       "complexity": 19,
       "file_name": "installer.py",
       "function_name": "ToolInstaller::_extract_zip",
+      "path": "src\\intellicrack\\bridges\\installer.py"
+    },
+    {
+      "complexity": 19,
+      "file_name": "installer.py",
+      "function_name": "ToolInstaller::install_tool",
       "path": "src\\intellicrack\\bridges\\installer.py"
     },
     {
@@ -4857,13 +4857,13 @@
     {
       "complexity": 8,
       "file_name": "named_pipe_client.py",
-      "function_name": "NamedPipeClient::_open_handle",
+      "function_name": "NamedPipeClient::_reap_open_task",
       "path": "src\\intellicrack\\bridges\\named_pipe_client.py"
     },
     {
-      "complexity": 8,
+      "complexity": 10,
       "file_name": "named_pipe_client.py",
-      "function_name": "NamedPipeClient::_reap_open_task",
+      "function_name": "NamedPipeClient::_open_handle",
       "path": "src\\intellicrack\\bridges\\named_pipe_client.py"
     },
     {
@@ -5403,6 +5403,12 @@
     {
       "complexity": 7,
       "file_name": "process.py",
+      "function_name": "ProcessBridge::_check_inproc_server",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "process.py",
       "function_name": "ProcessBridge::_iterate_stack_frames",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
@@ -5410,6 +5416,12 @@
       "complexity": 7,
       "file_name": "process.py",
       "function_name": "ProcessBridge::_query_thread_start_address",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "process.py",
+      "function_name": "ProcessBridge::_read_cor20_version",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5463,7 +5475,7 @@
     {
       "complexity": 8,
       "file_name": "process.py",
-      "function_name": "ProcessBridge::_read_cor20_version",
+      "function_name": "ProcessBridge::detect_architecture",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5487,18 +5499,6 @@
     {
       "complexity": 9,
       "file_name": "process.py",
-      "function_name": "ProcessBridge::_check_inproc_server",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "process.py",
-      "function_name": "ProcessBridge::detect_architecture",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "process.py",
       "function_name": "ProcessBridge::resume",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
@@ -5512,6 +5512,12 @@
       "complexity": 10,
       "file_name": "process.py",
       "function_name": "ProcessBridge::_extract_env_pointer",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "process.py",
+      "function_name": "ProcessBridge::_parse_pe_com_descriptor",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5548,12 +5554,6 @@
       "complexity": 11,
       "file_name": "process.py",
       "function_name": "ProcessBridge::_append_tls_expansion_slots",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 11,
-      "file_name": "process.py",
-      "function_name": "ProcessBridge::_parse_pe_com_descriptor",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5619,6 +5619,12 @@
     {
       "complexity": 13,
       "file_name": "process.py",
+      "function_name": "ProcessBridge::_scan_handles_for_duplicate",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "process.py",
       "function_name": "ProcessBridge::get_environment",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
@@ -5626,6 +5632,12 @@
       "complexity": 13,
       "file_name": "process.py",
       "function_name": "ProcessBridge::get_heaps",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "process.py",
+      "function_name": "ProcessBridge::get_seh_chain",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5661,19 +5673,7 @@
     {
       "complexity": 15,
       "file_name": "process.py",
-      "function_name": "ProcessBridge::get_seh_chain",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 15,
-      "file_name": "process.py",
       "function_name": "ProcessBridge::read_teb",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 16,
-      "file_name": "process.py",
-      "function_name": "ProcessBridge::_scan_handles_for_duplicate",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5725,6 +5725,12 @@
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
+      "complexity": 19,
+      "file_name": "process.py",
+      "function_name": "ProcessBridge::get_mitigation_policy",
+      "path": "src\\intellicrack\\bridges\\process.py"
+    },
+    {
       "complexity": 20,
       "file_name": "process.py",
       "function_name": "ProcessBridge::adjust_token_privilege",
@@ -5737,15 +5743,15 @@
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
-      "complexity": 21,
+      "complexity": 22,
       "file_name": "process.py",
-      "function_name": "ProcessBridge::get_mitigation_policy",
+      "function_name": "ProcessBridge::detect_dotnet",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
       "complexity": 22,
       "file_name": "process.py",
-      "function_name": "ProcessBridge::detect_dotnet",
+      "function_name": "ProcessBridge::get_modules",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -5758,12 +5764,6 @@
       "complexity": 23,
       "file_name": "process.py",
       "function_name": "ProcessBridge::_query_thread_current_pc",
-      "path": "src\\intellicrack\\bridges\\process.py"
-    },
-    {
-      "complexity": 23,
-      "file_name": "process.py",
-      "function_name": "ProcessBridge::get_modules",
       "path": "src\\intellicrack\\bridges\\process.py"
     },
     {
@@ -6040,6 +6040,12 @@
       "complexity": 6,
       "file_name": "sandbox_bridge.py",
       "function_name": "SandboxBridge::extract_iocs",
+      "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "sandbox_bridge.py",
+      "function_name": "SandboxBridge::stop",
       "path": "src\\intellicrack\\bridges\\sandbox_bridge.py"
     },
     {
@@ -6501,12 +6507,6 @@
     {
       "complexity": 1,
       "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_cancel_step_waiter",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_cancel_step_waiter_future",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
@@ -6628,12 +6628,6 @@
       "complexity": 1,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::set_logging_breakpoint",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::unregister_event_callback",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -6784,6 +6778,18 @@
       "complexity": 2,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::switch_thread",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::unregister_event_callback",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_cancel_step_waiter",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
@@ -7339,6 +7345,18 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
+      "complexity": 12,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_wait_for_breakpoint_enabled_state",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "x64dbg.py",
+      "function_name": "X64DbgBridge::_wait_for_thread_state",
+      "path": "src\\intellicrack\\bridges\\x64dbg.py"
+    },
+    {
       "complexity": 14,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::_detect_process_arch",
@@ -7423,18 +7441,6 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
-      "complexity": 17,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_wait_for_breakpoint_enabled_state",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
-      "complexity": 17,
-      "file_name": "x64dbg.py",
-      "function_name": "X64DbgBridge::_wait_for_thread_state",
-      "path": "src\\intellicrack\\bridges\\x64dbg.py"
-    },
-    {
       "complexity": 21,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::get_stack_trace",
@@ -7465,7 +7471,7 @@
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
     },
     {
-      "complexity": 28,
+      "complexity": 25,
       "file_name": "x64dbg.py",
       "function_name": "X64DbgBridge::patch_anti_debug",
       "path": "src\\intellicrack\\bridges\\x64dbg.py"
@@ -8115,7 +8121,19 @@
     {
       "complexity": 2,
       "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_sizeof_conditional_field",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "evaluator.py",
       "function_name": "_extract_members_dict",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_bind_template_args",
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
     {
@@ -8157,19 +8175,7 @@
     {
       "complexity": 3,
       "file_name": "evaluator.py",
-      "function_name": "HexPatEvaluator::_sizeof_conditional_field",
-      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "evaluator.py",
       "function_name": "HexPatEvaluator::_template_arg_to_type_node",
-      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "evaluator.py",
-      "function_name": "HexPatEvaluator::_bind_template_args",
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
     {
@@ -8377,12 +8383,6 @@
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
     {
-      "complexity": 15,
-      "file_name": "evaluator.py",
-      "function_name": "HexPatEvaluator::_instantiate_named_type",
-      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
-    },
-    {
       "complexity": 16,
       "file_name": "evaluator.py",
       "function_name": "HexPatEvaluator::_call_user_function",
@@ -8410,6 +8410,12 @@
       "complexity": 17,
       "file_name": "evaluator.py",
       "function_name": "HexPatEvaluator::_eval_binary",
+      "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
+    },
+    {
+      "complexity": 17,
+      "file_name": "evaluator.py",
+      "function_name": "HexPatEvaluator::_instantiate_named_type",
       "path": "src\\intellicrack\\core\\hexpat\\evaluator.py"
     },
     {
@@ -8995,15 +9001,15 @@
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
     },
     {
-      "complexity": 34,
+      "complexity": 31,
       "file_name": "preprocessor.py",
-      "function_name": "HexPatPreprocessor::_parse_macro_arguments",
+      "function_name": "HexPatPreprocessor::_substitute_func_macro",
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
     },
     {
       "complexity": 34,
       "file_name": "preprocessor.py",
-      "function_name": "HexPatPreprocessor::_substitute_func_macro",
+      "function_name": "HexPatPreprocessor::_parse_macro_arguments",
       "path": "src\\intellicrack\\core\\hexpat\\preprocessor.py"
     },
     {
@@ -10261,6 +10267,12 @@
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
+      "complexity": 1,
+      "file_name": "orchestrator.py",
+      "function_name": "_resolve_arch",
+      "path": "src\\intellicrack\\core\\orchestrator.py"
+    },
+    {
       "complexity": 2,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::_is_final_response_expected",
@@ -10348,12 +10360,6 @@
       "complexity": 4,
       "file_name": "orchestrator.py",
       "function_name": "Orchestrator::activate_binary_by_name",
-      "path": "src\\intellicrack\\core\\orchestrator.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "orchestrator.py",
-      "function_name": "_resolve_arch",
       "path": "src\\intellicrack\\core\\orchestrator.py"
     },
     {
@@ -10717,7 +10723,7 @@
       "path": "src\\intellicrack\\core\\process_manager.py"
     },
     {
-      "complexity": 10,
+      "complexity": 9,
       "file_name": "process_manager.py",
       "function_name": "_pid_exists_windows",
       "path": "src\\intellicrack\\core\\process_manager.py"
@@ -11443,7 +11449,7 @@
       "path": "src\\intellicrack\\core\\template_manager.py"
     },
     {
-      "complexity": 12,
+      "complexity": 9,
       "file_name": "template_manager.py",
       "function_name": "TemplateManager::bootstrap_builtins",
       "path": "src\\intellicrack\\core\\template_manager.py"
@@ -12093,6 +12099,12 @@
     {
       "complexity": 0,
       "file_name": "env_loader.py",
+      "function_name": "_strip_unquoted_inline_comment",
+      "path": "src\\intellicrack\\credentials\\env_loader.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "env_loader.py",
       "function_name": "create_env_template",
       "path": "src\\intellicrack\\credentials\\env_loader.py"
     },
@@ -12160,12 +12172,6 @@
       "complexity": 3,
       "file_name": "env_loader.py",
       "function_name": "_find_env_file",
-      "path": "src\\intellicrack\\credentials\\env_loader.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "env_loader.py",
-      "function_name": "_strip_unquoted_inline_comment",
       "path": "src\\intellicrack\\credentials\\env_loader.py"
     },
     {
@@ -13443,6 +13449,12 @@
     {
       "complexity": 3,
       "file_name": "gpu_pci_resources.py",
+      "function_name": "_parse_mem_descriptor",
+      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "gpu_pci_resources.py",
       "function_name": "_read_descriptor_bytes",
       "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
     },
@@ -13450,12 +13462,6 @@
       "complexity": 3,
       "file_name": "gpu_pci_resources.py",
       "function_name": "enumerate_pci_memory_bars",
-      "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "gpu_pci_resources.py",
-      "function_name": "_parse_mem_descriptor",
       "path": "src\\intellicrack\\providers\\gpu_pci_resources.py"
     },
     {
@@ -14715,12 +14721,6 @@
     {
       "complexity": 6,
       "file_name": "xpu_utils.py",
-      "function_name": "check_windows_requirements",
-      "path": "src\\intellicrack\\providers\\xpu_utils.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "xpu_utils.py",
       "function_name": "is_xpu_available",
       "path": "src\\intellicrack\\providers\\xpu_utils.py"
     },
@@ -14740,6 +14740,12 @@
       "complexity": 15,
       "file_name": "xpu_utils.py",
       "function_name": "_check_rebar_status",
+      "path": "src\\intellicrack\\providers\\xpu_utils.py"
+    },
+    {
+      "complexity": 16,
+      "file_name": "xpu_utils.py",
+      "function_name": "check_windows_requirements",
       "path": "src\\intellicrack\\providers\\xpu_utils.py"
     },
     {
@@ -15495,6 +15501,12 @@
     {
       "complexity": 1,
       "file_name": "qemu.py",
+      "function_name": "QEMUSandbox::_count_files_recursive",
+      "path": "src\\intellicrack\\sandbox\\qemu.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_ensure_qemu_started",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
@@ -15616,12 +15628,6 @@
       "complexity": 4,
       "file_name": "qemu.py",
       "function_name": "QEMUSandbox::_cleanup_result_artifacts",
-      "path": "src\\intellicrack\\sandbox\\qemu.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "qemu.py",
-      "function_name": "QEMUSandbox::_count_files_recursive",
       "path": "src\\intellicrack\\sandbox\\qemu.py"
     },
     {
@@ -16461,12 +16467,6 @@
     {
       "complexity": 1,
       "file_name": "app.py",
-      "function_name": "MainWindow::_on_load_binary",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "app.py",
       "function_name": "MainWindow::_on_stream_chunk",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16551,6 +16551,12 @@
     {
       "complexity": 2,
       "file_name": "app.py",
+      "function_name": "MainWindow::_apply_smart_window_size",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
       "function_name": "MainWindow::_build_sandbox_config",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16599,6 +16605,18 @@
     {
       "complexity": 2,
       "file_name": "app.py",
+      "function_name": "MainWindow::_on_load_binary",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
+      "function_name": "MainWindow::_on_load_session",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
       "function_name": "MainWindow::_on_open_binary_in_ghidra",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16617,6 +16635,12 @@
     {
       "complexity": 2,
       "file_name": "app.py",
+      "function_name": "MainWindow::_resolve_screen_geometry",
+      "path": "src\\intellicrack\\ui\\app.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "app.py",
       "function_name": "MainWindow::_setup_tools_menu",
       "path": "src\\intellicrack\\ui\\app.py"
     },
@@ -16630,12 +16654,6 @@
       "complexity": 3,
       "file_name": "app.py",
       "function_name": "MainWindow::_on_import_session",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_on_load_session",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -16720,12 +16738,6 @@
       "complexity": 4,
       "file_name": "app.py",
       "function_name": "MainWindow::_configure_orchestrator",
-      "path": "src\\intellicrack\\ui\\app.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "app.py",
-      "function_name": "MainWindow::_apply_smart_window_size",
       "path": "src\\intellicrack\\ui\\app.py"
     },
     {
@@ -17331,13 +17343,13 @@
     {
       "complexity": 7,
       "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::_update_stage_states",
+      "function_name": "SplashScreen::paintEvent",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
-      "complexity": 7,
+      "complexity": 10,
       "file_name": "splash_screen.py",
-      "function_name": "SplashScreen::paintEvent",
+      "function_name": "SplashScreen::_update_stage_states",
       "path": "src\\intellicrack\\ui\\dialogs\\splash_screen.py"
     },
     {
@@ -18135,12 +18147,6 @@
     {
       "complexity": 2,
       "file_name": "cutter_panel.py",
-      "function_name": "CutterPanel::_on_find_function",
-      "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "cutter_panel.py",
       "function_name": "CutterPanel::_on_func_context_menu",
       "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py"
     },
@@ -18208,6 +18214,12 @@
       "complexity": 3,
       "file_name": "cutter_panel.py",
       "function_name": "CutterPanel::_on_decompile_selected",
+      "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "cutter_panel.py",
+      "function_name": "CutterPanel::_on_find_function",
       "path": "src\\intellicrack\\ui\\panels\\cutter_panel.py"
     },
     {
@@ -18909,18 +18921,6 @@
     {
       "complexity": 2,
       "file_name": "frida_panel.py",
-      "function_name": "FridaPanel::_on_find_base",
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "frida_panel.py",
-      "function_name": "FridaPanel::_on_find_functions",
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_hook_install_error",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
@@ -18945,12 +18945,6 @@
     {
       "complexity": 2,
       "file_name": "frida_panel.py",
-      "function_name": "FridaPanel::_on_resolve_api",
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_resolve_symbol",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
@@ -18964,18 +18958,6 @@
       "complexity": 2,
       "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_set_protection",
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "frida_panel.py",
-      "function_name": "FridaPanel::_on_show_exports",
-      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "frida_panel.py",
-      "function_name": "FridaPanel::_on_show_imports",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
     {
@@ -19023,6 +19005,18 @@
     {
       "complexity": 3,
       "file_name": "frida_panel.py",
+      "function_name": "FridaPanel::_on_find_base",
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "frida_panel.py",
+      "function_name": "FridaPanel::_on_find_functions",
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_frida_message",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
@@ -19035,6 +19029,12 @@
     {
       "complexity": 3,
       "file_name": "frida_panel.py",
+      "function_name": "FridaPanel::_on_resolve_api",
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_run_script",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
@@ -19042,6 +19042,18 @@
       "complexity": 3,
       "file_name": "frida_panel.py",
       "function_name": "FridaPanel::_on_scan_memory",
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "frida_panel.py",
+      "function_name": "FridaPanel::_on_show_exports",
+      "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "frida_panel.py",
+      "function_name": "FridaPanel::_on_show_imports",
       "path": "src\\intellicrack\\ui\\panels\\frida_panel.py"
     },
     {
@@ -19987,7 +19999,7 @@
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
     },
     {
-      "complexity": 23,
+      "complexity": 17,
       "file_name": "ghidra_panel.py",
       "function_name": "GhidraPanel::_apply_cfg",
       "path": "src\\intellicrack\\ui\\panels\\ghidra_panel.py"
@@ -20185,7 +20197,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
     },
     {
-      "complexity": 25,
+      "complexity": 15,
       "file_name": "_base.py",
       "function_name": "_crc_over_chunks",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_base.py"
@@ -20797,13 +20809,13 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sandbox.py"
     },
     {
-      "complexity": 15,
+      "complexity": 14,
       "file_name": "_sandbox.py",
       "function_name": "SandboxMixin::_on_save_to_sandbox",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sandbox.py"
     },
     {
-      "complexity": 17,
+      "complexity": 16,
       "file_name": "_sandbox.py",
       "function_name": "SandboxMixin::_on_test_in_sandbox",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_sandbox.py"
@@ -21021,6 +21033,12 @@
     {
       "complexity": 3,
       "file_name": "_scripting.py",
+      "function_name": "_DocAPI::_resolve_search_encoding",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_scripting.py",
       "function_name": "_DocAPI::cursor",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
     },
@@ -21034,12 +21052,6 @@
       "complexity": 3,
       "file_name": "_scripting.py",
       "function_name": "_safe_getattr",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "_scripting.py",
-      "function_name": "_DocAPI::_resolve_search_encoding",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_scripting.py"
     },
     {
@@ -21205,15 +21217,15 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
     },
     {
-      "complexity": 7,
+      "complexity": 6,
       "file_name": "_search.py",
-      "function_name": "SearchMixin::_on_search",
+      "function_name": "execute_text_search",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
     },
     {
       "complexity": 7,
       "file_name": "_search.py",
-      "function_name": "execute_text_search",
+      "function_name": "SearchMixin::_on_search",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_search.py"
     },
     {
@@ -21403,15 +21415,15 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py"
     },
     {
-      "complexity": 2,
+      "complexity": 3,
       "file_name": "_signatures.py",
-      "function_name": "execute_signature_scan",
+      "function_name": "SignaturesMixin::goto_offset",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py"
     },
     {
       "complexity": 3,
       "file_name": "_signatures.py",
-      "function_name": "SignaturesMixin::goto_offset",
+      "function_name": "execute_signature_scan",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py"
     },
     {
@@ -21457,7 +21469,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py"
     },
     {
-      "complexity": 20,
+      "complexity": 21,
       "file_name": "_signatures.py",
       "function_name": "_scan_clamav_ndb",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_signatures.py"
@@ -21789,6 +21801,12 @@
     {
       "complexity": 3,
       "file_name": "_transforms.py",
+      "function_name": "TransformsMixin::_on_pipeline_reset",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "_transforms.py",
       "function_name": "TransformsMixin::_refresh_widget",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_transforms.py"
     },
@@ -21993,6 +22011,12 @@
     {
       "complexity": 0,
       "file_name": "_widgets.py",
+      "function_name": "_DigramMatrixWidget::__init__",
+      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "_widgets.py",
       "function_name": "_DigramMatrixWidget::minimumSizeHint",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
     },
@@ -22018,12 +22042,6 @@
       "complexity": 1,
       "file_name": "_widgets.py",
       "function_name": "CustomCrcDialog::_on_worker_finished",
-      "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "_widgets.py",
-      "function_name": "_DigramMatrixWidget::__init__",
       "path": "src\\intellicrack\\ui\\panels\\hex_editor\\_widgets.py"
     },
     {
@@ -22909,7 +22927,7 @@
       "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
     },
     {
-      "complexity": 16,
+      "complexity": 15,
       "file_name": "hxd_panel.py",
       "function_name": "_find_hxd_executable",
       "path": "src\\intellicrack\\ui\\panels\\hxd_panel.py"
@@ -23985,6 +24003,18 @@
     {
       "complexity": 0,
       "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_pause_vm_error",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_pause_vm_success",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_on_pcap_start_error",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
@@ -24220,6 +24250,12 @@
       "complexity": 2,
       "file_name": "sandbox_panel.py",
       "function_name": "SandboxPanel::_on_memory_dump",
+      "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_panel.py",
+      "function_name": "SandboxPanel::_on_pause_vm",
       "path": "src\\intellicrack\\ui\\panels\\sandbox_panel.py"
     },
     {
@@ -24859,9 +24895,15 @@
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
     },
     {
-      "complexity": 4,
+      "complexity": 3,
       "file_name": "stack_viewer.py",
       "function_name": "FridaStackSource::get_stack_frames",
+      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "stack_viewer.py",
+      "function_name": "X64DbgStackSource::get_stack_frames",
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
     },
     {
@@ -24874,12 +24916,6 @@
       "complexity": 4,
       "file_name": "stack_viewer.py",
       "function_name": "StackViewerPanel::_update_status",
-      "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "stack_viewer.py",
-      "function_name": "X64DbgStackSource::get_stack_frames",
       "path": "src\\intellicrack\\ui\\panels\\stack_viewer.py"
     },
     {
@@ -25089,12 +25125,6 @@
     {
       "complexity": 3,
       "file_name": "vnc_widget.py",
-      "function_name": "RFBClient::connect",
-      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
-    },
-    {
-      "complexity": 3,
-      "file_name": "vnc_widget.py",
       "function_name": "RFBClient::fill_rect",
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
@@ -25171,15 +25201,15 @@
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
     {
-      "complexity": 4,
+      "complexity": 5,
       "file_name": "vnc_widget.py",
-      "function_name": "VNCWidget::connect_to_server",
+      "function_name": "RFBClient::_negotiate_security",
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
     {
       "complexity": 5,
       "file_name": "vnc_widget.py",
-      "function_name": "RFBClient::_negotiate_security",
+      "function_name": "RFBClient::connect",
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
     {
@@ -25192,6 +25222,12 @@
       "complexity": 6,
       "file_name": "vnc_widget.py",
       "function_name": "RFBClient::apply_zrle_rect",
+      "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "vnc_widget.py",
+      "function_name": "VNCWidget::connect_to_server",
       "path": "src\\intellicrack\\ui\\panels\\vnc_widget.py"
     },
     {
@@ -25791,12 +25827,6 @@
     {
       "complexity": 2,
       "file_name": "x64dbg_panel.py",
-      "function_name": "X64DbgPanel::_on_eval_expression",
-      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
-    },
-    {
-      "complexity": 2,
-      "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_on_execute_command",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
@@ -25828,6 +25858,12 @@
       "complexity": 3,
       "file_name": "x64dbg_panel.py",
       "function_name": "X64DbgPanel::_on_attach",
+      "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "x64dbg_panel.py",
+      "function_name": "X64DbgPanel::_on_eval_expression",
       "path": "src\\intellicrack\\ui\\panels\\x64dbg_panel.py"
     },
     {
@@ -26349,6 +26385,12 @@
     {
       "complexity": 1,
       "file_name": "provider_config.py",
+      "function_name": "ProviderConfigDialog::_load_credential_overview",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::_on_discover_selected_provider",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
@@ -26434,6 +26476,30 @@
       "complexity": 1,
       "file_name": "provider_config.py",
       "function_name": "_get_source_colors",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_classify_probe_response",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_test_anthropic",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_test_google",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_test_huggingface",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26547,19 +26613,43 @@
     {
       "complexity": 3,
       "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_test_openai",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
+      "function_name": "ConnectionTestWorker::_test_openrouter",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
+      "function_name": "CredentialSourceDetector::_load_env_file_vars",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::_is_provider_connected",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 3,
       "file_name": "provider_config.py",
-      "function_name": "ProviderConfigDialog::_load_credential_overview",
+      "function_name": "ProviderConfigDialog::_refresh_credential_overview",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 3,
       "file_name": "provider_config.py",
       "function_name": "ProviderConfigDialog::discover_single_provider",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_persist_api_key_to_env",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26583,13 +26673,19 @@
     {
       "complexity": 4,
       "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_google_models",
+      "function_name": "ConnectionTestWorker::_test_ollama",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 4,
       "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_huggingface_models",
+      "function_name": "CredentialSourceDetector::_collect_env_var_name",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "provider_config.py",
+      "function_name": "CredentialSourceDetector::_parse_env_file",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26619,25 +26715,31 @@
     {
       "complexity": 4,
       "file_name": "provider_config.py",
+      "function_name": "ProviderSettingsWidget::_write_env_credentials",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::get_openrouter_generation",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 5,
       "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_ollama_models",
+      "function_name": "ModelRefreshWorker::_fetch_anthropic_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 5,
       "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_openai_models",
+      "function_name": "ModelRefreshWorker::_fetch_google_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
       "complexity": 5,
       "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_openrouter_models",
+      "function_name": "ModelRefreshWorker::_fetch_huggingface_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26667,7 +26769,19 @@
     {
       "complexity": 6,
       "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_ollama",
+      "function_name": "ModelRefreshWorker::_fetch_ollama_models",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "provider_config.py",
+      "function_name": "ModelRefreshWorker::_fetch_openai_models",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "provider_config.py",
+      "function_name": "ModelRefreshWorker::_fetch_openrouter_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26707,39 +26821,9 @@
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
-      "complexity": 8,
-      "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_anthropic",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_google",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 8,
-      "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_huggingface",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
       "complexity": 9,
       "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_openai",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_openrouter",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 9,
-      "file_name": "provider_config.py",
-      "function_name": "ProviderConfigDialog::start_oauth_flow",
+      "function_name": "ConnectionTestWorker::_test_grok",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26763,7 +26847,13 @@
     {
       "complexity": 10,
       "file_name": "provider_config.py",
-      "function_name": "ProviderSettingsWidget::_persist_api_key_to_env",
+      "function_name": "ProviderConfigDialog::start_oauth_flow",
+      "path": "src\\intellicrack\\ui\\provider_config.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "provider_config.py",
+      "function_name": "ModelRefreshWorker::_collect_anthropic_pages",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26797,9 +26887,9 @@
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
-      "complexity": 15,
+      "complexity": 16,
       "file_name": "provider_config.py",
-      "function_name": "ConnectionTestWorker::_test_grok",
+      "function_name": "ModelRefreshWorker::_fetch_grok_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -26815,27 +26905,9 @@
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
-      "complexity": 17,
-      "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_grok_models",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
       "complexity": 18,
       "file_name": "provider_config.py",
       "function_name": "ProviderSettingsWidget::pull_ollama_model",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 24,
-      "file_name": "provider_config.py",
-      "function_name": "CredentialSourceDetector::_load_env_file_vars",
-      "path": "src\\intellicrack\\ui\\provider_config.py"
-    },
-    {
-      "complexity": 28,
-      "file_name": "provider_config.py",
-      "function_name": "ModelRefreshWorker::_fetch_anthropic_models",
       "path": "src\\intellicrack\\ui\\provider_config.py"
     },
     {
@@ -27219,6 +27291,12 @@
     {
       "complexity": 0,
       "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_invoke_taskkill_by_name",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "sandbox_config.py",
       "function_name": "SandboxMonitorWidget::_setup_ui",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
@@ -27255,13 +27333,43 @@
     {
       "complexity": 1,
       "file_name": "sandbox_config.py",
+      "function_name": "SandboxConfigDialog::_save_settings",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "sandbox_config.py",
       "function_name": "SandboxConfigDialog::_setup_ui",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_report_taskkill_result",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_stop_via_pid",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxTestWorker::_log_wsb_written",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
       "complexity": 2,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxConfigDialog::_cancel_test",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxConfigDialog::_ensure_shared_folder",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
@@ -27280,6 +27388,30 @@
       "complexity": 2,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxConfigDialog::_test_sandbox",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_dispatch_pid_kill",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_stop_via_manager",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_terminate_sandbox_by_name",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxTestWorker::_register_test_process",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
@@ -27303,7 +27435,19 @@
     {
       "complexity": 3,
       "file_name": "sandbox_config.py",
+      "function_name": "SandboxMonitorWidget::_stop_sandbox",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_config.py",
       "function_name": "SandboxMonitorWidget::set_running",
+      "path": "src\\intellicrack\\ui\\sandbox_config.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "sandbox_config.py",
+      "function_name": "SandboxTestWorker::_handle_sandbox_exit_status",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
@@ -27316,18 +27460,6 @@
       "complexity": 4,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxConfigDialog::_fallback_rebuild_manager",
-      "path": "src\\intellicrack\\ui\\sandbox_config.py"
-    },
-    {
-      "complexity": 4,
-      "file_name": "sandbox_config.py",
-      "function_name": "SandboxConfigDialog::_save_settings",
-      "path": "src\\intellicrack\\ui\\sandbox_config.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "sandbox_config.py",
-      "function_name": "SandboxMonitorWidget::_terminate_sandbox_by_name",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
@@ -27349,13 +27481,7 @@
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
     },
     {
-      "complexity": 9,
-      "file_name": "sandbox_config.py",
-      "function_name": "SandboxMonitorWidget::_stop_sandbox",
-      "path": "src\\intellicrack\\ui\\sandbox_config.py"
-    },
-    {
-      "complexity": 21,
+      "complexity": 17,
       "file_name": "sandbox_config.py",
       "function_name": "SandboxTestWorker::run",
       "path": "src\\intellicrack\\ui\\sandbox_config.py"
@@ -27825,12 +27951,6 @@
     {
       "complexity": 1,
       "file_name": "tool_config.py",
-      "function_name": "ToolSettingsWidget::_load_settings",
-      "path": "src\\intellicrack\\ui\\tool_config.py"
-    },
-    {
-      "complexity": 1,
-      "file_name": "tool_config.py",
       "function_name": "ToolStatusCheckWorker::run",
       "path": "src\\intellicrack\\ui\\tool_config.py"
     },
@@ -27915,19 +28035,13 @@
     {
       "complexity": 4,
       "file_name": "tool_config.py",
-      "function_name": "ToolSettingsWidget::_install_tool",
+      "function_name": "ToolSettingsWidget::_load_settings",
       "path": "src\\intellicrack\\ui\\tool_config.py"
     },
     {
       "complexity": 5,
       "file_name": "tool_config.py",
       "function_name": "ToolInstallWorker::_resolve_download_url",
-      "path": "src\\intellicrack\\ui\\tool_config.py"
-    },
-    {
-      "complexity": 6,
-      "file_name": "tool_config.py",
-      "function_name": "ToolInstallWorker::_post_install_ghidra",
       "path": "src\\intellicrack\\ui\\tool_config.py"
     },
     {
@@ -27951,7 +28065,19 @@
     {
       "complexity": 7,
       "file_name": "tool_config.py",
+      "function_name": "ToolInstallWorker::_post_install_ghidra",
+      "path": "src\\intellicrack\\ui\\tool_config.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "tool_config.py",
       "function_name": "ToolInstallWorker::_select_asset_url",
+      "path": "src\\intellicrack\\ui\\tool_config.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "tool_config.py",
+      "function_name": "ToolSettingsWidget::_install_tool",
       "path": "src\\intellicrack\\ui\\tool_config.py"
     },
     {
@@ -28605,12 +28731,6 @@
     {
       "complexity": 5,
       "file_name": "tools.py",
-      "function_name": "ToolOutputPanel::open_in_hex_editor",
-      "path": "src\\intellicrack\\ui\\tools.py"
-    },
-    {
-      "complexity": 5,
-      "file_name": "tools.py",
       "function_name": "ToolOutputPanel::populate_xrefs_for_address",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
@@ -28642,6 +28762,12 @@
       "complexity": 6,
       "file_name": "tools.py",
       "function_name": "ToolOutputPanel::open_in_ghidra",
+      "path": "src\\intellicrack\\ui\\tools.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "tools.py",
+      "function_name": "ToolOutputPanel::open_in_hex_editor",
       "path": "src\\intellicrack\\ui\\tools.py"
     },
     {

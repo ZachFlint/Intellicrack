@@ -33,6 +33,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.qt_compat import key_event_key, qt_key_page_down, qt_key_page_up, wheel_angle_delta_y
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -857,9 +858,8 @@ class HexEditorWidget(QAbstractScrollArea):
                 return "       NaN"
             if math.isinf(val_f):
                 return "       Inf" if val_f > 0 else "      -Inf"
-            else:
-                return f"{val_f:13.6g}"
-        elif mode == "float64":
+            return f"{val_f:13.6g}"
+        if mode == "float64":
             try:
                 val_d = cast("float", struct.unpack_from("<d", padded)[0])
             except struct.error:
@@ -1310,7 +1310,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if event is None:
             return
 
-        key = event.key()
+        key = key_event_key(event)
         modifiers = event.modifiers()
         ctrl = bool(modifiers & Qt.KeyboardModifier.ControlModifier)
         shift = bool(modifiers & Qt.KeyboardModifier.ShiftModifier)
@@ -1359,9 +1359,9 @@ class HexEditorWidget(QAbstractScrollArea):
                 row_start = (self._cursor_offset // self._bytes_per_row) * self._bytes_per_row
                 row_end = min(row_start + self._bytes_per_row - 1, doc_len - 1)
                 self._move_cursor(row_end, extend_selection=shift)
-        elif key in {Qt.Key.Key_PageUp, Qt.Key.Key_PageDown}:
+        elif key in {qt_key_page_up(), qt_key_page_down()}:
             delta = self._visible_row_count() * self._bytes_per_row
-            if key == Qt.Key.Key_PageUp:
+            if key == qt_key_page_up():
                 delta = -delta
             self._move_cursor(self._cursor_offset + delta, extend_selection=shift)
         elif key == Qt.Key.Key_Tab:
@@ -1693,7 +1693,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if a0 is None:
             return
 
-        delta = a0.angleDelta().y()
+        delta = wheel_angle_delta_y(a0)
         lines = _SCROLL_LINES if delta < 0 else -_SCROLL_LINES
 
         vbar = self.verticalScrollBar()

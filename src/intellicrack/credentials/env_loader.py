@@ -91,11 +91,7 @@ def _strip_unquoted_inline_comment(value: str) -> str:
     """
     length = len(value)
     return next(
-        (
-            value[:i]
-            for i in range(length)
-            if value[i] == "#" and (i == 0 or value[i - 1] in {" ", "\t"})
-        ),
+        (value[:i] for i in range(length) if value[i] == "#" and (i == 0 or value[i - 1] in {" ", "\t"})),
         value,
     )
 

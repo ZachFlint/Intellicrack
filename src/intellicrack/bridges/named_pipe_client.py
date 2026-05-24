@@ -294,7 +294,7 @@ class NamedPipeClient:
                 "pipe_close_handle_failed",
                 handle=handle,
                 error_code=error,
-                hint=NamedPipeClient._PIPE_ERROR_HINTS.get(error, ""),
+                hint=NamedPipeClient.format_error_hint(error) or "",
             )
 
     async def close(self) -> None:
@@ -693,7 +693,7 @@ class NamedPipeClient:
         wait_ok = kernel32.WaitNamedPipeW(pipe_name, timeout_ms)
         if not wait_ok:
             error = ctypes.get_last_error()
-            hint = self._PIPE_ERROR_HINTS.get(error, "")
+            hint = self.format_error_hint(error) or ""
             _logger.error(
                 "pipe_connection_failed",
                 pipe_name=pipe_name,
@@ -718,7 +718,7 @@ class NamedPipeClient:
 
         if handle is None or handle == INVALID_HANDLE_VALUE:
             error = ctypes.get_last_error()
-            hint = self._PIPE_ERROR_HINTS.get(error, "")
+            hint = self.format_error_hint(error) or ""
             _logger.error(
                 "pipe_connection_failed",
                 pipe_name=pipe_name,
@@ -789,7 +789,7 @@ class NamedPipeClient:
                     operation="read",
                     error="read failed",
                     error_code=error,
-                    hint=self._PIPE_ERROR_HINTS.get(error, ""),
+                    hint=self.format_error_hint(error) or "",
                 )
                 error_message = f"Pipe read failed (error {error})"
                 raise ToolError(error_message)
@@ -854,7 +854,7 @@ class NamedPipeClient:
                     operation="write",
                     error="write failed",
                     error_code=error,
-                    hint=self._PIPE_ERROR_HINTS.get(error, ""),
+                    hint=self.format_error_hint(error) or "",
                 )
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)

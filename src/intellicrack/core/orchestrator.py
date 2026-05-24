@@ -2719,11 +2719,7 @@ def _resolve_arch(raw: str) -> str:
         str: Canonical architecture name.
     """
     return next(
-        (
-            canonical
-            for keyword, canonical in _ARCH_KEYWORDS.items()
-            if keyword in raw
-        ),
+        (canonical for keyword, canonical in _ARCH_KEYWORDS.items() if keyword in raw),
         raw or "unknown",
     )
 

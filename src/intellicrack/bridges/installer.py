@@ -955,6 +955,10 @@ class ToolInstaller:
         if tool_info is None:
             return False
 
+        if tool in {ToolName.X64DBG, ToolName.CUTTER} and not pefile_available():
+            _logger.warning("pefile_unavailable_for_verification", tool=tool.value)
+            return False
+
         if tool_info.kind == "builtin":
             return True
 
@@ -1027,6 +1031,13 @@ class ToolInstaller:
         tool_info = TOOL_REGISTRY.get(tool)
         if tool_info is None:
             return InstallResult(success=False, error=f"Unknown tool: {tool}")
+
+        if tool in {ToolName.X64DBG, ToolName.CUTTER} and not pefile_available():
+            _logger.warning("pefile_not_available_for_install", tool=tool.value)
+            return InstallResult(
+                success=False,
+                error=f"Cannot install {tool_info.display_name} because optional dependency 'pefile' is not available.",
+            )
 
         if tool_info.kind == "builtin":
             return InstallResult(success=True, path=None, kind="builtin")
@@ -2177,10 +2188,9 @@ def _path_requires_admin(target: Path) -> bool:
     except OSError as exc:
         _logger.warning("path_requires_admin_resolve_failed", target=str(target), error=str(exc))
         return False
-    candidates: list[str] = []
-    for env_key in ("PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432"):
-        if env_val := os.environ.get(env_key):
-            candidates.append(env_val)
+    candidates: list[str] = [
+        env_val for env_key in ("PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432") if (env_val := os.environ.get(env_key))
+    ]
     for prefix in candidates:
         try:
             resolved.relative_to(Path(prefix).resolve())

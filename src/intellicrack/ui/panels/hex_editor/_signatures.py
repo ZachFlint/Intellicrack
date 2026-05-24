@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.yara_scanner import YaraScanner
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
@@ -155,6 +156,20 @@ def execute_signature_scan(
         return _scan_die(doc_data, db_path)
     if db_type == "clamav":
         return _scan_clamav(doc_data, db_path)
+    if db_type == "yara":
+        scanner = YaraScanner()
+        rules = scanner.compile_rules([db_path])
+        matches = scanner.scan_data(doc_data, rules)
+        return [
+            {
+                "name": match.rule_name,
+                "type": "YARA",
+                "version": str(match.meta.get("version", "1.0")),
+                "offset": match.strings[0].offset if match.strings else 0,
+                "details": f"Namespace: {match.namespace}, Meta: {match.meta}, Tags: {match.tags}",
+            }
+            for match in matches
+        ]
     return _scan_custom(doc_data, db_path)
 
 
@@ -513,7 +528,7 @@ class SignaturesMixin:
         type_row = QHBoxLayout()
         type_row.addWidget(QLabel("Database:"))
         self._sig_db_type_combo = QComboBox()
-        self._sig_db_type_combo.addItems(["DIE (JSON)", "ClamAV (.ndb/.hdb)", "Custom (JSON)"])
+        self._sig_db_type_combo.addItems(["DIE (JSON)", "ClamAV (.ndb/.hdb)", "Custom (JSON)", "YARA (.yar/.yara)"])
         type_row.addWidget(self._sig_db_type_combo)
         layout.addLayout(type_row)
 
@@ -543,7 +558,7 @@ class SignaturesMixin:
     def _on_select_sig_db(self) -> None:
         """Open a file dialog to select a signature database file."""
         parent = self if isinstance(self, QWidget) else None
-        file_filter = "Signature Files (*.json *.ndb *.hdb);;All Files (*)"
+        file_filter = "Signature/YARA Files (*.json *.ndb *.hdb *.yar *.yara);;All Files (*)"
         result = QFileDialog.getOpenFileName(parent, "Select Signature Database", "", file_filter)
         db_path = result[0] if result else ""
         if db_path:
@@ -561,7 +576,7 @@ class SignaturesMixin:
             return
 
         type_idx = self._sig_db_type_combo.currentIndex() if self._sig_db_type_combo else 0
-        db_type_map = {0: "die", 1: "clamav", 2: "custom"}
+        db_type_map = {0: "die", 1: "clamav", 2: "custom", 3: "yara"}
         db_type = db_type_map.get(type_idx, "custom")
 
         if self._sig_results_tree is not None:

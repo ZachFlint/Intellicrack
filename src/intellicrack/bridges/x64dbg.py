@@ -411,8 +411,7 @@ def _coerce_address(value: object) -> int | None:
     if isinstance(value, str):
         if candidate := value.strip():
             return safe_int_from_str(candidate, base=0, context="x64dbg_safe_int_or_none")
-        else:
-            return None
+        return None
     return None
 
 

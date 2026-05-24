@@ -177,10 +177,7 @@ def _parse_mem_descriptor(data: bytes, *, large: bool) -> _BarDescriptor | None:
         return None
     range_offset = _MEM_DES_SIZE
     flags_le = data[range_offset + 32 : range_offset + 36]
-    if large:
-        nbytes_le = data[range_offset + 8 : range_offset + 16]
-    else:
-        nbytes_le = data[range_offset + 8 : range_offset + 12]
+    nbytes_le = data[range_offset + 8 : range_offset + 16] if large else data[range_offset + 8 : range_offset + 12]
     size_bytes = int.from_bytes(nbytes_le, byteorder="little", signed=False)
     flags = struct.unpack("<I", flags_le)[0]
     return _BarDescriptor(is_large=large, size_bytes=size_bytes, flags=flags)

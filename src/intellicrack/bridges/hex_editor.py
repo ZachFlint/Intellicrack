@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from collections.abc import Buffer, Callable, Generator
 
     from intellicrack.bridges.hex_state import HexDocumentState
-    from intellicrack.core.disassembler import HexDisassembler
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
     from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
     from intellicrack.core.tools import ToolRegistry
@@ -205,10 +204,10 @@ try:
 except (ImportError, OSError) as _exc:
     _logger.debug("hexpat_interpreter_unavailable", error=str(_exc))
 
-_HexDisassembler: type[HexDisassembler] | None = None
+_get_disassembler: Any = None
 _disasm_available: bool = False
 try:
-    from intellicrack.core.disassembler import HexDisassembler as _HexDisassembler
+    from intellicrack.core.disassembler import get_disassembler as _get_disassembler
 
     _disasm_available = True
 except (ImportError, OSError) as _exc:
@@ -1763,6 +1762,9 @@ class HexEditorBridge(ToolBridgeBase):
 
         doc_len: int = new_doc.length()
         _logger.info("file_opened", path=str(canonical_path), size=doc_len)
+        from intellicrack.core.logging import log_binary_operation
+
+        log_binary_operation("load", canonical_path, size=doc_len)
 
         if self.state_holder is not None:
             self.state_holder.set_document(new_doc, canonical_path, source="bridge")
@@ -1864,6 +1866,10 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.info("bytes_write_started", offset=hex(offset), length=len(data))
         self.document.write_bytes(offset, data)
         _logger.info("bytes_written", offset=hex(offset), length=len(data))
+        from intellicrack.core.logging import log_binary_operation
+
+        path = self._state.target_path or ""
+        log_binary_operation("patch", path, offset=offset, length=len(data))
         if self.state_holder is not None:
             self.state_holder.notify_data_modified(offset, len(data), source="bridge")
         return True
@@ -2954,6 +2960,9 @@ class HexEditorBridge(ToolBridgeBase):
                 self.state_holder.set_document(self.document, canonical_saved_path, source="bridge")
 
         _logger.info("file_saved", path=str(canonical_saved_path))
+        from intellicrack.core.logging import log_binary_operation
+
+        log_binary_operation("save", canonical_saved_path)
         if self.state_holder is not None:
             self.state_holder.notify_document_saved(str(canonical_saved_path), source="bridge")
         return True
@@ -3702,7 +3711,7 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "no document open"
             raise RuntimeError(msg)
 
-        if not _disasm_available or _HexDisassembler is None:
+        if not _disasm_available or _get_disassembler is None:
             _logger.error("disassemble_failed_disassembler_module_unavailable")
             msg = "disassembler module not available"
             raise RuntimeError(msg)
@@ -3721,7 +3730,7 @@ class HexEditorBridge(ToolBridgeBase):
             data = bytes(raw)
         else:
             data = bytes(cast("list[int]", raw))
-        disassembler = _HexDisassembler()
+        disassembler = _get_disassembler()
         if arch == "auto":
             arch, mode = disassembler.auto_detect_arch(data)
 
@@ -7042,7 +7051,7 @@ class HexEditorBridge(ToolBridgeBase):
         top = 1 << 32
 
         for i in range(0, len(data) & ~1, 2):
-            if i in [checksum_offset, checksum_offset + 2]:
+            if i in {checksum_offset, checksum_offset + 2}:
                 continue
             word = data[i] | (data[i + 1] << 8)
             checksum += word

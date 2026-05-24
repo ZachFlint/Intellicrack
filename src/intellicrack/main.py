@@ -1044,17 +1044,17 @@ async def _run_application(
     splash.set_progress(90, "Initializing script engine...")
     app.processEvents()
 
-    script_manager, script_validator, script_generator = _init_script_engine(config, logger)
+    script_manager, script_validator, script_generator = init_script_engine(config, logger)
 
     splash.set_progress(92, "Initializing template manager...")
     app.processEvents()
 
-    template_manager = _init_template_manager(logger)
+    template_manager = init_template_manager(logger)
 
     splash.set_progress(93, "Initializing model discovery...")
     app.processEvents()
 
-    model_discovery, discovery_cache = await _init_model_discovery(provider_registry, config, logger)
+    model_discovery, discovery_cache = await init_model_discovery(provider_registry, config, logger)
 
     splash.set_progress(95, "Initializing UI...")
     app.processEvents()

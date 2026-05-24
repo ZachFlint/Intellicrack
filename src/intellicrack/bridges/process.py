@@ -159,6 +159,7 @@ from intellicrack.bridges._win32_types import (
     state_to_string,
 )
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
+from intellicrack.bridges._parse_helpers import safe_call
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     MemoryRegion,
@@ -1709,7 +1710,11 @@ class ProcessBridge(ToolBridgeBase):
             return "Unknown"
 
         inherit_handle = False
-        handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid) or self._kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, inherit_handle, pid)
+        handle = self._kernel32.OpenProcess(PROCESS_QUERY_INFORMATION, inherit_handle, pid) or self._kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION,
+            inherit_handle,
+            pid,
+        )
         if not handle:
             return "Unknown"
 
@@ -2605,11 +2610,14 @@ class ProcessBridge(ToolBridgeBase):
         proc_handle: int | None = None
         if self._psapi is not None:
             inherit_handle = False
-            proc_handle = self._kernel32.OpenProcess(
-                            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                            inherit_handle,
-                            target_pid,
-                        ) or None
+            proc_handle = (
+                self._kernel32.OpenProcess(
+                    PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                    inherit_handle,
+                    target_pid,
+                )
+                or None
+            )
 
         try:
             if self._kernel32.Module32First(snapshot, ctypes.byref(entry)):
@@ -5011,9 +5019,8 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_NOT_ATTACHED)
 
         target_is_wow64 = self._target_is_wow64()
-        if not target_is_wow64 and self._kernel32 is not None:
-            if self._target_is_64bit(self._process_handle):
-                raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
+        if not target_is_wow64 and self._kernel32 is not None and self._target_is_64bit(self._process_handle):
+            raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
 
         teb = await self.read_teb(tid)
         seh_frame_addr = teb.get("seh_frame")
@@ -6304,9 +6311,8 @@ class ProcessBridge(ToolBridgeBase):
                     ctypes.byref(val_size),
                 )
                 == 0
-            ):
-                if path := val_buf.value:
-                    results.append({"server_type": key_name, "path": path})
+            ) and (path := val_buf.value):
+                results.append({"server_type": key_name, "path": path})
 
             self._advapi32.RegCloseKey(server_key)
 
@@ -6454,7 +6460,8 @@ class ProcessBridge(ToolBridgeBase):
             sections)`` on success, or ``None`` when the image is not a
             valid PE or has no COM Descriptor directory entry.
         """
-        try:
+
+        def run_parse() -> tuple[int, list[dict[str, int | str]]] | None:
             nt_offset = read_dos_e_lfanew(data)
             if nt_offset <= 0 or len(data) < nt_offset + 4:
                 return None
@@ -6470,13 +6477,14 @@ class ProcessBridge(ToolBridgeBase):
                 return None
             sections_off = nt_offset + PE_OPTIONAL_HEADER_OFFSET + size_of_optional_header
             sections = list(iterate_section_headers(data, sections_off, num_sections))
-        except struct.error as exc:
-            _logger.warning(
-                "cor20_pe_descriptor_parse_failed",
-                error=str(exc),
-            )
-            return None
-        return com_rva, sections
+            return com_rva, sections
+
+        return safe_call(
+            run_parse,
+            exceptions=struct.error,
+            context="cor20_pe_descriptor_parse",
+            default=None,
+        )
 
     def _read_cor20_version(self, proc_handle: int, base_address: int) -> str | None:
         """Read the .NET MetaData version string from a module image.
@@ -6527,15 +6535,12 @@ class ProcessBridge(ToolBridgeBase):
             or cor20_read.value < _DOTNET_COR20_HEADER_SIZE
         ):
             return None
-        try:
-            meta_rva = int(struct.unpack_from("<I", cor20_buf.raw, 8)[0])
-        except struct.error as exc:
-            _logger.warning(
-                "cor20_meta_rva_parse_failed",
-                base_address=hex(base_address),
-                error=str(exc),
-            )
-            return None
+        meta_rva = safe_call(
+            lambda: int(struct.unpack_from("<I", cor20_buf.raw, 8)[0]),
+            exceptions=struct.error,
+            context="cor20_meta_rva_parse",
+            default=0,
+        )
         if meta_rva == 0:
             return None
         return self._read_metadata_version(proc_handle, base_address, meta_rva, sections_list)
@@ -6860,8 +6865,7 @@ class ProcessBridge(ToolBridgeBase):
 
         if job_indices := self._lookup_job_type_indices():
             return self._duplicate_job_handle_from_target(target_pid, job_indices)
-        else:
-            return None
+        return None
 
     def _get_target_pid_for_handle(self, proc_handle: int) -> int:
         """Return the PID owning ``proc_handle`` via ``GetProcessId``.
@@ -6893,8 +6897,7 @@ class ProcessBridge(ToolBridgeBase):
             self._build_handle_type_map()
         if type_map := self._handle_type_cache:
             return {idx for idx, name in type_map.items() if name.lower() == "job"}
-        else:
-            return set()
+        return set()
 
     def _duplicate_job_handle_from_target(
         self,
@@ -7028,9 +7031,8 @@ class ProcessBridge(ToolBridgeBase):
                 _JOB_QUERY_INFORMATION,
                 inherit_handle,
                 options,
-            ):
-                if handle_int := int(duplicated.value or 0):
-                    return handle_int
+            ) and (handle_int := int(duplicated.value or 0)):
+                return handle_int
         return None
 
     def _read_job_information(self, job_handle: int) -> dict[str, object]:

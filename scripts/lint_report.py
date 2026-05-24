@@ -2276,13 +2276,24 @@ def process_skylos(data: dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]
     return grouped, cnt
 
 
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
+_XML_ILLEGAL_CHARS_RE = re.compile(
+    "[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x84\x86-\x9f\ud800-\udfff￾￿]",
+)
+
+
 def escape_xml(s: str) -> str:
-    """Escape special XML characters.
+    """Escape special XML characters and strip control characters.
+
+    ANSI escape sequences and characters forbidden by the XML 1.0 character
+    productions are stripped so the resulting document is always well-formed.
 
     Returns:
         The XML-escaped string.
     """
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    text = _ANSI_ESCAPE_RE.sub("", str(s))
+    text = _XML_ILLEGAL_CHARS_RE.sub("", text)
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _build_finding_xml(finding: dict[str, Any]) -> str:
@@ -2385,11 +2396,21 @@ def _build_sarif_output(
 def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process vermin Python version compatibility checker text output.
 
-    Vermin ``-vvv`` output format::
+    Two output shapes are accepted to cover historical and current vermin
+    behaviour:
 
-        !2, 3.11     path/file.py
-          L13 C5: '__future__' module requires 2.1, 3.0
-          L19 C5: 'datetime.UTC' member requires !2, 3.11
+    * Detailed (``-vvv`` with per-line violations)::
+
+          !2, 3.11     path/file.py
+            L13 C5: '__future__' module requires 2.1, 3.0
+            L19 C5: 'datetime.UTC' member requires !2, 3.11
+
+    * Summary-only (modern vermin when target versions cannot be reconciled)::
+
+          File with incompatible versions: path/file.py
+            Versions could not be combined: !2, 3.11 and 2.2, !3
+
+      Each ``File with incompatible versions:`` line counts as one finding.
 
     Returns:
         A tuple of (grouped findings by file, total count).
@@ -2397,14 +2418,45 @@ def process_vermin_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     header_pattern = re.compile(r"^[~!]?\d.*\s+(\S+\.py)$")
     finding_pattern = re.compile(r"^\s+L(\d+)\s+C(\d+):\s+(.+)$")
+    incompatible_pattern = re.compile(
+        r"^File with incompatible versions:\s*(.+\.py)\s*$",
+    )
+    incompatible_detail_pattern = re.compile(
+        r"^\s+Versions could not be combined:\s*(.+)$",
+    )
     current_file = ""
+    pending_incompatible: str | None = None
 
     for line in text_output.strip().split("\n"):
         if not line.strip():
             continue
+
+        incompat_match = incompatible_pattern.match(line)
+        if incompat_match:
+            current_file = incompat_match.group(1).strip()
+            pending_incompatible = current_file
+            grouped[current_file].append({
+                "line": None,
+                "column": None,
+                "code": "VERMIN-INCOMPAT",
+                "message": "Incompatible Python versions cannot be combined",
+                "raw": line.strip(),
+            })
+            continue
+
+        detail_match = incompatible_detail_pattern.match(line)
+        if detail_match and pending_incompatible:
+            findings = grouped[pending_incompatible]
+            if findings:
+                findings[-1]["message"] = (
+                    f"Incompatible Python versions: {detail_match.group(1).strip()}"
+                )
+            continue
+
         header_match = header_pattern.match(line)
         if header_match:
             current_file = header_match.group(1)
+            pending_incompatible = None
             continue
         finding_match = finding_pattern.match(line)
         if finding_match and current_file:
@@ -2502,21 +2554,21 @@ def write_outputs(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int)
     xml += "</Files></LintReport>"
     Path(f"reports/xml/{tool}_findings.xml").write_text(xml, encoding="utf-8")
 
-    csv_buf = io.StringIO()
-    writer = csv.DictWriter(csv_buf, fieldnames=CSV_COLUMNS, extrasaction="ignore")
-    writer.writeheader()
-    for fp in sorted_files:
-        for f in grouped[fp]:
-            row = dict(f)
-            row["tool"] = tool
-            row["file"] = fp
-            if not row.get("code"):
-                row["code"] = row.get("rule", "")
-            if not row.get("rule"):
-                row["rule"] = row.get("code", "")
-            row.pop("raw", None)
-            writer.writerow(row)
-    Path(f"reports/csv/{tool}_findings.csv").write_text(csv_buf.getvalue(), encoding="utf-8")
+    csv_path = Path(f"reports/csv/{tool}_findings.csv")
+    with csv_path.open("w", encoding="utf-8", newline="") as csv_handle:
+        writer = csv.DictWriter(csv_handle, fieldnames=CSV_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        for fp in sorted_files:
+            for f in grouped[fp]:
+                row = dict(f)
+                row["tool"] = tool
+                row["file"] = fp
+                if not row.get("code"):
+                    row["code"] = row.get("rule", "")
+                if not row.get("rule"):
+                    row["rule"] = row.get("code", "")
+                row.pop("raw", None)
+                writer.writerow(row)
 
     sarif_obj = _build_sarif_output(tool, grouped, ts)
     Path(f"reports/sarif/{tool}_findings.sarif").write_text(
@@ -2529,8 +2581,33 @@ def write_outputs(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int)
     print(f"[{tool.upper()}] {cnt} findings")
 
 
+def _write_sql_dump(db_path: Path) -> None:
+    """Write a portable SQL text dump alongside a SQLite database file.
+
+    The dump is produced via :meth:`sqlite3.Connection.iterdump`, which
+    emits the same ``BEGIN TRANSACTION`` / ``CREATE TABLE`` / ``INSERT``
+    / ``COMMIT`` sequence as the ``sqlite3`` CLI's ``.dump`` command and
+    can be replayed against an empty database to recreate the original
+    contents.
+
+    Args:
+        db_path: Path to an existing SQLite database file. The dump is
+            written next to it with the same stem and a ``.sql``
+            extension (e.g. ``foo_findings.db`` -> ``foo_findings.sql``).
+    """
+    sql_path = db_path.with_suffix(".sql")
+    conn = sqlite3.connect(str(db_path))
+    try:
+        with sql_path.open("w", encoding="utf-8", newline="\n") as fh:
+            for statement in conn.iterdump():
+                fh.write(statement)
+                fh.write("\n")
+    finally:
+        conn.close()
+
+
 def write_sql_output(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: int, ts: str) -> None:
-    """Write findings to a SQLite database file.
+    """Write findings to a SQLite database file and a parallel SQL dump.
 
     Args:
         tool: Name of the lint tool.
@@ -2626,14 +2703,22 @@ def write_sql_output(tool: str, grouped: dict[str, list[dict[str, Any]]], cnt: i
     conn.commit()
     conn.close()
 
+    _write_sql_dump(db_path)
+
 
 def load_json_file(input_file: str) -> dict[str, Any] | list[Any]:
-    """Load JSON from a file, handling BOM, encoding, and non-JSON prefixes.
+    """Load JSON from a file, handling BOM, encoding, and non-JSON noise.
 
-    Some tools (e.g. skylos) emit log lines to stderr before JSON output.
-    When captured together, the file contains non-JSON lines before the
-    actual JSON payload. This function finds the first ``{`` or ``[`` and
-    attempts to parse from that position.
+    Tool wrappers can wrap the real JSON output with non-JSON prefixes
+    (warnings, ANSI banners, f-string format markers) and suffixes (PowerShell
+    ``NativeCommandExitException`` trailers, exit-code echoes). This loader is
+    robust to both by:
+
+    1. Trying to parse the entire file.
+    2. Using :class:`json.JSONDecoder.raw_decode` at each plausible start
+       position so trailing non-JSON content is ignored.
+    3. Preferring candidates at line starts before falling back to any
+       ``{``/``[`` in the file.
 
     Returns:
         The parsed JSON data as a dict or list, or an empty dict on failure.
@@ -2645,16 +2730,35 @@ def load_json_file(input_file: str) -> dict[str, Any] | list[Any]:
         try:
             return json.loads(content)
         except json.JSONDecodeError:
-            brace = content.find("{")
-            bracket = content.find("[")
-            candidates = [i for i in (brace, bracket) if i >= 0]
-            if candidates:
-                start = min(candidates)
-                try:
-                    return json.loads(content[start:])
-                except json.JSONDecodeError:
-                    pass
-            return {}
+            pass
+
+        decoder = json.JSONDecoder()
+
+        def _try_decode(start: int) -> dict[str, Any] | list[Any] | None:
+            try:
+                obj, _ = decoder.raw_decode(content[start:])
+            except json.JSONDecodeError:
+                return None
+            if isinstance(obj, (dict, list)):
+                return obj
+            return None
+
+        line_start_candidates: list[int] = [
+            i for i, ch in enumerate(content)
+            if ch in "{[" and (i == 0 or content[i - 1] == "\n")
+        ]
+        for start in line_start_candidates:
+            result = _try_decode(start)
+            if result is not None:
+                return result
+
+        any_candidates: list[int] = [i for i, ch in enumerate(content) if ch in "{["]
+        for start in any_candidates:
+            result = _try_decode(start)
+            if result is not None:
+                return result
+
+        return {}
     except FileNotFoundError:
         return {}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
@@ -3277,6 +3381,8 @@ def generate_report(
         cur.execute("CREATE INDEX IF NOT EXISTS idx_findings_code ON findings (code)")
         conn.commit()
         conn.close()
+
+        _write_sql_dump(consolidated_path)
 
     total = len(dashboard_data["findings"])
     tools_count = len(dashboard_data["tools"])

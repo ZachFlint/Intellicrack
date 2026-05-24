@@ -160,6 +160,7 @@ class SandboxPanel(AnalysisPanelBase):
         toolbar.addSeparator()
 
         self.continue_btn = self._add_tool_button(toolbar, "Continue VM", self._on_continue_vm, enabled=False)
+        self.pause_btn = self._add_tool_button(toolbar, "Pause VM", self._on_pause_vm, enabled=False)
         self.delete_snap_btn = self._add_tool_button(
             toolbar,
             "Delete Snap",
@@ -500,6 +501,7 @@ class SandboxPanel(AnalysisPanelBase):
         self.copy_in_btn.setEnabled(active)
         self.copy_out_btn.setEnabled(active)
         self.continue_btn.setEnabled(active)
+        self.pause_btn.setEnabled(active)
         self.delete_snap_btn.setEnabled(active)
         self._exec_cmd_btn.setEnabled(active)
 
@@ -1660,6 +1662,40 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] VM continue failed: {exc}")
         self.continue_btn.setEnabled(True)
+
+    def _on_pause_vm(self) -> None:
+        """Pause execution of a running sandbox VM."""
+        if self._bridge is None or self.sandbox_id is None:
+            return
+        self.pause_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.stop(self.sandbox_id),
+            on_success=self._on_pause_vm_success,
+            on_error=self._on_pause_vm_error,
+            parent=self,
+            event="sandbox_stop",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+        )
+
+    def _on_pause_vm_success(self, _result: object) -> None:
+        """Handle successful VM pause.
+
+        Args:
+            _result: Bridge call result (unused).
+        """
+        self._log("[+] VM execution paused")
+        self.pause_btn.setEnabled(True)
+
+    def _on_pause_vm_error(self, exc: object) -> None:
+        """Handle VM pause failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] VM pause failed: {exc}")
+        self.pause_btn.setEnabled(True)
 
     def _on_delete_snapshot(self) -> None:
         """Delete the selected snapshot from the sandbox."""
