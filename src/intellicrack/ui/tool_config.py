@@ -186,6 +186,11 @@ class ToolInstallWorker(QThread):
 
         self.progress.emit(5)
 
+        _logger.info(
+            "tool_install_path_prepared",
+            tool_id=self._tool_id,
+            install_path=str(self._install_path),
+        )
         self._install_path.mkdir(parents=True, exist_ok=True)
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -194,6 +199,9 @@ class ToolInstallWorker(QThread):
 
             self.progress.emit(10)
 
+            _logger.info("tool_download_started", tool_id=self._tool_id, url=url)
+            downloaded = 0
+            total = 0
             try:
                 with (
                     httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0)) as client,
@@ -201,6 +209,11 @@ class ToolInstallWorker(QThread):
                 ):
                     if response.status_code != HTTP_OK:
                         success = False
+                        _logger.warning(
+                            "tool_download_http_error",
+                            tool_id=self._tool_id,
+                            status_code=response.status_code,
+                        )
                         self.install_finished.emit(
                             success,
                             f"Download failed: HTTP {response.status_code}",
@@ -208,7 +221,6 @@ class ToolInstallWorker(QThread):
                         return
 
                     total = int(response.headers.get("content-length", 0))
-                    downloaded = 0
 
                     with zip_path.open("wb") as f:
                         for chunk in response.iter_bytes(chunk_size=8192):
@@ -217,7 +229,6 @@ class ToolInstallWorker(QThread):
                             if total > 0:
                                 pct = int(10 + (downloaded / total) * 70)
                                 self.progress.emit(pct)
-
             except httpx.TimeoutException:
                 _logger.exception("tool_download_timeout", tool_id=self._tool_id)
                 success = False
@@ -228,9 +239,21 @@ class ToolInstallWorker(QThread):
                 success = False
                 self.install_finished.emit(success, "Could not connect to download server")
                 return
+            _logger.info(
+                "tool_download_completed",
+                tool_id=self._tool_id,
+                bytes_downloaded=downloaded,
+                expected_bytes=total,
+            )
 
             self.progress.emit(85)
 
+            _logger.info(
+                "tool_archive_extracting",
+                tool_id=self._tool_id,
+                archive=str(zip_path),
+                target=str(self._install_path),
+            )
             try:
                 with zipfile.ZipFile(zip_path, "r") as zf:
                     zf.extractall(self._install_path)
@@ -239,16 +262,24 @@ class ToolInstallWorker(QThread):
                 success = False
                 self.install_finished.emit(success, "Downloaded file is not a valid ZIP archive")
                 return
+            _logger.info(
+                "tool_archive_extracted",
+                tool_id=self._tool_id,
+                target=str(self._install_path),
+            )
 
             self.progress.emit(95)
 
             if self._tool_id == "ghidra":
+                _logger.info("tool_post_install_dispatched", tool_id=self._tool_id, hook="ghidra")
                 self._post_install_ghidra()
             elif self._tool_id == "cutter":
+                _logger.info("tool_post_install_dispatched", tool_id=self._tool_id, hook="cutter")
                 self._post_install_cutter()
 
             self.progress.emit(100)
             success = True
+            _logger.info("tool_install_completed", tool_id=self._tool_id, name=name)
             self.install_finished.emit(success, f"{name} installed successfully")
 
     def _resolve_download_url(self, tool_info: dict[str, str]) -> tuple[str | None, str]:
@@ -417,6 +448,7 @@ class ToolInstallWorker(QThread):
             raise RuntimeError(error_message)
 
         process_manager = ProcessManager.get_instance()
+        _logger.info("pip_install_started", package="ghidra_bridge")
         result = process_manager.run_tracked(
             [sys.executable, "-m", "pip", "install", "ghidra_bridge"],
             name="pip-install-ghidra-bridge",
@@ -426,7 +458,9 @@ class ToolInstallWorker(QThread):
         if result.returncode != _RETURNCODE_SUCCESS:
             error_message = f"Failed to install ghidra_bridge: {result.stderr.strip()}"
             raise RuntimeError(error_message)
+        _logger.info("pip_install_completed", package="ghidra_bridge")
 
+        _logger.info("ghidra_bridge_server_install_started", ghidra_root=str(ghidra_root))
         server_install_result = process_manager.run_tracked(
             [sys.executable, "-m", "ghidra_bridge.install_server", str(ghidra_root)],
             name="ghidra-bridge-server-install",
@@ -438,8 +472,11 @@ class ToolInstallWorker(QThread):
                 "ghidra_bridge_server_install_failed",
                 stderr=server_install_result.stderr.strip(),
             )
+        else:
+            _logger.info("ghidra_bridge_server_install_completed", ghidra_root=str(ghidra_root))
 
         scripts_dir = ghidra_root / "ghidra_scripts"
+        _logger.debug("ghidra_scripts_dir_creating", path=str(scripts_dir))
         scripts_dir.mkdir(parents=True, exist_ok=True)
 
         bridge_script_content = (
@@ -451,6 +488,7 @@ class ToolInstallWorker(QThread):
         script_path.write_text(bridge_script_content, encoding="utf-8")
 
         extensions_dir = ghidra_root / "Extensions" / "intellicrack_bridge"
+        _logger.debug("ghidra_extensions_dir_creating", path=str(extensions_dir))
         extensions_dir.mkdir(parents=True, exist_ok=True)
 
         ext_script_path = extensions_dir / "intellicrack_bridge.py"
@@ -479,6 +517,7 @@ class ToolInstallWorker(QThread):
         )
 
         support_dir = ghidra_root / "support"
+        _logger.debug("ghidra_support_dir_creating", path=str(support_dir))
         support_dir.mkdir(parents=True, exist_ok=True)
         headless_script_path = support_dir / "intellicrack_headless_bridge.bat"
         _logger.info("ghidra_headless_script_writing", path=str(headless_script_path))
@@ -730,6 +769,7 @@ class ToolStatusCheckWorker(QThread):
 
         try:
             process_manager = ProcessManager.get_instance()
+            _logger.debug("cutter_version_probe_started")
             result = process_manager.run_tracked(
                 ["cutter", "--version"],
                 name="cutter-path-check",
@@ -862,11 +902,13 @@ class ToolConfigDialog(QDialog):
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
+        _logger.info("tool_config_dialog_accepted")
         self._save_all_settings()
         self.accept()
 
     def _on_apply(self) -> None:
         """Handle apply button click."""
+        _logger.info("tool_config_dialog_apply")
         self._save_all_settings()
 
     def _save_all_settings(self) -> None:
@@ -1053,13 +1095,29 @@ class ToolSettingsWidget(QFrame):
         Returns:
             dict[str, Any]: Dictionary of saved settings for this tool.
         """
+        _logger.debug(
+            "tool_settings_load_started",
+            tool_id=self._tool_id,
+            path=str(self._config_path),
+        )
         if not self._config_path.exists():
+            _logger.debug(
+                "tool_settings_load_completed",
+                tool_id=self._tool_id,
+                found=False,
+            )
             return {}
 
         try:
             with self._config_path.open(encoding="utf-8") as f:
                 all_settings: dict[str, Any] = json.load(f)
                 result: dict[str, Any] = all_settings.get(self._tool_id, {})
+                _logger.debug(
+                    "tool_settings_load_completed",
+                    tool_id=self._tool_id,
+                    found=True,
+                    keys=list(result.keys()),
+                )
                 return result
         except (json.JSONDecodeError, OSError):
             _logger.warning("tool_settings_load_failed", tool_id=self._tool_id)
@@ -1067,15 +1125,18 @@ class ToolSettingsWidget(QFrame):
 
     def _browse_path(self) -> None:
         """Open file browser for tool path."""
+        _logger.debug("tool_path_browse_opened", tool_id=self._tool_id)
         if path := QFileDialog.getExistingDirectory(
             self,
             f"Select {self._display_name} Installation",
             str(self._tools_directory),
         ):
+            _logger.debug("tool_path_browse_selected", tool_id=self._tool_id, path=path)
             self._path_input.setText(path)
 
     def _check_status(self) -> None:
         """Check the tool installation status."""
+        _logger.debug("tool_status_check_requested", tool_id=self._tool_id)
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self.status_label.setText("Checking...")
@@ -1153,6 +1214,11 @@ class ToolSettingsWidget(QFrame):
                 self._on_install_finished(success=bool(s), message=m)
 
             self._install_worker.install_finished.connect(_install_slot)
+            _logger.info(
+                "tool_install_requested",
+                tool_id=self._tool_id,
+                install_path=str(install_path),
+            )
             self._install_worker.start()
 
     def _on_install_finished(self, *, success: bool, message: str) -> None:
@@ -1162,6 +1228,12 @@ class ToolSettingsWidget(QFrame):
             success: Whether installation was successful.
             message: Status message.
         """
+        _logger.info(
+            "tool_install_finished",
+            tool_id=self._tool_id,
+            success=success,
+            message=message,
+        )
         self._install_btn.setEnabled(True)
         self._install_progress.setVisible(False)
 
@@ -1186,10 +1258,16 @@ class ToolSettingsWidget(QFrame):
 
     def save_settings(self) -> None:
         """Save current settings to config file."""
+        _logger.debug(
+            "tool_settings_save_config_dir_ensuring",
+            tool_id=self._tool_id,
+            config_dir=str(self._config_path.parent),
+        )
         self._config_path.parent.mkdir(parents=True, exist_ok=True)
 
         all_settings: dict[str, dict[str, Any]] = {}
         if self._config_path.exists():
+            _logger.debug("tool_settings_pre_save_load", tool_id=self._tool_id)
             try:
                 with self._config_path.open(encoding="utf-8") as f:
                     all_settings = json.load(f)
@@ -1202,6 +1280,11 @@ class ToolSettingsWidget(QFrame):
         try:
             with self._config_path.open("w", encoding="utf-8") as f:
                 json.dump(all_settings, f, indent=2)
+            _logger.info(
+                "tool_settings_saved",
+                tool_id=self._tool_id,
+                path=str(self._config_path),
+            )
         except OSError as e:
             _logger.warning("tool_settings_save_failed", tool_id=self._tool_id, error=str(e))
             show_warning(
@@ -1413,6 +1496,10 @@ class ToolStatusDialog(QDialog):
         self._tool_statuses: dict[str, tuple[bool, str]] = {}
 
         self._setup_ui()
+        _logger.info(
+            "tool_status_dialog_opened",
+            prefetched=tool_statuses is not None,
+        )
         if tool_statuses is not None:
             self._populate_from_prefetched(tool_statuses)
         else:
@@ -1491,6 +1578,7 @@ class ToolStatusDialog(QDialog):
     def _on_configure(self) -> None:
         """Open configuration dialog for selected tool."""
         if self._status_list.currentItem():
+            _logger.info("tool_configure_from_status_dialog_invoked")
             config_dialog = ToolConfigDialog(parent=self)
             config_dialog.exec()
             self._refresh_status()
@@ -1501,12 +1589,22 @@ class ToolStatusDialog(QDialog):
         Returns:
             dict[str, dict[str, Any]]: Dictionary mapping tool IDs to their settings.
         """
+        _logger.debug(
+            "tool_status_dialog_settings_load_started",
+            path=str(self._config_path),
+        )
         if not self._config_path.exists():
+            _logger.debug("tool_status_dialog_settings_load_completed", found=False)
             return {}
 
         try:
             with self._config_path.open(encoding="utf-8") as f:
                 result: dict[str, dict[str, Any]] = json.load(f)
+                _logger.debug(
+                    "tool_status_dialog_settings_load_completed",
+                    found=True,
+                    tool_count=len(result),
+                )
                 return result
         except (json.JSONDecodeError, OSError):
             _logger.warning("tool_settings_load_all_failed")
@@ -1577,7 +1675,13 @@ class ToolStatusDialog(QDialog):
 
         saved_settings = self._load_settings()
 
-        for display_name, tool_id, _category in self._tool_rows():
+        tool_rows = self._tool_rows()
+        _logger.info(
+            "tool_status_refresh_started",
+            tool_count=len(tool_rows),
+            prefetched=False,
+        )
+        for display_name, tool_id, _category in tool_rows:
             item = QListWidgetItem(f"... {display_name} - Checking...")
             self._status_list.addItem(item)
 

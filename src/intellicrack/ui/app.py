@@ -287,17 +287,12 @@ class MainWindow(QMainWindow):
         min_w, min_h = 800, 600
         margin_w, margin_h = 6, 8
 
+        geometry = self._resolve_screen_geometry()
+        if geometry is None:
+            self.resize(max_w, max_h)
+            return
+
         try:
-            app = QApplication.instance()
-            if not isinstance(app, QApplication):
-                self.resize(max_w, max_h)
-                return
-
-            geometry = get_screen_geometry(app)
-            if geometry is None:
-                self.resize(max_w, max_h)
-                return
-
             avail_x, avail_y, avail_w, avail_h = geometry
             target_w = max(min_w, min(max_w, avail_w - margin_w))
             target_h = max(min_h, min(max_h, avail_h - margin_h))
@@ -311,6 +306,26 @@ class MainWindow(QMainWindow):
         except (AttributeError, RuntimeError, ValueError):
             _logger.debug("screen_detection_failed_using_default_size", exc_info=True)
             self.resize(max_w, max_h)
+
+    @staticmethod
+    def _resolve_screen_geometry() -> tuple[int, int, int, int] | None:
+        """Resolve the usable screen geometry tuple for window sizing.
+
+        Returns:
+            tuple[int, int, int, int] | None: ``(x, y, width, height)`` tuple
+            of the primary screen's available geometry, or ``None`` when no
+            ``QApplication`` instance is active or the geometry cannot be
+            resolved.
+        """
+        app = QApplication.instance()
+        if not isinstance(app, QApplication):
+            _logger.debug("screen_geometry_unavailable_using_default", reason="no_qapplication")
+            return None
+        geometry = get_screen_geometry(app)
+        if geometry is None:
+            _logger.debug("screen_geometry_unavailable_using_default", reason="geometry_none")
+            return None
+        return geometry
 
     def _save_window_state(self) -> None:
         """Persist window geometry, splitter sizes, tab state, and detached panels to QSettings."""
@@ -514,9 +529,7 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """
-
-           ,
+        """,
         )
 
     @property
@@ -1156,6 +1169,7 @@ class MainWindow(QMainWindow):
         Args:
             analysis: The BridgeAnalysisSummary result from the orchestrator.
         """
+        _logger.debug("bridge_analysis_received", analysis_type=type(analysis).__name__)
         self.tool_panel.clear_analysis_tab("analysis")
         self.tool_panel.display_analysis_result("analysis", str(analysis))
         self.bridge_analysis_received.emit(analysis)
@@ -1204,6 +1218,7 @@ class MainWindow(QMainWindow):
         self._stream_append = self._chat_panel.add_streaming_message()
         self.status_update.emit("Processing...")
 
+        _logger.debug("user_message_received", length=len(text))
         active_pid = self.tool_panel.get_active_process_pid()
         if active_pid is not None:
             _logger.debug("user_message_process_context", pid=active_pid)
@@ -1239,6 +1254,12 @@ class MainWindow(QMainWindow):
             result: The tool execution result.
         """
         status = "SUCCESS" if result.success else "FAILED"
+        _logger.debug(
+            "tool_result_received",
+            tool_name=getattr(result, "tool_name", ""),
+            success=result.success,
+            duration_ms=result.duration_ms,
+        )
         self.tool_panel.append_log_message(f"[{status}] Duration: {result.duration_ms:.1f}ms")
         self._accumulate_usage_from_payload(result.result)
 
@@ -1367,6 +1388,7 @@ class MainWindow(QMainWindow):
 
     def _on_load_binary(self) -> None:
         """Handle load binary action."""
+        _logger.info("load_binary_dialog_opened")
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Load Binary",
@@ -1374,7 +1396,10 @@ class MainWindow(QMainWindow):
             "Executables (*.exe *.dll *.so *.dylib);;All Files (*)",
         )
         if path:
+            _logger.info("load_binary_dialog_selection", path=path)
             self._load_binary(Path(path))
+        else:
+            _logger.info("load_binary_dialog_cancelled")
 
     def _load_binary(self, path: Path) -> None:
         """Load a binary file.
@@ -1382,6 +1407,7 @@ class MainWindow(QMainWindow):
         Args:
             path: Path to the binary.
         """
+        _logger.info("binary_loaded", path=str(path), name=path.name)
         self.current_binary = path
         self._binary_label.setText(f"Binary: {path.name}")
         for button in self._binary_dependent_buttons:
@@ -1444,6 +1470,12 @@ class MainWindow(QMainWindow):
                 description=description or None,
             )
 
+        _logger.info(
+            "session_create_requested",
+            provider=str(provider),
+            model=model,
+            name=session_name or None,
+        )
         self._chat_panel.clear_messages()
         self.tool_panel.clear_all()
         self.status_update.emit("Creating new session...")
@@ -1456,12 +1488,13 @@ class MainWindow(QMainWindow):
         dialog's load button (which emits ``session_loaded`` and accepts the dialog) and delete button (which emits ``session_deleted``
         while keeping the dialog open) both trigger orchestrator-side state changes.
         """
+        _logger.info("session_load_dialog_opened")
         dialog = SessionManagerDialog(parent=self)
         dialog.session_loaded.connect(self._on_session_load_requested)
         dialog.session_deleted.connect(self._on_session_deleted)
-        if dialog.exec():
-            if session_id := dialog.get_selected_session_id():
-                self._on_session_load_requested(session_id)
+        if dialog.exec() and (session_id := dialog.get_selected_session_id()):
+            _logger.info("session_load_dialog_selection", session_id=session_id)
+            self._on_session_load_requested(session_id)
 
     def _on_session_load_requested(self, session_id: str) -> None:
         """Load a session by ID through the orchestrator.
@@ -1469,6 +1502,7 @@ class MainWindow(QMainWindow):
         Args:
             session_id: Identifier of the session to load.
         """
+        _logger.info("session_load_requested", session_id=session_id)
 
         async def load_session() -> None:
             await self._orchestrator.load_session(session_id)
@@ -1501,6 +1535,11 @@ class MainWindow(QMainWindow):
 
     def _on_save_session(self) -> None:
         """Handle save session action."""
+        current = self._orchestrator.current_session
+        _logger.info(
+            "session_save_requested",
+            session_id=current.id if current is not None else None,
+        )
 
         async def save_session() -> None:
             await self._orchestrator.save_session()
@@ -1522,11 +1561,13 @@ class MainWindow(QMainWindow):
             "Text Files (*.txt);;Markdown (*.md);;All Files (*)",
         )
         if path:
+            _logger.info("chat_export_started", path=path, message_count=len(messages))
             with Path(path).open("w", encoding="utf-8") as f:
                 for msg in messages:
                     role = msg.role.upper()
                     f.write(f"[{role}] {msg.timestamp.strftime('%H:%M:%S')}\n")
                     f.write(f"{msg.content}\n\n")
+            _logger.info("chat_export_completed", path=path, message_count=len(messages))
             QMessageBox.information(self, "Export", f"Chat exported to {path}")
 
     def _on_export_session(self) -> None:
@@ -1576,6 +1617,7 @@ class MainWindow(QMainWindow):
         worker.finished.connect(_on_export_done)
         worker.error.connect(_on_export_failed)
         self._current_worker = worker
+        _logger.info("session_export_started", session_id=session.id, path=path)
         self.status_update.emit("Exporting session...")
         worker.start()
 
@@ -1604,6 +1646,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Import", "Session manager does not support import.")
             return
 
+        _logger.info("session_import_started", path=path)
         self._start_session_import(
             cast("Callable[..., Coroutine[object, object, object]]", import_json_attr),
             Path(path),
@@ -1690,21 +1733,29 @@ class MainWindow(QMainWindow):
         The hex editor lives in :attr:`ToolOutputPanel.embedded_tools` (registered by :meth:`ToolOutputPanel.add_hex_editor_tab`), not
         :attr:`panels`, so this method resolves it through :meth:`ToolOutputPanel.get_embedded_tool`.
         """
+        _logger.info(
+            "save_patched_binary_requested",
+            binary=str(self.current_binary) if self.current_binary is not None else None,
+        )
         hex_panel = self.tool_panel.get_embedded_tool("hex_editor")
         if hex_panel is None:
+            _logger.info("save_patched_binary_no_hex_editor")
             QMessageBox.information(self, "Save", "No hex editor loaded.")
             return
 
         save_as_fn = getattr(hex_panel, "save_as", None)
         if callable(save_as_fn):
+            _logger.info("save_patched_binary_dispatched", method="save_as")
             save_as_fn()
             return
 
         save_fn = getattr(hex_panel, "save", None)
         if callable(save_fn):
+            _logger.info("save_patched_binary_dispatched", method="save")
             save_fn()
             return
 
+        _logger.info("save_patched_binary_unsupported")
         QMessageBox.information(self, "Save", "Hex editor does not support saving.")
 
     def _on_export_analysis(self) -> None:
@@ -1727,6 +1778,7 @@ class MainWindow(QMainWindow):
             "JSON Files (*.json);;All Files (*)",
         )
         if path:
+            _logger.info("analysis_export_started", path=path)
             analysis_dict: object
             to_dict_fn = getattr(analysis, "to_dict", None)
             if callable(to_dict_fn):
@@ -1739,6 +1791,7 @@ class MainWindow(QMainWindow):
             with Path(path).open("w", encoding="utf-8") as f:
                 json.dump(analysis_dict, f, indent=2, default=str)
 
+            _logger.info("analysis_export_completed", path=path)
             QMessageBox.information(self, "Export", f"Analysis exported to {path}")
 
     def _on_tool_status(self) -> None:
@@ -2051,6 +2104,11 @@ class MainWindow(QMainWindow):
                         api_key = config_key
             except (json.JSONDecodeError, OSError):
                 _logger.debug("config_file_load_failed", exc_info=True)
+        _logger.info(
+            "models_refresh_requested",
+            provider=provider_id,
+            has_credentials=bool(api_key),
+        )
         self.status_update.emit("Refreshing models...")
         self.model_combo.clear()
         self.model_combo.setEnabled(False)
@@ -2103,6 +2161,7 @@ class MainWindow(QMainWindow):
         worker.finished.connect(self._on_browse_models_result)
         worker.error.connect(self._on_async_error)
         self.model_browse_worker = worker
+        _logger.info("provider_list_models_requested", provider=active_provider.name.value)
         worker.start()
         self.status_update.emit("Fetching models...")
 
@@ -2244,6 +2303,7 @@ class MainWindow(QMainWindow):
         (which fires the signal without dialog acceptance) propagates settings to the runtime sandbox manager just like an OK acceptance
         does.
         """
+        _logger.info("sandbox_config_dialog_opened")
         dialog = SandboxConfigDialog(
             sandbox_manager=self.sandbox_manager,
             parent=self,
@@ -2432,6 +2492,7 @@ class MainWindow(QMainWindow):
         The bridge is reused for the subsequent ``create()`` call so the availability probe and the create path target the same backend
         instance.
         """
+        _logger.info("sandbox_open_requested")
         bridge = self._get_or_create_sandbox_bridge()
 
         async def open_sandbox() -> object:
@@ -2440,6 +2501,7 @@ class MainWindow(QMainWindow):
 
         def on_sandbox_opened(result: object) -> None:
             if result is None:
+                _logger.info("sandbox_open_unavailable")
                 QMessageBox.warning(
                     self,
                     "Sandbox Unavailable",
@@ -2473,6 +2535,7 @@ class MainWindow(QMainWindow):
         without closing the dialog) immediately propagates the new config to MainWindow, instead of only being captured on the OK acceptance
         path.
         """
+        _logger.info("preferences_dialog_opened")
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
         config_path = get_config_file("config.json")
@@ -2528,6 +2591,7 @@ class MainWindow(QMainWindow):
         """Open the XPU status dialog showing device, memory, and cache state."""
         from intellicrack.ui.xpu_status import XPUStatusDialog
 
+        _logger.debug("xpu_status_dialog_opened")
         dialog = XPUStatusDialog(self)
         dialog.exec()
 
@@ -2540,6 +2604,14 @@ class MainWindow(QMainWindow):
 
         status_icon = self._icon_manager.get_status_icon(success=True)
         has_icon = not status_icon.isNull()
+
+        _logger.debug(
+            "about_dialog_opened",
+            code_font=str(code_font),
+            ui_font=str(ui_font),
+            custom_fonts=bool(custom_loaded),
+            has_icon=has_icon,
+        )
 
         about_text = (
             "Intellicrack\n\n"
@@ -2799,6 +2871,8 @@ class MainWindow(QMainWindow):
             _logger.debug("sandbox_widget_active", widget_type=type(sandbox_widget).__name__)
             self._wire_sandbox_monitor_widgets(sandbox_widget)
 
+        _logger.info("sandbox_panel_opened", bridge_attached=bool(sandbox_bridge))
+
     def _wire_sandbox_monitor_widgets(self, sandbox_widget: QWidget) -> None:
         """Connect ``SandboxMonitorWidget.sandbox_stopped`` for monitors under ``sandbox_widget``.
 
@@ -2829,6 +2903,7 @@ class MainWindow(QMainWindow):
         if self.current_binary is None:
             self._show_no_binary_warning("debug")
             return
+        _logger.info("debug_binary_requested", binary=str(self.current_binary))
         if not self.tool_panel.open_in_x64dbg(self.current_binary):
             self._show_tool_error("x64dbg", "Failed to open binary in x64dbg")
 
@@ -2837,6 +2912,7 @@ class MainWindow(QMainWindow):
         if self.current_binary is None:
             self._show_no_binary_warning("analyze")
             return
+        _logger.info("analyze_binary_requested", binary=str(self.current_binary))
         if not self.tool_panel.open_in_cutter(self.current_binary):
             self._show_tool_error("Cutter", "Failed to open binary in Cutter")
 
@@ -2845,6 +2921,7 @@ class MainWindow(QMainWindow):
         if self.current_binary is None:
             self._show_no_binary_warning("hex edit")
             return
+        _logger.info("hex_edit_binary_requested", binary=str(self.current_binary))
         if not self.tool_panel.open_in_hex_editor(self.current_binary):
             self._show_tool_error("Hex Editor", "Failed to open binary in hex editor")
 
@@ -2853,6 +2930,7 @@ class MainWindow(QMainWindow):
         if self.current_binary is None:
             self._show_no_binary_warning("Ghidra analysis")
             return
+        _logger.info("open_binary_in_ghidra_requested", binary=str(self.current_binary))
         if not self.tool_panel.open_in_ghidra(self.current_binary):
             self._show_tool_error("Ghidra", "Failed to open binary in Ghidra")
 
@@ -2977,6 +3055,7 @@ class MainWindow(QMainWindow):
         Args:
             checked: Whether sandbox is enabled.
         """
+        _logger.debug("sandbox_button_toggled", checked=checked)
         self._sandbox_btn.setText(f"Sandbox: {'ON' if checked else 'OFF'}")
 
     def _on_auto_approve_toggled(self, *, checked: bool) -> None:
@@ -2985,6 +3064,7 @@ class MainWindow(QMainWindow):
         Args:
             checked: Whether auto-approve is enabled.
         """
+        _logger.debug("auto_approve_button_toggled", checked=checked)
         types_module = importlib.import_module("intellicrack.core.types")
 
         self._auto_approve_btn.setText(f"Auto-approve: {'ON' if checked else 'OFF'}")
@@ -3017,6 +3097,7 @@ class MainWindow(QMainWindow):
         Args:
             a0: Close event.
         """
+        _logger.info("main_window_closing")
         if self.tool_panel.has_unsaved_changes():
             reply = QMessageBox.question(
                 self,
@@ -3067,5 +3148,6 @@ class MainWindow(QMainWindow):
         if self._current_worker and self._current_worker.isRunning():
             self._current_worker.wait()
 
+        _logger.info("main_window_closed")
         if a0 is not None:
             a0.accept()
