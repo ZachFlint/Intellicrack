@@ -445,6 +445,7 @@ class CustomCrcDialog(QDialog):
             ref_out = self._ref_out_check.isChecked()
             xor_out = int(self._xor_out_edit.text().strip(), 16)
         except ValueError as exc:
+            _logger.warning("custom_crc_invalid_input", error=str(exc))
             self._result_label.setText(f"Error: {exc}")
             return
 
@@ -494,7 +495,11 @@ class CustomCrcDialog(QDialog):
         """
         self._worker = None
         self._result_label.setText(f"Error: {exc}")
-        _logger.warning("custom_crc_worker_failed", error_type=type(exc).__name__, error=str(exc))
+        _logger.error(
+            "custom_crc_worker_failed",
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
 
 
 _DIGRAM_SIZE: int = 256

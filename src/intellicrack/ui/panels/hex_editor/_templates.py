@@ -332,12 +332,24 @@ class TemplatesMixin:
 
         try:
             json_str: str = self.document.export_template_json(name)
-            _logger.info("file_written", path=save_path, size=len(json_str), kind="template_json")
+            _logger.info(
+                "template_export_write_begin",
+                path=save_path,
+                size=len(json_str),
+                kind="template_json",
+                template_name=name,
+            )
             Path(save_path).write_text(json_str, encoding="utf-8")
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Export Template", f"Export failed:\n{exc}")
-            _logger.exception("template_export_failed")
+            _logger.exception("template_export_failed", template_name=name, path=save_path, error=str(exc))
         else:
+            _logger.info(
+                "file_written",
+                path=save_path,
+                size=len(json_str),
+                kind="template_json",
+            )
             _logger.info("template_exported", template_name=name, path=save_path)
 
     def _on_remove_template(self) -> None:

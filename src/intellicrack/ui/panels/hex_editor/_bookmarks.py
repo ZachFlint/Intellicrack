@@ -76,6 +76,13 @@ class BookmarksMixin:
         if not color.isValid():
             return
 
+        _logger.info(
+            "bookmark_add_started",
+            offset=cursor_offset,
+            bookmark_name=name,
+            color=color.name(),
+        )
+
         try:
             self.document.add_bookmark(cursor_offset, 1, name, color.name())
         except (RuntimeError, OSError, ValueError, IndexError, TypeError):
@@ -97,10 +104,11 @@ class BookmarksMixin:
 
         index = self._bookmarks_tree.indexOfTopLevelItem(current)
         if index >= 0:
+            _logger.info("bookmark_remove_started", index=index)
             try:
                 bookmarks = self.document.list_bookmarks()
             except (RuntimeError, OSError):
-                _logger.exception("bookmark_list_failed")
+                _logger.exception("bookmark_list_failed", context="remove_bookmark_lookup")
                 return
 
             if index < len(bookmarks):
@@ -129,7 +137,7 @@ class BookmarksMixin:
         try:
             bookmarks = self.document.list_bookmarks()
         except (RuntimeError, OSError):
-            _logger.exception("bookmark_list_failed")
+            _logger.exception("bookmark_list_failed", context="refresh_bookmarks")
             return
 
         for bm in bookmarks:
@@ -138,3 +146,4 @@ class BookmarksMixin:
             label = str(bm[2])
             item = QTreeWidgetItem([offset_str, length_str, label])
             self._bookmarks_tree.addTopLevelItem(item)
+        _logger.debug("bookmarks_refreshed", count=len(bookmarks))

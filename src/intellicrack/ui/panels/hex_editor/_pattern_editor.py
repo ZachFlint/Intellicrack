@@ -475,15 +475,26 @@ class PatternEditorMixin:
         if not save_path:
             return
 
+        path = Path(save_path)
+        if path.suffix == ".json" and self._compiled_json:
+            payload = self._compiled_json
+            payload_format = "json"
+        elif self._pattern_dsl_editor is not None:
+            payload = self._pattern_dsl_editor.toPlainText()
+            payload_format = "hexpat"
+        else:
+            _logger.debug("pattern_save_skipped", reason="no payload available")
+            return
+
+        _logger.info(
+            "pattern_save_begin",
+            path=str(path),
+            format=payload_format,
+            size=len(payload),
+        )
+
         try:
-            path = Path(save_path)
-            if path.suffix == ".json" and self._compiled_json:
-                path.write_text(self._compiled_json, encoding="utf-8")
-            elif self._pattern_dsl_editor is not None:
-                path.write_text(
-                    self._pattern_dsl_editor.toPlainText(),
-                    encoding="utf-8",
-                )
+            path.write_text(payload, encoding="utf-8")
         except OSError:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Save failed")
@@ -508,6 +519,7 @@ class PatternEditorMixin:
 
         try:
             path = Path(file_path_str)
+            _logger.info("pattern_open_begin", path=str(path))
             content = path.read_text(encoding="utf-8")
         except OSError:
             if self._pattern_status_label is not None:
@@ -588,9 +600,10 @@ class PatternEditorMixin:
             name: Display name of the pattern.
         """
         try:
+            _logger.info("hexpat_library_load_begin", path=file_path, name=name)
             source = Path(file_path).read_text(encoding="utf-8", errors="replace")
         except OSError:
-            _logger.exception("hexpat_library_load_failed")
+            _logger.exception("hexpat_library_load_failed", path=file_path, name=name)
             return
 
         if self._pattern_dsl_editor is not None:

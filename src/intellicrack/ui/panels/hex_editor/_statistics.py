@@ -219,6 +219,24 @@ class StatisticsMixin:
 
         self._set_statistics_computing()
 
+        doc_length: int = -1
+        length_attr: Any = getattr(self.document, "length", None)
+        if callable(length_attr):
+            try:
+                raw_length: Any = length_attr()
+                doc_length = int(raw_length)
+            except (TypeError, ValueError, AttributeError) as exc:
+                _logger.debug(
+                    "statistics_doc_length_unavailable",
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
+        _logger.info(
+            "statistics_update_started",
+            doc_length=doc_length,
+            block_size=ENTROPY_BLOCK_SIZE,
+        )
+
         parent_obj: QThread | None = self if isinstance(self, QThread) else None
         worker = GenericCallableWorker(
             compute_statistics,

@@ -253,7 +253,14 @@ class DisassemblyMixin:
                 operands = str(insn.get("operands", ""))
                 try:
                     address_int = int(address_val)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as exc:
+                    _logger.debug(
+                        "disasm_address_parse_fallback",
+                        raw_address=address_val,
+                        raw_address_type=type(address_val).__name__,
+                        error_type=type(exc).__name__,
+                        error=str(exc),
+                    )
                     address_int = 0
                 hex_str = " ".join(bytes_hex[i : i + 2] for i in range(0, len(bytes_hex), 2))
                 row = self._disasm_table.rowCount()
