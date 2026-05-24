@@ -46,6 +46,7 @@ def read_file_for_scan(path: Path) -> bytes:
         bytes: Complete file contents.
     """
     size = path.stat().st_size
+    _logger.debug("sig_scan_file_read_begin", path=str(path), size=size)
     if size == 0:
         return b""
     with path.open("rb") as fh, mmap.mmap(fh.fileno(), length=0, access=mmap.ACCESS_READ) as mm:
@@ -168,8 +169,15 @@ def _scan_die(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
         list[dict[str, Any]]: List of match dicts with ``name``, ``type``,
             ``version``, and ``offset`` keys.
     """
+    _logger.info("sig_scan_die_read_begin", db_path=db_path, doc_size=len(doc_data))
     db_text = Path(db_path).read_text(encoding="utf-8")
     db_entries: list[dict[str, Any]] = json.loads(db_text)
+    _logger.debug(
+        "sig_scan_die_read_complete",
+        db_path=db_path,
+        entry_count=len(db_entries),
+        db_size=len(db_text),
+    )
     results: list[dict[str, Any]] = []
 
     ep_bytes = doc_data[:_MAX_ENTRY_POINT_BYTES]
@@ -258,7 +266,18 @@ def _scan_clamav(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
     """
     db_file = Path(db_path)
     suffix = db_file.suffix.lower()
+    _logger.info(
+        "sig_scan_clamav_read_begin",
+        db_path=db_path,
+        suffix=suffix,
+        doc_size=len(doc_data),
+    )
     lines = db_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    _logger.debug(
+        "sig_scan_clamav_read_complete",
+        db_path=db_path,
+        line_count=len(lines),
+    )
     if suffix == ".hdb":
         return _scan_clamav_hdb(doc_data, lines)
     return _scan_clamav_ndb(doc_data, lines)
@@ -385,8 +404,15 @@ def _scan_custom(doc_data: bytes, db_path: str) -> list[dict[str, Any]]:
     Returns:
         list[dict[str, Any]]: List of match dicts.
     """
+    _logger.info("sig_scan_custom_read_begin", db_path=db_path, doc_size=len(doc_data))
     db_text = Path(db_path).read_text(encoding="utf-8")
     entries: list[dict[str, str]] = json.loads(db_text)
+    _logger.debug(
+        "sig_scan_custom_read_complete",
+        db_path=db_path,
+        entry_count=len(entries),
+        db_size=len(db_text),
+    )
     results: list[dict[str, Any]] = []
 
     for entry in entries:
@@ -542,6 +568,13 @@ class SignaturesMixin:
             self._sig_results_tree.clear()
 
         fp_str: str | None = str(self.file_path) if getattr(self, "file_path", None) is not None else None
+        _logger.info(
+            "sig_scan_started",
+            db_type=db_type,
+            db_path=self._sig_db_path,
+            file_path=fp_str,
+            has_document=self.document is not None,
+        )
         worker = GenericCallableWorker(
             execute_signature_scan_from_source,
             fp_str,

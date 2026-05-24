@@ -133,6 +133,13 @@ class ProcessMemoryDialog(QDialog):
         pid = self._pid_spin.value()
         self._regions_table.setRowCount(0)
 
+        _logger.info(
+            "process_memory_list_regions_started",
+            pid=pid,
+            hexcore_available=hexcore_available,
+            platform=sys.platform,
+        )
+
         if hexcore_available and hexcore is not None:
             try:
                 list_fn = getattr(hexcore.HexDocument, "list_process_memory_regions", None)
@@ -144,6 +151,12 @@ class ProcessMemoryDialog(QDialog):
                     )
                     self._populate_regions(regions)
                     self._status_label.setText(f"{len(regions)} region(s) found")
+                    _logger.info(
+                        "process_memory_list_regions_complete",
+                        pid=pid,
+                        backend="hexcore",
+                        region_count=len(regions),
+                    )
                     return
             except (OSError, RuntimeError, ValueError):
                 _logger.exception("process_regions_hexcore_failed", pid=pid)
@@ -159,23 +172,38 @@ class ProcessMemoryDialog(QDialog):
         Args:
             pid: Process ID to query.
         """
+        access_mask = _PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ
         try:
             kernel32 = ctypes.windll.kernel32
 
             no_inherit: int = 0
             inherit_handle = ctypes.c_bool(no_inherit)
+            _logger.info(
+                "win32_open_process_call",
+                pid=pid,
+                access=f"0x{access_mask:08X}",
+                inherit_handle=False,
+            )
             handle = kernel32.OpenProcess(
-                _PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ,
+                access_mask,
                 inherit_handle,
                 pid,
             )
             if not handle:
                 self._status_label.setText(f"Cannot open process {pid}")
+                _logger.warning(
+                    "win32_open_process_failed",
+                    pid=pid,
+                    access=f"0x{access_mask:08X}",
+                )
                 return
+
+            _logger.debug("win32_open_process_handle_acquired", pid=pid)
 
             mbi = MemoryBasicInformation()
             address = 0
             regions: list[tuple[int, int, int, int]] = []
+            query_calls = 0
 
             while kernel32.VirtualQueryEx(
                 handle,
@@ -183,6 +211,7 @@ class ProcessMemoryDialog(QDialog):
                 ctypes.byref(mbi),
                 ctypes.sizeof(mbi),
             ):
+                query_calls += 1
                 if mbi.State == _MEM_COMMIT:
                     regions.append((
                         mbi.BaseAddress or 0,
@@ -194,12 +223,30 @@ class ProcessMemoryDialog(QDialog):
                 if address >= _USER_VA_LIMIT:
                     break
 
-            kernel32.CloseHandle(handle)
+            _logger.debug(
+                "win32_virtual_query_ex_complete",
+                pid=pid,
+                query_calls=query_calls,
+                committed_regions=len(regions),
+            )
+
+            close_status = kernel32.CloseHandle(handle)
+            _logger.debug(
+                "win32_close_handle_called",
+                pid=pid,
+                status=int(close_status) if close_status is not None else None,
+            )
             self._populate_regions(regions)
             self._status_label.setText(f"{len(regions)} committed region(s) found")
+            _logger.info(
+                "process_memory_list_regions_complete",
+                pid=pid,
+                backend="ctypes",
+                region_count=len(regions),
+            )
         except (OSError, AttributeError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_ctypes_failed", pid=pid)
+            _logger.exception("process_regions_ctypes_failed", pid=pid, error=str(exc))
 
     def _list_regions_procfs(self, pid: int) -> None:
         """List process memory regions from /proc on Linux.
@@ -210,10 +257,12 @@ class ProcessMemoryDialog(QDialog):
         maps_path = Path(f"/proc/{pid}/maps")
         if not maps_path.exists():
             self._status_label.setText(f"Cannot read /proc/{pid}/maps")
+            _logger.warning("procfs_maps_unavailable", pid=pid, path=str(maps_path))
             return
 
         regions: list[tuple[int, int, int, int]] = []
         try:
+            _logger.info("procfs_maps_read_begin", pid=pid, path=str(maps_path))
             for line in maps_path.read_text(encoding="utf-8").splitlines():
                 parts = line.split()
                 if not parts:
@@ -234,11 +283,17 @@ class ProcessMemoryDialog(QDialog):
                 regions.append((start, end - start, prot, _MEM_COMMIT))
         except (OSError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_procfs_failed", pid=pid)
+            _logger.exception("process_regions_procfs_failed", pid=pid, error=str(exc))
             return
 
         self._populate_regions(regions)
         self._status_label.setText(f"{len(regions)} region(s) found")
+        _logger.info(
+            "process_memory_list_regions_complete",
+            pid=pid,
+            backend="procfs",
+            region_count=len(regions),
+        )
 
     def _populate_regions(self, regions: list[tuple[int, int, int, int]]) -> None:
         """Fill the table widget with memory region data.

@@ -392,10 +392,7 @@ def _crc_over_chunks(
         if not chunk:
             continue
         for byte in chunk:
-            if ref_in:
-                idx = (_reflect_bits(byte, 8) ^ (crc >> shift)) & 0xFF
-            else:
-                idx = (byte ^ (crc >> shift)) & 0xFF
+            idx = ((_reflect_bits(byte, 8) ^ (crc >> shift)) & 0xFF) if ref_in else ((byte ^ (crc >> shift)) & 0xFF)
             crc = ((crc << 8) ^ table[idx]) & mask
     if ref_out:
         crc = _reflect_bits(crc, width)
@@ -656,6 +653,7 @@ def compute_hash(algo: str, data: bytes) -> str:
             return result
         result = _compute_hash_fnv(algo, data)
     except (ValueError, TypeError, OSError, RuntimeError, ImportError) as exc:
+        _logger.exception("compute_hash_failed", algo=algo, error=str(exc))
         return f"Error: {exc}"
     else:
         return result if result is not None else f"Error: unknown algorithm {algo}"
