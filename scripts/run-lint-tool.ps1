@@ -10,7 +10,8 @@ param(
     [string[]]$EnvVars,
     [switch]$JsonDirect,
     [switch]$SuppressStderr,
-    [string]$Flags = ''
+    [string]$Flags = '',
+    [string]$PassthruExe = ''
 )
 
 if ($Flags.Trim()) {
@@ -20,18 +21,13 @@ if ($Flags.Trim()) {
             Set-Item -Path "env:$k" -Value $v
         }
     }
-    $passthruTmp = [System.IO.Path]::GetTempFileName()
+    $exe = if ($PassthruExe.Trim()) { $PassthruExe } else { "$Pixi $ToolName" }
+    if ($WorkDir) { Push-Location $WorkDir }
     try {
-        $passthruCmd = $Command -replace '\{TMPFILE\}', $passthruTmp
-        if ($WorkDir) { Push-Location $WorkDir }
-        try {
-            Invoke-Expression $passthruCmd
-            exit $LASTEXITCODE
-        } finally {
-            if ($WorkDir) { Pop-Location -ErrorAction SilentlyContinue }
-        }
+        Invoke-Expression "$exe $Flags"
+        exit $LASTEXITCODE
     } finally {
-        Remove-Item $passthruTmp -Force -ErrorAction SilentlyContinue
+        if ($WorkDir) { Pop-Location -ErrorAction SilentlyContinue }
     }
 }
 
