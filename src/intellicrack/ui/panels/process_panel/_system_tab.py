@@ -987,6 +987,7 @@ class SystemTab(QWidget):
                 try:
                     data = bytes.fromhex(result)
                 except ValueError:
+                    _logger.debug("raw_query_hex_parse_failed", length=len(result))
                     self._raw_output.setPlainText(result)
                     return
             elif isinstance(result, (bytes, bytearray)):

@@ -420,6 +420,7 @@ class ModulesTab(QWidget):
             self._handle_count.setText(f"{len(typed_result)} handles")
 
         def _on_error(exc: object) -> None:
+            _logger.warning("handles_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "Handle Enumeration Error", str(exc))
 
         run_bridge_coroutine_logged(
@@ -454,6 +455,7 @@ class ModulesTab(QWidget):
                 self._heap_table.setItem(row, 2, QTableWidgetItem("Yes" if typed_heap.get("is_default") else "No"))
 
         def _on_error(exc: object) -> None:
+            _logger.warning("heaps_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "Heap Enumeration Error", str(exc))
 
         run_bridge_coroutine_logged(
@@ -486,6 +488,7 @@ class ModulesTab(QWidget):
                 self._com_table.setItem(row, 2, QTableWidgetItem(str(typed_srv.get("loaded_path", ""))))
 
         def _on_error(exc: object) -> None:
+            _logger.warning("com_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "COM Enumeration Error", str(exc))
 
         run_bridge_coroutine_logged(
@@ -518,6 +521,7 @@ class ModulesTab(QWidget):
                     QTreeWidgetItem(self._net_tree, [str(key), str(val)])
 
         def _on_error(exc: object) -> None:
+            _logger.warning("dotnet_detect_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, ".NET Detection Error", str(exc))
 
         run_bridge_coroutine_logged(
