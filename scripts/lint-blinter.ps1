@@ -3,8 +3,8 @@ param(
     [string]$Flags = ''
 )
 
-if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
-    Invoke-Expression "$Pixi python -m blinter --help"
+if ($Flags.Trim()) {
+    Invoke-Expression "$Pixi python -m blinter $Flags"
     exit $LASTEXITCODE
 }
 

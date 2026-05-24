@@ -110,12 +110,12 @@ lint-fix *FLAGS:
 # Find dead code, secrets, and risky flows with skylos
 [group('lint')]
 skylos *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName skylos -DisplayName Skylos -Command "{{ pixi }} skylos {{ FLAGS }} --json --no-upload --no-grep-verify --no-provenance {{ src }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName skylos -DisplayName Skylos -Command "{{ pixi }} skylos {{ FLAGS }} --json --no-upload --no-grep-verify --no-provenance {{ src }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 # Detect dead code with vulture and output sorted findings
 [group('lint')]
 vulture *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName vulture -DisplayName Vulture -Command "{{ pixi }} vulture {{ FLAGS }} src/ vulture_whitelist.py --min-confidence 60" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName vulture -DisplayName Vulture -Command "{{ pixi }} vulture {{ FLAGS }} src/ vulture_whitelist.py --min-confidence 60" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Upgrade Python syntax to newer versions
 [group('lint')]
@@ -133,7 +133,7 @@ sourcery *FLAGS:
 # Check docstring validity with pydoclint and output sorted findings
 [group('lint')]
 pydoclint *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName pydoclint -DisplayName Pydoclint -Command "{{ pixi }} pydoclint {{ FLAGS }} {{ src }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName pydoclint -DisplayName Pydoclint -Command "{{ pixi }} pydoclint {{ FLAGS }} {{ src }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Check code line statistics with pygount
 [group('lint')]
@@ -149,12 +149,12 @@ pyroma *FLAGS:
 # Detect dead code and output sorted findings
 [group('lint')]
 dead *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName dead -DisplayName "Dead Code" -Command "{{ pixi }} dead --files 'src/' --symbol-allowlist dead_allowlist.txt {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName dead -DisplayName "Dead Code" -Command "{{ pixi }} dead --files 'src/' --symbol-allowlist dead_allowlist.txt {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run type checking with ty and output sorted findings
 [group('lint')]
 ty *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName ty -DisplayName "Ty Type" -Command "{{ pixi }} ty check {{ FLAGS }} {{ src_and_tests }} --output-format concise" -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName ty -DisplayName "Ty Type" -Command "{{ pixi }} ty check {{ FLAGS }} {{ src_and_tests }} --output-format concise" -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Fix PyQt6 QtWidgets.pyi missing collections.abc import
 [group('setup')]
@@ -164,62 +164,62 @@ fix-pyqt6-stubs:
 # Run type checking with basedpyright and output sorted findings
 [group('lint')]
 basedpyright *FLAGS: fix-pyqt6-stubs
-    @& scripts/run-lint-tool.ps1 -ToolName basedpyright -DisplayName BasedPyright -Command "{{ pixi }} basedpyright {{ FLAGS }} src/ --outputjson" -Pixi "{{ pixi }}" -EnvVars 'NODE_OPTIONS=--max-old-space-size=8192'
+    @& scripts/run-lint-tool.ps1 -ToolName basedpyright -DisplayName BasedPyright -Command "{{ pixi }} basedpyright {{ FLAGS }} src/ --outputjson" -Pixi "{{ pixi }}" -EnvVars 'NODE_OPTIONS=--max-old-space-size=8192' -Flags "{{ FLAGS }}"
 
 # Run type checking with mypy and output sorted findings
 [group('lint')]
 mypy *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName mypy -DisplayName Mypy -Command "{{ pixi }} mypy {{ FLAGS }} {{ src_and_tests }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName mypy -DisplayName Mypy -Command "{{ pixi }} mypy {{ FLAGS }} {{ src_and_tests }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Security linting with bandit and output sorted findings
 [group('lint')]
 bandit *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName bandit -DisplayName "Bandit Security" -Command "{{ pixi }} bandit {{ FLAGS }} -r {{ src_and_tests }} -c pyproject.toml" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName bandit -DisplayName "Bandit Security" -Command "{{ pixi }} bandit {{ FLAGS }} -r {{ src_and_tests }} -c pyproject.toml" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Security scanning with Semgrep and output sorted findings
 [group('lint')]
 semgrep *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName semgrep -DisplayName Semgrep -Command "{{ pixi }} python scripts/run-semgrep.py --config=.semgrep/logging/ --output {TMPFILE} {{ FLAGS }}" -Pixi "{{ pixi }}" -EnvVars 'PYTHONUTF8=1','PYTHONIOENCODING=utf-8','NO_COLOR=1' -JsonDirect -TextMode
+    @& scripts/run-lint-tool.ps1 -ToolName semgrep -DisplayName Semgrep -Command "{{ pixi }} python scripts/run-semgrep.py --config=.semgrep/logging/ --output {TMPFILE} {{ FLAGS }}" -Pixi "{{ pixi }}" -EnvVars 'PYTHONUTF8=1','PYTHONIOENCODING=utf-8','NO_COLOR=1' -JsonDirect -TextMode -Flags "{{ FLAGS }}"
 
 # Run flake8 style linting and output sorted findings
 [group('lint')]
 flake8 *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName flake8 -DisplayName Flake8 -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --statistics" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName flake8 -DisplayName Flake8 -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --statistics" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run wemake-python-styleguide (strictest linter) and output sorted findings
 [group('lint')]
 wemake *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 30" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 30" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run mccabe complexity checker and output sorted findings
 [group('lint')]
 mccabe *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName mccabe -DisplayName "McCabe Complexity" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --select=C901 --max-complexity 30" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName mccabe -DisplayName "McCabe Complexity" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src_and_tests }} --select=C901 --max-complexity 30" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run pydocstyle docstring checker and output sorted findings
 [group('lint')]
 pydocstyle *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName pydocstyle -DisplayName Pydocstyle -Command "{{ pixi }} pydocstyle {{ FLAGS }} {{ src_and_tests }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName pydocstyle -DisplayName Pydocstyle -Command "{{ pixi }} pydocstyle {{ FLAGS }} {{ src_and_tests }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run radon cyclomatic complexity analysis (C/D rank only, src/ only) and output sorted findings
 [group('lint')]
 radon *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName radon -DisplayName "Radon Complexity" -Command "{{ pixi }} radon cc {{ src }} -n C -s -a -o SCORE {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName radon -DisplayName "Radon Complexity" -Command "{{ pixi }} radon cc {{ src }} -n C -s -a -o SCORE {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run xenon complexity threshold checker and output sorted findings
 [group('lint')]
 xenon *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName xenon -DisplayName "Xenon Complexity" -Command "{{ pixi }} xenon {{ FLAGS }} {{ src_and_tests }} -b B -m C -a C" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName xenon -DisplayName "Xenon Complexity" -Command "{{ pixi }} xenon {{ FLAGS }} {{ src_and_tests }} -b B -m C -a C" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run complexipy cognitive complexity analysis and output sorted findings
 [group('lint')]
 complexipy *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName complexipy -DisplayName Complexipy -Command "{{ pixi }} complexipy {{ FLAGS }} src --failed --color no" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName complexipy -DisplayName Complexipy -Command "{{ pixi }} complexipy {{ FLAGS }} src --failed --color no" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run ruff linter and output sorted findings (uses native JSON output for speed)
 [group('lint')]
 ruff *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName ruff -DisplayName "Ruff Linter" -Command "{{ pixi }} ruff check {{ FLAGS }} {{ src_and_tests }} --output-format=json -o {TMPFILE}" -JsonDirect -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName ruff -DisplayName "Ruff Linter" -Command "{{ pixi }} ruff check {{ FLAGS }} {{ src_and_tests }} --output-format=json -o {TMPFILE}" -JsonDirect -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run ruff format to format Python code
 [group('lint')]
@@ -230,37 +230,37 @@ ruff-fmt *FLAGS:
 # Detect uncalled functions with uncalled and output sorted findings
 [group('lint')]
 uncalled *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName uncalled -DisplayName Uncalled -Command "{{ pixi }} uncalled {{ FLAGS }} --how both src/" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName uncalled -DisplayName Uncalled -Command "{{ pixi }} uncalled {{ FLAGS }} --how both src/" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Detect dead code with deadcode and output sorted findings
 [group('lint')]
 deadcode *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName deadcode -DisplayName Deadcode -Command "{{ pixi }} deadcode {{ FLAGS }} src/" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName deadcode -DisplayName Deadcode -Command "{{ pixi }} deadcode {{ FLAGS }} src/" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Check docstring coverage with interrogate and output sorted findings
 [group('lint')]
 interrogate *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName interrogate -DisplayName Interrogate -Command "{{ pixi }} interrogate -vv --fail-under 0 --style google {{ FLAGS }} {{ src }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName interrogate -DisplayName Interrogate -Command "{{ pixi }} interrogate -vv --fail-under 0 --style google {{ FLAGS }} {{ src }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Check for dependency issues with deptry and output sorted findings
 [group('lint')]
 deptry *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName deptry -DisplayName Deptry -Command "{{ pixi }} deptry --no-ansi {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName deptry -DisplayName Deptry -Command "{{ pixi }} deptry --no-ansi {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Check for common misspellings with codespell and output sorted findings
 [group('lint')]
 codespell *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName codespell -DisplayName Codespell -Command "{{ pixi }} codespell {{ FLAGS }} src/ tests/ scripts/ docs/ *.md *.toml" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName codespell -DisplayName Codespell -Command "{{ pixi }} codespell {{ FLAGS }} src/ tests/ scripts/ docs/ *.md *.toml" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run markdownlint and output sorted findings
 [group('lint')]
 mdlint *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName markdownlint -DisplayName "Markdown Lint" -Command "{{ pixi }} markdownlint {{ FLAGS }} '**/*.md' --ignore node_modules --ignore .venv* --ignore .pixi --ignore .claude --ignore build --ignore dist --ignore tools" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName markdownlint -DisplayName "Markdown Lint" -Command "{{ pixi }} markdownlint {{ FLAGS }} '**/*.md' --ignore node_modules --ignore .venv* --ignore .pixi --ignore .claude --ignore build --ignore dist --ignore tools" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run yamllint and output sorted findings
 [group('lint')]
 yamllint *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName yamllint -DisplayName "YAML Lint" -Command "{{ pixi }} yamllint {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName yamllint -DisplayName "YAML Lint" -Command "{{ pixi }} yamllint {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run shellcheck on shell scripts and output sorted findings
 [group('lint')]
@@ -280,12 +280,12 @@ jsonlint *FLAGS:
 # Run taplo TOML linter and output sorted findings
 [group('lint')]
 taplo *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName taplo -DisplayName Taplo -Command "taplo check {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName taplo -DisplayName Taplo -Command "taplo check {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run pre-commit hooks natively and output sorted findings
 [group('lint')]
 precommit-hooks *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName precommit-hooks -DisplayName "Pre-commit Hooks" -Command "{{ pixi }} python scripts/precommit_hooks.py {{ FLAGS }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif' -SuppressStderr
+    @& scripts/run-lint-tool.ps1 -ToolName precommit-hooks -DisplayName "Pre-commit Hooks" -Command "{{ pixi }} python scripts/precommit_hooks.py {{ FLAGS }}" -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif' -SuppressStderr -Flags "{{ FLAGS }}"
 
 # Run PSScriptAnalyzer on PowerShell files and output sorted findings
 [group('lint')]
@@ -329,7 +329,7 @@ pyproject-fmt *FLAGS:
 # Check Python version compatibility with vermin
 [group('lint')]
 vermin *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName vermin -DisplayName Vermin -Command "{{ pixi }} vermin --no-tips -vvv --target=3.13 --violations {{ FLAGS }} src/" -TextMode -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName vermin -DisplayName Vermin -Command "{{ pixi }} vermin --no-tips -vvv --target=3.13 --violations {{ FLAGS }} src/" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Watch GitHub Actions CI runs in real-time
 [group('git')]
@@ -412,47 +412,47 @@ install-rust-tools:
 [doc('Run Clippy linter on Rust hexcore crate')]
 [group('lint')]
 clippy *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy {{ FLAGS }} --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName clippy -DisplayName Clippy -Command "{{ pixi }} cargo clippy {{ FLAGS }} --all-targets -- -W clippy::all -W clippy::pedantic" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Check Rust formatting with rustfmt')]
 [group('lint')]
 rustfmt *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt {{ FLAGS }} -- --check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName rustfmt -DisplayName RustFmt -Command "{{ pixi }} cargo fmt {{ FLAGS }} -- --check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run cargo-deny license and advisory checks on Rust hexcore crate')]
 [group('lint')]
 cargo-deny *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny {{ FLAGS }} check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName cargo-deny -DisplayName CargoDeny -Command "{{ pixi }} cargo deny {{ FLAGS }} check" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run Rust tests with cargo-nextest')]
 [group('lint')]
 nextest *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName nextest -DisplayName Nextest -Command "{{ pixi }} cargo nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run code coverage with cargo-llvm-cov on Rust hexcore crate')]
 [group('lint')]
 llvm-cov *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Detect unused Rust dependencies with cargo-machete')]
 [group('lint')]
 machete *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName machete -DisplayName Machete -Command "{{ pixi }} cargo machete {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run mutation testing with cargo-mutants on Rust hexcore crate (standalone, slow)')]
 [group('lint')]
 mutants *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants {{ FLAGS }} --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName mutants -DisplayName Mutants -Command "{{ pixi }} cargo mutants {{ FLAGS }} --no-shuffle --timeout 60" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run rust-code-analysis complexity metrics on Rust hexcore crate')]
 [group('lint')]
 rust-code-analysis *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli {{ FLAGS }} -m -p src/" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName rust-code-analysis -DisplayName RustAnalysis -Command "{{ pixi }} rust-code-analysis-cli {{ FLAGS }} -m -p src/" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Run typos spell checker on Rust hexcore crate')]
 [group('lint')]
 typos *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql'
+    @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
 [doc('Generate unified HTML lint dashboard from all tool findings')]
 [group('reports')]

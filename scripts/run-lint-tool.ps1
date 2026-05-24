@@ -9,28 +9,29 @@ param(
     [string[]]$ReportFormats = @('txt', 'json', 'xml'),
     [string[]]$EnvVars,
     [switch]$JsonDirect,
-    [switch]$SuppressStderr
+    [switch]$SuppressStderr,
+    [string]$Flags = ''
 )
 
-if ($Command -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+if ($Flags.Trim()) {
     if ($EnvVars) {
         foreach ($ev in $EnvVars) {
             $k, $v = $ev -split '=', 2
             Set-Item -Path "env:$k" -Value $v
         }
     }
-    $helpTmp = [System.IO.Path]::GetTempFileName()
+    $passthruTmp = [System.IO.Path]::GetTempFileName()
     try {
-        $helpCmd = $Command -replace '\{TMPFILE\}', $helpTmp
+        $passthruCmd = $Command -replace '\{TMPFILE\}', $passthruTmp
         if ($WorkDir) { Push-Location $WorkDir }
         try {
-            Invoke-Expression $helpCmd
+            Invoke-Expression $passthruCmd
             exit $LASTEXITCODE
         } finally {
             if ($WorkDir) { Pop-Location -ErrorAction SilentlyContinue }
         }
     } finally {
-        Remove-Item $helpTmp -Force -ErrorAction SilentlyContinue
+        Remove-Item $passthruTmp -Force -ErrorAction SilentlyContinue
     }
 }
 
