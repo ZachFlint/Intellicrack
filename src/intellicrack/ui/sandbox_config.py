@@ -123,6 +123,7 @@ class SandboxTestWorker(QThread):
                 wsb_file.write(wsb_content)
                 self._wsb_file = Path(wsb_file.name)
 
+            self._log_wsb_written(wsb_content)
             self.output.emit(f"Configuration file: {self._wsb_file}")
             self.output.emit("Launching Windows Sandbox...")
 
@@ -132,28 +133,19 @@ class SandboxTestWorker(QThread):
                 stderr=PIPE,
                 creationflags=CREATE_NO_WINDOW,
             )
-
-            process_manager = ProcessManager.get_instance()
-            process_manager.register(
-                self._process,
-                name="sandbox-test",
-                process_type=ProcessType.SANDBOX,
-                metadata={"wsb_config": str(self._wsb_file)},
-            )
+            self._register_test_process()
 
             self.output.emit("Windows Sandbox launched successfully")
             self.output.emit("Waiting for sandbox to initialize (10 seconds)...")
 
             try:
                 self._process.wait(timeout=10)
-                if self._process.returncode != 0:
-                    stderr_output = self._process.stderr.read().decode("utf-8", errors="replace") if self._process.stderr else ""
-                    success = False
-                    self.finished.emit(success, f"Sandbox exited with error: {stderr_output}")
-                    return
             except TimeoutExpired:
                 _logger.warning("sandbox_test_wait_timeout")
                 self.output.emit("Sandbox is running normally")
+            else:
+                if self._handle_sandbox_exit_status():
+                    return
 
             success = True
             self.finished.emit(success, "Windows Sandbox test completed successfully")
@@ -197,6 +189,7 @@ class SandboxTestWorker(QThread):
                 pid = self._process.pid
                 try:
                     ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
+                    _logger.info("sandbox_test_process_terminated", pid=pid)
                 except (OSError, TimeoutExpired):
                     _logger.exception(
                         "sandbox_test_termination_error",
@@ -209,6 +202,66 @@ class SandboxTestWorker(QThread):
                     self._wsb_file.unlink()
                 except OSError:
                     _logger.exception("wsb_file_unlink_error")
+
+    def _log_wsb_written(self, wsb_content: str) -> None:
+        """Log structured event for the freshly written ``.wsb`` file.
+
+        Args:
+            wsb_content: Generated XML configuration payload written to disk.
+        """
+        if self._wsb_file is None:
+            return
+        _logger.info(
+            "sandbox_wsb_written",
+            path=str(self._wsb_file),
+            size=len(wsb_content),
+        )
+
+    def _register_test_process(self) -> None:
+        """Register the launched sandbox process with the global ``ProcessManager``.
+
+        Logs structured ``windows_sandbox_launched`` and
+        ``sandbox_test_process_registered`` events so the audit trail captures
+        both the process creation and the manager registration.
+        """
+        if self._process is None or self._wsb_file is None:
+            return
+        _logger.info("windows_sandbox_launched", pid=self._process.pid)
+        process_manager = ProcessManager.get_instance()
+        process_manager.register(
+            self._process,
+            name="sandbox-test",
+            process_type=ProcessType.SANDBOX,
+            metadata={"wsb_config": str(self._wsb_file)},
+        )
+        _logger.info(
+            "sandbox_test_process_registered",
+            pid=self._process.pid,
+            wsb_config=str(self._wsb_file),
+        )
+
+    def _handle_sandbox_exit_status(self) -> bool:
+        """Handle the sandbox process exit after a successful wait.
+
+        Emits the ``finished`` signal with the captured stderr when the sandbox
+        exited with a non-zero return code and logs the event for the
+        structured audit trail.
+
+        Returns:
+            bool: ``True`` if the caller should return early (non-zero exit was
+            reported); ``False`` if execution should continue.
+        """
+        if self._process is None or self._process.returncode == 0:
+            return False
+        stderr_output = self._process.stderr.read().decode("utf-8", errors="replace") if self._process.stderr else ""
+        _logger.warning(
+            "sandbox_test_nonzero_exit",
+            returncode=self._process.returncode,
+            stderr=stderr_output,
+        )
+        success = False
+        self.finished.emit(success, f"Sandbox exited with error: {stderr_output}")
+        return True
 
     def _generate_wsb_config(self) -> str:
         """Generate Windows Sandbox .wsb configuration XML.
@@ -250,6 +303,7 @@ class SandboxTestWorker(QThread):
         """Stop the sandbox test and terminate the process."""
         if self._process:
             pid = self._process.pid
+            _logger.info("sandbox_test_stop_requested", pid=pid)
             process_manager = ProcessManager.get_instance()
 
             try:
@@ -263,6 +317,7 @@ class SandboxTestWorker(QThread):
                     _logger.exception("process_force_kill_error", pid=pid)
 
             process_manager.unregister(pid)
+            _logger.info("sandbox_test_stop_completed", pid=pid)
 
 
 class SandboxConfigDialog(QDialog):
@@ -425,6 +480,7 @@ class SandboxConfigDialog(QDialog):
             self._set_unavailable("Windows Sandbox is only available on Windows")
             return
 
+        _logger.debug("sandbox_availability_check_started")
         try:
             process_manager = ProcessManager.get_instance()
             creation_flags = CREATE_NO_WINDOW
@@ -535,6 +591,10 @@ class SandboxConfigDialog(QDialog):
         """Load settings from config file."""
         default_shared = get_project_root() / "sandbox_shared"
 
+        _logger.debug(
+            "sandbox_config_load_started",
+            config_file=str(self.CONFIG_FILE),
+        )
         if self.CONFIG_FILE.exists():
             try:
                 with self.CONFIG_FILE.open(encoding="utf-8") as f:
@@ -563,15 +623,22 @@ class SandboxConfigDialog(QDialog):
                 )
                 self._shared_folder_input.setText(str(default_shared))
         else:
+            _logger.info(
+                "sandbox_config_load_defaulted",
+                config_file=str(self.CONFIG_FILE),
+                reason="file_missing",
+            )
             self._shared_folder_input.setText(str(default_shared))
 
     def _browse_shared_folder(self) -> None:
         """Open folder browser for shared folder."""
+        _logger.debug("sandbox_shared_folder_browse_opened")
         if path := QFileDialog.getExistingDirectory(
             self,
             "Select Shared Folder",
             self._shared_folder_input.text(),
         ):
+            _logger.debug("sandbox_shared_folder_browse_selected", path=path)
             self._shared_folder_input.setText(path)
 
     def _test_sandbox(self) -> None:
@@ -621,11 +688,18 @@ class SandboxConfigDialog(QDialog):
 
         self._test_worker.finished.connect(_test_finished_slot)
         self._test_worker.output.connect(self._on_test_output)
+        _logger.info(
+            "sandbox_test_started",
+            network_enabled=self._network_enabled_checkbox.isChecked(),
+            memory_limit_mb=self._memory_spin.value(),
+            shared_folder=self._shared_folder_input.text(),
+        )
         self._test_worker.start()
 
     def _cancel_test(self) -> None:
         """Cancel the sandbox test."""
         if self._test_worker and self._test_worker.isRunning():
+            _logger.info("sandbox_test_cancelled")
             self._test_worker.stop()
             self._test_worker.wait(5000)
             self._test_btn.setEnabled(True)
@@ -669,15 +743,21 @@ class SandboxConfigDialog(QDialog):
 
     def _on_accept(self) -> None:
         """Handle dialog acceptance."""
+        _logger.info("sandbox_config_dialog_accepted")
         self._save_settings()
         self.accept()
 
     def _on_apply(self) -> None:
         """Handle apply button click."""
+        _logger.info("sandbox_config_dialog_apply")
         self._save_settings()
 
     def _save_settings(self) -> None:
         """Save current settings to config file and apply to the sandbox manager."""
+        _logger.debug(
+            "sandbox_config_dir_ensuring",
+            config_dir=str(self.CONFIG_DIR),
+        )
         self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
         settings = self.get_settings()
@@ -686,12 +766,7 @@ class SandboxConfigDialog(QDialog):
             with self.CONFIG_FILE.open("w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=2)
 
-            shared_folder = Path(str(settings["shared_folder"]))
-            if not shared_folder.exists():
-                try:
-                    shared_folder.mkdir(parents=True, exist_ok=True)
-                except OSError:
-                    _logger.debug("shared_folder_create_failed", exc_info=True)
+            self._ensure_shared_folder(Path(str(settings["shared_folder"])))
 
             _logger.info(
                 "sandbox_config_saved",
@@ -715,6 +790,26 @@ class SandboxConfigDialog(QDialog):
         new_config = self._build_sandbox_config()
         self._apply_config_to_manager(new_config)
         self.settings_updated.emit()
+
+    @staticmethod
+    def _ensure_shared_folder(shared_folder: Path) -> None:
+        """Create the shared folder if it does not already exist.
+
+        Logs a ``sandbox_shared_folder_creating`` debug event before attempting
+        to create the directory. Failures are logged at debug level because
+        the sandbox can still launch without a host-side mapped folder.
+
+        Args:
+            shared_folder: Filesystem path requested as the sandbox shared
+                folder.
+        """
+        if shared_folder.exists():
+            return
+        _logger.debug("sandbox_shared_folder_creating", path=str(shared_folder))
+        try:
+            shared_folder.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            _logger.debug("shared_folder_create_failed", exc_info=True)
 
     def _build_sandbox_config(self) -> SandboxConfig:
         """Construct a SandboxConfig dataclass from the dialog's widget state.
@@ -748,6 +843,13 @@ class SandboxConfigDialog(QDialog):
             new_config: The SandboxConfig built from the dialog state.
         """
         manager = self._manager
+        _logger.info(
+            "sandbox_config_apply_started",
+            manager_attached=manager is not None,
+            timeout_seconds=new_config.timeout_seconds,
+            memory_limit_mb=new_config.memory_limit_mb,
+            network_enabled=new_config.network_enabled,
+        )
         if manager is None:
             _logger.debug(
                 "sandbox_manager_not_attached",
@@ -954,6 +1056,12 @@ class SandboxMonitorWidget(QFrame):
             binary_name: Name of binary being executed.
             pid: Process ID of the sandbox.
         """
+        _logger.info(
+            "sandbox_monitor_running_state",
+            is_running=is_running,
+            binary=binary_name,
+            pid=pid,
+        )
         self._sandbox_pid = pid if is_running else None
         icon_manager = IconManager.get_instance()
 
@@ -977,43 +1085,75 @@ class SandboxMonitorWidget(QFrame):
     def _stop_sandbox(self) -> None:
         """Stop the running sandbox."""
         if self._manager is not None:
-            try:
-                asyncio.run(self._manager.destroy_all())
-                self.append_output("[Sandbox stopped via manager]")
-            except (RuntimeError, OSError) as e:
-                _logger.exception(
-                    "sandbox_stop_error",
-                    method="manager",
-                )
-                self.append_output(f"[Error stopping sandbox: {e}]")
+            self._stop_via_manager()
         elif self._sandbox_pid is not None:
-            try:
-                if _IS_WIN32:
-                    process_manager = ProcessManager.get_instance()
-                    creation_flags = CREATE_NO_WINDOW
-                    process_manager.run_tracked(
-                        ["taskkill", "/F", "/PID", str(self._sandbox_pid)],
-                        name="taskkill-sandbox-pid",
-                        check=False,
-                        timeout=10,
-                        creationflags=creation_flags,
-                    )
-                    self.append_output(f"[Sandbox process {self._sandbox_pid} terminated]")
-                else:
-                    os.kill(self._sandbox_pid, 9)
-                    self.append_output(f"[Sandbox process {self._sandbox_pid} killed]")
-            except (TimeoutExpired, OSError) as e:
-                _logger.exception(
-                    "sandbox_stop_error",
-                    method="pid_kill",
-                    pid=self._sandbox_pid,
-                )
-                self.append_output(f"[Error terminating sandbox: {e}]")
+            self._stop_via_pid(self._sandbox_pid)
         else:
             self._terminate_sandbox_by_name()
 
         self.set_running(is_running=False)
         self.sandbox_stopped.emit()
+
+    def _stop_via_manager(self) -> None:
+        """Stop the sandbox by delegating to the attached ``SandboxManager``.
+
+        Runs :meth:`SandboxManager.destroy_all` synchronously via
+        :func:`asyncio.run` so the UI thread blocks until cleanup completes.
+        Logs the start, completion, and any errors as structured events.
+        """
+        if self._manager is None:
+            return
+        _logger.info("sandbox_stop_started", method="manager")
+        try:
+            asyncio.run(self._manager.destroy_all())
+        except (RuntimeError, OSError) as e:
+            _logger.exception("sandbox_stop_error", method="manager")
+            self.append_output(f"[Error stopping sandbox: {e}]")
+            return
+        _logger.info("sandbox_stop_completed", method="manager")
+        self.append_output("[Sandbox stopped via manager]")
+
+    def _stop_via_pid(self, pid: int) -> None:
+        """Stop the sandbox by terminating the registered process by PID.
+
+        On Windows this delegates to ``taskkill /F /PID``; on other platforms it
+        sends ``SIGKILL`` via :func:`os.kill`.
+
+        Args:
+            pid: Process identifier of the running sandbox process.
+        """
+        _logger.info("sandbox_stop_started", method="pid_kill", pid=pid)
+        try:
+            self._dispatch_pid_kill(pid)
+        except (TimeoutExpired, OSError) as e:
+            _logger.exception("sandbox_stop_error", method="pid_kill", pid=pid)
+            self.append_output(f"[Error terminating sandbox: {e}]")
+            return
+        _logger.info("sandbox_stop_completed", method="pid_kill", pid=pid)
+
+    def _dispatch_pid_kill(self, pid: int) -> None:
+        """Issue the platform-specific kill command for ``pid``.
+
+        Propagates ``TimeoutExpired`` from the Windows ``taskkill`` invocation
+        and ``OSError`` from the underlying OS API to the caller, which is
+        expected to wrap the call in an exception handler.
+
+        Args:
+            pid: Process identifier to terminate.
+        """
+        if _IS_WIN32:
+            process_manager = ProcessManager.get_instance()
+            process_manager.run_tracked(
+                ["taskkill", "/F", "/PID", str(pid)],
+                name="taskkill-sandbox-pid",
+                check=False,
+                timeout=10,
+                creationflags=CREATE_NO_WINDOW,
+            )
+            self.append_output(f"[Sandbox process {pid} terminated]")
+        else:
+            os.kill(pid, 9)
+            self.append_output(f"[Sandbox process {pid} killed]")
 
     def _terminate_sandbox_by_name(self) -> None:
         """Terminate Windows Sandbox by process name."""
@@ -1021,23 +1161,52 @@ class SandboxMonitorWidget(QFrame):
             self.append_output("[Cannot terminate sandbox on non-Windows platform]")
             return
 
+        _logger.info("sandbox_terminate_by_name_started")
         try:
-            process_manager = ProcessManager.get_instance()
-            creation_flags = CREATE_NO_WINDOW
-            result = process_manager.run_tracked(
-                ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
-                name="taskkill-sandbox-name",
-                check=False,
-                timeout=10,
-                creationflags=creation_flags,
-            )
-            if result.returncode == 0:
-                self.append_output("[Windows Sandbox terminated]")
-            else:
-                self.append_output("[No Windows Sandbox process found]")
+            returncode = self._invoke_taskkill_by_name()
         except (TimeoutExpired, OSError) as e:
-            _logger.exception(
-                "sandbox_stop_error",
-                method="name_kill",
-            )
+            _logger.exception("sandbox_stop_error", method="name_kill")
             self.append_output(f"[Error: {e}]")
+            return
+        self._report_taskkill_result(returncode)
+
+    @staticmethod
+    def _invoke_taskkill_by_name() -> int:
+        """Run ``taskkill /F /IM WindowsSandbox.exe`` through the process manager.
+
+        Propagates ``TimeoutExpired`` from ``process_manager.run_tracked`` if the
+        invocation exceeds the configured timeout, and ``OSError`` if the
+        operating system rejects the request. Callers wrap the call in an
+        exception handler.
+
+        Returns:
+            int: The exit code reported by ``taskkill``. ``0`` indicates a
+            running Windows Sandbox process was terminated; non-zero typically
+            means no matching process was found.
+        """
+        process_manager = ProcessManager.get_instance()
+        result = process_manager.run_tracked(
+            ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
+            name="taskkill-sandbox-name",
+            check=False,
+            timeout=10,
+            creationflags=CREATE_NO_WINDOW,
+        )
+        return result.returncode
+
+    def _report_taskkill_result(self, returncode: int) -> None:
+        """Surface the outcome of the name-based taskkill in the output panel.
+
+        Args:
+            returncode: Exit code captured from the ``taskkill`` invocation.
+        """
+        if returncode == 0:
+            _logger.info("sandbox_terminate_by_name_completed", outcome="terminated")
+            self.append_output("[Windows Sandbox terminated]")
+            return
+        _logger.info(
+            "sandbox_terminate_by_name_completed",
+            outcome="no_process_found",
+            returncode=returncode,
+        )
+        self.append_output("[No Windows Sandbox process found]")

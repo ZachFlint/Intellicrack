@@ -1517,18 +1517,22 @@ class ToolOutputPanel(QFrame):
         Returns:
             bool: True if the file was opened successfully.
         """
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        _logger.info("open_in_ghidra_requested", binary_path=str(path))
         if self._ghidra_widget is None:
             widget = self.add_ghidra_tab()
             if widget is None:
+                _logger.info("open_in_ghidra_completed", binary_path=str(path), success=False, reason="ghidra_tab_unavailable")
                 return False
 
         if self._ghidra_widget is None:
+            _logger.info("open_in_ghidra_completed", binary_path=str(path), success=False, reason="ghidra_widget_missing")
             return False
 
-        path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._ghidra_widget.load_binary(path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._ghidra_widget))
+        _logger.info("open_in_ghidra_completed", binary_path=str(path), success=success)
         return success
 
     def open_in_hex_editor(self, file_path: Path | str) -> bool:
@@ -1540,17 +1544,32 @@ class ToolOutputPanel(QFrame):
         Returns:
             bool: True if the file was opened successfully.
         """
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        _logger.info("open_in_hex_editor_requested", binary_path=str(path))
         if self._hex_editor_panel is None:
             widget = self.add_hex_editor_tab()
             if widget is None:
+                _logger.info(
+                    "open_in_hex_editor_completed",
+                    binary_path=str(path),
+                    success=False,
+                    reason="hex_editor_tab_unavailable",
+                )
                 return False
 
         if self._hex_editor_panel is None:
+            _logger.info(
+                "open_in_hex_editor_completed",
+                binary_path=str(path),
+                success=False,
+                reason="hex_editor_panel_missing",
+            )
             return False
 
         success = self._hex_editor_panel.load_file(file_path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._hex_editor_panel))
+        _logger.info("open_in_hex_editor_completed", binary_path=str(path), success=success)
         return success
 
     def open_in_x64dbg(
@@ -1568,18 +1587,34 @@ class ToolOutputPanel(QFrame):
         Returns:
             bool: True if the file was opened successfully.
         """
+        path = Path(file_path) if isinstance(file_path, str) else file_path
+        _logger.info("open_in_x64dbg_requested", binary_path=str(path), is_64bit=is_64bit)
         if self._x64dbg_widget is None:
             widget = self.add_x64dbg_tab(is_64bit=is_64bit)
             if widget is None:
+                _logger.info(
+                    "open_in_x64dbg_completed",
+                    binary_path=str(path),
+                    is_64bit=is_64bit,
+                    success=False,
+                    reason="x64dbg_tab_unavailable",
+                )
                 return False
 
         if self._x64dbg_widget is None:
+            _logger.info(
+                "open_in_x64dbg_completed",
+                binary_path=str(path),
+                is_64bit=is_64bit,
+                success=False,
+                reason="x64dbg_widget_missing",
+            )
             return False
 
-        path = Path(file_path) if isinstance(file_path, str) else file_path
         success = self._x64dbg_widget.debug_file(path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._x64dbg_widget))
+        _logger.info("open_in_x64dbg_completed", binary_path=str(path), is_64bit=is_64bit, success=success)
         return success
 
     def open_in_cutter(self, file_path: Path | str) -> bool:
@@ -1605,6 +1640,7 @@ class ToolOutputPanel(QFrame):
         success = self._cutter_widget.analyze_binary(path)
         if success:
             self._activate_tab_by_widget(cast("QWidget", self._cutter_widget))
+        _logger.info("open_in_cutter_completed", binary_path=str(path), success=success)
         return success
 
     def _activate_tab_by_widget(self, widget: QWidget) -> None:
@@ -1934,7 +1970,9 @@ class ToolOutputPanel(QFrame):
 
     def close_detached_windows(self) -> None:
         """Close all detached panel windows and re-dock their panels."""
-        for title in list(self._detached_windows):
+        titles = list(self._detached_windows)
+        _logger.debug("close_detached_windows", count=len(titles))
+        for title in titles:
             window = self._detached_windows.get(title)
             if window is not None:
                 self._reattach_panel(window.panel, window.panel_title)
@@ -1945,7 +1983,9 @@ class ToolOutputPanel(QFrame):
         Returns:
             list[str]: Titles of detached panel windows.
         """
-        return list(self._detached_windows.keys())
+        titles = list(self._detached_windows.keys())
+        _logger.debug("get_detached_state", count=len(titles))
+        return titles
 
     def find_tab_by_title(self, title: str) -> int:
         """Find a tab index by its title text.
@@ -1981,10 +2021,18 @@ class ToolOutputPanel(QFrame):
         }
         attr_name = panel_map.get(tool_id.lower())
         if attr_name is None:
+            _logger.debug("get_bridge_for_tool_unknown", tool_id=tool_id)
             return None
         panel = getattr(self, attr_name, None)
         if panel is not None and hasattr(panel, "get_bridge"):
-            return panel.get_bridge()
+            bridge = panel.get_bridge()
+            _logger.debug(
+                "get_bridge_for_tool_resolved",
+                tool_id=tool_id,
+                resolved=bridge is not None,
+            )
+            return bridge
+        _logger.debug("get_bridge_for_tool_no_panel", tool_id=tool_id)
         return None
 
     def get_active_process_pid(self) -> int | None:
@@ -2043,6 +2091,7 @@ class ToolOutputPanel(QFrame):
         Args:
             message: Message to log.
         """
+        _logger.debug("frida_message_logged", length=len(message))
         if self._frida_panel is not None and hasattr(self._frida_panel, "log_message"):
             self._frida_panel.log_message(message)
 
@@ -2052,6 +2101,14 @@ class ToolOutputPanel(QFrame):
         Args:
             hook_info: Dictionary with hook details.
         """
+        _logger.info(
+            "frida_hook_registered",
+            address=str(hook_info.get("address", "")),
+            module=str(hook_info.get("module", "")),
+            function=str(hook_info.get("function", "")),
+            status=str(hook_info.get("status", "Active")),
+            hook_id=str(hook_info.get("hook_id", "")),
+        )
         if self._frida_panel is not None and hasattr(self._frida_panel, "add_hook_entry"):
             self._frida_panel.add_hook_entry(
                 address=str(hook_info.get("address", "")),
@@ -2240,6 +2297,7 @@ class ToolOutputPanel(QFrame):
         Args:
             bridge: SandboxBridge instance.
         """
+        _logger.info("sandbox_bridge_wired", deferred=self.sandbox_panel is None)
         self._pending_sandbox_bridge = bridge
         if self.sandbox_panel is not None and hasattr(self.sandbox_panel, "set_bridge"):
             self.sandbox_panel.set_bridge(bridge)
@@ -2301,6 +2359,11 @@ class ToolOutputPanel(QFrame):
             backend: Script generation backend instance.
             validator: Optional script validator instance.
         """
+        _logger.info(
+            "script_backend_wired",
+            deferred=self.script_panel is None,
+            has_validator=validator is not None,
+        )
         self._pending_script_backend = backend
         self._pending_script_validator = validator
         if self.script_panel is not None and hasattr(self.script_panel, "set_backend"):
@@ -2375,9 +2438,12 @@ class ToolOutputPanel(QFrame):
             bool: True if unsaved changes exist.
         """
         if self._hex_editor_panel is None:
+            _logger.debug("has_unsaved_changes", result=False, reason="no_hex_panel")
             return False
         has_changes_fn = getattr(self._hex_editor_panel, "has_unsaved_changes", None)
-        return bool(has_changes_fn()) if callable(has_changes_fn) else False
+        result = bool(has_changes_fn()) if callable(has_changes_fn) else False
+        _logger.debug("has_unsaved_changes", result=result)
+        return result
 
     def save_hex_editor(self) -> bool:
         """Delegate save to the hex editor panel.
@@ -2385,7 +2451,11 @@ class ToolOutputPanel(QFrame):
         Returns:
             bool: True if saved successfully.
         """
+        _logger.info("hex_editor_save_invoked", panel_attached=self._hex_editor_panel is not None)
         if self._hex_editor_panel is None:
+            _logger.info("hex_editor_save_result", success=False, reason="no_hex_panel")
             return False
         save_fn = getattr(self._hex_editor_panel, "save", None)
-        return bool(save_fn()) if callable(save_fn) else False
+        success = bool(save_fn()) if callable(save_fn) else False
+        _logger.info("hex_editor_save_result", success=success)
+        return success
