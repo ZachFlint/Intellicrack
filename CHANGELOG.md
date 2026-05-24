@@ -170,6 +170,13 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Clean up logging, simplify conditional logic, and harden error handling (`3e88cbf`)
+Refactored multiple modules to standardize structured logging, simplify conditional expressions, and improve error handling across bridges, providers, and UI components. Replaced custom string formatting in log events with canonical event names and structured context fields.
+- Standardized logger initialization using `__name__` across helpers and bridges.
+- Simplified redundant conditional checks, ternary expressions, and list comprehensions.
+- Hardened error handling and exception logging in the Ghidra, Frida, and x64dbg bridges.
+- Cleaned up unused imports and trailing whitespaces.
+
 - **scripts/generate_tree:** Lazy-load tree rendering with flat JSON node table (`083eb8f`)
 Rewrite the HTA directory tree generator to render lazily. The
 filesystem is serialized once as a flat JSON node table, then only the
@@ -572,12 +579,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Clean up logging, simplify conditional logic, and harden error handling (``)
-Refactored multiple modules to standardize structured logging, simplify conditional expressions, and improve error handling across bridges, providers, and UI components. Replaced custom string formatting in log events with canonical event names and structured context fields.
-- Standardized logger initialization using `__name__` across helpers and bridges.
-- Simplified redundant conditional checks, ternary expressions, and list comprehensions.
-- Hardened error handling and exception logging in the Ghidra, Frida, and x64dbg bridges.
-- Cleaned up unused imports and trailing whitespaces.
+- Clean up unused assignments and fix google provider arguments (``)
+Remove redundant walrus operator assignments across multiple modules where the assigned variables were never read. Additionally, correct a duplicate keyword argument in the Google provider initialization to properly pass tool support configuration, and bump several project dependencies.
+- **bridges/process**: Remove unused `is_wow64_target` and `target_is_64bit` assignments.
+- **providers/google**: Fix duplicate `supports_vision` argument by mapping one to `supports_tools`.
+- **ui**: Remove unused `is_thunk` and `opened` assignments in Ghidra panel and provider settings.
+- **deps**: Update capstone, frida, nodejs, and pyclean dependencies.
 
 
 ### Documentation

@@ -1862,7 +1862,7 @@ class GhidraPanel(AnalysisPanelBase):
             f"Address: 0x{int(cast('int', body.get('address', 0))):X}",
             f"Size: {body.get('total_size', 0)} bytes",
         ]
-        if is_thunk := body.get("is_thunk", False):
+        if body.get("is_thunk", False):
             thunked = body.get("thunked_function", "")
             lines.append(f"Thunk -> {thunked}")
         ranges = body.get("ranges", [])
