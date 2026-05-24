@@ -9,6 +9,80 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **devtools:** Add -h/--help passthrough and recipe aliases (`da1c1cf`)
+- scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
+so -h/--help prints usage, group aliases, valid --skip names, and
+examples. Behavior preserved for positional groups, --skip, --workers.
+- scripts/run-lint-tool.ps1: detect -h/--help/-?// in $Command and
+invoke the underlying tool directly (with {TMPFILE} substitution and
+$EnvVars/$WorkDir applied), bypassing capture and report processor.
+- scripts/lint-shellcheck.ps1, lint-blinter.ps1, lint-jsonlint.ps1,
+lint-psscriptanalyzer.ps1: same short-circuit, forwarding to the
+native tool's help (Get-Help Invoke-ScriptAnalyzer for PSScriptAnalyzer).
+- justfile: add 30+ recipe aliases covering every display-name divergence
+in run-all-tools output plus natural variants (markdown/markdownlint
+-> mdlint, yaml -> yamllint, powershell/pwsh/psscript -> psscriptanalyzer,
+dashboard -> lint-dashboard, pyright -> basedpyright, coverage -> llvm-cov,
+cargo-clippy/cargo-nextest/cargo-machete, pre-commit -> precommit-hooks,
+etc.) so any reasonable tool name resolves.
+
+- **devtools:** Add -h/--help passthrough and recipe aliases (`6d90d6f`)
+- scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
+so -h/--help prints usage, group aliases, valid --skip names, and
+examples. Behavior preserved for positional groups, --skip, --workers.
+- scripts/run-lint-tool.ps1: detect -h/--help/-?// in $Command and
+invoke the underlying tool directly (with {TMPFILE} substitution and
+$EnvVars/$WorkDir applied), bypassing capture and report processor.
+- scripts/lint-shellcheck.ps1, lint-blinter.ps1, lint-jsonlint.ps1,
+lint-psscriptanalyzer.ps1: same short-circuit, forwarding to the
+native tool's help (Get-Help Invoke-ScriptAnalyzer for PSScriptAnalyzer).
+- justfile: add 30+ recipe aliases covering every display-name divergence
+in run-all-tools output plus natural variants (markdown/markdownlint
+-> mdlint, yaml -> yamllint, powershell/pwsh/psscript -> psscriptanalyzer,
+dashboard -> lint-dashboard, pyright -> basedpyright, coverage -> llvm-cov,
+cargo-clippy/cargo-nextest/cargo-machete, pre-commit -> precommit-hooks,
+etc.) so any reasonable tool name resolves.
+- pyproject.toml: extend scripts/** ruff ignore with N999 (script files
+use hyphenated names, not importable modules) and S607 (just/cargo on
+PATH is the established invocation pattern for build scripts).
+
+- **ui-logging:** Shard-15 audit — add workflow + entry/exit logs across UI surface (`6344a38`)
+Addresses every MEDIUM and LOW finding in audit/shard-15-ui-app-tools-config.md
+covering app.py, tools.py, tool_config.py, and sandbox_config.py. The audit
+identified consistently missing structured info/debug logs on the success
+paths of GUI workflow milestones, file writes, subprocess invocations, bridge
+wiring, and lifecycle transitions while exception paths were already covered.
+app.py — log binary load dialog/selection/cancel, _load_binary binary_loaded
+milestone, new/load/save session requests, chat/session/analysis exports,
+patched binary save, model refresh/browse, sandbox/preferences/xpu/about
+dialogs, sandbox panel open, current-binary routing to debug/analyze/hex/
+ghidra, main window close lifecycle, screen geometry fallbacks, user message
+receipt, tool result receipt, sandbox/auto-approve toggles, bridge analysis
+receipt; extracted _resolve_screen_geometry helper to keep the try clause
+under the existing statement budget and flattened a pre-existing SIM102
+nested-if in _on_load_session.
+tools.py — entry+completion logs for open_in_ghidra/_hex_editor/_x64dbg/
+_cutter, structured frida_hook_registered + frida_message_logged, sandbox
+and script backend wiring events with deferred flag, debug logs for
+close_detached_windows, get_detached_state, get_bridge_for_tool, and
+has_unsaved_changes/hex_editor_save_invoked workflow events.
+tool_config.py — install worker download/extract/post-install lifecycle,
+pip + ghidra-bridge server install, scripts/extensions/support mkdir trace,
+cutter --version probe, per-tool settings load/browse/check/install/save,
+dialog accept/apply, status dialog open + batch refresh + configure-from-
+status invocation; reorganized install_tool body to keep start/complete
+logs outside the wrapping try blocks where the rule applied.
+sandbox_config.py — wsb write, sandbox launch, process register, non-zero
+exit warning, terminate-on-finally, stop() entry/exit, availability check,
+config load/defaulted/browse-folder, test start/cancel, dialog accept/apply,
+config dir/shared folder creation, _apply_config_to_manager entry,
+_stop_sandbox manager/pid_kill/name_kill branches, set_running monitor
+state; extracted _log_wsb_written, _register_test_process,
+_handle_sandbox_exit_status, _stop_via_manager, _stop_via_pid,
+_dispatch_pid_kill, _ensure_shared_folder, _invoke_taskkill_by_name,
+_report_taskkill_result helpers so the new logs do not push existing try
+clauses past PLW0717 limits.
+
 - Refactor Windows Docker entrypoint and add audit documentation (`d700210`)
 Implement an entrypoint overlay mechanism for Windows containers to streamline initialization and improve environment parity. This update also includes the latest security audit report documenting the current system state and compliance requirements.
 - Add audit7.md containing the latest security and architectural audit findings.
@@ -169,6 +243,13 @@ Introduces a comprehensive Hex Editor
 
 
 ### Changed
+
+- Clean up unused assignments and fix google provider arguments (`f9aacfb`)
+Remove redundant walrus operator assignments across multiple modules where the assigned variables were never read. Additionally, correct a duplicate keyword argument in the Google provider initialization to properly pass tool support configuration, and bump several project dependencies.
+- **bridges/process**: Remove unused `is_wow64_target` and `target_is_64bit` assignments.
+- **providers/google**: Fix duplicate `supports_vision` argument by mapping one to `supports_tools`.
+- **ui**: Remove unused `is_thunk` and `opened` assignments in Ghidra panel and provider settings.
+- **deps**: Update capstone, frida, nodejs, and pyclean dependencies.
 
 - Clean up logging, simplify conditional logic, and harden error handling (`3e88cbf`)
 Refactored multiple modules to standardize structured logging, simplify conditional expressions, and improve error handling across bridges, providers, and UI components. Replaced custom string formatting in log events with canonical event names and structured context fields.
@@ -579,13 +660,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Clean up unused assignments and fix google provider arguments (``)
-Remove redundant walrus operator assignments across multiple modules where the assigned variables were never read. Additionally, correct a duplicate keyword argument in the Google provider initialization to properly pass tool support configuration, and bump several project dependencies.
-- **bridges/process**: Remove unused `is_wow64_target` and `target_is_64bit` assignments.
-- **providers/google**: Fix duplicate `supports_vision` argument by mapping one to `supports_tools`.
-- **ui**: Remove unused `is_thunk` and `opened` assignments in Ghidra panel and provider settings.
-- **deps**: Update capstone, frida, nodejs, and pyclean dependencies.
-
 
 ### Documentation
 
@@ -657,6 +731,87 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **audit/shard-16:** Add missing structured logs to provider config + process panel  (`a743889`)
+Addresses every finding in audit/shard-16-provider-config-process-panel.md
+across provider_config.py, splash_screen.py, and the five process_panel
+tabs (45 findings: 6 HIGH, 26 MEDIUM, 13 LOW).
+Provider config (27 findings)
+- env file scan/load + providers.json read entry logs
+- per-provider HTTP probe entry/success/failure logs via new
+_classify_probe_response helper and refactored _test_* methods
+- model fetch start/page/success/empty/http_error/failure logs, with
+_collect_anthropic_pages helper for the paginated Anthropic walk
+- credential overview/refresh/template/migrate failure logs bumped from
+debug to warning; new credential_store_loaded info log
+- OAuth flow start/missing-creds/revoke entry logs
+- env credential write start/success logs (extracted to
+_write_env_credentials helper)
+- save_settings entry log + auto-refresh-models scheduling log
+- bumped active_provider_lookup, provider_connection_check,
+model_count_lookup, xpu_unavailable to warning/info
+- drop unused walrus binding in _open_resource_url (was F841)
+Splash screen (5 findings)
+- splash_image_not_found now includes path kwarg
+- show/finish/mainwindow_transition/close lifecycle info logs
+- per-stage splash_stage_transition info logs when stages move to
+ACTIVE or COMPLETE in _update_stage_states
+- splash_stage_failed error log in mark_stage_failed
+Process panel base (6 findings)
+- entry debug logs for detect_architecture and get_token_privileges
+bridge dispatches
+- start_tool / stop_tool lifecycle info logs
+Memory tab (1 finding)
+- narrowed broad Exception in _on_search success handler to
+(RuntimeError, ValueError, TypeError); other findings already covered
+by run_bridge_coroutine_logged auto-events
+Modules tab (6 findings)
+- explicit warning logs in _on_error handlers for handles/heaps/com/
+dotnet enumerators (previously QMessageBox-only swallows)
+- dll_injection_target_selected info on Browse
+- dll_injected / dll_inject_failed info+warning logs around inject_dll
+System tab (4 findings)
+- sedebug_privilege_enabled, named_pipe_connected, named_pipe_closed
+info success logs
+- raw_query_hex_parse_failed debug log for previously silent ValueError
+- _show_error logs against the specific failing event name with
+standardized error= kwarg
+Threads tab (9 findings)
+- contextful _on_error handlers replacing None callbacks for threads
+refresh, suspend, resume, registers read/write, stack_walk, SEH,
+fiber, TLS bridge calls
+- threads_refresh_starting debug + thread_context_written success logs
+- threads_tab_cleanup info log
+Quality
+- 0 new ruff findings; refactor reduced provider_config from 14 to 7
+pre-existing PLW0717 errors by extracting helpers
+- 0 pydoclint / 0 pydocstyle findings
+- 152 tests pass across splash, process panel, audit4 base, and audit5
+provider config suites
+Drive-by fixes (required to enable test collection / pass)
+- providers/google.py: remove duplicate supports_vision= kwarg and
+restore supports_tools= in list_models ModelInfo construction
+- .gitignore: unignore src/intellicrack/assets/**/*.{png,jpg,jpeg,gif}
+so the bundled splash.png and splash-icon.png ship via git
+- track src/intellicrack/assets/splash.png and splash-icon.png
+- test_process_panel: update tool_definition_count assertion 53 -> 54
+to match current ProcessBridge tool surface
+- test_splash_screen: TestSplashImageCompositing.test_splash_image_loaded
+now honours brain-icon-takes-precedence path in SplashScreen.__init__
+
+- **ui/process_panel:** F17 surface bridge errors with logger + QMessageBox  (`da70903`)
+Add structured warning logs alongside the existing QMessageBox handlers
+in ModulesTab (_refresh_handles/_refresh_heaps/_refresh_com/_refresh_dotnet)
+so failures are observable in the structured log stream, not just shown
+once to the user.
+Also surface the silent hex-parse fallback in SystemTab._on_raw_query at
+debug level — when the bridge returns a non-hex result the operator now
+sees a parse-failure record before the raw text is dropped into the
+output panel.
+Matches the pattern established by commit 6bab435e for the memory tab.
+The remaining F17 sites (_base.py arch/privilege fetches, _modules_tab.py
+module_enumeration_failed, _threads_tab.py register cell parse) were
+already addressed by 3e88cbf7's logging refactor — verified.
 
 - **bridges:** F13 log silent excepts before re-raise (`b571bc7`)
 Add structured warning/debug logging in installer (_is_user_admin,

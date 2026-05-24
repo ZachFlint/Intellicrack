@@ -3,8 +3,8 @@ param(
     [string]$Flags = ''
 )
 
-if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
-    & node_modules/.bin/jsonlint --help
+if ($Flags.Trim()) {
+    Invoke-Expression "node_modules/.bin/jsonlint $Flags"
     exit $LASTEXITCODE
 }
 

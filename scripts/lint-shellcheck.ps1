@@ -3,8 +3,8 @@ param(
     [string]$Flags = ''
 )
 
-if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
-    Invoke-Expression "$Pixi shellcheck --help"
+if ($Flags.Trim()) {
+    Invoke-Expression "$Pixi shellcheck $Flags"
     exit $LASTEXITCODE
 }
 

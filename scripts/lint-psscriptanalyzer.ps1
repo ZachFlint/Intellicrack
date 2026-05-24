@@ -3,13 +3,21 @@ param(
     [string]$Flags = ''
 )
 
-if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+if ($Flags.Trim()) {
     if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
         Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
     }
     Import-Module PSScriptAnalyzer
-    Get-Help Invoke-ScriptAnalyzer -Detailed
-    exit 0
+    if ($Flags -cmatch '(?:^|\s)(-h|--help)(?:\s|$)') {
+        Get-Help Invoke-ScriptAnalyzer -Detailed
+        exit 0
+    }
+    if ($Flags -cmatch '(?:^|\s)(-V|--version)(?:\s|$)') {
+        Get-Module PSScriptAnalyzer -ListAvailable | Select-Object Name, Version, Path | Format-List
+        exit 0
+    }
+    Invoke-Expression "Invoke-ScriptAnalyzer $Flags"
+    exit $LASTEXITCODE
 }
 
 Write-Host "[PSScriptAnalyzer] Running..."
