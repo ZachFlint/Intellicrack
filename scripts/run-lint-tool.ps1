@@ -12,6 +12,28 @@ param(
     [switch]$SuppressStderr
 )
 
+if ($Command -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+    if ($EnvVars) {
+        foreach ($ev in $EnvVars) {
+            $k, $v = $ev -split '=', 2
+            Set-Item -Path "env:$k" -Value $v
+        }
+    }
+    $helpTmp = [System.IO.Path]::GetTempFileName()
+    try {
+        $helpCmd = $Command -replace '\{TMPFILE\}', $helpTmp
+        if ($WorkDir) { Push-Location $WorkDir }
+        try {
+            Invoke-Expression $helpCmd
+            exit $LASTEXITCODE
+        } finally {
+            if ($WorkDir) { Pop-Location -ErrorAction SilentlyContinue }
+        }
+    } finally {
+        Remove-Item $helpTmp -Force -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host "[$DisplayName] Running..."
 
 $ReportFormats | ForEach-Object {

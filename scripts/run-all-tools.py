@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-import contextlib
+import argparse
 import io
 import json
 import os
@@ -30,10 +30,10 @@ ESC = "\033"
 CHECK = "\u2714"
 CROSS = "\u2718"
 H = "\u2500"
-TL = "\u256D"
-TR = "\u256E"
+TL = "\u256d"
+TR = "\u256e"
 BL = "\u2570"
-BR = "\u256F"
+BR = "\u256f"
 V = "\u2502"
 CLEAR_EOL = f"{ESC}[K"
 
@@ -351,20 +351,35 @@ def run_tool(tool: Tool) -> ToolResult:
                 if report_findings is not None and report_findings > 0:
                     findings = report_findings
         return ToolResult(
-            tool.name, tool.recipe, findings, duration, recipe_seconds,
-            success=True, is_formatter=tool.is_formatter,
+            tool.name,
+            tool.recipe,
+            findings,
+            duration,
+            recipe_seconds,
+            success=True,
+            is_formatter=tool.is_formatter,
         )
     except subprocess.TimeoutExpired:
         recipe_seconds = round(time.monotonic() - start, 1)
         return ToolResult(
-            tool.name, tool.recipe, 0, recipe_seconds, recipe_seconds,
-            success=False, is_formatter=tool.is_formatter,
+            tool.name,
+            tool.recipe,
+            0,
+            recipe_seconds,
+            recipe_seconds,
+            success=False,
+            is_formatter=tool.is_formatter,
         )
     except OSError:
         recipe_seconds = round(time.monotonic() - start, 1)
         return ToolResult(
-            tool.name, tool.recipe, 0, recipe_seconds, recipe_seconds,
-            success=False, is_formatter=tool.is_formatter,
+            tool.name,
+            tool.recipe,
+            0,
+            recipe_seconds,
+            recipe_seconds,
+            success=False,
+            is_formatter=tool.is_formatter,
         )
 
 
@@ -427,7 +442,8 @@ class ProgressTracker:
         self._term_width_tick = 0
         self._stop_event = threading.Event()
         self._ticker = threading.Thread(
-            target=self._tick_loop, daemon=True,
+            target=self._tick_loop,
+            daemon=True,
         )
 
     def set_all_recipes(
@@ -444,11 +460,7 @@ class ProgressTracker:
             dashboard_recipes: Recipes in the dashboard phase.
         """
         with self._lock:
-            self._all_remaining = (
-                set(formatter_recipes)
-                | set(linter_recipes)
-                | set(dashboard_recipes)
-            )
+            self._all_remaining = set(formatter_recipes) | set(linter_recipes) | set(dashboard_recipes)
             self._linter_recipes = set(linter_recipes)
 
     def start(self) -> None:
@@ -502,19 +514,15 @@ class ProgressTracker:
             if result.success:
                 if result.is_formatter:
                     print(
-                        f"  {gc}{CHECK} {result.name}:"
-                        f" Done in {result.duration}s{RESET}",
+                        f"  {gc}{CHECK} {result.name}: Done in {result.duration}s{RESET}",
                     )
                 else:
                     print(
-                        f"  {gc}{CHECK} {result.name}:"
-                        f" Completed in {result.duration}s"
-                        f" with {result.findings} findings{RESET}",
+                        f"  {gc}{CHECK} {result.name}: Completed in {result.duration}s with {result.findings} findings{RESET}",
                     )
             else:
                 print(
-                    f"  {RED}{CROSS} {result.name}:"
-                    f" Failed after {result.duration}s{RESET}",
+                    f"  {RED}{CROSS} {result.name}: Failed after {result.duration}s{RESET}",
                 )
 
             self._recalculate_eta()
@@ -524,8 +532,7 @@ class ProgressTracker:
                 if self._ci_counter % 5 == 0 or self._completed == self._total:
                     eta_str = _format_eta(self._eta_base_secs)
                     print(
-                        f"  {GRAY}[{self._completed}/{self._total}]"
-                        f" {self._phase} {eta_str}{RESET}",
+                        f"  {GRAY}[{self._completed}/{self._total}] {self._phase} {eta_str}{RESET}",
                     )
 
     def _tick_loop(self) -> None:
@@ -558,10 +565,7 @@ class ProgressTracker:
         else:
             filled_part = BAR_FILL * filled_count
             empty_part = BAR_EMPTY * (bar_width - filled_count - 1)
-            bar = (
-                f"{BAR_DONE}{filled_part}{BAR_PROGRESS}{BAR_HEAD}"
-                f"{BAR_REMAIN}{empty_part}{RESET}"
-            )
+            bar = f"{BAR_DONE}{filled_part}{BAR_PROGRESS}{BAR_HEAD}{BAR_REMAIN}{empty_part}{RESET}"
 
         line = f"  {bar}{WHITE_BRIGHT}{right_text}{RESET}"
         sys.stdout.write(f"\r{line}{CLEAR_EOL}")
@@ -572,18 +576,101 @@ class ProgressTracker:
         self._eta_base_secs = self._estimate_remaining()
 
     def _estimate_remaining(self) -> float:
-        sequential = sum(
-            self._durations.get(r, _DEFAULT_DURATION)
-            for r in self._all_remaining
-            if r not in self._linter_recipes
-        )
-        parallel = sum(
-            self._durations.get(r, _DEFAULT_DURATION)
-            for r in self._linter_recipes
-        )
+        sequential = sum(self._durations.get(r, _DEFAULT_DURATION) for r in self._all_remaining if r not in self._linter_recipes)
+        parallel = sum(self._durations.get(r, _DEFAULT_DURATION) for r in self._linter_recipes)
         if self._max_workers > 1:
             parallel /= self._max_workers
         return sequential + parallel
+
+
+def _group_arg(raw: str) -> str:
+    """Resolve a group alias to its canonical group code.
+
+    Args:
+        raw: Group name or alias provided by the user.
+
+    Returns:
+        str: The canonical group code (e.g. ``"py"``, ``"rs"``).
+
+    Raises:
+        argparse.ArgumentTypeError: If the value is not a recognized alias.
+    """
+    code = GROUP_ALIASES.get(raw.lower())
+    if code is None:
+        valid = ", ".join(sorted(GROUP_ALIASES))
+        msg = f"invalid group {raw!r}; valid: {valid}"
+        raise argparse.ArgumentTypeError(msg)
+    return code
+
+
+def _workers_arg(raw: str) -> int:
+    """Parse and clamp the ``--workers`` argument to the supported range.
+
+    Args:
+        raw: Worker count as a string.
+
+    Returns:
+        int: Worker count clamped to ``[1, 16]``.
+
+    Raises:
+        argparse.ArgumentTypeError: If the value cannot be parsed as an int.
+    """
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        msg = f"invalid worker count {raw!r}: not an integer"
+        raise argparse.ArgumentTypeError(msg) from exc
+    return min(max(value, 1), 16)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser used by the pipeline entry point.
+
+    Returns:
+        argparse.ArgumentParser: Fully configured parser instance.
+    """
+    valid_groups = sorted(set(GROUP_ALIASES.keys()))
+    tool_names = sorted({t.recipe for t in TOOLS})
+    epilog = (
+        "Group aliases (case-insensitive):\n  "
+        + ", ".join(valid_groups)
+        + "\n\nTool recipe names (for --skip):\n  "
+        + ", ".join(tool_names)
+        + "\n\nExamples:\n"
+        "  just run-all-tools                   Run every tool\n"
+        "  just run-all-tools python            Only Python tools\n"
+        "  just run-all-tools python rust       Python and Rust tools\n"
+        "  just run-all-tools --skip ruff,mypy  Skip selected tools\n"
+        "  just run-all-tools --workers 8       Increase parallelism\n"
+    )
+    parser = argparse.ArgumentParser(
+        prog="run-all-tools",
+        description=("Run all development tools with parallel linting and progress tracking."),
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "groups",
+        nargs="*",
+        type=_group_arg,
+        default=[],
+        metavar="GROUP",
+        help=("Filter tools by language/format group (e.g. python, rust, toml). Repeat to include multiple groups. Omit to run all."),
+    )
+    parser.add_argument(
+        "--skip",
+        default="",
+        metavar="TOOL1,TOOL2",
+        help=("Comma-separated list of tool recipe names to exclude (see epilog for valid names)."),
+    )
+    parser.add_argument(
+        "--workers",
+        type=_workers_arg,
+        default=4,
+        metavar="N",
+        help="Number of parallel linter workers, clamped to [1, 16] (default 4).",
+    )
+    return parser
 
 
 def _parse_args() -> tuple[list[str], list[str], int]:
@@ -593,24 +680,15 @@ def _parse_args() -> tuple[list[str], list[str], int]:
         tuple[list[str], list[str], int]: The skip list, group filter,
             and max workers count.
     """
-    args = sys.argv[1:]
-    skip_list: list[str] = []
+    args = _build_parser().parse_args()
+    raw_skip: str = args.skip
+    raw_groups: list[str] = args.groups
+    max_workers: int = args.workers
+    skip_list = [s for s in raw_skip.split(",") if s]
     group_filter: list[str] = []
-    max_workers = 4
-    i = 0
-    while i < len(args):
-        if args[i] == "--skip" and i + 1 < len(args):
-            skip_list = args[i + 1].split(",")
-            i += 2
-        elif args[i] == "--workers" and i + 1 < len(args):
-            with contextlib.suppress(ValueError):
-                max_workers = min(max(int(args[i + 1]), 1), 16)
-            i += 2
-        elif not args[i].startswith("--") and args[i].lower() in GROUP_ALIASES:
-            group_filter.append(GROUP_ALIASES[args[i].lower()])
-            i += 1
-        else:
-            i += 1
+    for code in raw_groups:
+        if code not in group_filter:
+            group_filter.append(code)
     return skip_list, group_filter, max_workers
 
 
@@ -619,8 +697,7 @@ def _print_banner() -> None:
     line = H * 31
     print(f"\n{BRAND}{TL}{line}{TR}{RESET}")
     print(
-        f"{BRAND}{V}{RESET}     {BOLD_PURPLE}Running All Dev Tools{RESET}"
-        f"     {BRAND}{V}{RESET}",
+        f"{BRAND}{V}{RESET}     {BOLD_PURPLE}Running All Dev Tools{RESET}     {BRAND}{V}{RESET}",
     )
     print(f"{BRAND}{BL}{line}{BR}{RESET}\n")
 
@@ -712,8 +789,7 @@ def _run_phase_parallel(
         print(f"\n  {color}-- {title} --{RESET}\n")
     if max_workers > 1 and len(tools) > 1:
         print(
-            f"  {GRAY}Parallel linting: {len(tools)} tools,"
-            f" {max_workers} workers{RESET}\n",
+            f"  {GRAY}Parallel linting: {len(tools)} tools, {max_workers} workers{RESET}\n",
         )
     tracker.set_phase(phase_label)
     pool = ThreadPoolExecutor(max_workers=max_workers)
@@ -745,9 +821,7 @@ def _print_summary(results: dict[str, ToolResult], elapsed: float) -> None:
     """
     total_time = round(elapsed, 1)
     total_findings = sum(r.findings for r in results.values())
-    passed_count = sum(
-        1 for r in results.values() if r.success and r.findings == 0
-    )
+    passed_count = sum(1 for r in results.values() if r.success and r.findings == 0)
     total_count = len(results)
     print(f"\n{GRAY}{'-' * 60}{RESET}")
     print(

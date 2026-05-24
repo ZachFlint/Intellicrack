@@ -459,3 +459,61 @@ typos *FLAGS:
 lint-dashboard:
     @echo "[Dashboard] Generating..."
     @{{ pixi }} python scripts/lint_report.py report --input-dir reports/json --output reports/lint_dashboard.html --title "Intellicrack Lint Dashboard"
+
+# Recipe aliases — match the display names shown by `just run-all-tools`
+# and common natural-language variants so any reasonable name works.
+
+alias markdown := mdlint
+alias markdownlint := mdlint
+alias md-lint := mdlint
+alias mdformat := mdfmt
+alias md-fmt := mdfmt
+
+alias yaml := yamllint
+alias yaml-lint := yamllint
+alias yaml-fmt := yamlfmt
+
+alias json-lint := jsonlint
+alias json-fmt := jsonfmt
+
+alias toml-fmt := tomlfmt
+alias pyproject := pyproject-fmt
+
+alias shell := shellcheck
+alias shell-check := shellcheck
+
+alias bat := blinter
+alias batch := blinter
+
+alias psscript := psscriptanalyzer
+alias ps-script := psscriptanalyzer
+alias powershell := psscriptanalyzer
+alias pwsh := psscriptanalyzer
+
+alias dashboard := lint-dashboard
+
+alias rustanalysis := rust-code-analysis
+alias rust-analysis := rust-code-analysis
+
+alias cargodeny := cargo-deny
+alias cargo-clippy := clippy
+alias cargo-nextest := nextest
+alias cargo-machete := machete
+
+alias llvmcov := llvm-cov
+alias coverage := llvm-cov
+
+alias rust-fmt := rustfmt
+
+alias precommithooks := precommit-hooks
+alias precommit := precommit-hooks
+alias pre-commit := precommit-hooks
+
+alias deadcode-tool := deadcode
+alias dead-code := deadcode
+
+alias pyright := basedpyright
+alias based-pyright := basedpyright
+
+alias code-spell := codespell
+alias doc-formatter := docformatter

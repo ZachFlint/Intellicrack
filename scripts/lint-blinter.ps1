@@ -3,6 +3,11 @@ param(
     [string]$Flags = ''
 )
 
+if ($Flags -match '(?:^|\s)(-h|--help|-\?|/\?)(?:\s|$)') {
+    Invoke-Expression "$Pixi python -m blinter --help"
+    exit $LASTEXITCODE
+}
+
 Write-Host "[Blinter] Running..."
 
 @('txt', 'json', 'xml') | ForEach-Object {
