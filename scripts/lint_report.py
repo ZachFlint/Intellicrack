@@ -1966,58 +1966,63 @@ def process_complexipy_text(text_output: str) -> tuple[dict[str, list[dict[str, 
     return grouped, cnt
 
 
-def process_taplo_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
-    r"""Process taplo TOML checker text output.
+_ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
-    Taplo check/lint output format:
-    error: <message>
-      \u250c\u2500 <filepath>:<line>:<col>
-      \u2502
-    N \u2502 <source line>
-      \u2502   ^^^ <hint>
+
+def process_tombi_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    r"""Process tombi TOML linter text output.
+
+    Tombi lint output format (ANSI color codes stripped before matching):
+        <Severity>: <message>
+            at <filepath>:<line>:<col>
+
+    Where <Severity> is "Warning" or "Error" (Error may have leading whitespace
+    in tombi's renderer). Trailing summary lines like "N files linted
+    successfully" or "N file(s) failed to be linted" are filtered.
 
     Example:
-    error: invalid TOML
-      \u250c\u2500 pyproject.toml:5:10
-      \u2502
-    5 \u2502 bad = [
-      \u2502       ^ unexpected EOF
+        Warning: `tool.mypy.show_error_codes = true` is deprecated
+            at pyproject.toml:662:1
+        7 files linted successfully
 
     Returns:
         A tuple of (grouped findings by file, total count).
     """
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    location_pattern = re.compile(r"^\s*\u250c\u2500\s*(.+):(\d+):(\d+)\s*$")
-    error_pattern = re.compile(r"^(error|warning):\s*(.+)$")
-    lines = text_output.strip().split("\n")
+    severity_pattern = re.compile(r"^\s*(Warning|Error)\s*:\s*(.+?)\s*$")
+    location_pattern = re.compile(r"^\s*at\s+(.+?):(\d+):(\d+)\s*$")
+    summary_pattern = re.compile(
+        r"^\d+\s+files?\s+(linted\s+successfully|failed\s+to\s+be\s+linted)\s*$",
+    )
+    clean = _ANSI_ESCAPE_RE.sub("", text_output)
+    lines = clean.strip().splitlines()
+    current_severity = ""
     current_message = ""
 
-    for i, line in enumerate(lines):
-        error_match = error_pattern.match(line.strip())
-        if error_match:
-            current_message = error_match.group(2).strip()
+    for line in lines:
+        if summary_pattern.match(line.strip()):
+            current_severity = ""
+            current_message = ""
+            continue
+        sev_match = severity_pattern.match(line)
+        if sev_match:
+            current_severity = sev_match.group(1).lower()
+            current_message = sev_match.group(2).strip()
             continue
         loc_match = location_pattern.match(line)
         if loc_match and current_message:
             fp = loc_match.group(1)
             line_num = int(loc_match.group(2))
             col_num = int(loc_match.group(3))
-            hint = ""
-            for j in range(i + 1, min(i + 5, len(lines))):
-                hint_line = lines[j].strip()
-                if hint_line.startswith("\u2502"):
-                    content = hint_line.lstrip("\u2502").strip()
-                    if content.startswith(("^", "╰", "╭")):
-                        hint = content.lstrip("^").lstrip("\u2570").lstrip("\u256d").strip()
-                        break
-            message = f"{current_message}: {hint}" if hint else current_message
+            severity = current_severity or "warning"
             grouped[fp].append({
                 "line": line_num,
                 "column": col_num,
-                "severity": "error",
-                "message": message,
-                "raw": f"{fp}:{line_num}:{col_num}: [error] {message}",
+                "severity": severity,
+                "message": current_message,
+                "raw": f"{fp}:{line_num}:{col_num}: [{severity}] {current_message}",
             })
+            current_severity = ""
             current_message = ""
     cnt = sum(len(v) for v in grouped.values())
     return grouped, cnt
@@ -2728,7 +2733,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "radon": process_radon_text,
     "xenon": process_xenon_text,
     "complexipy": process_complexipy_text,
-    "taplo": process_taplo_text,
+    "tombi": process_tombi_text,
     "interrogate": process_interrogate_text,
     "deptry": process_deptry_text,
     "codespell": process_codespell_text,

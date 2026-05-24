@@ -278,10 +278,10 @@ blinter *FLAGS:
 jsonlint *FLAGS:
     @& scripts/lint-jsonlint.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
-# Run taplo TOML linter and output sorted findings
+# Run tombi TOML linter and output sorted findings
 [group('lint')]
-taplo *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName taplo -DisplayName Taplo -Command "taplo check {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
+tombi *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName tombi -DisplayName Tombi -Command "{{ pixi }} tombi lint {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
 
 # Run pre-commit hooks natively and output sorted findings
 [group('lint')]
@@ -304,10 +304,10 @@ jsonfmt:
 yamlfmt *FLAGS:
     @echo "[YAML Format] Running..."; yamlfmt {{ FLAGS }}; echo "[YAML Format] Done"
 
-# Format TOML files with taplo
+# Format TOML files with tombi
 [group('format')]
 tomlfmt *FLAGS:
-    @echo "[TOML Format] Running..."; taplo fmt {{ FLAGS }}; echo "[TOML Format] Done"
+    @echo "[TOML Format] Running..."; {{ pixi }} tombi format {{ FLAGS }}; echo "[TOML Format] Done"
 
 # Format Markdown files with markdownlint-cli2 --fix
 [group('format')]
@@ -478,6 +478,8 @@ alias json-lint := jsonlint
 alias json-fmt := jsonfmt
 
 alias toml-fmt := tomlfmt
+alias toml := tombi
+alias toml-lint := tombi
 alias pyproject := pyproject-fmt
 
 alias shell := shellcheck
