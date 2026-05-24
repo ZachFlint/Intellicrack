@@ -9,7 +9,13 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
-- **devtools:** Full flag passthrough for all lint recipes (`bb69d9b`)
+- Add sandbox pause support and audit GPU BAR sizes (`92b383e`)
+- Implement VM pause/stop support in the QEMU sandbox bridge and expose it in the Sandbox UI panel.
+- Audit GPU Resizable BAR sizes on Windows to warn when local LLM context profiles exceed the BAR limit and risk CPU-fallback slowdowns.
+- Refactor `pyproject.toml` to clean up dependencies and formatting, and update the lint report script to handle modern vermin output and generate portable SQL dumps.
+- Add YARA signature scanning support to the hex editor panel.
+
+- **devtools:** Full flag passthrough for all lint recipes (`be55536`)
 Any non-empty user-supplied FLAGS now bypasses the capture/report
 machinery and invokes the underlying tool directly, so every flag the
 tool supports (--version, --list-rules, --severity, --fix, etc.)
@@ -29,7 +35,7 @@ pattern, running the bare tool with $Flags.
 -V/--version to Get-Module, all other flags through
 Invoke-ScriptAnalyzer via splatting.
 
-- **devtools:** Add -h/--help passthrough and recipe aliases (`da1c1cf`)
+- **devtools:** Add -h/--help passthrough and recipe aliases (`e0f845a`)
 - scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
 so -h/--help prints usage, group aliases, valid --skip names, and
 examples. Behavior preserved for positional groups, --skip, --workers.
@@ -46,7 +52,7 @@ dashboard -> lint-dashboard, pyright -> basedpyright, coverage -> llvm-cov,
 cargo-clippy/cargo-nextest/cargo-machete, pre-commit -> precommit-hooks,
 etc.) so any reasonable tool name resolves.
 
-- **devtools:** Add -h/--help passthrough and recipe aliases (`6d90d6f`)
+- **devtools:** Add -h/--help passthrough and recipe aliases (`0af1c47`)
 - scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
 so -h/--help prints usage, group aliases, valid --skip names, and
 examples. Behavior preserved for positional groups, --skip, --workers.
@@ -65,6 +71,41 @@ etc.) so any reasonable tool name resolves.
 - pyproject.toml: extend scripts/** ruff ignore with N999 (script files
 use hyphenated names, not importable modules) and S607 (just/cargo on
 PATH is the established invocation pattern for build scripts).
+
+- **ui-logging:** Shard-20 audit - hex editor sub-modules  (`7ecfa25`)
+Address every finding in audit/shard-20-hex-editor-submodules.md
+(17 HIGH, 31 MEDIUM, 14 LOW) across the hex-editor mixin forest.
+Findings resolved per file:
+- _base.py: log compute_hash_failed before returning formatted error.
+Drive-by SIM108 ternary fix in _stream_crc loop required by ruff
+pre-commit on touched files.
+- _widgets.py: log invalid CRC input; promote worker-failure log to
+.error() to satisfy LOG004.
+- _pattern_editor.py: refactor pattern save to log pre-write outside
+the try block; add pre-read logs to open and hexpat library load.
+- _search.py: add entry logs for text and numeric search workers;
+upgrade numeric-search failure log to .error() with context.
+- _signatures.py: add read-begin logs for DIE, ClamAV, and custom
+database parsers; add scan dispatch log; trace mmap file reads.
+- _templates.py: move template export success log after the write
+succeeds.
+- _sections.py: add entry log for strings extraction worker.
+- _statistics.py: add entry log carrying doc length and block size.
+- _process_memory.py: add Win32 pre/post-call logs around OpenProcess,
+VirtualQueryEx, and CloseHandle; add dispatch log for list-regions
+and pre-read log for /proc/<pid>/maps.
+- _data_inspector.py: add entry logs for decode and encode bridges;
+log decode-text failures with full context; promote bridge error
+to .exception() with kwargs.
+- _disassembly.py: log address parse fallback in result rendering.
+- _hashing.py: log doc-path unavailable in CRC resolver; log custom
+CRC length failure; add success log for selection hashing; log
+post-repair PE checksum verify failure.
+- _yara.py: add dispatch log differentiating inline vs files mode.
+- _comparison.py: add tempfile pre-write log and diff worker entry
+log capturing both inputs.
+- _bookmarks.py: add entry logs for add, remove, and refresh paths.
+No behavioural changes - structured logging only.
 
 - **ui-logging:** Shard-15 audit — add workflow + entry/exit logs across UI surface (`6344a38`)
 Addresses every MEDIUM and LOW finding in audit/shard-15-ui-app-tools-config.md
@@ -260,12 +301,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Add sandbox pause support and audit GPU BAR sizes (``)
-- Implement VM pause/stop support in the QEMU sandbox bridge and expose it in the Sandbox UI panel.
-- Audit GPU Resizable BAR sizes on Windows to warn when local LLM context profiles exceed the BAR limit and risk CPU-fallback slowdowns.
-- Refactor `pyproject.toml` to clean up dependencies and formatting, and update the lint report script to handle modern vermin output and generate portable SQL dumps.
-- Add YARA signature scanning support to the hex editor panel.
 
 
 ### Changed
@@ -3246,5 +3281,8 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **ui:** Remove invalid keyword argument from setMouseTracking (``)
+Pass the boolean value positionally to prevent a TypeError. Qt's Python bindings typically do not accept keyword arguments for this method.
 
 
