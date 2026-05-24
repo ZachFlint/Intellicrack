@@ -41,6 +41,7 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
 
+
 @runtime_checkable
 class _StringsSource(Protocol):
     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""
@@ -323,6 +324,12 @@ class SectionsMixin:
         previous = getattr(self, "_strings_worker", None)
         if isinstance(previous, GenericCallableWorker) and previous.isRunning():
             previous.requestInterruption()
+
+        _logger.info(
+            "strings_extract_started",
+            min_length=_STRINGS_MIN_LENGTH,
+            max_results=_STRINGS_MAX_RESULTS,
+        )
 
         worker = GenericCallableWorker(
             execute_strings_extraction,

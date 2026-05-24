@@ -324,17 +324,43 @@ class DataInspectorMixin:
         doc_len = 0
         try:
             doc_len = int(self.document.length())
-        except (AttributeError, TypeError, ValueError):
+        except (AttributeError, TypeError, ValueError) as exc:
+            _logger.warning(
+                "decode_text_doc_length_unavailable",
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             doc_len = 0
         if doc_len > 0:
             length = max(0, min(length, doc_len - cursor_offset))
         if length <= 0:
             self._decode_output.setPlainText("")
+            _logger.debug(
+                "decode_text_zero_length",
+                cursor_offset=cursor_offset,
+                doc_len=doc_len,
+            )
             return
+
+        _logger.info(
+            "decode_text_started",
+            encoding=encoding,
+            offset=cursor_offset,
+            length=length,
+            doc_len=doc_len,
+        )
 
         try:
             decoded = self.document.decode_text(cursor_offset, length, encoding)
         except (AttributeError, ValueError, OverflowError) as exc:
+            _logger.warning(
+                "decode_text_failed",
+                encoding=encoding,
+                offset=cursor_offset,
+                length=length,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             self._decode_output.setPlainText(f"Error: {exc}")
         else:
             self._decode_output.setPlainText(str(decoded))
@@ -363,10 +389,22 @@ class DataInspectorMixin:
 
         encoding = self._selected_encoding(self._encode_combo)
 
+        _logger.info(
+            "encode_text_started",
+            encoding=encoding,
+            text_length=len(text),
+        )
+
         try:
             hex_str = run_bridge_coroutine(bridge.encode_text(text, encoding))
         except (AttributeError, ValueError, OverflowError, RuntimeError) as exc:
-            _logger.exception("encode_text_bridge_failed", encoding=encoding)
+            _logger.exception(
+                "encode_text_bridge_failed",
+                encoding=encoding,
+                text_length=len(text),
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             self._encode_output.setText(f"Error: {exc}")
             return
 

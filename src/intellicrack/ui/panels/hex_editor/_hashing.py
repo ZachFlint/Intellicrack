@@ -93,7 +93,12 @@ class HashingMixin:
             if callable(doc_path_fn):
                 try:
                     doc_path: object = doc_path_fn()
-                except (OSError, RuntimeError, ValueError):
+                except (OSError, RuntimeError, ValueError) as exc:
+                    _logger.debug(
+                        "custom_crc_doc_path_unavailable",
+                        error_type=type(exc).__name__,
+                        error=str(exc),
+                    )
                     doc_path = None
                 if isinstance(doc_path, str):
                     candidates.append(doc_path)
@@ -142,6 +147,11 @@ class HashingMixin:
         try:
             doc_len: int = document.length()
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+            _logger.warning(
+                "custom_crc_length_unavailable",
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             if isinstance(self, QWidget):
                 show_warning(self, "Custom CRC", f"Failed to read document length:\n{exc}")
             return
@@ -189,10 +199,22 @@ class HashingMixin:
             result = self.document.compute_hash_range(sel_start, sel_end, algo)
         except (RuntimeError, OSError, ValueError, AttributeError) as exc:
             self._hash_result_label.setText(f"Error: {exc}")
-            _logger.exception("hash_selection_failed")
+            _logger.exception(
+                "hash_selection_failed",
+                algo=algo,
+                start=sel_start,
+                end=sel_end,
+                error=str(exc),
+            )
         else:
             self._hash_result_label.setText(
                 f"{algo} (0x{sel_start:X}-0x{sel_end:X}): {result}",
+            )
+            _logger.info(
+                "hash_selection_calculated",
+                algo=algo,
+                start=sel_start,
+                end=sel_end,
             )
 
     def _on_verify_pe_checksum(self) -> None:
@@ -263,6 +285,11 @@ class HashingMixin:
             try:
                 info = self.document.verify_pe_checksum()
             except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+                _logger.warning(
+                    "pe_checksum_post_repair_verify_failed",
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 self._pe_checksum_status.setText(f"Repaired (verify failed: {exc})")
             else:
                 if isinstance(info, dict):

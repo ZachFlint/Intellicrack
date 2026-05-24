@@ -267,6 +267,14 @@ class SearchMixin:
 
         self._search_input.setEnabled(False)
 
+        _logger.info(
+            "search_started",
+            mode=mode,
+            encoding=encoding,
+            query_length=len(query),
+            max_results=MAX_SEARCH_RESULTS,
+        )
+
         self._search_worker = GenericCallableWorker(
             execute_text_search,
             document,
@@ -559,6 +567,19 @@ class SearchMixin:
 
         self._numeric_value_input.setEnabled(False)
 
+        _logger.info(
+            "numeric_search_started",
+            size_bits=bit_width,
+            type=type_text,
+            endian=endian_text,
+            alignment=alignment,
+            range_mode=range_mode,
+            min=min_val,
+            max=max_val,
+            use_native=use_native,
+            max_results=MAX_SEARCH_RESULTS,
+        )
+
         self._numeric_search_worker = GenericCallableWorker(
             execute_numeric_search,
             document,
@@ -626,6 +647,10 @@ class SearchMixin:
         """
         if self._numeric_value_input is not None:
             self._numeric_value_input.setEnabled(True)
-        _logger.warning("numeric_search_failed")
+        _logger.error(
+            "numeric_search_failed",
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(parent, "Numeric Search", f"Search failed:\n{exc}")

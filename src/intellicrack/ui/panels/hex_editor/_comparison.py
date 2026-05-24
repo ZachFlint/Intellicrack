@@ -148,16 +148,29 @@ class ComparisonMixin:
                 return
 
             try:
+                _logger.info(
+                    "diff_temp_write_begin",
+                    size=len(data_a),
+                    prefix="intellicrack_diff_",
+                )
                 with tempfile.NamedTemporaryFile(prefix="intellicrack_diff_", delete=False) as tmp:
                     tmp.write(data_a)
                     path_a = tmp.name
             except OSError:
-                _logger.exception("diff_temp_write_failed")
+                _logger.exception("diff_temp_write_failed", size=len(data_a))
                 return
             self._diff_temp_path = Path(path_a)
+            _logger.debug("diff_temp_write_complete", path=path_a, size=len(data_a))
 
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText("Computing diff...")
+
+        _logger.info(
+            "diff_compare_started",
+            path_a=path_a,
+            path_b=compare_path,
+            used_tempfile=self._diff_temp_path is not None,
+        )
 
         worker = GenericCallableWorker(execute_diff, bridge, path_a, compare_path)
         _: object = worker.call_finished.connect(self._on_diff_finished_obj)

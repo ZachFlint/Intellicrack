@@ -149,6 +149,11 @@ class YaraMixin:
 
         parent_obj = self if isinstance(self, QWidget) else None
         if inline_source:
+            _logger.info(
+                "yara_scan_dispatched",
+                source_mode="inline",
+                source_length=len(inline_source),
+            )
             run_bridge_coroutine_logged(
                 bridge.yara_scan(inline_source),
                 on_success=self._on_yara_scan_success,
@@ -162,6 +167,11 @@ class YaraMixin:
 
         if self._yara_rule_files:
             rule_paths_arg = ",".join(self._yara_rule_files)
+            _logger.info(
+                "yara_scan_dispatched",
+                source_mode="files",
+                rule_count=len(self._yara_rule_files),
+            )
             run_bridge_coroutine_logged(
                 bridge.yara_scan_files(rule_paths_arg),
                 on_success=self._on_yara_scan_success,
