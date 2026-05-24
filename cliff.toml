@@ -42,21 +42,21 @@ conventional_commits = true
 filter_unconventional = true
 split_commits = false
 commit_preprocessors = [
-    { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" },
+  { pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" },
 ]
 commit_parsers = [
-    { message = "^feat",     group = "Added"           },
-    { message = "^fix",      group = "Fixed"           },
-    { message = "^perf",     group = "Performance"     },
-    { message = "^refactor", group = "Changed"         },
-    { message = "^style",    skip  = true              },
-    { message = "^doc",      group = "Documentation"   },
-    { message = "^test",     skip  = true              },
-    { message = "^chore",    skip  = true              },
-    { message = "^build",    skip  = true              },
-    { message = "^ci",       skip  = true              },
-    { message = "^revert",   group = "Reverted"        },
-    { body    = ".*security",group = "Security"        },
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^style", skip = true },
+  { message = "^doc", group = "Documentation" },
+  { message = "^test", skip = true },
+  { message = "^chore", skip = true },
+  { message = "^build", skip = true },
+  { message = "^ci", skip = true },
+  { message = "^revert", group = "Reverted" },
+  { body = ".*security", group = "Security" },
 ]
 protect_breaking_commits = false
 filter_commits = true

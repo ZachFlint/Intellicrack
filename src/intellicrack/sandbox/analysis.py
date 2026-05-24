@@ -1158,9 +1158,7 @@ def _match_exfiltration(
     )
 
     if clipboard_read_evidence := [
-        (
-            f"Clipboard read by {clip['process_name']} (PID {clip['pid']}): {clip['format']} ({clip['size_bytes']} bytes)"
-        )
+        (f"Clipboard read by {clip['process_name']} (PID {clip['pid']}): {clip['format']} ({clip['size_bytes']} bytes)")
         for clip in report.clipboard_events
         if clip["operation"].lower() == "read"
     ]:
@@ -1187,9 +1185,7 @@ def _match_discovery(
         matches: Accumulator list for behavior matches.
     """
     if discovery_evidence := [
-        (
-            f"{proc['name']} (PID {proc['pid']}): {proc.get('command_line') or 'N/A'}"
-        )
+        (f"{proc['name']} (PID {proc['pid']}): {proc.get('command_line') or 'N/A'}")
         for proc in report.process_activity
         if proc["name"].lower() in _SYSTEM_DISCOVERY_TOOLS
     ]:

@@ -185,16 +185,8 @@ class X64DbgStackSource:
             StackFrame(
                 index=i,
                 return_address=int(getattr(item, "return_address", 0) or 0),
-                function_name=str(
-                    getattr(item, "function_name", "")
-                    or getattr(item, "name", "")
-                    or "unknown"
-                ),
-                module_name=str(
-                    getattr(item, "module_name", "")
-                    or getattr(item, "module", "")
-                    or "unknown"
-                ),
+                function_name=str(getattr(item, "function_name", "") or getattr(item, "name", "") or "unknown"),
+                module_name=str(getattr(item, "module_name", "") or getattr(item, "module", "") or "unknown"),
                 offset=int(getattr(item, "offset", 0) or 0),
                 frame_pointer=int(getattr(item, "frame_pointer", 0) or 0),
                 stack_pointer=int(getattr(item, "stack_pointer", 0) or 0),
@@ -272,11 +264,7 @@ class FridaStackSource:
                 index=i,
                 return_address=int(getattr(item, "address", 0) or 0),
                 function_name=str(getattr(item, "name", "") or "unknown"),
-                module_name=str(
-                    getattr(item, "module_name", "")
-                    or getattr(item, "moduleName", "")
-                    or "unknown"
-                ),
+                module_name=str(getattr(item, "module_name", "") or getattr(item, "moduleName", "") or "unknown"),
             )
             for i, item in enumerate(raw_list)
         ]

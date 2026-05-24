@@ -5,43 +5,51 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 publish = false
 
-[lib]
-name = "intellicrack_hexcore"
-crate-type = ["cdylib"]
-
-[dependencies]
-pyo3 = { version = "0.25", features = ["extension-module"] }
-memmap2 = "0.9.5"
-rayon = "1.10.0"
-regex = "1.11.1"
-md-5 = "0.10.6"
-sha1 = "0.10.6"
-sha2 = "0.10.8"
-crc32fast = "1.4.2"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-thiserror = "2.0.12"
-blake2 = "0.10"
-sha3 = "0.10"
-xxhash-rust = { version = "0.8", features = ["xxh32", "xxh64", "xxh3"] }
-siphasher = "1.0"
-adler2 = "2.0"
-crc = "3.2"
-half = "2.4"
-encoding_rs = "0.8"
-aes = "0.8"
-flate2 = "1.0"
-base64 = "0.22"
-similar = { version = "2.7", default-features = false }
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Diagnostics_Debug", "Win32_System_Memory", "Win32_System_Threading"] }
-
 [package.metadata.cargo-machete]
 ignored = ["md-5"]
 
+[lib]
+crate-type = ["cdylib"]
+name = "intellicrack_hexcore"
+
+[dependencies]
+adler2 = "2.0"
+aes = "0.8"
+base64 = "0.22"
+blake2 = "0.10"
+crc = "3.2"
+crc32fast = "1.4.2"
+encoding_rs = "0.8"
+flate2 = "1.0"
+half = "2.4"
+md-5 = "0.10.6"
+memmap2 = "0.9.5"
+pyo3 = { version = "0.25", features = ["extension-module"] }
+rayon = "1.10.0"
+regex = "1.11.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+sha1 = "0.10.6"
+sha2 = "0.10.8"
+sha3 = "0.10"
+similar = { version = "2.7", default-features = false }
+siphasher = "1.0"
+thiserror = "2.0.12"
+xxhash-rust = { version = "0.8", features = ["xxh3", "xxh32", "xxh64"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = {
+  version = "0.59",
+  features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Memory",
+    "Win32_System_Threading"
+  ]
+}
+
 [profile.release]
 opt-level = 3
+strip = "symbols"
 lto = true
 codegen-units = 1
-strip = "symbols"

@@ -9,6 +9,26 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **devtools:** Full flag passthrough for all lint recipes (`bb69d9b`)
+Any non-empty user-supplied FLAGS now bypasses the capture/report
+machinery and invokes the underlying tool directly, so every flag the
+tool supports (--version, --list-rules, --severity, --fix, etc.)
+produces real tool output instead of "0 findings".
+- scripts/run-lint-tool.ps1: accept -Flags and -PassthruExe params.
+When -Flags is non-empty, run `$PassthruExe $Flags` (defaulting to
+`$Pixi $ToolName`) and exit. Bypass tmpfile capture and processor.
+- justfile: add -Flags "{{ FLAGS }}" to all 36 run-lint-tool.ps1 recipes.
+Add -PassthruExe override for the 7 recipes where ToolName diverges
+from the actual binary (wemake -> flake8, precommit-hooks -> python
+scripts/precommit_hooks.py, cargo-deny/llvm-cov/machete/mutants ->
+cargo subcommand form, rust-code-analysis -> rust-code-analysis-cli).
+- scripts/lint-shellcheck.ps1, lint-blinter.ps1, lint-jsonlint.ps1:
+collapse help-specific branch into the same any-flags-passthrough
+pattern, running the bare tool with $Flags.
+- scripts/lint-psscriptanalyzer.ps1: route -h/--help to Get-Help,
+-V/--version to Get-Module, all other flags through
+Invoke-ScriptAnalyzer via splatting.
+
 - **devtools:** Add -h/--help passthrough and recipe aliases (`da1c1cf`)
 - scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
 so -h/--help prints usage, group aliases, valid --skip names, and
@@ -240,6 +260,12 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
+
+- Add sandbox pause support and audit GPU BAR sizes (``)
+- Implement VM pause/stop support in the QEMU sandbox bridge and expose it in the Sandbox UI panel.
+- Audit GPU Resizable BAR sizes on Windows to warn when local LLM context profiles exceed the BAR limit and risk CPU-fallback slowdowns.
+- Refactor `pyproject.toml` to clean up dependencies and formatting, and update the lint report script to handle modern vermin output and generate portable SQL dumps.
+- Add YARA signature scanning support to the hex editor panel.
 
 
 ### Changed

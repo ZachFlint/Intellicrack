@@ -200,7 +200,6 @@ class _StateTracker:
             with`` block; only the exit-side state update matters.
         """
         _logger.debug("state_tracker_entered", operation=self.operation)
-        return
 
     async def __aexit__(
         self,
@@ -1590,6 +1589,59 @@ class SandboxBridge(ToolBridgeBase):
                     "name": name,
                 }
 
+    async def stop(
+        self,
+        instance_id: str,
+    ) -> dict[str, Any]:
+        """Pause execution of a running QEMU sandbox VM.
+
+        Args:
+            instance_id: ID of the QEMU sandbox instance.
+
+        Returns:
+            dict[str, Any]: Command response dictionary.
+
+        Raises:
+            ToolError: If pause fails, QMP is not connected, or the
+                instance is not a QEMU sandbox.
+        """
+        manager = self.ensure_manager()
+
+        instance = await manager.get(instance_id)
+        if instance is None:
+            msg = f"{_ERR_INSTANCE_NOT_FOUND}: {instance_id}"
+            raise ToolError(msg)
+
+        if instance.sandbox_type != "qemu":
+            raise ToolError(_ERR_QEMU_ONLY)
+
+        qmp = getattr(instance.sandbox, "qmp", None)
+        if qmp is None:
+            msg = "Failed to pause VM: QMP client not connected"
+            raise ToolError(msg)
+
+        try:
+            response = await qmp.stop()
+        except Exception as e:
+            _logger.warning("vm_pause_failed", error=str(e))
+            msg = f"Failed to pause VM: {e}"
+            raise ToolError(msg) from e
+
+        if not response.success:
+            err_detail = response.error or "QMP stop command failed"
+            _logger.warning("vm_pause_qmp_error", error=err_detail, instance_id=instance_id)
+            msg = f"Failed to pause VM: {err_detail}"
+            raise ToolError(msg)
+
+        instance.touch()
+        _logger.info("vm_paused", instance_id=instance_id)
+
+        return {
+            "success": response.success,
+            "status": "paused",
+            "instance_id": instance_id,
+        }
+
     async def cont(
         self,
         instance_id: str,
@@ -2468,22 +2520,6 @@ class SandboxBridge(ToolBridgeBase):
         Returns:
             dict[str, Any]: Dictionary representation.
         """
-        return {
-            "instance_id": instance_id,
-            "result": report.result,
-            "exit_code": report.exit_code,
-            "stdout": report.stdout,
-            "stderr": report.stderr,
-            "duration_seconds": report.duration_seconds,
-            "file_changes": list(report.file_changes),
-            "registry_changes": list(report.registry_changes),
-            "network_activity": list(report.network_activity),
-            "process_activity": list(report.process_activity),
-            "api_calls": list(report.api_calls),
-            "service_changes": list(report.service_changes),
-            "kernel_objects": list(report.kernel_objects),
-            "dll_loads": list(report.dll_loads),
-            "injection_events": list(report.injection_events),
-            "resource_samples": list(report.resource_samples),
-            "clipboard_events": list(report.clipboard_events),
-        }
+        d = dataclass_to_dict(report)
+        d["instance_id"] = instance_id
+        return d

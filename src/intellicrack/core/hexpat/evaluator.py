@@ -1231,7 +1231,12 @@ class HexPatEvaluator:
         if resolved is None and type_node.namespace:
             resolved = self._types.resolve(type_node.name)
         if resolved is None:
+            from intellicrack.core.hexpat.type_system import BuiltinTypes
+
+            suggestions = sorted([name for name in BuiltinTypes.all_names() if name.startswith(lookup_name) or lookup_name in name])
             msg = f"unknown type '{lookup_name}'"
+            if suggestions:
+                msg = f"{msg} (did you mean one of: {', '.join(suggestions)}?)"
             raise HexPatTypeError(msg, type_node.line, type_node.column)
         if isinstance(resolved, HexPatType):
             pv = self._read_primitive(resolved, offset)
@@ -2873,8 +2878,7 @@ class HexPatEvaluator:
             _logger.warning("bind_template_args_arity_mismatch", type_name=type_name, param_count=len(params), arg_count=len(args))
             raise HexPatTypeError(msg, line, column)
         bindings: dict[str, ExprNode | TypeNode] = {
-            param.name: self._template_arg_to_type_node(arg)
-            for param, arg in zip(params, args, strict=True)
+            param.name: self._template_arg_to_type_node(arg) for param, arg in zip(params, args, strict=True)
         }
         return bindings
 

@@ -220,9 +220,8 @@ class SandboxTestWorker(QThread):
     def _register_test_process(self) -> None:
         """Register the launched sandbox process with the global ``ProcessManager``.
 
-        Logs structured ``windows_sandbox_launched`` and
-        ``sandbox_test_process_registered`` events so the audit trail captures
-        both the process creation and the manager registration.
+        Logs structured ``windows_sandbox_launched`` and ``sandbox_test_process_registered`` events so the audit trail captures both the
+        process creation and the manager registration.
         """
         if self._process is None or self._wsb_file is None:
             return
@@ -1097,9 +1096,8 @@ class SandboxMonitorWidget(QFrame):
     def _stop_via_manager(self) -> None:
         """Stop the sandbox by delegating to the attached ``SandboxManager``.
 
-        Runs :meth:`SandboxManager.destroy_all` synchronously via
-        :func:`asyncio.run` so the UI thread blocks until cleanup completes.
-        Logs the start, completion, and any errors as structured events.
+        Runs :meth:`SandboxManager.destroy_all` synchronously via :func:`asyncio.run` so the UI thread blocks until cleanup completes. Logs
+        the start, completion, and any errors as structured events.
         """
         if self._manager is None:
             return

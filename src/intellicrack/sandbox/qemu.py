@@ -3579,8 +3579,7 @@ python3 /mnt/shared/monitor/agent.py &
         """
         if not directory.exists():
             return 0
-        return sum(bool(entry.is_file())
-               for entry in directory.rglob("*"))
+        return sum(bool(entry.is_file()) for entry in directory.rglob("*"))
 
     async def yara_scan(
         self,

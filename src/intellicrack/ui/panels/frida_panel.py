@@ -1761,9 +1761,7 @@ class FridaPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.read_memory(captured_addr, size),
             on_success=lambda r: self._on_read_memory_success(captured_addr, r),
-            on_error=lambda e: self._console.appendPlainText(
-                f"[-] Read failed: {e}"
-            ),
+            on_error=lambda e: self._console.appendPlainText(f"[-] Read failed: {e}"),
             parent=self,
             event="frida_read_memory",
             logger=_logger,
@@ -2305,10 +2303,7 @@ class FridaPanel(AnalysisPanelBase):
                 return
 
         ret_type = self._adv_ret_type.currentText()
-        if arg_types_text := self._adv_arg_types.text().strip():
-            arg_types = [t.strip() for t in arg_types_text.split(",")]
-        else:
-            arg_types = None
+        arg_types = [t.strip() for t in arg_types_text.split(",")] if (arg_types_text := self._adv_arg_types.text().strip()) else None
         cc = self._adv_cc.currentText()
 
         run_bridge_coroutine_logged(

@@ -689,13 +689,11 @@ class OllamaProvider(LLMProviderBase):
         if normalized == "cloud":
             if self._cloud_available and self._cloud_client:
                 return self._cloud_client, self.CLOUD_API_URL
-            else:
-                raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
-        elif normalized == "local":
+            raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
+        if normalized == "local":
             if self._local_available and self._local_client:
                 return self._local_client, self._local_url
-            else:
-                raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
+            raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
         msg = _ERR_UNKNOWN_SOURCE % source
         raise ProviderError(msg, provider_name="ollama")
 

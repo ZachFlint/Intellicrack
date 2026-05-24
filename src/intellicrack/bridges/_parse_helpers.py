@@ -145,7 +145,7 @@ def safe_call[T, D](
     try:
         return func()
     except exceptions as exc:
-        _logger.warning(
+        _logger.debug(
             "safe_call_failed",
             context=context,
             exc_type=type(exc).__name__,

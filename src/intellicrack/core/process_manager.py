@@ -779,7 +779,7 @@ class ProcessManager:
             except TimeoutExpired:
                 # Should not happen if psutil worked, but as fallback
                 logger.warning("process_zombie_fallback", process_name=name)
-                process.kill()
+                ProcessManager._terminate_process_sync(process)
                 await asyncio.to_thread(process.wait)
 
         logger.info("process_terminated_tree", process_name=name)
@@ -812,7 +812,7 @@ class ProcessManager:
             await asyncio.wait_for(process.wait(), timeout=0.1)
         except TimeoutError:
             logger.warning("async_process_zombie_fallback", process_name=name)
-            process.kill()
+            ProcessManager._terminate_process_sync(process)
             try:
                 await process.wait()
             except (OSError, RuntimeError) as exc:

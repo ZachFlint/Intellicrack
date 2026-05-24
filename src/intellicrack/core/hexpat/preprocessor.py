@@ -667,10 +667,7 @@ class HexPatPreprocessor:
         if not params:
             return body
 
-        replacements: dict[str, str] = {
-            param: args[idx] if idx < len(args) else ""
-            for idx, param in enumerate(params)
-        }
+        replacements: dict[str, str] = {param: args[idx] if idx < len(args) else "" for idx, param in enumerate(params)}
         out: list[str] = []
         i: int = 0
         n: int = len(body)
