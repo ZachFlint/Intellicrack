@@ -7,6 +7,7 @@ set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 pixi := "pixi run"
 src := "src/intellicrack"
 src_and_tests := "src/intellicrack/ tests/"
+mdlint2 := "node node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs"
 
 # Complete installation with all post-install tasks
 [group('install')]
@@ -255,7 +256,7 @@ codespell *FLAGS:
 # Run markdownlint and output sorted findings
 [group('lint')]
 mdlint *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName markdownlint -DisplayName "Markdown Lint" -Command "{{ pixi }} markdownlint {{ FLAGS }} '**/*.md' --ignore node_modules --ignore .venv* --ignore .pixi --ignore .claude --ignore build --ignore dist --ignore tools" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
+    @& scripts/run-lint-tool.ps1 -ToolName markdownlint-cli2 -DisplayName "Markdown Lint" -Command "{{ pixi }} {{ mdlint2 }} {{ FLAGS }}" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} {{ mdlint2 }}"
 
 # Run yamllint and output sorted findings
 [group('lint')]
@@ -308,11 +309,11 @@ yamlfmt *FLAGS:
 tomlfmt *FLAGS:
     @echo "[TOML Format] Running..."; taplo fmt {{ FLAGS }}; echo "[TOML Format] Done"
 
-# Format Markdown files with markdownlint --fix
+# Format Markdown files with markdownlint-cli2 --fix
 [group('format')]
 mdfmt *FLAGS:
     @echo "[Markdown Format] Running..."
-    @{{ pixi }} markdownlint --fix {{ FLAGS }} "**/*.md" --ignore node_modules --ignore .venv* --ignore .pixi --ignore .claude --ignore build --ignore dist --ignore tools 2>&1 | Out-Null; Write-Host "[MDFMT] Done"
+    @{{ pixi }} {{ mdlint2 }} --fix {{ FLAGS }} 2>&1 | Out-Null; Write-Host "[MDFMT] Done"
 
 # Format docstrings in-place with docformatter
 [group('format')]

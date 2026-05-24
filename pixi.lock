@@ -34,7 +34,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/libsqlite-3.53.1-hf5d6505_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/libssh2-1.11.1-h9aa295b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.2-hfd05255_2.conda
-      - conda: https://conda.anaconda.org/conda-forge/win-64/markdownlint-cli-0.48.0-he474a74_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-24.16.0-h80d1838_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.2-hf411b9b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/python-3.13.13-h09917c8_100_cp313.conda
@@ -719,16 +718,6 @@ packages:
   purls: []
   size: 58347
   timestamp: 1774072851498
-- conda: https://conda.anaconda.org/conda-forge/win-64/markdownlint-cli-0.48.0-he474a74_0.conda
-  sha256: 0ee156106a0e643f2c51dc7117d1a1fb88e67ce9298c8e9485f3d554432bd759
-  md5: 43a8bf73d8210fc4ebc8e4a6f2c352bb
-  depends:
-  - nodejs >=24.14.0,<25.0a0
-  license: MIT
-  license_family: MIT
-  purls: []
-  size: 1971727
-  timestamp: 1772708721367
 - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-24.16.0-h80d1838_0.conda
   sha256: e0ba6a9db3371b4144415ad81519e7127f62a6386a9679bc04ea543cd6307433
   md5: b2bbae59181b182da8e5c02b674a97e4

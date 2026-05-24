@@ -345,7 +345,10 @@ def _classify_semgrep_line(
     file_match = _SEMGREP_FILE_RE.match(line)
     if file_match is not None and not line.lstrip().startswith(("\u276f", ">")):
         return _SemgrepLineInfo(
-            "file", file_match.group(1).strip().replace("\\", "/"), 0, "",
+            "file",
+            file_match.group(1).strip().replace("\\", "/"),
+            0,
+            "",
         )
     rule_match = _SEMGREP_RULE_RE.match(line)
     if rule_match is not None and current_file is not None:
@@ -357,7 +360,10 @@ def _classify_semgrep_line(
     severity_marker = _SEMGREP_SEVERITY_RE.search(line)
     if severity_marker is not None and current_rule is not None and not current_message_parts:
         return _SemgrepLineInfo(
-            "severity", _normalize_semgrep_severity(severity_marker.group(1)), 0, "",
+            "severity",
+            _normalize_semgrep_severity(severity_marker.group(1)),
+            0,
+            "",
         )
     finding_match = _SEMGREP_FINDING_RE.match(line)
     if finding_match is not None and current_file is not None and current_rule is not None:
@@ -409,7 +415,10 @@ def process_semgrep_text(text_output: str) -> tuple[dict[str, list[dict[str, Any
     for raw_line in text_output.splitlines():
         line = _SEMGREP_ANSI_RE.sub("", raw_line).rstrip()
         info = _classify_semgrep_line(
-            line, current_file, current_rule, current_message_parts,
+            line,
+            current_file,
+            current_rule,
+            current_message_parts,
         )
         if info.kind in {"banner", "ignore"}:
             continue
@@ -445,10 +454,7 @@ def process_semgrep_text(text_output: str) -> tuple[dict[str, list[dict[str, Any
                 "severity": current_severity,
                 "rule": current_rule,
                 "message": message,
-                "raw": (
-                    f"{current_file}:{info.finding_line}: "
-                    f"[{current_severity}] {current_rule}: {message}"
-                ),
+                "raw": (f"{current_file}:{info.finding_line}: [{current_severity}] {current_rule}: {message}"),
             })
     cnt = sum(len(v) for v in grouped.values())
     return grouped, cnt
@@ -2699,6 +2705,7 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "bandit": process_bandit_text,
     "clippy": process_clippy_text,
     "markdownlint": process_markdownlint_text,
+    "markdownlint-cli2": process_markdownlint_text,
     "yamllint": process_yamllint_text,
     "uncalled": process_uncalled_text,
     "deadcode": process_deadcode_text,
