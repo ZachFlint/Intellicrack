@@ -113,6 +113,7 @@ class HexPatInterpreter:
             size, raw_bytes, display_value, children, color,
             validation_passed, description.
         """
+        _logger.debug("hexpat_execute_started", source_length=len(source), offset=offset, file_path=str(file_path) if file_path else None)
         preprocessor = HexPatPreprocessor(self._include_paths)
         file_str = str(file_path) if file_path else "<input>"
 
@@ -155,6 +156,7 @@ class HexPatInterpreter:
         Returns:
             list[dict[str, Any]]: A list of ParsedField-compatible dicts.
         """
+        _logger.debug("hexpat_execute_file_started", pattern_path=str(pattern_path), offset=offset)
         source = pattern_path.read_text(encoding="utf-8", errors="replace")
         return self.execute(source, document, offset, pattern_path)
 
@@ -178,6 +180,7 @@ class HexPatInterpreter:
         Returns:
             list[dict[str, Any]]: A list of ParsedField-compatible dicts.
         """
+        _logger.debug("hexpat_execute_bytes_started", source_length=len(source), data_size=len(data), offset=offset)
         preprocessor = HexPatPreprocessor(self._include_paths)
         file_str = str(file_path) if file_path else "<input>"
 
@@ -223,7 +226,8 @@ class HexPatInterpreter:
             tokens = lexer.tokenize()
             parser = HexPatParser(tokens)
             program = parser.parse()
-        except HexPatError:
+        except HexPatError as exc:
+            _logger.debug("hexpat_can_compile_to_json_rejected", reason=str(exc))
             return False
         else:
             return not any(isinstance(node, (FunctionDecl, WhileStmt, ForStmt, MatchStmt)) for node in program)

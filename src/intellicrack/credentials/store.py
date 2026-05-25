@@ -632,8 +632,10 @@ class CredentialStore:
         Returns:
             tuple[bool, str | None]: Tuple of (is_valid, error_message).
         """
+        _logger.debug("credentials_validate_started", provider=provider.value)
         creds = await self.get(provider)
         if creds is None or not creds.api_key:
+            _logger.debug("credentials_validate_no_credentials", provider=provider.value)
             return False, f"No credentials found for {provider.value}"
 
         if provider == ProviderName.ANTHROPIC:
@@ -667,18 +669,24 @@ class CredentialStore:
         Returns:
             CredentialSource | None: CredentialSource or None if no credentials found.
         """
+        _logger.debug("credentials_get_source_started", provider=provider.value)
         if self.keyring_available:
             keyring_creds = await self._get_from_keyring(provider)
             if keyring_creds is not None and keyring_creds.api_key:
                 metadata = await self._get_metadata(provider)
-                return metadata.source if metadata is not None else CredentialSource.KEYRING
+                source = metadata.source if metadata is not None else CredentialSource.KEYRING
+                _logger.debug("credentials_get_source_completed", provider=provider.value, source=str(source))
+                return source
         env_creds = await asyncio.to_thread(self._fallback_loader.get_credentials, provider)
         if env_creds is not None and env_creds.api_key:
             is_valid, source_desc = await asyncio.to_thread(self._fallback_loader.validate_credentials, provider)
             if is_valid and source_desc and "environment" in source_desc.lower():
+                _logger.debug("credentials_get_source_completed", provider=provider.value, source="env_var")
                 return CredentialSource.ENV_VAR
+            _logger.debug("credentials_get_source_completed", provider=provider.value, source="env_file")
             return CredentialSource.ENV_FILE
 
+        _logger.debug("credentials_get_source_completed", provider=provider.value, source=None)
         return None
 
 

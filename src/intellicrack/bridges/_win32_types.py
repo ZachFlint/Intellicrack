@@ -884,10 +884,18 @@ def get_kernel32() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to kernel32.dll.
+
+    Raises:
+        OSError: If kernel32.dll cannot be loaded.
     """
     global _kernel32_cache  # noqa: PLW0603
     if _kernel32_cache is None:
-        _kernel32_cache = ctypes.windll.kernel32
+        _logger.debug("dll_cache_miss_loading", dll_name="kernel32")
+        try:
+            _kernel32_cache = ctypes.windll.kernel32
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="kernel32", error=str(exc))
+            raise
     return _kernel32_cache
 
 
@@ -896,10 +904,18 @@ def get_ntdll() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to ntdll.dll.
+
+    Raises:
+        OSError: If ntdll.dll cannot be loaded.
     """
     global _ntdll_cache  # noqa: PLW0603
     if _ntdll_cache is None:
-        _ntdll_cache = ctypes.WinDLL("ntdll")
+        _logger.debug("dll_cache_miss_loading", dll_name="ntdll")
+        try:
+            _ntdll_cache = ctypes.WinDLL("ntdll")
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="ntdll", error=str(exc))
+            raise
     return _ntdll_cache
 
 
@@ -908,10 +924,18 @@ def get_advapi32() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to advapi32.dll.
+
+    Raises:
+        OSError: If advapi32.dll cannot be loaded.
     """
     global _advapi32_cache  # noqa: PLW0603
     if _advapi32_cache is None:
-        _advapi32_cache = ctypes.WinDLL("advapi32")
+        _logger.debug("dll_cache_miss_loading", dll_name="advapi32")
+        try:
+            _advapi32_cache = ctypes.WinDLL("advapi32")
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="advapi32", error=str(exc))
+            raise
     return _advapi32_cache
 
 
@@ -920,10 +944,18 @@ def get_user32() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to user32.dll.
+
+    Raises:
+        OSError: If user32.dll cannot be loaded.
     """
     global _user32_cache  # noqa: PLW0603
     if _user32_cache is None:
-        _user32_cache = ctypes.WinDLL("user32")
+        _logger.debug("dll_cache_miss_loading", dll_name="user32")
+        try:
+            _user32_cache = ctypes.WinDLL("user32")
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="user32", error=str(exc))
+            raise
     return _user32_cache
 
 
@@ -932,10 +964,18 @@ def get_dbghelp() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to dbghelp.dll.
+
+    Raises:
+        OSError: If dbghelp.dll cannot be loaded.
     """
     global _dbghelp_cache  # noqa: PLW0603
     if _dbghelp_cache is None:
-        _dbghelp_cache = ctypes.WinDLL("dbghelp")
+        _logger.debug("dll_cache_miss_loading", dll_name="dbghelp")
+        try:
+            _dbghelp_cache = ctypes.WinDLL("dbghelp")
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="dbghelp", error=str(exc))
+            raise
     return _dbghelp_cache
 
 
@@ -944,10 +984,18 @@ def get_psapi() -> ctypes.WinDLL:
 
     Returns:
         ctypes.WinDLL: Handle to psapi.dll.
+
+    Raises:
+        OSError: If psapi.dll cannot be loaded.
     """
     global _psapi_cache  # noqa: PLW0603
     if _psapi_cache is None:
-        _psapi_cache = ctypes.windll.psapi
+        _logger.debug("dll_cache_miss_loading", dll_name="psapi")
+        try:
+            _psapi_cache = ctypes.windll.psapi
+        except OSError as exc:
+            _logger.exception("dll_load_failed", dll_name="psapi", error=str(exc))
+            raise
     return _psapi_cache
 
 

@@ -105,6 +105,7 @@ async def read_log_lines(shared_folder: Path | None, name: str) -> list[str]:
     log_path = shared_folder / "logs" / name
     if not await asyncio.to_thread(log_path.exists):
         return []
+    _logger.debug("sandbox_log_read_started", log=name, path=str(log_path))
     try:
         raw = await asyncio.to_thread(
             log_path.read_text,

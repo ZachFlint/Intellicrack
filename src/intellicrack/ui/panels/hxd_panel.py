@@ -235,8 +235,8 @@ class HxDPanel(QWidget):
             self.tool_started.emit()
             self._schedule_embed()
             _logger.info("hxd_file_loaded", path=str(file_path))
-        except (OSError, RuntimeError) as e:
-            _logger.warning("hxd_launch_failed", error=str(e))
+        except (OSError, RuntimeError):
+            _logger.exception("hxd_launch_failed")
             self.process = None
             return False
         else:
@@ -260,14 +260,15 @@ class HxDPanel(QWidget):
             self.process.start()
 
             if not self.process.waitForStarted(_PROCESS_TERM_TIMEOUT_MS):
+                _logger.warning("hxd_start_failed_wait_for_started")
                 self.process = None
                 return False
 
             self.embed_info_label.setText("HxD running")
             self.tool_started.emit()
             self._schedule_embed()
-        except (OSError, RuntimeError) as e:
-            _logger.warning("hxd_start_failed", error=str(e))
+        except (OSError, RuntimeError):
+            _logger.exception("hxd_start_failed")
             self.process = None
             return False
         else:

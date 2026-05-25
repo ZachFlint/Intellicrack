@@ -458,7 +458,7 @@ class NamedPipeClient:
                 raise
             except (ToolError, OSError, RuntimeError, ValueError) as exc:
                 self._read_failure = exc
-                _logger.warning(
+                _logger.exception(
                     "pipe_reader_failed",
                     error=str(exc),
                     error_type=type(exc).__name__,

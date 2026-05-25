@@ -198,7 +198,7 @@ class ToolRegistry:
             bool: True if initialization succeeded.
         """
         if name not in self._bridges:
-            _logger.error("unknown_tool", tool_name=name)
+            _logger.warning("unknown_tool", tool_name=name)
             return False
 
         bridge = self._bridges[name]

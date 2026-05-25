@@ -471,6 +471,7 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             message: Text to display.
         """
+        _logger.debug("frida_panel_log_message", length=len(message))
         self._console.appendPlainText(message)
 
     def _on_frida_message(self, message: dict[str, object]) -> None:

@@ -126,11 +126,13 @@ async def _fetch_model_config(model_id: str) -> dict[str, Any]:
         dict[str, Any]: Parsed config dict, or empty dict on failure.
     """
     url = _HF_CONFIG_URL.format(model_id=model_id)
+    _logger.debug("huggingface_config_fetch_started", model_id=model_id, url=url)
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
             response = await client.get(url)
             response.raise_for_status()
             result: dict[str, Any] = response.json()
+            _logger.debug("huggingface_config_fetch_completed", model_id=model_id, key_count=len(result))
             return result
     except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
         _logger.warning("huggingface_config_fetch_failed", url=url, error=str(exc))
@@ -439,9 +441,10 @@ class LocalTransformersProvider(LLMProviderBase):
             ProviderError: If the provider is not connected.
         """
         if not self.connected:
-            self._logger.error("local_transformers_list_models_not_connected")
+            self._logger.warning("local_transformers_list_models_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED)
 
+        self._logger.info("local_list_models_started", device_type=self._device_type)
         vram_utilisation_ceiling: float = 0.9
 
         total_vram: int = 0
@@ -1458,6 +1461,7 @@ class LocalTransformersProvider(LLMProviderBase):
             model_id = self._loaded_model.model_id
             dtype = self._loaded_model.dtype
             device_type = self._device_type
+            self._logger.info("unload_model_started", model_id=model_id, dtype=dtype, device_type=device_type)
             self._model_cache.remove(model_id, dtype, device_type)
             self._loaded_model = None
 

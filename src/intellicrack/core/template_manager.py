@@ -282,7 +282,7 @@ class TemplateManager:
         safe = "".join(c if c.isalnum() or c in {"_", "-"} else "_" for c in name)
         if not safe.strip("_"):
             msg = f"template name produces an empty filename after sanitization: {name!r}"
-            _logger.error("template_name_sanitization_empty", template_name=name)
+            _logger.warning("template_name_sanitization_empty", template_name=name)
             raise ValueError(msg)
         return safe
 
@@ -316,7 +316,7 @@ class TemplateManager:
         """
         if not name.strip():
             msg = "template name must not be empty"
-            _logger.error("user_template_save_empty_name")
+            _logger.warning("user_template_save_empty_name")
             raise ValueError(msg)
         self.ensure_directories()
         safe_name = self._sanitize_name(name)
@@ -375,7 +375,7 @@ class TemplateManager:
         """
         if not path.exists():
             msg = f"template file not found: {path}"
-            _logger.error("template_load_file_missing", path=str(path))
+            _logger.warning("template_load_file_missing", path=str(path))
             raise FileNotFoundError(msg)
         return path.read_text(encoding="utf-8")
 
@@ -393,7 +393,7 @@ class TemplateManager:
         """
         if not name.strip():
             msg = "template name must not be empty"
-            _logger.error("user_template_delete_empty_name")
+            _logger.warning("user_template_delete_empty_name")
             raise ValueError(msg)
         safe_name = self._sanitize_name(name)
         json_path = self._user_dir / f"{safe_name}.json"

@@ -660,6 +660,7 @@ class HexEditorPanel(
         """Save the current document."""
         if self.document is None:
             return
+        _logger.info("panel_save_started")
         try:
             file_path = self.document.file_path()
             if file_path is not None:
@@ -668,6 +669,7 @@ class HexEditorPanel(
                 self._on_save_as()
                 return
         except OSError as exc:
+            _logger.exception("panel_save_failed", file_path=str(self.document.file_path()) if self.document else None)
             show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
         else:
             self._on_data_changed()
@@ -682,9 +684,11 @@ class HexEditorPanel(
         result = QFileDialog.getSaveFileName(self, "Save As", "", "All Files (*)")
         save_path = result[0] if result else ""
         if save_path:
+            _logger.info("panel_save_as_started", path=save_path)
             try:
                 self.document.save(save_path)
             except OSError as exc:
+                _logger.exception("panel_save_as_failed", path=save_path)
                 show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
             else:
                 self.file_path = Path(save_path)
@@ -716,6 +720,7 @@ class HexEditorPanel(
         Args:
             offset: Target byte offset.
         """
+        _logger.info("panel_goto_offset", offset=offset)
         if self._hex_widget is not None:
             goto_fn = getattr(self._hex_widget, "goto_offset", None)
             if callable(goto_fn):
@@ -784,6 +789,12 @@ class HexEditorPanel(
             if isinstance(inspection, dict):
                 context["inspection"] = {k: str(v) for k, v in cast("dict[str, object]", inspection).items()}
 
+        _logger.info(
+            "ai_context_push_requested",
+            cursor=cursor_offset,
+            has_bytes="bytes_at_cursor" in context,
+            has_inspection="inspection" in context,
+        )
         self.context_push_requested.emit(context)
 
     def _on_undo(self) -> None:
@@ -817,6 +828,7 @@ class HexEditorPanel(
         Args:
             bridge: ``HexEditorBridge`` instance supplied by the tool registry.
         """
+        _logger.info("panel_bridge_attached", bridge_type=type(bridge).__name__)
         self._bridge = bridge
 
     def set_state_holder(self, state_holder: HexDocumentState) -> None:
@@ -825,6 +837,7 @@ class HexEditorPanel(
         Args:
             state_holder: The shared HexDocumentState instance.
         """
+        _logger.info("panel_state_holder_attached", holder_type=type(state_holder).__name__)
         self.state_holder = state_holder
 
         def on_state_event(event_type: object, data: dict[str, Any]) -> None:
@@ -975,11 +988,13 @@ class HexEditorPanel(
         """
         if self.document is None:
             return False
+        _logger.info("panel_save_public_called")
         try:
             self._on_save()
         except OSError:
             _logger.exception("save_document_failed")
             return False
+        _logger.info("panel_save_public_completed")
         return True
 
     def _on_display_mode_changed(self, mode: str) -> None:
@@ -1111,7 +1126,7 @@ class HexEditorPanel(
                 item = QTreeWidgetItem([f"0x{offset:08X}", str(length), label])
                 self._bookmarks_tree.addTopLevelItem(item)
         except (AttributeError, ValueError):
-            pass
+            _logger.debug("panel_refresh_bookmarks_list_failed", exc_info=True)
 
     def _cleanup(self) -> None:
         """Release resources when the panel is closed."""

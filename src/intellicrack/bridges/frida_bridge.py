@@ -1688,9 +1688,13 @@ class FridaBridge(InstrumentationBridge):
 
         read_data = result.get("__binary")
         if isinstance(read_data, (bytes, bytearray)):
-            return bytes(read_data)
+            bytes_data = bytes(read_data)
+            _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_data))
+            return bytes_data
         if isinstance(read_data, list):
-            return bytes(cast("list[int]", read_data))
+            bytes_list = bytes(cast("list[int]", read_data))
+            _logger.debug("memory_read_completed", address=hex(validated_address), size=len(bytes_list))
+            return bytes_list
 
         raise ToolError(_ERR_READ_FAILED)
 
@@ -1707,6 +1711,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If write fails.
         """
+        _logger.info("frida_write_memory_started", address=hex(address), size=len(data))
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -1960,6 +1965,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.debug("frida_enumerate_modules_started")
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2018,6 +2024,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.debug("frida_enumerate_exports_started", module_name=module_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2090,6 +2097,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If hooking fails.
         """
+        _logger.info("frida_hook_function_started", target=target, has_on_enter=on_enter is not None, has_on_leave=on_leave is not None)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2193,8 +2201,10 @@ class FridaBridge(InstrumentationBridge):
         Returns:
             list[HookInfo]: List of hook information.
         """
-        _logger.debug("hooks_listed", count=len(self._hooks))
-        return list(self._hooks.values())
+        _logger.debug("frida_get_hooks_started")
+        hooks_list = list(self._hooks.values())
+        _logger.debug("hooks_listed", count=len(hooks_list))
+        return hooks_list
 
     async def execute_script(self, script: str) -> str:
         """Execute custom Frida JavaScript code.
@@ -2219,7 +2229,9 @@ class FridaBridge(InstrumentationBridge):
             _logger.error("frida_script_failed", script_length=len(script))
             raise ToolError(_ERR_SCRIPT_FAILED)
 
-        return str(result)
+        result_str = str(result)
+        _logger.debug("frida_execute_script_completed", script_length=len(script), result_size=len(result_str))
+        return result_str
 
     async def execute_persistent_script(self, script_code: str) -> str:
         """Execute a Frida script that persists until explicitly unloaded.
@@ -2297,10 +2309,12 @@ class FridaBridge(InstrumentationBridge):
             return_value=validated_return_value,
         )
         on_leave = f"retval.replace(ptr('{validated_return_value:d}'));"
-        return await self.hook_function(
+        hook_info = await self.hook_function(
             target=target,
             on_leave=on_leave,
         )
+        _logger.debug("intercept_return_completed", target=target, hook_id=hook_info.id)
+        return hook_info
 
     async def call_function(
         self,
@@ -2374,7 +2388,9 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result:
             raise ToolError(_ERR_CALL_FAILED)
 
-        return self._coerce_call_value(result)
+        coerced = self._coerce_call_value(result)
+        _logger.debug("function_called", address=hex(validated_address), return_value=coerced)
+        return coerced
 
     async def _execute_script_and_wait(
         self,
@@ -2778,6 +2794,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.debug("frida_enumerate_imports_started", module_name=module_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2852,6 +2869,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.debug("frida_enumerate_threads_started")
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2911,6 +2929,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If allocation fails.
         """
+        _logger.info("frida_allocate_memory_started", size=size)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -2979,6 +2998,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the operation fails.
         """
+        _logger.debug("frida_protect_memory_started", address=hex(address), size=size, protection=protection)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3036,6 +3056,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the module is not found.
         """
+        _logger.debug("frida_find_base_address_started", module_name=module_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3077,6 +3098,7 @@ class FridaBridge(InstrumentationBridge):
             ToolError: If resolution fails or DebugSymbol returns no name for
                 the address.
         """
+        _logger.debug("frida_resolve_symbol_started", address=hex(address))
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3140,6 +3162,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the search fails.
         """
+        _logger.debug("frida_find_functions_named_started", func_name=name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3208,6 +3231,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If resolution fails.
         """
+        _logger.debug("frida_resolve_api_started", query=query, resolver_type=resolver_type)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3272,6 +3296,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If replacement fails.
         """
+        _logger.info("frida_replace_function_started", target=target, calling_convention=calling_convention)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -3353,6 +3378,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the bridge is not initialised or device is not available.
         """
+        _logger.debug("frida_enumerate_processes_started")
         device = self._device
         if device is None:
             _logger.error("frida_no_device", operation="enumerate_processes")
@@ -3851,6 +3877,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If child gating cannot be enabled.
         """
+        _logger.info("frida_enable_child_gating_started")
         if self._device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
@@ -3904,6 +3931,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If child gating cannot be disabled.
         """
+        _logger.info("frida_disable_child_gating_started")
         if self._device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
@@ -3963,6 +3991,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If crash reporting cannot be enabled.
         """
+        _logger.info("frida_enable_crash_reporting_started")
         if self._device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
@@ -4364,6 +4393,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or patching fails.
         """
+        _logger.info("frida_patch_code_started", address=hex(address), data_length=len(hex_data))
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4407,6 +4437,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached, encoding is invalid, or allocation fails.
         """
+        _logger.info("frida_allocate_string_started", encoding=encoding, value_length=len(value))
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4472,6 +4503,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or enumeration fails.
         """
+        _logger.debug("frida_enumerate_symbols_started", module_name=module_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4594,19 +4626,22 @@ class FridaBridge(InstrumentationBridge):
 
         result = await self._execute_script_and_wait(script_code)
         if "error" in result or result.get("name") is None:
+            _logger.debug("frida_find_module_by_address_not_found", address=hex(validated_address))
             return None
 
         base_str = str(result.get("base", "0"))
         base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
         size_val = result.get("size", 0)
 
-        return ModuleInfo(
+        module_info = ModuleInfo(
             name=str(result.get("name", "")),
             path=Path(str(result.get("path", ""))),
             base_address=base,
             size=int(size_val) if isinstance(size_val, (int, float)) else 0,
             entry_point=0,
         )
+        _logger.debug("frida_find_module_by_address_completed", address=hex(validated_address), module_name=module_info.name)
+        return module_info
 
     async def find_functions_matching(self, pattern: str) -> list[SymbolInfo]:
         """Find functions matching a glob pattern via DebugSymbol.
@@ -4620,6 +4655,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or search fails.
         """
+        _logger.debug("frida_find_functions_matching_started", pattern=pattern)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4711,7 +4747,7 @@ class FridaBridge(InstrumentationBridge):
         next_addr = int(next_str, 16) if next_str.startswith("0x") else int(next_str)
         size_val = result.get("size", 0)
 
-        return InstructionInfo(
+        info = InstructionInfo(
             address=insn_addr,
             next_address=next_addr,
             size=int(size_val) if isinstance(size_val, (int, float)) else 0,
@@ -4719,6 +4755,8 @@ class FridaBridge(InstrumentationBridge):
             op_str=str(result.get("opStr", "")),
             string=str(result.get("string", "")),
         )
+        _logger.debug("frida_disassemble_instruction_completed", address=hex(insn_addr), mnemonic=info.mnemonic)
+        return info
 
     async def get_backtrace(
         self,
@@ -4737,6 +4775,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or backtrace fails.
         """
+        _logger.debug("frida_get_backtrace_started", context_address=context_address, backtracer=backtracer)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4863,6 +4902,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or revert fails.
         """
+        _logger.info("frida_revert_hook_started", target=target)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -4893,6 +4933,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or flush fails.
         """
+        _logger.debug("frida_flush_interceptor_started")
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -5046,6 +5087,13 @@ class FridaBridge(InstrumentationBridge):
         last_err_raw = result.get("lastError", 0)
         last_err = int(last_err_raw) if isinstance(last_err_raw, (int, float)) else 0
 
+        _logger.debug(
+            "frida_call_system_function_completed",
+            address=hex(validated_address),
+            value=value,
+            errno=errno_val,
+            last_error=last_err,
+        )
         return SystemCallResult(value=value, errno=errno_val, last_error=last_err)
 
     async def stalker_add_call_probe(self, address: int, callback_code: str) -> str:
@@ -5133,6 +5181,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the bridge is not initialised or device is not available.
         """
+        _logger.debug("frida_enumerate_applications_started")
         device = self._device
         if device is None:
             _logger.warning("enumerate_applications_no_device")
@@ -5167,6 +5216,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If device is not available or injection fails.
         """
+        _logger.info("frida_inject_library_file_started", pid=pid, path=path, entrypoint=entrypoint)
         if self._device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
@@ -5200,6 +5250,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If device is not available or injection fails.
         """
+        _logger.info("frida_inject_library_blob_started", pid=pid, blob_length=len(blob_hex), entrypoint=entrypoint)
         if self._device is None:
             raise ToolError(_ERR_NO_DEVICE)
 
@@ -5437,6 +5488,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or ObjC runtime is unavailable.
         """
+        _logger.info("frida_objc_hook_method_started", class_name=class_name, method_name=method_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -5595,7 +5647,9 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_JAVA_UNAVAILABLE)
 
         data = result.get("data", [])
-        return [str(inst) for inst in cast("list[object]", data)] if isinstance(data, list) else []
+        instances_list = [str(inst) for inst in cast("list[object]", data)] if isinstance(data, list) else []
+        _logger.debug("frida_java_choose_completed", class_name=class_name, count=len(instances_list))
+        return instances_list
 
     async def java_use(self, class_name: str) -> dict[str, object]:
         """Get class wrapper with method info for a Java class.
@@ -5636,7 +5690,11 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result or result.get("type") == "java_error":
             raise ToolError(_ERR_JAVA_UNAVAILABLE)
 
-        return dict(result)
+        result_dict = dict(result)
+        methods_val = result_dict.get("methods")
+        method_count = len(cast("list[object]", methods_val)) if isinstance(methods_val, list) else 0
+        _logger.debug("frida_java_use_completed", class_name=class_name, method_count=method_count)
+        return result_dict
 
     async def java_hook_method(
         self,
@@ -5661,6 +5719,12 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or Java runtime is unavailable.
         """
+        _logger.info(
+            "frida_java_hook_method_started",
+            class_name=class_name,
+            method_name=method_name,
+            overload_count=len(overloads) if overloads else 0,
+        )
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -5737,6 +5801,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or Java runtime is unavailable.
         """
+        _logger.info("frida_java_deoptimize_started")
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -5771,6 +5836,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or compilation fails.
         """
+        _logger.info("frida_create_cmodule_started", code_length=len(code), symbol_count=len(symbols) if symbols else 0)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -5880,6 +5946,7 @@ class FridaBridge(InstrumentationBridge):
                         entry_point=0,
                     ),
                 )
+        _logger.debug("frida_kernel_enumerate_modules_completed", count=len(modules))
         return modules
 
     async def kernel_enumerate_ranges(self, protection: str = "---") -> list[MemoryRegion]:
@@ -5938,6 +6005,7 @@ class FridaBridge(InstrumentationBridge):
                         module_name=None,
                     ),
                 )
+        _logger.debug("frida_kernel_enumerate_ranges_completed", protection=protection, count=len(regions))
         return regions
 
     async def kernel_read(self, address: int, size: int) -> str:
@@ -6095,6 +6163,7 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result or result.get("type") == "kernel_error":
             _logger.error("frida_kernel_unavailable", operation="kernel_protect")
             raise ToolError(_ERR_KERNEL_UNAVAILABLE)
+        _logger.debug("frida_kernel_protect_completed", address=hex(validated_address), size=validated_size, protection=protection)
         return True
 
     async def socket_listen(self, port: int, family: str = "ipv4") -> str:
@@ -6191,7 +6260,9 @@ class FridaBridge(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
         if "error" in result or result.get("type") == "socket_error":
             raise ToolError(_ERR_SOCKET_FAILED)
-        return dict(result)
+        result_dict = dict(result)
+        _logger.debug("frida_socket_connect_completed", host=host, port=port, family=family)
+        return result_dict
 
     async def socket_type(self, handle: int) -> str:
         """Get socket type for a file descriptor.
@@ -6224,7 +6295,9 @@ class FridaBridge(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
         if "error" in result or result.get("type") == "socket_error":
             raise ToolError(_ERR_SOCKET_FAILED)
-        return str(result.get("value", ""))
+        value_str = str(result.get("value", ""))
+        _logger.debug("frida_socket_type_completed", handle=handle, value=value_str)
+        return value_str
 
     async def socket_local_address(self, handle: int) -> dict[str, object]:
         """Get local address of a socket.
@@ -6258,7 +6331,9 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result or result.get("type") == "socket_error":
             raise ToolError(_ERR_SOCKET_FAILED)
         data = result.get("data")
-        return dict(cast("dict[str, object]", data)) if isinstance(data, dict) else {}
+        addr_dict = dict(cast("dict[str, object]", data)) if isinstance(data, dict) else {}
+        _logger.debug("frida_socket_local_address_completed", handle=handle)
+        return addr_dict
 
     async def socket_peer_address(self, handle: int) -> dict[str, object]:
         """Get peer address of a connected socket.
@@ -6292,7 +6367,9 @@ class FridaBridge(InstrumentationBridge):
         if "error" in result or result.get("type") == "socket_error":
             raise ToolError(_ERR_SOCKET_FAILED)
         data = result.get("data")
-        return dict(cast("dict[str, object]", data)) if isinstance(data, dict) else {}
+        addr_dict = dict(cast("dict[str, object]", data)) if isinstance(data, dict) else {}
+        _logger.debug("frida_socket_peer_address_completed", handle=handle)
+        return addr_dict
 
     async def file_read_target(self, path: str) -> str:
         """Read a file on the target device.
@@ -6329,9 +6406,13 @@ class FridaBridge(InstrumentationBridge):
 
         read_data = result.get("__binary")
         if isinstance(read_data, (bytes, bytearray)):
-            return bytes(read_data).hex()
+            hex_str = bytes(read_data).hex()
+            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(read_data))
+            return hex_str
         if isinstance(read_data, list):
-            return bytes(cast("list[int]", read_data)).hex()
+            list_bytes = bytes(cast("list[int]", read_data))
+            _logger.debug("frida_file_read_target_completed", path=path, bytes_read=len(list_bytes))
+            return list_bytes.hex()
         raise ToolError(_ERR_FILE_FAILED)
 
     async def file_write_target(self, path: str, hex_data: str) -> bool:
@@ -6370,6 +6451,7 @@ class FridaBridge(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
         if "error" in result or result.get("type") == "file_error":
             raise ToolError(_ERR_FILE_FAILED)
+        _logger.debug("frida_file_write_target_completed", path=path, bytes_written=len(byte_values))
         return True
 
     async def sqlite_open(self, path: str) -> str:
@@ -6384,6 +6466,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or database cannot be opened.
         """
+        _logger.info("frida_sqlite_open_started", path=path)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6460,6 +6543,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If the script is not found or query fails.
         """
+        _logger.info("frida_sqlite_exec_started", script_id=script_id, sql_length=len(sql))
         if script_id not in self._scripts:
             raise ToolError(_ERR_SCRIPT_NOT_FOUND)
 
@@ -6470,6 +6554,7 @@ class FridaBridge(InstrumentationBridge):
             _logger.warning("sqlite_exec_failed", script_id=script_id, error=str(e))
             raise ToolError(_ERR_SQLITE_FAILED) from e
         else:
+            _logger.debug("frida_sqlite_exec_completed", script_id=script_id)
             return result
 
     async def sqlite_dump(self, path: str) -> str:
@@ -6504,7 +6589,9 @@ class FridaBridge(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code, max_wait=30.0)
         if "error" in result or result.get("type") == "sqlite_error":
             raise ToolError(_ERR_SQLITE_FAILED)
-        return str(result.get("data", ""))
+        dump_str = str(result.get("data", ""))
+        _logger.debug("frida_sqlite_dump_completed", path=path, dump_length=len(dump_str))
+        return dump_str
 
     async def write_code(
         self,
@@ -6537,6 +6624,7 @@ class FridaBridge(InstrumentationBridge):
             ToolError: If not attached, architecture is invalid,
                 ``max_size`` is non-positive, or the write fails.
         """
+        _logger.info("frida_write_code_started", address=hex(address), architecture=architecture, instruction_count=len(instructions))
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6609,6 +6697,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or operation fails.
         """
+        _logger.debug("frida_cloak_add_thread_started", thread_id=thread_id)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6637,6 +6726,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or operation fails.
         """
+        _logger.debug("frida_cloak_remove_thread_started", thread_id=thread_id)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6666,6 +6756,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or operation fails.
         """
+        _logger.debug("frida_cloak_add_range_started", address=hex(address), size=size)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6696,6 +6787,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If not attached or operation fails.
         """
+        _logger.debug("frida_cloak_remove_range_started", address=hex(address), size=size)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6741,6 +6833,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If compilation fails.
         """
+        _logger.info("frida_compile_typescript_started", source_length=len(source), project_root=project_root)
         source_path = Path(source)
         is_path: bool = await asyncio.to_thread(source_path.is_file)
 
@@ -6839,6 +6932,7 @@ class FridaBridge(InstrumentationBridge):
         Raises:
             ToolError: If monitoring setup fails.
         """
+        _logger.info("frida_monitor_path_started", path=path)
         monitor_id = str(uuid.uuid4())[:8]
 
         try:

@@ -1325,6 +1325,12 @@ class WindowsSandbox(SandboxBase):
             SandboxError: If execution fails.
             SandboxTimeoutError: If command times out.
         """
+        _logger.info(
+            "windows_sandbox_run_command_started",
+            command=command[:200],
+            time_limit=time_limit,
+            working_directory=working_directory,
+        )
         if self.state.status != "running":
             _logger.error("run_command_sandbox_not_running", state=self.state.status, command_prefix=command[:120])
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
@@ -1392,6 +1398,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If execution fails.
         """
+        _logger.info("windows_sandbox_run_binary_started", binary=str(binary_path), arg_count=len(args) if args else 0, monitor=monitor)
         if self.state.status != "running":
             _logger.error("run_binary_sandbox_not_running", state=self.state.status, binary_path=str(binary_path))
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
@@ -1532,6 +1539,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If copy fails.
         """
+        _logger.info("windows_sandbox_copy_to_sandbox_started", source=str(source), dest=dest)
         if self._shared_folder is None:
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
@@ -1563,6 +1571,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If copy fails.
         """
+        _logger.info("windows_sandbox_copy_from_sandbox_started", source=source, dest=str(dest))
         if self._shared_folder is None:
             raise SandboxError(_ERR_SHARED_FOLDER_NOT_INIT)
 
@@ -1682,6 +1691,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If screenshot cannot be captured.
         """
+        _logger.info("windows_sandbox_capture_screenshot_started", output_path=str(output_path) if output_path else None)
         if self.state.status != "running":
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
         if self._shared_folder is None:
@@ -1742,6 +1752,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If anti-evasion cannot be applied.
         """
+        _logger.info("windows_sandbox_apply_anti_evasion_started", profile=profile)
         if self.state.status != "running":
             _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
@@ -1955,6 +1966,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If memory dump fails or ``target_pid`` is missing/invalid.
         """
+        _logger.info("windows_sandbox_dump_memory_started", output_path=str(output_path) if output_path else None, target_pid=target_pid)
         if sys.platform != "win32":
             raise SandboxError(_ERR_MEMORY_DUMP_NOT_WINDOWS)
         if self.state.status != "running":
@@ -2097,6 +2109,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If extraction fails.
         """
+        _logger.info("windows_sandbox_extract_dropped_files_started", output_path=str(output_path) if output_path else None)
         if self.state.status != "running":
             _logger.error("dropped_files_extraction_skipped_not_running", state=self.state.status)
             raise SandboxError(_ERR_SANDBOX_NOT_RUNNING)
@@ -2189,6 +2202,7 @@ class WindowsSandbox(SandboxBase):
         Raises:
             SandboxError: If scan fails.
         """
+        _logger.info("windows_sandbox_yara_scan_started", rules_path=rules_path, scan_target=scan_target)
         yara = require_yara()
 
         if self._shared_folder is None:
