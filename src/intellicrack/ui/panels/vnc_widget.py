@@ -277,6 +277,7 @@ class RFBClient:
         """
         connect_timeout = options.get("timeout", _DEFAULT_CONNECT_TIMEOUT)
         password = options.get("password")
+        _logger.info("vnc_connect_started", host=host, port=port, timeout=connect_timeout)
         try:
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port),
@@ -325,6 +326,7 @@ class RFBClient:
 
         server_version = await self._reader.readexactly(12)
         _logger.debug("vnc_server_version", version=server_version.decode(errors="replace").strip())
+        _logger.debug("vnc_client_version_sending", version=_RFB_VERSION.decode(errors="replace").strip())
         self._writer.write(_RFB_VERSION)
         await self._writer.drain()
 
@@ -359,6 +361,7 @@ class RFBClient:
         sec_types = await self._reader.readexactly(num_types)
 
         if _SECURITY_NONE in sec_types:
+            _logger.debug("vnc_security_selection_sending", security_type="NONE")
             self._writer.write(bytes([_SECURITY_NONE]))
             await self._writer.drain()
 
@@ -367,6 +370,7 @@ class RFBClient:
             return result == 0
 
         if _SECURITY_VNC in sec_types:
+            _logger.debug("vnc_security_selection_sending", security_type="VNC")
             return await self._perform_vnc_auth(password)
 
         _logger.warning("vnc_no_supported_security", types=list(sec_types))
@@ -397,10 +401,12 @@ class RFBClient:
             _logger.warning("vnc_auth_missing_password")
             return False
 
+        _logger.debug("vnc_auth_security_type_sending", security_type="VNC")
         self._writer.write(bytes([_SECURITY_VNC]))
         await self._writer.drain()
 
         challenge = await self._reader.readexactly(_VNC_CHALLENGE_LEN)
+        _logger.debug("vnc_auth_response_sending", challenge_length=len(challenge))
         response = _vnc_auth_encrypt(challenge, password)
         self._writer.write(response)
         await self._writer.drain()
@@ -426,12 +432,14 @@ class RFBClient:
             msg = "Not connected"
             raise ConnectionError(msg)
 
+        _logger.debug("vnc_client_init_sending", shared_flag=True)
         self._writer.write(bytes([1]))
         await self._writer.drain()
 
         server_init = await self._reader.readexactly(24)
         width, height = struct.unpack("!HH", server_init[:4])
 
+        _logger.debug("vnc_pixel_format_sending", width=width, height=height)
         self._writer.write(_PIXEL_FORMAT_32BIT)
         await self._writer.drain()
 
@@ -459,6 +467,7 @@ class RFBClient:
             self.width,
             self.height,
         )
+        _logger.debug("vnc_framebuffer_update_request", incremental=incremental, width=self.width, height=self.height)
         self._writer.write(msg)
         await self._writer.drain()
 
@@ -1582,6 +1591,7 @@ class RFBClient:
             return
 
         msg = struct.pack("!BBHH", 5, button_mask, x, y)
+        _logger.debug("vnc_pointer_event_sending", x=x, y=y, button_mask=button_mask)
         self._writer.write(msg)
         await self._writer.drain()
 
@@ -1596,11 +1606,13 @@ class RFBClient:
             return
 
         msg = struct.pack("!BBxxI", 4, 1 if down else 0, key)
+        _logger.debug("vnc_key_event_sending", key=key, down=down)
         self._writer.write(msg)
         await self._writer.drain()
 
     async def disconnect(self) -> None:
         """Disconnect from the VNC server."""
+        _logger.info("vnc_disconnect_started", was_connected=self._connected)
         self._connected = False
         if self._writer is not None:
             try:
@@ -1610,6 +1622,7 @@ class RFBClient:
                 _logger.debug("vnc_disconnect_error", exc_info=True)
         self._reader = None
         self._writer = None
+        _logger.info("vnc_disconnect_completed")
 
 
 _QT_TO_X11_KEYSYM: dict[int, int] = {

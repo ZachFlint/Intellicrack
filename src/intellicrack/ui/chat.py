@@ -504,5 +504,6 @@ class ChatPanel(QFrame):
         Args:
             text: Context text to insert.
         """
+        _logger.info("chat_insert_context_text", length=len(text))
         self._input.set_text(text)
         self._input.set_focus()

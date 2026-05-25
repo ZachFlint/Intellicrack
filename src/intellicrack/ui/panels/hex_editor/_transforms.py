@@ -472,6 +472,7 @@ class TransformsMixin:
             return None
         raw_params = self._collect_transform_params()
         encoded_params: dict[str, bytes] = {key: str(value).encode("utf-8") for key, value in raw_params.items()}
+        _logger.info("transform_single_started", node_name=node_name, offset=offset, length=length, param_count=len(encoded_params))
         try:
             result = self.document.transform_data(node_name, offset, length, encoded_params)
         except (RuntimeError, OSError, ValueError, TypeError, KeyError, AttributeError):
@@ -492,6 +493,7 @@ class TransformsMixin:
         if self._hex_widget is not None:
             cursor_offset = getattr(self._hex_widget, "_cursor_offset", 0)
 
+        _logger.info("transform_preview_started", cursor_offset=cursor_offset)
         try:
             doc_len: int = self.document.length()
         except (AttributeError, ValueError):
@@ -820,6 +822,7 @@ class TransformsMixin:
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         src, length, dst = dlg.get_values()
+        _logger.info("block_copy_started", src=src, length=length, dst=dst)
         try:
             self.document.copy_block(src, length, dst)
         except (RuntimeError, OSError, ValueError, AttributeError):
@@ -829,6 +832,7 @@ class TransformsMixin:
         if state_holder is not None:
             state_holder.notify_data_modified(dst, length, source="hex-editor.transforms.copy")
         self._refresh_widget()
+        _logger.info("block_copy_completed", src=src, length=length, dst=dst)
 
     def _on_block_move(self) -> None:
         """Move a block via hexcore document.move_block."""
@@ -914,6 +918,7 @@ class TransformsMixin:
             try:
                 bytes.fromhex(key_hex.replace(" ", ""))
             except ValueError:
+                _logger.warning("arithmetic_invalid_hex_key", key_length=len(key_hex))
                 parent = self if isinstance(self, QWidget) else None
                 QMessageBox.warning(parent, "Arithmetic", "Invalid hex key.")
                 return

@@ -652,6 +652,7 @@ class HexPatEvaluator:
         Returns:
             list[dict[str, Any]]: A list of parsed-field dictionaries, one per top-level placement.
         """
+        _logger.debug("hexpat_evaluate_started", node_count=len(program))
         for node in program:
             if isinstance(
                 node,
@@ -660,6 +661,7 @@ class HexPatEvaluator:
                 self._eval_decl(node)
             else:
                 self._eval_stmt(node)
+        _logger.debug("hexpat_evaluate_completed", result_count=len(self._results))
         return self._results
 
     def _next_color(self) -> str:
@@ -978,7 +980,7 @@ class HexPatEvaluator:
             HexPatRuntimeError: If the pattern limit is exceeded.
         """
         if self._pattern_count >= self._pragma.pattern_limit:
-            _logger.error(
+            _logger.warning(
                 "hexpat_pattern_limit_exceeded",
                 pattern_limit=self._pragma.pattern_limit,
                 line=node.line,
@@ -1231,8 +1233,6 @@ class HexPatEvaluator:
         if resolved is None and type_node.namespace:
             resolved = self._types.resolve(type_node.name)
         if resolved is None:
-            from intellicrack.core.hexpat.type_system import BuiltinTypes
-
             suggestions = sorted([name for name in BuiltinTypes.all_names() if name.startswith(lookup_name) or lookup_name in name])
             msg = f"unknown type '{lookup_name}'"
             if suggestions:
@@ -1279,7 +1279,7 @@ class HexPatEvaluator:
         self._depth += 1
         if self._depth > self._pragma.eval_depth:
             self._depth -= 1
-            _logger.error(
+            _logger.warning(
                 "hexpat_struct_eval_depth_exceeded",
                 struct_name=name,
                 eval_depth_limit=self._pragma.eval_depth,
@@ -1356,7 +1356,7 @@ class HexPatEvaluator:
         self._depth += 1
         if self._depth > self._pragma.eval_depth:
             self._depth -= 1
-            _logger.error(
+            _logger.warning(
                 "hexpat_union_eval_depth_exceeded",
                 union_name=name,
                 eval_depth_limit=self._pragma.eval_depth,
@@ -2079,7 +2079,7 @@ class HexPatEvaluator:
             return lv * rv
         if op == "/":
             if rv == 0:
-                _logger.error(
+                _logger.warning(
                     "hexpat_division_by_zero",
                     operator=op,
                     line=line,
@@ -2090,7 +2090,7 @@ class HexPatEvaluator:
             return lv / rv if isinstance(lv, float) or isinstance(rv, float) else int(lv) // int(rv)
         if op == "%":
             if rv == 0:
-                _logger.error(
+                _logger.warning(
                     "hexpat_modulo_by_zero",
                     operator=op,
                     line=line,
@@ -2123,7 +2123,7 @@ class HexPatEvaluator:
             return int(lv) >> int(rv)
         if op == "^^":
             return bool(lv) != bool(rv)
-        _logger.error(
+        _logger.warning(
             "hexpat_unsupported_numeric_operator",
             operator=op,
             line=line,
@@ -2229,6 +2229,7 @@ class HexPatEvaluator:
             for stmt in decl.body:
                 self._eval_stmt(stmt)
         except _ReturnSignalError as sig:
+            _logger.debug("hexpat_function_return", function_name=decl.name, line=decl.line, column=decl.column)
             return sig.value
         finally:
             self._scope = saved_scope
@@ -2949,7 +2950,7 @@ class HexPatEvaluator:
                 assert_default = "assertion failed"
                 error_msg = args[1].value if len(args) > 1 else assert_default
                 resolved = str(error_msg) if error_msg is not None else assert_default
-                _logger.error("hexpat_builtin_assert_failed", assert_message=resolved)
+                _logger.warning("hexpat_builtin_assert_failed", assert_message=resolved)
                 raise HexPatRuntimeError(resolved)
             return PatternValue(value=None)
 

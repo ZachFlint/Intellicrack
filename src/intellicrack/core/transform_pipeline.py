@@ -319,6 +319,7 @@ class RustTransformNode(TransformNode):
         if not _hexcore_available or _hexcore_mod is None:
             raise HexcoreUnavailableError
 
+        _logger.debug("rust_transform_open_bytes_started", transform=self._name, input_size=len(data))
         doc = _hexcore_mod.HexDocument.open_bytes(data)
 
         rust_params: dict[str, bytes] = {}
@@ -336,7 +337,9 @@ class RustTransformNode(TransformNode):
             else:
                 rust_params[key] = str(val).encode("utf-8")
 
+        _logger.debug("rust_transform_invoke_started", transform=self._name, param_count=len(rust_params), input_size=len(data))
         result: bytes = bytes(doc.transform_data(self._name, 0, len(data), rust_params))
+        _logger.debug("rust_transform_completed", transform=self._name, output_size=len(result))
         return result
 
 
@@ -811,9 +814,11 @@ class TransformPipeline:
         Returns:
             bytes: Final output after all steps have been applied.
         """
+        _logger.info("pipeline_execute_started", step_count=len(self._steps), input_size=len(data))
         result = data
         for step in self._steps:
             result = step.node.process(result, step.params)
+        _logger.info("pipeline_execute_completed", step_count=len(self._steps), output_size=len(result))
         return result
 
     def preview(self, data: bytes) -> list[tuple[str, bytes]]:
@@ -826,11 +831,13 @@ class TransformPipeline:
             list[tuple[str, bytes]]: One entry per step containing the step
                 name and the bytes produced by that step.
         """
+        _logger.debug("pipeline_preview_started", step_count=len(self._steps), input_size=len(data))
         results: list[tuple[str, bytes]] = []
         current = data
         for step in self._steps:
             current = step.node.process(current, step.params)
             results.append((step.node.name, current))
+        _logger.debug("pipeline_preview_completed", result_count=len(results))
         return results
 
     @property

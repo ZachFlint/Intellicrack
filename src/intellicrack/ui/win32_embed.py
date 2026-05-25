@@ -96,6 +96,8 @@ def _configure_user32(user32: ctypes.WinDLL) -> None:
     user32.GetWindowLongPtrW.argtypes = [wt.HWND, ctypes.c_int]
     user32.GetWindowLongPtrW.restype = ctypes.c_longlong
 
+    _logger.debug("win32_user32_configured")
+
 
 def _get_user32() -> ctypes.WinDLL | None:
     """Return the annotated user32 DLL handle, or None off-Windows.
@@ -109,6 +111,7 @@ def _get_user32() -> ctypes.WinDLL | None:
         return None
 
     user32 = ctypes.WinDLL("user32", use_last_error=True)
+    _logger.debug("win32_user32_loaded")
     _configure_user32(user32)
     return user32
 
@@ -125,6 +128,7 @@ def find_window_by_pid(pid: int) -> int | None:
     Returns:
         int | None: Window handle (HWND) as int, or None if not found or not on Windows.
     """
+    _logger.debug("win32_find_window_by_pid_started", pid=pid)
     user32 = _get_user32()
     if user32 is None:
         return None
@@ -170,6 +174,7 @@ def find_window_by_pid(pid: int) -> int | None:
         )
         return result_hwnd[0]
 
+    _logger.debug("win32_window_not_found", pid=pid)
     return None
 
 
@@ -219,6 +224,7 @@ def _reparent_foreign_hwnd(user32: ctypes.WinDLL, hwnd: int, parent_hwnd: int) -
         )
         return False
 
+    _logger.info("win32_reparent_foreign_hwnd_completed", hwnd=hex(hwnd), parent=hex(parent_hwnd))
     return True
 
 

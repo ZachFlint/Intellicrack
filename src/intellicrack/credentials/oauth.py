@@ -753,6 +753,7 @@ class OAuthManager:
         _logger.info("oauth_flow_started", provider=config.provider.value)
 
         if open_browser:
+            _logger.info("oauth_browser_opening", provider=config.provider.value, auth_url=auth_url)
             webbrowser.open(auth_url)
 
         return auth_url, oauth_state
@@ -779,7 +780,6 @@ class OAuthManager:
             OAuthCallbackError: If state is invalid, expired, or PKCE
                 verifier is missing when required by the flow.
         """
-
         async with self._lock:
             oauth_state = self._pending_states.pop(state, None)
 
@@ -847,6 +847,7 @@ class OAuthManager:
         client = await self._get_http_client()
 
         try:
+            _logger.debug("oauth_code_exchange_request", token_url=config.token_url, provider=config.provider.value)
             response = await client.post(
                 config.token_url,
                 data=data,
@@ -932,7 +933,6 @@ class OAuthManager:
         Returns:
             OAuthToken | None: OAuthToken or None if not found.
         """
-
         async with self._token_cache_lock:
             cached = self._token_cache.get(provider)
         if cached is not None:
@@ -988,8 +988,10 @@ class OAuthManager:
         Returns:
             OAuthToken | None: Valid OAuthToken or None if not available.
         """
+        _logger.debug("oauth_get_token_started", provider=provider.value, auto_refresh=auto_refresh)
         token = await self._load_token(provider)
         if token is None:
+            _logger.debug("oauth_get_token_no_token", provider=provider.value)
             return None
 
         effective_config = config or OAUTH_CONFIGS.get(provider)
@@ -1029,6 +1031,7 @@ class OAuthManager:
             OAuthTokenError: If refresh fails for a non-authentication reason.
             OAuthTokenRefreshError: If the refresh token is rejected (401/403).
         """
+        _logger.info("oauth_refresh_token_started", provider=provider.value)
         current_token = await self._load_token(provider)
         if current_token is None or current_token.refresh_token is None:
             msg = "No refresh token available"
@@ -1046,6 +1049,7 @@ class OAuthManager:
         client = await self._get_http_client()
 
         try:
+            _logger.debug("oauth_token_refresh_request", token_url=config.token_url, provider=provider.value)
             response = await client.post(
                 config.token_url,
                 data=data,
@@ -1108,6 +1112,7 @@ class OAuthManager:
             bool: True if both the remote revocation (if any) and the
             keyring deletion succeeded.
         """
+        _logger.info("oauth_revoke_token_started", provider=provider.value)
         token = await self._load_token(provider)
         if token is None:
             return False
@@ -1118,6 +1123,7 @@ class OAuthManager:
             revoke_succeeded = False
             client = await self._get_http_client()
             try:
+                _logger.debug("oauth_token_revoke_request", revoke_url=config.revoke_url, provider=provider.value)
                 revoke_response = await client.post(
                     config.revoke_url,
                     data={"token": token.access_token},
@@ -1232,6 +1238,7 @@ class OAuthManager:
         server.start()
 
         try:
+            _logger.info("oauth_browser_opening", provider=callback_config.provider.value, auth_url=auth_url)
             webbrowser.open(auth_url)
             code, state = server.wait_for_callback()
             return await self.handle_callback(code, state)

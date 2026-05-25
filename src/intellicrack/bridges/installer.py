@@ -543,6 +543,7 @@ class ToolInstaller:
         self._http_client: httpx.AsyncClient | None = None
 
         self.tools_directory.mkdir(parents=True, exist_ok=True)
+        _logger.debug("tools_directory_ready", path=str(self.tools_directory))
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create HTTP client.
@@ -726,6 +727,7 @@ class ToolInstaller:
             return None
         cmd = list(tool_info.version_command)
         process_manager = ProcessManager.get_instance()
+        _logger.debug("python_package_probe_starting", tool=tool_info.display_name, cmd=cmd)
         try:
             result = await process_manager.run_tracked_async(
                 cmd,
@@ -820,6 +822,7 @@ class ToolInstaller:
                 cmd[0] = str(exe)
 
             is_dir = await asyncio.to_thread(path.is_dir)
+            _logger.debug("tool_version_probe_starting", tool=tool.value, cmd=cmd)
             result = await process_manager.run_tracked_async(
                 cmd,
                 name=f"{tool.value}-version",
@@ -1072,6 +1075,7 @@ class ToolInstaller:
                 install_path = await self._extract_archive(download_path, tool)
             finally:
                 await asyncio.to_thread(download_path.unlink, missing_ok=True)
+                _logger.debug("download_temp_unlinked", path=str(download_path))
 
             if install_path is None:
                 return InstallResult(
@@ -1162,6 +1166,11 @@ class ToolInstaller:
             )
 
             if result.returncode != 0:
+                _logger.warning(
+                    "frida_pip_install_failed",
+                    returncode=result.returncode,
+                    stderr=result.stderr.strip(),
+                )
                 return InstallResult(
                     success=False,
                     kind="python_package",
@@ -1183,6 +1192,11 @@ class ToolInstaller:
                 )
 
             if version_result.returncode != 0:
+                _logger.warning(
+                    "frida_version_verify_failed",
+                    returncode=version_result.returncode,
+                    stderr=version_result.stderr.strip(),
+                )
                 return InstallResult(
                     success=False,
                     kind="python_package",
@@ -1191,6 +1205,10 @@ class ToolInstaller:
 
             version = _ToolInstallerVersion.parse(version_result.stdout.strip())
             if version is None:
+                _logger.warning(
+                    "frida_version_unparseable",
+                    stdout=version_result.stdout.strip(),
+                )
                 return InstallResult(
                     success=False,
                     kind="python_package",
@@ -1324,6 +1342,7 @@ class ToolInstaller:
                 downloaded = 0
                 bytes_since_last_log = 0
 
+                _logger.debug("download_file_opened", path=str(temp_path))
                 file_handle = await asyncio.to_thread(temp_path.open, "wb")
                 try:
                     async for chunk in response.aiter_bytes(chunk_size=_PROGRESS_CHUNK):
@@ -1354,6 +1373,7 @@ class ToolInstaller:
         finally:
             if not success:
                 await asyncio.to_thread(temp_path.unlink, missing_ok=True)
+                _logger.debug("download_partial_removed", path=str(temp_path))
 
         return temp_path
 
@@ -1812,8 +1832,8 @@ def _cmake_timeout(env_var: str, default_s: int) -> int:
         return default_s
     try:
         value = int(raw)
-    except ValueError:
-        _logger.exception("cmake_timeout_env_invalid", env_var=env_var, value=raw)
+    except ValueError as exc:
+        _logger.exception("cmake_timeout_env_invalid", env_var=env_var, value=raw, error=str(exc))
         return default_s
     return max(value, default_s)
 
@@ -2097,7 +2117,9 @@ def deploy_x64dbg_plugin_detailed(x64dbg_path: Path, tools_directory: Path) -> D
             continue
 
         try:
+            _logger.debug("plugin_deploy_target_dir_mkdir", target_dir=str(target_dir))
             target_dir.mkdir(parents=True, exist_ok=True)
+            _logger.debug("plugin_deploy_copy", source=str(source), target=str(target))
             shutil.copy2(source, target)
         except OSError as exc:
             _logger.warning(

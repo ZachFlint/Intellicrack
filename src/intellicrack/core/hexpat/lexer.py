@@ -46,9 +46,11 @@ class HexPatLexer:
         Returns:
             list[Token]: A list of Token objects ending with an EOF token.
         """
+        _logger.debug("hexpat_tokenize_started", file_path=self.file_path, source_length=len(self._source))
         while self._pos < len(self._source):
             self._scan_token()
         self._tokens.append(Token(TokenType.EOF, "", self._line, self._column))
+        _logger.debug("hexpat_tokenize_completed", file_path=self.file_path, token_count=len(self._tokens))
         return self._tokens
 
     def _peek(self, offset: int = 0) -> str:

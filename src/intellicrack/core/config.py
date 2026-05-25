@@ -624,11 +624,18 @@ class Config:
     def ensure_directories(self) -> None:
         """Create all configured directories if they don't exist."""
         for directory in (self.tools_directory, self.logs_directory, self.data_directory):
+            was_present = directory.exists()
             directory.mkdir(parents=True, exist_ok=True)
-            _logger.info(
-                "config_directory_ensured",
-                path=str(directory),
-            )
+            if not was_present:
+                _logger.info(
+                    "config_directory_created",
+                    path=str(directory),
+                )
+            else:
+                _logger.debug(
+                    "config_directory_present",
+                    path=str(directory),
+                )
 
     def get_provider_config(self, provider: ProviderName) -> ProviderConfig:
         """Get configuration for a specific provider.

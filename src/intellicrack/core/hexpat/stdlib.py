@@ -1937,14 +1937,17 @@ class BuiltinFunctions:
         else:
             msg = f"std::file::open unknown mode {mode_tag}"
             raise HexPatRuntimeError(msg)
+        _logger.info("hexpat_file_open_started", path=path_str, mode=open_mode)
         try:
             handle_obj: BinaryIO = path.open(open_mode)
         except OSError as exc:
+            _logger.exception("hexpat_file_open_failed", path=path_str, mode=open_mode)
             msg = f"std::file::open failed for {path_str!r}: {exc}"
             raise HexPatRuntimeError(msg) from exc
         handle_id = self._file_next_handle
         self._file_next_handle += 1
         self._file_handles[handle_id] = handle_obj
+        _logger.debug("hexpat_file_open_completed", path=path_str, handle=handle_id)
         return PatternValue(value=handle_id)
 
     def _file_close(self, *args: object) -> PatternValue:
@@ -1983,11 +1986,14 @@ class BuiltinFunctions:
             return PatternValue(value="")
         handle = self._file_handle_for(args[0])
         size = int(self._unwrap(args[1]))
+        _logger.debug("hexpat_file_read_started", handle=handle, size=size)
         try:
             data = self._file_handles[handle].read(size)
         except OSError as exc:
+            _logger.exception("hexpat_file_read_failed", handle=handle, size=size)
             msg = f"std::file::read failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_read_completed", handle=handle, bytes_read=len(data))
         return PatternValue(value=data.decode("utf-8", errors="replace"))
 
     def _file_write(self, *args: object) -> PatternValue:
@@ -2006,11 +2012,14 @@ class BuiltinFunctions:
             return PatternValue(value=None)
         handle = self._file_handle_for(args[0])
         payload = self._unwrap_bytes(args[1])
+        _logger.info("hexpat_file_write_started", handle=handle, size=len(payload))
         try:
             self._file_handles[handle].write(payload)
         except OSError as exc:
+            _logger.exception("hexpat_file_write_failed", handle=handle, size=len(payload))
             msg = f"std::file::write failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_write_completed", handle=handle, bytes_written=len(payload))
         return PatternValue(value=None)
 
     def _file_seek(self, *args: object) -> PatternValue:
@@ -2029,11 +2038,14 @@ class BuiltinFunctions:
             return PatternValue(value=None)
         handle = self._file_handle_for(args[0])
         offset = int(self._unwrap(args[1]))
+        _logger.debug("hexpat_file_seek_started", handle=handle, offset=offset)
         try:
             self._file_handles[handle].seek(offset)
         except OSError as exc:
+            _logger.exception("hexpat_file_seek_failed", handle=handle, offset=offset)
             msg = f"std::file::seek failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_seek_completed", handle=handle, offset=offset)
         return PatternValue(value=None)
 
     def _file_size(self, *args: object) -> PatternValue:
@@ -2051,14 +2063,17 @@ class BuiltinFunctions:
         if not args:
             return PatternValue(value=0)
         handle = self._file_handle_for(args[0])
+        _logger.debug("hexpat_file_size_started", handle=handle)
         try:
             current = self._file_handles[handle].tell()
             self._file_handles[handle].seek(0, os.SEEK_END)
             length = self._file_handles[handle].tell()
             self._file_handles[handle].seek(current)
         except OSError as exc:
+            _logger.exception("hexpat_file_size_failed", handle=handle)
             msg = f"std::file::size failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_size_completed", handle=handle, size=length)
         return PatternValue(value=length)
 
     def _file_resize(self, *args: object) -> PatternValue:
@@ -2077,11 +2092,14 @@ class BuiltinFunctions:
             return PatternValue(value=None)
         handle = self._file_handle_for(args[0])
         size = int(self._unwrap(args[1]))
+        _logger.info("hexpat_file_resize_started", handle=handle, new_size=size)
         try:
             self._file_handles[handle].truncate(size)
         except OSError as exc:
+            _logger.exception("hexpat_file_resize_failed", handle=handle, new_size=size)
             msg = f"std::file::resize failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_resize_completed", handle=handle, new_size=size)
         return PatternValue(value=None)
 
     def _file_flush(self, *args: object) -> PatternValue:
@@ -2099,11 +2117,14 @@ class BuiltinFunctions:
         if not args:
             return PatternValue(value=None)
         handle = self._file_handle_for(args[0])
+        _logger.debug("hexpat_file_flush_started", handle=handle)
         try:
             self._file_handles[handle].flush()
         except OSError as exc:
+            _logger.exception("hexpat_file_flush_failed", handle=handle)
             msg = f"std::file::flush failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_flush_completed", handle=handle)
         return PatternValue(value=None)
 
     def _file_remove(self, *args: object) -> PatternValue:
@@ -2164,11 +2185,14 @@ class BuiltinFunctions:
         if not path.is_absolute():
             msg = f"std::file::create_directories requires an absolute path, got {path_str!r}"
             raise HexPatRuntimeError(msg)
+        _logger.info("hexpat_file_create_directories_started", path=path_str)
         try:
             path.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
+            _logger.exception("hexpat_file_create_directories_failed", path=path_str)
             msg = f"std::file::create_directories failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
+        _logger.debug("hexpat_file_create_directories_completed", path=path_str)
         return PatternValue(value=None)
 
     def _random_set_seed(self, *args: object) -> PatternValue:

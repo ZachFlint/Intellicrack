@@ -352,8 +352,18 @@ class CredentialLoader:
             )
             return
 
-        text = self.env_path.read_text(encoding="utf-8")
-        parsed = _parse_env_text(text)
+        try:
+            text = self.env_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            _logger.exception("env_file_read_failed", path=str(self.env_path), error=str(exc))
+            return
+
+        try:
+            parsed = _parse_env_text(text)
+        except (ValueError, KeyError) as exc:
+            _logger.exception("env_file_parse_failed", path=str(self.env_path), error=str(exc))
+            return
+
         for key, value in parsed.items():
             self._env_vars[key] = value
             os.environ[key] = value
@@ -572,6 +582,9 @@ class CredentialLoader:
         Args:
             name: The environment variable name.
             value: The value to save.
+
+        Raises:
+            OSError: If the .env file cannot be read or written.
         """
         self.set_env_var(name, value)
         _logger.info("env_file_write_started", path=str(self.env_path), variable=name)
@@ -582,8 +595,12 @@ class CredentialLoader:
 
         existing_text = ""
         if self.env_path.exists():
-            with self.env_path.open("r", encoding="utf-8", newline="") as f:
-                existing_text = f.read()
+            try:
+                with self.env_path.open("r", encoding="utf-8", newline="") as f:
+                    existing_text = f.read()
+            except OSError as exc:
+                _logger.exception("env_file_read_existing_failed", path=str(self.env_path), error=str(exc))
+                raise
 
         eol = _detect_eol(existing_text) if existing_text else "\n"
 
@@ -620,8 +637,12 @@ class CredentialLoader:
             lines.append(f"{new_line_body}{eol}")
 
         self.env_path.parent.mkdir(parents=True, exist_ok=True)
-        with self.env_path.open("w", encoding="utf-8", newline="") as f:
-            f.writelines(lines)
+        try:
+            with self.env_path.open("w", encoding="utf-8", newline="") as f:
+                f.writelines(lines)
+        except OSError as exc:
+            _logger.exception("env_file_write_failed", path=str(self.env_path), error=str(exc))
+            raise
 
         _logger.info(
             "env_file_saved",
@@ -648,6 +669,9 @@ def create_env_template(path: Path) -> None:
 
     Args:
         path: Path where to create the .env.example file.
+
+    Raises:
+        OSError: If the template file cannot be written.
     """
     template = """# Intellicrack API Credentials
 # Copy this file to .env and fill in your API keys
@@ -674,8 +698,12 @@ OPENROUTER_API_KEY=sk-or-v1-...
 
     _logger.debug("env_template_creating", path=str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        f.write(template)
+    try:
+        with path.open("w", encoding="utf-8") as f:
+            f.write(template)
+    except OSError as exc:
+        _logger.exception("env_template_write_failed", path=str(path), error=str(exc))
+        raise
     _logger.debug("env_template_created", path=str(path))
 
 

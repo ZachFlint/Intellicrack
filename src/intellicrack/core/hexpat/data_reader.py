@@ -145,7 +145,7 @@ class DataReader:
                 range exceeds the data source length.
         """
         if offset < 0 or offset + length > self._length:
-            _logger.error(
+            _logger.warning(
                 "hexpat_data_reader_read_out_of_bounds",
                 offset=offset,
                 read_length=length,

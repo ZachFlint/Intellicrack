@@ -172,6 +172,7 @@ class ProcessMemoryDialog(QDialog):
         Args:
             pid: Process ID to query.
         """
+        _logger.info("process_regions_ctypes_started", pid=pid)
         access_mask = _PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ
         try:
             kernel32 = ctypes.windll.kernel32
@@ -190,6 +191,7 @@ class ProcessMemoryDialog(QDialog):
                 pid,
             )
             if not handle:
+                _logger.warning("process_regions_open_process_failed", pid=pid)
                 self._status_label.setText(f"Cannot open process {pid}")
                 _logger.warning(
                     "win32_open_process_failed",
@@ -205,6 +207,7 @@ class ProcessMemoryDialog(QDialog):
             regions: list[tuple[int, int, int, int]] = []
             query_calls = 0
 
+            _logger.debug("process_regions_virtual_query_started", pid=pid)
             while kernel32.VirtualQueryEx(
                 handle,
                 ctypes.c_void_p(address),

@@ -832,6 +832,7 @@ class ScriptManagerPanel(QWidget):
 
         if file_path:
             content: str | None = None
+            _logger.info("script_file_load_started", path=file_path)
             try:
                 content = Path(file_path).read_text(encoding="utf-8")
             except OSError:

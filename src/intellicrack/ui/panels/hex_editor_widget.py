@@ -1433,6 +1433,7 @@ class HexEditorWidget(QAbstractScrollArea):
         else:
             byte_val = (self._pending_nibble << 4) | nibble_val
             data = bytes([byte_val])
+            _logger.debug("hex_editor_hex_input_started", offset=self._cursor_offset, mode=self._edit_mode)
             self.about_to_modify.emit(self._cursor_offset)
 
             if self._edit_mode == "overwrite":
@@ -1441,6 +1442,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     try:
                         write_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
+                        _logger.debug("hex_editor_overwrite_completed", offset=self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
                         _logger.warning("hex_editor_overwrite_failed", offset=self._cursor_offset, exc_info=True)
             else:
@@ -1449,6 +1451,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     try:
                         insert_fn(self._cursor_offset, data)
                         self._modified_offsets.add(self._cursor_offset)
+                        _logger.debug("hex_editor_insert_completed", offset=self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
                         _logger.warning("hex_editor_insert_failed", offset=self._cursor_offset, exc_info=True)
 
@@ -1467,6 +1470,7 @@ class HexEditorWidget(QAbstractScrollArea):
             return
 
         data = char.encode("ascii")
+        _logger.debug("hex_editor_ascii_input_started", offset=self._cursor_offset, mode=self._edit_mode)
         self.about_to_modify.emit(self._cursor_offset)
 
         if self._edit_mode == "overwrite":
@@ -1475,6 +1479,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 try:
                     write_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
+                    _logger.debug("hex_editor_ascii_overwrite_completed", offset=self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.warning("hex_editor_ascii_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
@@ -1483,6 +1488,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 try:
                     insert_fn(self._cursor_offset, data)
                     self._modified_offsets.add(self._cursor_offset)
+                    _logger.debug("hex_editor_ascii_insert_completed", offset=self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.warning("hex_editor_ascii_insert_failed", offset=self._cursor_offset, exc_info=True)
 
@@ -1506,6 +1512,7 @@ class HexEditorWidget(QAbstractScrollArea):
             start = min(self._selection_start, self._selection_end)
             end = max(self._selection_start, self._selection_end)
             length = end - start + 1
+            _logger.info("hex_editor_delete_selection_started", start=start, length=length)
             for i in range(length):
                 self.about_to_modify.emit(start + i)
             try:
@@ -1514,17 +1521,20 @@ class HexEditorWidget(QAbstractScrollArea):
                 self._selection_end = -1
                 self.data_changed.emit()
                 self._move_cursor(start)
+                _logger.debug("hex_editor_delete_selection_completed", start=start, length=length)
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_delete_selection_failed", exc_info=True)
         else:
             offset = self._cursor_offset
             if backspace and offset > 0:
                 offset -= 1
+            _logger.debug("hex_editor_delete_byte_started", offset=offset, backspace=backspace)
             self.about_to_modify.emit(offset)
             try:
                 delete_fn(offset, 1)
                 self.data_changed.emit()
                 self._move_cursor(offset)
+                _logger.debug("hex_editor_delete_byte_completed", offset=offset)
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_delete_byte_failed", offset=offset, exc_info=True)
 
@@ -1535,20 +1545,30 @@ class HexEditorWidget(QAbstractScrollArea):
         if self._document is None:
             return
         undo_fn = getattr(self._document, "undo", None)
-        if callable(undo_fn) and undo_fn():
-            self._modified_offsets.clear()
-            self.data_changed.emit()
-            self._update_viewport()
+        if callable(undo_fn):
+            _logger.info("hex_editor_undo_started")
+            if undo_fn():
+                self._modified_offsets.clear()
+                self.data_changed.emit()
+                self._update_viewport()
+                _logger.info("hex_editor_undo_completed")
+            else:
+                _logger.debug("hex_editor_undo_noop")
 
     def _do_redo(self) -> None:
         """Perform redo operation."""
         if self._document is None:
             return
         redo_fn = getattr(self._document, "redo", None)
-        if callable(redo_fn) and redo_fn():
-            self._modified_offsets.clear()
-            self.data_changed.emit()
-            self._update_viewport()
+        if callable(redo_fn):
+            _logger.info("hex_editor_redo_started")
+            if redo_fn():
+                self._modified_offsets.clear()
+                self.data_changed.emit()
+                self._update_viewport()
+                _logger.info("hex_editor_redo_completed")
+            else:
+                _logger.debug("hex_editor_redo_noop")
 
     def _do_copy(self) -> None:
         """Copy selection to clipboard as hex string."""
@@ -1570,6 +1590,7 @@ class HexEditorWidget(QAbstractScrollArea):
         text = clipboard.text()
         if not text:
             return
+        _logger.info("hex_editor_paste_started", offset=self._cursor_offset, clipboard_length=len(text), mode=self._edit_mode)
 
         data: bytes = b""
         stripped = text.replace(" ", "").replace("\n", "").replace("\r", "")
@@ -1577,6 +1598,7 @@ class HexEditorWidget(QAbstractScrollArea):
             try:
                 data = bytes.fromhex(stripped)
             except ValueError:
+                _logger.debug("hex_editor_paste_hex_parse_failed_fallback_utf8", length=len(text))
                 data = text.encode("utf-8")
         else:
             data = text.encode("utf-8")
@@ -1594,6 +1616,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     write_fn(self._cursor_offset, data)
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
+                    _logger.debug("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
                 except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.warning("hex_editor_paste_overwrite_failed", offset=self._cursor_offset, exc_info=True)
         else:
@@ -1603,6 +1626,7 @@ class HexEditorWidget(QAbstractScrollArea):
                     insert_fn(self._cursor_offset, data)
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
+                    _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
                 except (RuntimeError, ValueError, IndexError, OSError):
                     _logger.warning("hex_editor_paste_insert_failed", offset=self._cursor_offset, exc_info=True)
 

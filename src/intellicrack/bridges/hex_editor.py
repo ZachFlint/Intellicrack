@@ -45,7 +45,7 @@ from intellicrack.bridges._pe_format import (
     unpack_section_header,
 )
 from intellicrack.bridges.base import BridgeCapabilities, ToolBridgeBase
-from intellicrack.core.logging import get_logger
+from intellicrack.core.logging import get_logger, log_binary_operation
 from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, ToolName, ToolParameter
 
 
@@ -1737,6 +1737,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If the Rust core is not available.
         """
+        _logger.info("open_file_started", path=path)
         if not self._hexcore_available or _hexcore_mod is None:
             msg = "intellicrack_hexcore not installed"
             raise RuntimeError(msg)
@@ -1762,8 +1763,6 @@ class HexEditorBridge(ToolBridgeBase):
 
         doc_len: int = new_doc.length()
         _logger.info("file_opened", path=str(canonical_path), size=doc_len)
-        from intellicrack.core.logging import log_binary_operation
-
         log_binary_operation("load", canonical_path, size=doc_len)
 
         if self.state_holder is not None:
@@ -1866,8 +1865,6 @@ class HexEditorBridge(ToolBridgeBase):
         _logger.info("bytes_write_started", offset=hex(offset), length=len(data))
         self.document.write_bytes(offset, data)
         _logger.info("bytes_written", offset=hex(offset), length=len(data))
-        from intellicrack.core.logging import log_binary_operation
-
         path = self._state.target_path or ""
         log_binary_operation("patch", path, offset=offset, length=len(data))
         if self.state_holder is not None:
@@ -2934,6 +2931,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
+        _logger.info("save_started", path=path)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -2960,8 +2958,6 @@ class HexEditorBridge(ToolBridgeBase):
                 self.state_holder.set_document(self.document, canonical_saved_path, source="bridge")
 
         _logger.info("file_saved", path=str(canonical_saved_path))
-        from intellicrack.core.logging import log_binary_operation
-
         log_binary_operation("save", canonical_saved_path)
         if self.state_holder is not None:
             self.state_holder.notify_document_saved(str(canonical_saved_path), source="bridge")
@@ -3186,6 +3182,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open or sandbox unavailable.
             TypeError: If sandbox bridge does not support create.
         """
+        _logger.info("save_to_sandbox_started", dest=dest_path, sandbox_type=sandbox_type)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -3203,9 +3200,11 @@ class HexEditorBridge(ToolBridgeBase):
         file_path_str = self.document.file_path()
         tmp_path: str | None = None
         if file_path_str is None:
+            _logger.debug("save_to_sandbox_temp_file_creating")
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
             self.document.save(tmp_path)
+            _logger.debug("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
 
         instance_id: str = ""
@@ -3217,6 +3216,7 @@ class HexEditorBridge(ToolBridgeBase):
                 raise TypeError(msg)
 
             raw_create: object
+            _logger.debug("save_to_sandbox_create_invoked", sandbox_type=sandbox_type)
             if _inspect_mod.iscoroutinefunction(create_fn):
                 raw_create = await create_fn(sandbox_type=sandbox_type)
             else:
@@ -3224,9 +3224,16 @@ class HexEditorBridge(ToolBridgeBase):
             create_result = cast("dict[str, Any]", raw_create)
 
             instance_id = str(create_result.get("instance_id", ""))
+            _logger.debug("save_to_sandbox_create_succeeded", instance_id=instance_id)
 
             copy_fn = getattr(sandbox_bridge, "copy_to", None)
             if callable(copy_fn):
+                _logger.debug(
+                    "save_to_sandbox_copy_to_invoked",
+                    instance_id=instance_id,
+                    source=file_path_str,
+                    dest=dest_path,
+                )
                 if _inspect_mod.iscoroutinefunction(copy_fn):
                     await copy_fn(instance_id=instance_id, source=file_path_str, dest=dest_path)
                 else:
@@ -3236,6 +3243,7 @@ class HexEditorBridge(ToolBridgeBase):
                         source=file_path_str,
                         dest=dest_path,
                     )
+                _logger.debug("save_to_sandbox_copy_to_succeeded", instance_id=instance_id)
             copy_succeeded = True
         finally:
             if not copy_succeeded and instance_id:
@@ -3287,6 +3295,11 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If no document is open or sandbox unavailable.
             TypeError: If sandbox bridge does not support run_binary.
         """
+        _logger.info(
+            "test_in_sandbox_started",
+            sandbox_type=sandbox_type,
+            time_limit=time_limit,
+        )
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -3313,6 +3326,12 @@ class HexEditorBridge(ToolBridgeBase):
 
         args_list = args.split() if args else None
 
+        _logger.debug(
+            "test_in_sandbox_run_binary_invoked",
+            binary_path=file_path_str,
+            sandbox_type=sandbox_type,
+            time_limit=time_limit,
+        )
         if _inspect_mod.iscoroutinefunction(run_fn):
             result = await run_fn(
                 binary_path=file_path_str,
@@ -4660,6 +4679,7 @@ class HexEditorBridge(ToolBridgeBase):
         """
         if original_path is None:
             return self._read_all_doc_bytes()
+        _logger.debug("resolve_patch_source_reading", path=original_path)
         return await asyncio.to_thread(Path(original_path).read_bytes)
 
     @staticmethod
@@ -5150,6 +5170,7 @@ class HexEditorBridge(ToolBridgeBase):
                 via the Rust ``HexDocument::list_process_memory_regions``
                 binding.
         """
+        _logger.info("list_process_regions_started", pid=pid)
         if os.name != "nt":
             _logger.error("list_process_regions_failed_non_windows", pid=pid, os_name=os.name)
             msg = "list_process_regions is Windows-only; the underlying API uses VirtualQueryEx"
@@ -5160,7 +5181,7 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         regions: list[tuple[int, int, int, int]] = _hexcore_mod.HexDocument.list_process_memory_regions(pid)
-        _logger.debug("process_regions_listed", pid=pid, count=len(regions), bridge=self.name)
+        _logger.info("process_regions_listed", pid=pid, count=len(regions), bridge=self.name)
         return [{"base_address": r[0], "size": r[1], "protection": r[2], "state": r[3]} for r in regions]
 
     async def open_process_memory(self, pid: int, address: int, size: int) -> dict[str, Any]:
@@ -5184,6 +5205,7 @@ class HexEditorBridge(ToolBridgeBase):
             RuntimeError: If hexcore native module is not available, or
                 the host is not Windows.
         """
+        _logger.info("open_process_memory_started", pid=pid, address=hex(address), size=size)
         if os.name != "nt":
             _logger.error("open_process_memory_failed_non_windows", pid=pid, os_name=os.name)
             msg = "open_process_memory is Windows-only"
@@ -6777,6 +6799,13 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             ToolError: If no document is open or fpdf2 is unavailable.
         """
+        _logger.info(
+            "export_annotated_pdf_started",
+            output_path=output_path,
+            start=start,
+            end=end,
+            bytes_per_row=bytes_per_row,
+        )
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -6801,7 +6830,7 @@ class HexEditorBridge(ToolBridgeBase):
             bookmarks,
             doc_len,
         )
-        _logger.debug("annotated_pdf_exported", path=result, start=actual_start, end=actual_end)
+        _logger.info("annotated_pdf_exported", path=result, start=actual_start, end=actual_end)
         return result
 
     @staticmethod
@@ -7347,6 +7376,7 @@ class HexEditorBridge(ToolBridgeBase):
             TypeError: If the JSON parses but does not have the expected
                 ``list[dict]`` shape.
         """
+        _logger.info("scan_die_signatures_started", db_path=db_path)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -7544,6 +7574,7 @@ class HexEditorBridge(ToolBridgeBase):
                 silently treating them as ``.ndb`` would mis-scan them;
                 callers must dispatch those formats explicitly.
         """
+        _logger.info("scan_clamav_signatures_started", db_path=db_path)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -7757,6 +7788,7 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
+        _logger.info("scan_custom_signatures_started", sig_file=sig_file)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
@@ -7976,12 +8008,14 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
+        _logger.info("import_patches_bps_started", original_path=original_path)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
         patch_data = base64.b64decode(patch_b64)
+        _logger.debug("import_patches_bps_source_read", path=original_path)
         source_data = await asyncio.to_thread(Path(original_path).read_bytes)
 
         if hasattr(self.document, "import_patches_bps"):
@@ -8098,12 +8132,14 @@ class HexEditorBridge(ToolBridgeBase):
         Raises:
             RuntimeError: If no document is open.
         """
+        _logger.info("import_patches_ups_started", original_path=original_path)
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
             msg = "no document open"
             raise RuntimeError(msg)
 
         patch_data = base64.b64decode(patch_b64)
+        _logger.debug("import_patches_ups_source_read", path=original_path)
         source_data = await asyncio.to_thread(Path(original_path).read_bytes)
 
         if hasattr(self.document, "import_patches_ups"):
@@ -8770,7 +8806,9 @@ def _generate_pdf(
     pdf.set_font("Courier", "", 6)
 
     _pdf_render_hex_rows(pdf, data, start_offset, bytes_per_row, bookmark_map, col_widths)
+    _logger.debug("generate_pdf_writing", path=output_path, byte_count=len(data))
     pdf.output(output_path)
+    _logger.debug("generate_pdf_written", path=output_path)
     return output_path
 
 

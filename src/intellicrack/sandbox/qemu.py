@@ -1041,6 +1041,7 @@ class QEMUSandbox(SandboxBase):
             _logger.debug("whpx_probe_no_powershell")
             return False
 
+        _logger.debug("whpx_feature_probe_started", pwsh=pwsh)
         try:
             ps_result = _subprocess_run(
                 [
@@ -1070,6 +1071,7 @@ class QEMUSandbox(SandboxBase):
         if bcdedit_path is None:
             _logger.debug("whpx_probe_no_bcdedit")
             return False
+        _logger.debug("whpx_bcdedit_probe_started", bcdedit=bcdedit_path)
         try:
             bcdedit_result = _subprocess_run(
                 [bcdedit_path, "/enum", "{current}"],
@@ -2495,6 +2497,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If execution fails.
         """
+        _logger.info("qemu_run_command_started", command=command, time_limit=time_limit, working_directory=working_directory)
         if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
 
@@ -2741,6 +2744,7 @@ python3 /mnt/shared/monitor/agent.py &
             SandboxError: If execution fails.
             ValueError: If the guest OS type is unsupported.
         """
+        _logger.info("qemu_run_binary_started", binary=str(binary_path), arg_count=len(args) if args else 0, monitor=monitor)
         if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
 
@@ -2945,6 +2949,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If copy fails.
         """
+        _logger.info("qemu_copy_to_sandbox_started", source=str(source), dest=dest)
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
@@ -2972,6 +2977,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If copy fails.
         """
+        _logger.info("qemu_copy_from_sandbox_started", source=source, dest=str(dest))
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
@@ -3002,6 +3008,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If snapshot fails.
         """
+        _logger.info("qemu_take_snapshot_started", snapshot_name=name)
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
@@ -3022,6 +3029,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If restore fails.
         """
+        _logger.info("qemu_restore_snapshot_started", snapshot_id=snapshot_id)
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
@@ -3198,6 +3206,7 @@ python3 /mnt/shared/monitor/agent.py &
             SandboxError: If the screenshot cannot be captured, stabilized,
                 or converted.
         """
+        _logger.info("qemu_capture_screenshot_started", output_path=str(output_path) if output_path else None)
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
@@ -3270,6 +3279,7 @@ python3 /mnt/shared/monitor/agent.py &
             SandboxError: If the sandbox is not running, QMP is disconnected,
                 or ``profile`` does not match the launch-time profile.
         """
+        _logger.info("qemu_apply_anti_evasion_started", profile=profile)
         if self.state.status != "running":
             _logger.error("anti_evasion_skipped_sandbox_not_running", state=self.state.status, profile=profile)
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -3350,6 +3360,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If memory dump fails.
         """
+        _logger.info("qemu_dump_memory_started", output_path=str(output_path) if output_path else None, target_pid=target_pid)
         if target_pid is not None:
             _logger.debug("qemu_dump_memory_ignoring_target_pid", target_pid=target_pid)
         if self._qmp is None:
@@ -3412,6 +3423,7 @@ python3 /mnt/shared/monitor/agent.py &
                 is configured, or neither extraction path produced any
                 files.
         """
+        _logger.info("qemu_extract_dropped_files_started", output_path=str(output_path) if output_path else None)
         if self.state.status != "running":
             _logger.error("dropped_files_extraction_skipped_not_running", state=self.state.status)
             raise SandboxError(_ERR_NOT_RUNNING)
@@ -3598,6 +3610,7 @@ python3 /mnt/shared/monitor/agent.py &
         Raises:
             SandboxError: If scan fails.
         """
+        _logger.info("qemu_yara_scan_started", rules_path=rules_path, scan_target=scan_target)
         yara = require_yara()
 
         if self._shared_folder is None:
