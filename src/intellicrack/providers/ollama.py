@@ -273,20 +273,24 @@ class OllamaProvider(LLMProviderBase):
     async def disconnect(self) -> None:
         """Disconnect from both local and cloud Ollama."""
         try:
-            await super().disconnect()
-            if self._local_client:
-                await self._local_client.aclose()
-                self._local_client = None
-            if self._cloud_client:
-                await self._cloud_client.aclose()
-                self._cloud_client = None
-            self._local_available = False
-            self._cloud_available = False
-            self._pending_usage = None
-            self._logger.info("ollama_disconnected", provider="ollama")
+            await self._disconnect_impl()
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self.connected = False
+
+    async def _disconnect_impl(self) -> None:
+        """Tear down local and cloud Ollama HTTP clients."""
+        await super().disconnect()
+        if self._local_client:
+            await self._local_client.aclose()
+            self._local_client = None
+        if self._cloud_client:
+            await self._cloud_client.aclose()
+            self._cloud_client = None
+        self._local_available = False
+        self._cloud_available = False
+        self._pending_usage = None
+        self._logger.info("ollama_disconnected", provider="ollama")
 
     @staticmethod
     def _raise_for_status(response: httpx.Response) -> None:
@@ -709,35 +713,13 @@ class OllamaProvider(LLMProviderBase):
 
         self._logger.debug("local_models_fetching", url=self._local_url)
         try:
-            response = await self._local_client.get(f"{self._local_url}/api/tags")
-            self._raise_for_status(response)
-            data = cast("OllamaTagsResponse", response.json())
-
-            raw_models = data.get("models", [])
-            model_names = [m.get("name", "") for m in raw_models if m.get("name")]
-            model_metadata = await self._fetch_model_metadata(
-                self._local_client,
-                self._local_url,
-                model_names,
+            await self._populate_ollama_models(
+                client=self._local_client,
+                base_url=self._local_url,
+                id_prefix="local/",
+                name_prefix="[Local] ",
+                models=models,
             )
-
-            for model_name in model_names:
-                ctx_window, has_tools = model_metadata.get(model_name, (4096, False))
-                name_lower = model_name.lower()
-                has_vision = any(v in name_lower for v in ("vision", "llava"))
-                models.append(
-                    ModelInfo(
-                        id=f"local/{model_name}",
-                        name=f"[Local] {model_name}",
-                        provider=ProviderName.OLLAMA,
-                        context_window=ctx_window,
-                        supports_tools=has_tools,
-                        supports_vision=has_vision,
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError) as e:
             self._logger.warning("local_models_list_failed", error=str(e))
 
@@ -754,39 +736,66 @@ class OllamaProvider(LLMProviderBase):
             return models
 
         try:
-            response = await self._cloud_client.get(f"{self.CLOUD_API_URL}/api/tags")
-            self._raise_for_status(response)
-            data = cast("OllamaTagsResponse", response.json())
-
-            raw_models = data.get("models", [])
-            model_names = [m.get("name", "") for m in raw_models if m.get("name")]
-            model_metadata = await self._fetch_model_metadata(
-                self._cloud_client,
-                self.CLOUD_API_URL,
-                model_names,
+            await self._populate_ollama_models(
+                client=self._cloud_client,
+                base_url=self.CLOUD_API_URL,
+                id_prefix="cloud/",
+                name_prefix="[Cloud] ",
+                models=models,
             )
-
-            for model_name in model_names:
-                ctx_window, has_tools = model_metadata.get(model_name, (4096, False))
-                name_lower = model_name.lower()
-                has_vision = any(v in name_lower for v in ("vision", "llava"))
-                models.append(
-                    ModelInfo(
-                        id=f"cloud/{model_name}",
-                        name=f"[Cloud] {model_name}",
-                        provider=ProviderName.OLLAMA,
-                        context_window=ctx_window,
-                        supports_tools=has_tools,
-                        supports_vision=has_vision,
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ProviderError) as e:
             self._logger.warning("cloud_models_list_failed", error=str(e))
 
         return models
+
+    async def _populate_ollama_models(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        id_prefix: str,
+        name_prefix: str,
+        models: list[ModelInfo],
+    ) -> None:
+        """Query ``/api/tags`` and append parsed models to ``models``.
+
+        Args:
+            client: HTTP client to use for the request.
+            base_url: Base URL of the Ollama endpoint.
+            id_prefix: Prefix prepended to each model's ``id``.
+            name_prefix: Prefix prepended to each model's display name.
+            models: Destination list mutated in place with parsed
+                ``ModelInfo`` entries.
+        """
+        response = await client.get(f"{base_url}/api/tags")
+        self._raise_for_status(response)
+        data = cast("OllamaTagsResponse", response.json())
+
+        raw_models = data.get("models", [])
+        model_names = [m.get("name", "") for m in raw_models if m.get("name")]
+        model_metadata = await self._fetch_model_metadata(
+            client,
+            base_url,
+            model_names,
+        )
+
+        for model_name in model_names:
+            ctx_window, has_tools = model_metadata.get(model_name, (4096, False))
+            name_lower = model_name.lower()
+            has_vision = any(v in name_lower for v in ("vision", "llava"))
+            models.append(
+                ModelInfo(
+                    id=f"{id_prefix}{model_name}",
+                    name=f"{name_prefix}{model_name}",
+                    provider=ProviderName.OLLAMA,
+                    context_window=ctx_window,
+                    supports_tools=has_tools,
+                    supports_vision=has_vision,
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                ),
+            )
 
     def _get_client_and_model(self, model: str) -> tuple[httpx.AsyncClient, str, str]:
         """Get appropriate client and base URL for the specified model.
@@ -852,34 +861,55 @@ class OllamaProvider(LLMProviderBase):
                 window (defaulting to 4096 on failure), and whether its
                 template declares a ``.Tools`` directive.
             """
-            ctx_window = 4096
-            has_tools = False
             try:
-                resp = await client.post(
-                    f"{base_url}/api/show",
-                    json={"name": name},
-                )
-                self._raise_for_status(resp)
-                show_data = cast("OllamaShowResponse", resp.json())
-                params_str: str = show_data.get("parameters", "")
-                for line in params_str.splitlines():
-                    parts = line.strip().split()
-                    min_parts = 2
-                    if len(parts) >= min_parts and parts[0] == "num_ctx":
-                        ctx_window = int(parts[1])
-                template: str = show_data.get("template", "")
-                if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
-                    has_tools = True
+                ctx_window, has_tools = await self._query_model_show(client, base_url, name)
             except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError, ProviderError) as show_exc:
                 self._logger.warning(
                     "ollama_show_failed",
                     model=name,
                     error=str(show_exc),
                 )
+                ctx_window, has_tools = 4096, False
             return name, ctx_window, has_tools
 
         results = await asyncio.gather(*[_query_single(n) for n in model_names])
         return {name: (ctx, tools) for name, ctx, tools in results}
+
+    async def _query_model_show(
+        self,
+        client: httpx.AsyncClient,
+        base_url: str,
+        name: str,
+    ) -> tuple[int, bool]:
+        """Query ``/api/show`` and parse the context window plus tool support.
+
+        Args:
+            client: HTTP client to use for the request.
+            base_url: Ollama base URL to query.
+            name: Model name being inspected.
+
+        Returns:
+            tuple[int, bool]: ``(context_window, supports_tools)`` parsed
+            from the ``/api/show`` response.
+        """
+        ctx_window = 4096
+        has_tools = False
+        resp = await client.post(
+            f"{base_url}/api/show",
+            json={"name": name},
+        )
+        self._raise_for_status(resp)
+        show_data = cast("OllamaShowResponse", resp.json())
+        params_str: str = show_data.get("parameters", "")
+        for line in params_str.splitlines():
+            parts = line.strip().split()
+            min_parts = 2
+            if len(parts) >= min_parts and parts[0] == "num_ctx":
+                ctx_window = int(parts[1])
+        template: str = show_data.get("template", "")
+        if re.search(r"\{\{-?\s*\.Tools\s*-?\}\}", template):
+            has_tools = True
+        return ctx_window, has_tools
 
     async def chat(
         self,
@@ -1346,30 +1376,16 @@ class OllamaProvider(LLMProviderBase):
         accumulated_tool_calls: dict[str, dict[str, Any]] = {}
         tool_call_order: list[str] = []
         try:
-            async with client.stream(
-                "POST",
-                f"{base_url}{endpoint}",
-                json=request_body,
-            ) as response:
-                self._raise_for_status(response)
-                async for line in response.aiter_lines():
-                    if self._cancel_requested:
-                        break
-                    chunk_data = self._safe_parse_stream_json(line, logger=self._logger)
-                    if chunk_data is None:
-                        continue
-                    last_chunk_data = chunk_data
-                    message_obj_raw: object = last_chunk_data.get("message")
-                    if isinstance(message_obj_raw, dict):
-                        message_obj: dict[str, Any] = cast("dict[str, Any]", message_obj_raw)
-                        content_part = message_obj.get("content")
-                        if isinstance(content_part, str) and content_part:
-                            yield content_part
-                        self._accumulate_native_tool_call_deltas(
-                            message_obj,
-                            accumulated_tool_calls,
-                            tool_call_order,
-                        )
+            async for content_part in self._iter_native_stream_chunks(
+                client=client,
+                base_url=base_url,
+                endpoint=endpoint,
+                request_body=request_body,
+                last_chunk_data=last_chunk_data,
+                accumulated_tool_calls=accumulated_tool_calls,
+                tool_call_order=tool_call_order,
+            ):
+                yield content_part
         except (AuthenticationError, RateLimitError, ProviderError) as exc:
             log_passthrough(
                 self._logger,
@@ -1393,6 +1409,62 @@ class OllamaProvider(LLMProviderBase):
             else:
                 self._pending_tool_calls = self._parse_ollama_tool_calls(last_chunk_data)
             self._record_usage_from_chunk(last_chunk_data)
+
+    async def _iter_native_stream_chunks(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        endpoint: str,
+        request_body: dict[str, object],
+        last_chunk_data: dict[str, Any],
+        accumulated_tool_calls: dict[str, dict[str, Any]],
+        tool_call_order: list[str],
+    ) -> AsyncIterator[str]:
+        """Open the native Ollama stream and yield content chunks.
+
+        Mutates ``last_chunk_data`` in place so the caller can finalise
+        tool calls and usage after the stream completes, and accumulates
+        tool-call deltas into ``accumulated_tool_calls`` / ``tool_call_order``.
+
+        Args:
+            client: HTTP client to use.
+            base_url: Ollama base URL.
+            endpoint: ``/api/chat`` path appended to ``base_url``.
+            request_body: Fully constructed request payload.
+            last_chunk_data: Dict updated with the most recent NDJSON chunk.
+            accumulated_tool_calls: Mapping from call id to merged
+                tool-call payload, updated as deltas arrive.
+            tool_call_order: Insertion-order list of unique call ids.
+
+        Yields:
+            str: Content chunks as they arrive.
+        """
+        async with client.stream(
+            "POST",
+            f"{base_url}{endpoint}",
+            json=request_body,
+        ) as response:
+            self._raise_for_status(response)
+            async for line in response.aiter_lines():
+                if self._cancel_requested:
+                    break
+                chunk_data = self._safe_parse_stream_json(line, logger=self._logger)
+                if chunk_data is None:
+                    continue
+                last_chunk_data.clear()
+                last_chunk_data.update(chunk_data)
+                message_obj_raw: object = chunk_data.get("message")
+                if isinstance(message_obj_raw, dict):
+                    message_obj: dict[str, Any] = cast("dict[str, Any]", message_obj_raw)
+                    content_part = message_obj.get("content")
+                    if isinstance(content_part, str) and content_part:
+                        yield content_part
+                    self._accumulate_native_tool_call_deltas(
+                        message_obj,
+                        accumulated_tool_calls,
+                        tool_call_order,
+                    )
 
     @staticmethod
     def _accumulate_native_tool_call_deltas(
@@ -1499,39 +1571,14 @@ class OllamaProvider(LLMProviderBase):
         """
         accumulated_tool_calls: dict[int, dict[str, Any]] = {}
         try:
-            async with client.stream(
-                "POST",
-                f"{base_url}{endpoint}",
-                json=request_body,
-            ) as response:
-                self._raise_for_status(response)
-                async for line in response.aiter_lines():
-                    if self._cancel_requested:
-                        break
-                    if not line.startswith("data: "):
-                        continue
-                    payload = line[6:].strip()
-                    if not payload:
-                        continue
-                    if payload == "[DONE]":
-                        break
-                    chunk_data = self._safe_parse_stream_json(payload, logger=self._logger)
-                    if chunk_data is None:
-                        continue
-                    self._record_usage_from_openai_payload(chunk_data)
-                    choices = cast("list[dict[str, Any]]", chunk_data.get("choices") or [])
-                    if not choices:
-                        continue
-                    delta: dict[str, Any] = cast("dict[str, Any]", choices[0].get("delta", {}) or {})
-                    content_delta = delta.get("content")
-                    if isinstance(content_delta, str) and content_delta:
-                        yield content_delta
-                    tc_deltas = delta.get("tool_calls")
-                    if isinstance(tc_deltas, list):
-                        self._accumulate_openai_tool_call_deltas(
-                            cast("list[dict[str, Any]]", tc_deltas),
-                            accumulated_tool_calls,
-                        )
+            async for content_delta in self._iter_openai_compatible_chunks(
+                client=client,
+                base_url=base_url,
+                endpoint=endpoint,
+                request_body=request_body,
+                accumulated_tool_calls=accumulated_tool_calls,
+            ):
+                yield content_delta
         except (AuthenticationError, RateLimitError, ProviderError) as exc:
             log_passthrough(
                 self._logger,
@@ -1548,6 +1595,66 @@ class OllamaProvider(LLMProviderBase):
 
         if not self._cancel_requested and accumulated_tool_calls:
             self._pending_tool_calls = self._finalize_openai_tool_calls(accumulated_tool_calls)
+
+    async def _iter_openai_compatible_chunks(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        base_url: str,
+        endpoint: str,
+        request_body: dict[str, object],
+        accumulated_tool_calls: dict[int, dict[str, Any]],
+    ) -> AsyncIterator[str]:
+        """Open the OpenAI-compatible SSE stream and yield content chunks.
+
+        Accumulates tool-call deltas into ``accumulated_tool_calls`` and
+        updates ``self._pending_usage`` as usage frames arrive.
+
+        Args:
+            client: HTTP client to use.
+            base_url: Base URL of the cloud Ollama instance.
+            endpoint: ``/v1/chat/completions`` path appended to
+                ``base_url``.
+            request_body: Fully constructed OpenAI-compatible payload.
+            accumulated_tool_calls: Index-keyed mapping of merged
+                tool-call payloads, updated as deltas arrive.
+
+        Yields:
+            str: Content chunks as they arrive.
+        """
+        async with client.stream(
+            "POST",
+            f"{base_url}{endpoint}",
+            json=request_body,
+        ) as response:
+            self._raise_for_status(response)
+            async for line in response.aiter_lines():
+                if self._cancel_requested:
+                    break
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if not payload:
+                    continue
+                if payload == "[DONE]":
+                    break
+                chunk_data = self._safe_parse_stream_json(payload, logger=self._logger)
+                if chunk_data is None:
+                    continue
+                self._record_usage_from_openai_payload(chunk_data)
+                choices = cast("list[dict[str, Any]]", chunk_data.get("choices") or [])
+                if not choices:
+                    continue
+                delta: dict[str, Any] = cast("dict[str, Any]", choices[0].get("delta", {}) or {})
+                content_delta = delta.get("content")
+                if isinstance(content_delta, str) and content_delta:
+                    yield content_delta
+                tc_deltas = delta.get("tool_calls")
+                if isinstance(tc_deltas, list):
+                    self._accumulate_openai_tool_call_deltas(
+                        cast("list[dict[str, Any]]", tc_deltas),
+                        accumulated_tool_calls,
+                    )
 
     @staticmethod
     def _accumulate_openai_tool_call_deltas(
@@ -1694,21 +1801,8 @@ class OllamaProvider(LLMProviderBase):
             actual_model = model_name[6:]
 
         try:
-            async with self._local_client.stream(
-                "POST",
-                f"{self._local_url}/api/pull",
-                json={"name": actual_model},
-            ) as response:
-                self._raise_for_status(response)
-                async for line in response.aiter_lines():
-                    if line:
-                        try:
-                            data = json.loads(line)
-                        except json.JSONDecodeError:
-                            self._logger.warning("pull_status_json_decode_failed")
-                            continue
-                        if status := data.get("status", ""):
-                            yield status
+            async for status in self._iter_pull_progress(actual_model):
+                yield status
         except (AuthenticationError, RateLimitError, ProviderError) as exc:
             log_passthrough(
                 self._logger,
@@ -1721,3 +1815,34 @@ class OllamaProvider(LLMProviderBase):
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self._logger.warning("ollama_pull_failed", model=actual_model, error=str(e))
             raise ProviderError(_ERR_TRANSPORT % e, provider_name="ollama") from e
+
+    async def _iter_pull_progress(self, actual_model: str) -> AsyncIterator[str]:
+        """Stream progress events for ``/api/pull`` on the local instance.
+
+        Args:
+            actual_model: Resolved model name (without the ``local/``
+                prefix) to pull.
+
+        Yields:
+            str: ``status`` strings emitted by Ollama during the pull.
+
+        Raises:
+            ProviderError: If the local Ollama client is unavailable.
+        """
+        if self._local_client is None:
+            raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE, provider_name="ollama")
+        async with self._local_client.stream(
+            "POST",
+            f"{self._local_url}/api/pull",
+            json={"name": actual_model},
+        ) as response:
+            self._raise_for_status(response)
+            async for line in response.aiter_lines():
+                if line:
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        self._logger.warning("pull_status_json_decode_failed")
+                        continue
+                    if status := data.get("status", ""):
+                        yield status

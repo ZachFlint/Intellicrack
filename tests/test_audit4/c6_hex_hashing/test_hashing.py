@@ -340,6 +340,37 @@ def _build_synthetic_payload(size: int) -> bytes:
     return body
 
 
+def _run_custom_crc_calc(
+    harness: HashingHarness,
+    qtbot: QtBot,
+) -> tuple[object, tracemalloc.Snapshot]:
+    """Construct the CRC dialog, run ``_calculate``, and capture a snapshot.
+
+    Args:
+        harness: HashingHarness providing the document and parent widget.
+        qtbot: pytest-qt qtbot used to wait on the dialog's signal.
+
+    Returns:
+        tuple[object, tracemalloc.Snapshot]: The signal blocker and the
+        tracemalloc snapshot taken while the worker was running.
+    """
+    dlg = CustomCrcDialog(
+        file_path=harness.resolve_custom_crc_file_path(),
+        document=harness.document,
+        length=harness.document.length(),
+        parent=harness,
+        worker_parent=None,
+    )
+    _configure_crc_dialog(dlg)
+
+    calculate_fn = getattr(dlg, "_calculate")
+    with qtbot.waitSignal(dlg.crc_computed, timeout=120_000) as blocker:
+        calculate_fn()
+        assert dlg.worker() is not None
+        snapshot_during = tracemalloc.take_snapshot()
+    return blocker, snapshot_during
+
+
 def _configure_crc_dialog(dlg: CustomCrcDialog) -> None:
     """Pre-populate ``dlg`` with the test's CRC-32 parameter set.
 
@@ -402,20 +433,7 @@ class TestCustomCrcOffloaded:
         tracemalloc.start()
         snapshot_before = tracemalloc.take_snapshot()
         try:
-            dlg = CustomCrcDialog(
-                file_path=harness.resolve_custom_crc_file_path(),
-                document=harness.document,
-                length=harness.document.length(),
-                parent=harness,
-                worker_parent=None,
-            )
-            _configure_crc_dialog(dlg)
-
-            calculate_fn = getattr(dlg, "_calculate")
-            with qtbot.waitSignal(dlg.crc_computed, timeout=120_000) as blocker:
-                calculate_fn()
-                assert dlg.worker() is not None
-                snapshot_during = tracemalloc.take_snapshot()
+            blocker, snapshot_during = _run_custom_crc_calc(harness, qtbot)
         finally:
             tracemalloc.stop()
             harness.deleteLater()

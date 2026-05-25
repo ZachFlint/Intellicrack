@@ -38,6 +38,9 @@ from intellicrack.core.types import ToolError, ToolName
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import IO
+
+    import pefile
 
 
 _logger = get_logger(__name__)
@@ -487,41 +490,55 @@ def _read_pe_version_info(exe_path: Path) -> str | None:
         return None
 
     try:
-        pe.parse_data_directories(directories=[_pefile_mod.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
-
-        file_info_attr: Any = getattr(pe, "FileInfo", None) or []
-        file_info: list[Any] = list(file_info_attr) if file_info_attr else []
-        flat: list[Any] = []
-        for entry in file_info:
-            if isinstance(entry, list):
-                flat.extend(cast("list[Any]", entry))
-            else:
-                flat.append(entry)
-
-        preferred_keys = ("FileVersion", "ProductVersion")
-        for fi in flat:
-            tables_attr: Any = getattr(fi, "StringTable", []) or []
-            tables: list[Any] = list(tables_attr) if tables_attr else []
-            for st in tables:
-                entries_attr: Any = getattr(st, "entries", {}) or {}
-                entries: dict[bytes, bytes] = dict(entries_attr) if entries_attr else {}
-                for key_name in preferred_keys:
-                    if raw_value := entries.get(key_name.encode("utf-8")):
-                        try:
-                            return raw_value.decode("utf-8", errors="replace").strip()
-                        except (AttributeError, UnicodeError) as exc:
-                            _logger.warning("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
-                            continue
-
-        vs_fixed_attr: Any = getattr(pe, "VS_FIXEDFILEINFO", None) or []
-        vs_fixed: list[Any] = list(vs_fixed_attr) if vs_fixed_attr else []
-        for ffi in vs_fixed:
-            ms = int(getattr(ffi, "FileVersionMS", 0))
-            ls = int(getattr(ffi, "FileVersionLS", 0))
-            if ms or ls:
-                return f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+        return _extract_pe_version_string(pe, exe_path)
     finally:
         pe.close()
+
+
+def _extract_pe_version_string(pe: pefile.PE, exe_path: Path) -> str | None:
+    """Walk the parsed PE structure and return the first usable version string.
+
+    Args:
+        pe: A parsed ``pefile.PE`` instance.
+        exe_path: Path of the PE on disk, used for logging context.
+
+    Returns:
+        str | None: The best version string available, or None when no
+        readable version information is present.
+    """
+    pe.parse_data_directories(directories=[_pefile_mod.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]])
+
+    file_info_attr: Any = getattr(pe, "FileInfo", None) or []
+    file_info: list[Any] = list(file_info_attr) if file_info_attr else []
+    flat: list[Any] = []
+    for entry in file_info:
+        if isinstance(entry, list):
+            flat.extend(cast("list[Any]", entry))
+        else:
+            flat.append(entry)
+
+    preferred_keys = ("FileVersion", "ProductVersion")
+    for fi in flat:
+        tables_attr: Any = getattr(fi, "StringTable", []) or []
+        tables: list[Any] = list(tables_attr) if tables_attr else []
+        for st in tables:
+            entries_attr: Any = getattr(st, "entries", {}) or {}
+            entries: dict[bytes, bytes] = dict(entries_attr) if entries_attr else {}
+            for key_name in preferred_keys:
+                if raw_value := entries.get(key_name.encode("utf-8")):
+                    try:
+                        return raw_value.decode("utf-8", errors="replace").strip()
+                    except (AttributeError, UnicodeError) as exc:
+                        _logger.warning("pe_version_decode_failed", exe=str(exe_path), key=key_name, error=str(exc))
+                        continue
+
+    vs_fixed_attr: Any = getattr(pe, "VS_FIXEDFILEINFO", None) or []
+    vs_fixed: list[Any] = list(vs_fixed_attr) if vs_fixed_attr else []
+    for ffi in vs_fixed:
+        ms = int(getattr(ffi, "FileVersionMS", 0))
+        ls = int(getattr(ffi, "FileVersionLS", 0))
+        if ms or ls:
+            return f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
 
     return None
 
@@ -814,28 +831,52 @@ class ToolInstaller:
             return None
 
         try:
-            cmd = list(tool_info.version_command)
-            process_manager = ProcessManager.get_instance()
-
-            exe = path / cmd[0]
-            if await asyncio.to_thread(exe.exists):
-                cmd[0] = str(exe)
-
-            is_dir = await asyncio.to_thread(path.is_dir)
-            _logger.debug("tool_version_probe_starting", tool=tool.value, cmd=cmd)
-            result = await process_manager.run_tracked_async(
-                cmd,
-                name=f"{tool.value}-version",
-                process_timeout=30,
-                cwd=str(path) if is_dir else None,
-            )
-
-            if result.returncode == 0:
-                return _ToolInstallerVersion.parse(result.stdout.strip())
-
+            return await self._probe_version_command(tool, path, tool_info)
         except (TimeoutExpired, OSError):
             _logger.exception("version_check_failed", tool=str(tool))
 
+        return None
+
+    @staticmethod
+    async def _probe_version_command(
+        tool: ToolName,
+        path: Path,
+        tool_info: ToolInfo,
+    ) -> ToolVersion | None:
+        """Execute the configured version probe and parse its output.
+
+        Both :class:`TimeoutExpired` and :class:`OSError` raised by the
+        process manager propagate to the caller, which wraps the call in
+        ``try/except`` to convert them into a ``None`` return.
+
+        Args:
+            tool: Tool being probed (used for logging and process naming).
+            path: Installation root or executable path for the tool.
+            tool_info: Registry entry describing the tool, including the
+                ``version_command`` to invoke.
+
+        Returns:
+            ToolVersion | None: Parsed version when the probe exits
+            cleanly with a recognised version string, otherwise None.
+        """
+        cmd = list(tool_info.version_command)
+        process_manager = ProcessManager.get_instance()
+
+        exe = path / cmd[0]
+        if await asyncio.to_thread(exe.exists):
+            cmd[0] = str(exe)
+
+        is_dir = await asyncio.to_thread(path.is_dir)
+        _logger.debug("tool_version_probe_starting", tool=tool.value, cmd=cmd)
+        result = await process_manager.run_tracked_async(
+            cmd,
+            name=f"{tool.value}-version",
+            process_timeout=30,
+            cwd=str(path) if is_dir else None,
+        )
+
+        if result.returncode == 0:
+            return _ToolInstallerVersion.parse(result.stdout.strip())
         return None
 
     @staticmethod
@@ -1055,73 +1096,112 @@ class ToolInstaller:
             )
 
         try:
-            _logger.info("tool_installing", tool=tool_info.display_name)
-
-            download_url = await self._get_latest_release_url(tool)
-            if download_url is None:
-                return InstallResult(
-                    success=False,
-                    error=f"Could not find download URL for {tool_info.display_name}",
-                )
-
-            download_path = await self._download_file(download_url)
-            if download_path is None:
-                return InstallResult(
-                    success=False,
-                    error=f"Download failed for {tool_info.display_name}",
-                )
-
-            try:
-                install_path = await self._extract_archive(download_path, tool)
-            finally:
-                await asyncio.to_thread(download_path.unlink, missing_ok=True)
-                _logger.debug("download_temp_unlinked", path=str(download_path))
-
-            if install_path is None:
-                return InstallResult(
-                    success=False,
-                    error=f"{_ERR_EMPTY_ARCHIVE} for {tool_info.display_name}",
-                )
-
-            exe_present = await self._has_expected_executable(install_path, tool_info)
-            if not exe_present:
-                return InstallResult(
-                    success=False,
-                    path=install_path,
-                    error=f"{_ERR_NO_EXE_AFTER_INSTALL}: {tool_info.display_name}",
-                )
-
-            version = await self.get_version(tool, install_path)
-            if version is None:
-                return InstallResult(
-                    success=False,
-                    path=install_path,
-                    error=f"{_ERR_NO_VERSION_AFTER_INSTALL}: {tool_info.display_name}",
-                )
-            if not self._meets_min_version(version, tool_info):
-                return InstallResult(
-                    success=False,
-                    path=install_path,
-                    version=version,
-                    error=(f"installed version {version} below minimum {tool_info.min_version} for {tool_info.display_name}"),
-                )
-
-            _logger.info(
-                "tool_installed",
-                tool=tool_info.display_name,
-                version=str(version),
-                path=str(install_path),
-            )
-
-            return InstallResult(
-                success=True,
-                path=install_path,
-                version=version,
-            )
-
+            return await self._install_archive_tool(tool, tool_info)
         except (OSError, RuntimeError, ValueError, zipfile.BadZipFile, httpx.HTTPError, ToolError) as e:
             _logger.exception("tool_install_failed", tool=tool_info.display_name)
             return InstallResult(success=False, error=_format_exception(e))
+
+    async def _install_archive_tool(self, tool: ToolName, tool_info: ToolInfo) -> InstallResult:
+        """Run the download/extract/verify pipeline for an archive-backed tool.
+
+        Filesystem and network failures (OSError, RuntimeError, ValueError,
+        zipfile.BadZipFile, httpx.HTTPError, ToolError) raised by helper
+        steps propagate to the caller, which converts them into a
+        structured failure :class:`InstallResult`.
+
+        Args:
+            tool: Tool registry identifier being installed.
+            tool_info: Registry entry describing download and verification
+                requirements for ``tool``.
+
+        Returns:
+            InstallResult: Final install result. Failures are returned
+            inline; only unexpected exceptions propagate to the caller.
+        """
+        _logger.info("tool_installing", tool=tool_info.display_name)
+
+        download_url = await self._get_latest_release_url(tool)
+        if download_url is None:
+            return InstallResult(
+                success=False,
+                error=f"Could not find download URL for {tool_info.display_name}",
+            )
+
+        download_path = await self._download_file(download_url)
+        if download_path is None:
+            return InstallResult(
+                success=False,
+                error=f"Download failed for {tool_info.display_name}",
+            )
+
+        try:
+            install_path = await self._extract_archive(download_path, tool)
+        finally:
+            await asyncio.to_thread(download_path.unlink, missing_ok=True)
+            _logger.debug("download_temp_unlinked", path=str(download_path))
+
+        if install_path is None:
+            return InstallResult(
+                success=False,
+                error=f"{_ERR_EMPTY_ARCHIVE} for {tool_info.display_name}",
+            )
+
+        return await self._finalize_archive_install(tool, tool_info, install_path)
+
+    async def _finalize_archive_install(
+        self,
+        tool: ToolName,
+        tool_info: ToolInfo,
+        install_path: Path,
+    ) -> InstallResult:
+        """Verify executables and version constraints after extraction.
+
+        Args:
+            tool: Tool being installed.
+            tool_info: Registry entry describing executables and minimum
+                version requirements.
+            install_path: Directory the archive was extracted into.
+
+        Returns:
+            InstallResult: Success when an expected executable and a
+            version that meets ``tool_info.min_version`` are present,
+            otherwise a structured failure result.
+        """
+        exe_present = await self._has_expected_executable(install_path, tool_info)
+        if not exe_present:
+            return InstallResult(
+                success=False,
+                path=install_path,
+                error=f"{_ERR_NO_EXE_AFTER_INSTALL}: {tool_info.display_name}",
+            )
+
+        version = await self.get_version(tool, install_path)
+        if version is None:
+            return InstallResult(
+                success=False,
+                path=install_path,
+                error=f"{_ERR_NO_VERSION_AFTER_INSTALL}: {tool_info.display_name}",
+            )
+        if not self._meets_min_version(version, tool_info):
+            return InstallResult(
+                success=False,
+                path=install_path,
+                version=version,
+                error=(f"installed version {version} below minimum {tool_info.min_version} for {tool_info.display_name}"),
+            )
+
+        _logger.info(
+            "tool_installed",
+            tool=tool_info.display_name,
+            version=str(version),
+            path=str(install_path),
+        )
+
+        return InstallResult(
+            success=True,
+            path=install_path,
+            version=version,
+        )
 
     @staticmethod
     async def _has_expected_executable(install_path: Path, tool_info: ToolInfo) -> bool:
@@ -1156,73 +1236,7 @@ class ToolInstaller:
             the filesystem.
         """
         try:
-            _logger.info("frida_pip_installing", tool="frida")
-            process_manager = ProcessManager.get_instance()
-
-            result = await process_manager.run_tracked_async(
-                [sys.executable, "-m", "pip", "install", "--upgrade", "frida", "frida-tools"],
-                name="pip-install-frida",
-                process_timeout=_PIP_TIMEOUT_S,
-            )
-
-            if result.returncode != 0:
-                _logger.warning(
-                    "frida_pip_install_failed",
-                    returncode=result.returncode,
-                    stderr=result.stderr.strip(),
-                )
-                return InstallResult(
-                    success=False,
-                    kind="python_package",
-                    error=f"pip install failed (rc={result.returncode}): {result.stderr.strip()}",
-                )
-
-            try:
-                version_result = await process_manager.run_tracked_async(
-                    [sys.executable, "-c", "import frida; print(frida.__version__)"],
-                    name="frida-version-verify",
-                    process_timeout=_VERSION_PROBE_TIMEOUT_S,
-                )
-            except TimeoutExpired:
-                _logger.warning("frida_version_probe_timeout_after_install", timeout_s=_VERSION_PROBE_TIMEOUT_S)
-                return InstallResult(
-                    success=False,
-                    kind="python_package",
-                    error="frida version probe timed out after install",
-                )
-
-            if version_result.returncode != 0:
-                _logger.warning(
-                    "frida_version_verify_failed",
-                    returncode=version_result.returncode,
-                    stderr=version_result.stderr.strip(),
-                )
-                return InstallResult(
-                    success=False,
-                    kind="python_package",
-                    error=(f"frida version probe failed (rc={version_result.returncode}): {version_result.stderr.strip()}"),
-                )
-
-            version = _ToolInstallerVersion.parse(version_result.stdout.strip())
-            if version is None:
-                _logger.warning(
-                    "frida_version_unparseable",
-                    stdout=version_result.stdout.strip(),
-                )
-                return InstallResult(
-                    success=False,
-                    kind="python_package",
-                    error=(f"frida installed but version probe returned unparseable output: {version_result.stdout.strip()!r}"),
-                )
-
-            _logger.info("frida_installed", version=str(version))
-            return InstallResult(
-                success=True,
-                path=None,
-                version=version,
-                kind="python_package",
-            )
-
+            return await ToolInstaller._install_frida_impl()
         except (OSError, RuntimeError, ValueError, CalledProcessError) as e:
             _logger.exception("pip_install_unexpected_error")
             return InstallResult(
@@ -1230,6 +1244,102 @@ class ToolInstaller:
                 kind="python_package",
                 error=_format_exception(e),
             )
+
+    @staticmethod
+    async def _install_frida_impl() -> InstallResult:
+        """Run pip-install and the post-install version probe for Frida.
+
+        Subprocess failures (OSError, RuntimeError, ValueError, and
+        :class:`CalledProcessError`) raised by the process manager
+        propagate to the caller, which converts them into a structured
+        failure :class:`InstallResult`.
+
+        Returns:
+            InstallResult: Success when both pip and the verification
+            probe succeed and emit a parseable version, otherwise a
+            structured failure with diagnostic context.
+        """
+        _logger.info("frida_pip_installing", tool="frida")
+        process_manager = ProcessManager.get_instance()
+
+        result = await process_manager.run_tracked_async(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "frida", "frida-tools"],
+            name="pip-install-frida",
+            process_timeout=_PIP_TIMEOUT_S,
+        )
+
+        if result.returncode != 0:
+            _logger.warning(
+                "frida_pip_install_failed",
+                returncode=result.returncode,
+                stderr=result.stderr.strip(),
+            )
+            return InstallResult(
+                success=False,
+                kind="python_package",
+                error=f"pip install failed (rc={result.returncode}): {result.stderr.strip()}",
+            )
+
+        return await ToolInstaller._verify_frida_install(process_manager)
+
+    @staticmethod
+    async def _verify_frida_install(process_manager: ProcessManager) -> InstallResult:
+        """Run the post-install version probe and parse its output.
+
+        Args:
+            process_manager: Shared :class:`ProcessManager` used to spawn
+                the version-probe subprocess.
+
+        Returns:
+            InstallResult: Success when the probe exits cleanly with a
+            parseable version, otherwise a failure result describing
+            which stage failed.
+        """
+        try:
+            version_result = await process_manager.run_tracked_async(
+                [sys.executable, "-c", "import frida; print(frida.__version__)"],
+                name="frida-version-verify",
+                process_timeout=_VERSION_PROBE_TIMEOUT_S,
+            )
+        except TimeoutExpired:
+            _logger.warning("frida_version_probe_timeout_after_install", timeout_s=_VERSION_PROBE_TIMEOUT_S)
+            return InstallResult(
+                success=False,
+                kind="python_package",
+                error="frida version probe timed out after install",
+            )
+
+        if version_result.returncode != 0:
+            _logger.warning(
+                "frida_version_verify_failed",
+                returncode=version_result.returncode,
+                stderr=version_result.stderr.strip(),
+            )
+            return InstallResult(
+                success=False,
+                kind="python_package",
+                error=(f"frida version probe failed (rc={version_result.returncode}): {version_result.stderr.strip()}"),
+            )
+
+        version = _ToolInstallerVersion.parse(version_result.stdout.strip())
+        if version is None:
+            _logger.warning(
+                "frida_version_unparseable",
+                stdout=version_result.stdout.strip(),
+            )
+            return InstallResult(
+                success=False,
+                kind="python_package",
+                error=(f"frida installed but version probe returned unparseable output: {version_result.stdout.strip()!r}"),
+            )
+
+        _logger.info("frida_installed", version=str(version))
+        return InstallResult(
+            success=True,
+            path=None,
+            version=version,
+            kind="python_package",
+        )
 
     async def _get_latest_release_url(self, tool: ToolName) -> str | None:
         """Get the latest release download URL from GitHub.
@@ -1336,33 +1446,7 @@ class ToolInstaller:
         success = False
 
         try:
-            async with client.stream("GET", url) as response:
-                response.raise_for_status()
-                total = int(response.headers.get("content-length", 0))
-                downloaded = 0
-                bytes_since_last_log = 0
-
-                _logger.debug("download_file_opened", path=str(temp_path))
-                file_handle = await asyncio.to_thread(temp_path.open, "wb")
-                try:
-                    async for chunk in response.aiter_bytes(chunk_size=_PROGRESS_CHUNK):
-                        if not chunk:
-                            continue
-                        await asyncio.to_thread(file_handle.write, chunk)
-                        downloaded += len(chunk)
-                        bytes_since_last_log += len(chunk)
-                        if total > 0 and bytes_since_last_log >= _ONE_MB:
-                            percent = (downloaded / total) * 100
-                            _logger.debug(
-                                "download_progress",
-                                percent=round(percent, 1),
-                                downloaded_mb=round(downloaded / _ONE_MB, 1),
-                            )
-                            bytes_since_last_log = 0
-                finally:
-                    await asyncio.to_thread(file_handle.close)
-
-            _logger.info("download_completed", file_name=filename, data_size=downloaded)
+            await self._stream_download_to_path(client, url, temp_path, filename)
             success = True
         except (httpx.HTTPError, OSError, ValueError):
             _logger.exception(
@@ -1376,6 +1460,76 @@ class ToolInstaller:
                 _logger.debug("download_partial_removed", path=str(temp_path))
 
         return temp_path
+
+    @staticmethod
+    async def _stream_download_to_path(
+        client: httpx.AsyncClient,
+        url: str,
+        temp_path: Path,
+        filename: str,
+    ) -> None:
+        """Stream a GET response chunk-by-chunk into ``temp_path``.
+
+        ``httpx.HTTPError``, :class:`OSError`, and :class:`ValueError`
+        from the underlying transport, filesystem, or response decode
+        propagate to the caller, which converts them into a None return
+        and removes the partial download.
+
+        Args:
+            client: Pre-configured async HTTP client.
+            url: URL to GET.
+            temp_path: Destination path on disk for the downloaded bytes.
+            filename: Display name used in progress and completion logs.
+        """
+        async with client.stream("GET", url) as response:
+            response.raise_for_status()
+            total = int(response.headers.get("content-length", 0))
+            downloaded = 0
+
+            _logger.debug("download_file_opened", path=str(temp_path))
+            file_handle = await asyncio.to_thread(temp_path.open, "wb")
+            try:
+                downloaded = await ToolInstaller._copy_response_chunks(response, file_handle, total)
+            finally:
+                await asyncio.to_thread(file_handle.close)
+
+        _logger.info("download_completed", file_name=filename, data_size=downloaded)
+
+    @staticmethod
+    async def _copy_response_chunks(
+        response: httpx.Response,
+        file_handle: IO[bytes],
+        total: int,
+    ) -> int:
+        """Copy each non-empty chunk from ``response`` into ``file_handle``.
+
+        Args:
+            response: Open streaming HTTP response to consume.
+            file_handle: Destination file-like object opened in binary
+                write mode.
+            total: Expected total byte count from the response headers,
+                or 0 when the server did not advertise a length.
+
+        Returns:
+            int: Total number of bytes written to disk.
+        """
+        downloaded = 0
+        bytes_since_last_log = 0
+        async for chunk in response.aiter_bytes(chunk_size=_PROGRESS_CHUNK):
+            if not chunk:
+                continue
+            await asyncio.to_thread(file_handle.write, chunk)
+            downloaded += len(chunk)
+            bytes_since_last_log += len(chunk)
+            if total > 0 and bytes_since_last_log >= _ONE_MB:
+                percent = (downloaded / total) * 100
+                _logger.debug(
+                    "download_progress",
+                    percent=round(percent, 1),
+                    downloaded_mb=round(downloaded / _ONE_MB, 1),
+                )
+                bytes_since_last_log = 0
+        return downloaded
 
     async def _extract_archive(self, archive_path: Path, tool: ToolName) -> Path | None:
         """Extract an archive to the tools directory.

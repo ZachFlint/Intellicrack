@@ -90,48 +90,87 @@ async def test_live_ollama_chat_and_stream() -> None:
     )
     await provider.connect(credentials)
     try:
-        assert provider.is_connected is True
-        assert provider.local_available is True
-
-        messages = [
-            Message(role="user", content="Reply with the single word: ready"),
-        ]
-
-        response_msg, tool_calls = await provider.chat(
-            messages=messages,
-            model=f"local/{model_name}",
-            temperature=0.0,
-            max_tokens=32,
-        )
-        assert response_msg.content is not None
-        assert isinstance(response_msg.content, str)
-        assert len(response_msg.content.strip()) > 0
-        assert tool_calls is None or isinstance(tool_calls, list)
-
-        usage = provider.get_pending_usage()
-        assert usage is not None
-        assert usage.prompt_tokens > 0
-        assert usage.completion_tokens > 0
-        assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
-
-        collected: list[str] = []
-        stream_iter = provider.chat_stream(
-            messages=messages,
-            model=f"local/{model_name}",
-            temperature=0.0,
-            max_tokens=32,
-        )
-        async for chunk in stream_iter:
-            assert isinstance(chunk, str)
-            collected.append(chunk)
-
-        streamed_content = "".join(collected)
-        assert len(streamed_content.strip()) > 0
-
-        stream_usage = provider.get_pending_usage()
-        assert stream_usage is not None
-        assert stream_usage.prompt_tokens > 0
-        assert stream_usage.completion_tokens > 0
-        assert stream_usage.total_tokens == stream_usage.prompt_tokens + stream_usage.completion_tokens
+        await _exercise_ollama_chat_and_stream(provider, model_name)
     finally:
         await provider.disconnect()
+
+
+async def _exercise_ollama_chat_and_stream(provider: OllamaProvider, model_name: str) -> None:
+    """Run non-streaming and streaming Ollama exchanges and assert metadata.
+
+    Args:
+        provider: Connected OllamaProvider instance.
+        model_name: Installed Ollama model name to use (without ``local/`` prefix).
+    """
+    assert provider.is_connected is True
+    assert provider.local_available is True
+
+    messages = [
+        Message(role="user", content="Reply with the single word: ready"),
+    ]
+
+    await _exercise_ollama_chat(provider, messages, model_name)
+    await _exercise_ollama_stream(provider, messages, model_name)
+
+
+async def _exercise_ollama_chat(
+    provider: OllamaProvider,
+    messages: list[Message],
+    model_name: str,
+) -> None:
+    """Run one non-streaming chat call and assert content plus usage.
+
+    Args:
+        provider: Connected OllamaProvider instance.
+        messages: Message list passed to ``chat``.
+        model_name: Installed model name (no ``local/`` prefix).
+    """
+    response_msg, tool_calls = await provider.chat(
+        messages=messages,
+        model=f"local/{model_name}",
+        temperature=0.0,
+        max_tokens=32,
+    )
+    assert response_msg.content is not None
+    assert isinstance(response_msg.content, str)
+    assert len(response_msg.content.strip()) > 0
+    assert tool_calls is None or isinstance(tool_calls, list)
+
+    usage = provider.get_pending_usage()
+    assert usage is not None
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens
+
+
+async def _exercise_ollama_stream(
+    provider: OllamaProvider,
+    messages: list[Message],
+    model_name: str,
+) -> None:
+    """Run one streaming chat call and assert content plus usage.
+
+    Args:
+        provider: Connected OllamaProvider instance.
+        messages: Message list passed to ``chat_stream``.
+        model_name: Installed model name (no ``local/`` prefix).
+    """
+    collected: list[str] = []
+    stream_iter = provider.chat_stream(
+        messages=messages,
+        model=f"local/{model_name}",
+        temperature=0.0,
+        max_tokens=32,
+    )
+    async for chunk in stream_iter:
+        assert isinstance(chunk, str)
+        collected.append(chunk)
+
+    streamed_content = "".join(collected)
+    assert len(streamed_content.strip()) > 0
+
+    stream_usage = provider.get_pending_usage()
+    assert stream_usage is not None
+    assert stream_usage.prompt_tokens > 0
+    assert stream_usage.completion_tokens > 0
+    assert stream_usage.total_tokens == stream_usage.prompt_tokens + stream_usage.completion_tokens

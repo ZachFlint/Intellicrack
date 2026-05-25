@@ -1136,33 +1136,42 @@ class CutterBridge(StaticAnalysisBridge):
         ``connected=True`` after the bridge had released its rizin handle, presenting observers with a stuck-alive state.
         """
         try:
-            if self._r2 is not None:
-                try:
-                    await asyncio.to_thread(self._r2.quit)
-                except (OSError, RuntimeError) as e:
-                    _logger.warning("cutter_close_failed", error=str(e))
-                finally:
-                    self.r2 = None
-
-            if self._r2_pid is not None:
-                try:
-                    process_manager = ProcessManager.get_instance()
-                    process_manager.unregister_external_pid(self._r2_pid)
-                except (OSError, RuntimeError, ValueError, KeyError) as e:
-                    _logger.warning("cutter_unregister_pid_failed", pid=self._r2_pid, error=str(e))
-                finally:
-                    self._r2_pid = None
-
-            self._binary_path = None
-            self._analyzed = False
-            self._debug_mode = False
-            self._attached_pid = None
-            self._breakpoints.clear()
-            self._threads.clear()
-            self._current_thread_id = None
+            await self._release_cutter_resources()
         finally:
             await super().shutdown()
             _logger.info("cutter_bridge_shutdown", bridge="cutter")
+
+    async def _release_cutter_resources(self) -> None:
+        """Release rizin handles, registered PIDs, and per-binary debug state.
+
+        Each step is wrapped in its own ``try/except/finally`` so a failure
+        cleaning up one resource does not prevent the others from being
+        released. Errors are logged but never re-raised.
+        """
+        if self._r2 is not None:
+            try:
+                await asyncio.to_thread(self._r2.quit)
+            except (OSError, RuntimeError) as e:
+                _logger.warning("cutter_close_failed", error=str(e))
+            finally:
+                self.r2 = None
+
+        if self._r2_pid is not None:
+            try:
+                process_manager = ProcessManager.get_instance()
+                process_manager.unregister_external_pid(self._r2_pid)
+            except (OSError, RuntimeError, ValueError, KeyError) as e:
+                _logger.warning("cutter_unregister_pid_failed", pid=self._r2_pid, error=str(e))
+            finally:
+                self._r2_pid = None
+
+        self._binary_path = None
+        self._analyzed = False
+        self._debug_mode = False
+        self._attached_pid = None
+        self._breakpoints.clear()
+        self._threads.clear()
+        self._current_thread_id = None
 
     @override
     async def is_available(self) -> bool:
@@ -1310,49 +1319,66 @@ class CutterBridge(StaticAnalysisBridge):
             raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
 
         try:
-            await self._close_existing_r2()
-
-            open_flags: list[str] = ["-d"] if debug else ["-2"]
-            self.r2 = await asyncio.to_thread(r2pipe.open, str(path), open_flags)
-            self._binary_path = await asyncio.to_thread(path.resolve)
-            self._analyzed = False
-            self._debug_mode = debug
-
-            self._register_rizin_process(path)
-
-            file_type, arch, bits, entry = await self._extract_binary_metadata()
-            await self._r2_cmd("e io.cache=true")
-            _, sha256 = await self._extract_hashes()
-
-            sections = await self._get_sections_internal()
-            imports = await self._get_imports_internal()
-            exports = await self._get_exports_internal()
-
-            self.state.connected = True
-            self.state.tool_running = True
-            self.state.binary_loaded = True
-            self.state.target_path = self._binary_path
-            self._publish_tool_state()
-
-            _logger.info("binary_loaded", path=path.name, file_type=file_type, arch=arch, bits=bits)
-
-            return BinaryInfo(
-                path=self._binary_path,
-                name=path.name,
-                size=(await asyncio.to_thread(path.stat)).st_size,
-                sha256=sha256,
-                file_type=file_type.lower(),
-                architecture=arch,
-                is_64bit=is_rizin_64bit(bits, arch, file_type),
-                entry_point=entry,
-                sections=sections,
-                imports=imports,
-                exports=exports,
-            )
-
+            return await self._load_binary_impl(path, debug=debug)
         except (OSError, RuntimeError, ValueError) as e:
             _logger.warning("binary_load_failed", path=str(self._binary_path), error=str(e))
             raise ToolError(_ERR_LOAD_FAILED) from e
+
+    async def _load_binary_impl(self, path: Path, *, debug: bool) -> BinaryInfo:
+        """Open the binary in rizin and gather metadata for ``load_binary``.
+
+        :class:`OSError`, :class:`RuntimeError`, and :class:`ValueError`
+        raised by r2pipe, filesystem access, or metadata parsing
+        propagate to the caller, which converts them into a
+        :class:`ToolError`.
+
+        Args:
+            path: Resolved path to the binary to open.
+            debug: Open in rizin debug-attach mode when True, otherwise
+                static analysis mode.
+
+        Returns:
+            BinaryInfo: Populated descriptor of the loaded binary.
+        """
+        await self._close_existing_r2()
+
+        open_flags: list[str] = ["-d"] if debug else ["-2"]
+        self.r2 = await asyncio.to_thread(r2pipe.open, str(path), open_flags)
+        self._binary_path = await asyncio.to_thread(path.resolve)
+        self._analyzed = False
+        self._debug_mode = debug
+
+        self._register_rizin_process(path)
+
+        file_type, arch, bits, entry = await self._extract_binary_metadata()
+        await self._r2_cmd("e io.cache=true")
+        _, sha256 = await self._extract_hashes()
+
+        sections = await self._get_sections_internal()
+        imports = await self._get_imports_internal()
+        exports = await self._get_exports_internal()
+
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.binary_loaded = True
+        self.state.target_path = self._binary_path
+        self._publish_tool_state()
+
+        _logger.info("binary_loaded", path=path.name, file_type=file_type, arch=arch, bits=bits)
+
+        return BinaryInfo(
+            path=self._binary_path,
+            name=path.name,
+            size=(await asyncio.to_thread(path.stat)).st_size,
+            sha256=sha256,
+            file_type=file_type.lower(),
+            architecture=arch,
+            is_64bit=is_rizin_64bit(bits, arch, file_type),
+            entry_point=entry,
+            sections=sections,
+            imports=imports,
+            exports=exports,
+        )
 
     async def analyze(self, level: str = "normal") -> None:
         """Run analysis on the loaded binary.

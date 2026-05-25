@@ -1016,18 +1016,28 @@ class MainWindow(QMainWindow):
         self._refresh_memory_status()
         self._refresh_model_discovery_status()
 
+    @staticmethod
+    def _compute_memory_label_text() -> str:
+        """Compute the memory usage label text from the global model cache.
+
+        Returns:
+            str: Formatted cache usage string, or empty string when no usage.
+        """
+        if get_global_model_cache is None:
+            return ""
+        total_bytes = get_global_model_cache().get_memory_usage()
+        if total_bytes > 0:
+            mb = total_bytes / (1024 * 1024)
+            return f"Cache: {mb:.0f}MB"
+        return ""
+
     def _refresh_memory_status(self) -> None:
         """Update the memory usage display in the status bar."""
         if get_global_model_cache is None:
             self._memory_label.setText("")
             return
         try:
-            total_bytes = get_global_model_cache().get_memory_usage()
-            if total_bytes > 0:
-                mb = total_bytes / (1024 * 1024)
-                self._memory_label.setText(f"Cache: {mb:.0f}MB")
-            else:
-                self._memory_label.setText("")
+            self._memory_label.setText(self._compute_memory_label_text())
         except (RuntimeError, AttributeError, ValueError):
             _logger.debug("memory_label_update_failed", exc_info=True)
             self._memory_label.setText("")
@@ -2630,20 +2640,24 @@ class MainWindow(QMainWindow):
         """Open x64dbg debugger panel."""
         self._on_open_x64dbg()
 
+    def _open_x64dbg_impl(self) -> None:
+        """Initialize the x64dbg panel and start the tool."""
+        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+        if tool_reg is not None:
+            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+            if callable(ensure_ready):
+                ensure_ready("x64dbg")
+
+        widget = self.tool_panel.add_x64dbg_tab(is_64bit=True)
+        if widget is None:
+            self._show_tool_error("x64dbg", "Failed to initialize x64dbg panel")
+            return
+        widget.start_tool()
+
     def _on_open_x64dbg(self) -> None:
         """Open x64dbg debugger panel."""
         try:
-            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-            if tool_reg is not None:
-                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-                if callable(ensure_ready):
-                    ensure_ready("x64dbg")
-
-            widget = self.tool_panel.add_x64dbg_tab(is_64bit=True)
-            if widget is None:
-                self._show_tool_error("x64dbg", "Failed to initialize x64dbg panel")
-                return
-            widget.start_tool()
+            self._open_x64dbg_impl()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="x64dbg")
             self._show_tool_error("x64dbg", f"Failed to open x64dbg panel: {e}")
@@ -2668,6 +2682,24 @@ class MainWindow(QMainWindow):
         """Open the HxD hex editor panel (public wrapper for external callers)."""
         self._on_open_hxd()
 
+    def _open_hxd_impl(self) -> None:
+        """Activate the HxD hex editor panel, registering it late when needed."""
+        if self._hxd_panel is None:
+            self._register_hxd_panel_if_available()
+
+        widget: HxDPanel | None = self._hxd_panel
+        if widget is None:
+            self._show_tool_error(
+                "HxD",
+                "HxD executable not found. Install HxD and restart Intellicrack to use this tab.",
+            )
+            return
+
+        tab_idx = self.tool_panel.tab_widget.indexOf(widget)
+        if tab_idx >= 0:
+            self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
+        widget.start_tool()
+
     def _on_open_hxd(self) -> None:
         """Open the HxD hex editor panel.
 
@@ -2676,21 +2708,7 @@ class MainWindow(QMainWindow):
         the tab.
         """
         try:
-            if self._hxd_panel is None:
-                self._register_hxd_panel_if_available()
-
-            widget: HxDPanel | None = self._hxd_panel
-            if widget is None:
-                self._show_tool_error(
-                    "HxD",
-                    "HxD executable not found. Install HxD and restart Intellicrack to use this tab.",
-                )
-                return
-
-            tab_idx = self.tool_panel.tab_widget.indexOf(widget)
-            if tab_idx >= 0:
-                self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
-            widget.start_tool()
+            self._open_hxd_impl()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="HxD")
             self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
@@ -2707,38 +2725,46 @@ class MainWindow(QMainWindow):
             _logger.exception("tool_open_failed", tool_name="HexEditor")
             self._show_tool_error("Hex Editor", f"Failed to open hex editor panel: {e}")
 
+    def _open_ghidra_impl(self) -> None:
+        """Initialize the Ghidra panel and start the tool."""
+        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+        if tool_reg is not None:
+            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+            if callable(ensure_ready):
+                ensure_ready("ghidra")
+
+        widget = self.tool_panel.add_ghidra_tab()
+        if widget is None:
+            self._show_tool_error("Ghidra", "Failed to initialize Ghidra panel")
+            return
+        widget.start_tool()
+
     def _on_open_ghidra(self) -> None:
         """Open Ghidra analysis panel."""
         try:
-            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-            if tool_reg is not None:
-                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-                if callable(ensure_ready):
-                    ensure_ready("ghidra")
-
-            widget = self.tool_panel.add_ghidra_tab()
-            if widget is None:
-                self._show_tool_error("Ghidra", "Failed to initialize Ghidra panel")
-                return
-            widget.start_tool()
+            self._open_ghidra_impl()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Ghidra")
             self._show_tool_error("Ghidra", f"Failed to open Ghidra panel: {e}")
 
+    def _open_frida_impl(self) -> None:
+        """Initialize the Frida panel and start the tool."""
+        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
+        if tool_reg is not None:
+            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
+            if callable(ensure_ready):
+                ensure_ready("frida")
+
+        panel = self.tool_panel.add_frida_tab()
+        if panel is None:
+            self._show_tool_error("Frida", "Failed to initialize Frida panel")
+            return
+        panel.start_tool()
+
     def _on_open_frida(self) -> None:
         """Open Frida instrumentation panel."""
         try:
-            tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-            if tool_reg is not None:
-                ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-                if callable(ensure_ready):
-                    ensure_ready("frida")
-
-            panel = self.tool_panel.add_frida_tab()
-            if panel is None:
-                self._show_tool_error("Frida", "Failed to initialize Frida panel")
-                return
-            panel.start_tool()
+            self._open_frida_impl()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Frida")
             self._show_tool_error("Frida", f"Failed to open Frida panel: {e}")

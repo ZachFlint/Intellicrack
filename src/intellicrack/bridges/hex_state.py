@@ -642,6 +642,33 @@ class HexDocumentState:
         """
         self._dispatch_state.active = active
 
+    def _drain_dispatch_queue(
+        self,
+        event_type: HexDocumentEvent,
+        data: dict[str, Any],
+        source: str,
+        queue: deque[_PendingEvent],
+    ) -> int:
+        """Dispatch the initial event then drain any queued reentrant events.
+
+        Args:
+            event_type: The initial event type being dispatched.
+            data: Initial event payload.
+            source: Identifier of the originating caller.
+            queue: Per-thread pending event queue to drain.
+
+        Returns:
+            int: Number of events left in the queue after hitting the
+            dispatch cap.
+        """
+        self._dispatch_one(event_type, data, source)
+        dispatched = 1
+        while queue and dispatched < NOTIFY_MAX_DEPTH:
+            pending = queue.popleft()
+            self._dispatch_one(pending.event_type, pending.data, pending.source)
+            dispatched += 1
+        return len(queue)
+
     def _dispatch_one(
         self,
         event_type: HexDocumentEvent,
@@ -704,13 +731,7 @@ class HexDocumentState:
         self._set_dispatching(active=True)
         truncated_count = 0
         try:
-            self._dispatch_one(event_type, data, source)
-            dispatched = 1
-            while queue and dispatched < NOTIFY_MAX_DEPTH:
-                pending = queue.popleft()
-                self._dispatch_one(pending.event_type, pending.data, pending.source)
-                dispatched += 1
-            truncated_count = len(queue)
+            truncated_count = self._drain_dispatch_queue(event_type, data, source, queue)
         finally:
             if truncated_count:
                 _logger.warning(

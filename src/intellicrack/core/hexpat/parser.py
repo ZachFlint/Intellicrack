@@ -822,6 +822,40 @@ class HexPatParser:
         msg = f"Unexpected token '{tok.value}' in expression"
         raise HexPatParseError(msg, tok.line, tok.column, self.file_path)
 
+    def _try_parse_cast(self, tok: Token) -> CastExpr | None:
+        """Attempt to parse a ``(Type)(expr)`` cast at the current position.
+
+        Propagates :class:`HexPatParseError` from :meth:`_parse_type`,
+        :meth:`_parse_expression`, or :meth:`_expect` when the input cannot
+        satisfy the cast grammar. The caller catches that exception to
+        back-track to the parenthesised-expression branch.
+
+        Args:
+            tok: The opening ``(`` token used as the source position attached
+                to a successfully constructed :class:`CastExpr`.
+
+        Returns:
+            CastExpr | None: The parsed cast when both the closing ``)`` of the
+            type and the opening ``(`` of the cast operand are present;
+            otherwise ``None`` so the caller can restore the saved state and
+            re-parse the parentheses as a regular expression.
+        """
+        type_node = self._parse_type()
+        if self._current().type != TokenType.RPAREN:
+            return None
+        self._advance()
+        if self._current().type != TokenType.LPAREN:
+            return None
+        self._advance()
+        cast_expr = self._parse_expression()
+        self._expect(TokenType.RPAREN)
+        return CastExpr(
+            target_type=type_node,
+            expr=cast_expr,
+            line=tok.line,
+            column=tok.column,
+        )
+
     def _parse_paren_or_cast(self) -> ExprNode:
         """Parse a parenthesised expression or a cast expression.
 
@@ -834,19 +868,7 @@ class HexPatParser:
         saved = self._save()
         cast_result: CastExpr | None = None
         try:
-            type_node = self._parse_type()
-            if self._current().type == TokenType.RPAREN:
-                self._advance()
-                if self._current().type == TokenType.LPAREN:
-                    self._advance()
-                    cast_expr = self._parse_expression()
-                    self._expect(TokenType.RPAREN)
-                    cast_result = CastExpr(
-                        target_type=type_node,
-                        expr=cast_expr,
-                        line=tok.line,
-                        column=tok.column,
-                    )
+            cast_result = self._try_parse_cast(tok)
         except HexPatParseError as exc:
             _logger.warning(
                 "hexpat_parser_cast_backtrack",

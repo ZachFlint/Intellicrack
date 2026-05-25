@@ -227,6 +227,49 @@ class DisassemblyMixin:
             mode=mode_str,
         )
 
+    def _apply_disassemble_result(self, result: object) -> None:
+        """Render ``result`` into the disassembly table.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.disassemble`. Each dict contains
+                ``address``, ``bytes`` (hex string), ``mnemonic``,
+                ``operands``, and ``size`` keys.
+        """
+        if self._disasm_table is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("disasm_unexpected_result_type", result_type=type(result).__name__)
+            return
+
+        instructions = cast("list[dict[str, Any]]", result)
+        self._disasm_table.setRowCount(0)
+        for insn in instructions:
+            address_val = insn.get("address", 0)
+            bytes_hex = str(insn.get("bytes", ""))
+            mnemonic = str(insn.get("mnemonic", ""))
+            operands = str(insn.get("operands", ""))
+            try:
+                address_int = int(address_val)
+            except (TypeError, ValueError) as exc:
+                _logger.debug(
+                    "disasm_address_parse_fallback",
+                    raw_address=address_val,
+                    raw_address_type=type(address_val).__name__,
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
+                address_int = 0
+            hex_str = " ".join(bytes_hex[i : i + 2] for i in range(0, len(bytes_hex), 2))
+            row = self._disasm_table.rowCount()
+            self._disasm_table.insertRow(row)
+            self._disasm_table.setItem(row, 0, QTableWidgetItem(f"0x{address_int:08X}"))
+            self._disasm_table.setItem(row, 1, QTableWidgetItem(hex_str))
+            self._disasm_table.setItem(row, 2, QTableWidgetItem(mnemonic))
+            self._disasm_table.setItem(row, 3, QTableWidgetItem(operands))
+
+        _logger.info("disasm_complete", instruction_count=len(instructions))
+
     def _on_disassemble_success(self, result: object) -> None:
         """Populate the disassembly table from the bridge result.
 
@@ -238,39 +281,7 @@ class DisassemblyMixin:
         """
         self._disasm_in_flight = False
         try:
-            if self._disasm_table is None:
-                return
-            if not isinstance(result, list):
-                _logger.warning("disasm_unexpected_result_type", result_type=type(result).__name__)
-                return
-
-            instructions = cast("list[dict[str, Any]]", result)
-            self._disasm_table.setRowCount(0)
-            for insn in instructions:
-                address_val = insn.get("address", 0)
-                bytes_hex = str(insn.get("bytes", ""))
-                mnemonic = str(insn.get("mnemonic", ""))
-                operands = str(insn.get("operands", ""))
-                try:
-                    address_int = int(address_val)
-                except (TypeError, ValueError) as exc:
-                    _logger.debug(
-                        "disasm_address_parse_fallback",
-                        raw_address=address_val,
-                        raw_address_type=type(address_val).__name__,
-                        error_type=type(exc).__name__,
-                        error=str(exc),
-                    )
-                    address_int = 0
-                hex_str = " ".join(bytes_hex[i : i + 2] for i in range(0, len(bytes_hex), 2))
-                row = self._disasm_table.rowCount()
-                self._disasm_table.insertRow(row)
-                self._disasm_table.setItem(row, 0, QTableWidgetItem(f"0x{address_int:08X}"))
-                self._disasm_table.setItem(row, 1, QTableWidgetItem(hex_str))
-                self._disasm_table.setItem(row, 2, QTableWidgetItem(mnemonic))
-                self._disasm_table.setItem(row, 3, QTableWidgetItem(operands))
-
-            _logger.info("disasm_complete", instruction_count=len(instructions))
+            self._apply_disassemble_result(result)
         finally:
             self._flush_pending_follow_cursor()
 

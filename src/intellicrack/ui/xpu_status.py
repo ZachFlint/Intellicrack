@@ -32,6 +32,7 @@ from intellicrack.ui.resources.theme_manager import ThemeManager
 if TYPE_CHECKING:
     from PyQt6.QtGui import QCloseEvent
 
+    from intellicrack.providers.model_loader import ModelCache
     from intellicrack.providers.xpu_utils import XPUDeviceInfo
 
 
@@ -298,6 +299,20 @@ class XPUStatusDialog(QDialog):
         self._refresh_memory()
         self._refresh_cache()
 
+    @staticmethod
+    def _read_xpu_allocation() -> tuple[int, int] | None:
+        """Resolve the active XPU device and read its memory usage.
+
+        Returns:
+            tuple[int, int] | None: Tuple of ``(allocated_bytes, total_bytes)``
+            when an XPU device is available, or ``None`` when no device is available.
+        """
+        if is_xpu_available is None or get_xpu_memory_info is None:
+            return None
+        if not is_xpu_available():
+            return None
+        return get_xpu_memory_info(0)
+
     def _refresh_memory(self) -> None:
         """Update memory usage bar and text."""
         if get_xpu_memory_info is None or is_xpu_available is None:
@@ -307,19 +322,21 @@ class XPUStatusDialog(QDialog):
             return
 
         try:
-            if not is_xpu_available():
-                self.memory_bar.setValue(0)
-                self.memory_text.setText("No XPU device")
-                self.memory_text.setProperty("status", "idle")
-                _restyle(self.memory_text)
-                return
-
-            allocated, total = get_xpu_memory_info(0)
+            allocation = self._read_xpu_allocation()
         except (RuntimeError, OSError):
             _logger.exception("xpu_memory_info_failed")
             self.memory_bar.setValue(0)
             self.memory_text.setText("Failed to read memory")
             return
+
+        if allocation is None:
+            self.memory_bar.setValue(0)
+            self.memory_text.setText("No XPU device")
+            self.memory_text.setProperty("status", "idle")
+            _restyle(self.memory_text)
+            return
+
+        allocated, total = allocation
 
         if total > 0:
             pct = int((allocated / total) * 100)
@@ -335,6 +352,23 @@ class XPUStatusDialog(QDialog):
 
         _restyle(self.memory_text)
 
+    def _apply_cache_info(self, cache: ModelCache) -> None:
+        """Apply ``cache`` usage and limits to the UI labels.
+
+        Args:
+            cache: The global model cache instance.
+        """
+        usage_bytes = cache.get_memory_usage()
+        limit_bytes = cache.max_memory_bytes
+
+        usage_mb = usage_bytes / _BYTES_PER_MB
+        limit_mb = limit_bytes / _BYTES_PER_MB
+
+        self.cache_usage_label.setText(f"{usage_mb:.1f} MB")
+        self.cache_usage_label.setProperty("status", "")
+        _restyle(self.cache_usage_label)
+        self.cache_limit_label.setText(f"{limit_mb:.0f} MB")
+
     def _refresh_cache(self) -> None:
         """Update model cache usage and limit labels."""
         if get_global_model_cache is None:
@@ -345,17 +379,7 @@ class XPUStatusDialog(QDialog):
             return
 
         try:
-            cache = get_global_model_cache()
-            usage_bytes = cache.get_memory_usage()
-            limit_bytes = cache.max_memory_bytes
-
-            usage_mb = usage_bytes / _BYTES_PER_MB
-            limit_mb = limit_bytes / _BYTES_PER_MB
-
-            self.cache_usage_label.setText(f"{usage_mb:.1f} MB")
-            self.cache_usage_label.setProperty("status", "")
-            _restyle(self.cache_usage_label)
-            self.cache_limit_label.setText(f"{limit_mb:.0f} MB")
+            self._apply_cache_info(get_global_model_cache())
         except (RuntimeError, AttributeError):
             _logger.exception("cache_info_failed")
             self.cache_usage_label.setText("Error reading cache")

@@ -435,15 +435,25 @@ class CustomCrcDialog(QDialog):
         """
         return self._worker
 
+    def _read_crc_inputs(self) -> tuple[int, int, int, bool, bool, int]:
+        """Read and parse the CRC parameter inputs.
+
+        Returns:
+            tuple[int, int, int, bool, bool, int]:
+                ``(width, poly, init, ref_in, ref_out, xor_out)`` values.
+        """
+        width = self._width_spin.value()
+        poly = int(self._poly_edit.text().strip(), 16)
+        init = int(self._init_edit.text().strip(), 16)
+        ref_in = self._ref_in_check.isChecked()
+        ref_out = self._ref_out_check.isChecked()
+        xor_out = int(self._xor_out_edit.text().strip(), 16)
+        return width, poly, init, ref_in, ref_out, xor_out
+
     def _calculate(self) -> None:
         """Spawn a worker that streams the CRC computation off the UI thread."""
         try:
-            width = self._width_spin.value()
-            poly = int(self._poly_edit.text().strip(), 16)
-            init = int(self._init_edit.text().strip(), 16)
-            ref_in = self._ref_in_check.isChecked()
-            ref_out = self._ref_out_check.isChecked()
-            xor_out = int(self._xor_out_edit.text().strip(), 16)
+            width, poly, init, ref_in, ref_out, xor_out = self._read_crc_inputs()
         except ValueError as exc:
             _logger.warning("custom_crc_invalid_input", error=str(exc))
             self._result_label.setText(f"Error: {exc}")

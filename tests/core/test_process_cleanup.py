@@ -252,16 +252,25 @@ async def test_r2_cmd_timeout_raises_tool_error() -> None:
     cutter_module.R2_COMMAND_TIMEOUT = _R2_TEST_TIMEOUT
 
     try:
-        start = time.monotonic()
-        with pytest.raises(ToolError, match="cutter command timed out"):
-            _ = await bridge.r2_cmd("aaa")
-        elapsed = time.monotonic() - start
-
-        msg = f"Timeout should fire in ~0.5s, but took {elapsed:.1f}s. The asyncio.wait_for wrapper may be missing."
-        assert elapsed < _ELAPSED_UPPER_BOUND, msg
+        await _assert_r2_cmd_timeout(bridge)
     finally:
         blocker.release()
         cutter_module.R2_COMMAND_TIMEOUT = original_timeout
+
+
+async def _assert_r2_cmd_timeout(bridge: CutterBridge) -> None:
+    """Run r2_cmd and assert it times out within the configured bound.
+
+    Args:
+        bridge: CutterBridge wired to a blocking r2 stub.
+    """
+    start = time.monotonic()
+    with pytest.raises(ToolError, match="cutter command timed out"):
+        _ = await bridge.r2_cmd("aaa")
+    elapsed = time.monotonic() - start
+
+    msg = f"Timeout should fire in ~0.5s, but took {elapsed:.1f}s. The asyncio.wait_for wrapper may be missing."
+    assert elapsed < _ELAPSED_UPPER_BOUND, msg
 
 
 @pytest.mark.asyncio
@@ -536,20 +545,33 @@ async def test_pid_based_kill_targets_specific_process() -> None:
     proc_b = await asyncio.to_thread(_spawn_sleeper)
 
     try:
-        assert psutil.pid_exists(proc_a.pid)
-        assert psutil.pid_exists(proc_b.pid)
-
-        ProcessManager.terminate_tree(proc_a.pid, graceful_timeout=_GRACEFUL_TIMEOUT_SHORT, force_timeout=_FORCE_TIMEOUT_SHORT)
-
-        await asyncio.sleep(_SLEEP_DELAY_HALF)
-
-        assert not psutil.pid_exists(proc_a.pid), "Target process should be dead"
-        assert psutil.pid_exists(proc_b.pid), "Other process with same executable should survive PID-based kill"
+        await _assert_only_target_killed(proc_a, proc_b)
     finally:
         for proc in (proc_a, proc_b):
             if psutil.pid_exists(proc.pid):
                 proc.kill()
                 proc.wait()
+
+
+async def _assert_only_target_killed(
+    proc_a: subprocess.Popen[bytes],
+    proc_b: subprocess.Popen[bytes],
+) -> None:
+    """Terminate ``proc_a`` by PID and assert ``proc_b`` survives.
+
+    Args:
+        proc_a: The process targeted for termination.
+        proc_b: The sibling process expected to survive.
+    """
+    assert psutil.pid_exists(proc_a.pid)
+    assert psutil.pid_exists(proc_b.pid)
+
+    ProcessManager.terminate_tree(proc_a.pid, graceful_timeout=_GRACEFUL_TIMEOUT_SHORT, force_timeout=_FORCE_TIMEOUT_SHORT)
+
+    await asyncio.sleep(_SLEEP_DELAY_HALF)
+
+    assert not psutil.pid_exists(proc_a.pid), "Target process should be dead"
+    assert psutil.pid_exists(proc_b.pid), "Other process with same executable should survive PID-based kill"
 
 
 def test_process_manager_unregister_after_terminate() -> None:

@@ -444,18 +444,28 @@ async def test_memory_protection_changes(x64dbg_bridge_attached: X64DbgBridge) -
     ctypes.windll.kernel32.VirtualProtect(ctypes.c_void_p(buffer_address), BUFFER_SIZE_4K, PAGE_READONLY, ctypes.byref(old_protect))
 
     try:
-        memory_map = await x64dbg_bridge_attached.get_memory_regions()
-        found = False
-        for region in memory_map:
-            if region.base_address <= buffer_address < region.base_address + region.size:
-                assert "r" in region.protection
-                assert "w" not in region.protection
-                found = True
-                break
-        assert found
+        await _assert_readonly_region_present(x64dbg_bridge_attached, buffer_address)
     finally:
         # Restore
         ctypes.windll.kernel32.VirtualProtect(ctypes.c_void_p(buffer_address), BUFFER_SIZE_4K, old_protect, ctypes.byref(old_protect))
+
+
+async def _assert_readonly_region_present(bridge: X64DbgBridge, buffer_address: int) -> None:
+    """Assert the bridge reports the readonly region covering ``buffer_address``.
+
+    Args:
+        bridge: X64DbgBridge attached to the current process.
+        buffer_address: Address of the buffer mutated to ``PAGE_READONLY``.
+    """
+    memory_map = await bridge.get_memory_regions()
+    found = False
+    for region in memory_map:
+        if region.base_address <= buffer_address < region.base_address + region.size:
+            assert "r" in region.protection
+            assert "w" not in region.protection
+            found = True
+            break
+    assert found
 
 
 @pytest.mark.asyncio

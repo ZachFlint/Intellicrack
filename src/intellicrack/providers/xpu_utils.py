@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
+from intellicrack.providers.gpu_pci_resources import max_memory_bar_bytes
 
 
 try:
@@ -153,6 +154,42 @@ def _get_device_name_from_sycl(device_index: int) -> str:
     return ""
 
 
+def _query_windows_gpus() -> list[dict[str, str]]:
+    """Run WMI query and parse GPU entries from JSON output.
+
+    Returns:
+        list[dict[str, str]]: Normalized GPU info entries (name/pnp/driver_version).
+    """
+    result = ProcessManager.get_instance().run_tracked(
+        [
+            "pwsh",
+            "-Command",
+            "Get-WmiObject Win32_VideoController | Select-Object Name,PNPDeviceID,DriverVersion | ConvertTo-Json",
+        ],
+        name="xpu-gpu-detect",
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+    raw: object = json.loads(result.stdout)
+    if isinstance(raw, dict):
+        gpu_entries: list[dict[str, str]] = [cast("dict[str, str]", raw)]
+    elif isinstance(raw, list):
+        raw_list: list[object] = cast("list[object]", raw)
+        gpu_entries = [cast("dict[str, str]", item) for item in raw_list if isinstance(item, dict)]
+    else:
+        gpu_entries = []
+    return [
+        {
+            "name": str(gpu.get("Name", "")),
+            "pnp_device_id": str(gpu.get("PNPDeviceID", "")),
+            "driver_version": str(gpu.get("DriverVersion", "")),
+        }
+        for gpu in gpu_entries
+    ]
+
+
 def _get_windows_gpu_info() -> list[dict[str, str]]:
     """Get GPU information on Windows using WMI.
 
@@ -162,40 +199,11 @@ def _get_windows_gpu_info() -> list[dict[str, str]]:
     if platform.system() != "Windows":
         return []
 
-    gpus: list[dict[str, str]] = []
     try:
-        result = ProcessManager.get_instance().run_tracked(
-            [
-                "pwsh",
-                "-Command",
-                "Get-WmiObject Win32_VideoController | Select-Object Name,PNPDeviceID,DriverVersion | ConvertTo-Json",
-            ],
-            name="xpu-gpu-detect",
-            timeout=10,
-            check=False,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            raw: object = json.loads(result.stdout)
-            gpu_entries: list[dict[str, str]]
-            if isinstance(raw, dict):
-                gpu_entries = [cast("dict[str, str]", raw)]
-            elif isinstance(raw, list):
-                raw_list: list[object] = cast("list[object]", raw)
-                gpu_entries = [cast("dict[str, str]", item) for item in raw_list if isinstance(item, dict)]
-            else:
-                gpu_entries = []
-            gpus.extend(
-                {
-                    "name": str(gpu.get("Name", "")),
-                    "pnp_device_id": str(gpu.get("PNPDeviceID", "")),
-                    "driver_version": str(gpu.get("DriverVersion", "")),
-                }
-                for gpu in gpu_entries
-            )
+        return _query_windows_gpus()
     except (OSError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
         _logger.warning("windows_gpu_info_failed", error=str(exc))
-
-    return gpus
+        return []
 
 
 def _parse_device_id_from_pnp(pnp_id: str) -> str:
@@ -221,6 +229,109 @@ def _parse_device_id_from_pnp(pnp_id: str) -> str:
     return ""
 
 
+def _extract_torch_xpu_properties(
+    torch: types.ModuleType,
+    device_index: int,
+    device_name: str,
+) -> tuple[int, str, str]:
+    """Extract memory/driver/name properties from torch.xpu.get_device_properties.
+
+    Args:
+        torch: The imported ``torch`` module providing ``xpu`` namespace.
+        device_index: Index of the XPU device.
+        device_name: Existing best-known device name (may be empty).
+
+    Returns:
+        tuple[int, str, str]: ``(total_memory, driver_version, device_name)`` resolved from torch properties.
+    """
+    total_memory = 0
+    driver_version = ""
+    if not hasattr(torch.xpu, "get_device_properties"):
+        return total_memory, driver_version, device_name
+    props = torch.xpu.get_device_properties(device_index)
+    if hasattr(props, "total_memory"):
+        total_memory = int(props.total_memory)
+    if hasattr(props, "driver_version"):
+        driver_version = str(props.driver_version)
+    if not device_name and hasattr(props, "name"):
+        device_name = str(props.name)
+    return total_memory, driver_version, device_name
+
+
+def _enrich_from_windows_gpus(
+    device_name: str,
+    driver_version: str,
+    device_id: str,
+) -> tuple[str, str, str]:
+    """Fill missing device name/driver/id from Windows WMI GPU info.
+
+    Args:
+        device_name: Current device name (may be empty).
+        driver_version: Current driver version (may be empty).
+        device_id: Current device ID (may be empty).
+
+    Returns:
+        tuple[str, str, str]: Updated ``(device_name, driver_version, device_id)`` triple.
+    """
+    if device_name and driver_version:
+        return device_name, driver_version, device_id
+    for gpu in _get_windows_gpu_info():
+        if "Intel" in gpu["name"] and any(p in gpu["name"] for p in _ARC_DEVICE_PATTERNS):
+            if not device_name:
+                device_name = gpu["name"]
+            if not driver_version:
+                driver_version = gpu["driver_version"]
+            device_id = _parse_device_id_from_pnp(gpu["pnp_device_id"])
+            break
+    return device_name, driver_version, device_id
+
+
+def _build_xpu_device_info(torch: types.ModuleType, device_index: int) -> XPUDeviceInfo | None:
+    """Assemble :class:`XPUDeviceInfo` for ``device_index`` using torch and WMI sources.
+
+    Args:
+        torch: Imported ``torch`` module with ``xpu`` namespace available.
+        device_index: Index of the XPU device.
+
+    Returns:
+        XPUDeviceInfo | None: Composed device info, or ``None`` when torch.xpu is unavailable
+        or the device index is out of range.
+    """
+    if not hasattr(torch, "xpu") or not torch.xpu.is_available():
+        return None
+    if device_index >= torch.xpu.device_count():
+        return None
+
+    device_name = _get_device_name_from_sycl(device_index)
+    device_id = ""
+    try:
+        total_memory, driver_version, device_name = _extract_torch_xpu_properties(
+            torch, device_index, device_name,
+        )
+    except (RuntimeError, OSError, AttributeError) as exc:
+        _logger.warning("xpu_properties_failed", error=str(exc))
+        total_memory = 0
+        driver_version = ""
+
+    device_name, driver_version, device_id = _enrich_from_windows_gpus(
+        device_name, driver_version, device_id,
+    )
+    if total_memory == 0:
+        total_memory = _estimate_memory_from_name(device_name)
+
+    return XPUDeviceInfo(
+        device_index=device_index,
+        device_name=device_name or f"Intel XPU {device_index}",
+        total_memory_bytes=total_memory,
+        driver_version=driver_version,
+        device_id=device_id,
+        is_arc_b580=_is_b580_device(device_name, device_id),
+        supports_fp16=True,
+        supports_bf16=True,
+        supports_int8=True,
+    )
+
+
 def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
     """Get detailed information about a specific XPU device.
 
@@ -233,63 +344,8 @@ def get_xpu_device_info(device_index: int) -> XPUDeviceInfo | None:
     torch = _import_torch()
     if torch is None:
         return None
-
     try:
-        if not hasattr(torch, "xpu") or not torch.xpu.is_available():
-            return None
-
-        if device_index >= torch.xpu.device_count():
-            return None
-
-        device_name = _get_device_name_from_sycl(device_index)
-        total_memory: int = 0
-        driver_version = ""
-        device_id = ""
-
-        try:
-            if hasattr(torch.xpu, "get_device_properties"):
-                props = torch.xpu.get_device_properties(device_index)
-                if hasattr(props, "total_memory"):
-                    total_memory = int(props.total_memory)
-                if hasattr(props, "driver_version"):
-                    driver_version = str(props.driver_version)
-                if not device_name and hasattr(props, "name"):
-                    device_name = str(props.name)
-        except (RuntimeError, OSError, AttributeError) as exc:
-            _logger.warning("xpu_properties_failed", error=str(exc))
-
-        if not device_name or not driver_version:
-            windows_gpus = _get_windows_gpu_info()
-            for gpu in windows_gpus:
-                if "Intel" in gpu["name"] and any(p in gpu["name"] for p in _ARC_DEVICE_PATTERNS):
-                    if not device_name:
-                        device_name = gpu["name"]
-                    if not driver_version:
-                        driver_version = gpu["driver_version"]
-                    device_id = _parse_device_id_from_pnp(gpu["pnp_device_id"])
-                    break
-
-        if total_memory == 0:
-            total_memory = _estimate_memory_from_name(device_name)
-
-        is_arc_b580 = _is_b580_device(device_name, device_id)
-
-        supports_fp16 = True
-        supports_bf16 = True
-        supports_int8 = True
-
-        return XPUDeviceInfo(
-            device_index=device_index,
-            device_name=device_name or f"Intel XPU {device_index}",
-            total_memory_bytes=total_memory,
-            driver_version=driver_version,
-            device_id=device_id,
-            is_arc_b580=is_arc_b580,
-            supports_fp16=supports_fp16,
-            supports_bf16=supports_bf16,
-            supports_int8=supports_int8,
-        )
-
+        return _build_xpu_device_info(torch, device_index)
     except (RuntimeError, OSError, AttributeError) as exc:
         _logger.warning("xpu_device_info_failed", device_index=device_index, error=str(exc))
         return None
@@ -427,6 +483,31 @@ def _validate_xpu_device(torch_mod: types.ModuleType, device: torch.device) -> N
         raise RuntimeError(msg) from exc
 
 
+def _query_xpu_memory(torch: types.ModuleType, device_index: int) -> tuple[int, int]:
+    """Query allocated and total XPU memory for ``device_index``.
+
+    Args:
+        torch: Imported ``torch`` module with ``xpu`` namespace available.
+        device_index: Index of the XPU device.
+
+    Returns:
+        tuple[int, int]: ``(allocated_bytes, total_bytes)`` returned from torch and properties.
+    """
+    if not hasattr(torch, "xpu") or not torch.xpu.is_available():
+        return (0, 0)
+    allocated = torch.xpu.memory_allocated(device_index) if hasattr(torch.xpu, "memory_allocated") else 0
+    total = 0
+    if hasattr(torch.xpu, "get_device_properties"):
+        props = torch.xpu.get_device_properties(device_index)
+        if hasattr(props, "total_memory"):
+            total = int(props.total_memory)
+    if total == 0:
+        info = get_xpu_device_info(device_index)
+        if info is not None:
+            total = info.total_memory_bytes
+    return (allocated, total)
+
+
 def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
     """Get memory information for an XPU device.
 
@@ -439,31 +520,11 @@ def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
     torch = _import_torch()
     if torch is None:
         return (0, 0)
-
     try:
-        if not hasattr(torch, "xpu") or not torch.xpu.is_available():
-            return (0, 0)
-
-        allocated: int = 0
-        total: int = 0
-
-        if hasattr(torch.xpu, "memory_allocated"):
-            allocated = torch.xpu.memory_allocated(device_index)
-
-        if hasattr(torch.xpu, "get_device_properties"):
-            props = torch.xpu.get_device_properties(device_index)
-            if hasattr(props, "total_memory"):
-                total = int(props.total_memory)
-
-        if total == 0:
-            info = get_xpu_device_info(device_index)
-            if info is not None:
-                total = info.total_memory_bytes
+        return _query_xpu_memory(torch, device_index)
     except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_memory_info_failed", device_index=device_index, error=str(exc))
         return (0, 0)
-    else:
-        return (allocated, total)
 
 
 def clear_xpu_cache() -> None:
@@ -519,7 +580,6 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
         warnings.append(rebar_warning)
 
     gpus = _get_windows_gpu_info()
-    from intellicrack.providers.gpu_pci_resources import max_memory_bar_bytes
 
     for gpu in gpus:
         pnp_id = gpu.get("pnp_device_id", "")
@@ -530,7 +590,7 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
                 if bar_bytes < 512 * 1024 * 1024:
                     warnings.append(
                         f"GPU '{gpu.get('name')}' Resizable BAR is disabled or limited ({bar_bytes // 1024 // 1024} MB). "
-                        "Local LLM context profiles exceeding this size will trigger severe CPU-fallback slowdowns."
+                        "Local LLM context profiles exceeding this size will trigger severe CPU-fallback slowdowns.",
                     )
 
     _logger.debug(

@@ -18,6 +18,12 @@ import sys
 import tempfile
 import time
 import zipfile
+
+
+if sys.platform == "win32":
+    import msvcrt as _msvcrt
+else:
+    _msvcrt = None
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -375,53 +381,61 @@ class WindowsSandbox(SandboxBase):
             timeout_seconds=self._config.timeout_seconds,
         )
 
+    async def _probe_sandbox_availability(self) -> bool:
+        """Probe the host for Windows Sandbox availability.
+
+        Runs ``where WindowsSandbox.exe`` and then verifies that the
+        ``Containers-DisposableClientVM`` optional feature reports
+        ``Enabled`` via PowerShell.
+
+        Returns:
+            bool: True when both the executable lookup and the feature
+            probe succeed.
+        """
+        process_manager = ProcessManager.get_instance()
+        result = await process_manager.run_tracked_async(
+            ["where", self.SANDBOX_EXE],
+            name="where-sandbox-exe",
+            process_timeout=_WHERE_TIMEOUT,
+        )
+        if result.returncode != _RETURNCODE_SUCCESS:
+            _logger.debug("windows_sandbox_exe_not_found", exe=self.SANDBOX_EXE)
+            return False
+
+        ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
+        features_result = await process_manager.run_tracked_async(
+            [
+                ps_exe,
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "(Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM).State",
+            ],
+            name="pwsh-sandbox-feature-check",
+            process_timeout=_FEATURE_CHECK_TIMEOUT,
+        )
+
+        if "Enabled" in features_result.stdout:
+            _logger.info("windows_sandbox_available", feature_state="Enabled")
+            return True
+        _logger.warning(
+            "windows_sandbox_feature_not_enabled",
+            feature="Containers-DisposableClientVM",
+        )
+        return False
+
     async def is_available(self) -> bool:
         """Check if Windows Sandbox is available.
 
         Returns:
             bool: True if Windows Sandbox can be used.
         """
-        process_manager = ProcessManager.get_instance()
-
         try:
-            result = await process_manager.run_tracked_async(
-                ["where", self.SANDBOX_EXE],
-                name="where-sandbox-exe",
-                process_timeout=_WHERE_TIMEOUT,
-            )
-            if result.returncode != _RETURNCODE_SUCCESS:
-                _logger.debug("windows_sandbox_exe_not_found", exe=self.SANDBOX_EXE)
-                return False
-
-            ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
-            features_result = await process_manager.run_tracked_async(
-                [
-                    ps_exe,
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-Command",
-                    "(Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM).State",
-                ],
-                name="pwsh-sandbox-feature-check",
-                process_timeout=_FEATURE_CHECK_TIMEOUT,
-            )
-
-            if "Enabled" in features_result.stdout:
-                _logger.info("windows_sandbox_available", feature_state="Enabled")
-                is_available = True
-            else:
-                _logger.warning(
-                    "windows_sandbox_feature_not_enabled",
-                    feature="Containers-DisposableClientVM",
-                )
-                is_available = False
-
+            return await self._probe_sandbox_availability()
         except (OSError, RuntimeError) as e:
             _logger.warning("windows_sandbox_availability_check_failed", error=str(e))
             return False
-        else:
-            return is_available
 
     def _check_sandbox_alive(self) -> None:
         """Verify the sandbox process is still running.
@@ -432,6 +446,102 @@ class WindowsSandbox(SandboxBase):
         if self.process is not None and self.process.poll() is not None:
             _logger.error("windows_sandbox_process_terminated", returncode=self.process.returncode)
             raise SandboxError(_ERR_SANDBOX_TERMINATED)
+
+    async def _prepare_shared_folders(self) -> None:
+        """Create the temp dir, shared folder, monitor folder, and ticket subdirectories."""
+        self._temp_dir = Path(
+            await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_sandbox_"),
+        )
+        self._shared_folder = self._temp_dir / self.SHARED_FOLDER_NAME
+        await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
+
+        self._monitor_folder = self._shared_folder / "monitor"
+        await asyncio.to_thread(self._monitor_folder.mkdir, exist_ok=True)
+
+        for sub in ("input", "output", "logs", "flags"):
+            await asyncio.to_thread(
+                (self._shared_folder / sub).mkdir,
+                exist_ok=True,
+            )
+
+        trigger_dir = self._shared_folder / "input" / "trigger"
+        await asyncio.to_thread(trigger_dir.mkdir, exist_ok=True)
+
+    async def _launch_sandbox_process(self) -> None:
+        """Launch the Windows Sandbox client process and register it.
+
+        Generates monitor and dispatcher scripts, produces the ``.wsb``
+        configuration, spawns the sandbox executable, and registers the
+        process with the global :class:`ProcessManager`.
+
+        Raises:
+            SandboxError: If the temporary sandbox directory was not
+                initialised before this call.
+        """
+        await self._create_monitor_scripts()
+        await self._create_dispatcher_scripts()
+
+        if self._temp_dir is None:
+            raise SandboxError(_ERR_START_FAILED)
+        self._wsb_path = self._temp_dir / "intellicrack.wsb"
+        await self._generate_wsb_config()
+
+        _logger.info("windows_sandbox_starting", config_path=str(self._wsb_path))
+
+        self.process = await asyncio.to_thread(
+            Popen,
+            [self.SANDBOX_EXE, str(self._wsb_path)],
+            stdout=PIPE,
+            stderr=PIPE,
+            creationflags=CREATE_NEW_CONSOLE,
+        )
+
+        process_manager = ProcessManager.get_instance()
+        process_manager.register(
+            self.process,
+            name="windows-sandbox-client",
+            process_type=ProcessType.SANDBOX,
+            metadata={"wsb_config": str(self._wsb_path)},
+            cleanup_callback=self.stop,
+        )
+
+    async def _attach_sandbox_worker(self) -> None:
+        """Wait for dispatcher readiness, resolve worker PID, and finalize state.
+
+        Raises:
+            SandboxError: If the sandbox process has died before becoming ready.
+        """
+        await self._wait_for_dispatcher_ready()
+        self._check_sandbox_alive()
+
+        if self.process is None:
+            raise SandboxError(_ERR_SANDBOX_TERMINATED)
+
+        process_manager = ProcessManager.get_instance()
+        worker_pid = await self._resolve_worker_pid()
+        if worker_pid is not None:
+            self._worker_pid = worker_pid
+            process_manager.register_external_pid(
+                worker_pid,
+                name="windows-sandbox-worker",
+                process_type=ProcessType.SANDBOX,
+                metadata={"client_pid": self.process.pid},
+            )
+            _logger.info("windows_sandbox_worker_registered", worker_pid=worker_pid)
+        else:
+            _logger.warning("windows_sandbox_worker_pid_not_found")
+
+        self.state.status = "running"
+        self.state.started_at = datetime.now(UTC)
+        self.state.pid = self.process.pid
+
+        _logger.info("windows_sandbox_started", pid=self.process.pid)
+
+    async def _start_impl(self) -> None:
+        """Execute the full Windows Sandbox start sequence."""
+        await self._prepare_shared_folders()
+        await self._launch_sandbox_process()
+        await self._attach_sandbox_worker()
 
     async def start(self) -> None:
         """Start the Windows Sandbox environment.
@@ -452,77 +562,74 @@ class WindowsSandbox(SandboxBase):
         self.state.last_error = None
 
         try:
-            self._temp_dir = Path(
-                await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_sandbox_"),
-            )
-            self._shared_folder = self._temp_dir / self.SHARED_FOLDER_NAME
-            await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
-
-            self._monitor_folder = self._shared_folder / "monitor"
-            await asyncio.to_thread(self._monitor_folder.mkdir, exist_ok=True)
-
-            for sub in ("input", "output", "logs", "flags"):
-                await asyncio.to_thread(
-                    (self._shared_folder / sub).mkdir,
-                    exist_ok=True,
-                )
-
-            trigger_dir = self._shared_folder / "input" / "trigger"
-            await asyncio.to_thread(trigger_dir.mkdir, exist_ok=True)
-
-            await self._create_monitor_scripts()
-            await self._create_dispatcher_scripts()
-
-            self._wsb_path = self._temp_dir / "intellicrack.wsb"
-            await self._generate_wsb_config()
-
-            _logger.info("windows_sandbox_starting", config_path=str(self._wsb_path))
-
-            self.process = await asyncio.to_thread(
-                Popen,
-                [self.SANDBOX_EXE, str(self._wsb_path)],
-                stdout=PIPE,
-                stderr=PIPE,
-                creationflags=CREATE_NEW_CONSOLE,
-            )
-
-            process_manager = ProcessManager.get_instance()
-            process_manager.register(
-                self.process,
-                name="windows-sandbox-client",
-                process_type=ProcessType.SANDBOX,
-                metadata={"wsb_config": str(self._wsb_path)},
-                cleanup_callback=self.stop,
-            )
-
-            await self._wait_for_dispatcher_ready()
-            self._check_sandbox_alive()
-
-            worker_pid = await self._resolve_worker_pid()
-            if worker_pid is not None:
-                self._worker_pid = worker_pid
-                process_manager.register_external_pid(
-                    worker_pid,
-                    name="windows-sandbox-worker",
-                    process_type=ProcessType.SANDBOX,
-                    metadata={"client_pid": self.process.pid},
-                )
-                _logger.info("windows_sandbox_worker_registered", worker_pid=worker_pid)
-            else:
-                _logger.warning("windows_sandbox_worker_pid_not_found")
-
-            self.state.status = "running"
-            self.state.started_at = datetime.now(UTC)
-            self.state.pid = self.process.pid
-
-            _logger.info("windows_sandbox_started", pid=self.process.pid)
-
+            await self._start_impl()
         except (OSError, RuntimeError, SandboxError) as e:
             _logger.warning("windows_sandbox_start_failed", error=str(e))
             self.state.status = "error"
             self.state.last_error = str(e)
             await self._cleanup()
             raise SandboxError(_ERR_START_FAILED) from e
+
+    async def _terminate_sandbox_client(self, process_manager: ProcessManager) -> None:
+        """Terminate the sandbox client process gracefully or forcefully.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used to
+                unregister the client PID after termination.
+        """
+        if self.process is None:
+            return
+
+        pid = self.process.pid
+        graceful_ok = await self._try_graceful_close(pid)
+
+        if not graceful_ok:
+            await self._force_kill_sandbox(pid)
+
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(self.process.wait),
+                timeout=_PROCESS_WAIT_TIMEOUT,
+            )
+        except TimeoutError:
+            _logger.warning("sandbox_process_terminate_timeout", pid=pid)
+            self.process.kill()
+            await asyncio.to_thread(self.process.wait)
+
+        process_manager.unregister(pid)
+        self.process = None
+
+    def _terminate_sandbox_worker(self, process_manager: ProcessManager) -> None:
+        """Terminate the vmwp.exe worker registered for this sandbox.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used to issue
+                the forced external-PID termination.
+        """
+        if self._worker_pid is None:
+            return
+
+        worker_pid = self._worker_pid
+        try:
+            process_manager.terminate_external_pid(worker_pid, force=True)
+        except (OSError, RuntimeError) as worker_err:
+            _logger.warning(
+                "worker_pid_terminate_failed",
+                worker_pid=worker_pid,
+                error=str(worker_err),
+            )
+        self._worker_pid = None
+
+    async def _stop_impl(self) -> None:
+        """Execute the full Windows Sandbox stop sequence."""
+        process_manager = ProcessManager.get_instance()
+        await self._terminate_sandbox_client(process_manager)
+        self._terminate_sandbox_worker(process_manager)
+        await self._cleanup()
+
+        self.state.status = "stopped"
+        self.state.pid = None
+        _logger.info("windows_sandbox_stopped", sandbox_type="windows")
 
     async def stop(self) -> None:
         """Stop the Windows Sandbox environment.
@@ -539,47 +646,9 @@ class WindowsSandbox(SandboxBase):
             return
 
         self.state.status = "stopping"
-        process_manager = ProcessManager.get_instance()
 
         try:
-            if self.process is not None:
-                pid = self.process.pid
-                graceful_ok = await self._try_graceful_close(pid)
-
-                if not graceful_ok:
-                    await self._force_kill_sandbox(pid)
-
-                try:
-                    await asyncio.wait_for(
-                        asyncio.to_thread(self.process.wait),
-                        timeout=_PROCESS_WAIT_TIMEOUT,
-                    )
-                except TimeoutError:
-                    _logger.warning("sandbox_process_terminate_timeout", pid=pid)
-                    self.process.kill()
-                    await asyncio.to_thread(self.process.wait)
-
-                process_manager.unregister(pid)
-                self.process = None
-
-            if self._worker_pid is not None:
-                worker_pid = self._worker_pid
-                try:
-                    process_manager.terminate_external_pid(worker_pid, force=True)
-                except (OSError, RuntimeError) as worker_err:
-                    _logger.warning(
-                        "worker_pid_terminate_failed",
-                        worker_pid=worker_pid,
-                        error=str(worker_err),
-                    )
-                self._worker_pid = None
-
-            await self._cleanup()
-
-            self.state.status = "stopped"
-            self.state.pid = None
-            _logger.info("windows_sandbox_stopped", sandbox_type="windows")
-
+            await self._stop_impl()
         except (OSError, RuntimeError, SandboxError) as e:
             _logger.warning("windows_sandbox_stop_failed", error=str(e))
             self.state.status = "error"
@@ -1302,6 +1371,33 @@ class WindowsSandbox(SandboxBase):
             "}\n"
         )
 
+    async def _poll_dispatcher_result(
+        self,
+        paths: _DispatcherPaths,
+        effective_timeout: float,
+    ) -> tuple[int, str, str] | None:
+        """Poll dispatcher output paths until a result appears or timeout elapses.
+
+        Args:
+            paths: Ticket-specific dispatcher paths to poll.
+            effective_timeout: Total wall-clock budget in seconds.
+
+        Returns:
+            tuple[int, str, str] | None: The decoded ``(exit_code, stdout, stderr)``
+            triple emitted by the dispatcher, or ``None`` if the deadline was
+            reached without a result.
+        """
+        deadline = time.monotonic() + effective_timeout
+        while time.monotonic() < deadline:
+            self._check_sandbox_alive()
+            await asyncio.sleep(_RESULT_POLL_INTERVAL)
+            if not await asyncio.to_thread(paths.result.exists):
+                continue
+            completed = await _read_dispatcher_result(paths)
+            if completed is not None:
+                return completed
+        return None
+
     async def run_command(
         self,
         command: str,
@@ -1353,17 +1449,10 @@ class WindowsSandbox(SandboxBase):
         await asyncio.to_thread(paths.trigger.write_text, exec_content, encoding="utf-8")
 
         try:
-            deadline = time.monotonic() + effective_timeout
-            while time.monotonic() < deadline:
-                self._check_sandbox_alive()
-                await asyncio.sleep(_RESULT_POLL_INTERVAL)
-                if not await asyncio.to_thread(paths.result.exists):
-                    continue
-                completed = await _read_dispatcher_result(paths)
-                if completed is not None:
-                    return completed
-
-            raise SandboxTimeoutError(_ERR_CMD_TIMEOUT)
+            completed = await self._poll_dispatcher_result(paths, effective_timeout)
+            if completed is None:
+                raise SandboxTimeoutError(_ERR_CMD_TIMEOUT)
+            return completed
         finally:
             for ticket_path in (paths.trigger, paths.out, paths.err, paths.result):
                 try:
@@ -2430,35 +2519,56 @@ def _minidump_via_dbghelp(pid: int, dump_path: Path) -> tuple[bool, str]:
         return (False, f"open_process_failed:{err_code}")
 
     try:
-        dump_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fh = dump_path.open("wb")
-        except OSError as err:
-            _logger.warning("dbghelp_dump_open_failed", pid=pid, dump_path=str(dump_path), error=str(err))
-            return (False, f"dump_open_failed:{err}")
-        try:
-            file_handle = _win_handle_from_file(fh)
-            if file_handle is None:
-                return (False, "dump_handle_failed")
-            ok = dbghelp.MiniDumpWriteDump(
-                handle,
-                pid,
-                file_handle,
-                _MINIDUMP_WITH_FULL_MEMORY,
-                None,
-                None,
-                None,
-            )
-        finally:
-            fh.close()
-        if not ok:
-            err_code = kernel32.GetLastError()
-            if err_code == _ERROR_ACCESS_DENIED:
-                return (False, f"access_denied:{err_code}")
-            return (False, f"minidump_failed:{err_code}")
+        return _write_minidump_to_path(dbghelp, kernel32, handle, pid, dump_path)
     finally:
         kernel32.CloseHandle(handle)
 
+
+def _write_minidump_to_path(
+    dbghelp: ctypes.WinDLL,
+    kernel32: ctypes.WinDLL,
+    process_handle: int,
+    pid: int,
+    dump_path: Path,
+) -> tuple[bool, str]:
+    """Write the minidump for ``process_handle`` to ``dump_path``.
+
+    Args:
+        dbghelp: Loaded ``dbghelp.dll`` interface.
+        kernel32: Loaded ``kernel32.dll`` interface.
+        process_handle: Opened Win32 process handle for ``pid``.
+        pid: Target process PID (used only for diagnostic context).
+        dump_path: Destination file path for the dump.
+
+    Returns:
+        tuple[bool, str]: Success flag and diagnostic error string (empty on success).
+    """
+    dump_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fh = dump_path.open("wb")
+    except OSError as err:
+        _logger.warning("dbghelp_dump_open_failed", pid=pid, dump_path=str(dump_path), error=str(err))
+        return (False, f"dump_open_failed:{err}")
+    try:
+        file_handle = _win_handle_from_file(fh)
+        if file_handle is None:
+            return (False, "dump_handle_failed")
+        ok = dbghelp.MiniDumpWriteDump(
+            process_handle,
+            pid,
+            file_handle,
+            _MINIDUMP_WITH_FULL_MEMORY,
+            None,
+            None,
+            None,
+        )
+    finally:
+        fh.close()
+    if not ok:
+        err_code = kernel32.GetLastError()
+        if err_code == _ERROR_ACCESS_DENIED:
+            return (False, f"access_denied:{err_code}")
+        return (False, f"minidump_failed:{err_code}")
     return (True, "")
 
 
@@ -2471,18 +2581,9 @@ def _win_handle_from_file(file_obj: IO[bytes]) -> int | None:
     Returns:
         int | None: Win32 HANDLE, or None if it could not be obtained.
     """
-    if sys.platform != "win32":
+    if sys.platform != "win32" or _msvcrt is None:
         return None
-    msvcrt_mod = sys.modules.get("msvcrt")
-    if msvcrt_mod is None:
-        try:
-            import msvcrt  # noqa: PLC0415
-
-            msvcrt_mod = msvcrt
-        except ImportError:
-            _logger.warning("msvcrt_import_failed_returning_none")
-            return None
-    get_osfhandle: Callable[[int], int] = msvcrt_mod.get_osfhandle
+    get_osfhandle: Callable[[int], int] = _msvcrt.get_osfhandle
     try:
         return get_osfhandle(file_obj.fileno())
     except (OSError, ValueError, AttributeError):

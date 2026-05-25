@@ -302,15 +302,28 @@ class TestPrintSinkAppendsToOutputWidget:
 
         harness = _PatternHarness(document=_StubDocument(b"\x00" * 64))
         try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
-            assert stubs
-            sink = stubs[0].print_sink
-            assert sink is not None
-            sink("ui-print-line-from-pattern")
-            widget = harness.print_output_widget()
-            assert "ui-print-line-from-pattern" in widget.toPlainText()
+            TestPrintSinkAppendsToOutputWidget._assert_print_sink_writes_to_widget(harness, stubs)
         finally:
             harness.deleteLater()
+
+    @staticmethod
+    def _assert_print_sink_writes_to_widget(
+        harness: _PatternHarness,
+        stubs: list[_StubInterpreterWithPrintSink],
+    ) -> None:
+        """Trigger an apply and verify the print sink writes to the widget.
+
+        Args:
+            harness: PatternHarness driving the interpreter apply.
+            stubs: List collecting created interpreter stubs.
+        """
+        harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+        assert stubs
+        sink = stubs[0].print_sink
+        assert sink is not None
+        sink("ui-print-line-from-pattern")
+        widget = harness.print_output_widget()
+        assert "ui-print-line-from-pattern" in widget.toPlainText()
 
 
 class TestPrintSinkRebindsOnCachedInterpreter:
@@ -337,15 +350,28 @@ class TestPrintSinkRebindsOnCachedInterpreter:
 
         harness = _PatternHarness(document=_StubDocument(b"\x00" * 64))
         try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
-            assert len(stubs) == 1
-            cached = stubs[0]
-            cached.print_sink = None
-            harness.trigger_apply_via_interpreter("struct S2 { u32 y; };", 0)
-            assert len(stubs) == 1, "interpreter must be cached across applies"
-            assert callable(cached.print_sink), "cached interpreter must have its print sink reinstalled"
+            TestPrintSinkRebindsOnCachedInterpreter._assert_sink_reinstalled_on_second_apply(harness, stubs)
         finally:
             harness.deleteLater()
+
+    @staticmethod
+    def _assert_sink_reinstalled_on_second_apply(
+        harness: _PatternHarness,
+        stubs: list[_StubInterpreterWithPrintSink],
+    ) -> None:
+        """Trigger two applies and verify the cached interpreter is rebound.
+
+        Args:
+            harness: PatternHarness driving the interpreter applies.
+            stubs: List collecting created interpreter stubs.
+        """
+        harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+        assert len(stubs) == 1
+        cached = stubs[0]
+        cached.print_sink = None
+        harness.trigger_apply_via_interpreter("struct S2 { u32 y; };", 0)
+        assert len(stubs) == 1, "interpreter must be cached across applies"
+        assert callable(cached.print_sink), "cached interpreter must have its print sink reinstalled"
 
 
 class TestPrintOutputClearedBetweenApplies:

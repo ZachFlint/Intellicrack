@@ -504,18 +504,28 @@ class TestF0044HandleTrackingDicts:
         setattr(k32, "WaitNamedPipeW", _fake_wait_named_pipe_w)
         setattr(k32, "CloseHandle", _fake_close_handle)
         try:
-            handle = await bridge.pipe_connect(pipe_name)
-            pipe_handles = _get_pipe_handles(bridge)
-            assert handle == _TEST_HANDLE_PIPE
-            assert handle in pipe_handles, "pipe_connect must register handle in _pipe_handles"
-            assert pipe_handles[handle] == pipe_name
-
-            await bridge.pipe_close(handle)
-            assert handle not in _get_pipe_handles(bridge), "pipe_close must remove the entry from _pipe_handles"
+            await self._assert_pipe_register_and_close(bridge, pipe_name)
         finally:
             setattr(k32, "CreateFileW", original_create)
             setattr(k32, "WaitNamedPipeW", original_wait)
             setattr(k32, "CloseHandle", original_close)
+
+    @staticmethod
+    async def _assert_pipe_register_and_close(bridge: ProcessBridge, pipe_name: str) -> None:
+        """Connect to a pipe and assert registration/close round-trips state.
+
+        Args:
+            bridge: ProcessBridge under test.
+            pipe_name: Named pipe path supplied to ``pipe_connect``.
+        """
+        handle = await bridge.pipe_connect(pipe_name)
+        pipe_handles = _get_pipe_handles(bridge)
+        assert handle == _TEST_HANDLE_PIPE
+        assert handle in pipe_handles, "pipe_connect must register handle in _pipe_handles"
+        assert pipe_handles[handle] == pipe_name
+
+        await bridge.pipe_close(handle)
+        assert handle not in _get_pipe_handles(bridge), "pipe_close must remove the entry from _pipe_handles"
 
     async def test_device_open_registers_handle_in_device_handles(
         self,
@@ -549,14 +559,24 @@ class TestF0044HandleTrackingDicts:
         setattr(k32, "CreateFileW", _fake_create_file_w)
         setattr(k32, "CloseHandle", _fake_close_handle)
         try:
-            handle = await bridge.device_open(device_path)
-            device_handles = _get_device_handles(bridge)
-            assert handle == _TEST_HANDLE_DEVICE
-            assert handle in device_handles, "device_open must register handle in _device_handles"
-            assert device_handles[handle] == device_path
-
-            await bridge.device_close(handle)
-            assert handle not in _get_device_handles(bridge), "device_close must remove the entry from _device_handles"
+            await self._assert_device_register_and_close(bridge, device_path)
         finally:
             setattr(k32, "CreateFileW", original_create)
             setattr(k32, "CloseHandle", original_close)
+
+    @staticmethod
+    async def _assert_device_register_and_close(bridge: ProcessBridge, device_path: str) -> None:
+        """Open a device and assert registration/close round-trips state.
+
+        Args:
+            bridge: ProcessBridge under test.
+            device_path: Device namespace path supplied to ``device_open``.
+        """
+        handle = await bridge.device_open(device_path)
+        device_handles = _get_device_handles(bridge)
+        assert handle == _TEST_HANDLE_DEVICE
+        assert handle in device_handles, "device_open must register handle in _device_handles"
+        assert device_handles[handle] == device_path
+
+        await bridge.device_close(handle)
+        assert handle not in _get_device_handles(bridge), "device_close must remove the entry from _device_handles"

@@ -719,6 +719,24 @@ class MemoryTab(QWidget):
             protection=prot,
         )
 
+    def _display_search_results(self, result: object) -> None:
+        """Render memory-search results into the search results table.
+
+        Args:
+            result: Raw result payload returned by the bridge coroutine.
+        """
+        if not isinstance(result, list):
+            self._search_status.setText("No results")
+            return
+        typed_result = cast("list[object]", result)
+        self._search_results.setRowCount(0)
+        for addr in typed_result:
+            addr_int = addr if isinstance(addr, int) else 0
+            row = self._search_results.rowCount()
+            self._search_results.insertRow(row)
+            self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
+        self._search_status.setText(f"{len(typed_result)} matches")
+
     def _on_search(self) -> None:
         """Search for a byte pattern in process memory."""
         if self._bridge is None:
@@ -735,17 +753,7 @@ class MemoryTab(QWidget):
 
         def _on_success(result: object) -> None:
             try:
-                if not isinstance(result, list):
-                    self._search_status.setText("No results")
-                    return
-                typed_result = cast("list[object]", result)
-                self._search_results.setRowCount(0)
-                for addr in typed_result:
-                    addr_int = addr if isinstance(addr, int) else 0
-                    row = self._search_results.rowCount()
-                    self._search_results.insertRow(row)
-                    self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
-                self._search_status.setText(f"{len(typed_result)} matches")
+                self._display_search_results(result)
             except (RuntimeError, ValueError, TypeError) as exc:
                 _logger.warning("search_display_failed", error=str(exc))
                 self._search_status.setText("Error displaying results")

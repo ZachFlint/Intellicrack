@@ -262,6 +262,42 @@ class RFBClient:
         self._fb_dirty = False
         return dirty
 
+    async def _open_and_handshake(
+        self,
+        host: str,
+        port: int,
+        connect_timeout: float,
+        password: str | None,
+    ) -> bool:
+        """Open the VNC TCP connection and perform the full RFB handshake.
+
+        Args:
+            host: Server hostname or IP.
+            port: Server port number.
+            connect_timeout: Maximum seconds to wait for the TCP connection.
+            password: Optional password for VNC Authentication.
+
+        Returns:
+            bool: ``True`` when the handshake completes and authentication succeeds,
+            ``False`` when authentication is rejected.
+        """
+        self._reader, self._writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=connect_timeout,
+        )
+
+        await self._negotiate_version()
+        auth_ok = await self._negotiate_security(password)
+        if not auth_ok:
+            return False
+
+        self.width, self.height, self.server_name = await self._client_init()
+        self.framebuffer = QImage(self.width, self.height, QImage.Format.Format_RGB32)
+        self.framebuffer.fill(QColor(0, 0, 0))
+        self._fb_dirty = True
+        self._connected = True
+        return True
+
     async def connect(self, host: str, port: int, **options: Unpack[_ConnectOptions]) -> bool:
         """Connect to a VNC server and complete the handshake.
 
@@ -279,22 +315,8 @@ class RFBClient:
         password = options.get("password")
         _logger.info("vnc_connect_started", host=host, port=port, timeout=connect_timeout)
         try:
-            self._reader, self._writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port),
-                timeout=connect_timeout,
-            )
-
-            await self._negotiate_version()
-            auth_ok = await self._negotiate_security(password)
-            if not auth_ok:
+            if not await self._open_and_handshake(host, port, connect_timeout, password):
                 return False
-
-            self.width, self.height, self.server_name = await self._client_init()
-            self.framebuffer = QImage(self.width, self.height, QImage.Format.Format_RGB32)
-            self.framebuffer.fill(QColor(0, 0, 0))
-            self._fb_dirty = True
-            self._connected = True
-
         except (TimeoutError, OSError, struct.error) as exc:
             win_err = getattr(exc, "winerror", None)
             hint = None
@@ -471,6 +493,48 @@ class RFBClient:
         self._writer.write(msg)
         await self._writer.drain()
 
+    async def _dispatch_server_message(self, reader: asyncio.StreamReader) -> bool:
+        """Read one server message and dispatch it to the right handler.
+
+        Args:
+            reader: Active stream reader for the connected VNC socket.
+
+        Returns:
+            bool: ``True`` when the message was handled (or silently consumed),
+            ``False`` for unrecognised or zero-length message types.
+        """
+        msg_type_data = await asyncio.wait_for(
+            reader.readexactly(1),
+            timeout=_MESSAGE_READ_TIMEOUT,
+        )
+        if not msg_type_data:
+            return False
+
+        msg_type = msg_type_data[0]
+
+        if msg_type == _MSG_FRAMEBUFFER_UPDATE:
+            await self._handle_framebuffer_update()
+            return True
+
+        if msg_type == 1:
+            await reader.readexactly(5)
+            count_data = await reader.readexactly(2)
+            if count := struct.unpack("!H", count_data)[0]:
+                await reader.readexactly(count * 6)
+            return True
+
+        if msg_type == _MSG_BELL:
+            return True
+
+        if msg_type == _MSG_SERVER_CUT_TEXT:
+            await reader.readexactly(3)
+            length_data = await reader.readexactly(4)
+            if length := struct.unpack("!I", length_data)[0]:
+                await reader.readexactly(length)
+            return True
+
+        return False
+
     async def handle_server_message(self) -> bool:
         """Read and process one server message.
 
@@ -481,36 +545,7 @@ class RFBClient:
             return False
 
         try:
-            msg_type_data = await asyncio.wait_for(
-                self._reader.readexactly(1),
-                timeout=_MESSAGE_READ_TIMEOUT,
-            )
-            if not msg_type_data:
-                return False
-
-            msg_type = msg_type_data[0]
-
-            if msg_type == _MSG_FRAMEBUFFER_UPDATE:
-                await self._handle_framebuffer_update()
-                return True
-
-            if msg_type == 1:
-                await self._reader.readexactly(5)
-                count_data = await self._reader.readexactly(2)
-                if count := struct.unpack("!H", count_data)[0]:
-                    await self._reader.readexactly(count * 6)
-                return True
-
-            if msg_type == _MSG_BELL:
-                return True
-
-            if msg_type == _MSG_SERVER_CUT_TEXT:
-                await self._reader.readexactly(3)
-                length_data = await self._reader.readexactly(4)
-                if length := struct.unpack("!I", length_data)[0]:
-                    await self._reader.readexactly(length)
-                return True
-
+            return await self._dispatch_server_message(self._reader)
         except asyncio.IncompleteReadError:
             _logger.warning("vnc_message_incomplete")
             self._connected = False
@@ -522,8 +557,6 @@ class RFBClient:
             _logger.exception("vnc_message_error", connected=self._connected)
             self._connected = False
             return False
-
-        return False
 
     async def _handle_framebuffer_update(self) -> None:
         """Process a FramebufferUpdate message and update the QImage.
@@ -1739,14 +1772,7 @@ class VNCWidget(QWidget):
         """
         connected: bool = False
         try:
-            result = run_bridge_coroutine(self.client.connect(host, port, password=password))
-            connected = bool(result)
-            if connected:
-                self._start_pump_task()
-                self.update_timer.start(_REPAINT_INTERVAL_MS)
-                _logger.info("vnc_widget_connected", host=host, port=port)
-            else:
-                _logger.warning("vnc_widget_connect_failed", host=host, port=port)
+            connected = self._run_connect_and_start_pump(host, port, password)
         except (OSError, struct.error, RuntimeError) as exc:
             win_err = getattr(exc, "winerror", None)
             hint = None
@@ -1754,6 +1780,27 @@ class VNCWidget(QWidget):
                 hint = NamedPipeClient.format_error_hint(win_err)
             _logger.exception("vnc_widget_connect_error", host=host, port=port, error_hint=hint)
         self.connection_status_changed.emit(connected)
+
+    def _run_connect_and_start_pump(self, host: str, port: int, password: str | None) -> bool:
+        """Run the connect coroutine, start the pump, and emit status logs.
+
+        Args:
+            host: Server hostname or IP.
+            port: Server port number.
+            password: Optional password for VNC Authentication.
+
+        Returns:
+            bool: ``True`` when the connection succeeded and the pump was started.
+        """
+        result = run_bridge_coroutine(self.client.connect(host, port, password=password))
+        connected = bool(result)
+        if connected:
+            self._start_pump_task()
+            self.update_timer.start(_REPAINT_INTERVAL_MS)
+            _logger.info("vnc_widget_connected", host=host, port=port)
+        else:
+            _logger.warning("vnc_widget_connect_failed", host=host, port=port)
+        return connected
 
     def disconnect_from_server(self) -> None:
         """Disconnect from the VNC server and stop the pump task."""
@@ -1794,6 +1841,33 @@ class VNCWidget(QWidget):
 
         loop.call_soon_threadsafe(_cancel)
 
+    async def _pump_server_loop(self) -> None:
+        """Run the request/handle loop until the client disconnects or the task is cancelled.
+
+        This is the body of :meth:`_pump_server` extracted into a helper so the
+        outer method can keep its try/finally short.
+        """
+        while self.client.connected:
+            try:
+                await self.client.request_framebuffer_update(incremental=True)
+                handled = await self.client.handle_server_message()
+            except (OSError, struct.error):
+                _logger.exception("vnc_pump_error")
+                break
+            except asyncio.CancelledError:
+                _logger.debug("vnc_pump_cancelled", exc_info=True)
+                break
+
+            if self.client.take_dirty_flag():
+                self.framebuffer_updated.emit()
+
+            if not handled:
+                try:
+                    await asyncio.sleep(_PUMP_IDLE_SLEEP_S)
+                except asyncio.CancelledError:
+                    _logger.debug("vnc_pump_idle_sleep_cancelled", exc_info=True)
+                    break
+
     async def _pump_server(self) -> None:
         """Continuously request and process framebuffer updates.
 
@@ -1802,26 +1876,7 @@ class VNCWidget(QWidget):
         """
         self._pump_task_ref = asyncio.current_task()
         try:
-            while self.client.connected:
-                try:
-                    await self.client.request_framebuffer_update(incremental=True)
-                    handled = await self.client.handle_server_message()
-                except (OSError, struct.error):
-                    _logger.exception("vnc_pump_error")
-                    break
-                except asyncio.CancelledError:
-                    _logger.debug("vnc_pump_cancelled", exc_info=True)
-                    break
-
-                if self.client.take_dirty_flag():
-                    self.framebuffer_updated.emit()
-
-                if not handled:
-                    try:
-                        await asyncio.sleep(_PUMP_IDLE_SLEEP_S)
-                    except asyncio.CancelledError:
-                        _logger.debug("vnc_pump_idle_sleep_cancelled", exc_info=True)
-                        break
+            await self._pump_server_loop()
         finally:
             self._pump_task_ref = None
 

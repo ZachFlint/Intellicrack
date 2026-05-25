@@ -628,6 +628,32 @@ def _compute_hash_fnv(algo: str, data: bytes) -> str | None:
     return None
 
 
+def _compute_hash_impl(algo: str, data: bytes) -> str | None:
+    """Dispatch ``algo`` across the supported hash backends.
+
+    Args:
+        algo: Algorithm name string.
+        data: Input bytes to hash.
+
+    Returns:
+        str | None: Hex-encoded hash result, or ``None`` when no backend
+            recognized ``algo``.
+    """
+    result = _compute_hash_stdlib(algo, data)
+    if result is not None:
+        return result
+    result = _compute_hash_xxhash(algo, data)
+    if result is not None:
+        return result
+    result = _compute_hash_siphash(algo, data)
+    if result is not None:
+        return result
+    result = _compute_hash_checksums(algo, data)
+    if result is not None:
+        return result
+    return _compute_hash_fnv(algo, data)
+
+
 def compute_hash(algo: str, data: bytes) -> str:
     """Compute a hash or checksum of data using the specified algorithm.
 
@@ -639,19 +665,7 @@ def compute_hash(algo: str, data: bytes) -> str:
         str: Hex-encoded hash result, or an error message prefixed with "Error:".
     """
     try:
-        result = _compute_hash_stdlib(algo, data)
-        if result is not None:
-            return result
-        result = _compute_hash_xxhash(algo, data)
-        if result is not None:
-            return result
-        result = _compute_hash_siphash(algo, data)
-        if result is not None:
-            return result
-        result = _compute_hash_checksums(algo, data)
-        if result is not None:
-            return result
-        result = _compute_hash_fnv(algo, data)
+        result = _compute_hash_impl(algo, data)
     except (ValueError, TypeError, OSError, RuntimeError, ImportError) as exc:
         _logger.exception("compute_hash_failed", algo=algo, error=str(exc))
         return f"Error: {exc}"

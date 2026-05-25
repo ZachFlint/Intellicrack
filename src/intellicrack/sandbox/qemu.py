@@ -72,7 +72,7 @@ from intellicrack.sandbox.base import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
 _logger = get_logger(__name__)
 
@@ -438,6 +438,27 @@ class QMPClient:
         self._lock = asyncio.Lock()
         _logger.debug("qmp_client_initialized", host=host, port=port)
 
+    async def _open_qmp_session(self, time_limit: float) -> None:
+        """Open a QMP socket session and negotiate capabilities.
+
+        Args:
+            time_limit: Connection timeout in seconds.
+        """
+        self._reader, self._writer = await asyncio.wait_for(
+            asyncio.open_connection(self._host, self._port),
+            timeout=time_limit,
+        )
+
+        greeting = await asyncio.wait_for(
+            self._reader.readline(),
+            timeout=_QMP_READ_TIMEOUT,
+        )
+        _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
+
+        await self._send_command({"execute": "qmp_capabilities"})
+        self.connected = True
+        _logger.info("qmp_connected", host=self._host, port=self._port)
+
     async def connect(self, time_limit: float = 30.0) -> bool:
         """Connect to QMP server.
 
@@ -448,26 +469,11 @@ class QMPClient:
             bool: True if connected successfully.
         """
         try:
-            self._reader, self._writer = await asyncio.wait_for(
-                asyncio.open_connection(self._host, self._port),
-                timeout=time_limit,
-            )
-
-            greeting = await asyncio.wait_for(
-                self._reader.readline(),
-                timeout=_QMP_READ_TIMEOUT,
-            )
-            _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
-
-            await self._send_command({"execute": "qmp_capabilities"})
-            self.connected = True
-            _logger.info("qmp_connected", host=self._host, port=self._port)
-
+            await self._open_qmp_session(time_limit)
         except (OSError, TimeoutError, ConnectionError) as e:
             _logger.warning("qmp_connection_failed", error=str(e))
             return False
-        else:
-            return True
+        return True
 
     async def disconnect(self) -> None:
         """Disconnect from QMP server."""
@@ -501,31 +507,49 @@ class QMPClient:
 
         async with self._lock:
             try:
-                cmd_json = json.dumps(command) + "\n"
-                self._writer.write(cmd_json.encode())
-                await self._writer.drain()
-
-                response_line = await asyncio.wait_for(
-                    self._reader.readline(),
-                    timeout=time_limit,
-                )
-
-                response = json.loads(response_line.decode())
-
-                if "error" in response:
-                    return QMPResponse(
-                        success=False,
-                        error=response["error"].get("desc", "Unknown error"),
-                    )
-
-                return QMPResponse(success=True, data=response.get("return"))
-
+                return await self._exchange_qmp_command(command, time_limit)
             except TimeoutError:
                 _logger.warning("qmp_command_timeout")
                 return QMPResponse(success=False, error="Command timed out")
             except (OSError, json.JSONDecodeError, ConnectionError) as e:
                 _logger.warning("qmp_command_failed", error=str(e), exc_info=True)
                 return QMPResponse(success=False, error=str(e))
+
+    async def _exchange_qmp_command(
+        self,
+        command: dict[str, object],
+        time_limit: float,
+    ) -> QMPResponse:
+        """Send a QMP command over the open connection and decode the response.
+
+        Args:
+            command: QMP command dictionary.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            QMPResponse: Parsed response from the QMP server.
+        """
+        if self._reader is None or self._writer is None:
+            return QMPResponse(success=False, error="Not connected")
+
+        cmd_json = json.dumps(command) + "\n"
+        self._writer.write(cmd_json.encode())
+        await self._writer.drain()
+
+        response_line = await asyncio.wait_for(
+            self._reader.readline(),
+            timeout=time_limit,
+        )
+
+        response = json.loads(response_line.decode())
+
+        if "error" in response:
+            return QMPResponse(
+                success=False,
+                error=response["error"].get("desc", "Unknown error"),
+            )
+
+        return QMPResponse(success=True, data=response.get("return"))
 
     async def query_status(self) -> QMPResponse:
         """Query VM status.
@@ -665,6 +689,20 @@ class GuestAgentClient:
         """
         return self.connected
 
+    async def _open_agent_socket(self, retry_interval: float) -> None:
+        """Open a single connection attempt to the guest agent.
+
+        Args:
+            retry_interval: Per-attempt connect timeout in seconds.
+        """
+        self._reader, self._writer = await asyncio.wait_for(
+            asyncio.open_connection(self._host, self._port),
+            timeout=retry_interval,
+        )
+        self.connected = True
+        self._reader_task = asyncio.create_task(self._read_messages())
+        _logger.info("guest_agent_connected", host=self._host, port=self._port)
+
     async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
         """Connect to guest agent with retry.
 
@@ -680,18 +718,9 @@ class GuestAgentClient:
         connected = False
         while time.time() - start_time < time_limit:
             try:
-                self._reader, self._writer = await asyncio.wait_for(
-                    asyncio.open_connection(self._host, self._port),
-                    timeout=retry_interval,
-                )
-                self.connected = True
-
-                self._reader_task = asyncio.create_task(self._read_messages())
-
-                _logger.info("guest_agent_connected", host=self._host, port=self._port)
+                await self._open_agent_socket(retry_interval)
                 connected = True
                 break
-
             except (TimeoutError, OSError):
                 _logger.warning("guest_agent_connect_retry", host=self._host, port=self._port)
                 await asyncio.sleep(retry_interval)
@@ -721,6 +750,23 @@ class GuestAgentClient:
         self._writer = None
         self.connected = False
 
+    async def _enqueue_agent_line(self, line: bytes) -> None:
+        """Decode a raw agent line and enqueue a parsed message.
+
+        Args:
+            line: Newline-terminated bytes received from the agent socket.
+        """
+        try:
+            data = json.loads(line.decode())
+            msg = GuestAgentMessage(
+                message_type=data.get("type", "unknown"),
+                timestamp=datetime.now(UTC),
+                data=data.get("data", {}),
+            )
+            await self._message_queue.put(msg)
+        except json.JSONDecodeError:
+            _logger.warning("agent_invalid_json", line=line.decode(errors="replace"))
+
     async def _read_messages(self) -> None:
         """Background task to read messages from agent."""
         if self._reader is None:
@@ -731,18 +777,7 @@ class GuestAgentClient:
                 line = await self._reader.readline()
                 if not line:
                     break
-
-                try:
-                    data = json.loads(line.decode())
-                    msg = GuestAgentMessage(
-                        message_type=data.get("type", "unknown"),
-                        timestamp=datetime.now(UTC),
-                        data=data.get("data", {}),
-                    )
-                    await self._message_queue.put(msg)
-                except json.JSONDecodeError:
-                    _logger.warning("agent_invalid_json", line=line.decode(errors="replace"))
-
+                await self._enqueue_agent_line(line)
             except asyncio.CancelledError:
                 _logger.debug("agent_read_cancelled", exc_info=True)
                 break
@@ -783,38 +818,78 @@ class GuestAgentClient:
         }
 
         async with self._lock:
-            result: tuple[int, str, str] = (-1, "", "Command timed out")
             try:
-                self._writer.write((json.dumps(request) + "\n").encode())
-                await self._writer.drain()
-
-                start_time = time.time()
-                while time.time() - start_time < time_limit:
-                    try:
-                        msg = await asyncio.wait_for(
-                            self._message_queue.get(),
-                            timeout=_AGENT_POLL_TIMEOUT,
-                        )
-                        if msg.message_type == "result":
-                            exit_code_raw = msg.data.get("exit_code")
-                            exit_code_val = (
-                                int(exit_code_raw) if exit_code_raw is not None and isinstance(exit_code_raw, (int, str)) else -1
-                            )
-                            result = (
-                                exit_code_val,
-                                str(msg.data.get("stdout", "")),
-                                str(msg.data.get("stderr", "")),
-                            )
-                            break
-                    except TimeoutError:
-                        _logger.debug("guest_command_poll_timeout", exc_info=True)
-                        continue
-
+                return await self._dispatch_guest_request(request, time_limit)
             except (OSError, ConnectionError) as e:
                 _logger.warning("guest_command_execution_failed", error=str(e), exc_info=True)
-                result = (-1, "", str(e))
+                return (-1, "", str(e))
 
-            return result
+    @staticmethod
+    def _decode_guest_result(msg: GuestAgentMessage) -> tuple[int, str, str]:
+        """Decode a ``result`` message from the guest agent into a process triple.
+
+        Args:
+            msg: Message whose ``data`` payload contains the result fields.
+
+        Returns:
+            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` extracted from
+            ``msg``.
+        """
+        exit_code_raw = msg.data.get("exit_code")
+        exit_code_val = (
+            int(exit_code_raw) if exit_code_raw is not None and isinstance(exit_code_raw, (int, str)) else -1
+        )
+        return (
+            exit_code_val,
+            str(msg.data.get("stdout", "")),
+            str(msg.data.get("stderr", "")),
+        )
+
+    async def _poll_guest_result(self, time_limit: float) -> tuple[int, str, str]:
+        """Poll the message queue until a result message is observed or the deadline elapses.
+
+        Args:
+            time_limit: Total wall-clock deadline in seconds.
+
+        Returns:
+            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
+            received result message, or a timeout marker triple if the deadline
+            elapses without a result.
+        """
+        start_time = time.time()
+        while time.time() - start_time < time_limit:
+            try:
+                msg = await asyncio.wait_for(
+                    self._message_queue.get(),
+                    timeout=_AGENT_POLL_TIMEOUT,
+                )
+            except TimeoutError:
+                _logger.debug("guest_command_poll_timeout", exc_info=True)
+                continue
+            if msg.message_type == "result":
+                return self._decode_guest_result(msg)
+        return (-1, "", "Command timed out")
+
+    async def _dispatch_guest_request(
+        self,
+        request: Mapping[str, object],
+        time_limit: float,
+    ) -> tuple[int, str, str]:
+        """Write a guest agent request and poll for its corresponding result.
+
+        Args:
+            request: Serializable request payload to send.
+            time_limit: Total wall-clock deadline for the response.
+
+        Returns:
+            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
+            guest agent's reply.
+        """
+        if self._writer is None:
+            return (-1, "", "Not connected to guest agent")
+        self._writer.write((json.dumps(request) + "\n").encode())
+        await self._writer.drain()
+        return await self._poll_guest_result(time_limit)
 
     async def get_pending_messages(self) -> list[GuestAgentMessage]:
         """Get all pending messages from the agent.
@@ -1073,19 +1148,7 @@ class QEMUSandbox(SandboxBase):
             return False
         _logger.debug("whpx_bcdedit_probe_started", bcdedit=bcdedit_path)
         try:
-            bcdedit_result = _subprocess_run(
-                [bcdedit_path, "/enum", "{current}"],
-                capture_output=True,
-                text=True,
-                timeout=_ACCEL_DETECT_TIMEOUT,
-                check=False,
-            )
-            bcd_output = bcdedit_result.stdout.lower()
-            if "hypervisorlaunchtype" not in bcd_output:
-                _logger.debug("whpx_bcdedit_no_hypervisorlaunchtype")
-                return False
-            if "hypervisorlaunchtype    auto" not in bcd_output and "hypervisorlaunchtype  auto" not in bcd_output:
-                _logger.debug("whpx_bcdedit_hypervisorlaunchtype_not_auto", bcd_output=bcd_output)
+            if not QEMUSandbox._bcdedit_reports_hypervisor_auto(bcdedit_path):
                 return False
         except (OSError, _SubprocessTimeoutExpired) as e:
             _logger.warning("whpx_bcdedit_probe_failed", error=str(e))
@@ -1093,6 +1156,150 @@ class QEMUSandbox(SandboxBase):
 
         _logger.debug("whpx_host_prerequisites_satisfied")
         return True
+
+    @staticmethod
+    def _bcdedit_reports_hypervisor_auto(bcdedit_path: str) -> bool:
+        """Invoke ``bcdedit /enum {current}`` and check the hypervisor launch type.
+
+        Args:
+            bcdedit_path: Absolute path to the ``bcdedit`` executable.
+
+        Returns:
+            bool: True when ``hypervisorlaunchtype`` is present and set to
+            ``auto``; False otherwise.
+        """
+        bcdedit_result = _subprocess_run(
+            [bcdedit_path, "/enum", "{current}"],
+            capture_output=True,
+            text=True,
+            timeout=_ACCEL_DETECT_TIMEOUT,
+            check=False,
+        )
+        bcd_output = bcdedit_result.stdout.lower()
+        if "hypervisorlaunchtype" not in bcd_output:
+            _logger.debug("whpx_bcdedit_no_hypervisorlaunchtype")
+            return False
+        if "hypervisorlaunchtype    auto" not in bcd_output and "hypervisorlaunchtype  auto" not in bcd_output:
+            _logger.debug("whpx_bcdedit_hypervisorlaunchtype_not_auto", bcd_output=bcd_output)
+            return False
+        return True
+
+    async def _try_whpx_accelerator(
+        self,
+        process_manager: ProcessManager,
+        output_lower: str,
+    ) -> AcceleratorType | None:
+        """Probe WHPX support and return :attr:`AcceleratorType.WHPX` when usable.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used for tracked
+                subprocess invocations.
+            output_lower: Lower-cased ``-accel help`` output to scan for WHPX
+                advertisement.
+
+        Returns:
+            AcceleratorType | None: :attr:`AcceleratorType.WHPX` if WHPX is
+            advertised, prerequisites are satisfied, and the smoke test
+            succeeds; ``None`` otherwise.
+        """
+        if "whpx" not in output_lower:
+            return None
+
+        whpx_prereqs = await asyncio.to_thread(self._probe_whpx_host_prerequisites)
+        if not whpx_prereqs:
+            _logger.info("whpx_skipped_host_prerequisites_not_met")
+            return None
+
+        whpx_test = await process_manager.run_tracked_async(
+            [
+                str(self._qemu_path),
+                "-accel",
+                "whpx",
+                "-machine",
+                "q35",
+                "-m",
+                "64",
+                "-display",
+                "none",
+                "-device",
+                "?",
+            ],
+            name="qemu-whpx-test",
+            text=False,
+            process_timeout=_ACCEL_TEST_TIMEOUT,
+        )
+        stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
+        if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
+            _logger.info("whpx_acceleration_available", accelerator="whpx")
+            return AcceleratorType.WHPX
+        return None
+
+    async def _try_kvm_accelerator(
+        self,
+        process_manager: ProcessManager,
+        output_lower: str,
+    ) -> AcceleratorType | None:
+        """Probe KVM support and return :attr:`AcceleratorType.KVM` when usable.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used for tracked
+                subprocess invocations.
+            output_lower: Lower-cased ``-accel help`` output to scan for KVM
+                advertisement.
+
+        Returns:
+            AcceleratorType | None: :attr:`AcceleratorType.KVM` if the KVM
+            smoke test exits successfully; ``None`` otherwise.
+        """
+        if "kvm" not in output_lower:
+            return None
+
+        kvm_test = await process_manager.run_tracked_async(
+            [
+                str(self._qemu_path),
+                "-accel",
+                "kvm",
+                "-machine",
+                "q35",
+                "-m",
+                "64",
+                "-display",
+                "none",
+                "-device",
+                "?",
+            ],
+            name="qemu-kvm-test",
+            text=False,
+            process_timeout=_ACCEL_TEST_TIMEOUT,
+        )
+        if kvm_test.returncode == _RETURNCODE_SUCCESS:
+            _logger.info("kvm_acceleration_available", accelerator="kvm")
+            return AcceleratorType.KVM
+        return None
+
+    async def _detect_accelerator_impl(self, process_manager: ProcessManager) -> AcceleratorType | None:
+        """Run the WHPX and KVM detection probes for :meth:`_detect_accelerator`.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used for tracked
+                subprocess invocations.
+
+        Returns:
+            AcceleratorType | None: The first accelerator that passes its
+            smoke test, or ``None`` if no hardware accelerator is usable.
+        """
+        result = await process_manager.run_tracked_async(
+            [str(self._qemu_path), "-accel", "help"],
+            name="qemu-accel-help",
+            process_timeout=_ACCEL_DETECT_TIMEOUT,
+        )
+        output_lower = (result.stdout + result.stderr).lower()
+
+        whpx = await self._try_whpx_accelerator(process_manager, output_lower)
+        if whpx is not None:
+            return whpx
+
+        return await self._try_kvm_accelerator(process_manager, output_lower)
 
     async def _detect_accelerator(self) -> AcceleratorType:
         """Detect available hardware acceleration.
@@ -1112,66 +1319,13 @@ class QEMUSandbox(SandboxBase):
         process_manager = ProcessManager.get_instance()
 
         try:
-            result = await process_manager.run_tracked_async(
-                [str(self._qemu_path), "-accel", "help"],
-                name="qemu-accel-help",
-                process_timeout=_ACCEL_DETECT_TIMEOUT,
-            )
-            output = result.stdout + result.stderr
-
-            if "whpx" in output.lower():
-                whpx_prereqs = await asyncio.to_thread(self._probe_whpx_host_prerequisites)
-                if whpx_prereqs:
-                    whpx_test = await process_manager.run_tracked_async(
-                        [
-                            str(self._qemu_path),
-                            "-accel",
-                            "whpx",
-                            "-machine",
-                            "q35",
-                            "-m",
-                            "64",
-                            "-display",
-                            "none",
-                            "-device",
-                            "?",
-                        ],
-                        name="qemu-whpx-test",
-                        text=False,
-                        process_timeout=_ACCEL_TEST_TIMEOUT,
-                    )
-                    stderr_bytes = whpx_test.stderr if isinstance(whpx_test.stderr, bytes) else whpx_test.stderr.encode()
-                    if whpx_test.returncode == _RETURNCODE_SUCCESS or b"whpx" not in stderr_bytes.lower():
-                        _logger.info("whpx_acceleration_available", accelerator="whpx")
-                        return AcceleratorType.WHPX
-                else:
-                    _logger.info("whpx_skipped_host_prerequisites_not_met")
-
-            if "kvm" in output.lower():
-                kvm_test = await process_manager.run_tracked_async(
-                    [
-                        str(self._qemu_path),
-                        "-accel",
-                        "kvm",
-                        "-machine",
-                        "q35",
-                        "-m",
-                        "64",
-                        "-display",
-                        "none",
-                        "-device",
-                        "?",
-                    ],
-                    name="qemu-kvm-test",
-                    text=False,
-                    process_timeout=_ACCEL_TEST_TIMEOUT,
-                )
-                if kvm_test.returncode == _RETURNCODE_SUCCESS:
-                    _logger.info("kvm_acceleration_available", accelerator="kvm")
-                    return AcceleratorType.KVM
-
+            detected = await self._detect_accelerator_impl(process_manager)
         except (OSError, RuntimeError, TimeoutError) as e:
             _logger.warning("acceleration_detection_failed", error=str(e))
+            detected = None
+
+        if detected is not None:
+            return detected
 
         _logger.info("using_tcg_software_emulation", accelerator="tcg")
         return AcceleratorType.TCG
@@ -1690,6 +1844,135 @@ class QEMUSandbox(SandboxBase):
                 raise SandboxError(error_message) from connect_error
             raise SandboxError(error_message)
 
+    async def _prepare_qemu_shared_folders(self) -> None:
+        """Create temp dir, shared folder, and the standard subdirectories."""
+        self._temp_dir = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_qemu_"))
+        self._shared_folder = self._temp_dir / "shared"
+        await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
+
+        await asyncio.to_thread((self._shared_folder / "input").mkdir, exist_ok=True)
+        await asyncio.to_thread((self._shared_folder / "output").mkdir, exist_ok=True)
+        await asyncio.to_thread((self._shared_folder / "logs").mkdir, exist_ok=True)
+        await asyncio.to_thread((self._shared_folder / "monitor").mkdir, exist_ok=True)
+
+    async def _spawn_qemu_process(self) -> None:
+        """Build the QEMU command line and run the launcher subprocess to completion.
+
+        QEMU itself daemonizes by writing a PID file; the launcher process
+        exits once the VM is running.
+        """
+        cmd = await self._build_qemu_command()
+        _logger.info("qemu_starting", command=" ".join(cmd))
+        _logger.info("subprocess_spawning", argv=cmd, executable=cmd[0] if cmd else None)
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        _, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=_PROCESS_COMMUNICATE_TIMEOUT,
+        )
+
+        self._check_qemu_started(process.returncode, stderr)
+
+    @staticmethod
+    async def _read_pidfile_once(pidfile_path: Path) -> int | None:
+        """Attempt to read and parse a QEMU PID file once.
+
+        Args:
+            pidfile_path: Path to the QEMU-written PID file.
+
+        Returns:
+            int | None: Parsed PID on success, ``None`` if the file does not
+            yet exist or its contents cannot be parsed.
+        """
+        if not await asyncio.to_thread(pidfile_path.exists):
+            return None
+        try:
+            pid_content = await asyncio.to_thread(
+                pidfile_path.read_text,
+                encoding="utf-8",
+            )
+            return int(pid_content.strip())
+        except (ValueError, OSError):
+            return None
+
+    async def _resolve_qemu_pid(self) -> int | None:
+        """Poll the QEMU PID file with retry until a PID is read or attempts are exhausted.
+
+        Returns:
+            int | None: The QEMU PID once the file is parseable, or ``None``
+            if no PID file is configured or every attempt fails.
+        """
+        if self._pidfile_path is None:
+            return None
+
+        for attempt in range(_PIDFILE_MAX_RETRIES):
+            await asyncio.sleep(_PIDFILE_RETRY_DELAY)
+            qemu_pid = await self._read_pidfile_once(self._pidfile_path)
+            if qemu_pid is not None:
+                return qemu_pid
+            _logger.warning("pidfile_read_retry", attempt=attempt + 1)
+        return None
+
+    async def _register_qemu_pid(self, qemu_pid: int | None) -> int:
+        """Verify the QEMU PID, register it with the process manager, and update state.
+
+        Args:
+            qemu_pid: PID parsed from the QEMU PID file (or ``None`` when
+                the file was never produced).
+
+        Returns:
+            int: The verified PID stored on the sandbox state.
+        """
+        await self._verify_qemu_pid(qemu_pid)
+        self._ensure_qemu_started(qemu_pid)
+        verified_pid: int = qemu_pid if qemu_pid is not None else -1
+
+        self._qemu_pid = verified_pid
+        self.state.pid = verified_pid
+        _logger.info("qemu_started", pid=verified_pid)
+
+        process_manager = ProcessManager.get_instance()
+        process_manager.register_external_pid(
+            verified_pid,
+            name="qemu-vm",
+            process_type=ProcessType.SANDBOX,
+            metadata={
+                "guest_os": self._qemu_config.guest_os.value,
+                "image": str(self._qemu_config.image_path),
+            },
+        )
+        return verified_pid
+
+    async def _attach_qemu_agents(self) -> None:
+        """Bring up QMP, bootstrap the guest agent, and wait for it to connect."""
+        await self._connect_and_verify_qmp()
+        await self._bootstrap_guest_agent()
+
+        self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
+        await self._ensure_agent_connected(
+            self._agent,
+            self._qemu_config.agent_connect_timeout,
+        )
+
+    async def _start_impl(self) -> None:
+        """Execute the full QEMU sandbox start sequence."""
+        await self._prepare_qemu_shared_folders()
+        await self._create_guest_agent_script()
+        await self._spawn_qemu_process()
+
+        qemu_pid = await self._resolve_qemu_pid()
+        await self._register_qemu_pid(qemu_pid)
+        await self._attach_qemu_agents()
+
+        self.state.status = "running"
+        self.state.started_at = datetime.now(UTC)
+        _logger.info("qemu_sandbox_started_successfully", pid=self._qemu_pid, state=self.state.status)
+
     async def start(self) -> None:
         """Start the QEMU virtual machine.
 
@@ -1708,91 +1991,39 @@ class QEMUSandbox(SandboxBase):
         self.state.last_error = None
 
         try:
-            self._temp_dir = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_qemu_"))
-            self._shared_folder = self._temp_dir / "shared"
-            await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
-
-            await asyncio.to_thread((self._shared_folder / "input").mkdir, exist_ok=True)
-            await asyncio.to_thread((self._shared_folder / "output").mkdir, exist_ok=True)
-            await asyncio.to_thread((self._shared_folder / "logs").mkdir, exist_ok=True)
-            await asyncio.to_thread((self._shared_folder / "monitor").mkdir, exist_ok=True)
-
-            await self._create_guest_agent_script()
-
-            cmd = await self._build_qemu_command()
-            _logger.info("qemu_starting", command=" ".join(cmd))
-            _logger.info("subprocess_spawning", argv=cmd, executable=cmd[0] if cmd else None)
-
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            _, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=_PROCESS_COMMUNICATE_TIMEOUT,
-            )
-
-            self._check_qemu_started(process.returncode, stderr)
-
-            qemu_pid: int | None = None
-            if self._pidfile_path is not None:
-                for attempt in range(_PIDFILE_MAX_RETRIES):
-                    await asyncio.sleep(_PIDFILE_RETRY_DELAY)
-                    if await asyncio.to_thread(self._pidfile_path.exists):
-                        try:
-                            pid_content = await asyncio.to_thread(
-                                self._pidfile_path.read_text,
-                                encoding="utf-8",
-                            )
-                            qemu_pid = int(pid_content.strip())
-                            break
-                        except (ValueError, OSError):
-                            _logger.warning(
-                                "pidfile_read_retry",
-                                attempt=attempt + 1,
-                            )
-
-            await self._verify_qemu_pid(qemu_pid)
-            self._ensure_qemu_started(qemu_pid)
-            verified_pid: int = qemu_pid if qemu_pid is not None else -1
-
-            self._qemu_pid = verified_pid
-            self.state.pid = verified_pid
-            _logger.info("qemu_started", pid=verified_pid)
-
-            process_manager = ProcessManager.get_instance()
-            process_manager.register_external_pid(
-                verified_pid,
-                name="qemu-vm",
-                process_type=ProcessType.SANDBOX,
-                metadata={
-                    "guest_os": self._qemu_config.guest_os.value,
-                    "image": str(self._qemu_config.image_path),
-                },
-            )
-
-            await self._connect_and_verify_qmp()
-
-            await self._bootstrap_guest_agent()
-
-            self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
-            await self._ensure_agent_connected(
-                self._agent,
-                self._qemu_config.agent_connect_timeout,
-            )
-
-            self.state.status = "running"
-            self.state.started_at = datetime.now(UTC)
-            _logger.info("qemu_sandbox_started_successfully", pid=self._qemu_pid, state=self.state.status)
-
+            await self._start_impl()
         except (OSError, RuntimeError, SandboxError, TimeoutError, ValueError) as e:
             self.state.status = "error"
             self.state.last_error = str(e)
             await self._cleanup()
             _logger.warning("qemu_sandbox_start_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_START) from e
+
+    async def _stop_impl(self) -> None:
+        """Execute the full QEMU sandbox stop sequence."""
+        if self._agent is not None:
+            await self._agent.disconnect()
+            self._agent = None
+
+        if self._qmp is not None:
+            await self._qmp.quit()
+            await self._qmp.disconnect()
+            self._qmp = None
+
+        await asyncio.sleep(2)
+
+        if self._qemu_pid is not None:
+            process_manager = ProcessManager.get_instance()
+            process_manager.unregister_external_pid(self._qemu_pid)
+            self._qemu_pid = None
+
+        await self._cleanup()
+
+        self._active_captures.clear()
+        self.state.status = "stopped"
+        self.state.pid = None
+        self._vnc_port = None
+        _logger.info("qemu_sandbox_stopped", state=self.state.status)
 
     async def stop(self) -> None:
         """Stop the QEMU virtual machine.
@@ -1807,35 +2038,27 @@ class QEMUSandbox(SandboxBase):
         self.state.status = "stopping"
 
         try:
-            if self._agent is not None:
-                await self._agent.disconnect()
-                self._agent = None
-
-            if self._qmp is not None:
-                await self._qmp.quit()
-                await self._qmp.disconnect()
-                self._qmp = None
-
-            await asyncio.sleep(2)
-
-            if self._qemu_pid is not None:
-                process_manager = ProcessManager.get_instance()
-                process_manager.unregister_external_pid(self._qemu_pid)
-                self._qemu_pid = None
-
-            await self._cleanup()
-
-            self._active_captures.clear()
-            self.state.status = "stopped"
-            self.state.pid = None
-            self._vnc_port = None
-            _logger.info("qemu_sandbox_stopped", state=self.state.status)
-
+            await self._stop_impl()
         except (OSError, RuntimeError, SandboxError) as e:
             self.state.status = "error"
             self.state.last_error = str(e)
             _logger.warning("qemu_sandbox_stop_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_STOP) from e
+
+    @staticmethod
+    async def _terminate_orphan_qemu(pid_path: Path) -> None:
+        """Read ``pid_path`` and terminate the orphan QEMU tree it references.
+
+        Args:
+            pid_path: Path to the QEMU-written PID file.
+        """
+        pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
+        pid = int(pid_content.strip())
+        try:
+            ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
+            _logger.info("cleanup_terminated_orphan_qemu_tree", pid=pid)
+        except psutil.NoSuchProcess:
+            _logger.debug("cleanup_orphan_already_exited", pid=pid, exc_info=True)
 
     async def _cleanup(self) -> None:
         """Clean up temporary files and resources."""
@@ -1843,13 +2066,7 @@ class QEMUSandbox(SandboxBase):
             pid_path = self._temp_dir / "qemu.pid"
             if await asyncio.to_thread(pid_path.exists):
                 try:
-                    pid_content = await asyncio.to_thread(pid_path.read_text, encoding="utf-8")
-                    pid = int(pid_content.strip())
-                    try:
-                        ProcessManager.terminate_tree(pid, graceful_timeout=2.0, force_timeout=2.0)
-                        _logger.info("cleanup_terminated_orphan_qemu_tree", pid=pid)
-                    except psutil.NoSuchProcess:
-                        _logger.debug("cleanup_orphan_already_exited", pid=pid, exc_info=True)
+                    await self._terminate_orphan_qemu(pid_path)
                 except (OSError, ValueError) as e:
                     _logger.warning("cleanup_pid_check_failed", error=str(e))
 

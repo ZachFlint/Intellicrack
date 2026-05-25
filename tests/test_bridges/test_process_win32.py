@@ -235,16 +235,25 @@ async def test_decommit_memory_after_alloc(bridge: ProcessBridge) -> None:
     """
     await bridge.open_process(os.getpid(), "all")
     try:
-        size = 0x4000
-        address = await bridge.allocate(size, "rw")
-        assert address > 0
-        try:
-            ok = await bridge.decommit_memory(os.getpid(), address, size)
-            assert ok is True
-        finally:
-            await bridge.free(address)
+        await _alloc_decommit_free(bridge)
     finally:
         await bridge.close()
+
+
+async def _alloc_decommit_free(bridge: ProcessBridge) -> None:
+    """Allocate, decommit, and free a region; assert ``decommit_memory`` ok.
+
+    Args:
+        bridge: ProcessBridge attached to the current process.
+    """
+    size = 0x4000
+    address = await bridge.allocate(size, "rw")
+    assert address > 0
+    try:
+        ok = await bridge.decommit_memory(os.getpid(), address, size)
+        assert ok is True
+    finally:
+        await bridge.free(address)
 
 
 async def test_duplicate_token_returns_handle(bridge: ProcessBridge) -> None:

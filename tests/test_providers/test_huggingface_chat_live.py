@@ -52,29 +52,38 @@ async def test_live_chat_returns_content_and_usage(
     provider = HuggingFaceProvider()
     await provider.connect(credentials)
     try:
-        assert provider.is_connected is True
-
-        messages = [
-            Message(role="user", content="Respond with the single word: pong"),
-        ]
-        response, tool_calls = await provider.chat(
-            messages=messages,
-            model=_LIVE_MODEL,
-            temperature=0.0,
-            max_tokens=32,
-        )
-
-        assert response.role == "assistant"
-        assert response.content, "Expected non-empty assistant content"
-        assert tool_calls is None
-
-        usage = provider.get_pending_usage()
-        assert isinstance(usage, UsageInfo)
-        assert usage.prompt_tokens > 0
-        assert usage.completion_tokens > 0
-        assert usage.total_tokens >= usage.prompt_tokens
+        await _exercise_huggingface_chat(provider)
     finally:
         await provider.disconnect()
+
+
+async def _exercise_huggingface_chat(provider: HuggingFaceProvider) -> None:
+    """Run a single chat exchange and assert content plus usage metadata.
+
+    Args:
+        provider: Connected HuggingFaceProvider instance.
+    """
+    assert provider.is_connected is True
+
+    messages = [
+        Message(role="user", content="Respond with the single word: pong"),
+    ]
+    response, tool_calls = await provider.chat(
+        messages=messages,
+        model=_LIVE_MODEL,
+        temperature=0.0,
+        max_tokens=32,
+    )
+
+    assert response.role == "assistant"
+    assert response.content, "Expected non-empty assistant content"
+    assert tool_calls is None
+
+    usage = provider.get_pending_usage()
+    assert isinstance(usage, UsageInfo)
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.total_tokens >= usage.prompt_tokens
 
 
 @pytest.mark.integration
@@ -99,32 +108,41 @@ async def test_live_chat_stream_yields_and_captures_usage(
     provider = HuggingFaceProvider()
     await provider.connect(credentials)
     try:
-        assert provider.is_connected is True
-
-        messages = [
-            Message(
-                role="user",
-                content="Count the tokens: one two three four five.",
-            ),
-        ]
-        chunks: list[str] = [
-            chunk
-            async for chunk in provider.chat_stream(
-                messages=messages,
-                model=_LIVE_MODEL,
-                temperature=0.0,
-                max_tokens=64,
-            )
-        ]
-
-        full_text = "".join(chunks)
-        assert full_text.strip(), "Expected non-empty streamed text"
-        assert any(chunks), "Stream produced no chunks"
-
-        usage = provider.get_pending_usage()
-        if usage is not None:
-            assert isinstance(usage, UsageInfo)
-            assert usage.prompt_tokens > 0
-            assert usage.total_tokens >= usage.prompt_tokens
+        await _exercise_huggingface_chat_stream(provider)
     finally:
         await provider.disconnect()
+
+
+async def _exercise_huggingface_chat_stream(provider: HuggingFaceProvider) -> None:
+    """Stream a chat exchange and assert content plus optional usage metadata.
+
+    Args:
+        provider: Connected HuggingFaceProvider instance.
+    """
+    assert provider.is_connected is True
+
+    messages = [
+        Message(
+            role="user",
+            content="Count the tokens: one two three four five.",
+        ),
+    ]
+    chunks: list[str] = [
+        chunk
+        async for chunk in provider.chat_stream(
+            messages=messages,
+            model=_LIVE_MODEL,
+            temperature=0.0,
+            max_tokens=64,
+        )
+    ]
+
+    full_text = "".join(chunks)
+    assert full_text.strip(), "Expected non-empty streamed text"
+    assert any(chunks), "Stream produced no chunks"
+
+    usage = provider.get_pending_usage()
+    if usage is not None:
+        assert isinstance(usage, UsageInfo)
+        assert usage.prompt_tokens > 0
+        assert usage.total_tokens >= usage.prompt_tokens

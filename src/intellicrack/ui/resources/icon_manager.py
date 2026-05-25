@@ -370,22 +370,36 @@ class IconManager:
             return self.icon_cache["app_icon"]
 
         try:
-            icon_path = get_assets_path() / "icon.ico"
-            if icon_path.exists():
-                icon = QIcon(str(icon_path))
-                if not icon.isNull():
-                    _logger.debug("app_icon_loaded", path=str(icon_path))
-                    self.icon_cache["app_icon"] = icon
-                    return icon
-                _logger.warning("app_icon_load_failed", path=str(icon_path))
+            loaded = self._load_app_icon_from_disk()
         except FileNotFoundError:
             _logger.warning("app_icon_not_found")
+            loaded = None
+
+        if loaded is not None:
+            return loaded
 
         _logger.debug("app_icon_using_fallback")
         accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0078d4")
         fallback = IconManager._render_text_icon("IC", 256, accent)
         self.icon_cache["app_icon"] = fallback
         return fallback
+
+    def _load_app_icon_from_disk(self) -> QIcon | None:
+        """Attempt to load and cache the bundled application icon.
+
+        Returns:
+            QIcon | None: The cached :class:`QIcon` on success, or ``None`` when
+            the icon file is missing or its pixmap could not be decoded.
+        """
+        icon_path = get_assets_path() / "icon.ico"
+        if icon_path.exists():
+            icon = QIcon(str(icon_path))
+            if not icon.isNull():
+                _logger.debug("app_icon_loaded", path=str(icon_path))
+                self.icon_cache["app_icon"] = icon
+                return icon
+            _logger.warning("app_icon_load_failed", path=str(icon_path))
+        return None
 
     def get_status_icon(self, *, success: bool) -> QIcon:
         """Get a status icon indicating success or failure.

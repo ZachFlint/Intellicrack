@@ -350,21 +350,83 @@ class SessionStore:
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
 
+    def _save_session_transaction(
+        self,
+        *,
+        conn: sqlite3.Connection,
+        session: Session,
+        session_data: dict[str, Any],
+    ) -> None:
+        """Execute the session-save SQL transaction.
+
+        Runs ``BEGIN IMMEDIATE``, upserts the session row, rewrites the tag
+        table, and commits. Failures trigger an explicit ``ROLLBACK`` (whose
+        own failure is logged but not re-raised) before propagating the
+        original SQLite/OS error so the caller can close the connection.
+
+        Args:
+            conn: An open SQLite connection in autocommit mode
+                (``isolation_level=None``).
+            session: Session whose state is being persisted.
+            session_data: Pre-serialised JSON payload stored in the
+                ``sessions.data`` column.
+
+        Raises:
+            sqlite3.Error: Propagated when the database engine rejects any
+                statement in the transaction.
+            OSError: Propagated when SQLite reports an underlying I/O failure.
+        """
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session.id,
+                    session.name,
+                    session.created_at.isoformat(),
+                    session.updated_at.isoformat(),
+                    session.provider.value,
+                    session.model,
+                    session.active_binary_index,
+                    session.notes,
+                    json.dumps(session_data),
+                ),
+            )
+
+            conn.execute(
+                "DELETE FROM session_tags WHERE session_id = ?",
+                (session.id,),
+            )
+
+            for tag in session.tags:
+                conn.execute(
+                    "INSERT INTO session_tags (session_id, tag) VALUES (?, ?)",
+                    (session.id, tag),
+                )
+            conn.execute("COMMIT")
+            _logger.debug("db_connection_committed", db_path=str(self.db_path))
+        except (sqlite3.Error, OSError):
+            try:
+                conn.execute("ROLLBACK")
+            except sqlite3.Error:
+                _logger.exception("rollback_noop_failed", db_path=str(self.db_path))
+            _logger.exception("db_connection_rollback", db_path=str(self.db_path))
+            raise
+
     def save(self, session: Session) -> None:
         """Save a session to the database.
 
         Persists the full session state inside a single SQLite transaction
         initiated with ``BEGIN IMMEDIATE`` so that the tag rewrite and the
         session upsert cannot be interleaved with a concurrent save (for
-        example, from the auto-save loop).
+        example, from the auto-save loop). Propagates ``sqlite3.Error`` from
+        the database engine and ``OSError`` from the underlying SQLite file
+        layer after the connection is closed.
 
         Args:
             session: Session to save.
-
-        Raises:
-            sqlite3.Error: If the SQLite engine reports a database-level error
-                while writing the session or its tags.
-            OSError: If the underlying SQLite file cannot be opened or written.
         """
         _logger.debug("session_save_start", session_id=session.id)
         session_data = {
@@ -378,44 +440,7 @@ class SessionStore:
         conn = sqlite3.connect(str(self.db_path), isolation_level=None)
         _logger.debug("db_connection_opened", db_path=str(self.db_path))
         try:
-            conn.execute("BEGIN IMMEDIATE")
-            try:
-                conn.execute(
-                    """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        session.id,
-                        session.name,
-                        session.created_at.isoformat(),
-                        session.updated_at.isoformat(),
-                        session.provider.value,
-                        session.model,
-                        session.active_binary_index,
-                        session.notes,
-                        json.dumps(session_data),
-                    ),
-                )
-
-                conn.execute(
-                    "DELETE FROM session_tags WHERE session_id = ?",
-                    (session.id,),
-                )
-
-                for tag in session.tags:
-                    conn.execute(
-                        "INSERT INTO session_tags (session_id, tag) VALUES (?, ?)",
-                        (session.id, tag),
-                    )
-                conn.execute("COMMIT")
-                _logger.debug("db_connection_committed", db_path=str(self.db_path))
-            except (sqlite3.Error, OSError):
-                try:
-                    conn.execute("ROLLBACK")
-                except sqlite3.Error:
-                    _logger.exception("rollback_noop_failed", db_path=str(self.db_path))
-                _logger.exception("db_connection_rollback", db_path=str(self.db_path))
-                raise
+            self._save_session_transaction(conn=conn, session=session, session_data=session_data)
         finally:
             conn.close()
             _logger.info("db_connection_closed", db_path=str(self.db_path))

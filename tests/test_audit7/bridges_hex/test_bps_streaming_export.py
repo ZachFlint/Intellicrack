@@ -234,6 +234,30 @@ def _patch_builder(
     return _restore
 
 
+def _trace_pyfallback(bridge: HexEditorBridge, attr: str, source_path: Path) -> int:
+    """Invoke a pyfallback exporter under tracemalloc and return peak bytes.
+
+    Args:
+        bridge: HexEditorBridge exposing the pyfallback method.
+        attr: Attribute name of the pyfallback method to invoke.
+        source_path: Path to the source file passed to the pyfallback.
+
+    Returns:
+        int: Peak traced allocation in bytes observed during the call.
+    """
+    tracemalloc.start()
+    tracemalloc.clear_traces()
+    try:
+        fn = getattr(bridge, attr)
+        if not callable(fn):
+            pytest.fail(f"{attr} is not callable")
+        fn(str(source_path))
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    return peak
+
+
 class TestBpsStreamingPyfallback:
     """The pure-Python BPS fallback streams the source through mmap."""
 
@@ -292,16 +316,7 @@ class TestBpsStreamingPyfallback:
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_bps_patch", capture)
         try:
-            tracemalloc.start()
-            tracemalloc.clear_traces()
-            try:
-                fn = getattr(bridge, "_export_patches_bps_pyfallback")
-                if not callable(fn):
-                    pytest.fail("_export_patches_bps_pyfallback is not callable")
-                fn(str(source_path))
-                _, peak = tracemalloc.get_traced_memory()
-            finally:
-                tracemalloc.stop()
+            peak = _trace_pyfallback(bridge, "_export_patches_bps_pyfallback", source_path)
         finally:
             restore()
             target_path.unlink(missing_ok=True)
@@ -331,17 +346,27 @@ class TestBpsStreamingPyfallback:
         source_path.write_bytes(b"")
         bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
         try:
-            fn = getattr(bridge, "_export_patches_bps_pyfallback")
-            if not callable(fn):
-                pytest.fail("_export_patches_bps_pyfallback is not callable")
-            raw_obj = fn(str(source_path))
-            if not isinstance(raw_obj, (bytes, bytearray)):
-                pytest.fail("BPS fallback did not return bytes")
-            raw = bytes(raw_obj)
-            assert raw[:4] == b"BPS1"
+            self._assert_empty_source_returns_bps1(bridge, source_path)
         finally:
             target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _assert_empty_source_returns_bps1(bridge: object, source_path: Path) -> None:
+        """Invoke the BPS pyfallback for an empty source and assert BPS1 header.
+
+        Args:
+            bridge: HexEditorBridge under test exposing the pyfallback.
+            source_path: Filesystem path of the empty source file.
+        """
+        fn = getattr(bridge, "_export_patches_bps_pyfallback")
+        if not callable(fn):
+            pytest.fail("_export_patches_bps_pyfallback is not callable")
+        raw_obj = fn(str(source_path))
+        if not isinstance(raw_obj, (bytes, bytearray)):
+            pytest.fail("BPS fallback did not return bytes")
+        raw = bytes(raw_obj)
+        assert raw[:4] == b"BPS1"
 
     def test_pyfallback_small_source_roundtrip(self, tmp_path: Path) -> None:
         """A small source produces an applicable BPS patch end-to-end.
@@ -360,19 +385,36 @@ class TestBpsStreamingPyfallback:
         source_path.write_bytes(source)
         bridge, target_path = _open_bridge_with_target(bytes(target))
         try:
-            fn = getattr(bridge, "_export_patches_bps_pyfallback")
-            if not callable(fn):
-                pytest.fail("_export_patches_bps_pyfallback is not callable")
-            raw_obj = fn(str(source_path))
-            if not isinstance(raw_obj, (bytes, bytearray)):
-                pytest.fail("BPS fallback did not return bytes")
-            raw = bytes(raw_obj)
-            assert raw[:4] == b"BPS1"
-            applied = _call_apply(bridge, "_apply_bps_patch", raw, source)
-            assert applied == bytes(target)
+            self._assert_small_source_roundtrip(bridge, source_path, source, bytes(target))
         finally:
             target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _assert_small_source_roundtrip(
+        bridge: object,
+        source_path: Path,
+        source: bytes,
+        target: bytes,
+    ) -> None:
+        """Build a BPS patch and verify it applies back to the target bytes.
+
+        Args:
+            bridge: HexEditorBridge under test.
+            source_path: Path containing the original source bytes.
+            source: Source bytes used to produce and re-apply the patch.
+            target: Expected post-apply bytes.
+        """
+        fn = getattr(bridge, "_export_patches_bps_pyfallback")
+        if not callable(fn):
+            pytest.fail("_export_patches_bps_pyfallback is not callable")
+        raw_obj = fn(str(source_path))
+        if not isinstance(raw_obj, (bytes, bytearray)):
+            pytest.fail("BPS fallback did not return bytes")
+        raw = bytes(raw_obj)
+        assert raw[:4] == b"BPS1"
+        applied = _call_apply(bridge, "_apply_bps_patch", raw, source)
+        assert applied == target
 
 
 class TestUpsStreamingPyfallback:
@@ -424,16 +466,7 @@ class TestUpsStreamingPyfallback:
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_ups_patch", capture)
         try:
-            tracemalloc.start()
-            tracemalloc.clear_traces()
-            try:
-                fn = getattr(bridge, "_export_patches_ups_pyfallback")
-                if not callable(fn):
-                    pytest.fail("_export_patches_ups_pyfallback is not callable")
-                fn(str(source_path))
-                _, peak = tracemalloc.get_traced_memory()
-            finally:
-                tracemalloc.stop()
+            peak = _trace_pyfallback(bridge, "_export_patches_ups_pyfallback", source_path)
         finally:
             restore()
             target_path.unlink(missing_ok=True)

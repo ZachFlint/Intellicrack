@@ -221,26 +221,36 @@ class HxDPanel(QWidget):
         self._terminate_existing()
 
         try:
-            self.process = QProcess(self)
-            self.process.setProgram(str(self.hxd_exe))
-            self.process.setArguments([str(file_path)])
-            self.process.start()
-
-            if not self.process.waitForStarted(_PROCESS_TERM_TIMEOUT_MS):
-                _logger.warning("hxd_start_failed", path=str(file_path))
-                self.process = None
-                return False
-
-            self.embed_info_label.setText(f"HxD: {file_path.name}")
-            self.tool_started.emit()
-            self._schedule_embed()
-            _logger.info("hxd_file_loaded", path=str(file_path))
+            return self._launch_hxd_with_file(file_path)
         except (OSError, RuntimeError):
             _logger.exception("hxd_launch_failed")
             self.process = None
             return False
-        else:
-            return True
+
+    def _launch_hxd_with_file(self, file_path: Path) -> bool:
+        """Spawn HxD for ``file_path`` and wire embedding state.
+
+        Args:
+            file_path: Path to the binary that HxD should open.
+
+        Returns:
+            bool: ``True`` when the process started, ``False`` when ``waitForStarted`` timed out.
+        """
+        self.process = QProcess(self)
+        self.process.setProgram(str(self.hxd_exe))
+        self.process.setArguments([str(file_path)])
+        self.process.start()
+
+        if not self.process.waitForStarted(_PROCESS_TERM_TIMEOUT_MS):
+            _logger.warning("hxd_start_failed", path=str(file_path))
+            self.process = None
+            return False
+
+        self.embed_info_label.setText(f"HxD: {file_path.name}")
+        self.tool_started.emit()
+        self._schedule_embed()
+        _logger.info("hxd_file_loaded", path=str(file_path))
+        return True
 
     def start_tool(self) -> bool:
         """Start HxD without a specific file.
@@ -255,24 +265,31 @@ class HxDPanel(QWidget):
         self._terminate_existing()
 
         try:
-            self.process = QProcess(self)
-            self.process.setProgram(str(self.hxd_exe))
-            self.process.start()
-
-            if not self.process.waitForStarted(_PROCESS_TERM_TIMEOUT_MS):
-                _logger.warning("hxd_start_failed_wait_for_started")
-                self.process = None
-                return False
-
-            self.embed_info_label.setText("HxD running")
-            self.tool_started.emit()
-            self._schedule_embed()
+            return self._launch_hxd_standalone()
         except (OSError, RuntimeError):
             _logger.exception("hxd_start_failed")
             self.process = None
             return False
-        else:
-            return True
+
+    def _launch_hxd_standalone(self) -> bool:
+        """Start HxD without a target file and wire embedding state.
+
+        Returns:
+            bool: ``True`` when the process started, ``False`` when ``waitForStarted`` timed out.
+        """
+        self.process = QProcess(self)
+        self.process.setProgram(str(self.hxd_exe))
+        self.process.start()
+
+        if not self.process.waitForStarted(_PROCESS_TERM_TIMEOUT_MS):
+            _logger.warning("hxd_start_failed_wait_for_started")
+            self.process = None
+            return False
+
+        self.embed_info_label.setText("HxD running")
+        self.tool_started.emit()
+        self._schedule_embed()
+        return True
 
     def _schedule_embed(self) -> None:
         """Reparent the HxD top-level window into ``_embed_host`` on Windows.

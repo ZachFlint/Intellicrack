@@ -51,6 +51,7 @@ from intellicrack.credentials.env_loader import (
 )
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
+    OAuthConfig,
     OAuthProvider,
     get_oauth_manager,
 )
@@ -160,6 +161,9 @@ if TYPE_CHECKING:
     from intellicrack.core.types import ModelInfo
     from intellicrack.providers.base import LLMProviderBase
     from intellicrack.providers.discovery import DiscoveryEvent, ModelDiscovery
+    from intellicrack.providers.openrouter import (
+        OpenRouterProvider as _OpenRouterProviderType,
+    )
     from intellicrack.providers.registry import ProviderRegistry
 
 HTTP_OK = 200
@@ -1549,6 +1553,23 @@ class ProviderConfigDialog(QDialog):
         else:
             self._active_label.setText("<b>Active:</b> None selected")
 
+    def _apply_active_provider(self, registry: ProviderRegistry, current_provider: str) -> None:
+        """Mark ``current_provider`` active in ``registry`` and update the UI.
+
+        Args:
+            registry: Provider registry that owns the active selection.
+            current_provider: Name of the provider to activate.
+        """
+        provider_name = ProviderName(current_provider)
+        registry.set_active(provider_name)
+        self._update_active_label()
+        self._refresh_provider_status()
+        self.active_provider_changed.emit(current_provider)
+        _logger.info(
+            "active_provider_changed",
+            provider=current_provider,
+        )
+
     def _on_set_active(self) -> None:
         """Handle set active button click."""
         if self._current_provider is None:
@@ -1560,15 +1581,7 @@ class ProviderConfigDialog(QDialog):
             return
 
         try:
-            provider_name = ProviderName(self._current_provider)
-            self._registry.set_active(provider_name)
-            self._update_active_label()
-            self._refresh_provider_status()
-            self.active_provider_changed.emit(self._current_provider)
-            _logger.info(
-                "active_provider_changed",
-                provider=self._current_provider,
-            )
+            self._apply_active_provider(self._registry, self._current_provider)
         except ValueError:
             _logger.warning("unknown_provider_name", provider=self._current_provider)
             show_error(self, "Error", f"Unknown provider: {self._current_provider}")
@@ -1659,25 +1672,30 @@ class ProviderConfigDialog(QDialog):
         if self._current_provider is not None:
             self.revoke_oauth_token(self._current_provider)
 
+    @staticmethod
+    def _reload_credentials_from_store() -> None:
+        """Reload provider credentials from env files and the credential store."""
+        loader = get_credential_loader()
+        loader.reload()
+
+        configured = loader.list_configured_providers()
+        missing = loader.list_missing_providers()
+
+        for name in configured:
+            env_var = loader.get_env_var(name.value)
+            if env_var is not None:
+                _logger.debug("credential_refreshed", provider=name)
+        _logger.info(
+            "credentials_reloaded",
+            configured=len(configured),
+            missing=len(missing),
+        )
+
     def refresh_credentials(self) -> None:
         """Reload credentials from env files and credential store."""
         _logger.info("credential_refresh_starting")
         try:
-            loader = get_credential_loader()
-            loader.reload()
-
-            configured = loader.list_configured_providers()
-            missing = loader.list_missing_providers()
-
-            for name in configured:
-                env_var = loader.get_env_var(name.value)
-                if env_var is not None:
-                    _logger.debug("credential_refreshed", provider=name)
-            _logger.info(
-                "credentials_reloaded",
-                configured=len(configured),
-                missing=len(missing),
-            )
+            self._reload_credentials_from_store()
         except (RuntimeError, OSError, ValueError) as exc:
             _logger.warning("credential_refresh_failed", error=str(exc))
         self._load_credential_overview()
@@ -1754,23 +1772,54 @@ class ProviderConfigDialog(QDialog):
 
         _logger.info("oauth_flow_starting", provider=provider_id)
         try:
-            manager = get_oauth_manager()
-
-            async def _run_oauth() -> ProviderCredentials | None:
-                await manager.run_authorization_flow(oauth_config)
-                return await manager.to_provider_credentials(oauth_provider)
-
-            creds = run_bridge_coroutine(_run_oauth())
-            if creds is not None and creds.api_key:
-                _logger.info("oauth_credentials_obtained", provider=provider_id)
-                widget = self._provider_widgets.get(provider_id)
-                if widget is not None:
-                    widget.set_api_key(creds.api_key)
-            else:
-                _logger.warning("oauth_credentials_missing", provider=provider_id)
+            self._run_oauth_flow(provider_id, oauth_provider, oauth_config)
         except (RuntimeError, OSError, ValueError) as exc:
             _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
         self._load_credential_overview()
+
+    def _run_oauth_flow(
+        self,
+        provider_id: str,
+        oauth_provider: OAuthProvider,
+        oauth_config: OAuthConfig,
+    ) -> None:
+        """Execute the OAuth authorization flow and persist obtained credentials.
+
+        Args:
+            provider_id: The provider identifier used for logging and widget lookup.
+            oauth_provider: Enum value identifying the OAuth provider.
+            oauth_config: Provider-specific OAuth configuration.
+        """
+        manager = get_oauth_manager()
+
+        async def _run_oauth() -> ProviderCredentials | None:
+            await manager.run_authorization_flow(oauth_config)
+            return await manager.to_provider_credentials(oauth_provider)
+
+        creds = run_bridge_coroutine(_run_oauth())
+        if creds is not None and creds.api_key:
+            _logger.info("oauth_credentials_obtained", provider=provider_id)
+            widget = self._provider_widgets.get(provider_id)
+            if widget is not None:
+                widget.set_api_key(creds.api_key)
+        else:
+            _logger.warning("oauth_credentials_missing", provider=provider_id)
+
+    @staticmethod
+    def _do_revoke_oauth_token(provider_id: str) -> None:
+        """Resolve the OAuth provider and revoke its current token.
+
+        Args:
+            provider_id: The provider whose token to revoke.
+        """
+        manager = get_oauth_manager()
+        try:
+            oauth_provider = OAuthProvider(provider_id)
+        except ValueError:
+            _logger.warning("unknown_oauth_provider", provider=provider_id)
+            return
+        run_bridge_coroutine(manager.revoke_token(oauth_provider))
+        _logger.info("oauth_token_revoked", provider=provider_id)
 
     def revoke_oauth_token(self, provider_id: str) -> None:
         """Revoke an OAuth token for a provider.
@@ -1780,14 +1829,7 @@ class ProviderConfigDialog(QDialog):
         """
         _logger.info("oauth_revoke_starting", provider=provider_id)
         try:
-            manager = get_oauth_manager()
-            try:
-                oauth_provider = OAuthProvider(provider_id)
-            except ValueError:
-                _logger.warning("unknown_oauth_provider", provider=provider_id)
-                return
-            run_bridge_coroutine(manager.revoke_token(oauth_provider))
-            _logger.info("oauth_token_revoked", provider=provider_id)
+            self._do_revoke_oauth_token(provider_id)
         except (RuntimeError, OSError, ValueError):
             _logger.exception("oauth_revoke_failed", provider=provider_id)
         self._load_credential_overview()
@@ -2270,6 +2312,28 @@ class ProviderSettingsWidget(QFrame):
             else:
                 combo.addItem(f"XPU:{idx}", idx)
 
+    def _read_xpu_memory_usage(self) -> tuple[int, int] | None:
+        """Resolve the current XPU device and read its memory usage.
+
+        Returns:
+            tuple[int, int] | None: Tuple of ``(allocated_bytes, total_bytes)``
+            when a device is available, or ``None`` when no XPU device is
+            available or the required helpers are not importable.
+        """
+        if is_xpu_available is None or get_xpu_memory_info is None:
+            return None
+        if not is_xpu_available():
+            return None
+
+        device_idx: int = 0
+        device_combo: QComboBox | None = getattr(self, "_device_combo", None)
+        if device_combo is not None:
+            data = device_combo.currentData()
+            if isinstance(data, int):
+                device_idx = data
+
+        return get_xpu_memory_info(device_idx)
+
     def _refresh_xpu_memory(self) -> None:
         """Refresh the XPU memory usage bar and text label."""
         mem_bar: QProgressBar | None = getattr(self, "_xpu_mem_bar", None)
@@ -2283,24 +2347,19 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            if not is_xpu_available():
-                mem_bar.setValue(0)
-                mem_text.setText("No XPU device")
-                return
-
-            device_idx: int = 0
-            device_combo: QComboBox | None = getattr(self, "_device_combo", None)
-            if device_combo is not None:
-                data = device_combo.currentData()
-                if isinstance(data, int):
-                    device_idx = data
-
-            allocated, total = get_xpu_memory_info(device_idx)
+            usage = self._read_xpu_memory_usage()
         except (RuntimeError, OSError):
             _logger.debug("xpu_memory_refresh_failed", exc_info=True)
             mem_bar.setValue(0)
             mem_text.setText("Failed to read memory")
             return
+
+        if usage is None:
+            mem_bar.setValue(0)
+            mem_text.setText("No XPU device")
+            return
+
+        allocated, total = usage
 
         if total > 0:
             pct = int((allocated / total) * 100)
@@ -2451,6 +2510,30 @@ class ProviderSettingsWidget(QFrame):
             f"color: rgb({color.red()}, {color.green()}, {color.blue()}); }}",
         )
 
+    def _compute_recommended_model_text(self, discovery: ModelDiscovery) -> str:
+        """Determine the recommended-model label text for the provider.
+
+        Args:
+            discovery: Model discovery service used to resolve a recommendation.
+
+        Returns:
+            str: Label text for the recommended model, or an empty string when
+            discovery cannot run (for example, inside a running event loop).
+        """
+        loop: asyncio.AbstractEventLoop | None = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            _logger.warning("no_running_event_loop", provider=self.provider_id)
+
+        if loop is not None and loop.is_running():
+            return ""
+
+        recommended = asyncio.run(discovery.get_recommended_model(self.provider_id))
+        if recommended:
+            return f"Recommended: {recommended.name}"
+        return ""
+
     def _update_recommended_model(self) -> None:
         """Update the recommended model label based on discovery."""
         if self._discovery is None:
@@ -2458,20 +2541,7 @@ class ProviderSettingsWidget(QFrame):
             return
 
         try:
-            loop: asyncio.AbstractEventLoop | None = None
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                _logger.warning("no_running_event_loop", provider=self.provider_id)
-
-            if loop is not None and loop.is_running():
-                self._recommended_label.setText("")
-                return
-
-            if recommended := asyncio.run(self._discovery.get_recommended_model(self.provider_id)):
-                self._recommended_label.setText(f"Recommended: {recommended.name}")
-            else:
-                self._recommended_label.setText("")
+            self._recommended_label.setText(self._compute_recommended_model_text(self._discovery))
         except (RuntimeError, OSError, ValueError):
             _logger.exception("recommended_model_update_failed", provider=self.provider_id)
             self._recommended_label.setText("")
@@ -3029,20 +3099,38 @@ class ProviderSettingsWidget(QFrame):
         if not api_key:
             return None
         try:
-            provider = OpenRouterProvider()
-            creds = ProviderCredentials(api_key=api_key)
-
-            async def _fetch() -> dict[str, Any] | None:
-                try:
-                    await provider.connect(creds)
-                    return await provider.get_generation(generation_id)
-                finally:
-                    await provider.disconnect()
-
-            return run_bridge_coroutine(_fetch())
+            return self._fetch_openrouter_generation(OpenRouterProvider, api_key, generation_id)
         except (RuntimeError, OSError, ValueError):
             _logger.debug("openrouter_generation_fetch_failed", exc_info=True, generation_id=generation_id)
             return None
+
+    @staticmethod
+    def _fetch_openrouter_generation(
+        provider_cls: type[_OpenRouterProviderType],
+        api_key: str,
+        generation_id: str,
+    ) -> dict[str, Any] | None:
+        """Run the OpenRouter generation lookup coroutine.
+
+        Args:
+            provider_cls: ``OpenRouterProvider`` class to instantiate.
+            api_key: OpenRouter API key to authenticate the request.
+            generation_id: The generation ID to look up.
+
+        Returns:
+            dict[str, Any] | None: Generation info dict, or ``None`` when no data was returned.
+        """
+        provider = provider_cls()
+        creds = ProviderCredentials(api_key=api_key)
+
+        async def _fetch() -> dict[str, Any] | None:
+            try:
+                await provider.connect(creds)
+                return await provider.get_generation(generation_id)
+            finally:
+                await provider.disconnect()
+
+        return run_bridge_coroutine(_fetch())
 
     def get_xpu_optimal_dtype(self) -> str | None:
         """Get optimal dtype for XPU inference.

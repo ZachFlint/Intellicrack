@@ -510,15 +510,20 @@ class TestSplashScreenIntegration:
         """
         del qapp
         try:
-            splash = SplashScreen()
-            splash.show()
-            splash.set_progress(_PROGRESS_50, "Testing...")
-            splash.set_progress(_PROGRESS_60, "Step 1")
-            _ = splash.progress
-            _ = splash.status
-            splash.close()
+            TestSplashScreenIntegration._exercise_splash_operations()
         except (RuntimeError, OSError, ValueError) as e:
             pytest.fail(f"Splash screen operations raised exception: {e}")
+
+    @staticmethod
+    def _exercise_splash_operations() -> None:
+        """Exercise the splash screen show/progress/close lifecycle."""
+        splash = SplashScreen()
+        splash.show()
+        splash.set_progress(_PROGRESS_50, "Testing...")
+        splash.set_progress(_PROGRESS_60, "Step 1")
+        _ = splash.progress
+        _ = splash.status
+        splash.close()
 
 
 class TestFadeAnimation:

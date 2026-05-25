@@ -1215,13 +1215,8 @@ class ThemeManager:
         if self.styles_available:
             filename = f"{theme}_theme.qss"
             try:
-                style_path = get_style_path(filename)
-                if style_path.exists():
-                    with style_path.open(encoding="utf-8") as f:
-                        content = f.read()
-                        if content.strip():
-                            _logger.debug("stylesheet_loaded", path=str(style_path))
-                            return content
+                if loaded := self._read_stylesheet_file(filename):
+                    return loaded
             except OSError as e:
                 _logger.warning(
                     "stylesheet_load_failed",
@@ -1231,6 +1226,26 @@ class ThemeManager:
 
         _logger.debug("using_fallback_stylesheet", theme=theme)
         return DARK_THEME_FALLBACK if theme == THEME_DARK else LIGHT_THEME_FALLBACK
+
+    @staticmethod
+    def _read_stylesheet_file(filename: str) -> str | None:
+        """Read a bundled QSS stylesheet by file name.
+
+        Args:
+            filename: Stylesheet file name, e.g. ``"dark_theme.qss"``.
+
+        Returns:
+            str | None: The stylesheet contents when the file exists and is
+            non-empty, otherwise ``None``.
+        """
+        style_path = get_style_path(filename)
+        if style_path.exists():
+            with style_path.open(encoding="utf-8") as f:
+                content = f.read()
+            if content.strip():
+                _logger.debug("stylesheet_loaded", path=str(style_path))
+                return content
+        return None
 
     def toggle_theme(self) -> str:
         """Toggle between dark and light themes.

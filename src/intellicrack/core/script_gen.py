@@ -509,6 +509,41 @@ class ScriptValidator:
             return True, None
 
     @staticmethod
+    def _run_node_check(temp_path: str) -> tuple[bool, str | None]:
+        """Invoke ``node --check`` against ``temp_path`` and translate the result.
+
+        Args:
+            temp_path: Path to a temporary ``.js`` file holding the script
+                being validated.
+
+        Returns:
+            tuple[bool, str | None]: ``(True, None)`` when node reports a
+            clean parse (exit code 0); ``(False, <reason>)`` for every other
+            outcome (missing runtime, timeout, syntax error).
+        """
+        process_manager = ProcessManager.get_instance()
+        cmd = ["node", "--check", temp_path]
+        _logger.debug("subprocess_execute", command=cmd)
+        try:
+            result = process_manager.run_tracked(
+                cmd,
+                name="node-syntax-check",
+                timeout=10,
+            )
+        except FileNotFoundError:
+            _logger.warning("node_runtime_missing", language="javascript")
+            return False, "node not installed"
+        except TimeoutExpired:
+            _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
+            return False, "Validation timed out"
+        _logger.debug("subprocess_completed", command=cmd, exit_code=result.returncode)
+
+        if result.returncode == 0:
+            return True, None
+        stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
+        return False, stderr_text
+
+    @staticmethod
     def validate_javascript(content: str) -> tuple[bool, str | None]:
         """Validate JavaScript syntax using the ``node`` runtime.
 
@@ -543,27 +578,7 @@ class ScriptValidator:
             return False, f"tempfile write failed: {exc}"
 
         try:
-            process_manager = ProcessManager.get_instance()
-            cmd = ["node", "--check", temp_path]
-            _logger.debug("subprocess_execute", command=cmd)
-            try:
-                result = process_manager.run_tracked(
-                    cmd,
-                    name="node-syntax-check",
-                    timeout=10,
-                )
-            except FileNotFoundError:
-                _logger.warning("node_runtime_missing", language="javascript")
-                return False, "node not installed"
-            except TimeoutExpired:
-                _logger.warning("validation_timeout", language="javascript", timeout_seconds=10)
-                return False, "Validation timed out"
-            _logger.debug("subprocess_completed", command=cmd, exit_code=result.returncode)
-
-            if result.returncode == 0:
-                return True, None
-            stderr_text = (result.stderr or "").strip() or f"node exited with code {result.returncode}"
-            return False, stderr_text
+            return ScriptValidator._run_node_check(temp_path)
         finally:
             _logger.info("temp_file_unlink_attempt", path=temp_path)
             try:

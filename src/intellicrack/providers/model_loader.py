@@ -262,6 +262,23 @@ class ModelCache:
             )
 
 
+def _free_model_resources(loaded_model: LoadedModel) -> None:
+    """Release model and tokenizer references and clear XPU cache.
+
+    Args:
+        loaded_model: The model to free.
+    """
+    del loaded_model.model
+    del loaded_model.tokenizer
+    gc.collect()
+
+    try:
+        if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
+            _torch.xpu.empty_cache()
+    except (RuntimeError, OSError) as inner_exc:
+        _logger.warning("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
+
+
 def _unload_model(loaded_model: LoadedModel) -> None:
     """Unload a model and free resources.
 
@@ -269,15 +286,7 @@ def _unload_model(loaded_model: LoadedModel) -> None:
         loaded_model: The model to unload.
     """
     try:
-        del loaded_model.model
-        del loaded_model.tokenizer
-        gc.collect()
-
-        try:
-            if _torch is not None and hasattr(_torch, "xpu") and _torch.xpu.is_available():
-                _torch.xpu.empty_cache()
-        except (RuntimeError, OSError) as inner_exc:
-            _logger.warning("xpu_cache_clear_on_unload_failed", error=str(inner_exc))
+        _free_model_resources(loaded_model)
     except (RuntimeError, OSError, AttributeError) as exc:
         _logger.warning("model_unload_failed", error=str(exc))
 
@@ -487,9 +496,6 @@ def load_model_for_xpu(
 
     dtype_str = select_dtype_for_memory(config.model_id, available_memory) if config.dtype == "auto" else config.dtype
 
-    torch_dtype = _get_torch_dtype(dtype_str)
-    device = initialize_xpu(0)
-
     clear_xpu_cache()
 
     start_time = time.perf_counter()
@@ -498,64 +504,14 @@ def load_model_for_xpu(
         "model_loading_xpu",
         model_id=config.model_id,
         dtype=dtype_str,
-        device=str(device),
     )
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(
-            config.model_id,
-            trust_remote_code=config.trust_remote_code,
-            revision=config.revision,
-        )
-
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-
-        load_kwargs: dict[str, object] = {
-            "trust_remote_code": config.trust_remote_code,
-            "low_cpu_mem_usage": True,
-        }
-
-        if dtype_str in {"int8", "int4"}:
-            load_kwargs["device_map"] = "auto"
-            load_kwargs["quantization_config"] = _get_quantization_config(dtype_str)
-        else:
-            load_kwargs["torch_dtype"] = torch_dtype
-
-        model = AutoModelForCausalLM.from_pretrained(
-            config.model_id,
-            revision=config.revision,
-            **load_kwargs,
-        )
-
-        if dtype_str not in {"int8", "int4"}:
-            model = model.to(device)
-
-        model.eval()
-
-        load_time = time.perf_counter() - start_time
-
-        memory_usage = estimate_model_memory(config.model_id, dtype_str, include_activations=False)
-
-        loaded_model = LoadedModel(
-            model=model,
-            tokenizer=tokenizer,
-            device=device,
-            dtype=dtype_str,
-            memory_usage_bytes=memory_usage,
-            model_id=config.model_id,
-            load_time_seconds=load_time,
-        )
-
-        if cache is not None:
-            cache.put(loaded_model)
-
-        _logger.info(
-            "model_loaded_xpu",
-            model_id=config.model_id,
-            dtype=dtype_str,
-            load_time_seconds=load_time,
-            memory_mb=memory_usage // (1024 * 1024),
+        loaded_model = _load_xpu_model_impl(
+            config=config,
+            dtype_str=dtype_str,
+            start_time=start_time,
+            cache=cache,
         )
     except (RuntimeError, ImportError, ValueError, OSError) as exc:
         _logger.warning("xpu_model_load_failed", model_id=config.model_id, error=str(exc))
@@ -563,6 +519,90 @@ def load_model_for_xpu(
         raise RuntimeError(_ERR_LOAD_XPU_FAILED % (config.model_id, exc)) from exc
     else:
         return loaded_model
+
+
+def _load_xpu_model_impl(
+    *,
+    config: ModelConfig,
+    dtype_str: DtypeOption,
+    start_time: float,
+    cache: ModelCache | None,
+) -> LoadedModel:
+    """Perform the XPU model load and cache insertion.
+
+    Args:
+        config: Model configuration.
+        dtype_str: Resolved dtype string.
+        start_time: ``time.perf_counter()`` reference for load timing.
+        cache: Optional cache to populate on success.
+
+    Returns:
+        LoadedModel: Loaded model wrapper with metadata.
+
+    Raises:
+        ImportError: If required transformers symbols are unavailable.
+    """
+    if AutoModelForCausalLM is None or AutoTokenizer is None:
+        raise ImportError(_ERR_MISSING_DEPS)
+    torch_dtype = _get_torch_dtype(dtype_str)
+    device = initialize_xpu(0)
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_id,
+        trust_remote_code=config.trust_remote_code,
+        revision=config.revision,
+    )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    load_kwargs: dict[str, object] = {
+        "trust_remote_code": config.trust_remote_code,
+        "low_cpu_mem_usage": True,
+    }
+
+    if dtype_str in {"int8", "int4"}:
+        load_kwargs["device_map"] = "auto"
+        load_kwargs["quantization_config"] = _get_quantization_config(dtype_str)
+    else:
+        load_kwargs["torch_dtype"] = torch_dtype
+
+    model = AutoModelForCausalLM.from_pretrained(
+        config.model_id,
+        revision=config.revision,
+        **load_kwargs,
+    )
+
+    if dtype_str not in {"int8", "int4"}:
+        model = model.to(device)
+
+    model.eval()
+
+    load_time = time.perf_counter() - start_time
+
+    memory_usage = estimate_model_memory(config.model_id, dtype_str, include_activations=False)
+
+    loaded_model = LoadedModel(
+        model=model,
+        tokenizer=tokenizer,
+        device=device,
+        dtype=dtype_str,
+        memory_usage_bytes=memory_usage,
+        model_id=config.model_id,
+        load_time_seconds=load_time,
+    )
+
+    if cache is not None:
+        cache.put(loaded_model)
+
+    _logger.info(
+        "model_loaded_xpu",
+        model_id=config.model_id,
+        dtype=dtype_str,
+        load_time_seconds=load_time,
+        memory_mb=memory_usage // (1024 * 1024),
+    )
+    return loaded_model
 
 
 def load_model_for_cpu(
@@ -596,9 +636,6 @@ def load_model_for_cpu(
 
     dtype_str = "float32" if config.dtype == "auto" else config.dtype
 
-    torch_dtype = _get_torch_dtype(dtype_str)
-    device = _torch.device("cpu")
-
     start_time = time.perf_counter()
 
     _logger.info(
@@ -608,56 +645,11 @@ def load_model_for_cpu(
     )
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(
-            config.model_id,
-            trust_remote_code=config.trust_remote_code,
-            revision=config.revision,
-        )
-
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
-
-        load_kwargs: dict[str, object] = {
-            "trust_remote_code": config.trust_remote_code,
-            "low_cpu_mem_usage": True,
-        }
-
-        if dtype_str in {"int8", "int4"}:
-            load_kwargs["device_map"] = "cpu"
-            load_kwargs["quantization_config"] = _get_quantization_config(dtype_str)
-        else:
-            load_kwargs["torch_dtype"] = torch_dtype
-
-        model = AutoModelForCausalLM.from_pretrained(
-            config.model_id,
-            revision=config.revision,
-            **load_kwargs,
-        )
-        model.eval()
-
-        load_time = time.perf_counter() - start_time
-
-        memory_usage = estimate_model_memory(config.model_id, dtype_str, include_activations=False)
-
-        loaded_model = LoadedModel(
-            model=model,
-            tokenizer=tokenizer,
-            device=device,
-            dtype=dtype_str,
-            memory_usage_bytes=memory_usage,
-            model_id=config.model_id,
-            load_time_seconds=load_time,
-        )
-
-        if cache is not None:
-            cache.put(loaded_model)
-
-        _logger.info(
-            "model_loaded_cpu",
-            model_id=config.model_id,
-            dtype=dtype_str,
-            load_time_seconds=load_time,
-            memory_mb=memory_usage // (1024 * 1024),
+        loaded_model = _load_cpu_model_impl(
+            config=config,
+            dtype_str=dtype_str,
+            start_time=start_time,
+            cache=cache,
         )
     except (RuntimeError, ImportError, ValueError, OSError) as exc:
         _logger.warning("cpu_model_load_failed", model_id=config.model_id, error=str(exc))
@@ -665,6 +657,87 @@ def load_model_for_cpu(
         raise RuntimeError(_ERR_LOAD_CPU_FAILED % (config.model_id, exc)) from exc
     else:
         return loaded_model
+
+
+def _load_cpu_model_impl(
+    *,
+    config: ModelConfig,
+    dtype_str: DtypeOption,
+    start_time: float,
+    cache: ModelCache | None,
+) -> LoadedModel:
+    """Perform the CPU model load and cache insertion.
+
+    Args:
+        config: Model configuration.
+        dtype_str: Resolved dtype string.
+        start_time: ``time.perf_counter()`` reference for load timing.
+        cache: Optional cache to populate on success.
+
+    Returns:
+        LoadedModel: Loaded model wrapper with metadata.
+
+    Raises:
+        ImportError: If required transformers symbols or torch are
+            unavailable.
+    """
+    if AutoModelForCausalLM is None or AutoTokenizer is None or _torch is None:
+        raise ImportError(_ERR_MISSING_DEPS)
+    torch_dtype = _get_torch_dtype(dtype_str)
+    device = _torch.device("cpu")
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_id,
+        trust_remote_code=config.trust_remote_code,
+        revision=config.revision,
+    )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    load_kwargs: dict[str, object] = {
+        "trust_remote_code": config.trust_remote_code,
+        "low_cpu_mem_usage": True,
+    }
+
+    if dtype_str in {"int8", "int4"}:
+        load_kwargs["device_map"] = "cpu"
+        load_kwargs["quantization_config"] = _get_quantization_config(dtype_str)
+    else:
+        load_kwargs["torch_dtype"] = torch_dtype
+
+    model = AutoModelForCausalLM.from_pretrained(
+        config.model_id,
+        revision=config.revision,
+        **load_kwargs,
+    )
+    model.eval()
+
+    load_time = time.perf_counter() - start_time
+
+    memory_usage = estimate_model_memory(config.model_id, dtype_str, include_activations=False)
+
+    loaded_model = LoadedModel(
+        model=model,
+        tokenizer=tokenizer,
+        device=device,
+        dtype=dtype_str,
+        memory_usage_bytes=memory_usage,
+        model_id=config.model_id,
+        load_time_seconds=load_time,
+    )
+
+    if cache is not None:
+        cache.put(loaded_model)
+
+    _logger.info(
+        "model_loaded_cpu",
+        model_id=config.model_id,
+        dtype=dtype_str,
+        load_time_seconds=load_time,
+        memory_mb=memory_usage // (1024 * 1024),
+    )
+    return loaded_model
 
 
 def _get_torch_dtype(dtype_str: str) -> torch.dtype:

@@ -48,25 +48,37 @@ class TrackedRefreshWorker(QThread):
         """
         super().__init__(parent)
 
+    @staticmethod
+    def _collect_tracked_snapshot() -> list[dict[str, str | int | None]]:
+        """Collect a serialisable snapshot of all tracked processes.
+
+        Returns:
+            list[dict[str, str | int | None]]: A list of dictionaries describing
+            each tracked process, with ``pid``, ``name``, ``process_type``,
+            ``status``, and ``registered_at`` keys.
+        """
+        manager = ProcessManager.get_instance()
+        all_tracked: list[TrackedProcess] = manager.get_all_tracked()
+        running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
+
+        result: list[dict[str, str | int | None]] = []
+        for tracked in all_tracked:
+            pid = tracked.pid
+            status = "Running" if pid in running_pids else "Stopped"
+            registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
+            result.append({
+                "pid": pid,
+                "name": tracked.name,
+                "process_type": tracked.process_type.value,
+                "status": status,
+                "registered_at": registered_str,
+            })
+        return result
+
     def run(self) -> None:
         """Execute tracked process data collection in the background thread."""
         try:
-            manager = ProcessManager.get_instance()
-            all_tracked: list[TrackedProcess] = manager.get_all_tracked()
-            running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
-
-            result: list[dict[str, str | int | None]] = []
-            for tracked in all_tracked:
-                pid = tracked.pid
-                status = "Running" if pid in running_pids else "Stopped"
-                registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
-                result.append({
-                    "pid": pid,
-                    "name": tracked.name,
-                    "process_type": tracked.process_type.value,
-                    "status": status,
-                    "registered_at": registered_str,
-                })
+            result = self._collect_tracked_snapshot()
         except (RuntimeError, ValueError, KeyError) as exc:
             _logger.warning("tracked_refresh_failed", error=str(exc))
             self.refresh_error.emit(f"Refresh failed: {exc}")

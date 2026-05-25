@@ -1495,6 +1495,21 @@ class HexEditorWidget(QAbstractScrollArea):
         self.data_changed.emit()
         self._move_cursor(self._cursor_offset + 1)
 
+    def _delete_selection_impl(self, delete_fn: Callable[[int, int], object], start: int, length: int) -> None:
+        """Delete ``length`` bytes starting at ``start`` and refresh selection state.
+
+        Args:
+            delete_fn: The document's ``delete_bytes`` callable.
+            start: First byte offset of the selection.
+            length: Number of bytes to delete.
+        """
+        delete_fn(start, length)
+        self._selection_start = -1
+        self._selection_end = -1
+        self.data_changed.emit()
+        self._move_cursor(start)
+        _logger.debug("hex_editor_delete_selection_completed", start=start, length=length)
+
     def _do_delete(self, *, backspace: bool) -> None:
         """Delete byte(s) at cursor or selection.
 
@@ -1516,12 +1531,7 @@ class HexEditorWidget(QAbstractScrollArea):
             for i in range(length):
                 self.about_to_modify.emit(start + i)
             try:
-                delete_fn(start, length)
-                self._selection_start = -1
-                self._selection_end = -1
-                self.data_changed.emit()
-                self._move_cursor(start)
-                _logger.debug("hex_editor_delete_selection_completed", start=start, length=length)
+                self._delete_selection_impl(delete_fn, start, length)
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_delete_selection_failed", exc_info=True)
         else:

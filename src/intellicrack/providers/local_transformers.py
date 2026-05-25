@@ -81,10 +81,10 @@ except ImportError:
     _AutoTokenizer = None
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
     import torch
-    from transformers import PreTrainedModel
+    from transformers import PreTrainedModel, PreTrainedTokenizerBase
     from transformers.modeling_outputs import CausalLMOutputWithPast
 
 
@@ -566,51 +566,86 @@ class LocalTransformersProvider(LLMProviderBase):
         start_time = time.perf_counter()
 
         try:
-            formatted_messages = self._convert_messages_to_provider_format(messages)
-            prompt = self._format_prompt(formatted_messages, tools)
-
-            response_text, prompt_tokens, completion_tokens = await asyncio.to_thread(
-                self._generate_sync,
-                prompt,
-                temperature,
-                max_tokens,
-            )
-
-            self._pending_usage = UsageInfo(
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=prompt_tokens + completion_tokens,
-            )
-
-            tool_calls: list[ToolCall] | None = None
-            if tools:
-                tool_calls = self._parse_tool_calls(response_text)
-                if tool_calls:
-                    response_text = self._extract_text_before_tool_call(response_text)
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            message = Message(
-                role="assistant",
-                content=response_text,
-                tool_calls=tool_calls,
-                timestamp=datetime.now(tz=UTC),
-            )
-
-            self._logger.info(
-                "local_chat_completed",
-                model=model_id,
-                device=self._device_type,
-                duration_ms=duration_ms,
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                has_tool_calls=tool_calls is not None,
+            message, tool_calls = await self._run_local_chat(
+                messages=messages,
+                model_id=model_id,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                start_time=start_time,
             )
         except (RuntimeError, ImportError, ValueError, OSError) as exc:
             self._logger.warning("local_chat_failed", model=model_id, error=str(exc))
             raise ProviderError(_ERR_INFERENCE_FAILED % exc) from exc
         else:
             return message, tool_calls
+
+    async def _run_local_chat(
+        self,
+        *,
+        messages: list[Message],
+        model_id: str,
+        tools: list[ToolDefinition] | None,
+        temperature: float,
+        max_tokens: int,
+        start_time: float,
+    ) -> tuple[Message, list[ToolCall] | None]:
+        """Generate a non-streaming local chat completion.
+
+        Args:
+            messages: Conversation history.
+            model_id: Model identifier currently loaded.
+            tools: Available tools for function calling.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            start_time: ``time.perf_counter()`` reference captured before
+                generation began.
+
+        Returns:
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant
+            message, tool calls if any).
+        """
+        formatted_messages = self._convert_messages_to_provider_format(messages)
+        prompt = self._format_prompt(formatted_messages, tools)
+
+        response_text, prompt_tokens, completion_tokens = await asyncio.to_thread(
+            self._generate_sync,
+            prompt,
+            temperature,
+            max_tokens,
+        )
+
+        self._pending_usage = UsageInfo(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+        )
+
+        tool_calls: list[ToolCall] | None = None
+        if tools:
+            tool_calls = self._parse_tool_calls(response_text)
+            if tool_calls:
+                response_text = self._extract_text_before_tool_call(response_text)
+
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        message = Message(
+            role="assistant",
+            content=response_text,
+            tool_calls=tool_calls,
+            timestamp=datetime.now(tz=UTC),
+        )
+
+        self._logger.info(
+            "local_chat_completed",
+            model=model_id,
+            device=self._device_type,
+            duration_ms=duration_ms,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            has_tool_calls=tool_calls is not None,
+        )
+        return message, tool_calls
 
     async def chat_stream(
         self,
@@ -681,25 +716,54 @@ class LocalTransformersProvider(LLMProviderBase):
             raise ProviderError(_MSG_NO_MODEL_LOADED)
 
         try:
-            formatted_messages = self._convert_messages_to_provider_format(messages)
-            prompt = self._format_prompt(formatted_messages, tools)
-
-            accumulated_chunks: list[str] = []
-            async for chunk in self._stream_generate(prompt, temperature, max_tokens):
-                if self._cancel_requested:
-                    break
-                accumulated_chunks.append(chunk)
+            async for chunk in self._iter_local_stream(
+                messages=messages,
+                tools=tools,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ):
                 yield chunk
-
-            if tools and not self._cancel_requested:
-                full_text = "".join(accumulated_chunks)
-                if parsed_calls := self._parse_tool_calls(full_text):
-                    self._pending_tool_calls = parsed_calls
-
         except (RuntimeError, ImportError, ValueError, OSError) as exc:
             if not self._cancel_requested:
                 self._logger.warning("local_stream_failed", model=model_id, error=str(exc))
                 raise ProviderError(_ERR_STREAMING_FAILED % exc) from exc
+
+    async def _iter_local_stream(
+        self,
+        *,
+        messages: list[Message],
+        tools: list[ToolDefinition] | None,
+        temperature: float,
+        max_tokens: int,
+    ) -> AsyncIterator[str]:
+        """Generate the local streaming chunks and capture tool calls.
+
+        Updates ``self._pending_tool_calls`` when tool definitions are
+        provided and parsed calls are detected in the accumulated text.
+
+        Args:
+            messages: Conversation history.
+            tools: Available tools for function calling.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+
+        Yields:
+            str: Text chunks as they are generated.
+        """
+        formatted_messages = self._convert_messages_to_provider_format(messages)
+        prompt = self._format_prompt(formatted_messages, tools)
+
+        accumulated_chunks: list[str] = []
+        async for chunk in self._stream_generate(prompt, temperature, max_tokens):
+            if self._cancel_requested:
+                break
+            accumulated_chunks.append(chunk)
+            yield chunk
+
+        if tools and not self._cancel_requested:
+            full_text = "".join(accumulated_chunks)
+            if parsed_calls := self._parse_tool_calls(full_text):
+                self._pending_tool_calls = parsed_calls
 
     async def _ensure_model_loaded(self, model_id: str) -> None:
         """Ensure the specified model is loaded on the selected device.
@@ -1038,7 +1102,6 @@ class LocalTransformersProvider(LLMProviderBase):
             attention_mask = attention_mask.to(device)
 
         prompt_tokens = int(input_ids.shape[-1])
-        completion_tokens = 0
 
         generated_ids = input_ids.clone()
         past_key_values: tuple[tuple[torch.Tensor, ...], ...] | None = None
@@ -1082,50 +1145,111 @@ class LocalTransformersProvider(LLMProviderBase):
                     use_cache=True,
                 )
 
+        completion_counter = [0]
         try:
-            for _ in range(max_tokens):
-                if self._cancel_requested:
-                    break
-
-                outputs = await asyncio.to_thread(
-                    _forward_pass,
-                    model,
-                    generated_ids,
-                    attention_mask,
-                    past_key_values,
-                )
-
-                logits = outputs.logits[:, -1, :]
-                past_key_values = outputs.past_key_values
-
-                if temperature > 0:
-                    probs = _torch.softmax(logits / temperature, dim=-1)
-                    next_token = _torch.multinomial(probs, num_samples=1)
-                else:
-                    next_token = logits.argmax(dim=-1, keepdim=True)
-
-                if next_token.item() == tokenizer.eos_token_id:
-                    break
-
-                generated_ids = _torch.cat([generated_ids, next_token], dim=-1)
-                completion_tokens += 1
-
-                if attention_mask is not None:
-                    attention_mask = _torch.cat(
-                        [attention_mask, _torch.ones((1, 1), device=device)],
-                        dim=-1,
-                    )
-
-                token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
-                if token_text:
-                    yield token_text
+            async for token_text in self._iter_local_generation_loop(
+                model=model,
+                tokenizer=tokenizer,
+                generated_ids=generated_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                forward_pass=_forward_pass,
+                completion_counter=completion_counter,
+            ):
+                yield token_text
         finally:
             past_key_values = None
             self._pending_usage = UsageInfo(
                 prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                total_tokens=prompt_tokens + completion_tokens,
+                completion_tokens=completion_counter[0],
+                total_tokens=prompt_tokens + completion_counter[0],
             )
+
+    async def _iter_local_generation_loop(
+        self,
+        *,
+        model: PreTrainedModel,
+        tokenizer: PreTrainedTokenizerBase,
+        generated_ids: torch.Tensor,
+        attention_mask: torch.Tensor | None,
+        past_key_values: tuple[tuple[torch.Tensor, ...], ...] | None,
+        max_tokens: int,
+        temperature: float,
+        forward_pass: Callable[
+            [
+                PreTrainedModel,
+                torch.Tensor,
+                torch.Tensor | None,
+                tuple[tuple[torch.Tensor, ...], ...] | None,
+            ],
+            CausalLMOutputWithPast,
+        ],
+        completion_counter: list[int],
+    ) -> AsyncIterator[str]:
+        """Run the autoregressive decoding loop and yield decoded tokens.
+
+        Args:
+            model: The loaded causal LM.
+            tokenizer: Tokenizer associated with ``model``.
+            generated_ids: Token ids generated so far for the sequence.
+            attention_mask: Optional attention mask aligned with the
+                generated ids, or ``None`` to skip masking.
+            past_key_values: Cached key/value tensors from prior steps.
+            max_tokens: Maximum number of new tokens to generate.
+            temperature: Sampling temperature; ``0`` selects greedy
+                argmax decoding.
+            forward_pass: Forward-pass callable invoked via
+                ``asyncio.to_thread``.
+            completion_counter: Single-element list mutated with the
+                number of tokens generated so the caller can populate
+                usage in its ``finally`` block.
+
+        Yields:
+            str: Decoded token text for each generated token.
+
+        Raises:
+            ImportError: If ``torch`` is not installed.
+        """
+        if _torch is None:
+            raise ImportError(_MSG_TORCH_REQUIRED)
+        for _ in range(max_tokens):
+            if self._cancel_requested:
+                break
+
+            outputs = await asyncio.to_thread(
+                forward_pass,
+                model,
+                generated_ids,
+                attention_mask,
+                past_key_values,
+            )
+
+            logits = outputs.logits[:, -1, :]
+            past_key_values = outputs.past_key_values
+
+            if temperature > 0:
+                probs = _torch.softmax(logits / temperature, dim=-1)
+                next_token = _torch.multinomial(probs, num_samples=1)
+            else:
+                next_token = logits.argmax(dim=-1, keepdim=True)
+
+            if next_token.item() == tokenizer.eos_token_id:
+                break
+
+            generated_ids = _torch.cat([generated_ids, next_token], dim=-1)
+            completion_counter[0] += 1
+
+            if attention_mask is not None:
+                attention_mask = _torch.cat(
+                    [attention_mask, _torch.ones((1, 1), device=generated_ids.device)],
+                    dim=-1,
+                )
+
+            token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
+            if token_text:
+                yield token_text
 
     @override
     def _convert_messages_to_provider_format(
@@ -1381,25 +1505,41 @@ class LocalTransformersProvider(LLMProviderBase):
         json_str = response[start_idx:end_idx]
 
         try:
-            data: dict[str, Any] = json.loads(json_str)
-            tool_call_data: dict[str, Any] = data.get("tool_call", {})
-            name: str = str(tool_call_data.get("name", ""))
-            raw_arguments: object = tool_call_data.get("arguments", {})
-            parsed_arguments: dict[str, Any] = cast("dict[str, Any]", raw_arguments) if isinstance(raw_arguments, dict) else {}
-
-            if name:
-                return [
-                    ToolCall(
-                        id=f"call_{uuid.uuid4().hex}",
-                        tool_name=name.split(".", maxsplit=1)[0] if "." in name else name,
-                        function_name=name,
-                        arguments=parsed_arguments,
-                    ),
-                ]
+            return LocalTransformersProvider._build_tool_call_from_json(json_str)
         except json.JSONDecodeError:
             _logger.warning("tool_call_json_decode_failed")
+            return None
 
-        return None
+    @staticmethod
+    def _build_tool_call_from_json(json_str: str) -> list[ToolCall] | None:
+        """Decode a ``{"tool_call": ...}`` JSON object into ``ToolCall`` entries.
+
+        Any ``json.JSONDecodeError`` raised by the underlying
+        ``json.loads`` call propagates to the caller, which handles it.
+
+        Args:
+            json_str: Raw JSON string containing the tool-call object.
+
+        Returns:
+            list[ToolCall] | None: Single-element list containing the
+            parsed tool call, or ``None`` when the object lacks a name.
+        """
+        data: dict[str, Any] = json.loads(json_str)
+        tool_call_data: dict[str, Any] = data.get("tool_call", {})
+        name: str = str(tool_call_data.get("name", ""))
+        raw_arguments: object = tool_call_data.get("arguments", {})
+        parsed_arguments: dict[str, Any] = cast("dict[str, Any]", raw_arguments) if isinstance(raw_arguments, dict) else {}
+
+        if not name:
+            return None
+        return [
+            ToolCall(
+                id=f"call_{uuid.uuid4().hex}",
+                tool_name=name.split(".", maxsplit=1)[0] if "." in name else name,
+                function_name=name,
+                arguments=parsed_arguments,
+            ),
+        ]
 
     @staticmethod
     def _extract_text_before_tool_call(response: str) -> str:

@@ -66,6 +66,45 @@ class _WorkerStartRecorder:
         self.calls += 1
 
 
+def _assert_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
+    """Assert a fully prefetched dialog renders all rows without spawning workers.
+
+    Args:
+        dialog: ToolStatusDialog instance under test.
+        recorder: Recorder tracking worker.start invocations.
+    """
+    assert recorder.calls == 0
+    assert dialog._refresh_btn.isEnabled()
+    assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
+
+    ghidra_text = dialog._status_list.item(0).text()
+    assert "Ghidra" in ghidra_text
+    assert "Ghidra installed" in ghidra_text
+    assert "✓" in ghidra_text
+
+    x64dbg_text = dialog._status_list.item(1).text()
+    assert "x64dbg" in x64dbg_text
+    assert "x64dbg.exe not found" in x64dbg_text
+    assert "✗" in x64dbg_text
+
+
+def _assert_partial_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
+    """Assert a partial prefetched dialog renders unknown for missing rows.
+
+    Args:
+        dialog: ToolStatusDialog instance under test.
+        recorder: Recorder tracking worker.start invocations.
+    """
+    assert recorder.calls == 0
+    assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
+
+    ghidra_text = dialog._status_list.item(0).text()
+    assert "Ghidra installed" in ghidra_text
+
+    x64dbg_text = dialog._status_list.item(1).text()
+    assert "Status unknown" in x64dbg_text
+
+
 def _patch_worker_start(monkeypatch: pytest.MonkeyPatch, recorder: _WorkerStartRecorder) -> None:
     """Replace ``ToolStatusCheckWorker.start`` with a counting stub.
 
@@ -113,19 +152,7 @@ class TestToolStatusDialogPrefetch:
         prefetched = _make_prefetched_payload()
         dialog = ToolStatusDialog(tool_statuses=prefetched)
         try:
-            assert recorder.calls == 0
-            assert dialog._refresh_btn.isEnabled()
-            assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
-
-            ghidra_text = dialog._status_list.item(0).text()
-            assert "Ghidra" in ghidra_text
-            assert "Ghidra installed" in ghidra_text
-            assert "✓" in ghidra_text
-
-            x64dbg_text = dialog._status_list.item(1).text()
-            assert "x64dbg" in x64dbg_text
-            assert "x64dbg.exe not found" in x64dbg_text
-            assert "✗" in x64dbg_text
+            _assert_prefetched_render(dialog, recorder)
         finally:
             dialog.deleteLater()
 
@@ -205,13 +232,6 @@ class TestToolStatusDialogPrefetch:
         }
         dialog = ToolStatusDialog(tool_statuses=partial)
         try:
-            assert recorder.calls == 0
-            assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
-
-            ghidra_text = dialog._status_list.item(0).text()
-            assert "Ghidra installed" in ghidra_text
-
-            x64dbg_text = dialog._status_list.item(1).text()
-            assert "Status unknown" in x64dbg_text
+            _assert_partial_prefetched_render(dialog, recorder)
         finally:
             dialog.deleteLater()

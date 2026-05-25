@@ -37,7 +37,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
@@ -59,7 +58,6 @@ from intellicrack.ui.panels.hex_editor._disassembly import DisassemblyMixin
 from intellicrack.ui.panels.hex_editor._hashing import HashingMixin
 from intellicrack.ui.panels.hex_editor._highlighting import HighlightingMixin
 from intellicrack.ui.panels.hex_editor._patches import PatchesMixin
-from intellicrack.ui.panels.hex_editor._pattern_code_editor import PatternCodeEditor
 from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
 from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
 from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
@@ -86,7 +84,9 @@ if TYPE_CHECKING:
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.bridges.hex_state import HexDocumentState
+    from intellicrack.core.hexpat.completer import HexPatCompleter
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+    from intellicrack.ui.panels.hex_editor._pattern_code_editor import PatternCodeEditor
 
 _MODE_LABEL_WIDTH: Final[int] = 30
 _SEARCH_MODE_WIDTH: Final[int] = 80
@@ -609,43 +609,59 @@ class HexEditorPanel(
         path = Path(file_path) if isinstance(file_path, str) else file_path
 
         try:
-            self.document = hexcore.HexDocument.open(str(path))
-            self.file_path = path
-
-            if self._hex_widget is not None:
-                set_doc = getattr(self._hex_widget, "set_document", None)
-                if callable(set_doc):
-                    set_doc(self.document)
-
-            if self.document is None:
-                return False
-            doc_len: int = self.document.length()
-            if self._file_info_label is not None:
-                self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
-
-            self._populate_template_combo()
-            if self._encoding_combo is not None:
-                self._encoding_combo.setCurrentIndex(0)
-            self._auto_detect_file_type()
-            self._populate_sections()
-            self._populate_imports()
-            self._populate_exports()
-            self._populate_strings()
-            self._update_statistics()
-            self._original_data_cache.clear()
-            self._search_results.clear()
-            self._search_index = 0
-
-            if self.state_holder is not None:
-                self.state_holder.set_document(self.document, path, source="panel")
-
+            doc_len = self._load_file_impl(path)
         except OSError as exc:
             _logger.exception("file_load_failed", path=str(path))
             show_warning(self, "Load Failed", f"Failed to open file:\n{exc}")
             return False
-        else:
-            _logger.info("file_loaded", path=str(path), size=doc_len)
-            return True
+        if doc_len is None:
+            return False
+        _logger.info("file_loaded", path=str(path), size=doc_len)
+        return True
+
+    def _load_file_impl(self, path: Path) -> int | None:
+        """Open ``path`` through hexcore and refresh all derived panels.
+
+        Args:
+            path: Filesystem path to load.
+
+        Returns:
+            int | None: Length of the loaded document in bytes, or ``None`` if
+                the hexcore document could not be opened.
+        """
+        if hexcore is None:
+            return None
+        self.document = hexcore.HexDocument.open(str(path))
+        self.file_path = path
+
+        if self._hex_widget is not None:
+            set_doc = getattr(self._hex_widget, "set_document", None)
+            if callable(set_doc):
+                set_doc(self.document)
+
+        if self.document is None:
+            return None
+        doc_len: int = self.document.length()
+        if self._file_info_label is not None:
+            self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
+
+        self._populate_template_combo()
+        if self._encoding_combo is not None:
+            self._encoding_combo.setCurrentIndex(0)
+        self._auto_detect_file_type()
+        self._populate_sections()
+        self._populate_imports()
+        self._populate_exports()
+        self._populate_strings()
+        self._update_statistics()
+        self._original_data_cache.clear()
+        self._search_results.clear()
+        self._search_index = 0
+
+        if self.state_holder is not None:
+            self.state_holder.set_document(self.document, path, source="panel")
+
+        return doc_len
 
     def _on_open_file(self) -> None:
         """Open a file selection dialog and load the chosen file."""

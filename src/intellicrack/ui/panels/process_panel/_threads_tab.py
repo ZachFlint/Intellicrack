@@ -539,20 +539,30 @@ class ThreadsTab(QWidget):
         self._reg_last_edited_col[row] = col
         self._reg_sync_active = True
         try:
-            if col == 1:
-                dec_item = self._reg_table.item(row, 2)
-                if dec_item is None:
-                    dec_item = QTableWidgetItem()
-                    self._reg_table.setItem(row, 2, dec_item)
-                dec_item.setText(str(int_val))
-            else:
-                hex_item = self._reg_table.item(row, 1)
-                if hex_item is None:
-                    hex_item = QTableWidgetItem()
-                    self._reg_table.setItem(row, 1, hex_item)
-                hex_item.setText(f"0x{int_val:X}")
+            self._sync_register_companion_cell(row, col, int_val)
         finally:
             self._reg_sync_active = False
+
+    def _sync_register_companion_cell(self, row: int, col: int, int_val: int) -> None:
+        """Mirror the edited register cell into its sibling hex/decimal cell.
+
+        Args:
+            row: Row of the cell that was edited.
+            col: Column of the cell that was edited (1 = hex, otherwise decimal).
+            int_val: Parsed integer value to mirror into the sibling cell.
+        """
+        if col == 1:
+            dec_item = self._reg_table.item(row, 2)
+            if dec_item is None:
+                dec_item = QTableWidgetItem()
+                self._reg_table.setItem(row, 2, dec_item)
+            dec_item.setText(str(int_val))
+        else:
+            hex_item = self._reg_table.item(row, 1)
+            if hex_item is None:
+                hex_item = QTableWidgetItem()
+                self._reg_table.setItem(row, 1, hex_item)
+            hex_item.setText(f"0x{int_val:X}")
 
     def _on_write_registers(self) -> None:
         """Write modified registers back to the thread."""

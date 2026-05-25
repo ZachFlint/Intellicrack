@@ -312,20 +312,7 @@ def test_start_script_tracks_pids(tmp_path: Path) -> None:
     completed = _run_scratch_start(scripts_dir, log_dir)
     pids: list[int] = []
     try:
-        assert completed.returncode == 0, (
-            f"start_monitors exited {completed.returncode}; stdout={completed.stdout!r} stderr={completed.stderr!r}"
-        )
-
-        entries = _read_pid_file(log_dir)
-        assert entries, "PID file is empty"
-        pids = [pid for pid, _ in entries]
-        assert len(entries) == monitor_count, f"expected {monitor_count} tracked monitors, got {len(entries)}; entries={entries!r}"
-
-        # Wait briefly so the helpers are observable, then verify
-        # every PID is alive.
-        time.sleep(_SETTLE_SEC)
-        for pid, name in entries:
-            assert _process_alive(pid, pwsh), f"tracked monitor pid {pid} ({name}) is not running"
+        pids = _verify_start_tracks_pids(completed, log_dir, monitor_count, pwsh)
     finally:
         _kill_pids(pids)
 
@@ -387,21 +374,7 @@ def test_stop_script_terminates_tracked_pids(tmp_path: Path) -> None:
     pids = [pid for pid, _ in entries]
 
     try:
-        time.sleep(_SETTLE_SEC)
-        for pid, name in entries:
-            assert _process_alive(pid, pwsh), f"monitor pid {pid} ({name}) did not start"
-
-        stopped = _run_scratch_stop(scripts_dir, log_dir)
-        assert stopped.returncode == 0, f"stop_monitors must exit 0 on success; stdout={stopped.stdout!r} stderr={stopped.stderr!r}"
-
-        # All previously-tracked PIDs must be gone.
-        time.sleep(_SETTLE_SEC)
-        for pid, name in entries:
-            assert not _process_alive(pid, pwsh), f"monitor pid {pid} ({name}) still alive after stop_monitors"
-
-        # PID file must be removed once shutdown completes.
-        pid_file = log_dir / _PID_FILE_NAME
-        assert not pid_file.exists(), f"PID file at {pid_file} must be deleted after stop_monitors"
+        _verify_stop_terminates_tracked_pids(entries, scripts_dir, log_dir, pwsh)
     finally:
         _kill_pids(pids)
 
@@ -446,18 +419,95 @@ def test_full_lifecycle_no_orphan_pwsh(tmp_path: Path) -> None:
     tracked = {pid for pid, _ in entries}
 
     try:
-        time.sleep(_SETTLE_SEC)
-        stopped = _run_scratch_stop(scripts_dir, log_dir)
-        assert stopped.returncode == 0, f"stop failed; stdout={stopped.stdout!r} stderr={stopped.stderr!r}"
-
-        time.sleep(_SETTLE_SEC)
-        post_pids = _list_pwsh_pids(pwsh)
-
-        # Any PID tracked by start that survived stop is an orphan.
-        leaked_tracked = {pid for pid in tracked if pid in post_pids}
-        assert not leaked_tracked, f"tracked monitor PIDs survived stop_monitors: {leaked_tracked}"
+        _verify_full_lifecycle_no_orphans(scripts_dir, log_dir, pwsh, tracked)
     finally:
         _kill_pids(list(tracked))
+
+
+def _verify_start_tracks_pids(
+    completed: subprocess.CompletedProcess[str],
+    log_dir: Path,
+    monitor_count: int,
+    pwsh: str,
+) -> list[int]:
+    """Assert start_monitors exited 0 and PIDs in the file are alive.
+
+    Args:
+        completed: Completed start launcher process.
+        log_dir: Directory containing the PID file written by the launcher.
+        monitor_count: Expected number of tracked monitors.
+        pwsh: Absolute path to ``pwsh.exe`` for liveness checks.
+
+    Returns:
+        list[int]: PIDs recorded in the PID file.
+    """
+    assert completed.returncode == 0, (
+        f"start_monitors exited {completed.returncode}; stdout={completed.stdout!r} stderr={completed.stderr!r}"
+    )
+
+    entries = _read_pid_file(log_dir)
+    assert entries, "PID file is empty"
+    pids = [pid for pid, _ in entries]
+    assert len(entries) == monitor_count, f"expected {monitor_count} tracked monitors, got {len(entries)}; entries={entries!r}"
+
+    time.sleep(_SETTLE_SEC)
+    for pid, name in entries:
+        assert _process_alive(pid, pwsh), f"tracked monitor pid {pid} ({name}) is not running"
+    return pids
+
+
+def _verify_stop_terminates_tracked_pids(
+    entries: list[tuple[int, str]],
+    scripts_dir: Path,
+    log_dir: Path,
+    pwsh: str,
+) -> None:
+    """Run stop_monitors and assert all tracked PIDs are reaped.
+
+    Args:
+        entries: PID/name entries read from the PID file before stop.
+        scripts_dir: Scratch scripts directory passed to the stop launcher.
+        log_dir: Directory containing the PID file.
+        pwsh: Absolute path to ``pwsh.exe`` for liveness checks.
+    """
+    time.sleep(_SETTLE_SEC)
+    for pid, name in entries:
+        assert _process_alive(pid, pwsh), f"monitor pid {pid} ({name}) did not start"
+
+    stopped = _run_scratch_stop(scripts_dir, log_dir)
+    assert stopped.returncode == 0, f"stop_monitors must exit 0 on success; stdout={stopped.stdout!r} stderr={stopped.stderr!r}"
+
+    time.sleep(_SETTLE_SEC)
+    for pid, name in entries:
+        assert not _process_alive(pid, pwsh), f"monitor pid {pid} ({name}) still alive after stop_monitors"
+
+    pid_file = log_dir / _PID_FILE_NAME
+    assert not pid_file.exists(), f"PID file at {pid_file} must be deleted after stop_monitors"
+
+
+def _verify_full_lifecycle_no_orphans(
+    scripts_dir: Path,
+    log_dir: Path,
+    pwsh: str,
+    tracked: set[int],
+) -> None:
+    """Run stop_monitors and assert no tracked PID survives.
+
+    Args:
+        scripts_dir: Scratch scripts directory.
+        log_dir: Directory containing the PID file.
+        pwsh: Absolute path to ``pwsh.exe`` for PID enumeration.
+        tracked: Set of PIDs tracked by the start launcher.
+    """
+    time.sleep(_SETTLE_SEC)
+    stopped = _run_scratch_stop(scripts_dir, log_dir)
+    assert stopped.returncode == 0, f"stop failed; stdout={stopped.stdout!r} stderr={stopped.stderr!r}"
+
+    time.sleep(_SETTLE_SEC)
+    post_pids = _list_pwsh_pids(pwsh)
+
+    leaked_tracked = {pid for pid in tracked if pid in post_pids}
+    assert not leaked_tracked, f"tracked monitor PIDs survived stop_monitors: {leaked_tracked}"
 
 
 def _list_pwsh_pids(pwsh: str) -> set[int]:

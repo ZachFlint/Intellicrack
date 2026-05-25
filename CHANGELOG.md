@@ -9,6 +9,15 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Add autocomplete to HexPat pattern editor (`23d9ae2`)
+Introduce an in-line identifier completer for the HexPat pattern DSL editor, offering both built-in primitive types and user-declared types harvested from the most recent successful interpreter run.
+- Add `HexPatCompleter` to track and merge built-in and user-declared type names
+- Implement `PatternCodeEditor` with a custom `QCompleter` popup triggered by `Ctrl+Space` or auto-popup prefixes
+- Expose `last_type_registry` on `HexPatInterpreter` to feed the completer after successful executions
+- Prevent redeclaration of built-in types in `TypeRegistry`
+- Add asynchronous YARA compilation helpers to avoid blocking the event loop
+- Add an F2 shortcut to rename hooks in the Frida panel table
+
 - Add sandbox pause support and audit GPU BAR sizes (`92b383e`)
 - Implement VM pause/stop support in the QEMU sandbox bridge and expose it in the Sandbox UI panel.
 - Audit GPU Resizable BAR sizes on Windows to warn when local LLM context profiles exceed the BAR limit and risk CPU-fallback slowdowns.
@@ -301,15 +310,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Add autocomplete to HexPat pattern editor (``)
-Introduce an in-line identifier completer for the HexPat pattern DSL editor, offering both built-in primitive types and user-declared types harvested from the most recent successful interpreter run.
-- Add `HexPatCompleter` to track and merge built-in and user-declared type names
-- Implement `PatternCodeEditor` with a custom `QCompleter` popup triggered by `Ctrl+Space` or auto-popup prefixes
-- Expose `last_type_registry` on `HexPatInterpreter` to feed the completer after successful executions
-- Prevent redeclaration of built-in types in `TypeRegistry`
-- Add asynchronous YARA compilation helpers to avoid blocking the event loop
-- Add an F2 shortcut to rename hooks in the Frida panel table
 
 
 ### Changed
@@ -729,6 +729,13 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
+
+- Decompose complex methods and upgrade dependencies (``)
+Decomposed several large, high-complexity methods across the bridges, core orchestrator, providers, and UI components into smaller, single-responsibility private helper methods to improve maintainability and satisfy complexity limits. In tandem, upgraded Rust crate dependencies in the hexcore module, updated Node.js and Python dev dependencies, and added a unified update target to the justfile.
+- **Bridges & Core**: Extracted resource cleanup, initialization, and platform-specific API calls into dedicated private methods.
+- **Providers**: Refactored streaming loops and API response parsing for Anthropic, Google, Grok, and Ollama.
+- **UI & Sandbox**: Decomposed window embedding, dialog rendering, and QEMU/Windows sandbox lifecycle management.
+- **Dependencies**: Upgraded Rust crates (including pyo3 to 0.28 and aes to 0.9), Node.js to >=26.2.0, and updated dev tools.
 
 
 ### Documentation

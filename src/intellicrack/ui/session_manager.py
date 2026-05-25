@@ -700,6 +700,47 @@ class SessionManagerDialog(QDialog):
 
         _logger.info("session_list_refreshed", count=len(self._sessions))
 
+    @staticmethod
+    def _read_session_file(session_file: Path) -> dict[str, object]:
+        """Read and normalise a single session JSON file.
+
+        Args:
+            session_file: Path to the session JSON file.
+
+        Returns:
+            dict[str, object]: Session payload dictionary with id, name, and
+            datetime fields normalised.
+        """
+        with session_file.open(encoding="utf-8") as f:
+            session_data: dict[str, object] = json.load(f)
+
+        if "id" not in session_data:
+            session_data["id"] = session_file.stem
+
+        if "name" not in session_data:
+            session_data["name"] = session_file.stem
+
+        SessionManagerDialog._normalise_session_datetime(session_data, "created_at")
+        SessionManagerDialog._normalise_session_datetime(session_data, "updated_at")
+        return session_data
+
+    @staticmethod
+    def _normalise_session_datetime(session_data: dict[str, object], field: str) -> None:
+        """Convert an ISO-format datetime string in ``session_data`` to a ``datetime``.
+
+        Args:
+            session_data: Session payload dictionary to mutate in place.
+            field: Name of the datetime field to normalise.
+        """
+        raw = session_data.get(field)
+        if not isinstance(raw, str):
+            return
+        try:
+            session_data[field] = datetime.fromisoformat(raw)
+        except ValueError:
+            _logger.warning("session_datetime_parse_failed", field=field, session_id=session_data.get("id"))
+            session_data[field] = datetime.now(tz=UTC)
+
     def _load_sessions_from_disk(self) -> None:
         """Load sessions from disk storage."""
         if not self.SESSIONS_DIR.exists():
@@ -707,31 +748,7 @@ class SessionManagerDialog(QDialog):
 
         for session_file in self.SESSIONS_DIR.glob("*.json"):
             try:
-                with session_file.open(encoding="utf-8") as f:
-                    session_data = json.load(f)
-
-                if "id" not in session_data:
-                    session_data["id"] = session_file.stem
-
-                if "name" not in session_data:
-                    session_data["name"] = session_file.stem
-
-                if "created_at" in session_data and isinstance(session_data["created_at"], str):
-                    try:
-                        session_data["created_at"] = datetime.fromisoformat(session_data["created_at"])
-                    except ValueError:
-                        _logger.warning("session_datetime_parse_failed", field="created_at", session_id=session_data.get("id"))
-                        session_data["created_at"] = datetime.now(tz=UTC)
-
-                if "updated_at" in session_data and isinstance(session_data["updated_at"], str):
-                    try:
-                        session_data["updated_at"] = datetime.fromisoformat(session_data["updated_at"])
-                    except ValueError:
-                        _logger.warning("session_datetime_parse_failed", field="updated_at", session_id=session_data.get("id"))
-                        session_data["updated_at"] = datetime.now(tz=UTC)
-
-                self._sessions.append(session_data)
-
+                session_data = self._read_session_file(session_file)
             except (json.JSONDecodeError, OSError) as e:
                 _logger.warning(
                     "session_file_load_failed",
@@ -739,6 +756,7 @@ class SessionManagerDialog(QDialog):
                     error=str(e),
                 )
                 continue
+            self._sessions.append(session_data)
 
         sort_sentinel = datetime.min.replace(tzinfo=UTC)
 
@@ -1046,22 +1064,7 @@ class SessionManagerDialog(QDialog):
 
         if path:
             try:
-                export_data = self._prepare_export_data(session_data)
-
-                _logger.info("session_export_started", session_id=session_id, path=path)
-                with Path(path).open("w", encoding="utf-8") as f:
-                    json.dump(export_data, f, indent=2, default=str)
-
-                _logger.info(
-                    "session_exported",
-                    session_id=session_id,
-                    path=path,
-                )
-                QMessageBox.information(
-                    self,
-                    "Export Complete",
-                    f"Session exported to:\n{path}",
-                )
+                self._write_session_export(session_id, session_data, path)
             except (OSError, TypeError) as e:
                 _logger.warning(
                     "session_export_failed",
@@ -1073,6 +1076,32 @@ class SessionManagerDialog(QDialog):
                     "Export Failed",
                     f"Failed to export session:\n{e}",
                 )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Export Complete",
+                    f"Session exported to:\n{path}",
+                )
+
+    def _write_session_export(self, session_id: str, session_data: dict[str, object], path: str) -> None:
+        """Serialise ``session_data`` as JSON to ``path``.
+
+        Args:
+            session_id: Identifier of the session being exported.
+            session_data: Raw session payload to export.
+            path: Destination file path for the exported JSON.
+        """
+        export_data = self._prepare_export_data(session_data)
+
+        _logger.info("session_export_started", session_id=session_id, path=path)
+        with Path(path).open("w", encoding="utf-8") as f:
+            json.dump(export_data, f, indent=2, default=str)
+
+        _logger.info(
+            "session_exported",
+            session_id=session_id,
+            path=path,
+        )
 
     @staticmethod
     def _prepare_export_data(session_data: dict[str, object]) -> dict[str, object]:

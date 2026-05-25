@@ -812,6 +812,56 @@ class OAuthManager:
 
         return token
 
+    @staticmethod
+    async def _post_token_exchange(
+        *,
+        client: httpx.AsyncClient,
+        config: OAuthConfig,
+        data: dict[str, str],
+    ) -> OAuthToken:
+        """POST the authorization-code exchange request and build the token.
+
+        Propagates ``httpx.HTTPStatusError`` from ``raise_for_status`` when
+        the provider returns a non-2xx response, ``httpx.RequestError`` when
+        the transport fails, and ``OSError`` / ``ConnectionError`` /
+        ``TimeoutError`` from the underlying socket layer.
+
+        Args:
+            client: Open ``httpx.AsyncClient`` used for the POST.
+            config: OAuth configuration providing the token endpoint and
+                provider tag for logging.
+            data: ``application/x-www-form-urlencoded`` form payload.
+
+        Returns:
+            OAuthToken: The parsed token returned by the provider.
+        """
+        _logger.debug("oauth_code_exchange_request", token_url=config.token_url, provider=config.provider.value)
+        response = await client.post(
+            config.token_url,
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        response.raise_for_status()
+        token_data: dict[str, Any] = response.json()
+
+        expires_at: datetime | None = None
+        if "expires_in" in token_data:
+            expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
+
+        token = OAuthToken(
+            access_token=token_data["access_token"],
+            refresh_token=token_data.get("refresh_token"),
+            token_type=token_data.get("token_type", "Bearer"),
+            expires_at=expires_at,
+            scopes=tuple(str(token_data.get("scope", "")).split()),
+            id_token=token_data.get("id_token"),
+        )
+        _logger.debug(
+            "oauth_code_exchange_success",
+            has_refresh_token=token.refresh_token is not None,
+        )
+        return token
+
     async def _exchange_code_for_token(
         self,
         config: OAuthConfig,
@@ -847,31 +897,7 @@ class OAuthManager:
         client = await self._get_http_client()
 
         try:
-            _logger.debug("oauth_code_exchange_request", token_url=config.token_url, provider=config.provider.value)
-            response = await client.post(
-                config.token_url,
-                data=data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            response.raise_for_status()
-            token_data: dict[str, Any] = response.json()
-
-            expires_at: datetime | None = None
-            if "expires_in" in token_data:
-                expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
-
-            token = OAuthToken(
-                access_token=token_data["access_token"],
-                refresh_token=token_data.get("refresh_token"),
-                token_type=token_data.get("token_type", "Bearer"),
-                expires_at=expires_at,
-                scopes=tuple(str(token_data.get("scope", "")).split()),
-                id_token=token_data.get("id_token"),
-            )
-            _logger.debug(
-                "oauth_code_exchange_success",
-                has_refresh_token=token.refresh_token is not None,
-            )
+            token = await OAuthManager._post_token_exchange(client=client, config=config, data=data)
         except httpx.HTTPStatusError as e:
             _logger.warning("oauth_code_exchange_http_error", status_code=e.response.status_code, error=str(e))
             error_body = e.response.text
@@ -924,6 +950,42 @@ class OAuthManager:
         except (OSError, KeyError, ValueError) as exc:
             _logger.warning("oauth_token_store_failed", provider=provider.value, error=str(exc))
 
+    async def _load_token_from_store(self, provider: OAuthProvider) -> OAuthToken | None:
+        """Fetch and deserialise a stored OAuth token.
+
+        Assumes ``self._credential_store`` is not ``None`` (the caller
+        verifies this). Propagates ``_KeyringError`` from the credential
+        store backend, ``OSError`` when the underlying store cannot be read,
+        ``KeyError`` and ``ValueError`` from token deserialisation when the
+        payload is malformed, and ``json.JSONDecodeError`` when the stored
+        blob is not valid JSON.
+
+        Args:
+            provider: OAuth provider whose token should be loaded.
+
+        Returns:
+            OAuthToken | None: The cached token, or ``None`` when no
+            credentials are persisted for ``provider``.
+
+        Raises:
+            RuntimeError: If the credential store is unavailable.
+        """
+        if self._credential_store is None:
+            msg = "credential store is unavailable"
+            raise RuntimeError(msg)
+        provider_name = _oauth_provider_to_name(provider)
+
+        creds = await self._credential_store.get(provider_name)
+        if creds is None or not creds.api_key:
+            return None
+
+        token_data = json.loads(creds.api_key)
+        token = OAuthToken.from_dict(token_data)
+        async with self._token_cache_lock:
+            self._token_cache[provider] = token
+        _logger.debug("oauth_token_load_success", provider=provider.value)
+        return token
+
     async def _load_token(self, provider: OAuthProvider) -> OAuthToken | None:
         """Load OAuth token from credential store.
 
@@ -942,17 +1004,7 @@ class OAuthManager:
             return None
 
         try:
-            provider_name = _oauth_provider_to_name(provider)
-
-            creds = await self._credential_store.get(provider_name)
-            if creds is None or not creds.api_key:
-                return None
-
-            token_data = json.loads(creds.api_key)
-            token = OAuthToken.from_dict(token_data)
-            async with self._token_cache_lock:
-                self._token_cache[provider] = token
-            _logger.debug("oauth_token_load_success", provider=provider.value)
+            return await self._load_token_from_store(provider)
         except _KeyringError as exc:
             _logger.warning(
                 "oauth_token_load_failed",
@@ -964,8 +1016,6 @@ class OAuthManager:
         except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
             _logger.warning("oauth_token_load_failed", provider=provider.value, error=str(exc))
             return None
-        else:
-            return token
 
     async def get_token(
         self,
@@ -1006,6 +1056,64 @@ class OAuthManager:
                 return None if token.is_expired else token
 
         return None if token.is_expired else token
+
+    async def _post_token_refresh(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        config: OAuthConfig,
+        provider: OAuthProvider,
+        data: dict[str, str],
+        current_token: OAuthToken,
+    ) -> OAuthToken:
+        """POST the refresh-token request and update the local cache.
+
+        Propagates ``httpx.HTTPStatusError`` from ``raise_for_status`` when
+        the provider returns a non-2xx response, ``httpx.RequestError`` when
+        the transport fails, and ``OSError`` / ``ConnectionError`` /
+        ``TimeoutError`` from the underlying socket layer.
+
+        Args:
+            client: Open ``httpx.AsyncClient`` used for the POST.
+            config: OAuth configuration providing the token endpoint.
+            provider: OAuth provider used for cache keying and log records.
+            data: ``application/x-www-form-urlencoded`` form payload.
+            current_token: The currently stored token. Its ``refresh_token``
+                is reused when the provider does not return a new one and its
+                ``scopes`` are preserved on the refreshed token.
+
+        Returns:
+            OAuthToken: The refreshed token that has been cached and
+            persisted via :meth:`_store_token`.
+        """
+        _logger.debug("oauth_token_refresh_request", token_url=config.token_url, provider=provider.value)
+        response = await client.post(
+            config.token_url,
+            data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        response.raise_for_status()
+        token_data: dict[str, Any] = response.json()
+
+        expires_at: datetime | None = None
+        if "expires_in" in token_data:
+            expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
+
+        new_token = OAuthToken(
+            access_token=token_data["access_token"],
+            refresh_token=token_data.get("refresh_token", current_token.refresh_token),
+            token_type=token_data.get("token_type", "Bearer"),
+            expires_at=expires_at,
+            scopes=current_token.scopes,
+            id_token=token_data.get("id_token"),
+        )
+
+        async with self._token_cache_lock:
+            self._token_cache[provider] = new_token
+
+        await self._store_token(provider, new_token)
+        _logger.info("oauth_token_refreshed", provider=provider.value)
+        return new_token
 
     async def refresh_token(
         self,
@@ -1049,33 +1157,13 @@ class OAuthManager:
         client = await self._get_http_client()
 
         try:
-            _logger.debug("oauth_token_refresh_request", token_url=config.token_url, provider=provider.value)
-            response = await client.post(
-                config.token_url,
+            new_token = await self._post_token_refresh(
+                client=client,
+                config=config,
+                provider=provider,
                 data=data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                current_token=current_token,
             )
-            response.raise_for_status()
-            token_data: dict[str, Any] = response.json()
-
-            expires_at: datetime | None = None
-            if "expires_in" in token_data:
-                expires_at = datetime.now(UTC) + timedelta(seconds=int(token_data["expires_in"]))
-
-            new_token = OAuthToken(
-                access_token=token_data["access_token"],
-                refresh_token=token_data.get("refresh_token", current_token.refresh_token),
-                token_type=token_data.get("token_type", "Bearer"),
-                expires_at=expires_at,
-                scopes=current_token.scopes,
-                id_token=token_data.get("id_token"),
-            )
-
-            async with self._token_cache_lock:
-                self._token_cache[provider] = new_token
-
-            await self._store_token(provider, new_token)
-            _logger.info("oauth_token_refreshed", provider=provider.value)
         except httpx.HTTPStatusError as e:
             status_code = e.response.status_code
             _logger.warning(

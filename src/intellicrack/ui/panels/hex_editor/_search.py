@@ -498,6 +498,29 @@ class SearchMixin:
             else:
                 self._search_input.setValidator(None)
 
+    @staticmethod
+    def _parse_numeric_search_bounds(value_text: str, max_text: str, *, is_float: bool) -> tuple[float, float]:
+        """Parse the min / max numeric search inputs.
+
+        Args:
+            value_text: Minimum-bound text (also used as the equality value when
+                ``max_text`` is empty).
+            max_text: Maximum-bound text. Empty string means single-value search.
+            is_float: ``True`` to parse using ``float()``; otherwise the inputs
+                are decoded as integers via ``int(text, 0)`` before being
+                widened to ``float``.
+
+        Returns:
+            tuple[float, float]: ``(min_val, max_val)`` pair as floats.
+        """
+        if is_float:
+            min_val = float(value_text)
+            max_val = float(max_text) if max_text else min_val
+            return min_val, max_val
+        min_val_int = int(value_text, 0)
+        max_val_int = int(max_text, 0) if max_text else min_val_int
+        return float(min_val_int), float(max_val_int)
+
     def _on_numeric_search(self) -> None:
         """Execute a numeric value search using the current panel settings."""
         document: Any = getattr(self, "document", None)
@@ -543,14 +566,7 @@ class SearchMixin:
         fmt = endian_char + fmt_char
 
         try:
-            if is_float:
-                min_val = float(value_text)
-                max_val = float(max_text) if max_text else min_val
-            else:
-                min_val_int = int(value_text, 0)
-                max_val_int = int(max_text, 0) if max_text else min_val_int
-                min_val = float(min_val_int)
-                max_val = float(max_val_int)
+            min_val, max_val = self._parse_numeric_search_bounds(value_text, max_text, is_float=is_float)
         except ValueError as exc:
             _logger.warning(
                 "hex_editor_numeric_search_invalid_input",
