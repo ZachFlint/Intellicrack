@@ -793,6 +793,9 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
+- **ui:** Remove invalid keyword argument from setMouseTracking (`6abd873`)
+Pass the boolean value positionally to prevent a TypeError. Qt's Python bindings typically do not accept keyword arguments for this method.
+
 - **audit/shard-16:** Add missing structured logs to provider config + process panel  (`a743889`)
 Addresses every finding in audit/shard-16-provider-config-process-panel.md
 across provider_config.py, splash_screen.py, and the five process_panel
@@ -3281,8 +3284,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **ui:** Remove invalid keyword argument from setMouseTracking (``)
-Pass the boolean value positionally to prevent a TypeError. Qt's Python bindings typically do not accept keyword arguments for this method.
 
 

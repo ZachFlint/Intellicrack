@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/common.ps1"
 
-$totalSteps = 7
+$totalSteps = 8
 $script:currentStep = 0
 
 Write-Banner "Intellicrack Installation"
@@ -29,12 +29,23 @@ try {
     exit 1
 }
 
+$script:currentStep++
+Write-Host "${e}[36m[$script:currentStep/$totalSteps]${e}[0m Fixing pixi SSL cert directory..."
+try {
+    & just fix-pixi-ssl
+    if ($LASTEXITCODE -ne 0) { throw "fix-pixi-ssl failed with exit code $LASTEXITCODE" }
+    Write-Success "SSL cert directory populated"
+} catch {
+    Write-Fail "SSL cert fix failed: $_"
+    exit 1
+}
+
 $subSteps = @(
-    @{ Step = 3; Name = 'Ghidra';  Recipe = 'install-ghidra' },
-    @{ Step = 4; Name = 'radare2'; Recipe = 'install-radare2' },
-    @{ Step = 5; Name = 'QEMU';    Recipe = 'install-qemu' },
-    @{ Step = 6; Name = 'x64dbg';  Recipe = 'install-x64dbg' },
-    @{ Step = 7; Name = 'Cutter';  Recipe = 'install-cutter' }
+    @{ Step = 4; Name = 'Ghidra';  Recipe = 'install-ghidra' },
+    @{ Step = 5; Name = 'radare2'; Recipe = 'install-radare2' },
+    @{ Step = 6; Name = 'QEMU';    Recipe = 'install-qemu' },
+    @{ Step = 7; Name = 'x64dbg';  Recipe = 'install-x64dbg' },
+    @{ Step = 8; Name = 'Cutter';  Recipe = 'install-cutter' }
 )
 
 foreach ($sub in $subSteps) {

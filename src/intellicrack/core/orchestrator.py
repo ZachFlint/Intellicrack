@@ -520,6 +520,7 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
+
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 

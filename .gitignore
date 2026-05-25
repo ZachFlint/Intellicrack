@@ -51,6 +51,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage_report.txt
 *.cover
 *.py,cover
 .hypothesis/
@@ -306,6 +307,9 @@ $RECYCLE.BIN/
 .ruff_cache/
 ruff.toml
 
+# Complexipy
+.complexipy_cache/
+
 # Pylint
 .pylint.d/
 .pylintrc
@@ -400,6 +404,9 @@ backup/
 !src/intellicrack/assets/**/*.jpg
 !src/intellicrack/assets/**/*.jpeg
 !src/intellicrack/assets/**/*.gif
+
+# Root-level Screenshots directory (ad-hoc captures, shortcuts, not part of the project)
+/Screenshots/
 
 # Docker and containerization
 .docker/
