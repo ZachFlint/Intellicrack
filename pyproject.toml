@@ -435,8 +435,6 @@ ignore-names = [
   "code_font_family",
   "ui_font_family",
   "current_theme",
-  "scan_data_async",
-  "scan_file_async",
   "OAuthFlowType",
   "authorize_google",
   "get_process_bridge",

@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._dialogs import show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
@@ -58,6 +59,7 @@ from intellicrack.ui.panels.hex_editor._disassembly import DisassemblyMixin
 from intellicrack.ui.panels.hex_editor._hashing import HashingMixin
 from intellicrack.ui.panels.hex_editor._highlighting import HighlightingMixin
 from intellicrack.ui.panels.hex_editor._patches import PatchesMixin
+from intellicrack.ui.panels.hex_editor._pattern_code_editor import PatternCodeEditor
 from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
 from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
 from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
@@ -174,7 +176,8 @@ class HexEditorPanel(
         self._selection_end: int = -1
 
         self._pattern_frame: QFrame | None = None
-        self._pattern_dsl_editor: QPlainTextEdit | None = None
+        self._pattern_dsl_editor: PatternCodeEditor | None = None
+        self._pattern_completer: HexPatCompleter | None = None
         self._pattern_json_preview: QPlainTextEdit | None = None
         self._pattern_library_tree: QTreeWidget | None = None
         self._pattern_error_display: QPlainTextEdit | None = None

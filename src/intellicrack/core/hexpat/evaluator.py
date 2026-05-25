@@ -740,15 +740,19 @@ class HexPatEvaluator:
         else:
             self._register_using(node)
 
-    def _register_namespaced(self, name: str) -> None:
+    def _register_namespaced(self, name: str, line: int = 0, column: int = 0) -> None:
         """Register a namespace-qualified alias for a type when inside a namespace.
 
         Args:
             name: The unqualified type name.
+            line: Source line of the originating declaration, forwarded to
+                :meth:`TypeRegistry.register_alias` for diagnostics.
+            column: Source column of the originating declaration, forwarded
+                to :meth:`TypeRegistry.register_alias` for diagnostics.
         """
         if self._namespace_stack:
             qualified = "::".join(self._namespace_stack) + "::" + name
-            self._types.register_alias(qualified, name)
+            self._types.register_alias(qualified, name, line=line, column=column)
 
     def _register_enum(self, node: EnumDecl, namespace: str | None = None) -> None:
         """Register an enum declaration with resolved member values.
@@ -794,15 +798,15 @@ class HexPatEvaluator:
             node: The using declaration AST node.
         """
         if isinstance(node.target, PrimitiveType):
-            self._types.register_alias(node.alias, node.target.name)
-            self._register_namespaced(node.alias)
+            self._types.register_alias(node.alias, node.target.name, line=node.line, column=node.column)
+            self._register_namespaced(node.alias, line=node.line, column=node.column)
             return
         if isinstance(node.target, NamedType):
             target_name = node.target.name
             if node.target.namespace:
                 target_name = f"{node.target.namespace}::{target_name}"
-            self._types.register_alias(node.alias, target_name)
-            self._register_namespaced(node.alias)
+            self._types.register_alias(node.alias, target_name, line=node.line, column=node.column)
+            self._register_namespaced(node.alias, line=node.line, column=node.column)
             return
         self._type_node_aliases[node.alias] = node.target
         if self._namespace_stack:

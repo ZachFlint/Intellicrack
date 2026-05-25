@@ -3829,11 +3829,11 @@ class HexEditorBridge(ToolBridgeBase):
             raise RuntimeError(msg)
 
         scanner = _YaraScanner()
-        compiled = scanner.compile_source(rule_source)
+        compiled = await scanner.compile_source_async(rule_source)
         disk_path = self._document_disk_path_if_unmodified()
         if disk_path is not None:
             _logger.debug("yara_scan_using_disk_path", path=str(disk_path))
-            raw_matches = scanner.scan_file(disk_path, compiled)
+            raw_matches = await scanner.scan_file_async(disk_path, compiled)
         else:
             doc_len: int = self.document.length()
             raw = self.document.read(0, doc_len)
@@ -3843,7 +3843,7 @@ class HexEditorBridge(ToolBridgeBase):
                 data = bytes(raw)
             else:
                 data = bytes(cast("list[int]", raw))
-            raw_matches = scanner.scan_data(data, compiled)
+            raw_matches = await scanner.scan_data_async(data, compiled)
         _logger.debug("yara_scan_completed", matches=len(raw_matches))
         return [
             {
@@ -3884,11 +3884,11 @@ class HexEditorBridge(ToolBridgeBase):
 
         paths: list[str | Path] = [Path(p.strip()) for p in rule_paths.split(",") if p.strip()]
         scanner = _YaraScanner()
-        compiled = scanner.compile_rules(paths)
+        compiled = await scanner.compile_rules_async(paths)
         disk_path = self._document_disk_path_if_unmodified()
         if disk_path is not None:
             _logger.debug("yara_scan_files_using_disk_path", path=str(disk_path))
-            raw_matches = scanner.scan_file(disk_path, compiled)
+            raw_matches = await scanner.scan_file_async(disk_path, compiled)
         else:
             doc_len: int = self.document.length()
             raw = self.document.read(0, doc_len)
@@ -3898,7 +3898,7 @@ class HexEditorBridge(ToolBridgeBase):
                 data = bytes(raw)
             else:
                 data = bytes(cast("list[int]", raw))
-            raw_matches = scanner.scan_data(data, compiled)
+            raw_matches = await scanner.scan_data_async(data, compiled)
         _logger.debug("yara_scan_files_completed", rule_paths=paths, matches=len(raw_matches))
         return [
             {

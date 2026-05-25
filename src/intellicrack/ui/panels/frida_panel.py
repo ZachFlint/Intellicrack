@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFontMetrics, QIntValidator
+from PyQt6.QtGui import QFontMetrics, QIntValidator, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -40,7 +40,7 @@ from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
-from intellicrack.ui.panels.qt_compat import set_max_block_count
+from intellicrack.ui.panels.qt_compat import edit_table_item, set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -333,8 +333,21 @@ class FridaPanel(AnalysisPanelBase):
         hooks_h = self._hooks_table.horizontalHeader()
         if hooks_h is not None:
             hooks_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        rename_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F2), self._hooks_table)
+        rename_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        rename_shortcut.activated.connect(self._on_hook_rename_shortcut)
         hooks_layout.addWidget(self._hooks_table)
         return hooks_container
+
+    def _on_hook_rename_shortcut(self) -> None:
+        """Enter edit mode on the function cell of the currently selected hook row."""
+        row = self._hooks_table.currentRow()
+        if row < 0:
+            return
+        item = self._hooks_table.item(row, _HOOK_COL_FUNCTION)
+        if item is None:
+            return
+        edit_table_item(self._hooks_table, item)
 
     def _create_threads_section(self) -> QWidget:
         """Create the thread viewer section.
@@ -758,9 +771,13 @@ class FridaPanel(AnalysisPanelBase):
         self._hooks_table.insertRow(row)
         self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("Resolving..."))
         self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
-        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(target))
+        function_item = QTableWidgetItem(target)
+        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, function_item)
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
         self._hook_ids.append("")
+
+        self._hooks_table.setCurrentCell(row, _HOOK_COL_FUNCTION)
+        edit_table_item(self._hooks_table, function_item)
 
         self._add_hook_btn.setEnabled(False)
         run_bridge_coroutine_logged(
