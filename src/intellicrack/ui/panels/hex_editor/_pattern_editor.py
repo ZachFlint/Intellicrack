@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
 from intellicrack.ui.panels.hex_editor._base import (
@@ -37,6 +38,7 @@ from intellicrack.ui.panels.hex_editor._base import (
     hexpat_interpreter_available,
     hexpat_mod,
 )
+from intellicrack.ui.panels.hex_editor._pattern_code_editor import PatternCodeEditor
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -72,7 +74,8 @@ class PatternEditorMixin:
     _hex_widget: Any | None
     _file_path: Path | None
     _pattern_frame: QFrame | None
-    _pattern_dsl_editor: QPlainTextEdit | None
+    _pattern_dsl_editor: PatternCodeEditor | None
+    _pattern_completer: HexPatCompleter | None
     _pattern_json_preview: QPlainTextEdit | None
     _pattern_library_tree: QTreeWidget | None
     _pattern_error_display: QPlainTextEdit | None
@@ -180,11 +183,13 @@ class PatternEditorMixin:
 
         editor_tabs = QTabWidget()
 
-        self._pattern_dsl_editor = QPlainTextEdit()
+        self._pattern_dsl_editor = PatternCodeEditor()
         self._pattern_dsl_editor.setPlainText("struct MY_HEADER {\n    le u16 magic [[validate(0x5A4D)]];\n    le u32 size;\n};\n")
         font = FontManager.get_instance().get_code_font(10)
         self._pattern_dsl_editor.setFont(font)
         HexPatSyntaxHighlighter(self._pattern_dsl_editor.document())
+        self._pattern_completer = HexPatCompleter()
+        self._pattern_dsl_editor.update_type_names(self._pattern_completer.all_type_names())
         editor_tabs.addTab(self._pattern_dsl_editor, "DSL")
 
         self._pattern_json_preview = QPlainTextEdit()
@@ -377,6 +382,23 @@ class PatternEditorMixin:
 
             _logger.info("pattern_applied", template_name=name, offset=cursor_offset)
 
+    def _refresh_pattern_completer(self) -> None:
+        """Refresh the DSL editor's type-name completer from the interpreter.
+
+        Reads the :class:`TypeRegistry` produced by the most recent
+        successful interpreter execution (exposed through
+        :attr:`HexPatInterpreter.last_type_registry`) and rebuilds the
+        editor's completion model so the popup offers built-in primitives
+        plus all user-declared identifiers from the last run.
+        """
+        if self._interpreter is None or self._pattern_completer is None or self._pattern_dsl_editor is None:
+            return
+        registry: Any | None = getattr(self._interpreter, "last_type_registry", None)
+        if registry is None:
+            return
+        self._pattern_completer.update_from_registry(registry)
+        self._pattern_dsl_editor.update_type_names(self._pattern_completer.all_type_names())
+
     def _append_pattern_print_line(self, line: str) -> None:
         """Append a single ``std::print`` line to the pattern editor's print output.
 
@@ -428,6 +450,7 @@ class PatternEditorMixin:
                 self._pattern_status_label.setText("Execution failed")
             _logger.exception("pattern_interpreter_failed")
         else:
+            self._refresh_pattern_completer()
             if self._pattern_error_display is not None:
                 self._pattern_error_display.clear()
 

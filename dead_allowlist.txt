@@ -208,8 +208,6 @@ row_factory
 run_to
 save_as
 save_user_template
-scan_data_async
-scan_file_async
 search_bytes
 search_bytes_wildcard
 search_pattern

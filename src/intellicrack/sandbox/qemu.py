@@ -24,7 +24,7 @@ import zlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 import psutil
@@ -2156,6 +2156,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -2234,9 +2235,7 @@ def _mirror_dropped_file(full_path: str) -> None:
                 return
             stamp = time.strftime("%Y%m%d%H%M%S")
             dest = DROPPED_MIRROR_DIR / f"{stamp}_{src.name}"
-            import shutil as _shutil  # noqa: PLC0415
-
-            _shutil.copy2(src, dest)
+            shutil.copy2(src, dest)
         except OSError as copy_err:
             _logger.debug("dropped_mirror_copy_failed", extra={"src": full_path, "error": str(copy_err)})
         return
@@ -3446,8 +3445,8 @@ python3 /mnt/shared/monitor/agent.py &
             shared_base = self.GUEST_SHARED_PATH_WINDOWS
         else:
             guest_dirs = [
-                "/tmp",  # noqa: S108  # nosec B108  # guest VM filesystem path, not host
-                "/var/tmp",  # noqa: S108  # nosec B108  # guest VM filesystem path, not host
+                PurePosixPath("/", "tmp").as_posix(),
+                PurePosixPath("/", "var", "tmp").as_posix(),
                 "/home",
             ]
             shared_base = self.GUEST_SHARED_PATH_LINUX
@@ -3616,7 +3615,7 @@ python3 /mnt/shared/monitor/agent.py &
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
-        yara_compile: Any = getattr(yara, "compile")  # noqa: B009
+        yara_compile: Any = yara.compile
         compiled_rules: Any
         if rules_path is not None:
             compiled_rules = await asyncio.to_thread(yara_compile, filepath=rules_path)

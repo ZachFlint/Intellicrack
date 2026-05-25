@@ -76,11 +76,28 @@ class HexPatInterpreter:
 
         self._include_paths: list[Path] = paths
         self._print_sink: Callable[[str], None] | None = print_sink
+        self._last_type_registry: TypeRegistry | None = None
         _logger.info(
             "hexpat_interpreter_initialized",
             include_path_count=len(self._include_paths),
             std_lib_present=lib_path.exists(),
         )
+
+    @property
+    def last_type_registry(self) -> TypeRegistry | None:
+        """Return the :class:`TypeRegistry` produced by the most recent successful execution.
+
+        The registry exposes user-declared struct, union, enum, bitfield,
+        and alias names via :meth:`TypeRegistry.user_type_names`, allowing
+        IDE-style helpers (autocomplete, validators) to incorporate the
+        identifiers declared by the most recently run pattern.
+
+        Returns:
+            TypeRegistry | None: The registry from the last successful
+                ``execute`` / ``execute_bytes`` call, or ``None`` when no
+                execution has succeeded yet.
+        """
+        return self._last_type_registry
 
     def set_print_sink(self, sink: Callable[[str], None] | None) -> None:
         """Replace the ``std::print`` output sink for subsequent executions.
@@ -138,7 +155,9 @@ class HexPatInterpreter:
         self._wire_stdlib_to_evaluator(stdlib, evaluator)
         stdlib.register_all(evaluator.scope)
 
-        return evaluator.evaluate(program)
+        result = evaluator.evaluate(program)
+        self._last_type_registry = type_registry
+        return result
 
     def execute_file(
         self,
@@ -204,7 +223,9 @@ class HexPatInterpreter:
         self._wire_stdlib_to_evaluator(stdlib, evaluator)
         stdlib.register_all(evaluator.scope)
 
-        return evaluator.evaluate(program)
+        result = evaluator.evaluate(program)
+        self._last_type_registry = type_registry
+        return result
 
     def can_compile_to_json(self, source: str) -> bool:
         """Check if a pattern can be compiled to JSON for the fast Rust path.

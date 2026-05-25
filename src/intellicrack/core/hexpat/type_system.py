@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from intellicrack.core.hexpat.errors import HexPatTypeError
 from intellicrack.core.logging import get_logger
 
 
@@ -86,6 +87,23 @@ class BuiltinTypes:
             frozenset[str]: A frozenset containing every supported primitive type name.
         """
         return frozenset(BuiltinTypes._TYPES)
+
+    @staticmethod
+    def is_reserved_name(name: str) -> bool:
+        """Return whether ``name`` collides with a built-in primitive type.
+
+        Used by :class:`TypeRegistry` registration entry points to reject
+        user declarations that would shadow language primitives such as
+        ``u32`` or ``float``.
+
+        Args:
+            name: Candidate identifier to check.
+
+        Returns:
+            bool: ``True`` when ``name`` is a built-in primitive, ``False``
+                otherwise.
+        """
+        return name in BuiltinTypes._TYPES
 
 
 @dataclass
@@ -195,7 +213,14 @@ class TypeRegistry:
         Args:
             decl: The struct AST declaration to register.
             namespace: Optional ``::``-joined namespace prefix.
+
+        Raises:
+            HexPatTypeError: When ``decl.name`` collides with a built-in
+                primitive type.
         """
+        if BuiltinTypes.is_reserved_name(decl.name):
+            msg = f"cannot redeclare built-in type '{decl.name}'"
+            raise HexPatTypeError(msg, decl.line, decl.column)
         info = StructTypeInfo(name=decl.name, parent=decl.parent, decl=decl)
         self._structs[decl.name] = info
         qualified = self._record_qualified(decl.name, namespace)
@@ -209,7 +234,14 @@ class TypeRegistry:
             decl: The union AST declaration to register.
             namespace: Optional ``::``-joined namespace prefix; when set the
                 union is also registered under the qualified path.
+
+        Raises:
+            HexPatTypeError: When ``decl.name`` collides with a built-in
+                primitive type.
         """
+        if BuiltinTypes.is_reserved_name(decl.name):
+            msg = f"cannot redeclare built-in type '{decl.name}'"
+            raise HexPatTypeError(msg, decl.line, decl.column)
         info = UnionTypeInfo(name=decl.name, decl=decl)
         self._unions[decl.name] = info
         qualified = self._record_qualified(decl.name, namespace)
@@ -231,7 +263,14 @@ class TypeRegistry:
             members: Mapping from enum member name to its integer value.
             namespace: Optional ``::``-joined namespace prefix; when set the
                 enum is also registered under the qualified path.
+
+        Raises:
+            HexPatTypeError: When ``decl.name`` collides with a built-in
+                primitive type.
         """
+        if BuiltinTypes.is_reserved_name(decl.name):
+            msg = f"cannot redeclare built-in type '{decl.name}'"
+            raise HexPatTypeError(msg, decl.line, decl.column)
         info = EnumTypeInfo(
             name=decl.name,
             backing_type=backing,
@@ -250,22 +289,59 @@ class TypeRegistry:
             decl: The bitfield AST declaration to register.
             namespace: Optional ``::``-joined namespace prefix; when set the
                 bitfield is also registered under the qualified path.
+
+        Raises:
+            HexPatTypeError: When ``decl.name`` collides with a built-in
+                primitive type.
         """
+        if BuiltinTypes.is_reserved_name(decl.name):
+            msg = f"cannot redeclare built-in type '{decl.name}'"
+            raise HexPatTypeError(msg, decl.line, decl.column)
         info = BitfieldTypeInfo(name=decl.name, decl=decl)
         self._bitfields[decl.name] = info
         qualified = self._record_qualified(decl.name, namespace)
         if qualified is not None:
             self._bitfields[qualified] = info
 
-    def register_alias(self, alias: str, target_name: str) -> None:
-        """Register a type alias mapping alias to target_name.
+    def register_alias(
+        self,
+        alias: str,
+        target_name: str,
+        line: int = 0,
+        column: int = 0,
+    ) -> None:
+        """Register a type alias mapping ``alias`` to ``target_name``.
 
         Args:
             alias: The alias name to register.
             target_name: The name of the type that the alias resolves to.
+            line: Source line of the originating ``using`` declaration, used
+                when raising :class:`HexPatTypeError`.
+            column: Source column of the originating ``using`` declaration,
+                used when raising :class:`HexPatTypeError`.
+
+        Raises:
+            HexPatTypeError: When ``alias`` collides with a built-in
+                primitive type.
         """
+        if BuiltinTypes.is_reserved_name(alias):
+            msg = f"cannot redeclare built-in type '{alias}'"
+            raise HexPatTypeError(msg, line, column)
         self._aliases[alias] = target_name
         self._all_names.add(alias)
+
+    def user_type_names(self) -> frozenset[str]:
+        """Return every currently-registered user type name.
+
+        Includes both unqualified and ``namespace::``-qualified aliases.
+        The result excludes built-in primitive type names; combine with
+        :meth:`BuiltinTypes.all_names` to obtain the full identifier
+        completion set.
+
+        Returns:
+            frozenset[str]: Snapshot of user-declared identifiers.
+        """
+        return frozenset(self._all_names)
 
     def resolve(self, name: str) -> HexPatType | StructTypeInfo | UnionTypeInfo | EnumTypeInfo | BitfieldTypeInfo | None:
         """Resolve a type name to its definition, following aliases.

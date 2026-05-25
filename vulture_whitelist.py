@@ -154,8 +154,6 @@ intellicrack.core.tools.get_process_bridge  # unused-method
 intellicrack.core.tools.get_sandbox_bridge  # unused-method
 intellicrack.core.types.thinking_content  # unused-variable
 intellicrack.core.types.rflags  # unused-variable
-intellicrack.core.yara_scanner.scan_data_async  # unused-method
-intellicrack.core.yara_scanner.scan_file_async  # unused-method
 intellicrack.credentials.oauth.log_request  # unused-method
 intellicrack.credentials.oauth.authorize_google  # unused-function
 intellicrack.providers.anthropic._credentials  # unused-attribute

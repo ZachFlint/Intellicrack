@@ -302,6 +302,15 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- Add autocomplete to HexPat pattern editor (``)
+Introduce an in-line identifier completer for the HexPat pattern DSL editor, offering both built-in primitive types and user-declared types harvested from the most recent successful interpreter run.
+- Add `HexPatCompleter` to track and merge built-in and user-declared type names
+- Implement `PatternCodeEditor` with a custom `QCompleter` popup triggered by `Ctrl+Space` or auto-popup prefixes
+- Expose `last_type_registry` on `HexPatInterpreter` to feed the completer after successful executions
+- Prevent redeclaration of built-in types in `TypeRegistry`
+- Add asynchronous YARA compilation helpers to avoid blocking the event loop
+- Add an F2 shortcut to rename hooks in the Frida panel table
+
 
 ### Changed
 

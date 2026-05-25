@@ -100,6 +100,37 @@ class YaraScanner:
         return _yara_available
 
     @staticmethod
+    async def compile_source_async(source: str, namespace: str = "default") -> CompiledYaraRules:
+        """Asynchronously compile YARA rules from a source string.
+
+        Delegates to :meth:`compile_source` via :func:`asyncio.to_thread` so
+        the event loop is not blocked during compilation.
+
+        Args:
+            source: Raw YARA rule source text.
+            namespace: Namespace to assign to the compiled rules.
+
+        Returns:
+            CompiledYaraRules: A compiled YARA rules object.
+        """
+        return await asyncio.to_thread(YaraScanner.compile_source, source, namespace)
+
+    @staticmethod
+    async def compile_rules_async(paths: list[str | Path]) -> CompiledYaraRules:
+        """Asynchronously compile YARA rules from one or more rule files.
+
+        Delegates to :meth:`compile_rules` via :func:`asyncio.to_thread` so
+        the event loop is not blocked during compilation.
+
+        Args:
+            paths: Filesystem paths to ``.yar`` / ``.yara`` rule files.
+
+        Returns:
+            CompiledYaraRules: A compiled YARA rules object.
+        """
+        return await asyncio.to_thread(YaraScanner.compile_rules, paths)
+
+    @staticmethod
     def compile_rules(paths: list[str | Path]) -> CompiledYaraRules:
         """Compile YARA rules from one or more rule files.
 

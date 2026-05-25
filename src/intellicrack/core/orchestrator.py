@@ -1383,9 +1383,29 @@ class Orchestrator:
         return f"- `{func.name}({params}) -> {func.returns}`{suffix}"
 
     @staticmethod
+    def _estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
+        """Inner provider-aware token-count helper.
+
+        Used across internal orchestrator paths (context-window trimming,
+        per-call accounting) so subclasses can override token estimation in a
+        single place and have both the public entry point and all internal
+        bookkeeping pick up the change.
+
+        Args:
+            text: Text to count tokens for.
+            provider: Active LLM provider, or ``None`` to use the default
+                conservative encoding.
+
+        Returns:
+            int: Token count for ``text``.
+        """
+        return _count_tokens(text, provider)
+
+    @staticmethod
     def estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
         """Count tokens in ``text`` using a provider-aware tiktoken encoder.
 
+        Public entry point that delegates to :meth:`_estimate_tokens`.
         OpenAI requests use the ``o200k_base`` encoding (matching the GPT-4o
         family) and every other provider uses ``cl100k_base`` as a
         conservative shared default that overcounts vs. each provider's
@@ -1401,25 +1421,7 @@ class Orchestrator:
         Returns:
             int: Token count for ``text``.
         """
-        return _count_tokens(text, provider)
-
-    @staticmethod
-    def _estimate_tokens(text: str, provider: ProviderName | None = None) -> int:
-        """Internal alias retained for backward compatibility.
-
-        Delegates to :meth:`estimate_tokens`. Existing callers that referenced
-        the underscored helper continue to work; new callers should prefer the
-        public name.
-
-        Args:
-            text: Text to count tokens for.
-            provider: Active LLM provider, or ``None`` to use the default
-                conservative encoding.
-
-        Returns:
-            int: Token count for ``text``.
-        """
-        return Orchestrator.estimate_tokens(text, provider)
+        return Orchestrator._estimate_tokens(text, provider)
 
     async def _get_model_context_window(self, provider: LLMProvider) -> int | None:
         """Resolve the context window for the active model.
@@ -1550,7 +1552,7 @@ class Orchestrator:
             )
             raise ToolError(error_message)
         budget = int(context_window * 0.85)
-        total = sum(_count_tokens(m.content, provider) for m in messages)
+        total = sum(Orchestrator._estimate_tokens(m.content, provider) for m in messages)
         while total > budget and len(messages) > 1:
             oldest_idx = next(
                 (i for i, m in enumerate(messages) if m.role != "system"),
@@ -1559,7 +1561,7 @@ class Orchestrator:
             if oldest_idx < 0:
                 break
             removed = messages.pop(oldest_idx)
-            removed_tokens = _count_tokens(removed.content, provider)
+            removed_tokens = Orchestrator._estimate_tokens(removed.content, provider)
             total -= removed_tokens
             _logger.debug(
                 "message_trimmed_for_context",
@@ -1603,7 +1605,7 @@ class Orchestrator:
             raise RuntimeError(error_message)
 
         provider_name = provider.name
-        input_tokens = sum(_count_tokens(m.content, provider_name) for m in messages)
+        input_tokens = sum(Orchestrator._estimate_tokens(m.content, provider_name) for m in messages)
         self._stats.total_tokens_used += input_tokens
 
         tools_available = bool(tools)
@@ -1643,7 +1645,7 @@ class Orchestrator:
             )
 
         response, tool_calls_result = result
-        output_tokens = _count_tokens(response.content, provider_name)
+        output_tokens = Orchestrator._estimate_tokens(response.content, provider_name)
         self._stats.total_tokens_used += output_tokens
         self._record_provider_usage(provider=provider, response=response)
         _logger.debug(
