@@ -4375,8 +4375,7 @@ metadata
         _logger.debug("undo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.undo() True."""
-                                                 ,
+                """currentProgram.undo() True.""",
             )
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
@@ -4402,8 +4401,7 @@ metadata
         _logger.debug("redo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.redo() True."""
-                                                 ,
+                """currentProgram.redo() True.""",
             )
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}

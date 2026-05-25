@@ -162,6 +162,11 @@ ty *FLAGS:
 fix-pyqt6-stubs:
     @{{ pixi }} python scripts/fix_pyqt6_stubs.py
 
+# Populate empty Library/ssl/certs with cacert.pem so pixi 0.69+ stops warning about SSL_CERT_DIR
+[group('setup')]
+fix-pixi-ssl:
+    @& scripts/fix-pixi-ssl.ps1
+
 # Run type checking with basedpyright and output sorted findings
 [group('lint')]
 basedpyright *FLAGS: fix-pyqt6-stubs
