@@ -108,6 +108,27 @@ class ComparisonMixin:
         self._diff_temp_path = None
         return container
 
+    def _read_document_for_diff(self) -> bytes | None:
+        """Read the full document into bytes for the diff comparison.
+
+        Returns:
+            bytes | None: Document contents as ``bytes``, or ``None`` when the
+                document is missing or the underlying read returned an
+                unrecognized payload type.
+        """
+        document: Any = self.document
+        if document is None:
+            return None
+        doc_len: int = document.length()
+        raw_a: object = document.read(0, doc_len)
+        if isinstance(raw_a, list):
+            return bytes(cast("list[int]", raw_a))
+        if isinstance(raw_a, bytearray):
+            return bytes(raw_a)
+        if isinstance(raw_a, bytes):
+            return raw_a
+        return None
+
     def _on_compare(self) -> None:
         """Open a file dialog and begin diffing the current document against the selected file."""
         if self.document is None:
@@ -133,18 +154,11 @@ class ComparisonMixin:
             path_a = str(self.file_path)
         else:
             try:
-                doc_len: int = self.document.length()
-                raw_a: object = self.document.read(0, doc_len)
-                if isinstance(raw_a, list):
-                    data_a = bytes(cast("list[int]", raw_a))
-                elif isinstance(raw_a, bytearray):
-                    data_a = bytes(raw_a)
-                elif isinstance(raw_a, bytes):
-                    data_a = raw_a
-                else:
-                    return
+                data_a = self._read_document_for_diff()
             except (AttributeError, ValueError):
                 _logger.exception("diff_doc_read_failed")
+                return
+            if data_a is None:
                 return
 
             try:

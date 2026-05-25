@@ -151,6 +151,23 @@ def _control_service(action: str, service_name: str, pwsh: str) -> int:
     return completed.returncode
 
 
+def _drive_spooler_stop_start(pwsh: str) -> None:
+    """Cycle the Spooler service through stop/start with controlled gaps.
+
+    Args:
+        pwsh: Absolute path to ``pwsh.exe`` used for the Service-Control calls.
+    """
+    time.sleep(_BASELINE_SETTLE_SEC)
+
+    stop_rc = _control_service("Stop-Service", _TARGET_SERVICE, pwsh)
+    assert stop_rc == 0, f"Stop-Service {_TARGET_SERVICE} failed with rc={stop_rc}"
+    time.sleep(_LIFECYCLE_RAPID_GAP_SEC)
+    start_rc = _control_service("Start-Service", _TARGET_SERVICE, pwsh)
+    assert start_rc == 0, f"Start-Service {_TARGET_SERVICE} failed with rc={start_rc}"
+
+    time.sleep(_LIFECYCLE_SETTLE_SEC)
+
+
 def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
     """Spawn ``service_monitor.ps1`` with the supplied log directory.
 
@@ -354,15 +371,7 @@ def test_script_records_lifecycle_transitions(tmp_path: Path) -> None:
 
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_BASELINE_SETTLE_SEC)
-
-        stop_rc = _control_service("Stop-Service", _TARGET_SERVICE, pwsh)
-        assert stop_rc == 0, f"Stop-Service {_TARGET_SERVICE} failed with rc={stop_rc}"
-        time.sleep(_LIFECYCLE_RAPID_GAP_SEC)
-        start_rc = _control_service("Start-Service", _TARGET_SERVICE, pwsh)
-        assert start_rc == 0, f"Start-Service {_TARGET_SERVICE} failed with rc={start_rc}"
-
-        time.sleep(_LIFECYCLE_SETTLE_SEC)
+        _drive_spooler_stop_start(pwsh)
     finally:
         stdout, stderr, _ = _terminate(proc)
 
@@ -403,15 +412,7 @@ def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) 
 
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_BASELINE_SETTLE_SEC)
-
-        stop_rc = _control_service("Stop-Service", _TARGET_SERVICE, pwsh)
-        assert stop_rc == 0, f"Stop-Service {_TARGET_SERVICE} failed with rc={stop_rc}"
-        time.sleep(_LIFECYCLE_RAPID_GAP_SEC)
-        start_rc = _control_service("Start-Service", _TARGET_SERVICE, pwsh)
-        assert start_rc == 0, f"Start-Service {_TARGET_SERVICE} failed with rc={start_rc}"
-
-        time.sleep(_LIFECYCLE_SETTLE_SEC)
+        _drive_spooler_stop_start(pwsh)
     finally:
         _terminate(proc)
 

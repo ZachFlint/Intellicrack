@@ -1442,17 +1442,7 @@ def test_drain_threads_consume_stderr_in_real_subprocess(
     )
 
     try:
-        start_drain(process)
-        process.wait(timeout=15)
-
-        buffer_lock = cast("threading.Lock", getattr(fresh_bridge, "_stderr_buffer_lock"))
-
-        def _snapshot() -> list[str]:
-            with buffer_lock:
-                return list(cast("list[str]", getattr(fresh_bridge, "_stderr_buffer")))
-
-        lines = _wait_for_log_lines(_snapshot, 1)
-        assert any("headless-stderr-line" in line for line in lines), lines
+        _drive_drain_threads_and_assert(fresh_bridge, process, start_drain)
     finally:
         if process.poll() is None:
             process.kill()
@@ -1461,6 +1451,36 @@ def test_drain_threads_consume_stderr_in_real_subprocess(
             thread = cast("threading.Thread | None", getattr(fresh_bridge, thread_attr))
             if thread is not None:
                 thread.join(timeout=2)
+
+
+def _drive_drain_threads_and_assert(
+    fresh_bridge: GhidraBridge,
+    process: Popen[bytes],
+    start_drain: Callable[[Popen[bytes]], None],
+) -> None:
+    """Start drain threads, wait, and assert headless stderr was captured.
+
+    Args:
+        fresh_bridge: GhidraBridge under test.
+        process: Subprocess running the headless stub.
+        start_drain: Bound ``_start_drain_threads`` from ``fresh_bridge``.
+    """
+    start_drain(process)
+    process.wait(timeout=15)
+
+    buffer_lock = cast("threading.Lock", getattr(fresh_bridge, "_stderr_buffer_lock"))
+
+    def _snapshot() -> list[str]:
+        """Return a thread-safe snapshot of the bridge's stderr buffer.
+
+        Returns:
+            list[str]: Captured stderr lines collected by the drain thread.
+        """
+        with buffer_lock:
+            return list(cast("list[str]", getattr(fresh_bridge, "_stderr_buffer")))
+
+    lines = _wait_for_log_lines(_snapshot, 1)
+    assert any("headless-stderr-line" in line for line in lines), lines
 
 
 def test_start_headless_uses_correct_popen_kwargs(

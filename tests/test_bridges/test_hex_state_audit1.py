@@ -248,21 +248,11 @@ class TestF0036NotifyDropsDownstreamEvents:
         cursor_thread = threading.Thread(target=emit_cursor)
         cursor_thread.start()
         try:
-            assert observer_a_in_callback.wait(timeout=5.0)
-
-            data_emitted = threading.Event()
-
-            def emit_data() -> None:
-                state.notify_data_modified(0, 16)
-                data_emitted.set()
-
-            data_thread = threading.Thread(target=emit_data)
-            data_thread.start()
-            try:
-                assert data_emitted.wait(timeout=5.0)
-            finally:
-                observer_a_release.set()
-                data_thread.join(timeout=5.0)
+            TestF0036NotifyDropsDownstreamEvents._drive_cross_thread_emission(
+                state,
+                observer_a_in_callback,
+                observer_a_release,
+            )
         finally:
             observer_a_release.set()
             cursor_thread.join(timeout=5.0)
@@ -271,6 +261,35 @@ class TestF0036NotifyDropsDownstreamEvents:
             recorded = list(observer_a_events)
         assert HexDocumentEvent.CURSOR_MOVED in recorded
         assert HexDocumentEvent.DATA_MODIFIED in recorded
+
+    @staticmethod
+    def _drive_cross_thread_emission(
+        state: HexDocumentState,
+        observer_a_in_callback: threading.Event,
+        observer_a_release: threading.Event,
+    ) -> None:
+        """Drive a cross-thread DATA_MODIFIED while observer_a is parked.
+
+        Args:
+            state: HexDocumentState driving the dispatch.
+            observer_a_in_callback: Event signalling observer_a is paused.
+            observer_a_release: Event used to release observer_a.
+        """
+        assert observer_a_in_callback.wait(timeout=5.0)
+
+        data_emitted = threading.Event()
+
+        def emit_data() -> None:
+            state.notify_data_modified(0, 16)
+            data_emitted.set()
+
+        data_thread = threading.Thread(target=emit_data)
+        data_thread.start()
+        try:
+            assert data_emitted.wait(timeout=5.0)
+        finally:
+            observer_a_release.set()
+            data_thread.join(timeout=5.0)
 
     def test_runaway_dispatch_terminates_at_depth_cap(self) -> None:
         """A genuinely runaway callback chain stops at the documented depth cap.
@@ -398,22 +417,7 @@ class TestF0037SetDocumentLengthOutsideLock:
         slow_thread = threading.Thread(target=state.set_document, args=(slow_doc, Path("slow.bin")))
         slow_thread.start()
         try:
-            assert slow_in_length.wait(timeout=5.0)
-
-            interloper_done = threading.Event()
-
-            def interloper() -> None:
-                state.set_document(fast_doc, Path("fast.bin"))
-                interloper_done.set()
-
-            interloper_thread = threading.Thread(target=interloper)
-            interloper_thread.start()
-            try:
-                time.sleep(0.05)
-                assert not interloper_done.is_set()
-            finally:
-                slow_release.set()
-                interloper_thread.join(timeout=5.0)
+            self._block_then_run_interloper(state, fast_doc, slow_in_length, slow_release)
         finally:
             slow_release.set()
             slow_thread.join(timeout=5.0)
@@ -423,6 +427,38 @@ class TestF0037SetDocumentLengthOutsideLock:
         assert 999 in opens
         assert 42 in opens
         assert all(size in {999, 42} for size in opens)
+
+    @staticmethod
+    def _block_then_run_interloper(
+        state: HexDocumentState,
+        fast_doc: _DummyDoc,
+        slow_in_length: threading.Event,
+        slow_release: threading.Event,
+    ) -> None:
+        """Spawn an interloper set_document and assert it blocks on the lock.
+
+        Args:
+            state: HexDocumentState under test.
+            fast_doc: Dummy document used by the interloper thread.
+            slow_in_length: Event signalled when the slow length call begins.
+            slow_release: Event used to release the slow length call.
+        """
+        assert slow_in_length.wait(timeout=5.0)
+
+        interloper_done = threading.Event()
+
+        def interloper() -> None:
+            state.set_document(fast_doc, Path("fast.bin"))
+            interloper_done.set()
+
+        interloper_thread = threading.Thread(target=interloper)
+        interloper_thread.start()
+        try:
+            time.sleep(0.05)
+            assert not interloper_done.is_set()
+        finally:
+            slow_release.set()
+            interloper_thread.join(timeout=5.0)
 
 
 class TestF0038DisplayModeAsymmetricLocking:
@@ -499,29 +535,49 @@ class TestF0038DisplayModeAsymmetricLocking:
         set_thread = threading.Thread(target=state.set_document, args=(slow_doc, Path("slow.bin")))
         set_thread.start()
         try:
-            assert slow_in_length.wait(timeout=5.0)
-
-            reader_returned = threading.Event()
-            observed: list[str] = []
-
-            def reader() -> None:
-                observed.append(state.get_display_mode())
-                reader_returned.set()
-
-            reader_thread = threading.Thread(target=reader)
-            reader_thread.start()
-            try:
-                time.sleep(0.05)
-                assert not reader_returned.is_set()
-            finally:
-                slow_release.set()
-                reader_thread.join(timeout=5.0)
+            reader_returned, observed = self._block_then_run_display_mode_reader(state, slow_in_length, slow_release)
         finally:
             slow_release.set()
             set_thread.join(timeout=5.0)
 
         assert reader_returned.is_set()
         assert observed == ["hex8"]
+
+    @staticmethod
+    def _block_then_run_display_mode_reader(
+        state: HexDocumentState,
+        slow_in_length: threading.Event,
+        slow_release: threading.Event,
+    ) -> tuple[threading.Event, list[str]]:
+        """Spawn a get_display_mode reader and verify it blocks on the lock.
+
+        Args:
+            state: HexDocumentState under test.
+            slow_in_length: Event signalled when the slow length call begins.
+            slow_release: Event used to release the slow length call.
+
+        Returns:
+            tuple[threading.Event, list[str]]: The reader's completion event
+            and the list collecting its observed display mode.
+        """
+        assert slow_in_length.wait(timeout=5.0)
+
+        reader_returned = threading.Event()
+        observed: list[str] = []
+
+        def reader() -> None:
+            observed.append(state.get_display_mode())
+            reader_returned.set()
+
+        reader_thread = threading.Thread(target=reader)
+        reader_thread.start()
+        try:
+            time.sleep(0.05)
+            assert not reader_returned.is_set()
+        finally:
+            slow_release.set()
+            reader_thread.join(timeout=5.0)
+        return reader_returned, observed
 
 
 class TestF0039PropertyGettersUnlocked:
@@ -559,27 +615,48 @@ class TestF0039PropertyGettersUnlocked:
             set_thread = threading.Thread(target=state.set_document, args=(slow_doc, Path("slow.bin")))
             set_thread.start()
             try:
-                assert slow_in_length.wait(timeout=5.0)
-
-                returned = threading.Event()
-
-                def reader(prop_name: str = name, done: threading.Event = returned) -> None:
-                    _ = getattr(state, prop_name)
-                    done.set()
-
-                reader_thread = threading.Thread(target=reader)
-                reader_thread.start()
-                try:
-                    time.sleep(0.05)
-                    assert not returned.is_set(), f"{name} read without locking"
-                finally:
-                    slow_release.set()
-                    reader_thread.join(timeout=5.0)
+                returned = self._block_then_run_property_reader(state, name, slow_in_length, slow_release)
             finally:
                 slow_release.set()
                 set_thread.join(timeout=5.0)
 
             assert returned.is_set()
+
+    @staticmethod
+    def _block_then_run_property_reader(
+        state: HexDocumentState,
+        prop_name: str,
+        slow_in_length: threading.Event,
+        slow_release: threading.Event,
+    ) -> threading.Event:
+        """Spawn a property reader and assert it blocks on the writer's lock.
+
+        Args:
+            state: HexDocumentState under test.
+            prop_name: Property name to read.
+            slow_in_length: Event signalled when the slow length call begins.
+            slow_release: Event used to release the slow length call.
+
+        Returns:
+            threading.Event: Event signalled once the property read returns.
+        """
+        assert slow_in_length.wait(timeout=5.0)
+
+        returned = threading.Event()
+
+        def reader(name: str = prop_name, done: threading.Event = returned) -> None:
+            _ = getattr(state, name)
+            done.set()
+
+        reader_thread = threading.Thread(target=reader)
+        reader_thread.start()
+        try:
+            time.sleep(0.05)
+            assert not returned.is_set(), f"{prop_name} read without locking"
+        finally:
+            slow_release.set()
+            reader_thread.join(timeout=5.0)
+        return returned
 
     def test_property_getters_eventually_observe_published_writer_value(self) -> None:
         """Each getter, after the writer's section completes, returns the new value.

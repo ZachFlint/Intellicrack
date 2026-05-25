@@ -1639,6 +1639,57 @@ class TestF0006MemConstants:
 class TestF0007PatternScanContinues:
     """Verify pattern scan continues past per-chunk read failures."""
 
+    @staticmethod
+    async def _exercise_pattern_scan_after_unreadable_chunk(
+        attached_bridge: ProcessBridge,
+        addr: int,
+        chunk_size: int,
+        region_size: int,
+        unique_pattern: bytes,
+    ) -> None:
+        """Drive the pattern-scan-after-unreadable-chunk scenario.
+
+        Args:
+            attached_bridge: ProcessBridge attached to the test process.
+            addr: Base address of the committed test region.
+            chunk_size: Size in bytes of the search chunk boundary.
+            region_size: Total size of the allocated test region.
+            unique_pattern: Sentinel bytes written into the second chunk.
+        """
+        second_chunk_offset = chunk_size
+        await attached_bridge.write_memory(addr + second_chunk_offset, unique_pattern)
+        handle = _get_attr_optional(attached_bridge, _ATTR_PROCESS_HANDLE, int)
+        assert handle is not None
+        k32 = ctypes.windll.kernel32
+        old_prot = wintypes.DWORD()
+        ok = k32.VirtualProtectEx(
+            wintypes.HANDLE(handle),
+            ctypes.c_void_p(addr),
+            ctypes.c_size_t(chunk_size),
+            wintypes.DWORD(_PAGE_NOACCESS),
+            ctypes.byref(old_prot),
+        )
+        assert ok, "VirtualProtectEx PAGE_NOACCESS failed"
+
+        pattern_str = " ".join(f"{b:02X}" for b in unique_pattern)
+        matches = await attached_bridge.search_pattern(
+            pattern_str,
+            start_address=addr,
+            end_address=addr + region_size,
+        )
+        assert addr + second_chunk_offset in matches, (
+            f"pattern not found in second chunk at {hex(addr + second_chunk_offset)}; matches={[hex(m) for m in matches[:8]]}"
+        )
+
+        restore_prot = wintypes.DWORD()
+        k32.VirtualProtectEx(
+            wintypes.HANDLE(handle),
+            ctypes.c_void_p(addr),
+            ctypes.c_size_t(chunk_size),
+            old_prot,
+            ctypes.byref(restore_prot),
+        )
+
     async def test_pattern_scan_finds_match_after_unreadable_chunk(
         self,
         attached_bridge: ProcessBridge,
@@ -1668,38 +1719,12 @@ class TestF0007PatternScanContinues:
         region_size = chunk_size * 2
         addr = await attached_bridge.allocate(region_size, "rw")
         try:
-            second_chunk_offset = chunk_size
-            await attached_bridge.write_memory(addr + second_chunk_offset, unique_pattern)
-            handle = _get_attr_optional(attached_bridge, _ATTR_PROCESS_HANDLE, int)
-            assert handle is not None
-            k32 = ctypes.windll.kernel32
-            old_prot = wintypes.DWORD()
-            ok = k32.VirtualProtectEx(
-                wintypes.HANDLE(handle),
-                ctypes.c_void_p(addr),
-                ctypes.c_size_t(chunk_size),
-                wintypes.DWORD(_PAGE_NOACCESS),
-                ctypes.byref(old_prot),
-            )
-            assert ok, "VirtualProtectEx PAGE_NOACCESS failed"
-
-            pattern_str = " ".join(f"{b:02X}" for b in unique_pattern)
-            matches = await attached_bridge.search_pattern(
-                pattern_str,
-                start_address=addr,
-                end_address=addr + region_size,
-            )
-            assert addr + second_chunk_offset in matches, (
-                f"pattern not found in second chunk at {hex(addr + second_chunk_offset)}; matches={[hex(m) for m in matches[:8]]}"
-            )
-
-            restore_prot = wintypes.DWORD()
-            k32.VirtualProtectEx(
-                wintypes.HANDLE(handle),
-                ctypes.c_void_p(addr),
-                ctypes.c_size_t(chunk_size),
-                old_prot,
-                ctypes.byref(restore_prot),
+            await self._exercise_pattern_scan_after_unreadable_chunk(
+                attached_bridge,
+                addr,
+                chunk_size,
+                region_size,
+                unique_pattern,
             )
         finally:
             await attached_bridge.free(addr)
@@ -1792,16 +1817,31 @@ class TestF0038SectionCollision:
         section_name = f"IntellicrackProcessBridgeTest_F0038_{os.getpid()}"
         first = await process_bridge.create_section(4096, section_name=section_name)
         try:
-            assert first > 0
-            with pytest.raises(ToolError) as excinfo:
-                await process_bridge.create_section(4096, section_name=section_name)
-            err = excinfo.value
-            details = err.details or {}
-            assert details.get("code") == "SECTION_NAME_COLLISION"
-            assert err.error_code == 183
+            await self._assert_named_section_collision(process_bridge, first, section_name)
         finally:
             ctypes.windll.kernel32.CloseHandle(first)
             _get_section_handles(process_bridge).pop(first, None)
+
+    @staticmethod
+    async def _assert_named_section_collision(
+        process_bridge: ProcessBridge,
+        first_handle: int,
+        section_name: str,
+    ) -> None:
+        """Assert duplicate-name section creation raises the collision error.
+
+        Args:
+            process_bridge: ProcessBridge under test.
+            first_handle: Handle returned for the first successful create.
+            section_name: Section name shared by both create calls.
+        """
+        assert first_handle > 0
+        with pytest.raises(ToolError) as excinfo:
+            await process_bridge.create_section(4096, section_name=section_name)
+        err = excinfo.value
+        details = err.details or {}
+        assert details.get("code") == "SECTION_NAME_COLLISION"
+        assert err.error_code == 183
 
     async def test_anonymous_sections_do_not_collide(
         self,
@@ -2417,47 +2457,7 @@ class TestF0032AllInprocServerKeys:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         try:
-            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_INPROC_PATH) as k:
-                winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_INPROC_DLL)
-            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_LOCAL_PATH) as k:
-                winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_LOCAL_EXE)
-
-            advapi32 = _get_attr_optional(process_bridge, _ATTR_ADVAPI32, ctypes.WinDLL)
-            if advapi32 is None:
-                pytest.skip("advapi32 not available")
-                return
-
-            parent_hkey = wintypes.HKEY()
-            ret_open: object = advapi32.RegOpenKeyExW(
-                0x80000001,
-                _TEST_BASE_KEY,
-                0,
-                0x20019,
-                ctypes.byref(parent_hkey),
-            )
-            if ret_open != 0:
-                msg = f"could not open test registry key (error {ret_open})"
-                pytest.skip(msg)
-                return
-
-            try:
-                fn_raw: object = getattr(process_bridge, "_check_inproc_server")
-                if not callable(fn_raw):
-                    pytest.skip("_check_inproc_server not accessible")
-                    return
-                raw_call_result: object = fn_raw(parent_hkey, _TEST_CLSID)
-                if not isinstance(raw_call_result, list):
-                    pytest.skip("unexpected _check_inproc_server return type")
-                    return
-                call_result_list = cast("list[object]", raw_call_result)
-                results: list[dict[str, str]] = [cast("dict[str, str]", item) for item in call_result_list if isinstance(item, dict)]
-                server_types = {entry.get("server_type", "") for entry in results}
-                inproc_found = "InprocServer32" in server_types
-                local_found = "LocalServer32" in server_types
-                assert inproc_found, f"InprocServer32 not found in {server_types}"
-                assert local_found, f"LocalServer32 not found in {server_types}"
-            finally:
-                advapi32.RegCloseKey(parent_hkey)
+            self._run_inproc_server_test(process_bridge)
         finally:
             for sub in (_TEST_INPROC_PATH, _TEST_LOCAL_PATH, _TEST_KEY_PATH):
                 with contextlib.suppress(OSError):
@@ -2465,6 +2465,69 @@ class TestF0032AllInprocServerKeys:
             for sub in (_TEST_BASE_KEY, r"Software\IntellicrackTest"):
                 with contextlib.suppress(OSError):
                     winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sub)
+
+    @staticmethod
+    def _run_inproc_server_test(process_bridge: ProcessBridge) -> None:
+        """Create test registry entries and invoke _check_inproc_server.
+
+        Args:
+            process_bridge: ProcessBridge instance exposing
+                ``_check_inproc_server`` for the test.
+        """
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_INPROC_PATH) as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_INPROC_DLL)
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, _TEST_LOCAL_PATH) as k:
+            winreg.SetValueEx(k, "", 0, winreg.REG_SZ, _TEST_LOCAL_EXE)
+
+        advapi32 = _get_attr_optional(process_bridge, _ATTR_ADVAPI32, ctypes.WinDLL)
+        if advapi32 is None:
+            pytest.skip("advapi32 not available")
+            return
+
+        parent_hkey = wintypes.HKEY()
+        ret_open: object = advapi32.RegOpenKeyExW(
+            0x80000001,
+            _TEST_BASE_KEY,
+            0,
+            0x20019,
+            ctypes.byref(parent_hkey),
+        )
+        if ret_open != 0:
+            msg = f"could not open test registry key (error {ret_open})"
+            pytest.skip(msg)
+            return
+
+        try:
+            TestF0032AllInprocServerKeys._assert_inproc_and_local_present(process_bridge, parent_hkey)
+        finally:
+            advapi32.RegCloseKey(parent_hkey)
+
+    @staticmethod
+    def _assert_inproc_and_local_present(
+        process_bridge: ProcessBridge,
+        parent_hkey: wintypes.HKEY,
+    ) -> None:
+        """Call _check_inproc_server and assert both server types are present.
+
+        Args:
+            process_bridge: ProcessBridge instance under test.
+            parent_hkey: Opened HKEY pointing at the test CLSID parent key.
+        """
+        fn_raw: object = getattr(process_bridge, "_check_inproc_server")
+        if not callable(fn_raw):
+            pytest.skip("_check_inproc_server not accessible")
+            return
+        raw_call_result: object = fn_raw(parent_hkey, _TEST_CLSID)
+        if not isinstance(raw_call_result, list):
+            pytest.skip("unexpected _check_inproc_server return type")
+            return
+        call_result_list = cast("list[object]", raw_call_result)
+        results: list[dict[str, str]] = [cast("dict[str, str]", item) for item in call_result_list if isinstance(item, dict)]
+        server_types = {entry.get("server_type", "") for entry in results}
+        inproc_found = "InprocServer32" in server_types
+        local_found = "LocalServer32" in server_types
+        assert inproc_found, f"InprocServer32 not found in {server_types}"
+        assert local_found, f"LocalServer32 not found in {server_types}"
 
 
 class TestF0015DotnetByCor20Header:
@@ -2514,19 +2577,32 @@ class TestF0015DotnetByCor20Header:
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            await asyncio.sleep(0.5)
-            if async_proc.returncode is not None:
-                pytest.skip("managed process exited immediately, cannot inspect")
-                return
-            result = await process_bridge.detect_dotnet(async_proc.pid)
-            assert isinstance(result, dict)
-            assert result.get("managed") is True or result.get("clr_loaded") is True
-            version = result.get("version") or result.get("clr_version")
-            assert version is not None
+            await self._assert_managed_process_detected(process_bridge, async_proc)
         finally:
             with contextlib.suppress(ProcessLookupError):
                 async_proc.kill()
             await async_proc.wait()
+
+    @staticmethod
+    async def _assert_managed_process_detected(
+        process_bridge: ProcessBridge,
+        async_proc: asyncio.subprocess.Process,
+    ) -> None:
+        """Assert detect_dotnet reports the spawned process as managed.
+
+        Args:
+            process_bridge: ProcessBridge used to invoke ``detect_dotnet``.
+            async_proc: Subprocess running a .NET host to inspect.
+        """
+        await asyncio.sleep(0.5)
+        if async_proc.returncode is not None:
+            pytest.skip("managed process exited immediately, cannot inspect")
+            return
+        result = await process_bridge.detect_dotnet(async_proc.pid)
+        assert isinstance(result, dict)
+        assert result.get("managed") is True or result.get("clr_loaded") is True
+        version = result.get("version") or result.get("clr_version")
+        assert version is not None
 
 
 class _K32StubNoIsWow64:
@@ -2656,26 +2732,41 @@ class TestF0028ReadTEBPerTid:
         await asyncio.sleep(0.1)
 
         try:
-            if not main_tid_holder or not worker_tid_holder:
-                pytest.skip("Could not get thread IDs")
-
-            main_tid = main_tid_holder[0]
-            worker_tid = worker_tid_holder[0]
-
-            main_teb = await process_bridge.read_teb(main_tid)
-            worker_teb = await process_bridge.read_teb(worker_tid)
-
-            main_addr = main_teb.get("teb_address")
-            worker_addr = worker_teb.get("teb_address")
-
-            assert isinstance(main_addr, int)
-            assert main_addr != 0
-            assert isinstance(worker_addr, int)
-            assert worker_addr != 0
-            assert main_addr != worker_addr, "Main and worker thread TEBs must have different addresses"
+            await self._assert_teb_addresses_differ(process_bridge, main_tid_holder, worker_tid_holder)
         finally:
             event.set()
             t.join(timeout=2)
+
+    @staticmethod
+    async def _assert_teb_addresses_differ(
+        process_bridge: ProcessBridge,
+        main_tid_holder: list[int],
+        worker_tid_holder: list[int],
+    ) -> None:
+        """Assert main thread and worker thread report distinct TEB bases.
+
+        Args:
+            process_bridge: ProcessBridge used to call ``read_teb``.
+            main_tid_holder: List containing the main thread id.
+            worker_tid_holder: List containing the worker thread id.
+        """
+        if not main_tid_holder or not worker_tid_holder:
+            pytest.skip("Could not get thread IDs")
+
+        main_tid = main_tid_holder[0]
+        worker_tid = worker_tid_holder[0]
+
+        main_teb = await process_bridge.read_teb(main_tid)
+        worker_teb = await process_bridge.read_teb(worker_tid)
+
+        main_addr = main_teb.get("teb_address")
+        worker_addr = worker_teb.get("teb_address")
+
+        assert isinstance(main_addr, int)
+        assert main_addr != 0
+        assert isinstance(worker_addr, int)
+        assert worker_addr != 0
+        assert main_addr != worker_addr, "Main and worker thread TEBs must have different addresses"
 
 
 class TestF0022TLSArrayPointer:
@@ -2749,16 +2840,33 @@ class TestF0021StaticTLSSlots:
 
         sentinel = 0xDEADBEEF
         try:
-            k32.TlsSetValue(slot, ctypes.c_void_p(sentinel))
-            main_tid = k32.GetCurrentThreadId()
-            tls_values = await attached_bridge.get_tls_values(main_tid)
-
-            found = next((s for s in tls_values if s.get("index") == slot), None)
-            assert found is not None, f"TLS slot {slot} with value {hex(sentinel)} not found in {tls_values}"
-            found_value = cast("int", found["value"])
-            assert found_value == sentinel, f"Expected {hex(sentinel)}, got {hex(found_value)}"
+            await self._assert_tls_slot_value(attached_bridge, k32, slot, sentinel)
         finally:
             k32.TlsFree(slot)
+
+    @staticmethod
+    async def _assert_tls_slot_value(
+        attached_bridge: ProcessBridge,
+        k32: ctypes.WinDLL,
+        slot: int,
+        sentinel: int,
+    ) -> None:
+        """Write the sentinel into the TLS slot and assert the bridge reads it.
+
+        Args:
+            attached_bridge: ProcessBridge attached to the current process.
+            k32: kernel32 WinDLL handle for TLS APIs.
+            slot: TLS slot index allocated via ``TlsAlloc``.
+            sentinel: Sentinel value to write/verify via the TLS slot.
+        """
+        k32.TlsSetValue(slot, ctypes.c_void_p(sentinel))
+        main_tid = k32.GetCurrentThreadId()
+        tls_values = await attached_bridge.get_tls_values(main_tid)
+
+        found = next((s for s in tls_values if s.get("index") == slot), None)
+        assert found is not None, f"TLS slot {slot} with value {hex(sentinel)} not found in {tls_values}"
+        found_value = cast("int", found["value"])
+        assert found_value == sentinel, f"Expected {hex(sentinel)}, got {hex(found_value)}"
 
     async def test_tls_values_returns_list_of_dicts(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify get_tls_values returns a list of dicts each with index and value.
@@ -2800,20 +2908,35 @@ class TestF0033FullEnvironmentBlock:
             env=child_env,
         )
         try:
-            assert proc.pid is not None
-            await process_bridge.open_process(proc.pid, "all")
-            try:
-                env_vars = await process_bridge.get_environment(proc.pid)
-            finally:
-                await process_bridge.close()
-
-            assert "INTELLICRACK_LARGE_TEST" in env_vars, "Large env var must be present"
-            assert env_vars["INTELLICRACK_LARGE_TEST"] == large_value, (
-                f"Large env var truncated: expected {len(large_value)} chars, got {len(env_vars['INTELLICRACK_LARGE_TEST'])}"
-            )
+            await self._assert_large_env_var_readable(process_bridge, proc, large_value)
         finally:
             proc.kill()
             await proc.wait()
+
+    @staticmethod
+    async def _assert_large_env_var_readable(
+        process_bridge: ProcessBridge,
+        proc: asyncio.subprocess.Process,
+        large_value: str,
+    ) -> None:
+        """Assert the spawned child's large env var round-trips fully.
+
+        Args:
+            process_bridge: ProcessBridge used to inspect the child.
+            proc: Subprocess running with the large env var injected.
+            large_value: Expected exact value of ``INTELLICRACK_LARGE_TEST``.
+        """
+        assert proc.pid is not None
+        await process_bridge.open_process(proc.pid, "all")
+        try:
+            env_vars = await process_bridge.get_environment(proc.pid)
+        finally:
+            await process_bridge.close()
+
+        assert "INTELLICRACK_LARGE_TEST" in env_vars, "Large env var must be present"
+        assert env_vars["INTELLICRACK_LARGE_TEST"] == large_value, (
+            f"Large env var truncated: expected {len(large_value)} chars, got {len(env_vars['INTELLICRACK_LARGE_TEST'])}"
+        )
 
 
 class TestF0012EnvOffsets:
@@ -2839,19 +2962,34 @@ class TestF0012EnvOffsets:
             env=child_env,
         )
         try:
-            assert proc.pid is not None
-            await process_bridge.open_process(proc.pid, "all")
-            try:
-                env_vars = await process_bridge.get_environment(proc.pid)
-            finally:
-                await process_bridge.close()
-
-            for key, expected_val in test_vars.items():
-                assert key in env_vars, f"Expected env var {key!r} missing"
-                assert env_vars[key] == expected_val, f"{key}: expected {expected_val!r}, got {env_vars[key]!r}"
+            await self._assert_known_env_vars(process_bridge, proc, test_vars)
         finally:
             proc.kill()
             await proc.wait()
+
+    @staticmethod
+    async def _assert_known_env_vars(
+        process_bridge: ProcessBridge,
+        proc: asyncio.subprocess.Process,
+        test_vars: dict[str, str],
+    ) -> None:
+        """Read child env via the bridge and assert known vars match.
+
+        Args:
+            process_bridge: ProcessBridge used to inspect the child.
+            proc: Subprocess running with the env vars injected.
+            test_vars: Mapping of env var name to expected value.
+        """
+        assert proc.pid is not None
+        await process_bridge.open_process(proc.pid, "all")
+        try:
+            env_vars = await process_bridge.get_environment(proc.pid)
+        finally:
+            await process_bridge.close()
+
+        for key, expected_val in test_vars.items():
+            assert key in env_vars, f"Expected env var {key!r} missing"
+            assert env_vars[key] == expected_val, f"{key}: expected {expected_val!r}, got {env_vars[key]!r}"
 
     def test_extract_env_pointer_64bit_offsets(self) -> None:
         """Verify _extract_env_pointer reads correct x64 offsets.
@@ -3132,23 +3270,49 @@ class TestF0009ContextWow64:
 
         proc = await asyncio.create_subprocess_exec(wow64_notepad)
         try:
-            await asyncio.sleep(0.5)
-            await process_bridge.open_process(proc.pid, "all")
-            try:
-                is_wow64_fn = getattr(process_bridge, "_target_is_wow64", None)
-                if is_wow64_fn is None or not is_wow64_fn():
-                    pytest.skip("SysWOW64 notepad is not detected as WOW64 on this system")
-                threads = await process_bridge.get_threads(proc.pid)
-                assert len(threads) > 0, "WOW64 process must have at least one thread"
-                tid = threads[0].tid
-                ctx = await process_bridge.get_thread_context(tid)
-                assert "eip" in ctx, "WOW64 target must expose eip"
-                assert "rip" not in ctx, "WOW64 target must not expose rip"
-            finally:
-                await process_bridge.close()
+            await self._run_wow64_context_test(process_bridge, proc)
         finally:
             proc.terminate()
             await proc.wait()
+
+    @staticmethod
+    async def _run_wow64_context_test(
+        process_bridge: ProcessBridge,
+        proc: asyncio.subprocess.Process,
+    ) -> None:
+        """Open the WOW64 child and verify its context exposes ``eip``.
+
+        Args:
+            process_bridge: ProcessBridge used to attach and inspect.
+            proc: Subprocess running the WOW64 notepad target.
+        """
+        await asyncio.sleep(0.5)
+        await process_bridge.open_process(proc.pid, "all")
+        try:
+            await TestF0009ContextWow64._assert_wow64_eip(process_bridge, proc)
+        finally:
+            await process_bridge.close()
+
+    @staticmethod
+    async def _assert_wow64_eip(
+        process_bridge: ProcessBridge,
+        proc: asyncio.subprocess.Process,
+    ) -> None:
+        """Assert WOW64 thread context contains ``eip`` and not ``rip``.
+
+        Args:
+            process_bridge: Attached ProcessBridge for the WOW64 target.
+            proc: Subprocess representing the WOW64 target.
+        """
+        is_wow64_fn = getattr(process_bridge, "_target_is_wow64", None)
+        if is_wow64_fn is None or not is_wow64_fn():
+            pytest.skip("SysWOW64 notepad is not detected as WOW64 on this system")
+        threads = await process_bridge.get_threads(proc.pid)
+        assert len(threads) > 0, "WOW64 process must have at least one thread"
+        tid = threads[0].tid
+        ctx = await process_bridge.get_thread_context(tid)
+        assert "eip" in ctx, "WOW64 target must expose eip"
+        assert "rip" not in ctx, "WOW64 target must not expose rip"
 
 
 class TestF0008SehChainX64Raises:
@@ -3227,15 +3391,31 @@ class TestF0024SymbolInfoSizeOfStruct:
         invade = True
         sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
         try:
-            if not sym_initialized:
-                pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
-            name, _ = _invoke_resolve_symbol(attached_bridge, addr)
-            if not name:
-                pytest.skip("SymFromAddr returned empty — symbols not available")
-            assert isinstance(name, str)
-            assert len(name) > 0
+            self._assert_symbol_resolves(attached_bridge, addr, sym_initialized=sym_initialized)
         finally:
             dbghelp.SymCleanup(proc_handle)
+
+    @staticmethod
+    def _assert_symbol_resolves(
+        attached_bridge: ProcessBridge,
+        addr: int,
+        *,
+        sym_initialized: bool,
+    ) -> None:
+        """Resolve the address via the bridge and assert a non-empty name.
+
+        Args:
+            attached_bridge: ProcessBridge attached to the current process.
+            addr: Address to resolve.
+            sym_initialized: Whether SymInitialize succeeded.
+        """
+        if not sym_initialized:
+            pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
+        name, _ = _invoke_resolve_symbol(attached_bridge, addr)
+        if not name:
+            pytest.skip("SymFromAddr returned empty — symbols not available")
+        assert isinstance(name, str)
+        assert len(name) > 0
 
 
 class TestF0025ImageHlpModuleStruct:
@@ -3277,15 +3457,31 @@ class TestF0025ImageHlpModuleStruct:
         invade = True
         sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
         try:
-            if not sym_initialized:
-                pytest.skip("SymInitialize failed — insufficient privileges for module info")
-            module_name = _invoke_resolve_module(attached_bridge, addr)
-            if not module_name:
-                pytest.skip("SymGetModuleInfo64 returned empty — module info not available")
-            assert isinstance(module_name, str)
-            assert "kernel32" in module_name.lower()
+            self._assert_module_resolves(attached_bridge, addr, sym_initialized=sym_initialized)
         finally:
             dbghelp.SymCleanup(proc_handle)
+
+    @staticmethod
+    def _assert_module_resolves(
+        attached_bridge: ProcessBridge,
+        addr: int,
+        *,
+        sym_initialized: bool,
+    ) -> None:
+        """Resolve the module name via the bridge and assert kernel32 match.
+
+        Args:
+            attached_bridge: ProcessBridge attached to the current process.
+            addr: Address known to live in kernel32.
+            sym_initialized: Whether SymInitialize succeeded.
+        """
+        if not sym_initialized:
+            pytest.skip("SymInitialize failed — insufficient privileges for module info")
+        module_name = _invoke_resolve_module(attached_bridge, addr)
+        if not module_name:
+            pytest.skip("SymGetModuleInfo64 returned empty — module info not available")
+        assert isinstance(module_name, str)
+        assert "kernel32" in module_name.lower()
 
 
 class TestF0041BoolReturnChecked:
@@ -3361,29 +3557,43 @@ class TestF0042SymbolBufferAllocation:
         invade = True
         sym_initialized = bool(dbghelp.SymInitialize(proc_handle, None, invade))
         try:
-            if not sym_initialized:
-                pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
-
-            k32 = ctypes.windll.kernel32
-            addresses: list[int] = []
-            for fn_obj in (k32.GetCurrentProcess, k32.ReadProcessMemory, k32.VirtualQueryEx):
-                addr: int | None = ctypes.cast(fn_obj, ctypes.c_void_p).value
-                if addr and addr != 0:
-                    addresses.append(addr)
-
-            resolved: list[str] = []
-            for addr in addresses:
-                name, _ = _invoke_resolve_symbol(attached_bridge, addr)
-                if name:
-                    resolved.append(name)
-
-            if len(resolved) == 0:
-                pytest.skip("no symbols resolved — PDB/symbol server not configured")
-            for name in resolved:
-                assert isinstance(name, str)
-                assert len(name) > 0
+            self._assert_long_symbol_names_resolve(attached_bridge, sym_initialized=sym_initialized)
         finally:
             dbghelp.SymCleanup(proc_handle)
+
+    @staticmethod
+    def _assert_long_symbol_names_resolve(
+        attached_bridge: ProcessBridge,
+        *,
+        sym_initialized: bool,
+    ) -> None:
+        """Resolve several kernel32 symbols and assert names are not truncated.
+
+        Args:
+            attached_bridge: ProcessBridge attached to the current process.
+            sym_initialized: Whether SymInitialize succeeded.
+        """
+        if not sym_initialized:
+            pytest.skip("SymInitialize failed — insufficient privileges for symbol loading")
+
+        k32 = ctypes.windll.kernel32
+        addresses: list[int] = []
+        for fn_obj in (k32.GetCurrentProcess, k32.ReadProcessMemory, k32.VirtualQueryEx):
+            addr: int | None = ctypes.cast(fn_obj, ctypes.c_void_p).value
+            if addr and addr != 0:
+                addresses.append(addr)
+
+        resolved: list[str] = []
+        for addr in addresses:
+            name, _ = _invoke_resolve_symbol(attached_bridge, addr)
+            if name:
+                resolved.append(name)
+
+        if len(resolved) == 0:
+            pytest.skip("no symbols resolved — PDB/symbol server not configured")
+        for name in resolved:
+            assert isinstance(name, str)
+            assert len(name) > 0
 
     def test_sym_buf_size_accommodates_max_sym_name(self) -> None:
         """Verify the symbol buffer formula produces a size larger than SYMBOL_INFO alone.
@@ -3427,15 +3637,30 @@ class TestF0038SectionCreateFileMappingHandle:
         section_name = f"IntellicrackProcessBridge_F0038_collide_{os.getpid()}"
         first = await process_bridge.create_section(4096, section_name=section_name)
         try:
-            assert first > 0
-            with pytest.raises(ToolError) as excinfo:
-                await process_bridge.create_section(4096, section_name=section_name)
-            details = excinfo.value.details
-            assert isinstance(details, dict)
-            assert details.get("code") == "SECTION_NAME_COLLISION"
+            await self._assert_create_section_collision(process_bridge, first, section_name)
         finally:
             k32 = ctypes.windll.kernel32
             k32.CloseHandle(first)
+
+    @staticmethod
+    async def _assert_create_section_collision(
+        process_bridge: ProcessBridge,
+        first_handle: int,
+        section_name: str,
+    ) -> None:
+        """Assert a duplicate-named create_section raises with collision code.
+
+        Args:
+            process_bridge: ProcessBridge under test.
+            first_handle: Handle returned for the first successful create.
+            section_name: Shared section name forcing the collision.
+        """
+        assert first_handle > 0
+        with pytest.raises(ToolError) as excinfo:
+            await process_bridge.create_section(4096, section_name=section_name)
+        details = excinfo.value.details
+        assert isinstance(details, dict)
+        assert details.get("code") == "SECTION_NAME_COLLISION"
 
 
 class TestF0030RegistryHives:

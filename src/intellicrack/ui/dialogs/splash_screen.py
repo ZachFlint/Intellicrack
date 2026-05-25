@@ -254,6 +254,31 @@ class SplashScreen(QSplashScreen):
         return float(screen.devicePixelRatio())
 
     @staticmethod
+    def _try_load_splash_image(width: int, height: int) -> QPixmap | None:
+        """Attempt to load the bundled splash image scaled to the requested size.
+
+        Args:
+            width: Target pixmap width.
+            height: Target pixmap height.
+
+        Returns:
+            QPixmap | None: The scaled QPixmap, or ``None`` when the image is missing or empty.
+        """
+        splash_path = get_assets_path() / "splash.png"
+        if splash_path.exists():
+            pixmap = QPixmap(str(splash_path))
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    width,
+                    height,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                _logger.debug("splash_image_loaded", path=str(splash_path))
+                return scaled
+        return None
+
+    @staticmethod
     def _load_splash_pixmap(width: int, height: int, dpi_scale: float) -> QPixmap:
         """Load the splash screen image or create fallback.
 
@@ -266,20 +291,12 @@ class SplashScreen(QSplashScreen):
             QPixmap: QPixmap for the splash screen.
         """
         try:
-            splash_path = get_assets_path() / "splash.png"
-            if splash_path.exists():
-                pixmap = QPixmap(str(splash_path))
-                if not pixmap.isNull():
-                    scaled = pixmap.scaled(
-                        width,
-                        height,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                    _logger.debug("splash_image_loaded", path=str(splash_path))
-                    return scaled
+            loaded = SplashScreen._try_load_splash_image(width, height)
         except FileNotFoundError:
             _logger.warning("splash_image_not_found_using_fallback")
+            loaded = None
+        if loaded is not None:
+            return loaded
         return SplashScreen._create_fallback_pixmap(width, height, dpi_scale)
 
     @staticmethod
@@ -563,6 +580,29 @@ class SplashScreen(QSplashScreen):
         """
         self.set_progress(value, message)
 
+    def _paint_splash(self, painter: QPainter) -> None:
+        """Draw all splash screen layers using the provided ``painter``.
+
+        Args:
+            painter: Active QPainter targeted at this widget.
+        """
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        rect = QRectF(self.rect())
+        if rect.width() <= 0 or rect.height() <= 0:
+            return
+
+        self._draw_gradient_background(painter, rect)
+        if self._brain_icon is not None:
+            self._draw_brain_icon(painter, rect)
+            self._draw_title(painter, rect)
+        elif self._splash_image is not None:
+            self._draw_splash_image(painter, rect)
+        else:
+            self._draw_title(painter, rect)
+        self._draw_pipeline(painter, rect)
+        self._draw_status_and_version(painter, rect)
+
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Render all splash screen visual layers.
@@ -573,22 +613,7 @@ class SplashScreen(QSplashScreen):
         del a0
         painter = QPainter(self)
         try:
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-            rect = QRectF(self.rect())
-            if rect.width() <= 0 or rect.height() <= 0:
-                return
-
-            self._draw_gradient_background(painter, rect)
-            if self._brain_icon is not None:
-                self._draw_brain_icon(painter, rect)
-                self._draw_title(painter, rect)
-            elif self._splash_image is not None:
-                self._draw_splash_image(painter, rect)
-            else:
-                self._draw_title(painter, rect)
-            self._draw_pipeline(painter, rect)
-            self._draw_status_and_version(painter, rect)
+            self._paint_splash(painter)
         finally:
             painter.end()
 

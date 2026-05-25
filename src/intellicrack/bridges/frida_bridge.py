@@ -1224,93 +1224,134 @@ class FridaBridge(InstrumentationBridge):
         one of the per-resource cleanup steps raises an unexpected error.
         """
         try:
-            for tid in list(self._stalker_scripts.keys()):
-                script_id = self._stalker_scripts.get(tid)
-                if script_id is not None:
-                    try:
-                        await self._unload_stalker_script(tid, script_id)
-                    except Exception:
-                        _logger.exception("stalker_script_unload_failed", thread_id=tid)
-            self._stalker_scripts.clear()
-            self._stalker_traces.clear()
-
-            if self._child_gating_enabled and self._device is not None:
-                try:
-                    await asyncio.to_thread(self._device.disable_spawn_gating)
-                except Exception:
-                    _logger.exception("child_gating_disable_failed_during_shutdown")
-                self._child_gating_enabled = False
-
-            self._teardown_crash_handler()
-
-            for monitor_id, monitor_obj in list(self._file_monitors.items()):
-                try:
-                    disable_fn = getattr(monitor_obj, "disable", None)
-                    if callable(disable_fn):
-                        await asyncio.to_thread(disable_fn)
-                except Exception:
-                    _logger.exception("file_monitor_disable_failed", monitor_id=monitor_id)
-            self._file_monitors.clear()
-
-            for probe_id, probe_script_id in list(self._call_probes.items()):
-                try:
-                    await self._unload_script(probe_script_id)
-                except Exception:
-                    _logger.exception("call_probe_unload_failed", probe_id=probe_id)
-            self._call_probes.clear()
-
-            if self._exception_handler_script is not None:
-                try:
-                    await self._unload_script(self._exception_handler_script)
-                except Exception:
-                    _logger.exception("frida_exception_handler_unload_failed")
-                self._exception_handler_script = None
-
-            self._cancellables.clear()
-
-            for alloc_addr, alloc_script_id in list(self._alloc_scripts.items()):
-                try:
-                    await self._unload_script(alloc_script_id)
-                except Exception:
-                    _logger.exception("alloc_script_unload_failed", address=hex(alloc_addr))
-            self._alloc_scripts.clear()
-
-            for script_id in list(self._scripts.keys()):
-                try:
-                    await self._unload_script(script_id)
-                except Exception:
-                    _logger.exception("script_unload_failed", script_id=script_id)
-
-            if self._session is not None:
-                try:
-                    await asyncio.to_thread(self._session.detach)
-                except Exception:
-                    _logger.exception("session_detach_failed", bridge="frida")
-                self._session = None
-
-            if self._spawned_pid is not None and self._device is not None:
-                try:
-                    await asyncio.to_thread(self._device.kill, self._spawned_pid)
-                    _logger.info("spawned_process_killed", pid=self._spawned_pid)
-                except Exception:
-                    _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
-
-                process_manager = ProcessManager.get_instance()
-                process_manager.unregister_external_pid(self._spawned_pid)
-                self._spawned_pid = None
-
-            self._device = None
-            self._pid = None
-            self._hooks = {}
-            with self._gated_children_lock:
-                self._gated_children.clear()
-            with self._crashes_lock:
-                self._crashes.clear()
-            with self._typescript_compiler_lock:
-                self._typescript_compiler = None
+            await self._release_frida_resources()
         finally:
             await super().shutdown()
             _logger.info("frida_bridge_shutdown", bridge="frida")
+
+    async def _release_frida_resources(self) -> None:
+        """Release every Frida-side resource owned by this bridge.
+
+        Runs the individual cleanup phases (stalker scripts, child
+        gating, file monitors, call probes, exception handler, alloc
+        scripts, regular scripts, session detach, spawn kill, in-memory
+        bookkeeping) in order. Each phase wraps its own
+        exception-tolerant logic so a failure in one phase does not
+        prevent later phases from running.
+        """
+        await self._shutdown_stalker_scripts()
+        await self._shutdown_child_gating()
+        self._teardown_crash_handler()
+        await self._shutdown_file_monitors()
+        await self._shutdown_call_probes()
+        await self._shutdown_exception_handler_script()
+        self._cancellables.clear()
+        await self._shutdown_alloc_scripts()
+        await self._shutdown_regular_scripts()
+        await self._shutdown_session()
+        await self._shutdown_spawned_process()
+        self._clear_bridge_state()
+
+    async def _shutdown_stalker_scripts(self) -> None:
+        """Unload stalker scripts and clear the stalker tracking maps."""
+        for tid in list(self._stalker_scripts.keys()):
+            script_id = self._stalker_scripts.get(tid)
+            if script_id is not None:
+                try:
+                    await self._unload_stalker_script(tid, script_id)
+                except Exception:
+                    _logger.exception("stalker_script_unload_failed", thread_id=tid)
+        self._stalker_scripts.clear()
+        self._stalker_traces.clear()
+
+    async def _shutdown_child_gating(self) -> None:
+        """Disable spawn gating on the device when it was previously enabled."""
+        if self._child_gating_enabled and self._device is not None:
+            try:
+                await asyncio.to_thread(self._device.disable_spawn_gating)
+            except Exception:
+                _logger.exception("child_gating_disable_failed_during_shutdown")
+            self._child_gating_enabled = False
+
+    async def _shutdown_file_monitors(self) -> None:
+        """Disable any registered Frida file monitors and clear the registry."""
+        for monitor_id, monitor_obj in list(self._file_monitors.items()):
+            try:
+                disable_fn = getattr(monitor_obj, "disable", None)
+                if callable(disable_fn):
+                    await asyncio.to_thread(disable_fn)
+            except Exception:
+                _logger.exception("file_monitor_disable_failed", monitor_id=monitor_id)
+        self._file_monitors.clear()
+
+    async def _shutdown_call_probes(self) -> None:
+        """Unload all installed call-probe scripts and clear the registry."""
+        for probe_id, probe_script_id in list(self._call_probes.items()):
+            try:
+                await self._unload_script(probe_script_id)
+            except Exception:
+                _logger.exception("call_probe_unload_failed", probe_id=probe_id)
+        self._call_probes.clear()
+
+    async def _shutdown_exception_handler_script(self) -> None:
+        """Unload the global exception-handler script if it is installed."""
+        if self._exception_handler_script is not None:
+            try:
+                await self._unload_script(self._exception_handler_script)
+            except Exception:
+                _logger.exception("frida_exception_handler_unload_failed")
+            self._exception_handler_script = None
+
+    async def _shutdown_alloc_scripts(self) -> None:
+        """Unload every alloc-tracking script and clear the registry."""
+        for alloc_addr, alloc_script_id in list(self._alloc_scripts.items()):
+            try:
+                await self._unload_script(alloc_script_id)
+            except Exception:
+                _logger.exception("alloc_script_unload_failed", address=hex(alloc_addr))
+        self._alloc_scripts.clear()
+
+    async def _shutdown_regular_scripts(self) -> None:
+        """Unload every script registered through the public script API."""
+        for script_id in list(self._scripts.keys()):
+            try:
+                await self._unload_script(script_id)
+            except Exception:
+                _logger.exception("script_unload_failed", script_id=script_id)
+
+    async def _shutdown_session(self) -> None:
+        """Detach the active Frida session, if any, and drop the reference."""
+        if self._session is not None:
+            try:
+                await asyncio.to_thread(self._session.detach)
+            except Exception:
+                _logger.exception("session_detach_failed", bridge="frida")
+            self._session = None
+
+    async def _shutdown_spawned_process(self) -> None:
+        """Kill any process spawned by the bridge and unregister it."""
+        if self._spawned_pid is not None and self._device is not None:
+            try:
+                await asyncio.to_thread(self._device.kill, self._spawned_pid)
+                _logger.info("spawned_process_killed", pid=self._spawned_pid)
+            except Exception:
+                _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
+
+            process_manager = ProcessManager.get_instance()
+            process_manager.unregister_external_pid(self._spawned_pid)
+            self._spawned_pid = None
+
+    def _clear_bridge_state(self) -> None:
+        """Reset all in-memory bookkeeping owned by this bridge instance."""
+        self._device = None
+        self._pid = None
+        self._hooks = {}
+        with self._gated_children_lock:
+            self._gated_children.clear()
+        with self._crashes_lock:
+            self._crashes.clear()
+        with self._typescript_compiler_lock:
+            self._typescript_compiler = None
 
     @override
     async def is_available(self) -> bool:
@@ -1357,20 +1398,7 @@ class FridaBridge(InstrumentationBridge):
         cancellable = self._resolve_cancellable(cancellable_id)
 
         try:
-            self._session = await asyncio.to_thread(
-                self._attach_with_cancellable,
-                device,
-                pid,
-                cancellable,
-            )
-            self._pid = pid
-            self.state.connected = True
-            self.state.tool_running = True
-            self.state.process_attached = True
-            self.state.target_pid = pid
-            self._publish_tool_state()
-
-            _logger.info("process_attached", pid=pid)
+            await self._perform_attach(device, pid, cancellable)
         except frida.ProcessNotFoundError as e:
             _logger.warning("frida_process_not_found", pid=pid, error=str(e))
             self.state.last_error = str(e)
@@ -1392,6 +1420,41 @@ class FridaBridge(InstrumentationBridge):
                 _ERR_ATTACH_FAILED,
                 details=self._frida_error_details(e, pid=pid),
             ) from e
+
+    async def _perform_attach(
+        self,
+        device: frida.core.Device,
+        pid: int,
+        cancellable: frida.Cancellable | None,
+    ) -> None:
+        """Attach to ``pid`` via Frida and update bridge state on success.
+
+        Frida attach failures (``ProcessNotFoundError``,
+        ``PermissionDeniedError``, ``TransportError``,
+        ``InvalidArgumentError``) and :class:`OSError` from the
+        underlying thread call propagate to the caller, which converts
+        them into :class:`ToolError` instances with structured diagnostic
+        context.
+
+        Args:
+            device: Resolved Frida device to attach through.
+            pid: Process ID to attach to.
+            cancellable: Optional Frida cancellation token.
+        """
+        self._session = await asyncio.to_thread(
+            self._attach_with_cancellable,
+            device,
+            pid,
+            cancellable,
+        )
+        self._pid = pid
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = True
+        self.state.target_pid = pid
+        self._publish_tool_state()
+
+        _logger.info("process_attached", pid=pid)
 
     async def attach_by_name(self, name: str, *, cancellable_id: str | None = None) -> None:
         """Attach to a process by name.
@@ -1536,31 +1599,7 @@ class FridaBridge(InstrumentationBridge):
             ) from e
 
         try:
-            self._session = await asyncio.to_thread(
-                self._attach_with_cancellable,
-                device,
-                pid,
-                cancellable,
-            )
-            self._pid = pid
-            self._spawned_pid = pid
-
-            process_manager = ProcessManager.get_instance()
-            process_manager.register_external_pid(
-                pid,
-                name=f"frida-spawn-{path.name}",
-                process_type=ProcessType.DEBUGGER,
-                metadata={"path": str(path), "args": args or []},
-            )
-
-            self.state.connected = True
-            self.state.tool_running = True
-            self.state.process_attached = True
-            self.state.target_path = path
-            self.state.target_pid = pid
-            self._publish_tool_state()
-
-            _logger.info("process_spawned", process_name=path.name, pid=pid)
+            await self._post_spawn_attach(device, pid, path, args, cancellable)
         except (OSError, RuntimeError, frida.TransportError) as e:
             try:
                 await asyncio.to_thread(device.kill, pid)
@@ -1573,8 +1612,55 @@ class FridaBridge(InstrumentationBridge):
                 _ERR_ATTACH_FAILED,
                 details=self._frida_error_details(e, pid=pid, path=str(path)),
             ) from e
-        else:
-            return pid
+        return pid
+
+    async def _post_spawn_attach(
+        self,
+        device: frida.core.Device,
+        pid: int,
+        path: Path,
+        args: Sequence[str] | None,
+        cancellable: frida.Cancellable | None,
+    ) -> None:
+        """Attach to a newly spawned PID and update bridge tracking.
+
+        :class:`OSError`, :class:`RuntimeError`, and
+        ``frida.TransportError`` raised by attach propagate to the
+        caller, which kills the leaked process before re-raising the
+        failure as :class:`ToolError`.
+
+        Args:
+            device: Frida device that performed the spawn.
+            pid: Spawned process identifier.
+            path: Path of the spawned executable.
+            args: Original command-line arguments used for spawn.
+            cancellable: Optional cancellation token to forward to attach.
+        """
+        self._session = await asyncio.to_thread(
+            self._attach_with_cancellable,
+            device,
+            pid,
+            cancellable,
+        )
+        self._pid = pid
+        self._spawned_pid = pid
+
+        process_manager = ProcessManager.get_instance()
+        process_manager.register_external_pid(
+            pid,
+            name=f"frida-spawn-{path.name}",
+            process_type=ProcessType.DEBUGGER,
+            metadata={"path": str(path), "args": args or []},
+        )
+
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = True
+        self.state.target_path = path
+        self.state.target_pid = pid
+        self._publish_tool_state()
+
+        _logger.info("process_spawned", process_name=path.name, pid=pid)
 
     async def resume(self) -> None:
         """Resume a spawned process.
@@ -1614,32 +1700,7 @@ class FridaBridge(InstrumentationBridge):
             return
 
         try:
-            for script_id in list(self._scripts.keys()):
-                await self._unload_script(script_id)
-
-            await asyncio.to_thread(self._session.detach)
-            self._session = None
-
-            if kill_spawned and self._spawned_pid is not None and self._device is not None:
-                try:
-                    await asyncio.to_thread(self._device.kill, self._spawned_pid)
-                    _logger.info("spawned_process_killed", pid=self._spawned_pid)
-                except Exception:
-                    _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
-
-                process_manager = ProcessManager.get_instance()
-                process_manager.unregister_external_pid(self._spawned_pid)
-                self._spawned_pid = None
-
-            self._pid = None
-            self._hooks = {}
-            self.state.connected = True
-            self.state.tool_running = True
-            self.state.process_attached = False
-            self.state.target_pid = None
-            self._publish_tool_state()
-
-            _logger.info("process_detached", bridge="frida")
+            await self._perform_detach(kill_spawned=kill_spawned)
         except (frida.InvalidOperationError, frida.TransportError, OSError) as e:
             _logger.warning(
                 "frida_detach_failed",
@@ -1652,6 +1713,52 @@ class FridaBridge(InstrumentationBridge):
                 _ERR_DETACH_FAILED,
                 details=self._frida_error_details(e),
             ) from e
+
+    async def _perform_detach(self, *, kill_spawned: bool) -> None:
+        """Tear down the active Frida session and reset attach state.
+
+        Unloads every loaded script, detaches the session, optionally
+        kills any process the bridge spawned, then resets the per-attach
+        bookkeeping fields on the bridge. ``frida.InvalidOperationError``,
+        ``frida.TransportError``, and :class:`OSError` raised by detach
+        propagate to the caller, which converts them into a
+        :class:`ToolError`.
+
+        Args:
+            kill_spawned: When True and the bridge owns the spawned PID,
+                kill the process and unregister it from the
+                :class:`ProcessManager`.
+        """
+        session = self._session
+        if session is None:
+            return
+
+        for script_id in list(self._scripts.keys()):
+            await self._unload_script(script_id)
+
+        await asyncio.to_thread(session.detach)
+        self._session = None
+
+        if kill_spawned and self._spawned_pid is not None and self._device is not None:
+            try:
+                await asyncio.to_thread(self._device.kill, self._spawned_pid)
+                _logger.info("spawned_process_killed", pid=self._spawned_pid)
+            except Exception:
+                _logger.exception("spawned_process_kill_failed", pid=self._spawned_pid)
+
+            process_manager = ProcessManager.get_instance()
+            process_manager.unregister_external_pid(self._spawned_pid)
+            self._spawned_pid = None
+
+        self._pid = None
+        self._hooks = {}
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = False
+        self.state.target_pid = None
+        self._publish_tool_state()
+
+        _logger.info("process_detached", bridge="frida")
 
     async def read_memory(self, address: int, size: int) -> bytes:
         """Read memory from the target process.
@@ -4117,6 +4224,26 @@ class FridaBridge(InstrumentationBridge):
             for d in devices
         ]
 
+    @staticmethod
+    async def _resolve_frida_device(device_type: str, host: str | None) -> frida.core.Device:
+        """Resolve a :class:`frida.core.Device` for ``device_type``.
+
+        Args:
+            device_type: One of ``"local"``, ``"usb"``, or ``"remote"``.
+            host: Remote host address. Required when ``device_type`` is
+                ``"remote"`` and ignored otherwise.
+
+        Returns:
+            frida.core.Device: The resolved Frida device handle.
+        """
+        if device_type == "local":
+            return await asyncio.to_thread(frida.get_local_device)
+        if device_type == "usb":
+            return await asyncio.to_thread(frida.get_usb_device)
+        manager = frida.get_device_manager()
+        remote_host: str = host if host is not None else ""
+        return await asyncio.to_thread(manager.add_remote_device, remote_host)
+
     async def connect_device(
         self,
         device_type: str,
@@ -4147,14 +4274,7 @@ class FridaBridge(InstrumentationBridge):
             raise ToolError(_ERR_DEVICE_FAILED, details={"reason": f"unknown device type: {device_type}"})
 
         try:
-            if device_type == "local":
-                device = await asyncio.to_thread(frida.get_local_device)
-            elif device_type == "usb":
-                device = await asyncio.to_thread(frida.get_usb_device)
-            else:
-                manager = frida.get_device_manager()
-                remote_host: str = host if host is not None else ""
-                device = await asyncio.to_thread(manager.add_remote_device, remote_host)
+            device = await self._resolve_frida_device(device_type, host)
         except Exception as e:
             _logger.warning("device_connect_failed", device_type=device_type, error=str(e))
             raise ToolError(_ERR_DEVICE_FAILED) from e
@@ -6817,7 +6937,9 @@ class FridaBridge(InstrumentationBridge):
         Accepts either a path to an existing entry file or raw TypeScript
         source. When raw source is provided it is written to a temporary
         ``.ts`` file so the compiler can resolve it as an entrypoint; the
-        temp file is removed on all exit paths.
+        temp file is removed on all exit paths. A :class:`ToolError`
+        raised by :meth:`_invoke_typescript_compiler` propagates out of
+        this call when Frida fails the build.
 
         Args:
             source: TypeScript source code or path to an entry file.
@@ -6829,9 +6951,6 @@ class FridaBridge(InstrumentationBridge):
 
         Returns:
             str: Compiled JavaScript source code.
-
-        Raises:
-            ToolError: If compilation fails.
         """
         _logger.info("frida_compile_typescript_started", source_length=len(source), project_root=project_root)
         source_path = Path(source)
@@ -6841,25 +6960,15 @@ class FridaBridge(InstrumentationBridge):
 
         compiler = self._get_or_create_compiler()
 
-        temp_path: Path | None = None
-        try:
-            if is_path:
-                entrypoint = str(source_path)
-            else:
-                temp_path = await asyncio.to_thread(_write_typescript_tempfile, source)
-                entrypoint = str(temp_path)
+        if is_path:
+            entrypoint = str(source_path)
+            temp_path: Path | None = None
+        else:
+            temp_path = await asyncio.to_thread(_write_typescript_tempfile, source)
+            entrypoint = str(temp_path)
 
-            try:
-                compiled: str = await asyncio.to_thread(
-                    self._compiler_build_with_cancellable,
-                    compiler,
-                    entrypoint,
-                    project_root,
-                    cancellable,
-                )
-            except Exception as e:
-                _logger.exception("typescript_compile_failed")
-                raise ToolError(_ERR_COMPILE_FAILED) from e
+        try:
+            compiled = await self._invoke_typescript_compiler(compiler, entrypoint, project_root, cancellable)
         finally:
             if temp_path is not None:
                 try:
@@ -6872,6 +6981,40 @@ class FridaBridge(InstrumentationBridge):
 
         _logger.info("typescript_compiled", output_size=len(compiled))
         return compiled
+
+    async def _invoke_typescript_compiler(
+        self,
+        compiler: frida.Compiler,
+        entrypoint: str,
+        project_root: str | None,
+        cancellable: frida.Cancellable | None,
+    ) -> str:
+        """Run Frida's TypeScript compiler with the resolved entrypoint.
+
+        Args:
+            compiler: Shared :class:`frida.Compiler` instance.
+            entrypoint: Absolute path of the TypeScript entry file.
+            project_root: Optional project root for module resolution.
+            cancellable: Optional Frida cancellation token forwarded to
+                ``compiler.build``.
+
+        Returns:
+            str: Compiled JavaScript output emitted by Frida.
+
+        Raises:
+            ToolError: When Frida raises during the build call.
+        """
+        try:
+            return await asyncio.to_thread(
+                self._compiler_build_with_cancellable,
+                compiler,
+                entrypoint,
+                project_root,
+                cancellable,
+            )
+        except Exception as e:
+            _logger.exception("typescript_compile_failed")
+            raise ToolError(_ERR_COMPILE_FAILED) from e
 
     def _get_or_create_compiler(self) -> frida.Compiler:
         """Return the lazily-initialised shared :class:`frida.Compiler` instance.

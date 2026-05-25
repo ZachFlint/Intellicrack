@@ -258,29 +258,42 @@ class TestF0005FunctionListPopulation:
         recorder = _RecordingAnalysisPanel()
         panel.analysis_panel = cast("BridgeAnalysisPanel", recorder)
         try:
-            assert panel.func_list.get_functions() == []
-
-            summary = _make_summary([
-                _make_function("main", _ADDR_MAIN),
-                _make_function("helper", _ADDR_HELPER),
-                _make_function("cleanup", _ADDR_LIBC),
-            ])
-            panel.update_bridge_analysis(summary)
-
-            stored = panel.func_list.get_functions()
-            assert stored == [
-                ("main", _ADDR_MAIN),
-                ("helper", _ADDR_HELPER),
-                ("cleanup", _ADDR_LIBC),
-            ]
-            assert panel.func_list.list_widget.count() == 3
-            first_item = panel.func_list.list_widget.item(0)
-            assert first_item is not None
-            assert "main" in first_item.text()
-            assert "0x00401000" in first_item.text()
-            assert recorder.received == [summary]
+            TestF0005FunctionListPopulation._assert_function_list_populated(panel, recorder)
         finally:
             panel.deleteLater()
+
+    @staticmethod
+    def _assert_function_list_populated(
+        panel: ToolOutputPanel,
+        recorder: _RecordingAnalysisPanel,
+    ) -> None:
+        """Push a known summary and verify the navigator panel contents.
+
+        Args:
+            panel: The ToolOutputPanel under test.
+            recorder: Recording analysis panel installed as side-effect sink.
+        """
+        assert panel.func_list.get_functions() == []
+
+        summary = _make_summary([
+            _make_function("main", _ADDR_MAIN),
+            _make_function("helper", _ADDR_HELPER),
+            _make_function("cleanup", _ADDR_LIBC),
+        ])
+        panel.update_bridge_analysis(summary)
+
+        stored = panel.func_list.get_functions()
+        assert stored == [
+            ("main", _ADDR_MAIN),
+            ("helper", _ADDR_HELPER),
+            ("cleanup", _ADDR_LIBC),
+        ]
+        assert panel.func_list.list_widget.count() == 3
+        first_item = panel.func_list.list_widget.item(0)
+        assert first_item is not None
+        assert "main" in first_item.text()
+        assert "0x00401000" in first_item.text()
+        assert recorder.received == [summary]
 
     @staticmethod
     def test_update_bridge_analysis_clears_stale_xrefs() -> None:
@@ -332,33 +345,48 @@ class TestF0005XRefPopulation:
         panel.cutter_bridge = bridge
 
         try:
-            panel.func_list.function_selected.emit("main", _ADDR_MAIN)
-
-            assert _process_events_until(
-                qapp,
-                lambda: panel.xref_panel.xref_display.topLevelItemCount() == 2,
-            )
-            assert bridge.to_calls == [_ADDR_MAIN]
-            assert bridge.from_calls == [_ADDR_MAIN]
-
-            roots = panel.xref_panel.xref_display
-            assert roots.topLevelItemCount() == 2
-            in_root = roots.topLevelItem(0)
-            out_root = roots.topLevelItem(1)
-            assert in_root is not None
-            assert out_root is not None
-            assert in_root.text(0) == "=== References TO ==="
-            assert out_root.text(0) == "=== References FROM ==="
-            in_child = in_root.child(0)
-            out_child = out_root.child(0)
-            assert in_child is not None
-            assert out_child is not None
-            assert "0x00500100" in in_child.text(0)
-            assert "caller_a" in in_child.text(0)
-            assert "0x00500200" in out_child.text(0)
-            assert "callee_b" in out_child.text(0)
+            TestF0005XRefPopulation._assert_xref_panel_populated(qapp, panel, bridge)
         finally:
             panel.deleteLater()
+
+    @staticmethod
+    def _assert_xref_panel_populated(
+        qapp: QCoreApplication,
+        panel: ToolOutputPanel,
+        bridge: _RecordingCutterBridge,
+    ) -> None:
+        """Emit a function selection and verify xref panel is populated.
+
+        Args:
+            qapp: Active Qt application driving the event loop.
+            panel: ToolOutputPanel under test.
+            bridge: Recording cutter bridge used as the analysis source.
+        """
+        panel.func_list.function_selected.emit("main", _ADDR_MAIN)
+
+        assert _process_events_until(
+            qapp,
+            lambda: panel.xref_panel.xref_display.topLevelItemCount() == 2,
+        )
+        assert bridge.to_calls == [_ADDR_MAIN]
+        assert bridge.from_calls == [_ADDR_MAIN]
+
+        roots = panel.xref_panel.xref_display
+        assert roots.topLevelItemCount() == 2
+        in_root = roots.topLevelItem(0)
+        out_root = roots.topLevelItem(1)
+        assert in_root is not None
+        assert out_root is not None
+        assert in_root.text(0) == "=== References TO ==="
+        assert out_root.text(0) == "=== References FROM ==="
+        in_child = in_root.child(0)
+        out_child = out_root.child(0)
+        assert in_child is not None
+        assert out_child is not None
+        assert "0x00500100" in in_child.text(0)
+        assert "caller_a" in in_child.text(0)
+        assert "0x00500200" in out_child.text(0)
+        assert "callee_b" in out_child.text(0)
 
     @staticmethod
     def test_xref_selection_repopulates_xref_panel(qapp: QCoreApplication) -> None:
@@ -419,49 +447,76 @@ class TestF0021SandboxBackendWiring:
         """A sandbox passed before panel creation must be stored as pending bridge."""
         panel = ToolOutputPanel()
         try:
-            sandbox = _StubWindowsSandbox()
-            panel.wire_sandbox_backend(sandbox)
-
-            pending = _read_pending_sandbox_bridge(panel)
-            assert isinstance(pending, SandboxBridge)
-            assert pending.manager is not None
-            assert any(inst.sandbox is sandbox for inst in pending.manager.instances)
-            instance = next(inst for inst in pending.manager.instances if inst.sandbox is sandbox)
-            assert instance.sandbox_type == "windows"
+            TestF0021SandboxBackendWiring._assert_wires_sandbox_to_pending_bridge(panel)
         finally:
             panel.deleteLater()
+
+    @staticmethod
+    def _assert_wires_sandbox_to_pending_bridge(panel: ToolOutputPanel) -> None:
+        """Assert a freshly wired sandbox stores a pending Windows bridge.
+
+        Args:
+            panel: ToolOutputPanel under test.
+        """
+        sandbox = _StubWindowsSandbox()
+        panel.wire_sandbox_backend(sandbox)
+
+        pending = _read_pending_sandbox_bridge(panel)
+        assert isinstance(pending, SandboxBridge)
+        assert pending.manager is not None
+        assert any(inst.sandbox is sandbox for inst in pending.manager.instances)
+        instance = next(inst for inst in pending.manager.instances if inst.sandbox is sandbox)
+        assert instance.sandbox_type == "windows"
 
     @staticmethod
     def test_wires_sandbox_with_manager_reuses_supplied_manager() -> None:
         """When a manager is supplied it must be reused on the new bridge."""
         panel = ToolOutputPanel()
         try:
-            sandbox = _StubWindowsSandbox()
-            manager = SandboxManager()
-            panel.wire_sandbox_backend(sandbox, manager)
-
-            pending = _read_pending_sandbox_bridge(panel)
-            assert isinstance(pending, SandboxBridge)
-            assert pending.manager is manager
-            assert any(inst.sandbox is sandbox for inst in manager.instances)
+            TestF0021SandboxBackendWiring._assert_supplied_manager_reused(panel)
         finally:
             panel.deleteLater()
+
+    @staticmethod
+    def _assert_supplied_manager_reused(panel: ToolOutputPanel) -> None:
+        """Assert wire_sandbox_backend reuses an existing SandboxManager.
+
+        Args:
+            panel: ToolOutputPanel under test.
+        """
+        sandbox = _StubWindowsSandbox()
+        manager = SandboxManager()
+        panel.wire_sandbox_backend(sandbox, manager)
+
+        pending = _read_pending_sandbox_bridge(panel)
+        assert isinstance(pending, SandboxBridge)
+        assert pending.manager is manager
+        assert any(inst.sandbox is sandbox for inst in manager.instances)
 
     @staticmethod
     def test_wires_qemu_sandbox_with_qemu_type() -> None:
         """A QEMU-class sandbox must register under the ``qemu`` SandboxType."""
         panel = ToolOutputPanel()
         try:
-            sandbox = _StubQemuSandbox()
-            panel.wire_sandbox_backend(sandbox)
-
-            pending = _read_pending_sandbox_bridge(panel)
-            assert isinstance(pending, SandboxBridge)
-            assert pending.manager is not None
-            instance = next(inst for inst in pending.manager.instances if inst.sandbox is sandbox)
-            assert instance.sandbox_type == "qemu"
+            TestF0021SandboxBackendWiring._assert_qemu_sandbox_registers_as_qemu(panel)
         finally:
             panel.deleteLater()
+
+    @staticmethod
+    def _assert_qemu_sandbox_registers_as_qemu(panel: ToolOutputPanel) -> None:
+        """Assert a QEMU-class sandbox registers with the ``qemu`` SandboxType.
+
+        Args:
+            panel: ToolOutputPanel under test.
+        """
+        sandbox = _StubQemuSandbox()
+        panel.wire_sandbox_backend(sandbox)
+
+        pending = _read_pending_sandbox_bridge(panel)
+        assert isinstance(pending, SandboxBridge)
+        assert pending.manager is not None
+        instance = next(inst for inst in pending.manager.instances if inst.sandbox is sandbox)
+        assert instance.sandbox_type == "qemu"
 
     @staticmethod
     def test_rejects_non_sandbox_backend() -> None:

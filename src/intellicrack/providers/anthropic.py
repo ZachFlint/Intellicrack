@@ -50,6 +50,8 @@ from intellicrack.providers.base import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from anthropic.lib.streaming import AsyncMessageStream
+
 _MSG_API_KEY_REQUIRED = "API key required"
 _MSG_NOT_CONNECTED = "Not connected"
 _MSG_INVALID_API_KEY = "Invalid API key"
@@ -547,35 +549,7 @@ class AnthropicProvider(LLMProviderBase):
         )
         self._current_task = cast("asyncio.Task[Any]", api_task)
         try:
-            try:
-                response = await api_task
-            finally:
-                self._current_task = None
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            content, tool_calls, thinking_text = self._parse_response_blocks(response)
-            self._pending_usage = self._build_usage_from_message(response)
-            if thinking_text:
-                self._pending_thinking.append(thinking_text)
-                message = Message(
-                    role="assistant",
-                    content=content,
-                    tool_calls=tool_calls or None,
-                    thinking_content=thinking_text,
-                )
-                log_provider_response(
-                    provider="anthropic",
-                    model=model,
-                    tool_calls_count=len(tool_calls),
-                    duration_ms=duration_ms,
-                )
-                return message, tool_calls or None
-            return self._build_chat_response(
-                provider="anthropic",
-                model=model,
-                content=content,
-                tool_calls=tool_calls,
-                duration_ms=duration_ms,
-            )
+            return await self._await_anthropic_chat(api_task=api_task, model=model, start_time=start_time)
         except RateLimitError as exc:
             log_passthrough(
                 self._logger,
@@ -588,6 +562,56 @@ class AnthropicProvider(LLMProviderBase):
         except (ConnectionError, TimeoutError, OSError, anthropic.APIError, ValueError) as e:
             self._logger.warning("anthropic_request_failed", error=str(e))
             raise ProviderError(_MSG_REQUEST_FAILED) from e
+
+    async def _await_anthropic_chat(
+        self,
+        *,
+        api_task: asyncio.Task[AnthropicMessage],
+        model: str,
+        start_time: float,
+    ) -> tuple[Message, list[ToolCall] | None]:
+        """Await the chat API task and build the response payload.
+
+        Args:
+            api_task: The active ``asyncio.Task`` wrapping the Anthropic
+                ``messages.create`` call.
+            model: Model ID associated with the request, used for logging.
+            start_time: ``time.perf_counter()`` reference captured before
+                the request was dispatched.
+
+        Returns:
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant
+            message, tool calls if any).
+        """
+        try:
+            response = await api_task
+        finally:
+            self._current_task = None
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        content, tool_calls, thinking_text = self._parse_response_blocks(response)
+        self._pending_usage = self._build_usage_from_message(response)
+        if thinking_text:
+            self._pending_thinking.append(thinking_text)
+            message = Message(
+                role="assistant",
+                content=content,
+                tool_calls=tool_calls or None,
+                thinking_content=thinking_text,
+            )
+            log_provider_response(
+                provider="anthropic",
+                model=model,
+                tool_calls_count=len(tool_calls),
+                duration_ms=duration_ms,
+            )
+            return message, tool_calls or None
+        return self._build_chat_response(
+            provider="anthropic",
+            model=model,
+            content=content,
+            tool_calls=tool_calls,
+            duration_ms=duration_ms,
+        )
 
     async def chat_stream(
         self,
@@ -648,40 +672,8 @@ class AnthropicProvider(LLMProviderBase):
         )
 
         try:
-            stream_context = self._client.messages.stream(**api_kwargs)
-            async with stream_context as stream:
-                async for text in stream.text_stream:
-                    if self._cancel_requested:
-                        break
-                    yield text
-
-                if not self._cancel_requested:
-                    final_message = await stream.get_final_message()
-                    tool_calls: list[ToolCall] = []
-                    thinking_blocks: list[str] = []
-                    for block in final_message.content:
-                        if block.type == "tool_use":
-                            args: dict[str, object] = dict(block.input)
-                            tool_calls.append(
-                                ToolCall(
-                                    id=block.id,
-                                    tool_name=block.name.split(".")[0] if "." in block.name else block.name,
-                                    function_name=block.name,
-                                    arguments=args,
-                                ),
-                            )
-                        elif block.type == "thinking" and hasattr(block, "thinking"):
-                            thinking_text = block.thinking
-                            thinking_blocks.append(thinking_text)
-                            self._logger.debug(
-                                "stream_thinking_captured",
-                                length=len(thinking_text),
-                            )
-                    self._pending_tool_calls = tool_calls
-                    if thinking_blocks:
-                        self._pending_thinking.extend(thinking_blocks)
-                    self._pending_usage = self._build_usage_from_message(final_message)
-
+            async for text in self._iter_anthropic_stream(api_kwargs):
+                yield text
         except anthropic.RateLimitError as e:
             self._logger.warning("anthropic_stream_rate_limited", error=str(e))
             raise RateLimitError(_MSG_RATE_LIMITED) from e
@@ -708,6 +700,69 @@ class AnthropicProvider(LLMProviderBase):
                 cancel_requested=self._cancel_requested,
             )
             raise ProviderError(_MSG_STREAM_FAILED) from e
+
+    async def _iter_anthropic_stream(self, api_kwargs: dict[str, Any]) -> AsyncIterator[str]:
+        """Open the Anthropic stream, yield text deltas, and capture final state.
+
+        After the visible text stream is consumed, the helper inspects
+        the final message to populate ``self._pending_tool_calls``,
+        ``self._pending_thinking``, and ``self._pending_usage``.
+
+        Args:
+            api_kwargs: Keyword arguments forwarded to
+                ``self._client.messages.stream``.
+
+        Yields:
+            str: Text chunks as they arrive from the API.
+
+        Raises:
+            ProviderError: If the Anthropic client has not been
+                initialised.
+        """
+        if self._client is None:
+            raise ProviderError(_MSG_NOT_CONNECTED)
+        stream_context = self._client.messages.stream(**api_kwargs)
+        async with stream_context as stream:
+            async for text in stream.text_stream:
+                if self._cancel_requested:
+                    break
+                yield text
+
+            if not self._cancel_requested:
+                await self._finalize_anthropic_stream(stream)
+
+    async def _finalize_anthropic_stream(self, stream: AsyncMessageStream) -> None:
+        """Capture tool calls, thinking, and usage from the final message.
+
+        Args:
+            stream: The active Anthropic stream context whose
+                ``get_final_message`` coroutine will be awaited.
+        """
+        final_message = await stream.get_final_message()
+        tool_calls: list[ToolCall] = []
+        thinking_blocks: list[str] = []
+        for block in final_message.content:
+            if block.type == "tool_use":
+                args: dict[str, object] = dict(block.input)
+                tool_calls.append(
+                    ToolCall(
+                        id=block.id,
+                        tool_name=block.name.split(".")[0] if "." in block.name else block.name,
+                        function_name=block.name,
+                        arguments=args,
+                    ),
+                )
+            elif block.type == "thinking" and hasattr(block, "thinking"):
+                thinking_text = block.thinking
+                thinking_blocks.append(thinking_text)
+                self._logger.debug(
+                    "stream_thinking_captured",
+                    length=len(thinking_text),
+                )
+        self._pending_tool_calls = tool_calls
+        if thinking_blocks:
+            self._pending_thinking.extend(thinking_blocks)
+        self._pending_usage = self._build_usage_from_message(final_message)
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""

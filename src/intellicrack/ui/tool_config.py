@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.bridges.installer import pefile_available
 from intellicrack.core._subprocess import TimeoutExpired
 from intellicrack.core.config import get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
@@ -166,6 +167,48 @@ class ToolInstallWorker(QThread):
             success = False
             self.install_finished.emit(success, f"Installation failed: {e}")
 
+    def _stream_download(self, url: str, zip_path: Path) -> tuple[int, int] | None:
+        """Stream a download from ``url`` into ``zip_path`` with progress updates.
+
+        Args:
+            url: Source URL to download from.
+            zip_path: Destination archive path.
+
+        Returns:
+            tuple[int, int] | None: Tuple of ``(downloaded_bytes, expected_total_bytes)``
+            on success, or ``None`` when the HTTP response is not successful
+            (caller-visible failure already signalled via ``install_finished``).
+        """
+        downloaded = 0
+        total = 0
+        with (
+            httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0)) as client,
+            client.stream("GET", url, follow_redirects=True) as response,
+        ):
+            if response.status_code != HTTP_OK:
+                success = False
+                _logger.warning(
+                    "tool_download_http_error",
+                    tool_id=self._tool_id,
+                    status_code=response.status_code,
+                )
+                self.install_finished.emit(
+                    success,
+                    f"Download failed: HTTP {response.status_code}",
+                )
+                return None
+
+            total = int(response.headers.get("content-length", 0))
+
+            with zip_path.open("wb") as f:
+                for chunk in response.iter_bytes(chunk_size=8192):
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        pct = int(10 + (downloaded / total) * 70)
+                        self.progress.emit(pct)
+        return downloaded, total
+
     def _install_tool(self) -> None:
         """Download and install the tool."""
         if self._tool_id not in self.DOWNLOAD_URLS:
@@ -200,35 +243,8 @@ class ToolInstallWorker(QThread):
             self.progress.emit(10)
 
             _logger.info("tool_download_started", tool_id=self._tool_id, url=url)
-            downloaded = 0
-            total = 0
             try:
-                with (
-                    httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0)) as client,
-                    client.stream("GET", url, follow_redirects=True) as response,
-                ):
-                    if response.status_code != HTTP_OK:
-                        success = False
-                        _logger.warning(
-                            "tool_download_http_error",
-                            tool_id=self._tool_id,
-                            status_code=response.status_code,
-                        )
-                        self.install_finished.emit(
-                            success,
-                            f"Download failed: HTTP {response.status_code}",
-                        )
-                        return
-
-                    total = int(response.headers.get("content-length", 0))
-
-                    with zip_path.open("wb") as f:
-                        for chunk in response.iter_bytes(chunk_size=8192):
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total > 0:
-                                pct = int(10 + (downloaded / total) * 70)
-                                self.progress.emit(pct)
+                result = self._stream_download(url, zip_path)
             except httpx.TimeoutException:
                 _logger.exception("tool_download_timeout", tool_id=self._tool_id)
                 success = False
@@ -239,6 +255,9 @@ class ToolInstallWorker(QThread):
                 success = False
                 self.install_finished.emit(success, "Could not connect to download server")
                 return
+            if result is None:
+                return
+            downloaded, total = result
             _logger.info(
                 "tool_download_completed",
                 tool_id=self._tool_id,
@@ -1088,15 +1107,12 @@ class ToolSettingsWidget(QFrame):
             self._install_btn.setEnabled(False)
             self._auto_install_checkbox.setEnabled(False)
             self._path_input.setToolTip("This tool does not require a path")
-        elif self._tool_id in {"x64dbg", "cutter"}:
-            from intellicrack.bridges.installer import pefile_available
-
-            if not pefile_available():
-                self._install_btn.setEnabled(False)
-                self._install_btn.setToolTip("Installation disabled: 'pefile' dependency is missing.")
-                self._auto_install_checkbox.setEnabled(False)
-                self._auto_install_checkbox.setChecked(False)
-                _logger.warning("tool_row_pe_installer_disabled_no_pefile", tool=self._tool_id)
+        elif self._tool_id in {"x64dbg", "cutter"} and not pefile_available():
+            self._install_btn.setEnabled(False)
+            self._install_btn.setToolTip("Installation disabled: 'pefile' dependency is missing.")
+            self._auto_install_checkbox.setEnabled(False)
+            self._auto_install_checkbox.setChecked(False)
+            _logger.warning("tool_row_pe_installer_disabled_no_pefile", tool=self._tool_id)
 
     def _load_from_config(self) -> dict[str, Any]:
         """Load settings from the config file.
@@ -1199,16 +1215,13 @@ class ToolSettingsWidget(QFrame):
             )
             return
 
-        if self._tool_id in {"x64dbg", "cutter"}:
-            from intellicrack.bridges.installer import pefile_available
-
-            if not pefile_available():
-                show_warning(
-                    self,
-                    "Installation",
-                    f"Cannot install {self._display_name} because optional dependency 'pefile' is missing.",
-                )
-                return
+        if self._tool_id in {"x64dbg", "cutter"} and not pefile_available():
+            show_warning(
+                self,
+                "Installation",
+                f"Cannot install {self._display_name} because optional dependency 'pefile' is missing.",
+            )
+            return
 
         install_path = Path(self._path_input.text().strip())
         if not install_path:

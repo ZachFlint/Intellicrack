@@ -227,22 +227,7 @@ def test_full_callback_path_with_mock_provider(
         )
         server.start()
         try:
-
-            def fire_callback() -> None:
-                query = urlencode({"code": "auth-code-xyz", "state": oauth_state.state})
-                with httpx.Client(timeout=5.0) as client:
-                    resp = client.get(
-                        f"http://127.0.0.1:{callback_port}/callback?{query}",
-                    )
-                    assert resp.status_code == _OK
-
-            firing_thread = threading.Thread(target=fire_callback, daemon=True)
-            firing_thread.start()
-            code, state = await asyncio.to_thread(server.wait_for_callback)
-            firing_thread.join(timeout=2.0)
-            assert code == "auth-code-xyz"
-            assert state == oauth_state.state
-            return await manager.handle_callback(code, state)
+            return await _drive_oauth_callback(server, manager, oauth_state, callback_port)
         finally:
             server.stop()
 
@@ -260,6 +245,40 @@ def test_full_callback_path_with_mock_provider(
     assert form["grant_type"] == "authorization_code"
     assert form["code"] == "auth-code-xyz"
     assert form["code_verifier"]
+
+
+async def _drive_oauth_callback(
+    server: object,
+    manager: oauth_module.OAuthManager,
+    oauth_state: object,
+    callback_port: int,
+) -> oauth_module.OAuthToken:
+    """Fire the callback URL and resolve the resulting token via the manager.
+
+    Args:
+        server: Running OAuthCallbackServer instance.
+        manager: OAuthManager driving the live flow.
+        oauth_state: OAuth state container holding the expected ``state`` value.
+        callback_port: Port the callback server is listening on.
+
+    Returns:
+        oauth_module.OAuthToken: Token returned by ``handle_callback``.
+    """
+    def fire_callback() -> None:
+        query = urlencode({"code": "auth-code-xyz", "state": oauth_state.state})
+        with httpx.Client(timeout=5.0) as client:
+            resp = client.get(
+                f"http://127.0.0.1:{callback_port}/callback?{query}",
+            )
+            assert resp.status_code == _OK
+
+    firing_thread = threading.Thread(target=fire_callback, daemon=True)
+    firing_thread.start()
+    code, state = await asyncio.to_thread(server.wait_for_callback)
+    firing_thread.join(timeout=2.0)
+    assert code == "auth-code-xyz"
+    assert state == oauth_state.state
+    return await manager.handle_callback(code, state)
 
 
 def test_state_mismatch_is_rejected(
@@ -283,16 +302,31 @@ def test_state_mismatch_is_rejected(
     )
     server.start()
     try:
-        query = urlencode({"code": "c", "state": "different-state"})
-        with httpx.Client(timeout=5.0) as client:
-            resp = client.get(
-                f"http://127.0.0.1:{callback_port}/callback?{query}",
-            )
-            assert resp.status_code == 400
-        with pytest.raises(reloaded_oauth_module.OAuthCallbackError):
-            server.wait_for_callback()
+        _assert_state_mismatch_rejected(reloaded_oauth_module, server, callback_port)
     finally:
         server.stop()
+
+
+def _assert_state_mismatch_rejected(
+    reloaded_oauth_module: ModuleType,
+    server: object,
+    callback_port: int,
+) -> None:
+    """POST a callback with a wrong state and assert the server refuses it.
+
+    Args:
+        reloaded_oauth_module: Freshly reloaded oauth module.
+        server: Running OAuthCallbackServer instance.
+        callback_port: Port the server is listening on.
+    """
+    query = urlencode({"code": "c", "state": "different-state"})
+    with httpx.Client(timeout=5.0) as client:
+        resp = client.get(
+            f"http://127.0.0.1:{callback_port}/callback?{query}",
+        )
+        assert resp.status_code == 400
+    with pytest.raises(reloaded_oauth_module.OAuthCallbackError):
+        server.wait_for_callback()
 
 
 def _prime_cached_token(

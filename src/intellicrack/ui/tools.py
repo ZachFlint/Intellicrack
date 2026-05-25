@@ -1198,23 +1198,30 @@ class ToolOutputPanel(QFrame):
             return self._hex_editor_panel
 
         try:
-            panel_module = importlib.import_module(".panels.hex_editor_panel", "intellicrack.ui")
-            raw_widget = panel_module.HexEditorPanel()
-            self._hex_editor_panel = cast("HexEditorPanelProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._hex_editor_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("hex_editor"))
-            self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
-            self.tab_widget.addTab(qwidget, "Hex Editor")
-            self.embedded_tools["hex_editor"] = qwidget
-
-            self._wire_hex_editor_state(raw_widget)
-
-            _logger.info("hex_editor_tab_added", tab="Hex Editor")
+            return self._create_hex_editor_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("hex_editor_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._hex_editor_panel
+
+    def _create_hex_editor_panel(self) -> HexEditorPanelProtocol:
+        """Construct and wire the built-in hex editor panel.
+
+        Returns:
+            HexEditorPanelProtocol: The created HexEditorPanel.
+        """
+        panel_module = importlib.import_module(".panels.hex_editor_panel", "intellicrack.ui")
+        raw_widget = panel_module.HexEditorPanel()
+        self._hex_editor_panel = cast("HexEditorPanelProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._hex_editor_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("hex_editor"))
+        self._hex_editor_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("hex_editor"))
+        self.tab_widget.addTab(qwidget, "Hex Editor")
+        self.embedded_tools["hex_editor"] = qwidget
+
+        self._wire_hex_editor_state(raw_widget)
+
+        _logger.info("hex_editor_tab_added", tab="Hex Editor")
+        return self._hex_editor_panel
 
     def add_x64dbg_tab(self, *, is_64bit: bool = True) -> X64DbgWidgetProtocol | None:
         """Add the x64dbg debugger as a native panel tab.
@@ -1229,44 +1236,64 @@ class ToolOutputPanel(QFrame):
             return self._x64dbg_widget
 
         try:
-            panel_module = importlib.import_module(".panels.x64dbg_panel", "intellicrack.ui")
-            raw_widget = panel_module.X64DbgPanel()
-            self._x64dbg_widget = cast("X64DbgWidgetProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
-            self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
-            tab_name = "x64dbg" if is_64bit else "x32dbg"
-            self.tab_widget.addTab(qwidget, tab_name)
-            self.embedded_tools["x64dbg"] = qwidget
-
-            bridge: Any | None = None
-            reg_getter = getattr(self._tool_registry, "get_x64dbg_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("x64dbg_bridge_from_registry", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("x64dbg_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
-                    bridge = bridge_module.X64DbgBridge()
-                except (RuntimeError, ImportError, AttributeError) as bridge_err:
-                    _logger.warning("x64dbg_bridge_create_failed", error=str(bridge_err))
-
-            if bridge is not None:
-                self._x64dbg_widget.set_bridge(bridge)
-                self.x64dbg_bridge = bridge
-                self._wire_stack_viewer_bridges()
-                _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
-
-            _logger.info("x64dbg_tab_added", is_64bit=is_64bit)
+            return self._create_x64dbg_panel(is_64bit=is_64bit)
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("x64dbg_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._x64dbg_widget
+
+    def _create_x64dbg_panel(self, *, is_64bit: bool) -> X64DbgWidgetProtocol:
+        """Construct and wire the x64dbg panel and its bridge.
+
+        Args:
+            is_64bit: Whether to use 64-bit mode (True) or 32-bit (False).
+
+        Returns:
+            X64DbgWidgetProtocol: The created X64DbgPanel.
+        """
+        panel_module = importlib.import_module(".panels.x64dbg_panel", "intellicrack.ui")
+        raw_widget = panel_module.X64DbgPanel()
+        self._x64dbg_widget = cast("X64DbgWidgetProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._x64dbg_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("x64dbg"))
+        self._x64dbg_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("x64dbg"))
+        tab_name = "x64dbg" if is_64bit else "x32dbg"
+        self.tab_widget.addTab(qwidget, tab_name)
+        self.embedded_tools["x64dbg"] = qwidget
+
+        bridge = self._resolve_x64dbg_bridge()
+
+        if bridge is not None:
+            self._x64dbg_widget.set_bridge(bridge)
+            self.x64dbg_bridge = bridge
+            self._wire_stack_viewer_bridges()
+            _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
+
+        _logger.info("x64dbg_tab_added", is_64bit=is_64bit)
+        return self._x64dbg_widget
+
+    def _resolve_x64dbg_bridge(self) -> X64DbgBridge | None:
+        """Resolve the x64dbg bridge from registry or construct a new one.
+
+        Returns:
+            X64DbgBridge | None: The resolved bridge instance, or None when unavailable.
+        """
+        bridge: X64DbgBridge | None = None
+        reg_getter = getattr(self._tool_registry, "get_x64dbg_bridge", None)
+        if callable(reg_getter):
+            try:
+                bridge = cast("X64DbgBridge", reg_getter())
+                _logger.info("x64dbg_bridge_from_registry", source="registry")
+            except (RuntimeError, ImportError, AttributeError):
+                _logger.debug("x64dbg_bridge_registry_fallback", exc_info=True)
+
+        if bridge is None:
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.x64dbg")
+                bridge = bridge_module.X64DbgBridge()
+            except (RuntimeError, ImportError, AttributeError) as bridge_err:
+                _logger.warning("x64dbg_bridge_create_failed", error=str(bridge_err))
+
+        return bridge
 
     def add_cutter_tab(self) -> CutterWidgetProtocol | None:
         """Add the Cutter reverse engineering panel as a native tab.
@@ -1278,42 +1305,59 @@ class ToolOutputPanel(QFrame):
             return self._cutter_widget
 
         try:
-            panel_module = importlib.import_module(".panels.cutter_panel", "intellicrack.ui")
-            raw_widget = panel_module.CutterPanel()
-            self._cutter_widget = cast("CutterWidgetProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
-            self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
-            self.tab_widget.addTab(qwidget, "Cutter")
-            self.embedded_tools["cutter"] = qwidget
-
-            bridge: Any | None = None
-            reg_getter = getattr(self._tool_registry, "get_cutter_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("cutter_bridge_from_registry", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("cutter_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.cutter")
-                    bridge = bridge_module.CutterBridge()
-                except (RuntimeError, ImportError, AttributeError) as bridge_err:
-                    _logger.warning("cutter_bridge_create_failed", error=str(bridge_err))
-
-            if bridge is not None:
-                self._cutter_widget.set_bridge(bridge)
-                self.cutter_bridge = bridge
-                _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
-
-            _logger.info("cutter_tab_added", tab="Cutter")
+            return self._create_cutter_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("cutter_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._cutter_widget
+
+    def _create_cutter_panel(self) -> CutterWidgetProtocol:
+        """Construct and wire the Cutter panel and its bridge.
+
+        Returns:
+            CutterWidgetProtocol: The created CutterPanel.
+        """
+        panel_module = importlib.import_module(".panels.cutter_panel", "intellicrack.ui")
+        raw_widget = panel_module.CutterPanel()
+        self._cutter_widget = cast("CutterWidgetProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._cutter_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("cutter"))
+        self._cutter_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("cutter"))
+        self.tab_widget.addTab(qwidget, "Cutter")
+        self.embedded_tools["cutter"] = qwidget
+
+        bridge = self._resolve_cutter_bridge()
+
+        if bridge is not None:
+            self._cutter_widget.set_bridge(bridge)
+            self.cutter_bridge = bridge
+            _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
+
+        _logger.info("cutter_tab_added", tab="Cutter")
+        return self._cutter_widget
+
+    def _resolve_cutter_bridge(self) -> CutterBridge | None:
+        """Resolve the Cutter bridge from registry or construct a new one.
+
+        Returns:
+            CutterBridge | None: The resolved bridge instance, or None when unavailable.
+        """
+        bridge: CutterBridge | None = None
+        reg_getter = getattr(self._tool_registry, "get_cutter_bridge", None)
+        if callable(reg_getter):
+            try:
+                bridge = cast("CutterBridge", reg_getter())
+                _logger.info("cutter_bridge_from_registry", source="registry")
+            except (RuntimeError, ImportError, AttributeError):
+                _logger.debug("cutter_bridge_registry_fallback", exc_info=True)
+
+        if bridge is None:
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.cutter")
+                bridge = bridge_module.CutterBridge()
+            except (RuntimeError, ImportError, AttributeError) as bridge_err:
+                _logger.warning("cutter_bridge_create_failed", error=str(bridge_err))
+
+        return bridge
 
     def add_ghidra_tab(self) -> GhidraWidgetProtocol | None:
         """Add the Ghidra analysis panel as a native tab.
@@ -1325,42 +1369,59 @@ class ToolOutputPanel(QFrame):
             return self._ghidra_widget
 
         try:
-            panel_module = importlib.import_module(".panels.ghidra_panel", "intellicrack.ui")
-            raw_widget = panel_module.GhidraPanel()
-            self._ghidra_widget = cast("GhidraWidgetProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
-            self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
-            self.tab_widget.addTab(qwidget, "Ghidra")
-            self.embedded_tools["ghidra"] = qwidget
-
-            bridge: Any | None = None
-            reg_getter = getattr(self._tool_registry, "get_ghidra_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("ghidra_bridge_from_registry", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("ghidra_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
-                    bridge = bridge_module.GhidraBridge()
-                except (RuntimeError, ImportError, AttributeError) as bridge_err:
-                    _logger.warning("ghidra_bridge_create_failed", error=str(bridge_err))
-
-            if bridge is not None:
-                self._ghidra_widget.set_bridge(bridge)
-                self.ghidra_bridge = bridge
-                _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
-
-            _logger.info("ghidra_tab_added", tab="Ghidra")
+            return self._create_ghidra_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("ghidra_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._ghidra_widget
+
+    def _create_ghidra_panel(self) -> GhidraWidgetProtocol:
+        """Construct and wire the Ghidra panel and its bridge.
+
+        Returns:
+            GhidraWidgetProtocol: The created GhidraPanel.
+        """
+        panel_module = importlib.import_module(".panels.ghidra_panel", "intellicrack.ui")
+        raw_widget = panel_module.GhidraPanel()
+        self._ghidra_widget = cast("GhidraWidgetProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._ghidra_widget.tool_started.connect(lambda: self.embedded_tool_started.emit("ghidra"))
+        self._ghidra_widget.tool_closed.connect(lambda: self.embedded_tool_closed.emit("ghidra"))
+        self.tab_widget.addTab(qwidget, "Ghidra")
+        self.embedded_tools["ghidra"] = qwidget
+
+        bridge = self._resolve_ghidra_bridge()
+
+        if bridge is not None:
+            self._ghidra_widget.set_bridge(bridge)
+            self.ghidra_bridge = bridge
+            _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
+
+        _logger.info("ghidra_tab_added", tab="Ghidra")
+        return self._ghidra_widget
+
+    def _resolve_ghidra_bridge(self) -> GhidraBridge | None:
+        """Resolve the Ghidra bridge from registry or construct a new one.
+
+        Returns:
+            GhidraBridge | None: The resolved bridge instance, or None when unavailable.
+        """
+        bridge: GhidraBridge | None = None
+        reg_getter = getattr(self._tool_registry, "get_ghidra_bridge", None)
+        if callable(reg_getter):
+            try:
+                bridge = cast("GhidraBridge", reg_getter())
+                _logger.info("ghidra_bridge_from_registry", source="registry")
+            except (RuntimeError, ImportError, AttributeError):
+                _logger.debug("ghidra_bridge_registry_fallback", exc_info=True)
+
+        if bridge is None:
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.ghidra")
+                bridge = bridge_module.GhidraBridge()
+            except (RuntimeError, ImportError, AttributeError) as bridge_err:
+                _logger.warning("ghidra_bridge_create_failed", error=str(bridge_err))
+
+        return bridge
 
     def add_frida_tab(self) -> FridaPanelProtocol | None:
         """Add the Frida instrumentation panel as a tab.
@@ -1372,45 +1433,62 @@ class ToolOutputPanel(QFrame):
             return self._frida_panel
 
         try:
-            panel_module = importlib.import_module(".panels.frida_panel", "intellicrack.ui")
-            raw_widget = panel_module.FridaPanel()
-            self._frida_panel = cast("FridaPanelProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
-            self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
-            self.tab_widget.addTab(qwidget, "Frida")
-            self.panels["frida"] = qwidget
-
-            bridge: Any | None = None
-            reg_getter = getattr(self._tool_registry, "get_frida_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("frida_bridge_from_registry", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("frida_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
-                    new_bridge = bridge_module.FridaBridge()
-                    run_bridge_coroutine(new_bridge.initialize())
-                    bridge = new_bridge
-                except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
-                    _logger.warning("frida_bridge_create_failed", error=str(bridge_err))
-
-            if bridge is not None:
-                self._frida_panel.set_bridge(bridge)
-                self.frida_bridge = bridge
-                self._wire_stack_viewer_bridges()
-                _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
-
-            _logger.info("frida_tab_added", tab="Frida")
+            return self._create_frida_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("frida_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._frida_panel
+
+    def _create_frida_panel(self) -> FridaPanelProtocol:
+        """Construct and wire the Frida panel and its bridge.
+
+        Returns:
+            FridaPanelProtocol: The created FridaPanel.
+        """
+        panel_module = importlib.import_module(".panels.frida_panel", "intellicrack.ui")
+        raw_widget = panel_module.FridaPanel()
+        self._frida_panel = cast("FridaPanelProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._frida_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("frida"))
+        self._frida_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("frida"))
+        self.tab_widget.addTab(qwidget, "Frida")
+        self.panels["frida"] = qwidget
+
+        bridge = self._resolve_frida_bridge()
+
+        if bridge is not None:
+            self._frida_panel.set_bridge(bridge)
+            self.frida_bridge = bridge
+            self._wire_stack_viewer_bridges()
+            _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
+
+        _logger.info("frida_tab_added", tab="Frida")
+        return self._frida_panel
+
+    def _resolve_frida_bridge(self) -> FridaBridge | None:
+        """Resolve the Frida bridge from registry or construct a new one.
+
+        Returns:
+            FridaBridge | None: The resolved bridge instance, or None when unavailable.
+        """
+        bridge: FridaBridge | None = None
+        reg_getter = getattr(self._tool_registry, "get_frida_bridge", None)
+        if callable(reg_getter):
+            try:
+                bridge = cast("FridaBridge", reg_getter())
+                _logger.info("frida_bridge_from_registry", source="registry")
+            except (RuntimeError, ImportError, AttributeError):
+                _logger.debug("frida_bridge_registry_fallback", exc_info=True)
+
+        if bridge is None:
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.frida_bridge")
+                new_bridge = bridge_module.FridaBridge()
+                run_bridge_coroutine(new_bridge.initialize())
+                bridge = new_bridge
+            except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
+                _logger.warning("frida_bridge_create_failed", error=str(bridge_err))
+
+        return bridge
 
     def add_process_tab(self) -> ProcessPanelProtocol | None:
         """Add the process management panel as a tab.
@@ -1425,44 +1503,61 @@ class ToolOutputPanel(QFrame):
             return self._process_panel
 
         try:
-            panel_module = importlib.import_module(".panels.process_panel", "intellicrack.ui")
-            raw_widget = panel_module.ProcessPanel()
-            self._process_panel = cast("ProcessPanelProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
-            self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
-            self.tab_widget.addTab(qwidget, "Process")
-            self.panels["process"] = qwidget
-
-            bridge: Any | None = None
-            reg_getter = getattr(self._tool_registry, "get_process_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    _logger.info("process_bridge_from_registry", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("process_bridge_registry_fallback", exc_info=True)
-
-            if bridge is None:
-                try:
-                    bridge_module = importlib.import_module("intellicrack.bridges.process")
-                    new_bridge = bridge_module.ProcessBridge()
-                    run_bridge_coroutine(new_bridge.initialize())
-                    bridge = new_bridge
-                except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
-                    _logger.warning("process_bridge_create_failed", error=str(bridge_err))
-
-            if bridge is not None:
-                self._process_panel.set_bridge(bridge)
-                self.process_bridge = bridge
-                _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
-
-            _logger.info("process_tab_added", tab="Processes")
+            return self._create_process_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("process_tab_add_failed", error=str(e))
             return None
-        else:
-            return self._process_panel
+
+    def _create_process_panel(self) -> ProcessPanelProtocol:
+        """Construct and wire the process management panel and its bridge.
+
+        Returns:
+            ProcessPanelProtocol: The created ProcessPanel.
+        """
+        panel_module = importlib.import_module(".panels.process_panel", "intellicrack.ui")
+        raw_widget = panel_module.ProcessPanel()
+        self._process_panel = cast("ProcessPanelProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self._process_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("process"))
+        self._process_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("process"))
+        self.tab_widget.addTab(qwidget, "Process")
+        self.panels["process"] = qwidget
+
+        bridge = self._resolve_process_bridge()
+
+        if bridge is not None:
+            self._process_panel.set_bridge(bridge)
+            self.process_bridge = bridge
+            _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
+
+        _logger.info("process_tab_added", tab="Processes")
+        return self._process_panel
+
+    def _resolve_process_bridge(self) -> ProcessBridge | None:
+        """Resolve the process bridge from registry or construct a new one.
+
+        Returns:
+            ProcessBridge | None: The resolved bridge instance, or None when unavailable.
+        """
+        bridge: ProcessBridge | None = None
+        reg_getter = getattr(self._tool_registry, "get_process_bridge", None)
+        if callable(reg_getter):
+            try:
+                bridge = cast("ProcessBridge", reg_getter())
+                _logger.info("process_bridge_from_registry", source="registry")
+            except (RuntimeError, ImportError, AttributeError):
+                _logger.debug("process_bridge_registry_fallback", exc_info=True)
+
+        if bridge is None:
+            try:
+                bridge_module = importlib.import_module("intellicrack.bridges.process")
+                new_bridge = bridge_module.ProcessBridge()
+                run_bridge_coroutine(new_bridge.initialize())
+                bridge = new_bridge
+            except (RuntimeError, ImportError, AttributeError, OSError) as bridge_err:
+                _logger.warning("process_bridge_create_failed", error=str(bridge_err))
+
+        return bridge
 
     def add_sandbox_tab(self) -> SandboxPanelProtocol | None:
         """Add the sandbox management panel as a tab.
@@ -1474,39 +1569,46 @@ class ToolOutputPanel(QFrame):
             return self.sandbox_panel
 
         try:
-            sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
-            dialog_cls = getattr(sandbox_config_mod, "SandboxConfigDialog", None)
-            if dialog_cls is not None and not dialog_cls().is_sandbox_available():
-                _logger.info("sandbox_not_available_skipping_tab", tab="Sandbox")
-                return None
-
-            panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
-            raw_widget = panel_module.SandboxPanel()
-            self.sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
-            qwidget = cast("QWidget", raw_widget)
-            self.sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
-            self.sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
-            self.tab_widget.addTab(qwidget, "Sandbox")
-            self.panels["sandbox"] = qwidget
-
-            if self._pending_sandbox_bridge is not None:
-                if hasattr(self.sandbox_panel, "set_bridge"):
-                    self.sandbox_panel.set_bridge(self._pending_sandbox_bridge)
-                self._pending_sandbox_bridge = None
-
-            monitor_cls = getattr(sandbox_config_mod, "SandboxMonitorWidget", None)
-            if monitor_cls is not None:
-                monitor = monitor_cls(parent=qwidget)
-                layout = qwidget.layout()
-                if layout is not None:
-                    layout.addWidget(monitor)
-
-            _logger.info("sandbox_tab_added", tab="Sandbox")
+            return self._create_sandbox_panel()
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.warning("sandbox_tab_add_failed", error=str(e))
             return None
-        else:
-            return self.sandbox_panel
+
+    def _create_sandbox_panel(self) -> SandboxPanelProtocol | None:
+        """Construct and wire the sandbox management panel and its monitor.
+
+        Returns:
+            SandboxPanelProtocol | None: The created SandboxPanel, or None when sandbox is unavailable.
+        """
+        sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
+        dialog_cls = getattr(sandbox_config_mod, "SandboxConfigDialog", None)
+        if dialog_cls is not None and not dialog_cls().is_sandbox_available():
+            _logger.info("sandbox_not_available_skipping_tab", tab="Sandbox")
+            return None
+
+        panel_module = importlib.import_module(".panels.sandbox_panel", "intellicrack.ui")
+        raw_widget = panel_module.SandboxPanel()
+        self.sandbox_panel = cast("SandboxPanelProtocol", raw_widget)
+        qwidget = cast("QWidget", raw_widget)
+        self.sandbox_panel.tool_started.connect(lambda: self.embedded_tool_started.emit("sandbox"))
+        self.sandbox_panel.tool_closed.connect(lambda: self.embedded_tool_closed.emit("sandbox"))
+        self.tab_widget.addTab(qwidget, "Sandbox")
+        self.panels["sandbox"] = qwidget
+
+        if self._pending_sandbox_bridge is not None:
+            if hasattr(self.sandbox_panel, "set_bridge"):
+                self.sandbox_panel.set_bridge(self._pending_sandbox_bridge)
+            self._pending_sandbox_bridge = None
+
+        monitor_cls = getattr(sandbox_config_mod, "SandboxMonitorWidget", None)
+        if monitor_cls is not None:
+            monitor = monitor_cls(parent=qwidget)
+            layout = qwidget.layout()
+            if layout is not None:
+                layout.addWidget(monitor)
+
+        _logger.info("sandbox_tab_added", tab="Sandbox")
+        return self.sandbox_panel
 
     def open_in_ghidra(self, file_path: Path | str) -> bool:
         """Open a file in the embedded Ghidra tool.
@@ -2203,36 +2305,73 @@ class ToolOutputPanel(QFrame):
             panel_widget: The HexEditorPanel instance.
         """
         try:
-            state_mod = importlib.import_module("intellicrack.bridges.hex_state")
-            state_holder = state_mod.HexDocumentState()
-
-            set_state = getattr(panel_widget, "set_state_holder", None)
-            if callable(set_state):
-                set_state(state_holder)
-
-            reg_getter = getattr(self._tool_registry, "get_hex_editor_bridge", None)
-            if callable(reg_getter):
-                try:
-                    bridge = reg_getter()
-                    bridge_set_state = getattr(bridge, "set_state_holder", None)
-                    if callable(bridge_set_state):
-                        bridge_set_state(state_holder)
-                    bridge_set_reg = getattr(bridge, "set_tool_registry", None)
-                    if callable(bridge_set_reg):
-                        bridge_set_reg(self._tool_registry)
-                    panel_set_bridge = getattr(panel_widget, "set_bridge", None)
-                    if callable(panel_set_bridge):
-                        panel_set_bridge(bridge)
-                    _logger.info("hex_editor_state_wired", source="registry")
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
-
-            context_signal = getattr(panel_widget, "context_push_requested", None)
-            if context_signal is not None and hasattr(context_signal, "connect"):
-                context_signal.connect(self._on_hex_context_push)
-
+            self._wire_hex_editor_state_impl(panel_widget)
         except (RuntimeError, ImportError, AttributeError):
             _logger.debug("hex_editor_state_wire_failed", exc_info=True)
+
+    def _wire_hex_editor_state_impl(self, panel_widget: HexEditorPanel) -> None:
+        """Build the shared HexDocumentState and connect it to bridge and panel.
+
+        Args:
+            panel_widget: The HexEditorPanel instance.
+        """
+        state_mod = importlib.import_module("intellicrack.bridges.hex_state")
+        state_holder = state_mod.HexDocumentState()
+
+        set_state = getattr(panel_widget, "set_state_holder", None)
+        if callable(set_state):
+            set_state(state_holder)
+
+        reg_getter = getattr(self._tool_registry, "get_hex_editor_bridge", None)
+        if callable(reg_getter):
+            self._attach_hex_editor_bridge(panel_widget, reg_getter, state_holder)
+
+        context_signal = getattr(panel_widget, "context_push_requested", None)
+        if context_signal is not None and hasattr(context_signal, "connect"):
+            context_signal.connect(self._on_hex_context_push)
+
+    def _attach_hex_editor_bridge(
+        self,
+        panel_widget: HexEditorPanel,
+        reg_getter: Callable[[], Any],
+        state_holder: HexDocumentState,
+    ) -> None:
+        """Resolve the hex editor bridge from the registry and wire it.
+
+        Args:
+            panel_widget: The HexEditorPanel instance receiving the bridge.
+            reg_getter: Zero-argument callable returning the bridge instance.
+            state_holder: Shared HexDocumentState instance to propagate.
+        """
+        try:
+            self._attach_hex_editor_bridge_impl(panel_widget, reg_getter, state_holder)
+        except (RuntimeError, ImportError, AttributeError):
+            _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
+
+    def _attach_hex_editor_bridge_impl(
+        self,
+        panel_widget: HexEditorPanel,
+        reg_getter: Callable[[], Any],
+        state_holder: HexDocumentState,
+    ) -> None:
+        """Apply the hex editor bridge wiring once it has been resolved.
+
+        Args:
+            panel_widget: The HexEditorPanel instance receiving the bridge.
+            reg_getter: Zero-argument callable returning the bridge instance.
+            state_holder: Shared HexDocumentState instance to propagate.
+        """
+        bridge = reg_getter()
+        bridge_set_state = getattr(bridge, "set_state_holder", None)
+        if callable(bridge_set_state):
+            bridge_set_state(state_holder)
+        bridge_set_reg = getattr(bridge, "set_tool_registry", None)
+        if callable(bridge_set_reg):
+            bridge_set_reg(self._tool_registry)
+        panel_set_bridge = getattr(panel_widget, "set_bridge", None)
+        if callable(panel_set_bridge):
+            panel_set_bridge(bridge)
+        _logger.info("hex_editor_state_wired", source="registry")
 
     def _on_hex_context_push(self, context: dict[str, object]) -> None:
         """Handle hex editor context push for AI integration.

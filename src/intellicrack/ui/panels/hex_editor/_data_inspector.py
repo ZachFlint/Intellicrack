@@ -58,6 +58,58 @@ class DataInspectorMixin:
     _encode_output: QLabel | None
     _encode_combo: QComboBox | None
 
+    def _populate_data_inspector(self, tree: QTreeWidget, offset: int) -> None:
+        """Inspect ``offset`` and populate ``tree`` with the decoded fields.
+
+        Args:
+            tree: Inspector tree widget to fill.
+            offset: Byte offset to inspect.
+        """
+        document: Any = self.document
+        if document is None:
+            return
+        result = document.inspect_at(offset)
+        if not isinstance(result, dict):
+            return
+        typed_result = cast("dict[str, object]", result)
+
+        display_order = [
+            "int8",
+            "uint8",
+            "ascii_char",
+            "utf8_char",
+            "int16_le",
+            "uint16_le",
+            "int16_be",
+            "uint16_be",
+            "int32_le",
+            "uint32_le",
+            "int32_be",
+            "uint32_be",
+            "float32_le",
+            "float32_be",
+            "int64_le",
+            "uint64_le",
+            "int64_be",
+            "uint64_be",
+            "float64_le",
+            "float64_be",
+            "unix_timestamp",
+            "dos_date",
+            "dos_time",
+            "filetime",
+        ]
+
+        for key in display_order:
+            if key in typed_result:
+                item = QTreeWidgetItem([key, str(typed_result[key])])
+                tree.addTopLevelItem(item)
+
+        for key, val in sorted(typed_result.items()):
+            if key not in display_order:
+                item = QTreeWidgetItem([key, str(val)])
+                tree.addTopLevelItem(item)
+
     def _update_data_inspector(self, offset: int) -> None:
         """Update the data inspector tree for the given offset.
 
@@ -69,48 +121,7 @@ class DataInspectorMixin:
 
         self._data_inspector_tree.clear()
         try:
-            result = self.document.inspect_at(offset)
-            if not isinstance(result, dict):
-                return
-            typed_result = cast("dict[str, object]", result)
-
-            display_order = [
-                "int8",
-                "uint8",
-                "ascii_char",
-                "utf8_char",
-                "int16_le",
-                "uint16_le",
-                "int16_be",
-                "uint16_be",
-                "int32_le",
-                "uint32_le",
-                "int32_be",
-                "uint32_be",
-                "float32_le",
-                "float32_be",
-                "int64_le",
-                "uint64_le",
-                "int64_be",
-                "uint64_be",
-                "float64_le",
-                "float64_be",
-                "unix_timestamp",
-                "dos_date",
-                "dos_time",
-                "filetime",
-            ]
-
-            for key in display_order:
-                if key in typed_result:
-                    item = QTreeWidgetItem([key, str(typed_result[key])])
-                    self._data_inspector_tree.addTopLevelItem(item)
-
-            for key, val in sorted(typed_result.items()):
-                if key not in display_order:
-                    item = QTreeWidgetItem([key, str(val)])
-                    self._data_inspector_tree.addTopLevelItem(item)
-
+            self._populate_data_inspector(self._data_inspector_tree, offset)
         except (AttributeError, ValueError, TypeError):
             _logger.exception("inspector_update_failed")
 

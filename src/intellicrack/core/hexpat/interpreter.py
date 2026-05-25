@@ -13,7 +13,7 @@ import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from intellicrack.core.hexpat.ast_nodes import ForStmt, FunctionDecl, MatchStmt, WhileStmt
+from intellicrack.core.hexpat.ast_nodes import DeclNode, ForStmt, FunctionDecl, MatchStmt, StmtNode, WhileStmt
 from intellicrack.core.hexpat.data_reader import DataReader
 from intellicrack.core.hexpat.errors import HexPatError
 from intellicrack.core.hexpat.evaluator import HexPatEvaluator
@@ -227,6 +227,26 @@ class HexPatInterpreter:
         self._last_type_registry = type_registry
         return result
 
+    def _parse_for_compile_check(self, source: str) -> list[DeclNode | StmtNode]:
+        """Preprocess, lex, and parse a pattern for JSON-compile eligibility.
+
+        Propagates :class:`HexPatError` from the preprocessor, lexer, or
+        parser when ``source`` is not a valid pattern. The caller treats that
+        propagation as "not eligible for the fast JSON path".
+
+        Args:
+            source: The ``.hexpat`` source code being inspected.
+
+        Returns:
+            list[DeclNode | StmtNode]: The fully parsed top-level program AST.
+        """
+        preprocessor = HexPatPreprocessor(self._include_paths)
+        processed_source, _pragma = preprocessor.process(source)
+        lexer = HexPatLexer(processed_source)
+        tokens = lexer.tokenize()
+        parser = HexPatParser(tokens)
+        return parser.parse()
+
     def can_compile_to_json(self, source: str) -> bool:
         """Check if a pattern can be compiled to JSON for the fast Rust path.
 
@@ -241,12 +261,7 @@ class HexPatInterpreter:
             bool: True if the pattern can be compiled to JSON.
         """
         try:
-            preprocessor = HexPatPreprocessor(self._include_paths)
-            processed_source, _pragma = preprocessor.process(source)
-            lexer = HexPatLexer(processed_source)
-            tokens = lexer.tokenize()
-            parser = HexPatParser(tokens)
-            program = parser.parse()
+            program = self._parse_for_compile_check(source)
         except HexPatError as exc:
             _logger.debug("hexpat_can_compile_to_json_rejected", reason=str(exc))
             return False

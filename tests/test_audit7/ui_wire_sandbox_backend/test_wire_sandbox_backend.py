@@ -275,16 +275,38 @@ class TestPreRegisteredSandboxStartupWiring:
         )
         window = MainWindow(real_config, orchestrator)
         try:
-            _wire_preregistered_sandbox(window, orchestrator)
-
-            wired_bridge = window.tool_panel.get_sandbox_bridge()
-            assert isinstance(wired_bridge, SandboxBridge)
-            assert wired_bridge.manager is manager
-            assert any(inst.sandbox is sandbox for inst in manager.instances)
-            assert window.sandbox_manager is manager
+            TestPreRegisteredSandboxStartupWiring._assert_preregistered_sandbox_wired(
+                window,
+                orchestrator,
+                manager,
+                sandbox,
+            )
         finally:
             window.close()
             window.deleteLater()
+
+    @staticmethod
+    def _assert_preregistered_sandbox_wired(
+        window: MainWindow,
+        orchestrator: Orchestrator,
+        manager: SandboxManager,
+        sandbox: object,
+    ) -> None:
+        """Run the startup wiring helper and verify the sandbox bridge state.
+
+        Args:
+            window: The MainWindow instance under test.
+            orchestrator: Orchestrator instance bound to ``window``.
+            manager: SandboxManager expected to be retained by the bridge.
+            sandbox: Pre-registered sandbox instance expected to be present.
+        """
+        _wire_preregistered_sandbox(window, orchestrator)
+
+        wired_bridge = window.tool_panel.get_sandbox_bridge()
+        assert isinstance(wired_bridge, SandboxBridge)
+        assert wired_bridge.manager is manager
+        assert any(inst.sandbox is sandbox for inst in manager.instances)
+        assert window.sandbox_manager is manager
 
     @staticmethod
     def test_startup_helper_is_noop_without_preregistration(

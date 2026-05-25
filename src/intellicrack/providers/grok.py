@@ -258,31 +258,45 @@ class GrokProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            response = await self.client.models.list()
-            models: list[ModelInfo] = []
-
-            for model_data in response.data:
-                model_id = model_data.id
-                if not self._is_chat_model(model_id):
-                    continue
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=model_id,
-                        provider=ProviderName.GROK,
-                        context_window=self._infer_context_window(model_id),
-                        supports_tools=True,
-                        supports_vision=self._infer_supports_vision(model_id),
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
-
-            return sorted(models, key=lambda m: m.id, reverse=True)
+            return await self._fetch_and_sort_models()
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self._logger.warning("grok_list_models_failed", error=str(e))
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
+
+    async def _fetch_and_sort_models(self) -> list[ModelInfo]:
+        """Fetch chat-capable models from the Grok API and sort them.
+
+        Returns:
+            list[ModelInfo]: Available chat models sorted by identifier in
+            reverse order.
+
+        Raises:
+            ProviderError: If the Grok client has not been initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        response = await self.client.models.list()
+        models: list[ModelInfo] = []
+
+        for model_data in response.data:
+            model_id = model_data.id
+            if not self._is_chat_model(model_id):
+                continue
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=model_id,
+                    provider=ProviderName.GROK,
+                    context_window=self._infer_context_window(model_id),
+                    supports_tools=True,
+                    supports_vision=self._infer_supports_vision(model_id),
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                ),
+            )
+
+        return sorted(models, key=lambda m: m.id, reverse=True)
 
     async def chat(
         self,
@@ -850,7 +864,7 @@ class GrokProvider(LLMProviderBase):
         reasoning_effort = self._reasoning_effort_for(model=model, thinking=thinking)
 
         try:
-            stream = await self._open_grok_stream(
+            async for text_chunk in self._iter_grok_stream(
                 model=model,
                 messages=grok_messages_typed,
                 temperature=temperature,
@@ -858,32 +872,8 @@ class GrokProvider(LLMProviderBase):
                 tools=grok_tools_typed,
                 tool_choice=tool_choice_value,
                 reasoning_effort=reasoning_effort,
-            )
-
-            tc_buffer = ToolCallBufferManager()
-
-            async for chunk in stream:
-                if self._cancel_requested:
-                    break
-                chunk_usage = getattr(chunk, "usage", None)
-                if chunk_usage is not None:
-                    self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    yield delta.content
-                if delta.tool_calls:
-                    for tc_delta in delta.tool_calls:
-                        tc_buffer.accumulate(
-                            index=tc_delta.index,
-                            call_id=tc_delta.id,
-                            name=tc_delta.function.name if tc_delta.function else None,
-                            arguments=tc_delta.function.arguments if tc_delta.function else None,
-                        )
-
-            self._pending_tool_calls = tc_buffer.finalize()
-
+            ):
+                yield text_chunk
         except openai.AuthenticationError as e:
             self._logger.warning("grok_stream_auth_failed", error=str(e))
             raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
@@ -900,6 +890,68 @@ class GrokProvider(LLMProviderBase):
                 cancel_requested=self._cancel_requested,
             )
             raise ProviderError(_ERR_STREAM_FAILED % e) from e
+
+    async def _iter_grok_stream(
+        self,
+        *,
+        model: str,
+        messages: list[ChatCompletionMessageParam],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ChatCompletionToolParam] | None,
+        tool_choice: ChatCompletionToolChoiceOptionParam | None,
+        reasoning_effort: ReasoningEffort | None,
+    ) -> AsyncIterator[str]:
+        """Open the Grok stream and yield content chunks.
+
+        Updates ``self._pending_usage`` and ``self._pending_tool_calls``
+        as the stream progresses and on completion.
+
+        Args:
+            model: Model ID to use.
+            messages: OpenAI-format messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Tool definitions in OpenAI format, if any.
+            tool_choice: OpenAI-format tool-choice value, if any.
+            reasoning_effort: Resolved reasoning effort, if any.
+
+        Yields:
+            str: Text chunks as they arrive.
+        """
+        stream = await self._open_grok_stream(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=tools,
+            tool_choice=tool_choice,
+            reasoning_effort=reasoning_effort,
+        )
+
+        tc_buffer = ToolCallBufferManager()
+
+        async for chunk in stream:
+            if self._cancel_requested:
+                break
+            chunk_usage = getattr(chunk, "usage", None)
+            if chunk_usage is not None:
+                self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta.content:
+                yield delta.content
+            if delta.tool_calls:
+                for tc_delta in delta.tool_calls:
+                    tc_buffer.accumulate(
+                        index=tc_delta.index,
+                        call_id=tc_delta.id,
+                        name=tc_delta.function.name if tc_delta.function else None,
+                        arguments=tc_delta.function.arguments if tc_delta.function else None,
+                    )
+
+        self._pending_tool_calls = tc_buffer.finalize()
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""

@@ -418,27 +418,44 @@ class TemplatesMixin:
                 "Unsupported file format (PE and ELF supported).",
             )
 
+    def _read_document_bytes(self, offset: int, length: int) -> bytes | None:
+        """Read ``length`` bytes from the document at ``offset`` as ``bytes``.
+
+        Args:
+            offset: Byte offset to read from.
+            length: Number of bytes to request.
+
+        Returns:
+            bytes | None: Decoded byte payload, or ``None`` if the document is
+                missing or returned an unsupported payload type.
+        """
+        document: Any = self.document
+        if document is None:
+            return None
+        raw: object = document.read(offset, length)
+        if isinstance(raw, bytes):
+            return raw
+        if isinstance(raw, bytearray):
+            return bytes(raw)
+        if isinstance(raw, list):
+            return bytes(cast("list[int]", raw))
+        return None
+
     def _bookmark_pe_structure(self) -> None:
         """Create colored bookmarks for PE file structure regions."""
         if self.document is None:
             return
 
         try:
-            dos_raw: object = self.document.read(0, PE_DOS_HEADER_SIZE)
-            if isinstance(dos_raw, bytes):
-                dos_data = dos_raw
-            elif isinstance(dos_raw, bytearray):
-                dos_data = bytes(dos_raw)
-            elif isinstance(dos_raw, list):
-                dos_data = bytes(cast("list[int]", dos_raw))
-            else:
-                return
+            dos_data = self._read_document_bytes(0, PE_DOS_HEADER_SIZE)
         except (AttributeError, ValueError) as exc:
             _logger.warning(
                 "pe_bookmark_dos_header_read_failed",
                 exc_type=type(exc).__name__,
                 error=str(exc),
             )
+            return
+        if dos_data is None:
             return
 
         self.document.add_bookmark(0, PE_DOS_HEADER_SIZE, "DOS Header", "#FF6B6B")
@@ -449,15 +466,7 @@ class TemplatesMixin:
         e_lfanew = read_dos_e_lfanew(dos_data)
 
         try:
-            coff_raw: object = self.document.read(e_lfanew, 4 + PE_COFF_HEADER_SIZE)
-            if isinstance(coff_raw, bytes):
-                coff_data = coff_raw
-            elif isinstance(coff_raw, bytearray):
-                coff_data = bytes(coff_raw)
-            elif isinstance(coff_raw, list):
-                coff_data = bytes(cast("list[int]", coff_raw))
-            else:
-                return
+            coff_data = self._read_document_bytes(e_lfanew, 4 + PE_COFF_HEADER_SIZE)
         except (AttributeError, ValueError) as exc:
             _logger.warning(
                 "pe_bookmark_coff_header_read_failed",
@@ -465,6 +474,8 @@ class TemplatesMixin:
                 exc_type=type(exc).__name__,
                 error=str(exc),
             )
+            return
+        if coff_data is None:
             return
 
         if len(coff_data) < 4 + PE_COFF_HEADER_SIZE or coff_data[:4] != PE_SIGNATURE:
@@ -505,15 +516,7 @@ class TemplatesMixin:
         for i in range(min(num_sections, _MAX_BOOKMARK_SECTIONS)):
             sec_off = section_offset + i * 40
             try:
-                sec_raw: object = self.document.read(sec_off, 8)
-                if isinstance(sec_raw, bytes):
-                    sec_name = sec_raw.rstrip(b"\x00").decode("ascii", errors="replace")
-                elif isinstance(sec_raw, bytearray):
-                    sec_name = bytes(sec_raw).rstrip(b"\x00").decode("ascii", errors="replace")
-                elif isinstance(sec_raw, list):
-                    sec_name = bytes(cast("list[int]", sec_raw)).rstrip(b"\x00").decode("ascii", errors="replace")
-                else:
-                    sec_name = f"Section {i}"
+                sec_bytes = self._read_document_bytes(sec_off, 8)
             except (AttributeError, ValueError) as exc:
                 _logger.warning(
                     "pe_bookmark_section_read_failed",
@@ -522,7 +525,8 @@ class TemplatesMixin:
                     exc_type=type(exc).__name__,
                     error=str(exc),
                 )
-                sec_name = f"Section {i}"
+                sec_bytes = None
+            sec_name = sec_bytes.rstrip(b"\x00").decode("ascii", errors="replace") if sec_bytes is not None else f"Section {i}"
             color = section_colors[i % len(section_colors)]
             self.document.add_bookmark(sec_off, 40, sec_name, color)
             self._notify_state_data_modified(sec_off, 40, source="hex-editor.templates.auto-bookmark.pe")
@@ -536,15 +540,7 @@ class TemplatesMixin:
         self._notify_state_data_modified(0, 64, source="hex-editor.templates.auto-bookmark.elf")
 
         try:
-            ident_raw: object = self.document.read(4, 1)
-            if isinstance(ident_raw, bytes):
-                ei_class = ident_raw[0]
-            elif isinstance(ident_raw, bytearray):
-                ei_class = bytes(ident_raw)[0]
-            elif isinstance(ident_raw, list):
-                ei_class = bytes(cast("list[int]", ident_raw))[0]
-            else:
-                return
+            ident_bytes = self._read_document_bytes(4, 1)
         except (AttributeError, ValueError) as exc:
             _logger.warning(
                 "elf_bookmark_ei_class_read_failed",
@@ -552,20 +548,15 @@ class TemplatesMixin:
                 error=str(exc),
             )
             return
+        if ident_bytes is None:
+            return
+        ei_class = ident_bytes[0]
 
         is_64 = ei_class == _ELF_CLASS_64
 
         if is_64:
             try:
-                hdr_raw: object = self.document.read(32, 16)
-                if isinstance(hdr_raw, bytes):
-                    hdr = hdr_raw
-                elif isinstance(hdr_raw, bytearray):
-                    hdr = bytes(hdr_raw)
-                elif isinstance(hdr_raw, list):
-                    hdr = bytes(cast("list[int]", hdr_raw))
-                else:
-                    return
+                hdr = self._read_document_bytes(32, 16)
             except (AttributeError, ValueError) as exc:
                 _logger.warning(
                     "elf64_bookmark_header_read_failed",
@@ -573,20 +564,14 @@ class TemplatesMixin:
                     error=str(exc),
                 )
                 return
+            if hdr is None:
+                return
 
             ph_offset = int.from_bytes(hdr[:8], "little")
             sh_offset = int.from_bytes(hdr[8:16], "little")
 
             try:
-                count_raw: object = self.document.read(56, 4)
-                if isinstance(count_raw, bytes):
-                    count_data = count_raw
-                elif isinstance(count_raw, bytearray):
-                    count_data = bytes(count_raw)
-                elif isinstance(count_raw, list):
-                    count_data = bytes(cast("list[int]", count_raw))
-                else:
-                    return
+                count_data = self._read_document_bytes(56, 4)
             except (AttributeError, ValueError) as exc:
                 _logger.warning(
                     "elf64_bookmark_header_counts_read_failed",
@@ -594,26 +579,22 @@ class TemplatesMixin:
                     error=str(exc),
                 )
                 return
+            if count_data is None:
+                return
 
             ph_count = int.from_bytes(count_data[:2], "little")
             sh_count = int.from_bytes(count_data[2:4], "little")
         else:
             try:
-                hdr_raw = self.document.read(28, 8)
-                if isinstance(hdr_raw, bytes):
-                    hdr = hdr_raw
-                elif isinstance(hdr_raw, bytearray):
-                    hdr = bytes(hdr_raw)
-                elif isinstance(hdr_raw, list):
-                    hdr = bytes(cast("list[int]", hdr_raw))
-                else:
-                    return
+                hdr = self._read_document_bytes(28, 8)
             except (AttributeError, ValueError) as exc:
                 _logger.warning(
                     "elf32_bookmark_header_read_failed",
                     exc_type=type(exc).__name__,
                     error=str(exc),
                 )
+                return
+            if hdr is None:
                 return
 
             ph_offset = int.from_bytes(hdr[:4], "little")

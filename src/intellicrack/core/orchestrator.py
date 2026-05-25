@@ -1075,13 +1075,7 @@ class Orchestrator:
         loop_messages: list[Message] = []
         loop_succeeded = False
         try:
-            self._current_session.messages.append(user_message)
-            try:
-                await self._run_agent_loop(turn_messages=loop_messages)
-                loop_succeeded = True
-            finally:
-                if not loop_succeeded:
-                    self._rollback_turn_messages(user_message=user_message, turn_messages=loop_messages)
+            loop_succeeded = await self._run_user_turn(user_message=user_message, turn_messages=loop_messages)
         except asyncio.CancelledError:
             _logger.info("request_cancelled", state=self._state)
             self._state = "cancelled"
@@ -1096,6 +1090,47 @@ class Orchestrator:
 
             if loop_succeeded:
                 await self._sessions.update(self._current_session)
+
+    async def _run_user_turn(
+        self,
+        *,
+        user_message: Message,
+        turn_messages: list[Message],
+    ) -> bool:
+        """Append ``user_message`` and run a single agent loop turn.
+
+        Rolls back the in-memory session messages produced by the turn when the
+        agent loop raises so a subsequent retry does not re-send a partial
+        conversation. ``self._current_session`` must be non-``None`` when this
+        helper is invoked; callers verify that precondition before delegating.
+        ``asyncio.CancelledError`` propagates unchanged so the caller can
+        update state and re-raise. Any other exception raised by
+        ``_run_agent_loop`` propagates after the in-memory rollback runs.
+
+        Args:
+            user_message: The user message to append before running the loop.
+            turn_messages: Mutable list collecting assistant/tool messages
+                produced during the turn.
+
+        Returns:
+            bool: True when the agent loop completed successfully.
+
+        Raises:
+            RuntimeError: If ``self._current_session`` is ``None`` when the
+                helper is invoked.
+        """
+        if self._current_session is None:
+            error_message = "No active session"
+            raise RuntimeError(error_message)
+        loop_succeeded = False
+        self._current_session.messages.append(user_message)
+        try:
+            await self._run_agent_loop(turn_messages=turn_messages)
+            loop_succeeded = True
+        finally:
+            if not loop_succeeded:
+                self._rollback_turn_messages(user_message=user_message, turn_messages=turn_messages)
+        return loop_succeeded
 
     def _rollback_turn_messages(
         self,
@@ -1896,6 +1931,57 @@ class Orchestrator:
 
         return results
 
+    async def _execute_single_tool_call_success(
+        self,
+        *,
+        call: ToolCall,
+        start_time: float,
+    ) -> ToolResult:
+        """Run a tool call and build the success ``ToolResult``.
+
+        Propagates :class:`ToolError`, ``OSError``, ``RuntimeError``, and
+        ``ValueError`` from the underlying tool so the caller can convert
+        those failures into a failure ``ToolResult``.
+
+        Args:
+            call: The tool call to execute.
+            start_time: ``time.time()`` reading captured before the call so the
+                caller and this helper share a single elapsed-time origin.
+
+        Returns:
+            ToolResult: Success result.
+        """
+        result = await self._tools.execute_tool_call(
+            tool_name=call.tool_name,
+            function_name=call.function_name,
+            arguments=call.arguments,
+        )
+
+        elapsed_ms = (time.time() - start_time) * 1000
+        self._stats.successful_tool_calls += 1
+
+        _logger.info(
+            "tool_call_success",
+            tool=call.tool_name,
+            function=call.function_name,
+            duration_ms=round(elapsed_ms, 2),
+        )
+
+        if self._script_manager is not None:
+            self._script_manager.record_execution(
+                script_name=call.function_name,
+                tool_name=call.tool_name,
+                result=result,
+            )
+
+        return ToolResult(
+            call_id=call.id,
+            success=True,
+            result=result,
+            error=None,
+            duration_ms=elapsed_ms,
+        )
+
     async def _execute_single_tool_call(self, call: ToolCall) -> ToolResult:
         """Execute a single tool call.
 
@@ -1915,36 +2001,7 @@ class Orchestrator:
         )
 
         try:
-            result = await self._tools.execute_tool_call(
-                tool_name=call.tool_name,
-                function_name=call.function_name,
-                arguments=call.arguments,
-            )
-
-            elapsed_ms = (time.time() - start_time) * 1000
-            self._stats.successful_tool_calls += 1
-
-            _logger.info(
-                "tool_call_success",
-                tool=call.tool_name,
-                function=call.function_name,
-                duration_ms=round(elapsed_ms, 2),
-            )
-
-            if self._script_manager is not None:
-                self._script_manager.record_execution(
-                    script_name=call.function_name,
-                    tool_name=call.tool_name,
-                    result=result,
-                )
-
-            return ToolResult(
-                call_id=call.id,
-                success=True,
-                result=result,
-                error=None,
-                duration_ms=elapsed_ms,
-            )
+            return await self._execute_single_tool_call_success(call=call, start_time=start_time)
 
         except (ToolError, OSError, RuntimeError, ValueError) as e:
             elapsed_ms = (time.time() - start_time) * 1000
@@ -2602,6 +2659,78 @@ class Orchestrator:
         _logger.error("activate_binary_by_name_not_found", binary_name=name)
         raise ValueError(error_message)
 
+    async def _run_shutdown_steps(self, *, errors: list[Exception]) -> None:
+        """Execute every shutdown teardown step, collecting failures.
+
+        Each step is guarded so a single failure does not skip the remaining
+        steps; caught exceptions are appended to ``errors`` for the caller to
+        bundle into an :class:`ExceptionGroup` after the outer ``finally``
+        runs.
+
+        Args:
+            errors: Mutable list collecting exceptions raised by individual
+                teardown steps. ``BaseException`` subclasses are intentionally
+                not caught and propagate to the caller's ``finally`` clause.
+        """
+        self._marshal_pending_confirmations(reason="shutdown")
+        await asyncio.sleep(0)
+
+        try:
+            await self.cancel()
+        except Exception as exc:
+            _logger.exception("shutdown_cancel_failed", state=self._state)
+            errors.append(exc)
+
+        try:
+            await self._tools.shutdown()
+        except Exception as exc:
+            _logger.exception("shutdown_tools_cleanup_failed", state=self._state)
+            errors.append(exc)
+
+        if self._current_session:
+            try:
+                await self._sessions.update(self._current_session)
+            except Exception as exc:
+                _logger.exception(
+                    "shutdown_session_save_failed",
+                    session_id=self._current_session.id,
+                    state=self._state,
+                )
+                errors.append(exc)
+
+        for provider_name in self._providers.list_registered():
+            provider = self._providers.get(provider_name)
+            if provider is None:
+                continue
+            unload = getattr(provider, "unload_model", None)
+            if callable(unload):
+                try:
+                    unload_coro: Coroutine[object, object, None] = cast(
+                        "Coroutine[object, object, None]",
+                        unload(),
+                    )
+                    await unload_coro
+                    _logger.info("shutdown_provider_model_unloaded", provider=provider_name.value)
+                except Exception as exc:
+                    _logger.exception(
+                        "shutdown_provider_unload_failed",
+                        provider=provider_name.value,
+                    )
+                    errors.append(exc)
+
+        session_cleanup = getattr(self._sessions, "cleanup", None)
+        if callable(session_cleanup):
+            try:
+                cleanup_coro: Coroutine[object, object, int] = cast(
+                    "Coroutine[object, object, int]",
+                    session_cleanup(),
+                )
+                deleted: int = await cleanup_coro
+                _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
+            except Exception as exc:
+                _logger.exception("shutdown_session_cleanup_failed")
+                errors.append(exc)
+
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and cleanup resources.
 
@@ -2631,64 +2760,7 @@ class Orchestrator:
         errors: list[Exception] = []
 
         try:
-            self._marshal_pending_confirmations(reason="shutdown")
-            await asyncio.sleep(0)
-
-            try:
-                await self.cancel()
-            except Exception as exc:
-                _logger.exception("shutdown_cancel_failed", state=self._state)
-                errors.append(exc)
-
-            try:
-                await self._tools.shutdown()
-            except Exception as exc:
-                _logger.exception("shutdown_tools_cleanup_failed", state=self._state)
-                errors.append(exc)
-
-            if self._current_session:
-                try:
-                    await self._sessions.update(self._current_session)
-                except Exception as exc:
-                    _logger.exception(
-                        "shutdown_session_save_failed",
-                        session_id=self._current_session.id,
-                        state=self._state,
-                    )
-                    errors.append(exc)
-
-            for provider_name in self._providers.list_registered():
-                provider = self._providers.get(provider_name)
-                if provider is None:
-                    continue
-                unload = getattr(provider, "unload_model", None)
-                if callable(unload):
-                    try:
-                        unload_coro: Coroutine[object, object, None] = cast(
-                            "Coroutine[object, object, None]",
-                            unload(),
-                        )
-                        await unload_coro
-                        _logger.info("shutdown_provider_model_unloaded", provider=provider_name.value)
-                    except Exception as exc:
-                        _logger.exception(
-                            "shutdown_provider_unload_failed",
-                            provider=provider_name.value,
-                        )
-                        errors.append(exc)
-
-            session_cleanup = getattr(self._sessions, "cleanup", None)
-            if callable(session_cleanup):
-                try:
-                    cleanup_coro: Coroutine[object, object, int] = cast(
-                        "Coroutine[object, object, int]",
-                        session_cleanup(),
-                    )
-                    deleted: int = await cleanup_coro
-                    _logger.info("shutdown_session_cleanup_completed", deleted=deleted)
-                except Exception as exc:
-                    _logger.exception("shutdown_session_cleanup_failed")
-                    errors.append(exc)
+            await self._run_shutdown_steps(errors=errors)
         finally:
             self._current_session = None
             self._state = "idle"

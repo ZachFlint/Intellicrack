@@ -52,6 +52,8 @@ from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, Too
 if TYPE_CHECKING:
     from collections.abc import Buffer, Callable, Generator
 
+    import pefile
+
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.hexpat import HexPatInterpreter, PatternRegistry
     from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
@@ -396,6 +398,23 @@ def _is_standard_crc32(
         bool: True when the parameters match standard CRC-32.
     """
     return width == _CRC32_WIDTH and poly == _CRC32_POLY and init == _CRC32_INIT and refin and refout and xorout == _CRC32_XOROUT
+
+
+class _SandboxCopyProgress:
+    """Tracks ``save_to_sandbox`` progress so cleanup observes the latest state.
+
+    Stores the latest sandbox ``instance_id`` returned by ``create`` so
+    the caller's ``finally`` block can tear it down on partial failure,
+    plus a ``copy_succeeded`` flag flipped to True once the copy step
+    finishes without error.
+    """
+
+    __slots__ = ("copy_succeeded", "instance_id")
+
+    def __init__(self) -> None:
+        """Initialise progress with no instance and no successful copy."""
+        self.instance_id: str = ""
+        self.copy_succeeded: bool = False
 
 
 class HexEditorBridge(ToolBridgeBase):
@@ -3207,45 +3226,24 @@ class HexEditorBridge(ToolBridgeBase):
             _logger.debug("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
 
-        instance_id: str = ""
-        copy_succeeded = False
+        create_fn = getattr(sandbox_bridge, "create", None)
+        if not callable(create_fn):
+            msg = "sandbox bridge does not support create"
+            raise TypeError(msg)
+
+        progress = _SandboxCopyProgress()
         try:
-            create_fn = getattr(sandbox_bridge, "create", None)
-            if not callable(create_fn):
-                msg = "sandbox bridge does not support create"
-                raise TypeError(msg)
-
-            raw_create: object
-            _logger.debug("save_to_sandbox_create_invoked", sandbox_type=sandbox_type)
-            if _inspect_mod.iscoroutinefunction(create_fn):
-                raw_create = await create_fn(sandbox_type=sandbox_type)
-            else:
-                raw_create = await asyncio.to_thread(create_fn, sandbox_type=sandbox_type)
-            create_result = cast("dict[str, Any]", raw_create)
-
-            instance_id = str(create_result.get("instance_id", ""))
-            _logger.debug("save_to_sandbox_create_succeeded", instance_id=instance_id)
-
-            copy_fn = getattr(sandbox_bridge, "copy_to", None)
-            if callable(copy_fn):
-                _logger.debug(
-                    "save_to_sandbox_copy_to_invoked",
-                    instance_id=instance_id,
-                    source=file_path_str,
-                    dest=dest_path,
-                )
-                if _inspect_mod.iscoroutinefunction(copy_fn):
-                    await copy_fn(instance_id=instance_id, source=file_path_str, dest=dest_path)
-                else:
-                    await asyncio.to_thread(
-                        copy_fn,
-                        instance_id=instance_id,
-                        source=file_path_str,
-                        dest=dest_path,
-                    )
-                _logger.debug("save_to_sandbox_copy_to_succeeded", instance_id=instance_id)
-            copy_succeeded = True
+            await self._sandbox_create_and_copy(
+                sandbox_bridge,
+                sandbox_type,
+                file_path_str,
+                dest_path,
+                progress,
+                create_fn,
+            )
         finally:
+            instance_id = progress.instance_id
+            copy_succeeded = progress.copy_succeeded
             if not copy_succeeded and instance_id:
                 destroy_fn = getattr(sandbox_bridge, "destroy", None)
                 if callable(destroy_fn):
@@ -3271,6 +3269,61 @@ class HexEditorBridge(ToolBridgeBase):
 
         _logger.info("saved_to_sandbox", dest=dest_path, sandbox_type=sandbox_type)
         return {"sandbox_path": dest_path, "status": "copied", "instance_id": instance_id}
+
+    @staticmethod
+    async def _sandbox_create_and_copy(
+        sandbox_bridge: ToolBridgeBase,
+        sandbox_type: str,
+        file_path_str: str,
+        dest_path: str,
+        progress: _SandboxCopyProgress,
+        create_fn: Callable[..., Any],
+    ) -> None:
+        """Create a sandbox instance and copy ``file_path_str`` into it.
+
+        Updates ``progress.instance_id`` after a successful create and
+        flips ``progress.copy_succeeded`` after the copy step finishes so
+        the caller's ``finally`` block can detect partial progress.
+
+        Args:
+            sandbox_bridge: Resolved sandbox bridge to delegate to.
+            sandbox_type: Sandbox type (``"windows"`` or ``"qemu"``).
+            file_path_str: Local source path to copy into the sandbox.
+            dest_path: Destination path inside the sandbox.
+            progress: Mutable progress tracker for transactional cleanup.
+            create_fn: Pre-resolved callable returned by ``getattr`` on
+                ``sandbox_bridge`` for the ``create`` operation.
+        """
+        raw_create: object
+        _logger.debug("save_to_sandbox_create_invoked", sandbox_type=sandbox_type)
+        if _inspect_mod.iscoroutinefunction(create_fn):
+            raw_create = await create_fn(sandbox_type=sandbox_type)
+        else:
+            raw_create = await asyncio.to_thread(create_fn, sandbox_type=sandbox_type)
+        create_result = cast("dict[str, Any]", raw_create)
+
+        progress.instance_id = str(create_result.get("instance_id", ""))
+        _logger.debug("save_to_sandbox_create_succeeded", instance_id=progress.instance_id)
+
+        copy_fn = getattr(sandbox_bridge, "copy_to", None)
+        if callable(copy_fn):
+            _logger.debug(
+                "save_to_sandbox_copy_to_invoked",
+                instance_id=progress.instance_id,
+                source=file_path_str,
+                dest=dest_path,
+            )
+            if _inspect_mod.iscoroutinefunction(copy_fn):
+                await copy_fn(instance_id=progress.instance_id, source=file_path_str, dest=dest_path)
+            else:
+                await asyncio.to_thread(
+                    copy_fn,
+                    instance_id=progress.instance_id,
+                    source=file_path_str,
+                    dest=dest_path,
+                )
+            _logger.debug("save_to_sandbox_copy_to_succeeded", instance_id=progress.instance_id)
+        progress.copy_succeeded = True
 
     async def test_in_sandbox(
         self,
@@ -3941,39 +3994,52 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         try:
-            dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
-            if dos_header[:2] != b"MZ":
-                return []
-
-            e_lfanew = read_dos_e_lfanew(dos_header)
-            if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
-                return []
-
-            coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
-            _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
-            section_table_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + opt_header_size
-            count = min(num_sections, _MAX_PE_SECTIONS)
-            if count <= 0:
-                return []
-
-            section_bytes = self._read_doc_bytes(section_table_offset, count * _PE_SECTION_ENTRY_SIZE)
-            sections: list[dict[str, Any]] = [
-                {
-                    "name": section["name"],
-                    "virtual_address": section["virtual_address"],
-                    "virtual_size": section["virtual_size"],
-                    "raw_size": section["raw_size"],
-                    "raw_offset": section["raw_offset"],
-                    "characteristics": section["characteristics"],
-                }
-                for section in iterate_section_headers(section_bytes, 0, count)
-            ]
+            sections = self._collect_pe_sections()
         except (struct.error, RuntimeError, OSError):
             _logger.exception("get_pe_sections_failed")
             return []
-        else:
-            _logger.debug("get_pe_sections_completed", count=len(sections))
-            return sections
+        _logger.debug("get_pe_sections_completed", count=len(sections))
+        return sections
+
+    def _collect_pe_sections(self) -> list[dict[str, Any]]:
+        """Parse the PE COFF section table from the open document.
+
+        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
+        raised by header unpacking or document reads propagate to the
+        caller, which catches them to return an empty list.
+
+        Returns:
+            list[dict[str, Any]]: One dict per parsed section entry, or
+            an empty list when the document is not a PE, has no PE
+            signature, or declares zero capped sections.
+        """
+        dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+        if dos_header[:2] != b"MZ":
+            return []
+
+        e_lfanew = read_dos_e_lfanew(dos_header)
+        if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
+            return []
+
+        coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
+        _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
+        section_table_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE + opt_header_size
+        count = min(num_sections, _MAX_PE_SECTIONS)
+        if count <= 0:
+            return []
+
+        section_bytes = self._read_doc_bytes(section_table_offset, count * _PE_SECTION_ENTRY_SIZE)
+        return [
+            {
+                "name": section["name"],
+                "virtual_address": section["virtual_address"],
+                "virtual_size": section["virtual_size"],
+                "raw_size": section["raw_size"],
+                "raw_offset": section["raw_offset"],
+                "characteristics": section["characteristics"],
+            }
+            for section in iterate_section_headers(section_bytes, 0, count)
+        ]
 
     async def get_pe_imports(self) -> list[dict[str, Any]]:
         """Parse the PE import directory and return imports grouped by DLL.
@@ -4011,17 +4077,30 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         disk_path = self._document_disk_path_if_unmodified()
-        try:
-            if disk_path is not None:
-                _logger.debug("get_pe_imports_using_disk_path", path=str(disk_path))
-                pe = _pefile_mod.PE(name=str(disk_path), fast_load=True)
-            else:
-                data = self._read_all_doc_bytes()
-                pe = _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError):
-            _logger.exception("get_pe_imports_failed_parse")
+        pe = self._open_pe_for_inspection(disk_path, error_event="get_pe_imports_failed_parse")
+        if pe is None:
             return []
 
+        results: list[dict[str, Any]] = []
+        try:
+            results = self._walk_pe_imports(pe)
+        finally:
+            pe.close()
+
+        _logger.debug("get_pe_imports_completed", count=len(results))
+        return results
+
+    @staticmethod
+    def _walk_pe_imports(pe: pefile.PE) -> list[dict[str, Any]]:
+        """Walk ``DIRECTORY_ENTRY_IMPORT`` on ``pe`` and collect IAT entries.
+
+        Args:
+            pe: Parsed ``pefile.PE`` instance.
+
+        Returns:
+            list[dict[str, Any]]: One dict per imported symbol; an empty
+            list when the import directory cannot be walked.
+        """
         results: list[dict[str, Any]] = []
         try:
             dir_entry: dict[str, int] = getattr(_pefile_mod, "DIRECTORY_ENTRY", {})
@@ -4032,12 +4111,31 @@ class HexEditorBridge(ToolBridgeBase):
                     results.extend(_collect_import_entries(entry))
         except (AttributeError, ValueError):
             _logger.exception("get_pe_imports_failed_walk")
-            results = []
-        finally:
-            pe.close()
-
-        _logger.debug("get_pe_imports_completed", count=len(results))
+            return []
         return results
+
+    def _open_pe_for_inspection(self, disk_path: Path | None, *, error_event: str) -> pefile.PE | None:
+        """Open a ``pefile.PE`` from the document, preferring the on-disk file.
+
+        Args:
+            disk_path: Path of the unmodified document on disk, or None
+                when the document must be parsed in-memory.
+            error_event: Structured log event emitted when ``pefile``
+                fails to parse the bytes.
+
+        Returns:
+            pefile.PE | None: Parsed ``pefile.PE`` instance, or None when
+            parsing failed.
+        """
+        try:
+            if disk_path is not None:
+                _logger.debug("pe_inspect_using_disk_path", path=str(disk_path), source_event=error_event)
+                return _pefile_mod.PE(name=str(disk_path), fast_load=True)
+            data = self._read_all_doc_bytes()
+            return _pefile_mod.PE(data=data, fast_load=True)
+        except (AttributeError, ValueError, OSError):
+            _logger.exception(error_event)
+            return None
 
     async def get_pe_exports(self) -> list[dict[str, Any]]:
         """Parse the PE export directory and return exported symbols.
@@ -4073,44 +4171,68 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         disk_path = self._document_disk_path_if_unmodified()
-        try:
-            if disk_path is not None:
-                _logger.debug("get_pe_exports_using_disk_path", path=str(disk_path))
-                pe = _pefile_mod.PE(name=str(disk_path), fast_load=True)
-            else:
-                data = self._read_all_doc_bytes()
-                pe = _pefile_mod.PE(data=data, fast_load=True)
-        except (AttributeError, ValueError, OSError):
-            _logger.exception("get_pe_exports_failed_parse")
+        pe = self._open_pe_for_inspection(disk_path, error_event="get_pe_exports_failed_parse")
+        if pe is None:
             return []
 
         results: list[dict[str, Any]] = []
         try:
-            dir_entry: dict[str, int] = getattr(_pefile_mod, "DIRECTORY_ENTRY", {})
-            pe.parse_data_directories(directories=[dir_entry.get("IMAGE_DIRECTORY_ENTRY_EXPORT", 0)])
-            export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
-            if export_dir is not None:
-                raw_symbols: Any = getattr(export_dir, "symbols", None)
-                symbols: list[Any] = list(raw_symbols) if raw_symbols is not None else []
-                for exp in symbols:
-                    name_bytes: Any = getattr(exp, "name", None)
-                    ordinal_val: int = int(getattr(exp, "ordinal", 0) or 0)
-                    name_str = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
-                    address_val: int = int(getattr(exp, "address", 0) or 0)
-                    results.append(
-                        {
-                            "name": name_str,
-                            "address": address_val,
-                            "ordinal": ordinal_val,
-                        },
-                    )
-        except (AttributeError, ValueError):
-            _logger.exception("get_pe_exports_failed_walk")
-            results = []
+            results = self._walk_pe_exports(pe)
         finally:
             pe.close()
 
         _logger.debug("get_pe_exports_completed", count=len(results))
+        return results
+
+    @staticmethod
+    def _walk_pe_exports(pe: pefile.PE) -> list[dict[str, Any]]:
+        """Walk ``DIRECTORY_ENTRY_EXPORT`` on ``pe`` and collect symbols.
+
+        Args:
+            pe: Parsed ``pefile.PE`` instance.
+
+        Returns:
+            list[dict[str, Any]]: One dict per export entry; an empty
+            list when the export directory cannot be walked.
+        """
+        try:
+            return HexEditorBridge._collect_pe_export_symbols(pe)
+        except (AttributeError, ValueError):
+            _logger.exception("get_pe_exports_failed_walk")
+            return []
+
+    @staticmethod
+    def _collect_pe_export_symbols(pe: pefile.PE) -> list[dict[str, Any]]:
+        """Resolve and return all exported symbols on ``pe``.
+
+        Args:
+            pe: Parsed ``pefile.PE`` instance with the export directory
+                already parsed when present.
+
+        Returns:
+            list[dict[str, Any]]: One dict per export entry. Each dict
+            has ``name``, ``address`` and ``ordinal`` keys.
+        """
+        results: list[dict[str, Any]] = []
+        dir_entry: dict[str, int] = getattr(_pefile_mod, "DIRECTORY_ENTRY", {})
+        pe.parse_data_directories(directories=[dir_entry.get("IMAGE_DIRECTORY_ENTRY_EXPORT", 0)])
+        export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
+        if export_dir is None:
+            return results
+        raw_symbols: Any = getattr(export_dir, "symbols", None)
+        symbols: list[Any] = list(raw_symbols) if raw_symbols is not None else []
+        for exp in symbols:
+            name_bytes: Any = getattr(exp, "name", None)
+            ordinal_val: int = int(getattr(exp, "ordinal", 0) or 0)
+            name_str = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
+            address_val: int = int(getattr(exp, "address", 0) or 0)
+            results.append(
+                {
+                    "name": name_str,
+                    "address": address_val,
+                    "ordinal": ordinal_val,
+                },
+            )
         return results
 
     async def apply_transform(
@@ -5507,30 +5629,17 @@ class HexEditorBridge(ToolBridgeBase):
         key = bytes.fromhex(key_hex.replace(" ", "")) if key_hex else b""
 
         used_native = False
+        result_data: bytes = b""
         if hasattr(self.document, "transform_data"):
             params: dict[str, Any] = {}
             if operation in {"xor", "and", "or"} and key:
                 params["key"] = key
             if operation in {"shl", "shr", "rol", "ror"}:
                 params["count"] = bytes([count & 0xFF])
-            try:
-                result_raw = self.document.transform_data(transform_map[operation], start, length, params)
-                if isinstance(result_raw, bytes):
-                    result_data = result_raw
-                elif isinstance(result_raw, list):
-                    result_data = bytes(cast("list[int]", result_raw))
-                else:
-                    result_data = bytes(result_raw)
-                _logger.info("file_written", path="document", offset=hex(start), size=len(result_data), op=operation)
-                self.document.write_bytes(start, result_data)
+            native_result = self._try_native_arithmetic(operation, start, length, params, transform_map[operation])
+            if native_result is not None:
+                result_data = native_result
                 used_native = True
-            except (TypeError, ValueError, RuntimeError) as exc:
-                _logger.warning(
-                    "native_transform_failed",
-                    operation=operation,
-                    error=str(exc),
-                    exc_info=True,
-                )
 
         if not used_native:
             result_data = bytes(self._apply_arithmetic_fallback(data, operation, key, count))
@@ -5541,6 +5650,84 @@ class HexEditorBridge(ToolBridgeBase):
         if self.state_holder is not None:
             self.state_holder.notify_data_modified(start, length, source="bridge")
         return {"offset": start, "length": length, "operation": operation}
+
+    def _try_native_arithmetic(
+        self,
+        operation: str,
+        start: int,
+        length: int,
+        params: dict[str, Any],
+        native_op: str,
+    ) -> bytes | None:
+        """Invoke the document's native ``transform_data`` for ``operation``.
+
+        Args:
+            operation: User-facing operation name (used for logging).
+            start: Start offset inside the document.
+            length: Number of bytes to transform.
+            params: Native-transform parameter dict.
+            native_op: Backing native transform identifier from the
+                operation-to-transform map.
+
+        Returns:
+            bytes | None: Transformed bytes written back to the document
+            on success, or ``None`` when the native call raised and the
+            caller should fall back to the pure-Python path.
+        """
+        try:
+            result_data = self._invoke_native_transform(native_op, start, length, params, operation)
+        except (TypeError, ValueError, RuntimeError) as exc:
+            _logger.warning(
+                "native_transform_failed",
+                operation=operation,
+                error=str(exc),
+                exc_info=True,
+            )
+            return None
+        return result_data
+
+    def _invoke_native_transform(
+        self,
+        native_op: str,
+        start: int,
+        length: int,
+        params: dict[str, Any],
+        operation: str,
+    ) -> bytes:
+        """Drive ``HexDocument.transform_data`` and write the result back.
+
+        ``TypeError`` and ``ValueError`` raised by the native call
+        propagate to the caller, which catches them alongside
+        :class:`RuntimeError` to drop back to the pure-Python fallback.
+
+        Args:
+            native_op: Backing native transform identifier.
+            start: Start offset inside the document.
+            length: Number of bytes to transform.
+            params: Native-transform parameter dict.
+            operation: User-facing operation name (used for logging).
+
+        Returns:
+            bytes: Transformed bytes that were written back to the
+            document.
+
+        Raises:
+            RuntimeError: When the document was closed before invocation.
+        """
+        document = self.document
+        if document is None:
+            msg = "document closed before native transform invocation"
+            raise RuntimeError(msg)
+        result_raw = document.transform_data(native_op, start, length, params)
+        if isinstance(result_raw, bytes):
+            result_data = result_raw
+        elif isinstance(result_raw, list):
+            result_data = bytes(cast("list[int]", result_raw))
+        else:
+            result_data = bytes(result_raw)
+        _logger.info("file_written", path="document", offset=hex(start), size=len(result_data), op=operation)
+        document.write_bytes(start, result_data)
+        return result_data
 
     @staticmethod
     def _apply_arithmetic_fallback(
@@ -5975,39 +6162,53 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         try:
-            dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
-            e_lfanew = read_dos_e_lfanew(dos_header)
-            if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
-                return []
-
-            coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
-            _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
-            opt_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE
-            opt_header = self._read_doc_bytes(opt_offset, min(opt_header_size, _DOS_HEADER_SIZE))
-            is_pe64 = is_pe64_optional_header(opt_header, 0)
-            image_base = unpack_optional_header_image_base(opt_header, 0, is_pe64=is_pe64)
-
-            mappings: list[dict[str, int]] = [
-                {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
-            ]
-            if hasattr(self.document, "add_va_mapping"):
-                self.document.add_va_mapping(0, image_base, e_lfanew)
-
-            self._parse_pe_sections_va(
-                opt_offset + opt_header_size,
-                min(num_sections, _MAX_PE_SECTIONS),
-                image_base,
-                mappings,
-            )
-
-            _logger.info("pe_va_mappings_detected", count=len(mappings))
-            if self.state_holder is not None:
-                self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+            mappings = self._collect_pe_va_mappings()
         except (struct.error, RuntimeError, OSError):
             _logger.exception("pe_va_detection_failed")
             return []
-        else:
-            return mappings
+        return mappings
+
+    def _collect_pe_va_mappings(self) -> list[dict[str, int]]:
+        """Parse the PE optional header to build the document's VA mapping list.
+
+        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
+        raised while reading or unpacking propagate to the caller, which
+        catches them to return an empty list.
+
+        Returns:
+            list[dict[str, int]]: VA mapping dicts covering the headers
+            and every parsed section. An empty list is returned for
+            documents that do not have a PE signature.
+        """
+        dos_header = self._read_doc_bytes(0, _DOS_HEADER_SIZE)
+        e_lfanew = read_dos_e_lfanew(dos_header)
+        if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
+            return []
+
+        coff_header = self._read_doc_bytes(e_lfanew + 4, _PE_COFF_HEADER_SIZE)
+        _machine, num_sections, opt_header_size, _characteristics = unpack_coff_header(coff_header, 0)
+        opt_offset = e_lfanew + 4 + _PE_COFF_HEADER_SIZE
+        opt_header = self._read_doc_bytes(opt_offset, min(opt_header_size, _DOS_HEADER_SIZE))
+        is_pe64 = is_pe64_optional_header(opt_header, 0)
+        image_base = unpack_optional_header_image_base(opt_header, 0, is_pe64=is_pe64)
+
+        mappings: list[dict[str, int]] = [
+            {"file_offset": 0, "virtual_address": image_base, "length": e_lfanew},
+        ]
+        if self.document is not None and hasattr(self.document, "add_va_mapping"):
+            self.document.add_va_mapping(0, image_base, e_lfanew)
+
+        self._parse_pe_sections_va(
+            opt_offset + opt_header_size,
+            min(num_sections, _MAX_PE_SECTIONS),
+            image_base,
+            mappings,
+        )
+
+        _logger.info("pe_va_mappings_detected", count=len(mappings))
+        if self.state_holder is not None:
+            self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+        return mappings
 
     def _parse_pe_sections_va(
         self,
@@ -6047,29 +6248,42 @@ class HexEditorBridge(ToolBridgeBase):
             return []
 
         try:
-            ident = self._read_doc_bytes(0, 16)
-            is_64 = ident[4] == _ELF_CLASS_64
-            endian = "<" if ident[5] == _ELF_DATA_LE else ">"
-            phoff, phentsize, phnum = self._parse_elf_phdr_info(endian, is_64=is_64)
-
-            mappings: list[dict[str, int]] = []
-            for i in range(min(phnum, _MAX_ELF_SEGMENTS)):
-                phdr_data = self._read_doc_bytes(phoff + i * phentsize, phentsize)
-                if struct.unpack_from(f"{endian}I", phdr_data, 0)[0] != _PT_LOAD:
-                    continue
-                p_offset, p_vaddr, p_filesz = self._parse_elf_load_segment(phdr_data, endian, is_64=is_64)
-                if hasattr(self.document, "add_va_mapping"):
-                    self.document.add_va_mapping(p_offset, p_vaddr, p_filesz)
-                mappings.append({"file_offset": p_offset, "virtual_address": p_vaddr, "length": p_filesz})
-
-            _logger.info("elf_va_mappings_detected", count=len(mappings))
-            if self.state_holder is not None:
-                self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+            mappings = self._collect_elf_va_mappings()
         except (struct.error, RuntimeError, OSError):
             _logger.exception("elf_va_detection_failed")
             return []
-        else:
-            return mappings
+        return mappings
+
+    def _collect_elf_va_mappings(self) -> list[dict[str, int]]:
+        """Parse the ELF program header table to build the VA mapping list.
+
+        ``struct.error``, :class:`RuntimeError`, and :class:`OSError`
+        raised while reading or unpacking propagate to the caller, which
+        catches them to return an empty list.
+
+        Returns:
+            list[dict[str, int]]: VA mapping dicts for every ``PT_LOAD``
+            segment, capped at :data:`_MAX_ELF_SEGMENTS`.
+        """
+        ident = self._read_doc_bytes(0, 16)
+        is_64 = ident[4] == _ELF_CLASS_64
+        endian = "<" if ident[5] == _ELF_DATA_LE else ">"
+        phoff, phentsize, phnum = self._parse_elf_phdr_info(endian, is_64=is_64)
+
+        mappings: list[dict[str, int]] = []
+        for i in range(min(phnum, _MAX_ELF_SEGMENTS)):
+            phdr_data = self._read_doc_bytes(phoff + i * phentsize, phentsize)
+            if struct.unpack_from(f"{endian}I", phdr_data, 0)[0] != _PT_LOAD:
+                continue
+            p_offset, p_vaddr, p_filesz = self._parse_elf_load_segment(phdr_data, endian, is_64=is_64)
+            if self.document is not None and hasattr(self.document, "add_va_mapping"):
+                self.document.add_va_mapping(p_offset, p_vaddr, p_filesz)
+            mappings.append({"file_offset": p_offset, "virtual_address": p_vaddr, "length": p_filesz})
+
+        _logger.info("elf_va_mappings_detected", count=len(mappings))
+        if self.state_holder is not None:
+            self.state_holder.notify_va_mapping_changed(len(mappings), source="bridge")
+        return mappings
 
     def _parse_elf_phdr_info(self, endian: str, *, is_64: bool) -> tuple[int, int, int]:
         """Parse ELF header to extract program header table location.
@@ -6490,23 +6704,7 @@ class HexEditorBridge(ToolBridgeBase):
         colors = ("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4")
 
         try:
-            e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
-            self._add_bm(bookmarks, added_indices, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
-            self._add_bm(bookmarks, added_indices, e_lfanew, 4, "PE Signature", colors[1])
-
-            coff_offset = e_lfanew + 4
-            self._add_bm(bookmarks, added_indices, coff_offset, _PE_COFF_HEADER_SIZE, "COFF Header", colors[1])
-
-            coff_header = self._read_doc_bytes(coff_offset, _PE_COFF_HEADER_SIZE)
-            num_sections = struct.unpack_from("<H", coff_header, 2)[0]
-            opt_size = struct.unpack_from("<H", coff_header, 16)[0]
-            opt_offset = coff_offset + _PE_COFF_HEADER_SIZE
-            if opt_size > 0:
-                self._add_bm(bookmarks, added_indices, opt_offset, opt_size, "Optional Header", colors[2])
-
-            self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, added_indices, colors[3])
-
-            _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
+            self._populate_pe_structure_bookmarks(bookmarks, added_indices, colors)
         except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception(
                 "pe_structure_bookmark_failed",
@@ -6515,6 +6713,44 @@ class HexEditorBridge(ToolBridgeBase):
             self._rollback_bookmark_indices(added_indices)
             return []
         return bookmarks
+
+    def _populate_pe_structure_bookmarks(
+        self,
+        bookmarks: list[dict[str, Any]],
+        added_indices: list[int],
+        colors: tuple[str, str, str, str],
+    ) -> None:
+        """Append PE structural bookmarks for the open document.
+
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised by reads or unpacks propagate to the
+        caller, which rolls back any partial bookmarks before returning.
+
+        Args:
+            bookmarks: Mutable list of bookmark dicts that the helper
+                appends every successful bookmark into.
+            added_indices: Parallel list of bookmark indices used for
+                transactional rollback by the caller.
+            colors: Four-colour palette for DOS, signature/COFF,
+                optional, and per-section bookmarks.
+        """
+        e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
+        self._add_bm(bookmarks, added_indices, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
+        self._add_bm(bookmarks, added_indices, e_lfanew, 4, "PE Signature", colors[1])
+
+        coff_offset = e_lfanew + 4
+        self._add_bm(bookmarks, added_indices, coff_offset, _PE_COFF_HEADER_SIZE, "COFF Header", colors[1])
+
+        coff_header = self._read_doc_bytes(coff_offset, _PE_COFF_HEADER_SIZE)
+        num_sections = struct.unpack_from("<H", coff_header, 2)[0]
+        opt_size = struct.unpack_from("<H", coff_header, 16)[0]
+        opt_offset = coff_offset + _PE_COFF_HEADER_SIZE
+        if opt_size > 0:
+            self._add_bm(bookmarks, added_indices, opt_offset, opt_size, "Optional Header", colors[2])
+
+        self._bookmark_pe_sections(opt_offset + opt_size, num_sections, bookmarks, added_indices, colors[3])
+
+        _logger.info("pe_structure_bookmarked", bookmark_count=len(bookmarks))
 
     def _rollback_bookmark_indices(self, added_indices: list[int]) -> None:
         """Remove bookmarks that were inserted during a failed transaction.
@@ -6608,32 +6844,7 @@ class HexEditorBridge(ToolBridgeBase):
         colors = ("#FF6B6B", "#4ECDC4", "#45B7D1")
 
         try:
-            ident = self._read_doc_bytes(0, 16)
-            is_64 = ident[4] == _ELF_CLASS_64
-            endian = "<" if ident[5] == _ELF_DATA_LE else ">"
-            ehdr_size, ph_info, sh_info = self._parse_elf_bookmark_info(endian, is_64=is_64)
-
-            self._add_bm(bookmarks, added_indices, 0, ehdr_size, "ELF Header", colors[0])
-            for i in range(min(ph_info[2], _MAX_BOOKMARK_ENTRIES)):
-                self._add_bm(
-                    bookmarks,
-                    added_indices,
-                    ph_info[0] + i * ph_info[1],
-                    ph_info[1],
-                    f"Program Header {i}",
-                    colors[1],
-                )
-            for i in range(min(sh_info[2], _MAX_BOOKMARK_ENTRIES)):
-                self._add_bm(
-                    bookmarks,
-                    added_indices,
-                    sh_info[0] + i * sh_info[1],
-                    sh_info[1],
-                    f"Section Header {i}",
-                    colors[2],
-                )
-
-            _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
+            self._populate_elf_structure_bookmarks(bookmarks, added_indices, colors)
         except (struct.error, RuntimeError, OSError, ValueError):
             _logger.exception(
                 "elf_structure_bookmark_failed",
@@ -6642,6 +6853,53 @@ class HexEditorBridge(ToolBridgeBase):
             self._rollback_bookmark_indices(added_indices)
             return []
         return bookmarks
+
+    def _populate_elf_structure_bookmarks(
+        self,
+        bookmarks: list[dict[str, Any]],
+        added_indices: list[int],
+        colors: tuple[str, str, str],
+    ) -> None:
+        """Append ELF structural bookmarks for the open document.
+
+        ``struct.error``, :class:`RuntimeError`, :class:`OSError`, and
+        :class:`ValueError` raised by reads or unpacks propagate to the
+        caller, which rolls back any partial bookmarks before returning.
+
+        Args:
+            bookmarks: Mutable list of bookmark dicts that the helper
+                appends every successful bookmark into.
+            added_indices: Parallel list of bookmark indices used for
+                transactional rollback by the caller.
+            colors: Three-colour palette for the ELF header, program
+                headers, and section headers respectively.
+        """
+        ident = self._read_doc_bytes(0, 16)
+        is_64 = ident[4] == _ELF_CLASS_64
+        endian = "<" if ident[5] == _ELF_DATA_LE else ">"
+        ehdr_size, ph_info, sh_info = self._parse_elf_bookmark_info(endian, is_64=is_64)
+
+        self._add_bm(bookmarks, added_indices, 0, ehdr_size, "ELF Header", colors[0])
+        for i in range(min(ph_info[2], _MAX_BOOKMARK_ENTRIES)):
+            self._add_bm(
+                bookmarks,
+                added_indices,
+                ph_info[0] + i * ph_info[1],
+                ph_info[1],
+                f"Program Header {i}",
+                colors[1],
+            )
+        for i in range(min(sh_info[2], _MAX_BOOKMARK_ENTRIES)):
+            self._add_bm(
+                bookmarks,
+                added_indices,
+                sh_info[0] + i * sh_info[1],
+                sh_info[1],
+                f"Section Header {i}",
+                colors[2],
+            )
+
+        _logger.info("elf_structure_bookmarked", bookmark_count=len(bookmarks))
 
     def _parse_elf_bookmark_info(
         self,
@@ -7132,25 +7390,8 @@ class HexEditorBridge(ToolBridgeBase):
             msg = "value must not be empty"
             raise ValueError(msg)
 
-        parsed: int
         try:
-            if from_base == "auto":
-                if value.startswith(("0x", "0X")):
-                    parsed = int(value, 16)
-                elif value.startswith(("0b", "0B")):
-                    parsed = int(value, 2)
-                elif value.startswith(("0o", "0O")):
-                    parsed = int(value, 8)
-                else:
-                    parsed = int(value)
-            elif from_base == "hex":
-                parsed = int(value.removeprefix("0x").removeprefix("0X"), 16)
-            elif from_base == "binary":
-                parsed = int(value.removeprefix("0b").removeprefix("0B"), 2)
-            elif from_base == "octal":
-                parsed = int(value.removeprefix("0o").removeprefix("0O"), 8)
-            else:
-                parsed = int(value)
+            parsed = HexEditorBridge._parse_base_value(value, from_base)
         except ValueError as exc:
             _logger.warning("base_convert_parse_failed", value=value, from_base=from_base, error=str(exc))
             msg = f"failed to parse {value!r} as {from_base}: {exc}"
@@ -7177,19 +7418,66 @@ class HexEditorBridge(ToolBridgeBase):
             result["int64_le"] = str(struct.unpack("<q", struct.pack("<Q", parsed))[0])
 
         try:
-            if 0 <= parsed <= _U32_MASK:
-                float_val: float = struct.unpack("<f", struct.pack("<I", parsed))[0]
-                if math.isfinite(float_val):
-                    result["float32_le"] = str(float_val)
-            if 0 <= parsed <= _U64_MASK:
-                double_val: float = struct.unpack("<d", struct.pack("<Q", parsed))[0]
-                if math.isfinite(double_val):
-                    result["float64_le"] = str(double_val)
+            HexEditorBridge._populate_float_views(parsed, result)
         except (struct.error, OverflowError):
             _logger.debug("base_convert_float_unpack_failed", value=value, exc_info=True)
 
         _logger.debug("base_convert", input_value=value)
         return result
+
+    @staticmethod
+    def _parse_base_value(value: str, from_base: str) -> int:
+        """Parse ``value`` as an integer using the configured base hint.
+
+        ``ValueError`` raised by :func:`int` propagates to the caller,
+        which wraps it into a descriptive message before re-raising.
+
+        Args:
+            value: Stripped string representation of the integer.
+            from_base: Base hint - one of ``"auto"``, ``"hex"``,
+                ``"binary"``, ``"octal"``, or ``"decimal"``.
+
+        Returns:
+            int: Parsed integer value.
+        """
+        if from_base == "auto":
+            if value.startswith(("0x", "0X")):
+                return int(value, 16)
+            if value.startswith(("0b", "0B")):
+                return int(value, 2)
+            if value.startswith(("0o", "0O")):
+                return int(value, 8)
+            return int(value)
+        if from_base == "hex":
+            return int(value.removeprefix("0x").removeprefix("0X"), 16)
+        if from_base == "binary":
+            return int(value.removeprefix("0b").removeprefix("0B"), 2)
+        if from_base == "octal":
+            return int(value.removeprefix("0o").removeprefix("0O"), 8)
+        return int(value)
+
+    @staticmethod
+    def _populate_float_views(parsed: int, result: dict[str, str]) -> None:
+        """Add IEEE-754 single/double views of ``parsed`` to ``result``.
+
+        ``struct.error`` and :class:`OverflowError` raised by the
+        underlying ``struct`` calls propagate to the caller, which logs
+        the failure at debug level and continues without the float
+        views.
+
+        Args:
+            parsed: Integer value being inspected.
+            result: Output dict updated in place with ``float32_le`` and
+                ``float64_le`` entries when the value fits.
+        """
+        if 0 <= parsed <= _U32_MASK:
+            float_val: float = struct.unpack("<f", struct.pack("<I", parsed))[0]
+            if math.isfinite(float_val):
+                result["float32_le"] = str(float_val)
+        if 0 <= parsed <= _U64_MASK:
+            double_val: float = struct.unpack("<d", struct.pack("<Q", parsed))[0]
+            if math.isfinite(double_val):
+                result["float64_le"] = str(double_val)
 
     @staticmethod
     async def run_python_script(source: str) -> dict[str, Any]:

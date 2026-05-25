@@ -476,39 +476,75 @@ async def test_event_handler_exception_does_not_break_request_stream(
     original_processors = list(structlog.get_config()["processors"])
     structlog.configure(processors=[signal_processor, *original_processors])
     try:
-        await client.connect()
-        try:
-
-            def respond(frame: dict[str, Any]) -> list[dict[str, Any]]:
-                """Build event-then-response replies for a single client frame.
-
-                Args:
-                    frame: The decoded client frame to reply to.
-
-                Returns:
-                    list[dict[str, Any]]: The frames to push back to the client.
-                """
-                rid = int(frame["id"])
-                return [
-                    {"type": "event", "name": "tick"},
-                    {"id": rid, "type": "response", "ok": True},
-                ]
-
-            async def server() -> None:
-                """Drive the responder once."""
-                await _run_responder(fake_pipe, respond)
-
-            task = asyncio.create_task(server())
-            response = await asyncio.wait_for(client.send_command("hello"), timeout=3.0)
-            await task
-
-            assert await asyncio.to_thread(signal_processor.event_seen.wait, 3.0), "pipe_event_handler_error was never logged"
-        finally:
-            await client.close()
+        response = await _drive_angry_handler_exchange(client, fake_pipe, signal_processor)
     finally:
         structlog.configure(processors=original_processors)
 
     assert response["ok"] is True
+
+
+async def _drive_angry_handler_exchange(
+    client: NamedPipeClient,
+    fake_pipe: _FakePipe,
+    signal_processor: _EventSignal,
+) -> dict[str, Any]:
+    """Run one request/response exchange and verify the error log appeared.
+
+    Args:
+        client: The named pipe client under test.
+        fake_pipe: The in-memory pipe driving the client.
+        signal_processor: structlog processor watching for the error event.
+
+    Returns:
+        dict[str, Any]: Response frame returned by ``send_command``.
+    """
+    await client.connect()
+    try:
+        return await _exchange_and_assert_handler_error(client, fake_pipe, signal_processor)
+    finally:
+        await client.close()
+
+
+async def _exchange_and_assert_handler_error(
+    client: NamedPipeClient,
+    fake_pipe: _FakePipe,
+    signal_processor: _EventSignal,
+) -> dict[str, Any]:
+    """Run a single command exchange and assert the error event surfaced.
+
+    Args:
+        client: Connected named pipe client.
+        fake_pipe: In-memory pipe used by the test.
+        signal_processor: structlog processor watching for the error event.
+
+    Returns:
+        dict[str, Any]: Decoded response returned by ``send_command``.
+    """
+    def respond(frame: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build event-then-response replies for a single client frame.
+
+        Args:
+            frame: The decoded client frame to reply to.
+
+        Returns:
+            list[dict[str, Any]]: The frames to push back to the client.
+        """
+        rid = int(frame["id"])
+        return [
+            {"type": "event", "name": "tick"},
+            {"id": rid, "type": "response", "ok": True},
+        ]
+
+    async def server() -> None:
+        """Drive the responder once."""
+        await _run_responder(fake_pipe, respond)
+
+    task = asyncio.create_task(server())
+    response = await asyncio.wait_for(client.send_command("hello"), timeout=3.0)
+    await task
+
+    assert await asyncio.to_thread(signal_processor.event_seen.wait, 3.0), "pipe_event_handler_error was never logged"
+    return response
 
 
 @pytest.mark.asyncio
@@ -533,39 +569,60 @@ async def test_event_handler_runs_outside_write_lock(
     _bind_fake_pipe(client, fake_pipe)
     await client.connect()
     try:
-        fake_pipe.push_server_frame({"type": "event", "name": "boot"})
-        for _ in range(200):
-            if handler_started.is_set():
-                break
-            await asyncio.sleep(0.01)
-        assert handler_started.is_set(), "event handler never executed"
-
-        def respond(frame: dict[str, Any]) -> list[dict[str, Any]]:
-            """Build a single ok response frame for the matching id.
-
-            Args:
-                frame: Decoded client frame.
-
-            Returns:
-                list[dict[str, Any]]: Response frames to push back.
-            """
-            return [{"id": int(frame["id"]), "type": "response", "ok": True}]
-
-        async def server_inner() -> None:
-            """Drive the responder once."""
-            await _run_responder(fake_pipe, respond, deadline_s=3.0)
-
-        responder = asyncio.create_task(server_inner())
-        try:
-            response = await asyncio.wait_for(client.send_command("ping"), timeout=3.0)
-        finally:
-            release_handler.set()
-            await responder
+        response = await _drive_slow_handler_exchange(client, fake_pipe, handler_started, release_handler)
     finally:
         release_handler.set()
         await client.close()
 
     assert response["ok"] is True
+
+
+async def _drive_slow_handler_exchange(
+    client: NamedPipeClient,
+    fake_pipe: _FakePipe,
+    handler_started: threading.Event,
+    release_handler: threading.Event,
+) -> dict[str, Any]:
+    """Run the slow-handler exchange and return the response frame.
+
+    Args:
+        client: Connected named pipe client.
+        fake_pipe: In-memory pipe driving the client.
+        handler_started: Event flipped once the slow handler is running.
+        release_handler: Event used to release the slow handler.
+
+    Returns:
+        dict[str, Any]: Decoded response frame for the ``ping`` command.
+    """
+    fake_pipe.push_server_frame({"type": "event", "name": "boot"})
+    for _ in range(200):
+        if handler_started.is_set():
+            break
+        await asyncio.sleep(0.01)
+    assert handler_started.is_set(), "event handler never executed"
+
+    def respond(frame: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build a single ok response frame for the matching id.
+
+        Args:
+            frame: Decoded client frame.
+
+        Returns:
+            list[dict[str, Any]]: Response frames to push back.
+        """
+        return [{"id": int(frame["id"]), "type": "response", "ok": True}]
+
+    async def server_inner() -> None:
+        """Drive the responder once."""
+        await _run_responder(fake_pipe, respond, deadline_s=3.0)
+
+    responder = asyncio.create_task(server_inner())
+    try:
+        response = await asyncio.wait_for(client.send_command("ping"), timeout=3.0)
+    finally:
+        release_handler.set()
+        await responder
+    return response
 
 
 def test_dispatch_event_safe_isolates_exceptions() -> None:
@@ -746,24 +803,41 @@ async def test_cancelled_connect_closes_handle(
         staticmethod(fake_close_native_handle),
     )
     try:
-        connect_task = asyncio.create_task(client.connect())
-        for _ in range(200):
-            if open_started.is_set():
-                break
-            await asyncio.sleep(0.01)
-        assert open_started.is_set()
-        connect_task.cancel()
-        with pytest.raises(asyncio.CancelledError):
-            await connect_task
-        release_open.set()
-        for _ in range(200):
-            if closed:
-                break
-            await asyncio.sleep(0.01)
+        await _run_cancelled_connect_reap(client, open_started, release_open, closed)
     finally:
         release_open.set()
 
     assert closed == [_FAKE_HANDLE]
+
+
+async def _run_cancelled_connect_reap(
+    client: NamedPipeClient,
+    open_started: threading.Event,
+    release_open: threading.Event,
+    closed: list[int],
+) -> None:
+    """Cancel an in-flight connect and wait for the leaked handle to close.
+
+    Args:
+        client: Named pipe client under test.
+        open_started: Event flipped once the slow open starts.
+        release_open: Event used to release the slow open.
+        closed: Collector list receiving closed handle values.
+    """
+    connect_task = asyncio.create_task(client.connect())
+    for _ in range(200):
+        if open_started.is_set():
+            break
+        await asyncio.sleep(0.01)
+    assert open_started.is_set()
+    connect_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await connect_task
+    release_open.set()
+    for _ in range(200):
+        if closed:
+            break
+        await asyncio.sleep(0.01)
 
 
 @pytest.mark.asyncio
@@ -803,21 +877,38 @@ async def test_timed_out_connect_closes_handle(
         staticmethod(fake_close_native_handle),
     )
     try:
-        with pytest.raises(ToolError, match="Timed out"):
-            await client.connect()
-        for _ in range(50):
-            if open_started.is_set():
-                break
-            await asyncio.sleep(0.01)
-        release_open.set()
-        for _ in range(200):
-            if closed:
-                break
-            await asyncio.sleep(0.01)
+        await _run_timed_out_connect_reap(client, open_started, release_open, closed)
     finally:
         release_open.set()
 
     assert closed == [_FAKE_HANDLE]
+
+
+async def _run_timed_out_connect_reap(
+    client: NamedPipeClient,
+    open_started: threading.Event,
+    release_open: threading.Event,
+    closed: list[int],
+) -> None:
+    """Await a connect that times out and wait for the handle to be closed.
+
+    Args:
+        client: Named pipe client under test (configured with a tight timeout).
+        open_started: Event flipped once the slow open starts.
+        release_open: Event used to release the slow open.
+        closed: Collector list receiving closed handle values.
+    """
+    with pytest.raises(ToolError, match="Timed out"):
+        await client.connect()
+    for _ in range(50):
+        if open_started.is_set():
+            break
+        await asyncio.sleep(0.01)
+    release_open.set()
+    for _ in range(200):
+        if closed:
+            break
+        await asyncio.sleep(0.01)
 
 
 # ---------------------------------------------------------------------------

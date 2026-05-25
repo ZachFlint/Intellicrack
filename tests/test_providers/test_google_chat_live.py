@@ -71,39 +71,48 @@ async def test_live_google_chat_populates_usage(
 
     await provider.connect(credentials)
     try:
-        assert provider.is_connected is True
-
-        try:
-            message, tool_calls = await provider.chat(
-                messages=_user_message("Reply with exactly the word: ready"),
-                model=_MODEL,
-                temperature=0.0,
-                max_tokens=16,
-            )
-        except RateLimitError:
-            pytest.skip("Google API quota exceeded for this project")
-        except AuthenticationError:
-            pytest.skip("Google API rejected credentials")
-        except ProviderError as exc:
-            pytest.skip(f"Google API request failed: {exc}")
-
-        assert message.role == "assistant"
-        assert isinstance(message.content, str)
-        assert len(message.content.strip()) > 0, "Expected non-empty content"
-        assert tool_calls is None or isinstance(tool_calls, list)
-
-        usage = provider.get_pending_usage()
-        assert usage is not None, "Expected usage populated after chat()"
-        assert isinstance(usage, UsageInfo)
-        assert usage.prompt_tokens > 0
-        assert usage.completion_tokens >= 0
-        assert usage.total_tokens >= usage.prompt_tokens
-
-        assert provider.get_pending_usage() is None, "Expected usage buffer cleared after retrieval"
+        await _exercise_google_chat(provider)
     finally:
         await provider.disconnect()
 
     assert provider.is_connected is False
+
+
+async def _exercise_google_chat(provider: GoogleProvider) -> None:
+    """Run a single chat exchange and assert content plus usage metadata.
+
+    Args:
+        provider: Connected GoogleProvider instance.
+    """
+    assert provider.is_connected is True
+
+    try:
+        message, tool_calls = await provider.chat(
+            messages=_user_message("Reply with exactly the word: ready"),
+            model=_MODEL,
+            temperature=0.0,
+            max_tokens=16,
+        )
+    except RateLimitError:
+        pytest.skip("Google API quota exceeded for this project")
+    except AuthenticationError:
+        pytest.skip("Google API rejected credentials")
+    except ProviderError as exc:
+        pytest.skip(f"Google API request failed: {exc}")
+
+    assert message.role == "assistant"
+    assert isinstance(message.content, str)
+    assert len(message.content.strip()) > 0, "Expected non-empty content"
+    assert tool_calls is None or isinstance(tool_calls, list)
+
+    usage = provider.get_pending_usage()
+    assert usage is not None, "Expected usage populated after chat()"
+    assert isinstance(usage, UsageInfo)
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens >= 0
+    assert usage.total_tokens >= usage.prompt_tokens
+
+    assert provider.get_pending_usage() is None, "Expected usage buffer cleared after retrieval"
 
 
 @pytest.mark.integration
@@ -128,33 +137,42 @@ async def test_live_google_chat_stream_populates_usage(
 
     await provider.connect(credentials)
     try:
-        collected: list[str] = []
-        try:
-            async for chunk in provider.chat_stream(
-                messages=_user_message("List three primary colors, one per line."),
-                model=_MODEL,
-                temperature=0.0,
-                max_tokens=64,
-            ):
-                assert isinstance(chunk, str)
-                collected.append(chunk)
-        except RateLimitError:
-            pytest.skip("Google API quota exceeded for this project")
-        except AuthenticationError:
-            pytest.skip("Google API rejected credentials")
-        except ProviderError as exc:
-            pytest.skip(f"Google API stream failed: {exc}")
-
-        full_text = "".join(collected)
-        assert len(full_text.strip()) > 0, "Expected non-empty streamed content"
-
-        usage = provider.get_pending_usage()
-        assert usage is not None, "Expected usage populated after chat_stream()"
-        assert isinstance(usage, UsageInfo)
-        assert usage.prompt_tokens > 0
-        assert usage.completion_tokens >= 0
-        assert usage.total_tokens >= usage.prompt_tokens
+        await _exercise_google_chat_stream(provider)
     finally:
         await provider.disconnect()
 
     assert provider.is_connected is False
+
+
+async def _exercise_google_chat_stream(provider: GoogleProvider) -> None:
+    """Stream a chat exchange and assert content plus usage metadata.
+
+    Args:
+        provider: Connected GoogleProvider instance.
+    """
+    collected: list[str] = []
+    try:
+        async for chunk in provider.chat_stream(
+            messages=_user_message("List three primary colors, one per line."),
+            model=_MODEL,
+            temperature=0.0,
+            max_tokens=64,
+        ):
+            assert isinstance(chunk, str)
+            collected.append(chunk)
+    except RateLimitError:
+        pytest.skip("Google API quota exceeded for this project")
+    except AuthenticationError:
+        pytest.skip("Google API rejected credentials")
+    except ProviderError as exc:
+        pytest.skip(f"Google API stream failed: {exc}")
+
+    full_text = "".join(collected)
+    assert len(full_text.strip()) > 0, "Expected non-empty streamed content"
+
+    usage = provider.get_pending_usage()
+    assert usage is not None, "Expected usage populated after chat_stream()"
+    assert isinstance(usage, UsageInfo)
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens >= 0
+    assert usage.total_tokens >= usage.prompt_tokens

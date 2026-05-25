@@ -294,7 +294,20 @@ def test_script_emits_real_sample_lines(tmp_path: Path) -> None:
     contents = log_path.read_text(encoding="utf-8", errors="replace").strip()
     assert contents, f"smoke log at {log_path} is empty; stdout={stdout!r} stderr={stderr!r}"
 
-    saw_valid_row = False
+    saw_valid_row = _has_valid_sample_row(contents)
+
+    assert saw_valid_row, f"expected at least one parser-compatible sample line; contents={contents!r}"
+
+
+def _has_valid_sample_row(contents: str) -> bool:
+    """Return True if any line in ``contents`` is parser-compatible.
+
+    Args:
+        contents: Raw text content of the smoke log.
+
+    Returns:
+        bool: ``True`` if at least one well-formed sample row was found.
+    """
     for raw in contents.splitlines():
         line = raw.strip()
         if not line:
@@ -302,16 +315,29 @@ def test_script_emits_real_sample_lines(tmp_path: Path) -> None:
         parts = line.split("|")
         if len(parts) < 7:
             continue
-        try:
-            float(parts[1])
-            float(parts[2])
-            int(parts[3])
-            int(parts[4])
-            int(parts[5])
-            int(parts[6])
-        except ValueError:
-            continue
-        saw_valid_row = True
-        break
+        if _row_fields_are_numeric(parts):
+            return True
+    return False
 
-    assert saw_valid_row, f"expected at least one parser-compatible sample line; contents={contents!r}"
+
+_FLOAT_FIELD_INDEXES: tuple[int, ...] = (1, 2)
+_INT_FIELD_INDEXES: tuple[int, ...] = (3, 4, 5, 6)
+
+
+def _row_fields_are_numeric(parts: list[str]) -> bool:
+    """Return True when the sample row's numeric fields parse cleanly.
+
+    Args:
+        parts: Pipe-split fields from a single sample row.
+
+    Returns:
+        bool: ``True`` when the expected numeric coercions all succeed.
+    """
+    try:
+        for idx in _FLOAT_FIELD_INDEXES:
+            float(parts[idx])
+        for idx in _INT_FIELD_INDEXES:
+            int(parts[idx])
+    except ValueError:
+        return False
+    return True

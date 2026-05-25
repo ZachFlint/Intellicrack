@@ -255,60 +255,7 @@ def test_helper_signal_event_then_waitforexit_releases_consumer(tmp_path: Path) 
         errors="replace",
     )
     try:
-        # Give the consumer time to create the event.
-        time.sleep(1.5)
-        assert consumer.poll() is None, "consumer must still be running before signal"
-
-        signal = subprocess.run(
-            [
-                pwsh,
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(_STOP_HELPER),
-                "-Mode",
-                "SignalEvent",
-                "-EventName",
-                test_event_name,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=_HELPER_TIMEOUT_SEC,
-        )
-        assert signal.returncode == 0, f"helper SignalEvent must exit 0; stderr={signal.stderr!r}"
-
-        wait = subprocess.run(
-            [
-                pwsh,
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(_STOP_HELPER),
-                "-Mode",
-                "WaitForExit",
-                "-TargetPid",
-                str(consumer.pid),
-                "-WaitMilliseconds",
-                "10000",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=_HELPER_TIMEOUT_SEC,
-        )
-        assert wait.returncode in {0, 2}, (
-            f"helper WaitForExit must indicate graceful exit (0) or process gone (2); rc={wait.returncode} stderr={wait.stderr!r}"
-        )
-
-        consumer.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        assert consumer.returncode == 0, f"consumer must exit 0 when stop event is signalled; rc={consumer.returncode}"
+        _drive_consumer_signal_and_wait(consumer, pwsh, test_event_name)
     finally:
         if consumer.poll() is None:
             consumer.kill()
@@ -356,51 +303,174 @@ def test_kernel_object_monitor_finally_emits_stopped_record(tmp_path: Path) -> N
         errors="replace",
     )
     try:
-        started = _wait_for_marker(lifecycle_log, "|started|", _FINALLY_FLUSH_TIMEOUT_SEC)
-        if not started:
-            stdout, stderr = monitor.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-            pytest.fail(
-                f"kernel_object_monitor did not emit started lifecycle record within "
-                f"{_FINALLY_FLUSH_TIMEOUT_SEC}s; stdout={stdout!r} stderr={stderr!r}",
-            )
-
-        signal = subprocess.run(
-            [
-                pwsh,
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(_STOP_HELPER),
-                "-Mode",
-                "SignalEvent",
-                "-EventName",
-                _STOP_EVENT_NAME,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=_HELPER_TIMEOUT_SEC,
-        )
-        assert signal.returncode == 0, f"failed to signal stop event; stderr={signal.stderr!r}"
-
-        stopped = _wait_for_marker(lifecycle_log, "|stopped|", _FINALLY_FLUSH_TIMEOUT_SEC)
-        try:
-            monitor.wait(timeout=_FINALLY_FLUSH_TIMEOUT_SEC)
-            graceful_exit = True
-        except subprocess.TimeoutExpired:
-            graceful_exit = False
-
-        contents = lifecycle_log.read_text(encoding="utf-8", errors="replace") if lifecycle_log.is_file() else ""
-        assert stopped, f"kernel_object_monitor.lifecycle.log must record |stopped|; contents={contents!r}"
-        assert graceful_exit, "monitor must exit voluntarily once the stop event is signalled"
+        _drive_kernel_object_monitor_finally(monitor, lifecycle_log, pwsh)
     finally:
         if monitor.poll() is None:
             monitor.kill()
             with contextlib.suppress(subprocess.TimeoutExpired):
                 monitor.communicate(timeout=_PWSH_KILL_GRACE_SEC)
+
+
+def _drive_consumer_signal_and_wait(
+    consumer: subprocess.Popen[str],
+    pwsh: str,
+    test_event_name: str,
+) -> None:
+    """Signal the stop event and assert the consumer exits cleanly.
+
+    Args:
+        consumer: Running consumer subprocess.
+        pwsh: Absolute path to ``pwsh.exe`` driving the helper.
+        test_event_name: Named event the consumer waits on.
+    """
+    time.sleep(1.5)
+    assert consumer.poll() is None, "consumer must still be running before signal"
+
+    signal = subprocess.run(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(_STOP_HELPER),
+            "-Mode",
+            "SignalEvent",
+            "-EventName",
+            test_event_name,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=_HELPER_TIMEOUT_SEC,
+    )
+    assert signal.returncode == 0, f"helper SignalEvent must exit 0; stderr={signal.stderr!r}"
+
+    wait = subprocess.run(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(_STOP_HELPER),
+            "-Mode",
+            "WaitForExit",
+            "-TargetPid",
+            str(consumer.pid),
+            "-WaitMilliseconds",
+            "10000",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=_HELPER_TIMEOUT_SEC,
+    )
+    assert wait.returncode in {0, 2}, (
+        f"helper WaitForExit must indicate graceful exit (0) or process gone (2); rc={wait.returncode} stderr={wait.stderr!r}"
+    )
+
+    consumer.communicate(timeout=_PWSH_KILL_GRACE_SEC)
+    assert consumer.returncode == 0, f"consumer must exit 0 when stop event is signalled; rc={consumer.returncode}"
+
+
+def _drive_kernel_object_monitor_finally(
+    monitor: subprocess.Popen[str],
+    lifecycle_log: Path,
+    pwsh: str,
+) -> None:
+    """Signal the kernel-object monitor and assert its finally fired.
+
+    Args:
+        monitor: Running monitor subprocess.
+        lifecycle_log: Lifecycle log file the monitor writes to.
+        pwsh: Absolute path to ``pwsh.exe`` driving the helper.
+    """
+    started = _wait_for_marker(lifecycle_log, "|started|", _FINALLY_FLUSH_TIMEOUT_SEC)
+    if not started:
+        stdout, stderr = monitor.communicate(timeout=_PWSH_KILL_GRACE_SEC)
+        pytest.fail(
+            f"kernel_object_monitor did not emit started lifecycle record within "
+            f"{_FINALLY_FLUSH_TIMEOUT_SEC}s; stdout={stdout!r} stderr={stderr!r}",
+        )
+
+    signal = subprocess.run(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(_STOP_HELPER),
+            "-Mode",
+            "SignalEvent",
+            "-EventName",
+            _STOP_EVENT_NAME,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=_HELPER_TIMEOUT_SEC,
+    )
+    assert signal.returncode == 0, f"failed to signal stop event; stderr={signal.stderr!r}"
+
+    stopped = _wait_for_marker(lifecycle_log, "|stopped|", _FINALLY_FLUSH_TIMEOUT_SEC)
+    try:
+        monitor.wait(timeout=_FINALLY_FLUSH_TIMEOUT_SEC)
+        graceful_exit = True
+    except subprocess.TimeoutExpired:
+        graceful_exit = False
+
+    contents = lifecycle_log.read_text(encoding="utf-8", errors="replace") if lifecycle_log.is_file() else ""
+    assert stopped, f"kernel_object_monitor.lifecycle.log must record |stopped|; contents={contents!r}"
+    assert graceful_exit, "monitor must exit voluntarily once the stop event is signalled"
+
+
+def _drive_stop_monitors_consumer(
+    consumer: subprocess.Popen[bytes],
+    cmd: str,
+    scripts_dir: Path,
+    log_dir: Path,
+) -> None:
+    """Run stop_monitors against the consumer PID and assert lifecycle.
+
+    Args:
+        consumer: Running consumer subprocess.
+        cmd: Absolute path to ``cmd.exe`` for running the .cmd shim.
+        scripts_dir: Scratch scripts directory with ``stop_monitors.cmd``.
+        log_dir: Log directory referenced by both consumer and stopper.
+    """
+    time.sleep(2.0)
+    assert consumer.poll() is None, "consumer must still be running before stop"
+
+    stop = subprocess.run(
+        [cmd, "/c", str(scripts_dir / "stop_monitors.cmd"), str(log_dir), "5"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=60.0,
+    )
+    assert stop.returncode == 0, f"stop_monitors must succeed; returncode={stop.returncode}"
+
+    info_path = log_dir / "stop_monitors.info.log"
+    info_contents = info_path.read_text(encoding="utf-8", errors="replace") if info_path.is_file() else ""
+    assert "graceful=" in info_contents, f"info log must record graceful count; contents={info_contents!r}"
+    graceful_count = _parse_graceful_count(info_contents)
+    assert graceful_count >= 1, f"at least one PID must exit gracefully; info={info_contents!r}"
+
+    consumer_lifecycle = log_dir / "consumer.lifecycle.log"
+    assert consumer_lifecycle.is_file(), (
+        f"consumer.ps1 finally clause must have written its lifecycle log; dir={list(log_dir.iterdir())!r}"
+    )
+    consumer_text = consumer_lifecycle.read_text(encoding="utf-8", errors="replace")
+    assert "|consumer|stopped" in consumer_text, f"consumer finally did not run; contents={consumer_text!r}"
 
 
 def _ensure_taskkill() -> str:
@@ -539,32 +609,7 @@ def test_stop_monitors_driver_signals_event_before_taskkill(tmp_path: Path) -> N
     pid_file.write_text(f"{consumer.pid} consumer.ps1\n", encoding="utf-8")
 
     try:
-        # Give the consumer a moment to create / open the named event.
-        time.sleep(2.0)
-        assert consumer.poll() is None, "consumer must still be running before stop"
-
-        stop = subprocess.run(
-            [cmd, "/c", str(scripts_dir / "stop_monitors.cmd"), str(log_dir), "5"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=60.0,
-        )
-        assert stop.returncode == 0, f"stop_monitors must succeed; returncode={stop.returncode}"
-
-        info_path = log_dir / "stop_monitors.info.log"
-        info_contents = info_path.read_text(encoding="utf-8", errors="replace") if info_path.is_file() else ""
-        assert "graceful=" in info_contents, f"info log must record graceful count; contents={info_contents!r}"
-        graceful_count = _parse_graceful_count(info_contents)
-        assert graceful_count >= 1, f"at least one PID must exit gracefully; info={info_contents!r}"
-
-        consumer_lifecycle = log_dir / "consumer.lifecycle.log"
-        assert consumer_lifecycle.is_file(), (
-            f"consumer.ps1 finally clause must have written its lifecycle log; dir={list(log_dir.iterdir())!r}"
-        )
-        consumer_text = consumer_lifecycle.read_text(encoding="utf-8", errors="replace")
-        assert "|consumer|stopped" in consumer_text, f"consumer finally did not run; contents={consumer_text!r}"
+        _drive_stop_monitors_consumer(consumer, cmd, scripts_dir, log_dir)
     finally:
         for pid in pids:
             try:

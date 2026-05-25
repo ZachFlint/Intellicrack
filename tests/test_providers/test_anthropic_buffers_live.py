@@ -170,85 +170,123 @@ async def test_anthropic_chat_and_stream_populate_usage_and_thinking() -> None:
     provider = AnthropicProvider()
     await provider.connect(credentials)
     try:
-        chat_model = await _pick_chat_model(provider)
-        thinking_model = await _pick_thinking_model(provider)
-
-        chat_messages: list[Message] = [Message(role="user", content="Reply with exactly one word: pong.")]
-
-        try:
-            await provider.chat(
-                messages=chat_messages,
-                model=chat_model,
-                max_tokens=16,
-                temperature=0.0,
-            )
-        except Exception as exc:
-            if _is_credit_error(exc):
-                pytest.skip(_SKIP_REASON_NO_CREDIT)
-            raise
-
-        post_chat_usage = provider.get_pending_usage()
-        assert post_chat_usage is not None, "chat() did not populate _pending_usage"
-        assert isinstance(post_chat_usage, UsageInfo)
-        assert post_chat_usage.prompt_tokens > 0
-        assert post_chat_usage.completion_tokens > 0
-        assert post_chat_usage.total_tokens >= post_chat_usage.prompt_tokens
-
-        stream_messages: list[Message] = [Message(role="user", content="Count aloud to three.")]
-        collected_chunks: list[str] = []
-        try:
-            collected_chunks.extend([
-                chunk
-                async for chunk in provider.chat_stream(
-                    messages=stream_messages,
-                    model=chat_model,
-                    max_tokens=64,
-                    temperature=0.0,
-                )
-            ])
-        except Exception as exc:
-            if _is_credit_error(exc):
-                pytest.skip(_SKIP_REASON_NO_CREDIT)
-            raise
-
-        assert collected_chunks, "chat_stream() yielded no chunks"
-        stream_usage = provider.get_pending_usage()
-        assert stream_usage is not None, "chat_stream() did not populate _pending_usage"
-        assert isinstance(stream_usage, UsageInfo)
-        assert stream_usage.prompt_tokens > 0
-        assert stream_usage.completion_tokens > 0
-        assert stream_usage.total_tokens >= stream_usage.prompt_tokens
-
-        assert provider.get_pending_usage() is None, "get_pending_usage() did not clear buffer"
-
-        if thinking_model is not None:
-            thinking_messages: list[Message] = [
-                Message(
-                    role="user",
-                    content="Think about whether 17 is prime, then answer yes or no.",
-                ),
-            ]
-            try:
-                async for _chunk in provider.chat_stream(
-                    messages=thinking_messages,
-                    model=thinking_model,
-                    max_tokens=2048,
-                    temperature=1.0,
-                    thinking=ThinkingConfig(enabled=True, budget_tokens=1024),
-                ):
-                    pass
-            except Exception as exc:
-                message = str(exc).lower()
-                if any(marker in message for marker in ("credit", "payment", "billing", "quota")):
-                    pytest.skip(_SKIP_REASON_NO_CREDIT)
-                raise
-
-            thinking_blocks = provider.get_pending_thinking()
-            assert thinking_blocks, "chat_stream() with thinking enabled did not populate _pending_thinking"
-            assert all(isinstance(block, str) and block for block in thinking_blocks)
-            assert provider.get_pending_thinking() == [], "get_pending_thinking() did not clear buffer"
+        await _exercise_anthropic_buffers(provider)
     finally:
         await provider.disconnect()
+
+
+async def _exercise_anthropic_buffers(provider: AnthropicProvider) -> None:
+    """Run chat, chat_stream and optional thinking, asserting buffer state.
+
+    Args:
+        provider: Connected AnthropicProvider instance.
+    """
+    chat_model = await _pick_chat_model(provider)
+    thinking_model = await _pick_thinking_model(provider)
+
+    await _run_chat_and_assert_usage(provider, chat_model)
+    await _run_stream_and_assert_usage(provider, chat_model)
+
+    if thinking_model is not None:
+        await _run_thinking_and_assert_blocks(provider, thinking_model)
+
+
+async def _run_chat_and_assert_usage(provider: AnthropicProvider, chat_model: str) -> None:
+    """Run a single chat call and assert ``_pending_usage`` is populated.
+
+    Args:
+        provider: Connected AnthropicProvider instance.
+        chat_model: Model identifier passed to ``chat``.
+    """
+    chat_messages: list[Message] = [Message(role="user", content="Reply with exactly one word: pong.")]
+
+    try:
+        await provider.chat(
+            messages=chat_messages,
+            model=chat_model,
+            max_tokens=16,
+            temperature=0.0,
+        )
+    except Exception as exc:
+        if _is_credit_error(exc):
+            pytest.skip(_SKIP_REASON_NO_CREDIT)
+        raise
+
+    post_chat_usage = provider.get_pending_usage()
+    assert post_chat_usage is not None, "chat() did not populate _pending_usage"
+    assert isinstance(post_chat_usage, UsageInfo)
+    assert post_chat_usage.prompt_tokens > 0
+    assert post_chat_usage.completion_tokens > 0
+    assert post_chat_usage.total_tokens >= post_chat_usage.prompt_tokens
+
+
+async def _run_stream_and_assert_usage(provider: AnthropicProvider, chat_model: str) -> None:
+    """Run a chat_stream call and assert ``_pending_usage`` is populated/cleared.
+
+    Args:
+        provider: Connected AnthropicProvider instance.
+        chat_model: Model identifier passed to ``chat_stream``.
+    """
+    stream_messages: list[Message] = [Message(role="user", content="Count aloud to three.")]
+    collected_chunks: list[str] = []
+    try:
+        collected_chunks.extend([
+            chunk
+            async for chunk in provider.chat_stream(
+                messages=stream_messages,
+                model=chat_model,
+                max_tokens=64,
+                temperature=0.0,
+            )
+        ])
+    except Exception as exc:
+        if _is_credit_error(exc):
+            pytest.skip(_SKIP_REASON_NO_CREDIT)
+        raise
+
+    assert collected_chunks, "chat_stream() yielded no chunks"
+    stream_usage = provider.get_pending_usage()
+    assert stream_usage is not None, "chat_stream() did not populate _pending_usage"
+    assert isinstance(stream_usage, UsageInfo)
+    assert stream_usage.prompt_tokens > 0
+    assert stream_usage.completion_tokens > 0
+    assert stream_usage.total_tokens >= stream_usage.prompt_tokens
+
+    assert provider.get_pending_usage() is None, "get_pending_usage() did not clear buffer"
+
+
+async def _run_thinking_and_assert_blocks(provider: AnthropicProvider, thinking_model: str) -> None:
+    """Run a thinking-enabled stream and assert ``_pending_thinking`` populates.
+
+    Args:
+        provider: Connected AnthropicProvider instance.
+        thinking_model: Model identifier supporting the thinking feature.
+    """
+    thinking_messages: list[Message] = [
+        Message(
+            role="user",
+            content="Think about whether 17 is prime, then answer yes or no.",
+        ),
+    ]
+    try:
+        async for _chunk in provider.chat_stream(
+            messages=thinking_messages,
+            model=thinking_model,
+            max_tokens=2048,
+            temperature=1.0,
+            thinking=ThinkingConfig(enabled=True, budget_tokens=1024),
+        ):
+            pass
+    except Exception as exc:
+        message = str(exc).lower()
+        if any(marker in message for marker in ("credit", "payment", "billing", "quota")):
+            pytest.skip(_SKIP_REASON_NO_CREDIT)
+        raise
+
+    thinking_blocks = provider.get_pending_thinking()
+    assert thinking_blocks, "chat_stream() with thinking enabled did not populate _pending_thinking"
+    assert all(isinstance(block, str) and block for block in thinking_blocks)
+    assert provider.get_pending_thinking() == [], "get_pending_thinking() did not clear buffer"
 
 
 def test_live_module_importable() -> None:

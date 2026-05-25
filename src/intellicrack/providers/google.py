@@ -111,18 +111,7 @@ class GoogleProvider(LLMProviderBase):
 
         saved_gemini_key = os.environ.pop("GEMINI_API_KEY", None)
         try:
-            self.client = genai.Client(api_key=credentials.api_key)
-
-            models_iter = await asyncio.to_thread(self.client.models.list)
-            _ = next(iter(models_iter), None)
-
-            self._credentials = credentials
-            self.connected = True
-            self._logger.info(
-                "google_connected",
-                has_custom_base=credentials.api_base is not None,
-            )
-
+            await self._connect_impl(credentials)
         except APIError as e:
             self.connected = False
             self.client = None
@@ -147,6 +136,24 @@ class GoogleProvider(LLMProviderBase):
         finally:
             if saved_gemini_key is not None:
                 os.environ["GEMINI_API_KEY"] = saved_gemini_key
+
+    async def _connect_impl(self, credentials: ProviderCredentials) -> None:
+        """Initialise the Google client and probe the models endpoint.
+
+        Args:
+            credentials: Provider credentials containing the API key.
+        """
+        self.client = genai.Client(api_key=credentials.api_key)
+
+        models_iter = await asyncio.to_thread(self.client.models.list)
+        _ = next(iter(models_iter), None)
+
+        self._credentials = credentials
+        self.connected = True
+        self._logger.info(
+            "google_connected",
+            has_custom_base=credentials.api_base is not None,
+        )
 
     async def disconnect(self) -> None:
         """Disconnect from Google AI API.
@@ -181,48 +188,7 @@ class GoogleProvider(LLMProviderBase):
             raise ProviderError(_MSG_NOT_CONNECTED)
 
         try:
-            models_response = await asyncio.to_thread(self.client.models.list)
-
-            models: list[ModelInfo] = []
-            for model_data in models_response:
-                model_name = getattr(model_data, "name", "")
-                name_lower = model_name.lower()
-                if "gemini" not in name_lower or "embedding" in name_lower:
-                    continue
-
-                display_name = getattr(model_data, "display_name", model_name)
-                input_limit: int = getattr(model_data, "input_token_limit", 1048576)
-
-                model_id = model_name
-                model_id = model_id.removeprefix("models/")
-
-                gen_methods: list[str] = getattr(
-                    model_data,
-                    "supported_generation_methods",
-                    [],
-                )
-                supports_tools = "generateContent" in gen_methods
-                supports_streaming = "streamGenerateContent" in gen_methods
-                supports_vision = supports_tools
-
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=display_name or model_id,
-                        provider=ProviderName.GOOGLE,
-                        context_window=input_limit,
-                        supports_tools=supports_tools,
-                        supports_vision=supports_vision,
-                        supports_streaming=supports_streaming,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
-            sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
-            self._logger.info(
-                "google_models_listed",
-                count=len(sorted_models),
-            )
+            sorted_models = await self._fetch_and_sort_models()
         except APIError as e:
             self._logger.warning(
                 "google_list_models_api_failed",
@@ -242,6 +208,61 @@ class GoogleProvider(LLMProviderBase):
             raise ProviderError(_MSG_FETCH_MODELS_FAILED) from e
         else:
             return sorted_models
+
+    async def _fetch_and_sort_models(self) -> list[ModelInfo]:
+        """Fetch Gemini models from the API and sort them.
+
+        Returns:
+            list[ModelInfo]: Sorted available Gemini models.
+
+        Raises:
+            ProviderError: If the Google client has not been initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_MSG_NOT_CONNECTED)
+        models_response = await asyncio.to_thread(self.client.models.list)
+
+        models: list[ModelInfo] = []
+        for model_data in models_response:
+            model_name = getattr(model_data, "name", "")
+            name_lower = model_name.lower()
+            if "gemini" not in name_lower or "embedding" in name_lower:
+                continue
+
+            display_name = getattr(model_data, "display_name", model_name)
+            input_limit: int = getattr(model_data, "input_token_limit", 1048576)
+
+            model_id = model_name
+            model_id = model_id.removeprefix("models/")
+
+            gen_methods: list[str] = getattr(
+                model_data,
+                "supported_generation_methods",
+                [],
+            )
+            supports_tools = "generateContent" in gen_methods
+            supports_streaming = "streamGenerateContent" in gen_methods
+            supports_vision = supports_tools
+
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=display_name or model_id,
+                    provider=ProviderName.GOOGLE,
+                    context_window=input_limit,
+                    supports_tools=supports_tools,
+                    supports_vision=supports_vision,
+                    supports_streaming=supports_streaming,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                ),
+            )
+        sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
+        self._logger.info(
+            "google_models_listed",
+            count=len(sorted_models),
+        )
+        return sorted_models
 
     async def chat(
         self,
@@ -306,72 +327,17 @@ class GoogleProvider(LLMProviderBase):
         start_time = time.perf_counter()
 
         try:
-            config = self._create_config(
-                temperature,
-                max_tokens,
-                gemini_tools,
-                system_instruction,
+            result = await self._run_google_chat(
+                model=model,
+                gemini_contents=gemini_contents,
+                gemini_tools=gemini_tools,
+                system_instruction=system_instruction,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 tool_choice=tool_choice,
                 thinking=thinking,
+                start_time=start_time,
             )
-
-            client = self.client
-            typed_contents = cast("types.ContentListUnionDict", gemini_contents)
-
-            generate_task: asyncio.Task[GenerateContentResponse] = asyncio.create_task(
-                self._retry_with_backoff(
-                    lambda: self._call_generate_content(
-                        client=client,
-                        model=model,
-                        contents=typed_contents,
-                        config=config,
-                    ),
-                ),
-            )
-            self._current_task = cast("asyncio.Task[object]", generate_task)
-            try:
-                response = await generate_task
-            finally:
-                self._current_task = None
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            self._check_safety_block(response)
-
-            content, tool_calls = self._parse_response(response)
-            self._pending_usage = self._extract_usage(response)
-            if thinking_text := self._extract_thinking_text(response):
-                self._pending_thinking.append(thinking_text)
-
-            for tc in tool_calls:
-                self._logger.debug(
-                    "tool_call_parsed",
-                    tool_name=tc.tool_name,
-                    arguments_count=len(tc.arguments),
-                )
-
-            message = Message(
-                role="assistant",
-                content=content,
-                tool_calls=tool_calls or None,
-                timestamp=datetime.now(tz=UTC),
-            )
-
-            log_provider_response(
-                provider="google",
-                model=model,
-                tool_calls_count=len(tool_calls),
-                duration_ms=duration_ms,
-            )
-
-            self._logger.info(
-                "google_chat_completed",
-                model=model,
-                duration_ms=duration_ms,
-                tool_calls_count=len(tool_calls),
-                content_length=len(content),
-            )
-
         except (AuthenticationError, ProviderError, RateLimitError) as exc:
             log_passthrough(
                 self._logger,
@@ -401,7 +367,111 @@ class GoogleProvider(LLMProviderBase):
             )
             raise ProviderError(_MSG_REQUEST_FAILED) from e
         else:
-            return message, tool_calls or None
+            return result
+
+    async def _run_google_chat(
+        self,
+        *,
+        model: str,
+        gemini_contents: list[dict[str, object]],
+        gemini_tools: list[types.Tool] | None,
+        system_instruction: str | None,
+        temperature: float,
+        max_tokens: int,
+        tool_choice: ToolChoice | None,
+        thinking: ThinkingConfig | None,
+        start_time: float,
+    ) -> tuple[Message, list[ToolCall] | None]:
+        """Execute a Gemini chat request and assemble the response payload.
+
+        Args:
+            model: Gemini model identifier.
+            gemini_contents: Messages already converted to Gemini format.
+            gemini_tools: Gemini-format tool declarations, if any.
+            system_instruction: System prompt extracted from the messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            start_time: ``time.perf_counter()`` reference captured before
+                the request was dispatched.
+
+        Returns:
+            tuple[Message, list[ToolCall] | None]: Tuple of (assistant
+            message, tool calls if any).
+
+        Raises:
+            ProviderError: If the Google client has not been initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_MSG_NOT_CONNECTED)
+        config = self._create_config(
+            temperature,
+            max_tokens,
+            gemini_tools,
+            system_instruction,
+            tool_choice=tool_choice,
+            thinking=thinking,
+        )
+
+        client = self.client
+        typed_contents = cast("types.ContentListUnionDict", gemini_contents)
+
+        generate_task: asyncio.Task[GenerateContentResponse] = asyncio.create_task(
+            self._retry_with_backoff(
+                lambda: self._call_generate_content(
+                    client=client,
+                    model=model,
+                    contents=typed_contents,
+                    config=config,
+                ),
+            ),
+        )
+        self._current_task = cast("asyncio.Task[object]", generate_task)
+        try:
+            response = await generate_task
+        finally:
+            self._current_task = None
+
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        self._check_safety_block(response)
+
+        content, tool_calls = self._parse_response(response)
+        self._pending_usage = self._extract_usage(response)
+        if thinking_text := self._extract_thinking_text(response):
+            self._pending_thinking.append(thinking_text)
+
+        for tc in tool_calls:
+            self._logger.debug(
+                "tool_call_parsed",
+                tool_name=tc.tool_name,
+                arguments_count=len(tc.arguments),
+            )
+
+        message = Message(
+            role="assistant",
+            content=content,
+            tool_calls=tool_calls or None,
+            timestamp=datetime.now(tz=UTC),
+        )
+
+        log_provider_response(
+            provider="google",
+            model=model,
+            tool_calls_count=len(tool_calls),
+            duration_ms=duration_ms,
+        )
+
+        self._logger.info(
+            "google_chat_completed",
+            model=model,
+            duration_ms=duration_ms,
+            tool_calls_count=len(tool_calls),
+            content_length=len(content),
+        )
+
+        return message, tool_calls or None
 
     @override
     async def chat_stream(
@@ -458,61 +528,22 @@ class GoogleProvider(LLMProviderBase):
         gemini_tools = self._build_tool_declarations(tools) if tools else None
         chunk_count = 0
 
+        chunk_counter = [0]
         try:
-            config = self._create_config(
-                temperature,
-                max_tokens,
-                gemini_tools,
-                system_instruction,
+            async for visible_text in self._iter_google_stream(
+                model=model,
+                gemini_contents=gemini_contents,
+                gemini_tools=gemini_tools,
+                system_instruction=system_instruction,
+                temperature=temperature,
+                max_tokens=max_tokens,
                 tool_choice=tool_choice,
                 thinking=thinking,
-            )
-
-            client = self.client
-            typed_contents = cast("types.ContentListUnionDict", gemini_contents)
-
-            stream_init_task: asyncio.Task[AsyncIterator[GenerateContentResponse]] = asyncio.create_task(
-                client.aio.models.generate_content_stream(
-                    model=model,
-                    contents=typed_contents,
-                    config=config,
-                ),
-            )
-            self._current_task = cast("asyncio.Task[object]", stream_init_task)
-            try:
-                response_stream: AsyncIterator[GenerateContentResponse] = await stream_init_task
-            finally:
-                self._current_task = None
-
-            last_chunk: GenerateContentResponse | None = None
-            thinking_parts: list[str] = []
-            async for chunk in response_stream:
-                if self._cancel_requested:
-                    self._logger.info(
-                        "google_chat_stream_cancelled",
-                        model=model,
-                        chunks_received=chunk_count,
-                    )
-                    break
-                last_chunk = chunk
-                self._check_safety_block(chunk)
-                if chunk_thinking := self._extract_thinking_text(chunk):
-                    thinking_parts.append(chunk_thinking)
-                if visible_text := self._extract_visible_chunk_text(chunk):
-                    chunk_count += 1
-                    yield visible_text
-
-            if not self._cancel_requested and last_chunk is not None:
-                self._pending_usage = self._extract_usage(last_chunk)
-                if thinking_parts:
-                    self._pending_thinking.extend(thinking_parts)
-                self._pending_tool_calls = self._extract_function_calls(last_chunk)
-                self._logger.info(
-                    "google_chat_stream_completed",
-                    model=model,
-                    chunks_received=chunk_count,
-                )
-
+                chunk_counter=chunk_counter,
+            ):
+                chunk_count = chunk_counter[0]
+                yield visible_text
+            chunk_count = chunk_counter[0]
         except (AuthenticationError, ProviderError, RateLimitError) as exc:
             log_passthrough(
                 self._logger,
@@ -546,6 +577,99 @@ class GoogleProvider(LLMProviderBase):
                 cancel_requested=self._cancel_requested,
             )
             raise ProviderError(_MSG_STREAM_FAILED) from e
+
+    async def _iter_google_stream(
+        self,
+        *,
+        model: str,
+        gemini_contents: list[dict[str, object]],
+        gemini_tools: list[types.Tool] | None,
+        system_instruction: str | None,
+        temperature: float,
+        max_tokens: int,
+        tool_choice: ToolChoice | None,
+        thinking: ThinkingConfig | None,
+        chunk_counter: list[int],
+    ) -> AsyncIterator[str]:
+        """Open the Gemini stream and yield visible text chunks.
+
+        Updates ``self._pending_usage``, ``self._pending_thinking``,
+        ``self._pending_tool_calls`` and the caller's ``chunk_counter``
+        as the stream progresses and on completion.
+
+        Args:
+            model: Gemini model identifier.
+            gemini_contents: Messages already converted to Gemini format.
+            gemini_tools: Gemini-format tool declarations, if any.
+            system_instruction: System prompt extracted from the messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            chunk_counter: Single-element list updated with the count of
+                visible chunks emitted so the caller can report it.
+
+        Yields:
+            str: Visible text chunks as they arrive from the API.
+
+        Raises:
+            ProviderError: If the Google client has not been initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_MSG_NOT_CONNECTED)
+        config = self._create_config(
+            temperature,
+            max_tokens,
+            gemini_tools,
+            system_instruction,
+            tool_choice=tool_choice,
+            thinking=thinking,
+        )
+
+        client = self.client
+        typed_contents = cast("types.ContentListUnionDict", gemini_contents)
+
+        stream_init_task: asyncio.Task[AsyncIterator[GenerateContentResponse]] = asyncio.create_task(
+            client.aio.models.generate_content_stream(
+                model=model,
+                contents=typed_contents,
+                config=config,
+            ),
+        )
+        self._current_task = cast("asyncio.Task[object]", stream_init_task)
+        try:
+            response_stream: AsyncIterator[GenerateContentResponse] = await stream_init_task
+        finally:
+            self._current_task = None
+
+        last_chunk: GenerateContentResponse | None = None
+        thinking_parts: list[str] = []
+        async for chunk in response_stream:
+            if self._cancel_requested:
+                self._logger.info(
+                    "google_chat_stream_cancelled",
+                    model=model,
+                    chunks_received=chunk_counter[0],
+                )
+                break
+            last_chunk = chunk
+            self._check_safety_block(chunk)
+            if chunk_thinking := self._extract_thinking_text(chunk):
+                thinking_parts.append(chunk_thinking)
+            if visible_text := self._extract_visible_chunk_text(chunk):
+                chunk_counter[0] += 1
+                yield visible_text
+
+        if not self._cancel_requested and last_chunk is not None:
+            self._pending_usage = self._extract_usage(last_chunk)
+            if thinking_parts:
+                self._pending_thinking.extend(thinking_parts)
+            self._pending_tool_calls = self._extract_function_calls(last_chunk)
+            self._logger.info(
+                "google_chat_stream_completed",
+                model=model,
+                chunks_received=chunk_counter[0],
+            )
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

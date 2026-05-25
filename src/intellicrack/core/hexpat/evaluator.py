@@ -921,25 +921,38 @@ class HexPatEvaluator:
         saved_scope = self._scope
         self._scope = loop_scope
         try:
-            if node.init is not None:
-                self._eval_stmt(node.init)
-            while True:
-                if node.condition is not None:
-                    cond = self._eval_expr(node.condition)
-                    if not _truthy(cond):
-                        break
-                try:
-                    for stmt in node.body:
-                        self._eval_stmt(stmt)
-                except _BreakSignalError:
-                    _logger.warning("hexpat_for_break", line=node.line, column=node.column)
-                    break
-                except _ContinueSignalError:
-                    _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
-                if node.update is not None:
-                    self._eval_expr(node.update)
+            self._run_for_body(node)
         finally:
             self._scope = saved_scope
+
+    def _run_for_body(self, node: ForStmt) -> None:
+        """Drive a ``for`` loop's init/condition/body/update cycle.
+
+        Propagates :class:`HexPatRuntimeError` from nested statement
+        evaluation. ``break``/``continue`` signals are handled internally
+        so they never propagate.
+
+        Args:
+            node: The for loop AST node currently being evaluated. The caller
+                is responsible for setting up and restoring ``self._scope``.
+        """
+        if node.init is not None:
+            self._eval_stmt(node.init)
+        while True:
+            if node.condition is not None:
+                cond = self._eval_expr(node.condition)
+                if not _truthy(cond):
+                    break
+            try:
+                for stmt in node.body:
+                    self._eval_stmt(stmt)
+            except _BreakSignalError:
+                _logger.warning("hexpat_for_break", line=node.line, column=node.column)
+                break
+            except _ContinueSignalError:
+                _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
+            if node.update is not None:
+                self._eval_expr(node.update)
 
     def _eval_match(self, node: MatchStmt) -> None:
         """Evaluate a match statement by testing value against arms.
@@ -1255,6 +1268,56 @@ class HexPatEvaluator:
             return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
         return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
 
+    def _evaluate_struct_body(
+        self,
+        *,
+        type_info: StructTypeInfo,
+        color: str,
+        offset: int,
+        children: list[dict[str, Any]],
+        members: dict[str, PatternValue],
+        struct_scope: EvalScope,
+    ) -> tuple[int, bytes]:
+        """Evaluate a struct's inheritance chain and statements.
+
+        Populates ``children`` and ``members`` in place and returns the total
+        struct size together with the raw bytes spanned. The caller is
+        responsible for restoring ``self._offset``/``self._scope``/
+        ``self._depth`` in its ``finally`` clause. Propagates
+        :class:`HexPatRuntimeError` from nested evaluation when a statement
+        fails to evaluate.
+
+        Args:
+            type_info: The struct type being instantiated.
+            color: Hex colour propagated to parent struct evaluation.
+            offset: Absolute byte offset of the struct.
+            children: Accumulator for child parsed-field dictionaries; modified
+                in place.
+            members: Accumulator for resolved member values; modified in place.
+            struct_scope: Evaluation scope for this struct instance whose
+                bindings are merged into ``members``.
+
+        Returns:
+            tuple[int, bytes]: ``(total_size, raw)`` for the struct instance.
+        """
+        if type_info.parent is not None:
+            parent_resolved = self._types.resolve(type_info.parent)
+            if isinstance(parent_resolved, StructTypeInfo):
+                parent_result = self._eval_struct_instance(parent_resolved.name, parent_resolved, "__parent__", self._offset, color, "")
+                children.extend(parent_result.get("children", []))
+                self._offset += int(parent_result["size"])
+                parent_members = _extract_members_dict(parent_result, "_members", pop=True)
+                if parent_members is not None:
+                    members |= parent_members
+
+        for stmt in type_info.decl.body:
+            self._eval_stmt_collect(stmt, children)
+
+        total_size = self._offset - offset
+        raw = self._data.read(offset, max(total_size, 0))
+        members.update(struct_scope.bindings)
+        return total_size, raw
+
     def _eval_struct_instance(
         self,
         name: str,
@@ -1305,22 +1368,14 @@ class HexPatEvaluator:
         raw: bytes = b""
 
         try:
-            if type_info.parent is not None:
-                parent_resolved = self._types.resolve(type_info.parent)
-                if isinstance(parent_resolved, StructTypeInfo):
-                    parent_result = self._eval_struct_instance(parent_resolved.name, parent_resolved, "__parent__", self._offset, color, "")
-                    children.extend(parent_result.get("children", []))
-                    self._offset += int(parent_result["size"])
-                    parent_members = _extract_members_dict(parent_result, "_members", pop=True)
-                    if parent_members is not None:
-                        members |= parent_members
-
-            for stmt in type_info.decl.body:
-                self._eval_stmt_collect(stmt, children)
-
-            total_size = self._offset - offset
-            raw = self._data.read(offset, max(total_size, 0))
-            members.update(struct_scope.bindings)
+            total_size, raw = self._evaluate_struct_body(
+                type_info=type_info,
+                color=color,
+                offset=offset,
+                children=children,
+                members=members,
+                struct_scope=struct_scope,
+            )
         finally:
             self._offset = saved_offset
             self._scope = saved_scope
@@ -1329,6 +1384,47 @@ class HexPatEvaluator:
         result = _make_parsed_field(var_name, offset, total_size, raw, name, children, color, description)
         result["_members"] = members
         return result
+
+    def _evaluate_union_body(
+        self,
+        *,
+        type_info: UnionTypeInfo,
+        offset: int,
+        children: list[dict[str, Any]],
+        members: dict[str, PatternValue],
+        union_scope: EvalScope,
+    ) -> tuple[int, bytes]:
+        """Evaluate a union's alternatives and compute its footprint.
+
+        Resets ``self._offset`` to ``offset`` before each alternative so
+        members are read as overlays, tracks the maximum size seen, and
+        populates ``children``/``members`` in place. The caller restores the
+        saved offset/scope/depth in its ``finally`` clause. Propagates
+        :class:`HexPatRuntimeError` from nested evaluation when an
+        alternative fails to evaluate.
+
+        Args:
+            type_info: The union type being instantiated.
+            offset: Absolute byte offset where every alternative starts.
+            children: Accumulator for child parsed-field dictionaries; modified
+                in place.
+            members: Accumulator for resolved member values; modified in place.
+            union_scope: Evaluation scope for this union instance whose
+                bindings are merged into ``members``.
+
+        Returns:
+            tuple[int, bytes]: ``(max_size, raw)`` for the union instance.
+        """
+        max_size = 0
+        for stmt in type_info.decl.body:
+            self._offset = offset
+            self._eval_stmt_collect(stmt, children)
+            member_size = self._offset - offset
+            max_size = max(max_size, member_size)
+
+        raw = self._data.read(offset, max(max_size, 0))
+        members |= union_scope.bindings
+        return max_size, raw
 
     def _eval_union_instance(
         self,
@@ -1381,14 +1477,13 @@ class HexPatEvaluator:
         raw: bytes = b""
 
         try:
-            for stmt in type_info.decl.body:
-                self._offset = offset
-                self._eval_stmt_collect(stmt, children)
-                member_size = self._offset - offset
-                max_size = max(max_size, member_size)
-
-            raw = self._data.read(offset, max(max_size, 0))
-            members |= union_scope.bindings
+            max_size, raw = self._evaluate_union_body(
+                type_info=type_info,
+                offset=offset,
+                children=children,
+                members=members,
+                union_scope=union_scope,
+            )
         finally:
             self._offset = saved_offset
             self._scope = saved_scope
@@ -2833,20 +2928,54 @@ class HexPatEvaluator:
         bindings = self._bind_template_args(params, type_node.template_args, type_node.line, type_node.column, lookup_name)
         self._template_args_stack.append(bindings)
         try:
-            if isinstance(resolved, StructTypeInfo):
-                return self._eval_struct_instance(resolved.name, resolved, var_name, offset, color, description)
-            if isinstance(resolved, UnionTypeInfo):
-                return self._eval_union_instance(resolved.name, resolved, var_name, offset, color, description)
-            if isinstance(resolved, EnumTypeInfo):
-                return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
-            if isinstance(resolved, BitfieldTypeInfo):
-                return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
-            pv = self._read_primitive(resolved, offset)
-            raw = self._data.read(offset, resolved.size)
-            display = self._format_value(pv.value, resolved)
-            return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
+            return self._dispatch_resolved_type(
+                resolved=resolved,
+                var_name=var_name,
+                offset=offset,
+                color=color,
+                description=description,
+            )
         finally:
             self._template_args_stack.pop()
+
+    def _dispatch_resolved_type(
+        self,
+        *,
+        resolved: HexPatType | StructTypeInfo | UnionTypeInfo | EnumTypeInfo | BitfieldTypeInfo,
+        var_name: str,
+        offset: int,
+        color: str,
+        description: str,
+    ) -> dict[str, Any]:
+        """Dispatch a resolved type to its instantiation method.
+
+        Propagates :class:`HexPatRuntimeError` from the underlying
+        instantiation helpers when evaluation fails.
+
+        Args:
+            resolved: The resolved type-info entry (struct, union, enum,
+                bitfield, or primitive).
+            var_name: The variable name attached to the resulting field.
+            offset: Absolute byte offset where the type is instantiated.
+            color: Hex colour string for UI highlighting.
+            description: Optional description annotation.
+
+        Returns:
+            dict[str, Any]: The parsed-field dictionary produced by the
+            matching ``_eval_*_instance`` helper (or by reading a primitive).
+        """
+        if isinstance(resolved, StructTypeInfo):
+            return self._eval_struct_instance(resolved.name, resolved, var_name, offset, color, description)
+        if isinstance(resolved, UnionTypeInfo):
+            return self._eval_union_instance(resolved.name, resolved, var_name, offset, color, description)
+        if isinstance(resolved, EnumTypeInfo):
+            return self._eval_enum_instance(resolved.name, resolved, var_name, offset, color, description)
+        if isinstance(resolved, BitfieldTypeInfo):
+            return self._eval_bitfield_instance(resolved.name, resolved, var_name, offset, color, description)
+        pv = self._read_primitive(resolved, offset)
+        raw = self._data.read(offset, resolved.size)
+        display = self._format_value(pv.value, resolved)
+        return _make_parsed_field(var_name, offset, resolved.size, raw, display, [], color, description)
 
     def _bind_template_args(
         self,

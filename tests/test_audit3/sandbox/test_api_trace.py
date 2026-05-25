@@ -238,6 +238,53 @@ def _run_script(
     )
 
 
+def _run_smoke_script_and_wait(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
+    """Start the smoke script and wait for it (or kill on timeout).
+
+    Args:
+        log_dir: Directory passed to the script via ``-LogDir``.
+        pwsh: Absolute path to ``pwsh.exe``.
+
+    Returns:
+        subprocess.Popen[str]: The background script process.
+    """
+    proc = _start_script_background(
+        log_dir=log_dir,
+        pwsh=pwsh,
+        target_pid=0,
+        duration_seconds=_SMOKE_DURATION_SEC,
+    )
+    try:
+        proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
+    return proc
+
+
+def _run_handle_churn_helper_and_wait(
+    proc: subprocess.Popen[str],
+    pwsh: str,
+) -> subprocess.Popen[str]:
+    """Spawn the churn helper and wait for the smoke script to settle.
+
+    Args:
+        proc: The background smoke script subprocess.
+        pwsh: Absolute path to ``pwsh.exe``.
+
+    Returns:
+        subprocess.Popen[str]: The spawned churn helper.
+    """
+    time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+    helper = _spawn_handle_churn_helper(pwsh)
+    try:
+        proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
+    return helper
+
+
 def _start_script_background(
     log_dir: Path,
     pwsh: str,
@@ -760,17 +807,7 @@ def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> N
     )
     proc: subprocess.Popen[str] | None = None
     try:
-        proc = _start_script_background(
-            log_dir=log_dir,
-            pwsh=pwsh,
-            target_pid=0,
-            duration_seconds=_SMOKE_DURATION_SEC,
-        )
-        try:
-            proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-            proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
+        proc = _run_smoke_script_and_wait(log_dir, pwsh)
     finally:
         if proc is not None and proc.poll() is None:
             proc.terminate()
@@ -824,13 +861,7 @@ def test_smoke_script_emits_event_records_under_admin(tmp_path: Path) -> None:
     )
     helper: subprocess.Popen[str] | None = None
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
-        helper = _spawn_handle_churn_helper(pwsh)
-        try:
-            proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
-        except subprocess.TimeoutExpired:
-            proc.terminate()
-            proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
+        helper = _run_handle_churn_helper_and_wait(proc, pwsh)
     finally:
         if helper is not None:
             _terminate(helper)

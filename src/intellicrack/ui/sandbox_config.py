@@ -103,6 +103,49 @@ class SandboxTestWorker(QThread):
         self._wsb_file: Path | None = None
         self._process: Popen[bytes] | None = None
 
+    def _launch_sandbox_test(self) -> bool:
+        """Generate the WSB config, launch Windows Sandbox, and wait for it.
+
+        Returns:
+            bool: ``True`` when the helper handled finish signalling itself
+            (the caller should return without emitting a success), ``False``
+            when the run completed normally and the caller should emit success.
+        """
+        self.output.emit("Creating sandbox configuration...")
+        wsb_content = self._generate_wsb_config()
+
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".wsb",
+            delete=False,
+            encoding="utf-8",
+        ) as wsb_file:
+            wsb_file.write(wsb_content)
+            self._wsb_file = Path(wsb_file.name)
+
+        self._log_wsb_written(wsb_content)
+        self.output.emit(f"Configuration file: {self._wsb_file}")
+        self.output.emit("Launching Windows Sandbox...")
+
+        self._process = Popen(
+            ["WindowsSandbox.exe", str(self._wsb_file)],
+            stdout=PIPE,
+            stderr=PIPE,
+            creationflags=CREATE_NO_WINDOW,
+        )
+        self._register_test_process()
+
+        self.output.emit("Windows Sandbox launched successfully")
+        self.output.emit("Waiting for sandbox to initialize (10 seconds)...")
+
+        try:
+            self._process.wait(timeout=10)
+        except TimeoutExpired:
+            _logger.warning("sandbox_test_wait_timeout")
+            self.output.emit("Sandbox is running normally")
+            return False
+        return self._handle_sandbox_exit_status()
+
     def run(self) -> None:
         """Execute the sandbox test."""
         if not _IS_WIN32:
@@ -111,42 +154,8 @@ class SandboxTestWorker(QThread):
             return
 
         try:
-            self.output.emit("Creating sandbox configuration...")
-            wsb_content = self._generate_wsb_config()
-
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".wsb",
-                delete=False,
-                encoding="utf-8",
-            ) as wsb_file:
-                wsb_file.write(wsb_content)
-                self._wsb_file = Path(wsb_file.name)
-
-            self._log_wsb_written(wsb_content)
-            self.output.emit(f"Configuration file: {self._wsb_file}")
-            self.output.emit("Launching Windows Sandbox...")
-
-            self._process = Popen(
-                ["WindowsSandbox.exe", str(self._wsb_file)],
-                stdout=PIPE,
-                stderr=PIPE,
-                creationflags=CREATE_NO_WINDOW,
-            )
-            self._register_test_process()
-
-            self.output.emit("Windows Sandbox launched successfully")
-            self.output.emit("Waiting for sandbox to initialize (10 seconds)...")
-
-            try:
-                self._process.wait(timeout=10)
-            except TimeoutExpired:
-                _logger.warning("sandbox_test_wait_timeout")
-                self.output.emit("Sandbox is running normally")
-            else:
-                if self._handle_sandbox_exit_status():
-                    return
-
+            if self._launch_sandbox_test():
+                return
             success = True
             self.finished.emit(success, "Windows Sandbox test completed successfully")
 
@@ -467,6 +476,36 @@ class SandboxConfigDialog(QDialog):
 
         layout.addLayout(button_layout)
 
+    def _run_sandbox_availability_check(self) -> None:
+        """Probe Windows for the Containers-DisposableClientVM feature."""
+        process_manager = ProcessManager.get_instance()
+        creation_flags = CREATE_NO_WINDOW
+        result = process_manager.run_tracked(
+            [
+                "powershell",
+                "-Command",
+                "Get-WindowsOptionalFeature -FeatureName Containers-DisposableClientVM -Online",
+            ],
+            name="powershell-sandbox-check",
+            check=False,
+            timeout=10,
+            creationflags=creation_flags,
+        )
+        if "Enabled" in result.stdout:
+            _logger.info(
+                "sandbox_config_validated",
+                valid=True,
+                sandbox_available=True,
+            )
+            self._set_available()
+        else:
+            _logger.info(
+                "sandbox_config_validated",
+                valid=False,
+                reason="feature_not_enabled",
+            )
+            self._set_unavailable("Windows Sandbox feature is not enabled")
+
     def _check_availability(self) -> None:
         """Check if Windows Sandbox is available."""
         if not _IS_WIN32:
@@ -481,33 +520,7 @@ class SandboxConfigDialog(QDialog):
 
         _logger.debug("sandbox_availability_check_started")
         try:
-            process_manager = ProcessManager.get_instance()
-            creation_flags = CREATE_NO_WINDOW
-            result = process_manager.run_tracked(
-                [
-                    "powershell",
-                    "-Command",
-                    "Get-WindowsOptionalFeature -FeatureName Containers-DisposableClientVM -Online",
-                ],
-                name="powershell-sandbox-check",
-                check=False,
-                timeout=10,
-                creationflags=creation_flags,
-            )
-            if "Enabled" in result.stdout:
-                _logger.info(
-                    "sandbox_config_validated",
-                    valid=True,
-                    sandbox_available=True,
-                )
-                self._set_available()
-            else:
-                _logger.info(
-                    "sandbox_config_validated",
-                    valid=False,
-                    reason="feature_not_enabled",
-                )
-                self._set_unavailable("Windows Sandbox feature is not enabled")
+            self._run_sandbox_availability_check()
         except TimeoutExpired:
             _logger.exception(
                 "sandbox_config_error",
@@ -586,6 +599,31 @@ class SandboxConfigDialog(QDialog):
         self._read_only_checkbox.setEnabled(enabled)
         self._test_btn.setEnabled(enabled)
 
+    def _apply_settings_from_config(self, default_shared: Path) -> None:
+        """Load sandbox settings JSON from ``CONFIG_FILE`` and apply them to widgets.
+
+        Args:
+            default_shared: Default shared-folder path used when the saved
+                config omits the ``shared_folder`` key.
+        """
+        with self.CONFIG_FILE.open(encoding="utf-8") as f:
+            settings = json.load(f)
+
+        self._enabled_checkbox.setChecked(settings.get("enabled", True))
+        self._auto_cleanup_checkbox.setChecked(settings.get("auto_cleanup", True))
+        self._timeout_spin.setValue(settings.get("timeout_seconds", 300))
+        self._memory_spin.setValue(settings.get("memory_limit_mb", 2048))
+        self._network_enabled_checkbox.setChecked(settings.get("network_enabled", False))
+        self._block_telemetry_checkbox.setChecked(settings.get("block_telemetry", True))
+        self._shared_folder_input.setText(settings.get("shared_folder", str(default_shared)))
+        self._read_only_checkbox.setChecked(settings.get("shared_folder_read_only", False))
+
+        _logger.info(
+            "sandbox_config_loaded",
+            config_file=str(self.CONFIG_FILE),
+            settings_count=len(settings),
+        )
+
     def _load_settings(self) -> None:
         """Load settings from config file."""
         default_shared = get_project_root() / "sandbox_shared"
@@ -596,24 +634,7 @@ class SandboxConfigDialog(QDialog):
         )
         if self.CONFIG_FILE.exists():
             try:
-                with self.CONFIG_FILE.open(encoding="utf-8") as f:
-                    settings = json.load(f)
-
-                self._enabled_checkbox.setChecked(settings.get("enabled", True))
-                self._auto_cleanup_checkbox.setChecked(settings.get("auto_cleanup", True))
-                self._timeout_spin.setValue(settings.get("timeout_seconds", 300))
-                self._memory_spin.setValue(settings.get("memory_limit_mb", 2048))
-                self._network_enabled_checkbox.setChecked(settings.get("network_enabled", False))
-                self._block_telemetry_checkbox.setChecked(settings.get("block_telemetry", True))
-                self._shared_folder_input.setText(settings.get("shared_folder", str(default_shared)))
-                self._read_only_checkbox.setChecked(settings.get("shared_folder_read_only", False))
-
-                _logger.info(
-                    "sandbox_config_loaded",
-                    config_file=str(self.CONFIG_FILE),
-                    settings_count=len(settings),
-                )
-
+                self._apply_settings_from_config(default_shared)
             except (json.JSONDecodeError, OSError):
                 _logger.exception(
                     "sandbox_config_error",

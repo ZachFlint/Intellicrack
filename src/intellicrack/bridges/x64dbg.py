@@ -579,6 +579,32 @@ def _read_process_memory_block(
     return buffer.raw[: bytes_read.value]
 
 
+def _open_process_and_extract_command_line(pid: int) -> str | None:
+    """Open a process handle and extract its command line via the PEB.
+
+    Args:
+        pid: Process ID whose command line should be extracted.
+
+    Returns:
+        str | None: Command line string, or None if the process handle
+        cannot be opened.
+    """
+    kernel32 = ctypes.windll.kernel32
+    inherit_handle = False
+    handle = kernel32.OpenProcess(
+        WIN_PROCESS_QUERY_INFORMATION | WIN_PROCESS_VM_READ,
+        inherit_handle,
+        pid,
+    )
+    if not handle:
+        return None
+
+    try:
+        return _extract_command_line_from_peb(handle)
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _read_process_command_line(pid: int) -> str | None:
     """Read process command line using Windows API.
 
@@ -592,21 +618,7 @@ def _read_process_command_line(pid: int) -> str | None:
         return None
 
     try:
-        kernel32 = ctypes.windll.kernel32
-        inherit_handle = False
-        handle = kernel32.OpenProcess(
-            WIN_PROCESS_QUERY_INFORMATION | WIN_PROCESS_VM_READ,
-            inherit_handle,
-            pid,
-        )
-        if not handle:
-            return None
-
-        try:
-            return _extract_command_line_from_peb(handle)
-        finally:
-            kernel32.CloseHandle(handle)
-
+        return _open_process_and_extract_command_line(pid)
     except (OSError, ValueError) as e:
         _logger.warning("command_line_read_failed", error=str(e))
         return None
@@ -2118,59 +2130,9 @@ class X64DbgBridge(DebuggerBridge):
         cleanup_errors: list[BaseException] = []
 
         try:
-            try:
-                await self._close_connection()
-            except (ToolError, OSError, RuntimeError) as exc:
-                _logger.warning("x64dbg_close_connection_failed_during_shutdown", error=str(exc))
-                cleanup_errors.append(exc)
-
-            if self._process is not None:
-                process = self._process
-                pid = process.pid
-                process_manager = ProcessManager.get_instance()
-                try:
-                    process.terminate()
-                    try:
-                        await asyncio.wait_for(
-                            asyncio.to_thread(process.wait),
-                            timeout=5,
-                        )
-                    except TimeoutError:
-                        _logger.warning("x64dbg_process_terminate_timeout", pid=pid)
-                        try:
-                            process.kill()
-                        except OSError as kill_exc:
-                            _logger.warning("x64dbg_process_kill_failed", pid=pid, error=str(kill_exc))
-                            cleanup_errors.append(kill_exc)
-                        else:
-                            await asyncio.to_thread(process.wait)
-                except OSError as exc:
-                    _logger.warning("x64dbg_process_terminate_failed", pid=pid, error=str(exc))
-                    cleanup_errors.append(exc)
-                finally:
-                    try:
-                        process_manager.unregister(pid)
-                    except (RuntimeError, KeyError) as exc:
-                        _logger.warning("x64dbg_process_unregister_failed", pid=pid, error=str(exc))
-                        cleanup_errors.append(exc)
-                    self._process = None
+            await self._run_shutdown_phase(cleanup_errors)
         finally:
-            self._attached_pid = None
-            with self._state_lock:
-                self._breakpoints.clear()
-                self._watchpoints.clear()
-            self._cancel_all_step_waiters()
-            try:
-                self._release_process_handles()
-            except (OSError, RuntimeError) as exc:
-                _logger.warning("x64dbg_release_handles_failed", error=str(exc))
-                cleanup_errors.append(exc)
-            try:
-                await super().shutdown()
-            except (ToolError, OSError, RuntimeError) as exc:
-                _logger.warning("x64dbg_super_shutdown_failed", error=str(exc))
-                cleanup_errors.append(exc)
-            _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg", errors=len(cleanup_errors))
+            await self._run_shutdown_finalization(cleanup_errors)
 
         if cleanup_errors:
             first = cleanup_errors[0]
@@ -2188,6 +2150,104 @@ class X64DbgBridge(DebuggerBridge):
             if isinstance(first, KeyError):
                 raise KeyError(*first.args) from first
             raise RuntimeError(*first.args) from first
+
+    async def _run_shutdown_phase(self, cleanup_errors: list[BaseException]) -> None:
+        """Close the IPC connection and terminate the spawned debugger.
+
+        Args:
+            cleanup_errors: Mutable list that collects exceptions raised by
+                any sub-phase so the caller can re-raise the first one
+                after all stages have completed.
+        """
+        try:
+            await self._close_connection()
+        except (ToolError, OSError, RuntimeError) as exc:
+            _logger.warning("x64dbg_close_connection_failed_during_shutdown", error=str(exc))
+            cleanup_errors.append(exc)
+
+        if self._process is not None:
+            await self._terminate_debugger_process(cleanup_errors)
+
+    async def _terminate_debugger_process(self, cleanup_errors: list[BaseException]) -> None:
+        """Terminate the spawned x64dbg process and unregister it.
+
+        Args:
+            cleanup_errors: Mutable list that collects exceptions raised
+                during termination, kill, or process-manager
+                deregistration.
+        """
+        process = self._process
+        if process is None:
+            return
+        pid = process.pid
+        process_manager = ProcessManager.get_instance()
+        try:
+            await self._terminate_process_with_timeout(process, pid, cleanup_errors)
+        except OSError as exc:
+            _logger.warning("x64dbg_process_terminate_failed", pid=pid, error=str(exc))
+            cleanup_errors.append(exc)
+        finally:
+            try:
+                process_manager.unregister(pid)
+            except (RuntimeError, KeyError) as exc:
+                _logger.warning("x64dbg_process_unregister_failed", pid=pid, error=str(exc))
+                cleanup_errors.append(exc)
+            self._process = None
+
+    @staticmethod
+    async def _terminate_process_with_timeout(
+        process: Popen[bytes],
+        pid: int,
+        cleanup_errors: list[BaseException],
+    ) -> None:
+        """Terminate a process and fall back to ``kill`` on timeout.
+
+        Args:
+            process: The ``Popen`` handle representing the spawned
+                x64dbg debugger.
+            pid: Process ID, used for logging context.
+            cleanup_errors: Mutable list that records exceptions raised
+                by the fallback ``kill`` call.
+        """
+        process.terminate()
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(process.wait),
+                timeout=5,
+            )
+        except TimeoutError:
+            _logger.warning("x64dbg_process_terminate_timeout", pid=pid)
+            try:
+                process.kill()
+            except OSError as kill_exc:
+                _logger.warning("x64dbg_process_kill_failed", pid=pid, error=str(kill_exc))
+                cleanup_errors.append(kill_exc)
+            else:
+                await asyncio.to_thread(process.wait)
+
+    async def _run_shutdown_finalization(self, cleanup_errors: list[BaseException]) -> None:
+        """Reset bookkeeping state and run base-class shutdown.
+
+        Args:
+            cleanup_errors: Mutable list that collects exceptions raised
+                by handle release or the base shutdown coroutine.
+        """
+        self._attached_pid = None
+        with self._state_lock:
+            self._breakpoints.clear()
+            self._watchpoints.clear()
+        self._cancel_all_step_waiters()
+        try:
+            self._release_process_handles()
+        except (OSError, RuntimeError) as exc:
+            _logger.warning("x64dbg_release_handles_failed", error=str(exc))
+            cleanup_errors.append(exc)
+        try:
+            await super().shutdown()
+        except (ToolError, OSError, RuntimeError) as exc:
+            _logger.warning("x64dbg_super_shutdown_failed", error=str(exc))
+            cleanup_errors.append(exc)
+        _logger.info("x64dbg_bridge_shutdown", bridge="x64dbg", errors=len(cleanup_errors))
 
     def _cancel_all_step_waiters(self) -> None:
         """Cancel every pending step waiter future during shutdown.
@@ -2901,34 +2961,65 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("x64dbg_arch_detect_skipped_non_windows", pid=pid)
             return None
         try:
-            kernel32 = ctypes.windll.kernel32
-            inherit_handle = False
-            handle = kernel32.OpenProcess(WIN_PROCESS_QUERY_INFORMATION, inherit_handle, pid)
-            if not handle:
-                last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
-                _logger.warning(
-                    "x64dbg_arch_detect_open_process_failed",
-                    pid=pid,
-                    last_error=last_error,
-                )
-                return None
-            try:
-                is_wow64 = ctypes.c_int(0)
-                ok: int = kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
-                if not ok:
-                    last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
-                    _logger.warning(
-                        "x64dbg_arch_detect_iswow64_failed",
-                        pid=pid,
-                        last_error=last_error,
-                    )
-                    return None
-                return not bool(is_wow64.value)
-            finally:
-                kernel32.CloseHandle(handle)
+            return X64DbgBridge._open_process_and_detect_arch(pid)
         except (OSError, AttributeError) as exc:
             _logger.warning("x64dbg_arch_detect_unexpected_error", pid=pid, error=str(exc))
             return None
+
+    @staticmethod
+    def _open_process_and_detect_arch(pid: int) -> bool | None:
+        """Open the target process and read its WOW64 status.
+
+        Args:
+            pid: Process ID of the target process.
+
+        Returns:
+            bool | None: ``True`` for native x86_64, ``False`` for
+            WOW64, or ``None`` if the handle could not be opened or
+            ``IsWow64Process`` reported failure.
+        """
+        kernel32 = ctypes.windll.kernel32
+        inherit_handle = False
+        handle = kernel32.OpenProcess(WIN_PROCESS_QUERY_INFORMATION, inherit_handle, pid)
+        if not handle:
+            last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
+            _logger.warning(
+                "x64dbg_arch_detect_open_process_failed",
+                pid=pid,
+                last_error=last_error,
+            )
+            return None
+        try:
+            return X64DbgBridge._read_iswow64_status(handle, pid)
+        finally:
+            kernel32.CloseHandle(handle)
+
+    @staticmethod
+    def _read_iswow64_status(handle: int, pid: int) -> bool | None:
+        """Invoke ``IsWow64Process`` on an open process handle.
+
+        Args:
+            handle: Process handle previously returned by
+                ``OpenProcess`` with ``PROCESS_QUERY_INFORMATION``.
+            pid: Process ID, used only for logging context.
+
+        Returns:
+            bool | None: ``True`` if the process is a native 64-bit
+            process, ``False`` if it is WOW64, or ``None`` when
+            ``IsWow64Process`` failed.
+        """
+        kernel32 = ctypes.windll.kernel32
+        is_wow64 = ctypes.c_int(0)
+        ok: int = kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
+        if not ok:
+            last_error = ctypes.get_last_error() if hasattr(ctypes, "get_last_error") else 0
+            _logger.warning(
+                "x64dbg_arch_detect_iswow64_failed",
+                pid=pid,
+                last_error=last_error,
+            )
+            return None
+        return not bool(is_wow64.value)
 
     async def detach(self) -> None:
         """Detach from current process."""
@@ -2966,6 +3057,45 @@ class X64DbgBridge(DebuggerBridge):
 
     STEP_TIMEOUT_SECONDS: float = 30.0
 
+    async def _dispatch_step_and_await(
+        self,
+        command: str,
+        waiter: asyncio.Future[int],
+    ) -> int:
+        """Send a step command and wait for the matching paused event.
+
+        Args:
+            command: The step command (``step_into`` / ``step_over`` /
+                ``step_out``).
+            waiter: Future previously registered via
+                :meth:`_register_step_waiter` that will resolve with the
+                event instruction pointer when the plugin emits the
+                paused notification.
+
+        Returns:
+            int: Instruction pointer reported by the paused event.
+
+        Raises:
+            ToolError: If the step did not complete within
+                :attr:`STEP_TIMEOUT_SECONDS`.
+        """
+        await self._send_pipe_command(command)
+        try:
+            return await asyncio.wait_for(waiter, timeout=self.STEP_TIMEOUT_SECONDS)
+        except TimeoutError as exc:
+            self._cancel_step_waiter(waiter)
+            _logger.warning(
+                "x64dbg_step_timeout",
+                command=command,
+                timeout_s=self.STEP_TIMEOUT_SECONDS,
+                error=str(exc),
+            )
+            msg = (
+                f"x64dbg {command} did not complete within {self.STEP_TIMEOUT_SECONDS:.0f}s; "
+                "the debuggee may be blocked in a syscall, on a long-running call, or hung"
+            )
+            raise ToolError(msg, tool_name="x64dbg") from exc
+
     async def _await_step_complete(self, command: str) -> int:
         """Send a step command and await the resulting paused event.
 
@@ -2987,33 +3117,16 @@ class X64DbgBridge(DebuggerBridge):
             32 bits for x86 targets.
 
         Raises:
-            ToolError: If the step never completes within
-                :attr:`STEP_TIMEOUT_SECONDS`.
             BaseException: Re-raised after cancelling the step waiter
-                when ``_send_pipe_command`` or the ``asyncio.wait_for``
-                wait is cancelled or fails for any other reason; the
-                bare re-raise preserves cancellations and unexpected
+                when :meth:`_dispatch_step_and_await` raises (most
+                notably :class:`ToolError` on timeout, but the bare
+                re-raise also preserves cancellations and any other
                 framework-level errors so callers see the original
-                cause.
+                cause).
         """
         waiter = self._register_step_waiter()
         try:
-            await self._send_pipe_command(command)
-            try:
-                event_ip = await asyncio.wait_for(waiter, timeout=self.STEP_TIMEOUT_SECONDS)
-            except TimeoutError as exc:
-                self._cancel_step_waiter(waiter)
-                _logger.warning(
-                    "x64dbg_step_timeout",
-                    command=command,
-                    timeout_s=self.STEP_TIMEOUT_SECONDS,
-                    error=str(exc),
-                )
-                msg = (
-                    f"x64dbg {command} did not complete within {self.STEP_TIMEOUT_SECONDS:.0f}s; "
-                    "the debuggee may be blocked in a syscall, on a long-running call, or hung"
-                )
-                raise ToolError(msg, tool_name="x64dbg") from exc
+            event_ip = await self._dispatch_step_and_await(command, waiter)
         except BaseException:
             self._cancel_step_waiter(waiter)
             _logger.debug("x64dbg_step_cancelled", command=command, exc_info=True)
@@ -3888,63 +4001,108 @@ class X64DbgBridge(DebuggerBridge):
             return None
 
         try:
-            address = 0
-            mbi = MemoryBasicInformation()
-
-            while True:
-                result = kernel32.VirtualQueryEx(
-                    handle,
-                    ctypes.c_void_p(address),
-                    ctypes.byref(mbi),
-                    ctypes.sizeof(mbi),
-                )
-
-                if result == 0:
-                    break
-
-                if mbi.State == WIN_MEM_COMMIT:
-                    prot_map = {
-                        PAGE_NOACCESS: "---",
-                        PAGE_READONLY: "r--",
-                        PAGE_READWRITE: "rw-",
-                        PAGE_EXECUTE: "--x",
-                        PAGE_EXECUTE_READ: "r-x",
-                        PAGE_EXECUTE_READWRITE_FLAG: "rwx",
-                    }
-
-                    mem_type_raw = int(mbi.Type)
-                    if mem_type_raw == MEM_IMAGE_FLAG:
-                        region_type = "image"
-                    elif mem_type_raw == MEM_MAPPED_FLAG:
-                        region_type = "mapped"
-                    elif mem_type_raw == MEM_PRIVATE_FLAG:
-                        region_type = "private"
-                    else:
-                        region_type = "unknown"
-
-                    base_addr = int(mbi.BaseAddress or 0)
-                    module_name = _resolve_module(base_addr) if region_type == "image" else None
-
-                    regions.append(
-                        MemoryRegion(
-                            base_address=base_addr,
-                            size=mbi.RegionSize,
-                            protection=prot_map.get(mbi.Protect, "???"),
-                            state="committed",
-                            type=region_type,
-                            module_name=module_name,
-                        ),
-                    )
-
-                address = (mbi.BaseAddress or 0) + mbi.RegionSize
-
-                if address > MAX_USER_ADDRESS_64:
-                    break
-
+            self._walk_committed_memory_regions(
+                kernel32,
+                handle,
+                MemoryBasicInformation(),
+                regions,
+                _resolve_module,
+            )
         finally:
             kernel32.CloseHandle(handle)
 
         return regions
+
+    @staticmethod
+    def _walk_committed_memory_regions(
+        kernel32: ctypes.WinDLL,
+        handle: int,
+        mbi: ctypes.Structure,
+        regions: list[MemoryRegion],
+        resolve_module: Callable[[int], str | None],
+    ) -> None:
+        """Walk the target process address space via ``VirtualQueryEx``.
+
+        Appends every committed region to ``regions`` and stops when
+        ``VirtualQueryEx`` returns zero or the cursor passes the
+        x86_64 user-mode boundary.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to issue
+                ``VirtualQueryEx``.
+            handle: Open process handle with ``PROCESS_QUERY_INFORMATION``
+                and ``PROCESS_VM_READ`` access.
+            mbi: A freshly allocated ``MEMORY_BASIC_INFORMATION``
+                structure that ``VirtualQueryEx`` will populate in place
+                on every iteration.
+            regions: Mutable list that receives one :class:`MemoryRegion`
+                per committed range encountered.
+            resolve_module: Callback that returns the name of the module
+                covering a given base address, or ``None`` if no module
+                matches.
+        """
+        address = 0
+        while True:
+            result = kernel32.VirtualQueryEx(
+                handle,
+                ctypes.c_void_p(address),
+                ctypes.byref(mbi),
+                ctypes.sizeof(mbi),
+            )
+            if result == 0:
+                break
+            if mbi.State == WIN_MEM_COMMIT:
+                X64DbgBridge._append_committed_region(mbi, regions, resolve_module)
+            address = (mbi.BaseAddress or 0) + mbi.RegionSize
+            if address > MAX_USER_ADDRESS_64:
+                break
+
+    @staticmethod
+    def _append_committed_region(
+        mbi: ctypes.Structure,
+        regions: list[MemoryRegion],
+        resolve_module: Callable[[int], str | None],
+    ) -> None:
+        """Translate one ``MEMORY_BASIC_INFORMATION`` into a region.
+
+        Args:
+            mbi: Populated ``MEMORY_BASIC_INFORMATION`` describing a
+                single committed range.
+            regions: Mutable list that receives the new
+                :class:`MemoryRegion` entry.
+            resolve_module: Callback that returns the name of the module
+                covering ``mbi.BaseAddress`` when ``mbi`` describes an
+                image-backed region.
+        """
+        prot_map = {
+            PAGE_NOACCESS: "---",
+            PAGE_READONLY: "r--",
+            PAGE_READWRITE: "rw-",
+            PAGE_EXECUTE: "--x",
+            PAGE_EXECUTE_READ: "r-x",
+            PAGE_EXECUTE_READWRITE_FLAG: "rwx",
+        }
+        mem_type_raw = int(mbi.Type)
+        if mem_type_raw == MEM_IMAGE_FLAG:
+            region_type = "image"
+        elif mem_type_raw == MEM_MAPPED_FLAG:
+            region_type = "mapped"
+        elif mem_type_raw == MEM_PRIVATE_FLAG:
+            region_type = "private"
+        else:
+            region_type = "unknown"
+        base_addr = int(mbi.BaseAddress or 0)
+        module_name = resolve_module(base_addr) if region_type == "image" else None
+        regions.append(
+            MemoryRegion(
+                base_address=base_addr,
+                size=mbi.RegionSize,
+                protection=prot_map.get(mbi.Protect, "???"),
+                state="committed",
+                type=region_type,
+                module_name=module_name,
+            ),
+        )
 
     async def disassemble_at(
         self,
@@ -3982,26 +4140,7 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg)
 
         try:
-            data = await self.read_memory(address, count * 15)
-
-            mode = capstone.CS_MODE_64 if self._is_64bit else capstone.CS_MODE_32
-            md = capstone.Cs(capstone.CS_ARCH_X86, mode)
-
-            capstone_lines: list[DisassemblyLine] = []
-
-            for instr in md.disasm(data, address):
-                capstone_lines.append(
-                    DisassemblyLine(
-                        address=instr.address,
-                        bytes_str=" ".join(f"{b:02x}" for b in instr.bytes),
-                        mnemonic=instr.mnemonic,
-                        operands=instr.op_str,
-                        comment=None,
-                    ),
-                )
-                if len(capstone_lines) >= count:
-                    break
-
+            capstone_lines = await self._capstone_disassemble(capstone, address, count)
         except (OSError, struct.error, ValueError, ToolError) as exc:
             _logger.warning(
                 "disassembly_failed",
@@ -4012,8 +4151,41 @@ class X64DbgBridge(DebuggerBridge):
             )
             msg = f"Disassembly failed at {hex(address)}: {exc}"
             raise ToolError(msg, tool_name="x64dbg") from exc
-        else:
-            return capstone_lines
+        return capstone_lines
+
+    async def _capstone_disassemble(
+        self,
+        capstone: ModuleType,
+        address: int,
+        count: int,
+    ) -> list[DisassemblyLine]:
+        """Disassemble ``count`` instructions starting at ``address`` via capstone.
+
+        Args:
+            capstone: The imported capstone module.
+            address: Address in the attached process to disassemble from.
+            count: Maximum number of instructions to decode.
+
+        Returns:
+            list[DisassemblyLine]: Decoded instructions, up to ``count``.
+        """
+        data = await self.read_memory(address, count * 15)
+        mode = capstone.CS_MODE_64 if self._is_64bit else capstone.CS_MODE_32
+        md = capstone.Cs(capstone.CS_ARCH_X86, mode)
+        capstone_lines: list[DisassemblyLine] = []
+        for instr in md.disasm(data, address):
+            capstone_lines.append(
+                DisassemblyLine(
+                    address=instr.address,
+                    bytes_str=" ".join(f"{b:02x}" for b in instr.bytes),
+                    mnemonic=instr.mnemonic,
+                    operands=instr.op_str,
+                    comment=None,
+                ),
+            )
+            if len(capstone_lines) >= count:
+                break
+        return capstone_lines
 
     async def assemble_at(self, address: int, instruction: str) -> bytes:
         """Assemble instruction at address.
@@ -4086,43 +4258,63 @@ class X64DbgBridge(DebuggerBridge):
 
         for i in range(1, 32):
             try:
-                if rbp == 0:
-                    break
-
-                data = await self.read_memory(rbp, STACK_FRAME_SIZE_64)
-
-                if len(data) < STACK_FRAME_SIZE_64:
-                    break
-
-                if self._is_64bit:
-                    saved_rbp = int.from_bytes(data[:8], "little")
-                    return_addr = int.from_bytes(data[8:16], "little")
-                else:
-                    saved_rbp = int.from_bytes(data[:4], "little")
-                    return_addr = int.from_bytes(data[4:8], "little")
-
-                if return_addr == 0 or saved_rbp == 0:
-                    break
-
-                frames_fallback.append(
-                    StackFrame(
-                        index=i,
-                        address=return_addr,
-                        return_address=return_addr,
-                        frame_pointer=saved_rbp,
-                        stack_pointer=rbp + (16 if self._is_64bit else 8),
-                        function_name=None,
-                        module_name=None,
-                    ),
-                )
-
-                rbp = saved_rbp
-
+                next_rbp = await self._walk_one_stack_frame(i, rbp, frames_fallback)
             except ToolError as e:
                 _logger.warning("stack_trace_unavailable", error=str(e))
                 break
+            if next_rbp is None:
+                break
+            rbp = next_rbp
 
         return frames_fallback
+
+    async def _walk_one_stack_frame(
+        self,
+        index: int,
+        rbp: int,
+        frames_fallback: list[StackFrame],
+    ) -> int | None:
+        """Append one frame walked from ``rbp`` to ``frames_fallback``.
+
+        Reads the saved frame pointer and return address at ``[rbp]``
+        and ``[rbp + 8 / 4]`` and appends the resulting
+        :class:`StackFrame` to ``frames_fallback`` when both values are
+        non-zero.
+
+        Args:
+            index: Zero-based frame index for the new entry.
+            rbp: Current frame pointer to walk.
+            frames_fallback: Mutable list that receives the new frame.
+
+        Returns:
+            int | None: The saved frame pointer to continue walking
+            from, or ``None`` when the walk should terminate.
+        """
+        if rbp == 0:
+            return None
+        data = await self.read_memory(rbp, STACK_FRAME_SIZE_64)
+        if len(data) < STACK_FRAME_SIZE_64:
+            return None
+        if self._is_64bit:
+            saved_rbp = int.from_bytes(data[:8], "little")
+            return_addr = int.from_bytes(data[8:16], "little")
+        else:
+            saved_rbp = int.from_bytes(data[:4], "little")
+            return_addr = int.from_bytes(data[4:8], "little")
+        if return_addr == 0 or saved_rbp == 0:
+            return None
+        frames_fallback.append(
+            StackFrame(
+                index=index,
+                address=return_addr,
+                return_address=return_addr,
+                frame_pointer=saved_rbp,
+                stack_pointer=rbp + (16 if self._is_64bit else 8),
+                function_name=None,
+                module_name=None,
+            ),
+        )
+        return saved_rbp
 
     async def scan_memory(self, pattern: str | bytes) -> list[MemorySearchResult]:
         """Scan process memory for a pattern.
@@ -4360,26 +4552,7 @@ class X64DbgBridge(DebuggerBridge):
         threads: list[ThreadInfo] = []
 
         try:
-            te32 = ThreadEntry32()
-            te32.dwSize = ctypes.sizeof(ThreadEntry32)
-            _logger.debug("initialized_thread_entry", size=te32.dwSize)
-
-            if kernel32.Thread32First(snapshot, ctypes.byref(te32)):
-                while True:
-                    if te32.th32OwnerProcessID == self._attached_pid:
-                        tid = int(te32.th32ThreadID)
-                        start_address = self._query_thread_start_address(tid)
-                        current_pc, state = self._query_thread_pc_and_state(tid)
-                        threads.append(
-                            ThreadInfo(
-                                tid=tid,
-                                start_address=start_address,
-                                current_pc=current_pc,
-                                state=state,
-                            ),
-                        )
-                    if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
-                        break
+            self._enumerate_attached_threads(kernel32, snapshot, ThreadEntry32, threads)
         except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_threads_failed", pid=self._attached_pid, error=str(e))
             msg = f"{_ERR_GET_THREADS_FAILED}: {e}"
@@ -4389,6 +4562,46 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.debug("threads_found", count=len(threads), pid=self._attached_pid)
         return threads
+
+    def _enumerate_attached_threads(
+        self,
+        kernel32: ctypes.WinDLL,
+        snapshot: int,
+        thread_entry_cls: type[ctypes.Structure],
+        threads: list[ThreadInfo],
+    ) -> None:
+        """Iterate the thread snapshot and append matching threads.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to walk the
+                snapshot via ``Thread32First`` / ``Thread32Next``.
+            snapshot: Open ``CreateToolhelp32Snapshot`` handle for the
+                ``TH32CS_SNAPTHREAD`` class.
+            thread_entry_cls: ``THREADENTRY32`` ctypes structure class
+                whose instances will be populated by the walk.
+            threads: Mutable list that receives one :class:`ThreadInfo`
+                entry per thread owned by the attached process.
+        """
+        te32 = thread_entry_cls()
+        te32.dwSize = ctypes.sizeof(thread_entry_cls)
+        _logger.debug("initialized_thread_entry", size=te32.dwSize)
+        if not kernel32.Thread32First(snapshot, ctypes.byref(te32)):
+            return
+        while True:
+            if te32.th32OwnerProcessID == self._attached_pid:
+                tid = int(te32.th32ThreadID)
+                start_address = self._query_thread_start_address(tid)
+                current_pc, state = self._query_thread_pc_and_state(tid)
+                threads.append(
+                    ThreadInfo(
+                        tid=tid,
+                        start_address=start_address,
+                        current_pc=current_pc,
+                        state=state,
+                    ),
+                )
+            if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
+                break
 
     @staticmethod
     def _query_thread_start_address(tid: int) -> int:
@@ -4431,33 +4644,53 @@ class X64DbgBridge(DebuggerBridge):
             )
             return 0
         try:
-            start_address = ctypes.c_void_p(0)
-            try:
-                status: int = ntdll.NtQueryInformationThread(
-                    handle,
-                    ThreadQuerySetWin32StartAddress,
-                    ctypes.byref(start_address),
-                    ctypes.sizeof(start_address),
-                    None,
-                )
-            except (OSError, ctypes.ArgumentError) as exc:
-                _logger.warning(
-                    "thread_start_address_query_exception",
-                    tid=tid,
-                    error=str(exc),
-                    error_type=type(exc).__name__,
-                )
-                return 0
-            if status >= 0:
-                return int(start_address.value or 0)
-            _logger.debug(
-                "thread_start_address_nt_failed",
-                tid=tid,
-                ntstatus=hex(status & 0xFFFFFFFF),
-            )
-            return 0
+            return X64DbgBridge._query_thread_start_address_with_handle(ntdll, handle, tid)
         finally:
             kernel32.CloseHandle(handle)
+
+    @staticmethod
+    def _query_thread_start_address_with_handle(
+        ntdll: ctypes.WinDLL,
+        handle: int,
+        tid: int,
+    ) -> int:
+        """Invoke ``NtQueryInformationThread`` for an opened thread.
+
+        Args:
+            ntdll: ``ntdll`` proxy returned by :func:`get_ntdll`.
+            handle: Open thread handle with ``THREAD_QUERY_INFORMATION``
+                rights.
+            tid: Thread identifier, used only for logging context.
+
+        Returns:
+            int: Resolved start address, or ``0`` when the query failed
+            or returned a negative NTSTATUS.
+        """
+        start_address = ctypes.c_void_p(0)
+        try:
+            status: int = ntdll.NtQueryInformationThread(
+                handle,
+                ThreadQuerySetWin32StartAddress,
+                ctypes.byref(start_address),
+                ctypes.sizeof(start_address),
+                None,
+            )
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.warning(
+                "thread_start_address_query_exception",
+                tid=tid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            return 0
+        if status >= 0:
+            return int(start_address.value or 0)
+        _logger.debug(
+            "thread_start_address_nt_failed",
+            tid=tid,
+            ntstatus=hex(status & 0xFFFFFFFF),
+        )
+        return 0
 
     def _query_thread_pc_and_state(self, tid: int) -> tuple[int, str]:
         """Read the current PC and execution state for a single thread.
@@ -4496,27 +4729,49 @@ class X64DbgBridge(DebuggerBridge):
             )
             return 0, "unknown"
         try:
-            try:
-                raw_count: int = kernel32.SuspendThread(handle)
-            except (OSError, ctypes.ArgumentError) as exc:
-                _logger.warning(
-                    "thread_pc_suspend_exception",
-                    tid=tid,
-                    error=str(exc),
-                    error_type=type(exc).__name__,
-                )
-                return 0, "unknown"
-            signed_count = ctypes.c_long(raw_count).value
-            if signed_count < 0:
-                return 0, "unknown"
-            try:
-                state = "suspended" if signed_count > 0 else "running"
-                pc = self._read_thread_program_counter(handle)
-                return pc, state
-            finally:
-                kernel32.ResumeThread(handle)
+            return self._read_thread_pc_and_state_with_handle(kernel32, handle, tid)
         finally:
             kernel32.CloseHandle(handle)
+
+    def _read_thread_pc_and_state_with_handle(
+        self,
+        kernel32: ctypes.WinDLL,
+        handle: int,
+        tid: int,
+    ) -> tuple[int, str]:
+        """Suspend a thread, read its PC, then resume it.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used for the
+                suspend/resume pair.
+            handle: Open thread handle with the
+                ``THREAD_QUERY_INFORMATION | THREAD_GET_CONTEXT |
+                THREAD_SUSPEND_RESUME`` access mask.
+            tid: Thread identifier, used only for logging context.
+
+        Returns:
+            tuple[int, str]: ``(pc, state)`` where ``state`` is one of
+            ``"suspended"``, ``"running"``, or ``"unknown"``.
+        """
+        try:
+            raw_count: int = kernel32.SuspendThread(handle)
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.warning(
+                "thread_pc_suspend_exception",
+                tid=tid,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            return 0, "unknown"
+        signed_count = ctypes.c_long(raw_count).value
+        if signed_count < 0:
+            return 0, "unknown"
+        try:
+            state = "suspended" if signed_count > 0 else "running"
+            pc = self._read_thread_program_counter(handle)
+            return pc, state
+        finally:
+            kernel32.ResumeThread(handle)
 
     def _read_thread_program_counter(self, handle: int) -> int:
         """Read the instruction pointer of a thread via ``GetThreadContext``.
@@ -4608,24 +4863,7 @@ class X64DbgBridge(DebuggerBridge):
         modules: list[ModuleInfo] = []
 
         try:
-            me32 = ModuleEntry32W()
-            me32.dwSize = ctypes.sizeof(ModuleEntry32W)
-            _logger.debug("initialized_module_entry", size=me32.dwSize)
-
-            if kernel32.Module32FirstW(snapshot, ctypes.byref(me32)):
-                while True:
-                    base_addr = me32.modBaseAddr or 0
-                    modules.append(
-                        ModuleInfo(
-                            name=me32.szModule,
-                            path=Path(me32.szExePath),
-                            base_address=base_addr,
-                            size=me32.modBaseSize,
-                            entry_point=0,
-                        ),
-                    )
-                    if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
-                        break
+            self._enumerate_modules_into(kernel32, snapshot, ModuleEntry32W, modules)
         except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_modules_failed", pid=self._attached_pid, error=str(e))
             msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
@@ -4635,6 +4873,44 @@ class X64DbgBridge(DebuggerBridge):
 
         _logger.debug("modules_found", count=len(modules), pid=self._attached_pid)
         return modules
+
+    @staticmethod
+    def _enumerate_modules_into(
+        kernel32: ctypes.WinDLL,
+        snapshot: int,
+        module_entry_cls: type[ctypes.Structure],
+        modules: list[ModuleInfo],
+    ) -> None:
+        """Walk a module snapshot and append every module entry.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to walk the
+                snapshot via ``Module32FirstW`` / ``Module32NextW``.
+            snapshot: Open ``CreateToolhelp32Snapshot`` handle for the
+                ``TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32`` classes.
+            module_entry_cls: ``MODULEENTRY32W`` ctypes structure class
+                whose instances will be populated by the walk.
+            modules: Mutable list that receives one :class:`ModuleInfo`
+                per loaded module.
+        """
+        me32 = module_entry_cls()
+        me32.dwSize = ctypes.sizeof(module_entry_cls)
+        _logger.debug("initialized_module_entry", size=me32.dwSize)
+        if not kernel32.Module32FirstW(snapshot, ctypes.byref(me32)):
+            return
+        while True:
+            base_addr = me32.modBaseAddr or 0
+            modules.append(
+                ModuleInfo(
+                    name=me32.szModule,
+                    path=Path(me32.szExePath),
+                    base_address=base_addr,
+                    size=me32.modBaseSize,
+                    entry_point=0,
+                ),
+            )
+            if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
+                break
 
     async def get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
@@ -8505,56 +8781,102 @@ class X64DbgBridge(DebuggerBridge):
             return []
 
         try:
-            advapi32 = ctypes.windll.advapi32
-            kernel32 = ctypes.windll.kernel32
-
-            token_handle = wintypes.HANDLE()
-            current_process = kernel32.GetCurrentProcess()
-            if not advapi32.OpenProcessToken(current_process, 0x0008, ctypes.byref(token_handle)):
-                return []
-
-            try:
-                return_length = wintypes.DWORD()
-                advapi32.GetTokenInformation(token_handle, 3, None, 0, ctypes.byref(return_length))
-                buffer = ctypes.create_string_buffer(return_length.value)
-                if not advapi32.GetTokenInformation(token_handle, 3, buffer, return_length.value, ctypes.byref(return_length)):
-                    return []
-
-                count = struct.unpack_from("<I", buffer.raw, 0)[0]
-                privileges: list[dict[str, Any]] = []
-                offset = 4
-                for _ in range(min(count, 100)):
-                    luid_low = struct.unpack_from("<I", buffer.raw, offset)[0]
-                    luid_high = struct.unpack_from("<I", buffer.raw, offset + 4)[0]
-                    attrs = struct.unpack_from("<I", buffer.raw, offset + 8)[0]
-
-                    name_buf = ctypes.create_unicode_buffer(256)
-                    name_len = wintypes.DWORD(256)
-
-                    class LUID(ctypes.Structure):
-                        """Windows ``LUID`` structure used for privilege lookup.
-
-                        A locally unique identifier is a 64-bit value that the OS assigns to privileges and other securable objects.
-                        Declared inline so it can be passed by reference into ``LookupPrivilegeNameW``.
-                        """
-
-                        _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
-
-                    luid = LUID(luid_low, luid_high)
-                    if advapi32.LookupPrivilegeNameW(None, ctypes.byref(luid), name_buf, ctypes.byref(name_len)):
-                        privileges.append({
-                            "name": name_buf.value,
-                            "enabled": bool(attrs & 0x00000002),
-                            "enabled_by_default": bool(attrs & 0x00000001),
-                        })
-                    offset += 12
-
-                return privileges
-            finally:
-                kernel32.CloseHandle(token_handle)
+            return X64DbgBridge._enumerate_process_token_privileges()
         except (OSError, ValueError) as e:
             _logger.warning("privileges_enum_failed", error=str(e))
             return []
+
+    @staticmethod
+    def _enumerate_process_token_privileges() -> list[dict[str, Any]]:
+        """Open the current process token and enumerate its privileges.
+
+        Returns:
+            list[dict[str, Any]]: List of privilege dictionaries with
+            ``name``, ``enabled``, and ``enabled_by_default`` keys, or an
+            empty list when the token could not be opened.
+        """
+        advapi32 = ctypes.windll.advapi32
+        kernel32 = ctypes.windll.kernel32
+        token_handle = wintypes.HANDLE()
+        current_process = kernel32.GetCurrentProcess()
+        if not advapi32.OpenProcessToken(current_process, 0x0008, ctypes.byref(token_handle)):
+            return []
+        try:
+            return X64DbgBridge._read_token_privileges(advapi32, token_handle)
+        finally:
+            kernel32.CloseHandle(token_handle)
+
+    @staticmethod
+    def _read_token_privileges(
+        advapi32: ctypes.WinDLL,
+        token_handle: wintypes.HANDLE,
+    ) -> list[dict[str, Any]]:
+        """Fetch and parse ``TokenPrivileges`` data for an open token.
+
+        Args:
+            advapi32: ``ctypes.windll.advapi32`` proxy used to query the
+                token via ``GetTokenInformation`` and resolve LUIDs via
+                ``LookupPrivilegeNameW``.
+            token_handle: Open process-token handle returned by
+                ``OpenProcessToken`` with ``TOKEN_QUERY``.
+
+        Returns:
+            list[dict[str, Any]]: List of privilege dictionaries with
+            ``name``, ``enabled``, and ``enabled_by_default`` keys.
+        """
+        return_length = wintypes.DWORD()
+        advapi32.GetTokenInformation(token_handle, 3, None, 0, ctypes.byref(return_length))
+        buffer = ctypes.create_string_buffer(return_length.value)
+        if not advapi32.GetTokenInformation(token_handle, 3, buffer, return_length.value, ctypes.byref(return_length)):
+            return []
+        count = struct.unpack_from("<I", buffer.raw, 0)[0]
+        privileges: list[dict[str, Any]] = []
+        offset = 4
+        for _ in range(min(count, 100)):
+            X64DbgBridge._append_token_privilege(advapi32, buffer.raw, offset, privileges)
+            offset += 12
+        return privileges
+
+    @staticmethod
+    def _append_token_privilege(
+        advapi32: ctypes.WinDLL,
+        raw: bytes,
+        offset: int,
+        privileges: list[dict[str, Any]],
+    ) -> None:
+        """Resolve one ``LUID_AND_ATTRIBUTES`` entry and append it.
+
+        Args:
+            advapi32: ``ctypes.windll.advapi32`` proxy used to resolve
+                the LUID via ``LookupPrivilegeNameW``.
+            raw: Raw ``TOKEN_PRIVILEGES`` byte buffer.
+            offset: Byte offset of the ``LUID_AND_ATTRIBUTES`` record to
+                read.
+            privileges: Mutable list that receives the resolved
+                privilege dictionary when the LUID lookup succeeds.
+        """
+        luid_low = struct.unpack_from("<I", raw, offset)[0]
+        luid_high = struct.unpack_from("<I", raw, offset + 4)[0]
+        attrs = struct.unpack_from("<I", raw, offset + 8)[0]
+        name_buf = ctypes.create_unicode_buffer(256)
+        name_len = wintypes.DWORD(256)
+
+        class LUID(ctypes.Structure):
+            """Windows ``LUID`` structure used for privilege lookup.
+
+            A locally unique identifier is a 64-bit value that the OS assigns to privileges and other securable objects.
+            Declared inline so it can be passed by reference into ``LookupPrivilegeNameW``.
+            """
+
+            _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+        luid = LUID(luid_low, luid_high)
+        if advapi32.LookupPrivilegeNameW(None, ctypes.byref(luid), name_buf, ctypes.byref(name_len)):
+            privileges.append({
+                "name": name_buf.value,
+                "enabled": bool(attrs & 0x00000002),
+                "enabled_by_default": bool(attrs & 0x00000001),
+            })
 
     @staticmethod
     async def adjust_privilege(name: str, *, enable: bool = True) -> dict[str, Any]:
@@ -8572,58 +8894,116 @@ class X64DbgBridge(DebuggerBridge):
             return {"success": False, "error": "Windows only"}
 
         try:
-            advapi32 = ctypes.windll.advapi32
-            kernel32 = ctypes.windll.kernel32
-
-            class LUID(ctypes.Structure):
-                """Windows ``LUID`` structure used for privilege adjustment.
-
-                Holds the locally unique identifier returned by
-                ``LookupPrivilegeValueW`` and passed into the
-                ``TOKEN_PRIVILEGES`` structure submitted to
-                ``AdjustTokenPrivileges``.
-                """
-
-                _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
-
-            class TokenPrivileges(ctypes.Structure):
-                """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
-
-                Simplified single-entry variant of the standard Windows structure, which is all ``AdjustTokenPrivileges`` needs when
-                toggling a single privilege at a time.
-                """
-
-                _fields_: ClassVar = [
-                    ("PrivilegeCount", wintypes.DWORD),
-                    ("Luid", LUID),
-                    ("Attributes", wintypes.DWORD),
-                ]
-
-            luid = LUID()
-            if not advapi32.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
-                _logger.warning("adjust_privilege_lookup_failed", privilege=name)
-                return {"success": False, "error": f"Privilege {name!r} not found"}
-
-            token_handle = wintypes.HANDLE()
-            current_process = kernel32.GetCurrentProcess()
-            if not advapi32.OpenProcessToken(current_process, 0x0020, ctypes.byref(token_handle)):
-                _logger.warning("adjust_privilege_open_token_failed", privilege=name)
-                return {"success": False, "error": "Failed to open process token"}
-
-            try:
-                tp = TokenPrivileges()
-                tp.PrivilegeCount = 1
-                tp.Luid = luid
-                tp.Attributes = 0x00000002 if enable else 0
-
-                disable_all_privileges = False
-                result = advapi32.AdjustTokenPrivileges(token_handle, disable_all_privileges, ctypes.byref(tp), 0, None, None)
-                return {"success": bool(result), "privilege": name, "enabled": enable}
-            finally:
-                kernel32.CloseHandle(token_handle)
+            return X64DbgBridge._adjust_token_privilege_by_name(name, enable=enable)
         except (OSError, ValueError) as e:
             _logger.warning("privilege_adjust_failed", error=str(e))
             return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _adjust_token_privilege_by_name(name: str, *, enable: bool) -> dict[str, Any]:
+        """Look up ``name``, open the process token, and toggle the privilege.
+
+        Args:
+            name: Privilege name (for example ``"SeDebugPrivilege"``).
+            enable: ``True`` to enable the privilege,
+                ``False`` to disable it.
+
+        Returns:
+            dict[str, Any]: Result payload with ``success``, optional
+            ``error``, and ``privilege`` / ``enabled`` keys.
+        """
+        advapi32 = ctypes.windll.advapi32
+        kernel32 = ctypes.windll.kernel32
+
+        class LUID(ctypes.Structure):
+            """Windows ``LUID`` structure used for privilege adjustment.
+
+            Holds the locally unique identifier returned by
+            ``LookupPrivilegeValueW`` and passed into the
+            ``TOKEN_PRIVILEGES`` structure submitted to
+            ``AdjustTokenPrivileges``.
+            """
+
+            _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+        class TokenPrivileges(ctypes.Structure):
+            """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
+
+            Simplified single-entry variant of the standard Windows structure, which is all ``AdjustTokenPrivileges`` needs when
+            toggling a single privilege at a time.
+            """
+
+            _fields_: ClassVar = [
+                ("PrivilegeCount", wintypes.DWORD),
+                ("Luid", LUID),
+                ("Attributes", wintypes.DWORD),
+            ]
+
+        luid = LUID()
+        if not advapi32.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
+            _logger.warning("adjust_privilege_lookup_failed", privilege=name)
+            return {"success": False, "error": f"Privilege {name!r} not found"}
+
+        token_handle = wintypes.HANDLE()
+        current_process = kernel32.GetCurrentProcess()
+        if not advapi32.OpenProcessToken(current_process, 0x0020, ctypes.byref(token_handle)):
+            _logger.warning("adjust_privilege_open_token_failed", privilege=name)
+            return {"success": False, "error": "Failed to open process token"}
+
+        try:
+            return X64DbgBridge._invoke_adjust_token_privileges(
+                advapi32,
+                token_handle,
+                TokenPrivileges,
+                luid,
+                name,
+                enable=enable,
+            )
+        finally:
+            kernel32.CloseHandle(token_handle)
+
+    @staticmethod
+    def _invoke_adjust_token_privileges(
+        advapi32: ctypes.WinDLL,
+        token_handle: wintypes.HANDLE,
+        token_privileges_cls: type[ctypes.Structure],
+        luid: ctypes.Structure,
+        name: str,
+        *,
+        enable: bool,
+    ) -> dict[str, Any]:
+        """Build a ``TOKEN_PRIVILEGES`` payload and submit it.
+
+        Args:
+            advapi32: ``ctypes.windll.advapi32`` proxy used to invoke
+                ``AdjustTokenPrivileges``.
+            token_handle: Open process-token handle with
+                ``TOKEN_ADJUST_PRIVILEGES`` access.
+            token_privileges_cls: Locally-declared ``TOKEN_PRIVILEGES``
+                ctypes structure class.
+            luid: Resolved ``LUID`` for the privilege to toggle.
+            name: Privilege name, returned in the result for diagnostics.
+            enable: ``True`` to enable the privilege, ``False`` to
+                disable it.
+
+        Returns:
+            dict[str, Any]: Result payload with ``success``,
+            ``privilege``, and ``enabled`` keys.
+        """
+        tp = token_privileges_cls()
+        tp.PrivilegeCount = 1
+        tp.Luid = luid
+        tp.Attributes = 0x00000002 if enable else 0
+        disable_all_privileges = False
+        result = advapi32.AdjustTokenPrivileges(
+            token_handle,
+            disable_all_privileges,
+            ctypes.byref(tp),
+            0,
+            None,
+            None,
+        )
+        return {"success": bool(result), "privilege": name, "enabled": enable}
 
     @staticmethod
     def _parse_stack_frame_entry(entry: dict[str, object]) -> StackFrame:
@@ -8731,17 +9111,12 @@ class X64DbgBridge(DebuggerBridge):
             raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
 
         try:
-            pe32 = ProcessEntry32W()
-            pe32.dwSize = ctypes.sizeof(ProcessEntry32W)
-            _logger.debug("initialized_process_entry", size=pe32.dwSize)
-
-            if kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
-                while True:
-                    if pe32.th32ProcessID == pid:
-                        parent_pid = int(pe32.th32ParentProcessID)
-                        break
-                    if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
-                        break
+            parent_pid = X64DbgBridge._find_parent_pid_in_snapshot(
+                kernel32,
+                snapshot,
+                ProcessEntry32W,
+                pid,
+            )
         except (OSError, ctypes.ArgumentError) as e:
             _logger.warning("x64dbg_get_parent_pid_failed", pid=pid, error=str(e))
             msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
@@ -8750,6 +9125,39 @@ class X64DbgBridge(DebuggerBridge):
             kernel32.CloseHandle(snapshot)
 
         return parent_pid
+
+    @staticmethod
+    def _find_parent_pid_in_snapshot(
+        kernel32: ctypes.WinDLL,
+        snapshot: int,
+        process_entry_cls: type[ctypes.Structure],
+        pid: int,
+    ) -> int:
+        """Walk a process snapshot and return the parent PID of ``pid``.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to walk the
+                snapshot via ``Process32FirstW`` / ``Process32NextW``.
+            snapshot: Open ``CreateToolhelp32Snapshot`` handle for the
+                ``TH32CS_SNAPPROCESS`` class.
+            process_entry_cls: ``PROCESSENTRY32W`` ctypes structure
+                class whose instances will be populated by the walk.
+            pid: Target process ID whose parent should be located.
+
+        Returns:
+            int: Parent process ID, or ``0`` when the target was not
+            found in the snapshot.
+        """
+        pe32 = process_entry_cls()
+        pe32.dwSize = ctypes.sizeof(process_entry_cls)
+        _logger.debug("initialized_process_entry", size=pe32.dwSize)
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
+            return 0
+        while True:
+            if pe32.th32ProcessID == pid:
+                return int(pe32.th32ParentProcessID)
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
+                return 0
 
     @staticmethod
     def _get_command_line(pid: int) -> str | None:

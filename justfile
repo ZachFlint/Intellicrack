@@ -14,6 +14,16 @@ mdlint2 := "node node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs"
 install:
     @& scripts/install-all.ps1
 
+[doc('Update everything: pixi env, cargo crates (hexcore + CLI launcher), yarn deps')]
+[group('update')]
+update:
+    @Write-Host '==> pixi upgrade' -ForegroundColor Cyan; pixi upgrade
+    @Write-Host '==> cargo (hexcore)' -ForegroundColor Cyan; Push-Location 'src/intellicrack-hexcore'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
+    @Write-Host '==> cargo (CLI launcher)' -ForegroundColor Cyan; Push-Location 'CLI Coding/launcher'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
+    @Write-Host '==> yarn up' -ForegroundColor Cyan; yarn up '*'
+    @Write-Host '==> yarn dedupe' -ForegroundColor Cyan; yarn dedupe
+    @Write-Host '==> Update complete' -ForegroundColor Green
+
 # Remove pixi environment
 [group('install')]
 uninstall:

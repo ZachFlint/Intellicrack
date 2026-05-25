@@ -82,6 +82,33 @@ class FontManager:
         """Reset the singleton instance (primarily for testing)."""
         cls._instance = None
 
+    def _load_fonts_from_disk(self) -> bool:
+        """Discover and register all bundled font files.
+
+        Returns:
+            bool: ``True`` when at least one family was registered, ``False``
+            when the bundled directory contained no usable fonts and the
+            fallback font setup was applied.
+        """
+        if not resource_exists("fonts"):
+            _logger.warning("fonts_directory_not_found", resource_key="fonts")
+            self._setup_fallback_fonts()
+            return False
+
+        fonts_dir = get_assets_path() / "fonts"
+
+        font_files = list(fonts_dir.glob("*.ttf")) + list(fonts_dir.glob("*.otf"))
+
+        for font_file in font_files:
+            self._load_font_file(font_file)
+
+        if not self._loaded_families:
+            self._setup_fallback_fonts()
+            return False
+        _logger.info("custom_fonts_loaded", count=len(self._loaded_families))
+        self._setup_fonts_from_loaded()
+        return True
+
     def load_fonts(self) -> bool:
         """Load all custom fonts from the fonts directory.
 
@@ -96,26 +123,7 @@ class FontManager:
         self._load_font_config()
 
         try:
-            if not resource_exists("fonts"):
-                _logger.warning("fonts_directory_not_found", resource_key="fonts")
-                self._setup_fallback_fonts()
-                return False
-
-            fonts_dir = get_assets_path() / "fonts"
-
-            font_files = list(fonts_dir.glob("*.ttf")) + list(fonts_dir.glob("*.otf"))
-
-            for font_file in font_files:
-                self._load_font_file(font_file)
-
-            if not self._loaded_families:
-                self._setup_fallback_fonts()
-                fonts_loaded = False
-            else:
-                _logger.info("custom_fonts_loaded", count=len(self._loaded_families))
-                self._setup_fonts_from_loaded()
-                fonts_loaded = True
-
+            fonts_loaded = self._load_fonts_from_disk()
         except (FileNotFoundError, PermissionError):
             _logger.exception("font_loading_error")
             self._setup_fallback_fonts()

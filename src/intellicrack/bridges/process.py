@@ -1270,40 +1270,7 @@ class ProcessBridge(ToolBridgeBase):
         """
         del tool_path
         try:
-            self._kernel32 = ctypes.windll.kernel32
-            self._psapi = ctypes.windll.psapi
-            try:
-                self._ntdll = get_ntdll()
-            except OSError:
-                _logger.exception("ntdll_load_failed")
-            try:
-                self._advapi32 = get_advapi32()
-            except OSError:
-                _logger.exception("advapi32_load_failed")
-            try:
-                self._user32 = get_user32()
-            except OSError:
-                _logger.exception("user32_load_failed")
-            try:
-                self._dbghelp = get_dbghelp()
-            except OSError:
-                _logger.exception("dbghelp_load_failed")
-
-            try:
-                self._elevate_debug_privilege()
-            except ToolError:
-                _logger.warning("se_debug_privilege_skipped")
-
-            self.state = BridgeState(
-                connected=True,
-                tool_running=True,
-                binary_loaded=False,
-                process_attached=False,
-                target_path=None,
-                target_pid=None,
-                last_error=None,
-            )
-            _logger.debug("process_bridge_initialized", bridge="process", debug_privilege=self._debug_privilege_enabled)
+            self._initialize_impl()
         except (AttributeError, OSError, RuntimeError) as e:
             _logger.exception("process_bridge_init_failed", bridge="process")
             self.state = BridgeState(
@@ -1315,6 +1282,59 @@ class ProcessBridge(ToolBridgeBase):
                 target_pid=None,
                 last_error=str(e),
             )
+
+    def _initialize_impl(self) -> None:
+        """Load all required DLLs and elevate debug privilege.
+
+        Loads kernel32, psapi, ntdll, advapi32, user32, and dbghelp DLL
+        references, attempts to enable ``SeDebugPrivilege`` on the current
+        process token, and updates :attr:`state` to reflect a fully
+        initialized bridge.
+        """
+        self._kernel32 = ctypes.windll.kernel32
+        self._psapi = ctypes.windll.psapi
+        self._load_optional_dlls()
+
+        try:
+            self._elevate_debug_privilege()
+        except ToolError:
+            _logger.warning("se_debug_privilege_skipped")
+
+        self.state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+        _logger.debug("process_bridge_initialized", bridge="process", debug_privilege=self._debug_privilege_enabled)
+
+    def _load_optional_dlls(self) -> None:
+        """Load optional Win32 DLL references used by the bridge.
+
+        Loads ntdll, advapi32, user32, and dbghelp.  Each is attempted in
+        isolation so that the failure of one DLL does not prevent the
+        others from being loaded.  Failures are logged at exception
+        level via the module logger.
+        """
+        try:
+            self._ntdll = get_ntdll()
+        except OSError:
+            _logger.exception("ntdll_load_failed")
+        try:
+            self._advapi32 = get_advapi32()
+        except OSError:
+            _logger.exception("advapi32_load_failed")
+        try:
+            self._user32 = get_user32()
+        except OSError:
+            _logger.exception("user32_load_failed")
+        try:
+            self._dbghelp = get_dbghelp()
+        except OSError:
+            _logger.exception("dbghelp_load_failed")
 
     def _elevate_debug_privilege(self) -> None:
         """Attempt to enable SeDebugPrivilege on the current process token.
@@ -1332,79 +1352,7 @@ class ProcessBridge(ToolBridgeBase):
             return
 
         try:
-            advapi32_le: ctypes.WinDLL = ctypes.WinDLL("advapi32", use_last_error=True)
-
-            advapi32_le.OpenProcessToken.restype = wintypes.BOOL
-            advapi32_le.OpenProcessToken.argtypes = [
-                wintypes.HANDLE,
-                wintypes.DWORD,
-                ctypes.POINTER(wintypes.HANDLE),
-            ]
-            advapi32_le.LookupPrivilegeValueW.restype = wintypes.BOOL
-            advapi32_le.LookupPrivilegeValueW.argtypes = [
-                wintypes.LPCWSTR,
-                wintypes.LPCWSTR,
-                ctypes.c_void_p,
-            ]
-            advapi32_le.AdjustTokenPrivileges.restype = wintypes.BOOL
-            advapi32_le.AdjustTokenPrivileges.argtypes = [
-                wintypes.HANDLE,
-                wintypes.BOOL,
-                ctypes.c_void_p,
-                wintypes.DWORD,
-                ctypes.c_void_p,
-                ctypes.c_void_p,
-            ]
-
-            self._kernel32.GetCurrentProcess.restype = wintypes.HANDLE
-            token_handle = wintypes.HANDLE()
-            current_process: wintypes.HANDLE = self._kernel32.GetCurrentProcess()
-            if not advapi32_le.OpenProcessToken(
-                current_process,
-                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-                ctypes.byref(token_handle),
-            ):
-                return
-
-            try:
-                luid = LUID()
-                if not advapi32_le.LookupPrivilegeValueW(
-                    None,
-                    "SeDebugPrivilege",
-                    ctypes.byref(luid),
-                ):
-                    return
-
-                tp = TOKEN_PRIVILEGES()
-                tp.PrivilegeCount = 1
-                tp.Privileges[0].Luid = luid
-                tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
-
-                disable_all_privileges = wintypes.BOOL(0)
-                adjust_result: int = advapi32_le.AdjustTokenPrivileges(
-                    token_handle,
-                    disable_all_privileges,
-                    ctypes.byref(tp),
-                    ctypes.sizeof(TOKEN_PRIVILEGES),
-                    None,
-                    None,
-                )
-
-                last_error = ctypes.get_last_error()
-
-                if not adjust_result or last_error == ERROR_NOT_ALL_ASSIGNED:
-                    _logger.debug(
-                        "se_debug_privilege_not_granted",
-                        adjust_result=adjust_result,
-                        last_error=last_error,
-                    )
-                    msg = f"SeDebugPrivilege not granted: adjust_result={adjust_result} last_error={last_error}"
-                    raise ToolError(msg)
-
-                self._debug_privilege_enabled = True
-                _logger.debug("se_debug_privilege_enabled")
-            finally:
-                self._kernel32.CloseHandle(token_handle)
+            self._elevate_debug_privilege_impl()
         except ToolError as exc:
             _logger.warning(
                 "se_debug_privilege_known_failure",
@@ -1413,6 +1361,129 @@ class ProcessBridge(ToolBridgeBase):
             raise
         except (OSError, AttributeError, ctypes.ArgumentError):
             _logger.exception("se_debug_privilege_elevation_failed")
+
+    def _elevate_debug_privilege_impl(self) -> None:
+        """Open the process token and dispatch to the privilege adjuster.
+
+        Loads ``advapi32`` with ``use_last_error=True``, prepares its
+        argtypes/restypes, opens the current process token, and delegates
+        the actual privilege adjustment to
+        :meth:`_adjust_se_debug_privilege` so that the token handle is
+        always closed via the ``finally`` clause.  Propagates any
+        :class:`ToolError` raised by the inner privilege adjuster.
+        """
+        if self._kernel32 is None:
+            return
+
+        advapi32_le = self._prepare_privilege_advapi32()
+
+        self._kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        token_handle = wintypes.HANDLE()
+        current_process: wintypes.HANDLE = self._kernel32.GetCurrentProcess()
+        if not advapi32_le.OpenProcessToken(
+            current_process,
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+            ctypes.byref(token_handle),
+        ):
+            return
+
+        try:
+            self._adjust_se_debug_privilege(advapi32_le, token_handle)
+        finally:
+            self._kernel32.CloseHandle(token_handle)
+
+    @staticmethod
+    def _prepare_privilege_advapi32() -> ctypes.WinDLL:
+        """Load advapi32 with ``use_last_error`` and configure argtypes.
+
+        Returns:
+            ctypes.WinDLL: An ``advapi32`` handle with ``OpenProcessToken``,
+                ``LookupPrivilegeValueW``, and ``AdjustTokenPrivileges``
+                argtypes/restypes prepared for use by the privilege
+                elevation helpers.
+        """
+        advapi32_le: ctypes.WinDLL = ctypes.WinDLL("advapi32", use_last_error=True)
+
+        advapi32_le.OpenProcessToken.restype = wintypes.BOOL
+        advapi32_le.OpenProcessToken.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.HANDLE),
+        ]
+        advapi32_le.LookupPrivilegeValueW.restype = wintypes.BOOL
+        advapi32_le.LookupPrivilegeValueW.argtypes = [
+            wintypes.LPCWSTR,
+            wintypes.LPCWSTR,
+            ctypes.c_void_p,
+        ]
+        advapi32_le.AdjustTokenPrivileges.restype = wintypes.BOOL
+        advapi32_le.AdjustTokenPrivileges.argtypes = [
+            wintypes.HANDLE,
+            wintypes.BOOL,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+        ]
+        return advapi32_le
+
+    def _adjust_se_debug_privilege(
+        self,
+        advapi32_le: ctypes.WinDLL,
+        token_handle: wintypes.HANDLE,
+    ) -> None:
+        """Adjust the token to enable ``SeDebugPrivilege``.
+
+        Looks up the LUID for ``SeDebugPrivilege``, builds the
+        ``TOKEN_PRIVILEGES`` request, and calls ``AdjustTokenPrivileges``.
+        Sets :attr:`_debug_privilege_enabled` on success.
+
+        Args:
+            advapi32_le: ``advapi32`` handle prepared by
+                :meth:`_prepare_privilege_advapi32`.
+            token_handle: Open process token handle with
+                ``TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY`` access.
+
+        Raises:
+            ToolError: If ``AdjustTokenPrivileges`` returns FALSE or sets
+                ``ERROR_NOT_ALL_ASSIGNED``.
+        """
+        luid = LUID()
+        if not advapi32_le.LookupPrivilegeValueW(
+            None,
+            "SeDebugPrivilege",
+            ctypes.byref(luid),
+        ):
+            return
+
+        tp = TOKEN_PRIVILEGES()
+        tp.PrivilegeCount = 1
+        tp.Privileges[0].Luid = luid
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
+
+        disable_all_privileges = wintypes.BOOL(0)
+        adjust_result: int = advapi32_le.AdjustTokenPrivileges(
+            token_handle,
+            disable_all_privileges,
+            ctypes.byref(tp),
+            ctypes.sizeof(TOKEN_PRIVILEGES),
+            None,
+            None,
+        )
+
+        last_error = ctypes.get_last_error()
+
+        if not adjust_result or last_error == ERROR_NOT_ALL_ASSIGNED:
+            _logger.debug(
+                "se_debug_privilege_not_granted",
+                adjust_result=adjust_result,
+                last_error=last_error,
+            )
+            msg = f"SeDebugPrivilege not granted: adjust_result={adjust_result} last_error={last_error}"
+            raise ToolError(msg)
+
+        self._debug_privilege_enabled = True
+        _logger.debug("se_debug_privilege_enabled")
 
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources.
@@ -1578,33 +1649,58 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
         try:
-            if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-                error_code: int = ctypes.get_last_error()
-                if error_code != _ERROR_NO_MORE_FILES:
-                    msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
-                    raise ToolError(msg)
-                return processes
-            while True:
-                name = entry.szExeFile.decode("utf-8", errors="ignore")
-                if filter_name is None or filter_name.lower() in name.lower():
-                    processes.append(
-                        ProcessInfo(
-                            pid=entry.th32ProcessID,
-                            name=name,
-                            path=None,
-                            command_line=None,
-                            parent_pid=entry.th32ParentProcessID,
-                            threads=[],
-                            modules=[],
-                        ),
-                    )
-                if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
-                    break
+            self._iterate_process_snapshot(snapshot, entry, processes, filter_name)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         _logger.debug("processes_listed", count=len(processes), filter_name=filter_name)
         return processes
+
+    def _iterate_process_snapshot(
+        self,
+        snapshot: int,
+        entry: PROCESSENTRY32,
+        processes: list[ProcessInfo],
+        filter_name: str | None,
+    ) -> None:
+        """Walk a Toolhelp32 process snapshot and collect matching processes.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``PROCESSENTRY32`` buffer used for each call.
+            processes: Output list that receives matching :class:`ProcessInfo`
+                records.
+            filter_name: Optional case-insensitive substring filter for the
+                process name; ``None`` collects every entry.
+
+        Raises:
+            ToolError: If ``Process32First`` fails for a reason other than
+                ``_ERROR_NO_MORE_FILES``.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
+            error_code: int = ctypes.get_last_error()
+            if error_code != _ERROR_NO_MORE_FILES:
+                msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
+                raise ToolError(msg)
+            return
+        while True:
+            name = entry.szExeFile.decode("utf-8", errors="ignore")
+            if filter_name is None or filter_name.lower() in name.lower():
+                processes.append(
+                    ProcessInfo(
+                        pid=entry.th32ProcessID,
+                        name=name,
+                        path=None,
+                        command_line=None,
+                        parent_pid=entry.th32ParentProcessID,
+                        threads=[],
+                        modules=[],
+                    ),
+                )
+            if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                break
 
     async def list_processes_detailed(
         self,
@@ -1638,28 +1734,50 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
         try:
-            if self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-                while True:
-                    name = entry.szExeFile.decode("utf-8", errors="ignore")
-                    pid = entry.th32ProcessID
-                    if filter_name is None or filter_name.lower() in name.lower():
-                        arch = await self.detect_architecture(pid)
-                        mem_mb = await self.get_process_memory_mb(pid)
-                        results.append({
-                            "pid": pid,
-                            "name": name,
-                            "parent_pid": entry.th32ParentProcessID,
-                            "thread_count": entry.cntThreads,
-                            "architecture": arch,
-                            "memory_mb": round(mem_mb, 1),
-                        })
-                    if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
-                        break
+            await self._iterate_process_snapshot_detailed(snapshot, entry, results, filter_name)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         _logger.debug("processes_listed_detailed", count=len(results), filter_name=filter_name)
         return results
+
+    async def _iterate_process_snapshot_detailed(
+        self,
+        snapshot: int,
+        entry: PROCESSENTRY32,
+        results: list[dict[str, int | str | float]],
+        filter_name: str | None,
+    ) -> None:
+        """Iterate a process snapshot collecting architecture and memory info.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``PROCESSENTRY32`` buffer used for each call.
+            results: Output list that receives detail dictionaries for
+                every matching process.
+            filter_name: Optional case-insensitive substring filter for the
+                process name; ``None`` collects every entry.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
+            return
+        while True:
+            name = entry.szExeFile.decode("utf-8", errors="ignore")
+            pid = entry.th32ProcessID
+            if filter_name is None or filter_name.lower() in name.lower():
+                arch = await self.detect_architecture(pid)
+                mem_mb = await self.get_process_memory_mb(pid)
+                results.append({
+                    "pid": pid,
+                    "name": name,
+                    "parent_pid": entry.th32ParentProcessID,
+                    "thread_count": entry.cntThreads,
+                    "architecture": arch,
+                    "memory_mb": round(mem_mb, 1),
+                })
+            if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                break
 
     async def get_process_memory_mb(self, pid: int) -> float:
         """Get working set memory size for a process in megabytes.
@@ -1737,21 +1855,35 @@ class ProcessBridge(ToolBridgeBase):
             return "Unknown"
 
         try:
-            arch = self._detect_arch_via_iswow64process2(handle)
-            if arch is not None and arch != "Unknown":
-                _logger.debug("process_detect_architecture_completed", pid=pid, arch=arch, source="iswow64process2")
-                return arch
-
-            pe_arch = self._detect_arch_via_pe_header(pid)
-            if pe_arch is not None:
-                _logger.debug("process_detect_architecture_completed", pid=pid, arch=pe_arch, source="pe_header")
-                return pe_arch
-
-            legacy = self._detect_arch_via_iswow64process(handle)
-            _logger.debug("process_detect_architecture_completed", pid=pid, arch=legacy, source="iswow64process")
-            return legacy
+            return self._detect_architecture_with_handle(pid, handle)
         finally:
             self._kernel32.CloseHandle(handle)
+
+    def _detect_architecture_with_handle(self, pid: int, handle: int) -> str:
+        """Run the architecture detection cascade for a given process handle.
+
+        Args:
+            pid: Process ID being inspected (used for logging).
+            handle: Open process handle with at least
+                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            str: Architecture string such as ``'x86_64'``, ``'x86'``,
+                ``'arm64'``, ``'arm'``, or ``'Unknown'``.
+        """
+        arch = self._detect_arch_via_iswow64process2(handle)
+        if arch is not None and arch != "Unknown":
+            _logger.debug("process_detect_architecture_completed", pid=pid, arch=arch, source="iswow64process2")
+            return arch
+
+        pe_arch = self._detect_arch_via_pe_header(pid)
+        if pe_arch is not None:
+            _logger.debug("process_detect_architecture_completed", pid=pid, arch=pe_arch, source="pe_header")
+            return pe_arch
+
+        legacy = self._detect_arch_via_iswow64process(handle)
+        _logger.debug("process_detect_architecture_completed", pid=pid, arch=legacy, source="iswow64process")
+        return legacy
 
     def _call_iswow64process2(self, handle: int) -> tuple[int, int] | None:
         """Invoke the Win10+ ``IsWow64Process2`` API with prepared argtypes.
@@ -1865,58 +1997,75 @@ class ProcessBridge(ToolBridgeBase):
             return None
 
         try:
-            module_handle = wintypes.HMODULE()
-            bytes_needed = wintypes.DWORD(0)
-            if not self._psapi.EnumProcessModules(
-                read_handle,
-                ctypes.byref(module_handle),
-                ctypes.sizeof(wintypes.HMODULE),
-                ctypes.byref(bytes_needed),
-            ):
-                return None
-
-            base = ctypes.cast(module_handle, ctypes.c_void_p).value or 0
-            if base == 0:
-                return None
-
-            dos_header = ctypes.create_string_buffer(0x40)
-            bytes_read = ctypes.c_size_t()
-            if not self._kernel32.ReadProcessMemory(
-                read_handle,
-                ctypes.c_void_p(base),
-                dos_header,
-                0x40,
-                ctypes.byref(bytes_read),
-            ):
-                return None
-
-            if detect_format(dos_header.raw) != "pe":
-                return None
-
-            pe_offset = struct.unpack_from("<I", dos_header.raw, PE_DOS_LFANEW_OFFSET)[0]
-
-            header_buffer = ctypes.create_string_buffer(_PE_SIGNATURE_SIZE + 0x14)
-            if not self._kernel32.ReadProcessMemory(
-                read_handle,
-                ctypes.c_void_p(base + pe_offset),
-                header_buffer,
-                _PE_SIGNATURE_SIZE + 0x14,
-                ctypes.byref(bytes_read),
-            ):
-                return None
-
-            if header_buffer.raw[:_PE_SIGNATURE_SIZE] != PE_SIGNATURE:
-                return None
-
-            machine = struct.unpack_from(
-                "<H",
-                header_buffer.raw,
-                _PE_SIGNATURE_SIZE,
-            )[0]
-            arch = self._machine_to_arch_string(machine)
-            return arch if arch != "Unknown" else None
+            return self._read_pe_arch_from_handle(read_handle)
         finally:
             self._kernel32.CloseHandle(read_handle)
+
+    def _read_pe_arch_from_handle(self, read_handle: int) -> str | None:
+        """Read the primary module's PE header machine field and map to arch.
+
+        Args:
+            read_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` access.
+
+        Returns:
+            str | None: Architecture string or ``None`` if the PE header
+                could not be located, the format is not PE, or the
+                resulting machine value maps to ``'Unknown'``.
+        """
+        if self._kernel32 is None or self._psapi is None:
+            return None
+
+        module_handle = wintypes.HMODULE()
+        bytes_needed = wintypes.DWORD(0)
+        if not self._psapi.EnumProcessModules(
+            read_handle,
+            ctypes.byref(module_handle),
+            ctypes.sizeof(wintypes.HMODULE),
+            ctypes.byref(bytes_needed),
+        ):
+            return None
+
+        base = ctypes.cast(module_handle, ctypes.c_void_p).value or 0
+        if base == 0:
+            return None
+
+        dos_header = ctypes.create_string_buffer(0x40)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            read_handle,
+            ctypes.c_void_p(base),
+            dos_header,
+            0x40,
+            ctypes.byref(bytes_read),
+        ):
+            return None
+
+        if detect_format(dos_header.raw) != "pe":
+            return None
+
+        pe_offset = struct.unpack_from("<I", dos_header.raw, PE_DOS_LFANEW_OFFSET)[0]
+
+        header_buffer = ctypes.create_string_buffer(_PE_SIGNATURE_SIZE + 0x14)
+        if not self._kernel32.ReadProcessMemory(
+            read_handle,
+            ctypes.c_void_p(base + pe_offset),
+            header_buffer,
+            _PE_SIGNATURE_SIZE + 0x14,
+            ctypes.byref(bytes_read),
+        ):
+            return None
+
+        if header_buffer.raw[:_PE_SIGNATURE_SIZE] != PE_SIGNATURE:
+            return None
+
+        machine = struct.unpack_from(
+            "<H",
+            header_buffer.raw,
+            _PE_SIGNATURE_SIZE,
+        )[0]
+        arch = self._machine_to_arch_string(machine)
+        return arch if arch != "Unknown" else None
 
     def _detect_arch_via_iswow64process(self, handle: int) -> str:
         """Legacy architecture detection via ``IsWow64Process``.
@@ -2654,21 +2803,7 @@ class ProcessBridge(ToolBridgeBase):
             )
 
         try:
-            if self._kernel32.Module32First(snapshot, ctypes.byref(entry)):
-                while True:
-                    base_addr = ctypes.cast(entry.modBaseAddr, ctypes.c_void_p).value or 0
-                    ep = self._query_module_entry_point(proc_handle, entry.hModule) if proc_handle else 0
-                    modules.append(
-                        ModuleInfo(
-                            name=entry.szModule.decode("utf-8", errors="ignore"),
-                            path=Path(entry.szExePath.decode("utf-8", errors="ignore")),
-                            base_address=base_addr,
-                            size=entry.modBaseSize,
-                            entry_point=ep,
-                        ),
-                    )
-                    if not self._kernel32.Module32Next(snapshot, ctypes.byref(entry)):
-                        break
+            self._collect_module_entries(snapshot, entry, modules, proc_handle)
         finally:
             self._kernel32.CloseHandle(snapshot)
             if proc_handle:
@@ -2676,6 +2811,43 @@ class ProcessBridge(ToolBridgeBase):
 
         _logger.debug("process_get_modules_completed", pid=target_pid, count=len(modules))
         return modules
+
+    def _collect_module_entries(
+        self,
+        snapshot: int,
+        entry: MODULEENTRY32,
+        modules: list[ModuleInfo],
+        proc_handle: int | None,
+    ) -> None:
+        """Iterate a module snapshot and append every entry to ``modules``.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``MODULEENTRY32`` buffer used for each call.
+            modules: Output list that receives a :class:`ModuleInfo` for
+                every module the snapshot exposes.
+            proc_handle: Optional open process handle used to query each
+                module's entry point via psapi.  Pass ``None`` when entry
+                points should be reported as 0.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Module32First(snapshot, ctypes.byref(entry)):
+            return
+        while True:
+            base_addr = ctypes.cast(entry.modBaseAddr, ctypes.c_void_p).value or 0
+            ep = self._query_module_entry_point(proc_handle, entry.hModule) if proc_handle else 0
+            modules.append(
+                ModuleInfo(
+                    name=entry.szModule.decode("utf-8", errors="ignore"),
+                    path=Path(entry.szExePath.decode("utf-8", errors="ignore")),
+                    base_address=base_addr,
+                    size=entry.modBaseSize,
+                    entry_point=ep,
+                ),
+            )
+            if not self._kernel32.Module32Next(snapshot, ctypes.byref(entry)):
+                break
 
     async def get_threads(self, pid: int | None = None) -> list[ThreadInfo]:
         """Get process threads with real start address and state.
@@ -2714,29 +2886,50 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(THREADENTRY32)
 
         try:
-            if self._kernel32.Thread32First(snapshot, ctypes.byref(entry)):
-                while True:
-                    if entry.th32OwnerProcessID == target_pid:
-                        tid = entry.th32ThreadID
-                        start_addr = self._query_thread_start_address(tid)
-                        current_pc = self._query_thread_current_pc(tid, owner_pid=target_pid)
-                        state = self._query_thread_state(tid)
-
-                        threads.append(
-                            ThreadInfo(
-                                tid=tid,
-                                start_address=start_addr,
-                                current_pc=current_pc,
-                                state=state,
-                            ),
-                        )
-
-                    if not self._kernel32.Thread32Next(snapshot, ctypes.byref(entry)):
-                        break
+            self._collect_thread_entries(snapshot, entry, threads, target_pid)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         return threads
+
+    def _collect_thread_entries(
+        self,
+        snapshot: int,
+        entry: THREADENTRY32,
+        threads: list[ThreadInfo],
+        target_pid: int,
+    ) -> None:
+        """Iterate a thread snapshot and collect threads owned by ``target_pid``.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``THREADENTRY32`` buffer used for each call.
+            threads: Output list that receives a :class:`ThreadInfo` for
+                every thread whose owner matches ``target_pid``.
+            target_pid: Process ID whose threads should be collected.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Thread32First(snapshot, ctypes.byref(entry)):
+            return
+        while True:
+            if entry.th32OwnerProcessID == target_pid:
+                tid = entry.th32ThreadID
+                start_addr = self._query_thread_start_address(tid)
+                current_pc = self._query_thread_current_pc(tid, owner_pid=target_pid)
+                state = self._query_thread_state(tid)
+
+                threads.append(
+                    ThreadInfo(
+                        tid=tid,
+                        start_address=start_addr,
+                        current_pc=current_pc,
+                        state=state,
+                    ),
+                )
+
+            if not self._kernel32.Thread32Next(snapshot, ctypes.byref(entry)):
+                break
 
     def _query_thread_start_address(self, tid: int) -> int:
         """Query the Win32 start address of a thread via NtQueryInformationThread.
@@ -2828,26 +3021,27 @@ class ProcessBridge(ToolBridgeBase):
             return "unknown"
 
         try:
-            tbi = THREAD_BASIC_INFORMATION()
-            status: int = self._ntdll.NtQueryInformationThread(
-                handle,
-                ThreadBasicInformation,
-                ctypes.byref(tbi),
-                ctypes.sizeof(tbi),
-                None,
-            )
-            if status >= 0:
-                if tbi.ExitStatus != _STILL_ACTIVE:
-                    return "terminated"
+            return self._probe_thread_state(handle, tid)
+        finally:
+            self._kernel32.CloseHandle(handle)
 
-                raw_count: int = self._kernel32.SuspendThread(handle)
-                signed_count = ctypes.c_long(raw_count).value
-                if signed_count >= 0:
-                    try:
-                        result = "suspended" if signed_count > 0 else "running"
-                    finally:
-                        self._kernel32.ResumeThread(handle)
-                    return result
+    def _probe_thread_state(self, handle: int, tid: int) -> str:
+        """Probe an opened thread handle for its current execution state.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME`` access.
+            tid: Thread ID (used for logging only).
+
+        Returns:
+            str: ``'terminated'`` if the thread has exited, ``'suspended'``
+                if the prior suspend count was non-zero, ``'running'`` when
+                the thread was active, or ``'unknown'`` if the probe fails.
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return "unknown"
+        try:
+            return self._probe_thread_state_inner(handle)
         except (OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "thread_state_probe_failed",
@@ -2855,10 +3049,43 @@ class ProcessBridge(ToolBridgeBase):
                 error=str(exc),
                 error_type=type(exc).__name__,
             )
-        finally:
-            self._kernel32.CloseHandle(handle)
-
         return "unknown"
+
+    def _probe_thread_state_inner(self, handle: int) -> str:
+        """Issue ``NtQueryInformationThread`` and derive the execution state.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME`` access.
+
+        Returns:
+            str: ``'terminated'`` if the thread has exited, ``'suspended'``
+                if the prior suspend count was non-zero, ``'running'`` if
+                the thread was active, or ``'unknown'`` otherwise.
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return "unknown"
+        tbi = THREAD_BASIC_INFORMATION()
+        status: int = self._ntdll.NtQueryInformationThread(
+            handle,
+            ThreadBasicInformation,
+            ctypes.byref(tbi),
+            ctypes.sizeof(tbi),
+            None,
+        )
+        if status < 0:
+            return "unknown"
+        if tbi.ExitStatus != _STILL_ACTIVE:
+            return "terminated"
+
+        raw_count: int = self._kernel32.SuspendThread(handle)
+        signed_count = ctypes.c_long(raw_count).value
+        if signed_count < 0:
+            return "unknown"
+        try:
+            return "suspended" if signed_count > 0 else "running"
+        finally:
+            self._kernel32.ResumeThread(handle)
 
     def _query_thread_pc_and_state(self, tid: int) -> tuple[int, str]:
         """Query both current_pc and state in a single suspend/resume cycle.
@@ -2893,51 +3120,107 @@ class ProcessBridge(ToolBridgeBase):
 
         result: tuple[int, str] = (0, "unknown")
         try:
-            tbi = THREAD_BASIC_INFORMATION()
-            status: int = self._ntdll.NtQueryInformationThread(
-                handle,
-                ThreadBasicInformation,
-                ctypes.byref(tbi),
-                ctypes.sizeof(tbi),
-                None,
-            )
-            if status >= 0 and tbi.ExitStatus != _STILL_ACTIVE:
-                result = (0, "terminated")
-            else:
-                raw_count: int = self._kernel32.SuspendThread(handle)
-                signed_count = ctypes.c_long(raw_count).value
-                if signed_count >= 0:
-                    try:
-                        state = "suspended" if signed_count > 0 else "running"
-                        is_wow64 = self._target_is_wow64()
-                        pc: int = 0
-                        if is_wow64:
-                            wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
-                            if wow64_get_ctx is not None:
-                                wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-                                wow64_get_ctx.restype = wintypes.BOOL
-                                ctx32 = WOW64_CONTEXT()
-                                ctx32.ContextFlags = CONTEXT_I386_ALL
-                                if wow64_get_ctx(handle, ctypes.byref(ctx32)):
-                                    pc = int(ctx32.Eip)
-                        else:
-                            ctx64 = CONTEXT64()
-                            ctx64.ContextFlags = CONTEXT_ALL
-                            if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
-                                pc = int(ctx64.Rip)
-                        result = (pc, state)
-                    finally:
-                        self._kernel32.ResumeThread(handle)
+            result = self._probe_thread_pc_and_state(handle, tid)
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+        return result
+
+    def _probe_thread_pc_and_state(self, handle: int, tid: int) -> tuple[int, str]:
+        """Issue ``NtQueryInformationThread`` and capture pc + state.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME |
+                THREAD_GET_CONTEXT`` access.
+            tid: Thread ID (used for logging only).
+
+        Returns:
+            tuple[int, str]: ``(current_pc, state)`` where ``current_pc``
+                is 0 if the context could not be read, and ``state`` is
+                ``'terminated'``, ``'suspended'``, ``'running'`` or
+                ``'unknown'``.
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return (0, "unknown")
+        try:
+            return self._probe_thread_pc_and_state_inner(handle)
         except (OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "thread_pc_and_state_probe_failed",
                 tid=tid,
                 error=str(exc),
             )
-        finally:
-            self._kernel32.CloseHandle(handle)
+            return (0, "unknown")
 
-        return result
+    def _probe_thread_pc_and_state_inner(self, handle: int) -> tuple[int, str]:
+        """Suspend the thread, read pc/state, then resume.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME |
+                THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            tuple[int, str]: ``(current_pc, state)`` with the same
+                semantics as :meth:`_probe_thread_pc_and_state`.
+        """
+        if self._ntdll is None or self._kernel32 is None:
+            return (0, "unknown")
+        tbi = THREAD_BASIC_INFORMATION()
+        status: int = self._ntdll.NtQueryInformationThread(
+            handle,
+            ThreadBasicInformation,
+            ctypes.byref(tbi),
+            ctypes.sizeof(tbi),
+            None,
+        )
+        if status >= 0 and tbi.ExitStatus != _STILL_ACTIVE:
+            return (0, "terminated")
+        raw_count: int = self._kernel32.SuspendThread(handle)
+        signed_count = ctypes.c_long(raw_count).value
+        if signed_count < 0:
+            return (0, "unknown")
+        try:
+            state = "suspended" if signed_count > 0 else "running"
+            pc = self._read_thread_pc(handle)
+            return (pc, state)
+        finally:
+            self._kernel32.ResumeThread(handle)
+
+    def _read_thread_pc(self, handle: int) -> int:
+        """Read the current instruction pointer of a suspended thread.
+
+        Selects ``Wow64GetThreadContext`` (returning ``Eip``) for WOW64
+        targets or ``GetThreadContext`` (returning ``Rip``) for native
+        x64 targets.
+
+        Args:
+            handle: Open thread handle with ``THREAD_GET_CONTEXT`` access
+                that has already been suspended by the caller.
+
+        Returns:
+            int: The thread's current program counter, or 0 if the
+                context read fails or the appropriate API is unavailable.
+        """
+        if self._kernel32 is None:
+            return 0
+        if self._target_is_wow64():
+            wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+            if wow64_get_ctx is None:
+                return 0
+            wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+            wow64_get_ctx.restype = wintypes.BOOL
+            ctx32 = WOW64_CONTEXT()
+            ctx32.ContextFlags = CONTEXT_I386_ALL
+            if wow64_get_ctx(handle, ctypes.byref(ctx32)):
+                return int(ctx32.Eip)
+            return 0
+        ctx64 = CONTEXT64()
+        ctx64.ContextFlags = CONTEXT_ALL
+        if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
+            return int(ctx64.Rip)
+        return 0
 
     def _query_module_entry_point(self, proc_handle: int, module_handle: int) -> int:
         """Query the entry point address of a module via GetModuleInformation.
@@ -3008,29 +3291,34 @@ class ProcessBridge(ToolBridgeBase):
             return 0
 
         try:
-            raw_count: int = self._kernel32.SuspendThread(handle)
-            signed_count = ctypes.c_long(raw_count).value
-            if signed_count < 0:
-                return 0
+            return self._read_thread_current_pc(handle, owner_pid, tid)
+        finally:
+            self._kernel32.CloseHandle(handle)
 
-            try:
-                is_wow64 = self._pid_is_wow64(owner_pid) if owner_pid is not None else self._target_is_wow64()
-                if is_wow64:
-                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
-                    if wow64_get_ctx is None:
-                        return 0
-                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-                    wow64_get_ctx.restype = wintypes.BOOL
-                    ctx32 = WOW64_CONTEXT()
-                    ctx32.ContextFlags = CONTEXT_I386_ALL
-                    return int(ctx32.Eip) if wow64_get_ctx(handle, ctypes.byref(ctx32)) else 0
-                ctx64 = CONTEXT64()
-                ctx64.ContextFlags = CONTEXT_ALL
-                if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
-                    return int(ctx64.Rip)
-                return 0
-            finally:
-                self._kernel32.ResumeThread(handle)
+    def _read_thread_current_pc(
+        self,
+        handle: int,
+        owner_pid: int | None,
+        tid: int,
+    ) -> int:
+        """Suspend an opened thread, read its instruction pointer, then resume.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME`` access.
+            owner_pid: PID that owns the thread, used to determine the
+                correct CONTEXT struct when the thread is in a different
+                process from the attached one.
+            tid: Thread ID, used for logging only.
+
+        Returns:
+            int: The thread's instruction pointer, or 0 if the read fails
+                or the thread cannot be suspended.
+        """
+        if self._kernel32 is None:
+            return 0
+        try:
+            return self._suspend_and_read_pc(handle, owner_pid)
         except (OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "thread_current_pc_query_exception",
@@ -3039,8 +3327,63 @@ class ProcessBridge(ToolBridgeBase):
                 error_type=type(exc).__name__,
             )
             return 0
+
+    def _suspend_and_read_pc(self, handle: int, owner_pid: int | None) -> int:
+        """Suspend the thread, read the instruction pointer, then resume.
+
+        Args:
+            handle: Open thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME`` access.
+            owner_pid: PID that owns the thread (forwarded to
+                :meth:`_read_pc_via_context`).
+
+        Returns:
+            int: The thread's instruction pointer, or 0 if the thread
+                cannot be suspended.
+        """
+        if self._kernel32 is None:
+            return 0
+        raw_count: int = self._kernel32.SuspendThread(handle)
+        signed_count = ctypes.c_long(raw_count).value
+        if signed_count < 0:
+            return 0
+        try:
+            return self._read_pc_via_context(handle, owner_pid)
         finally:
-            self._kernel32.CloseHandle(handle)
+            self._kernel32.ResumeThread(handle)
+
+    def _read_pc_via_context(self, handle: int, owner_pid: int | None) -> int:
+        """Read the instruction pointer using the appropriate context API.
+
+        Args:
+            handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+            owner_pid: PID that owns the thread; when provided the WOW64
+                check is performed against this PID, otherwise the
+                attached process is used.
+
+        Returns:
+            int: ``Rip`` for native x64 threads or ``Eip`` for WOW64
+                threads, or 0 if the context could not be retrieved or
+                ``Wow64GetThreadContext`` is unavailable.
+        """
+        if self._kernel32 is None:
+            return 0
+        is_wow64 = self._pid_is_wow64(owner_pid) if owner_pid is not None else self._target_is_wow64()
+        if is_wow64:
+            wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+            if wow64_get_ctx is None:
+                return 0
+            wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+            wow64_get_ctx.restype = wintypes.BOOL
+            ctx32 = WOW64_CONTEXT()
+            ctx32.ContextFlags = CONTEXT_I386_ALL
+            return int(ctx32.Eip) if wow64_get_ctx(handle, ctypes.byref(ctx32)) else 0
+        ctx64 = CONTEXT64()
+        ctx64.ContextFlags = CONTEXT_ALL
+        if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
+            return int(ctx64.Rip)
+        return 0
 
     # ------------------------------------------------------------------
     # DLL injection
@@ -3072,57 +3415,94 @@ class ProcessBridge(ToolBridgeBase):
         remote_mem = await self.allocate(len(dll_path_utf16), "rw")
 
         try:
-            await self.write_memory(remote_mem, dll_path_utf16)
-
-            kernel32_handle = self._kernel32.GetModuleHandleW("kernel32.dll")
-            if not kernel32_handle:
-                raise ToolError(_ERR_KERNEL32_HANDLE)
-
-            load_library_addr = self._kernel32.GetProcAddress(kernel32_handle, b"LoadLibraryW")
-            if not load_library_addr:
-                raise ToolError(_ERR_LOADLIB_ADDR)
-
-            thread_handle = self._kernel32.CreateRemoteThread(
-                self._process_handle,
-                None,
-                0,
-                load_library_addr,
-                remote_mem,
-                0,
-                None,
-            )
-
-            if not thread_handle:
-                raise ToolError(_ERR_REMOTE_THREAD)
-
-            try:
-                wait_result: int = self._kernel32.WaitForSingleObject(thread_handle, 5000)
-                if wait_result == WAIT_FAILED:
-                    raise ToolError(_ERR_INJECT_WAIT_FAILED)
-                if wait_result == WAIT_TIMEOUT:
-                    raise ToolError(_ERR_INJECT_TIMEOUT)
-                if wait_result != WAIT_OBJECT_0:
-                    raise ToolError(_ERR_INJECT_WAIT_FAILED)
-
-                self._kernel32.GetExitCodeThread.restype = wintypes.BOOL
-                self._kernel32.GetExitCodeThread.argtypes = [
-                    wintypes.HANDLE,
-                    ctypes.POINTER(wintypes.DWORD),
-                ]
-                exit_code = wintypes.DWORD(0)
-                if not self._kernel32.GetExitCodeThread(thread_handle, ctypes.byref(exit_code)):
-                    last_error: int = self._kernel32.GetLastError()
-                    err_msg = f"{_ERR_INJECT_GETEXITCODE_FAILED}: {last_error}"
-                    raise ToolError(err_msg)
-                if exit_code.value == 0:
-                    raise ToolError(_ERR_INJECT_LOADLIB_FAILED)
-            finally:
-                self._kernel32.CloseHandle(thread_handle)
-
+            await self._inject_dll_with_remote_mem(remote_mem, dll_path_utf16)
             _logger.info("dll_injected", dll_path=dll_path)
             return True
         finally:
             await self.free(remote_mem)
+
+    async def _inject_dll_with_remote_mem(
+        self,
+        remote_mem: int,
+        dll_path_utf16: bytes,
+    ) -> None:
+        """Write the DLL path and launch ``LoadLibraryW`` in the target.
+
+        Args:
+            remote_mem: Address of the already-allocated remote buffer
+                that will receive ``dll_path_utf16``.
+            dll_path_utf16: UTF-16-LE encoded DLL path including the
+                trailing NUL.
+
+        Raises:
+            ToolError: If kernel32 is unavailable, ``GetModuleHandleW`` /
+                ``GetProcAddress`` fail, ``CreateRemoteThread`` fails, or
+                the remote ``LoadLibraryW`` call did not succeed.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        await self.write_memory(remote_mem, dll_path_utf16)
+
+        kernel32_handle = self._kernel32.GetModuleHandleW("kernel32.dll")
+        if not kernel32_handle:
+            raise ToolError(_ERR_KERNEL32_HANDLE)
+
+        load_library_addr = self._kernel32.GetProcAddress(kernel32_handle, b"LoadLibraryW")
+        if not load_library_addr:
+            raise ToolError(_ERR_LOADLIB_ADDR)
+
+        thread_handle = self._kernel32.CreateRemoteThread(
+            self._process_handle,
+            None,
+            0,
+            load_library_addr,
+            remote_mem,
+            0,
+            None,
+        )
+
+        if not thread_handle:
+            raise ToolError(_ERR_REMOTE_THREAD)
+
+        try:
+            self._await_remote_loadlibrary(thread_handle)
+        finally:
+            self._kernel32.CloseHandle(thread_handle)
+
+    def _await_remote_loadlibrary(self, thread_handle: int) -> None:
+        """Wait on a remote ``LoadLibraryW`` thread and verify success.
+
+        Args:
+            thread_handle: Handle to the remote thread started by
+                :meth:`_inject_dll_with_remote_mem`.
+
+        Raises:
+            ToolError: If the wait fails or times out, the exit-code query
+                fails, or the remote ``LoadLibraryW`` returned NULL.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        wait_result: int = self._kernel32.WaitForSingleObject(thread_handle, 5000)
+        if wait_result == WAIT_FAILED:
+            raise ToolError(_ERR_INJECT_WAIT_FAILED)
+        if wait_result == WAIT_TIMEOUT:
+            raise ToolError(_ERR_INJECT_TIMEOUT)
+        if wait_result != WAIT_OBJECT_0:
+            raise ToolError(_ERR_INJECT_WAIT_FAILED)
+
+        self._kernel32.GetExitCodeThread.restype = wintypes.BOOL
+        self._kernel32.GetExitCodeThread.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
+        exit_code = wintypes.DWORD(0)
+        if not self._kernel32.GetExitCodeThread(thread_handle, ctypes.byref(exit_code)):
+            last_error: int = self._kernel32.GetLastError()
+            err_msg = f"{_ERR_INJECT_GETEXITCODE_FAILED}: {last_error}"
+            raise ToolError(err_msg)
+        if exit_code.value == 0:
+            raise ToolError(_ERR_INJECT_LOADLIB_FAILED)
 
     async def get_process_info(self, pid: int | None = None) -> ProcessInfo | None:
         """Get detailed process information.
@@ -3217,19 +3597,43 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            token_handle = wintypes.HANDLE()
-            if not self._advapi32.OpenProcessToken(proc_handle, TOKEN_QUERY, ctypes.byref(token_handle)):
-                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
-
-            try:
-                privileges = self._read_token_privileges(token_handle)
-                _logger.debug("process_get_token_privileges_completed", pid=target_pid, count=len(privileges))
-                return privileges
-            finally:
-                self._kernel32.CloseHandle(token_handle)
+            return self._get_token_privileges_for_handle(proc_handle, target_pid)
         finally:
             if close_proc and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _get_token_privileges_for_handle(
+        self,
+        proc_handle: int,
+        target_pid: int | None,
+    ) -> list[dict[str, object]]:
+        """Open the process token and read its privileges.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access.
+            target_pid: PID being inspected, used for logging only.
+
+        Returns:
+            list[dict[str, object]]: One dict per privilege as built by
+                :meth:`_read_token_privileges`.
+
+        Raises:
+            ToolError: If required DLLs are unavailable or token open
+                fails.
+        """
+        if self._kernel32 is None or self._advapi32 is None:
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+        token_handle = wintypes.HANDLE()
+        if not self._advapi32.OpenProcessToken(proc_handle, TOKEN_QUERY, ctypes.byref(token_handle)):
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+        try:
+            privileges = self._read_token_privileges(token_handle)
+            _logger.debug("process_get_token_privileges_completed", pid=target_pid, count=len(privileges))
+            return privileges
+        finally:
+            self._kernel32.CloseHandle(token_handle)
 
     def _read_token_privileges(self, token_handle: wintypes.HANDLE) -> list[dict[str, object]]:
         """Read privilege entries from an opened token handle.
@@ -3355,48 +3759,101 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            token_handle = wintypes.HANDLE()
-            if not self._advapi32.OpenProcessToken(
-                proc_handle,
-                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-                ctypes.byref(token_handle),
-            ):
-                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
-
-            try:
-                luid = LUID()
-                if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
-                    msg = _ERR_PRIV_LOOKUP + privilege_name
-                    raise ToolError(msg)
-
-                tp = TOKEN_PRIVILEGES()
-                tp.PrivilegeCount = 1
-                tp.Privileges[0].Luid = luid
-                tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED if enable else 0
-
-                disable_all = False
-                self._advapi32.AdjustTokenPrivileges(
-                    token_handle,
-                    disable_all,
-                    ctypes.byref(tp),
-                    ctypes.sizeof(TOKEN_PRIVILEGES),
-                    None,
-                    None,
-                )
-
-                last_error = ctypes.get_last_error()
-                if last_error == ERROR_NOT_ALL_ASSIGNED:
-                    msg = _ERR_PRIV_NOT_HELD + privilege_name
-                    raise ToolError(msg)
-
-                _logger.info("privilege_adjusted", privilege=privilege_name, enabled=enable)
-                self._notify_privileges_changed()
-                return True
-            finally:
-                self._kernel32.CloseHandle(token_handle)
+            return self._adjust_token_privilege_with_handle(proc_handle, privilege_name, enable=enable)
         finally:
             if close_proc and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _adjust_token_privilege_with_handle(
+        self,
+        proc_handle: int,
+        privilege_name: str,
+        *,
+        enable: bool,
+    ) -> bool:
+        """Open the process token and apply :meth:`_apply_token_privilege`.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access.
+            privilege_name: Privilege name such as ``SeDebugPrivilege``.
+            enable: ``True`` to enable, ``False`` to disable.
+
+        Returns:
+            bool: ``True`` on success.
+
+        Raises:
+            ToolError: If required DLLs are unavailable or token open
+                fails.
+        """
+        if self._kernel32 is None or self._advapi32 is None:
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+        token_handle = wintypes.HANDLE()
+        if not self._advapi32.OpenProcessToken(
+            proc_handle,
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+            ctypes.byref(token_handle),
+        ):
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+        try:
+            return self._apply_token_privilege(token_handle, privilege_name, enable=enable)
+        finally:
+            self._kernel32.CloseHandle(token_handle)
+
+    def _apply_token_privilege(
+        self,
+        token_handle: wintypes.HANDLE,
+        privilege_name: str,
+        *,
+        enable: bool,
+    ) -> bool:
+        """Look up and adjust a single privilege on an opened token.
+
+        Args:
+            token_handle: Open token handle with
+                ``TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY`` access.
+            privilege_name: Privilege name such as ``SeDebugPrivilege``.
+            enable: ``True`` to enable, ``False`` to disable.
+
+        Returns:
+            bool: ``True`` on success.
+
+        Raises:
+            ToolError: If advapi32 is unavailable, the privilege LUID
+                cannot be resolved, or the adjustment reports
+                ``ERROR_NOT_ALL_ASSIGNED``.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+        luid = LUID()
+        if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
+            msg = _ERR_PRIV_LOOKUP + privilege_name
+            raise ToolError(msg)
+
+        tp = TOKEN_PRIVILEGES()
+        tp.PrivilegeCount = 1
+        tp.Privileges[0].Luid = luid
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED if enable else 0
+
+        disable_all = False
+        self._advapi32.AdjustTokenPrivileges(
+            token_handle,
+            disable_all,
+            ctypes.byref(tp),
+            ctypes.sizeof(TOKEN_PRIVILEGES),
+            None,
+            None,
+        )
+
+        last_error = ctypes.get_last_error()
+        if last_error == ERROR_NOT_ALL_ASSIGNED:
+            msg = _ERR_PRIV_NOT_HELD + privilege_name
+            raise ToolError(msg)
+
+        _logger.info("privilege_adjusted", privilege=privilege_name, enabled=enable)
+        self._notify_privileges_changed()
+        return True
 
     # ------------------------------------------------------------------
     # Handle enumeration
@@ -3558,17 +4015,7 @@ class ProcessBridge(ToolBridgeBase):
         del ptr_size
         str_offset = offset + _OBJECT_TYPE_INFO_HEADER_SIZE
         try:
-            length_ptr = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(wintypes.USHORT))
-            max_length_ptr = ctypes.cast(ctypes.byref(buffer, offset + 2), ctypes.POINTER(wintypes.USHORT))
-            length = length_ptr.contents.value
-            max_length = max_length_ptr.contents.value
-            if length == 0 or length > max_length or length > _MAX_TYPE_NAME_BYTES:
-                return ""
-            buf_len = getattr(buffer, "_length_", 0)
-            if str_offset + length > buf_len:
-                return ""
-            raw = bytes(buffer[str_offset : str_offset + length])
-            return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
+            return ProcessBridge._decode_object_type_name(buffer, offset, str_offset)
         except (ValueError, OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "object_type_name_decode_failed",
@@ -3576,6 +4023,37 @@ class ProcessBridge(ToolBridgeBase):
                 error=str(exc),
             )
             return ""
+
+    @staticmethod
+    def _decode_object_type_name(
+        buffer: ctypes.Array[ctypes.c_char],
+        offset: int,
+        str_offset: int,
+    ) -> str:
+        """Decode the UNICODE_STRING at ``offset`` into a Python string.
+
+        Args:
+            buffer: Raw buffer from NtQueryObject.
+            offset: Byte offset of the UNICODE_STRING header within
+                ``buffer``.
+            str_offset: Byte offset of the string data
+                (``offset + _OBJECT_TYPE_INFO_HEADER_SIZE``).
+
+        Returns:
+            str: Decoded type name, or empty string when the bounds
+                checks fail.
+        """
+        length_ptr = ctypes.cast(ctypes.byref(buffer, offset), ctypes.POINTER(wintypes.USHORT))
+        max_length_ptr = ctypes.cast(ctypes.byref(buffer, offset + 2), ctypes.POINTER(wintypes.USHORT))
+        length = length_ptr.contents.value
+        max_length = max_length_ptr.contents.value
+        if length == 0 or length > max_length or length > _MAX_TYPE_NAME_BYTES:
+            return ""
+        buf_len = getattr(buffer, "_length_", 0)
+        if str_offset + length > buf_len:
+            return ""
+        raw = bytes(buffer[str_offset : str_offset + length])
+        return raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
 
     def _parse_type_info_buffer(
         self,
@@ -3875,47 +4353,71 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_SCM_OPEN_FAILED)
 
         try:
-            bytes_needed = wintypes.DWORD(0)
-            services_returned = wintypes.DWORD(0)
-            resume_handle = wintypes.DWORD(0)
-
-            enum_svc(
-                scm,
-                0,
-                SERVICE_WIN32,
-                SERVICE_STATE_ALL,
-                None,
-                0,
-                ctypes.byref(bytes_needed),
-                ctypes.byref(services_returned),
-                ctypes.byref(resume_handle),
-                None,
-            )
-
-            buf_size = bytes_needed.value
-            if buf_size == 0:
-                return []
-
-            buffer = ctypes.create_string_buffer(buf_size)
-            if not enum_svc(
-                scm,
-                0,
-                SERVICE_WIN32,
-                SERVICE_STATE_ALL,
-                buffer,
-                buf_size,
-                ctypes.byref(bytes_needed),
-                ctypes.byref(services_returned),
-                ctypes.byref(resume_handle),
-                None,
-            ):
-                raise ToolError(_ERR_ENUM_SVC)
-
-            services = self._parse_service_entries(buffer, services_returned.value, filter_pid)
+            services = self._enumerate_services(scm, enum_svc, filter_pid)
             _logger.debug("process_list_services_completed", filter_pid=filter_pid, count=len(services))
             return services
         finally:
             close_svc(scm)
+
+    def _enumerate_services(
+        self,
+        scm: int,
+        enum_svc: Callable[..., int],
+        filter_pid: int | None,
+    ) -> list[dict[str, object]]:
+        """Probe sizes, enumerate, and parse Win32 services via SCM.
+
+        Args:
+            scm: Open SCM handle with ``SC_MANAGER_ENUMERATE_SERVICE``
+                access.
+            enum_svc: ``EnumServicesStatusExW`` callable with argtypes
+                already configured.
+            filter_pid: Optional process-ID filter passed to
+                :meth:`_parse_service_entries`.
+
+        Returns:
+            list[dict[str, object]]: Parsed service descriptors.
+
+        Raises:
+            ToolError: If the second ``EnumServicesStatusExW`` call fails.
+        """
+        bytes_needed = wintypes.DWORD(0)
+        services_returned = wintypes.DWORD(0)
+        resume_handle = wintypes.DWORD(0)
+
+        enum_svc(
+            scm,
+            0,
+            SERVICE_WIN32,
+            SERVICE_STATE_ALL,
+            None,
+            0,
+            ctypes.byref(bytes_needed),
+            ctypes.byref(services_returned),
+            ctypes.byref(resume_handle),
+            None,
+        )
+
+        buf_size = bytes_needed.value
+        if buf_size == 0:
+            return []
+
+        buffer = ctypes.create_string_buffer(buf_size)
+        if not enum_svc(
+            scm,
+            0,
+            SERVICE_WIN32,
+            SERVICE_STATE_ALL,
+            buffer,
+            buf_size,
+            ctypes.byref(bytes_needed),
+            ctypes.byref(services_returned),
+            ctypes.byref(resume_handle),
+            None,
+        ):
+            raise ToolError(_ERR_ENUM_SVC)
+
+        return self._parse_service_entries(buffer, services_returned.value, filter_pid)
 
     @staticmethod
     def _parse_service_entries(
@@ -4317,58 +4819,118 @@ class ProcessBridge(ToolBridgeBase):
         if not thread_handle:
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
-        proc_handle: int | None = None
+        proc_handle_box: list[int | None] = [None]
         try:
-            tbi = THREAD_BASIC_INFORMATION()
-            status: int = self._ntdll.NtQueryInformationThread(
-                thread_handle,
-                ThreadBasicInformation,
-                ctypes.byref(tbi),
-                ctypes.sizeof(tbi),
-                None,
-            )
-
-            if status < 0:
-                msg = f"{_ERR_NTQUERY_THREAD}{status & 4294967295:08X}"
-                raise ToolError(msg)
-
-            teb_address = tbi.TebBaseAddress or 0
-            owner_pid = tbi.ClientId_UniqueProcess or 0
-
-            inherit_handle = False
-            proc_handle = self._kernel32.OpenProcess(
-                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
-                inherit_handle,
-                owner_pid,
-            )
-            if not proc_handle:
-                raise ToolError(_ERR_OPEN_FAILED)
-
-            target_is_64bit = self._target_is_64bit(proc_handle)
-            teb_read_size = ctypes.sizeof(TEB64) if target_is_64bit else ctypes.sizeof(TEB32)
-            teb_data = ctypes.create_string_buffer(teb_read_size)
-            bytes_read = ctypes.c_size_t()
-            if not self._kernel32.ReadProcessMemory(
-                proc_handle,
-                ctypes.c_void_p(teb_address),
-                teb_data,
-                teb_read_size,
-                ctypes.byref(bytes_read),
-            ):
-                raise ToolError(_ERR_TEB_READ)
-
-            result = self._parse_teb_fields(
-                teb_data.raw,
-                teb_address,
-                target_is_64bit=target_is_64bit,
-            )
-            result["exit_status"] = tbi.ExitStatus
-            _logger.debug("process_read_teb_completed", tid=tid, teb_address=hex(teb_address))
-            return result
+            return self._read_teb_with_thread_handle(tid, thread_handle, proc_handle_box)
         finally:
             self._kernel32.CloseHandle(thread_handle)
-            if proc_handle:
-                self._kernel32.CloseHandle(proc_handle)
+            owned = proc_handle_box[0]
+            if owned:
+                self._kernel32.CloseHandle(owned)
+
+    def _read_teb_with_thread_handle(
+        self,
+        tid: int,
+        thread_handle: int,
+        proc_handle_box: list[int | None],
+    ) -> dict[str, object]:
+        """Resolve TEB base address and dispatch to the process reader.
+
+        Args:
+            tid: Thread ID, used for logging only.
+            thread_handle: Open thread handle with
+                ``THREAD_QUERY_INFORMATION`` access.
+            proc_handle_box: Single-element mutable container that
+                receives the process handle so the caller's ``finally``
+                clause can close it.
+
+        Returns:
+            dict[str, object]: TEB field map produced by
+                :meth:`_parse_teb_fields`.
+
+        Raises:
+            ToolError: If required DLLs are unavailable, the NT query
+                fails, the owning process cannot be opened, or the TEB
+                memory cannot be read.
+        """
+        if self._kernel32 is None or self._ntdll is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        tbi = THREAD_BASIC_INFORMATION()
+        status: int = self._ntdll.NtQueryInformationThread(
+            thread_handle,
+            ThreadBasicInformation,
+            ctypes.byref(tbi),
+            ctypes.sizeof(tbi),
+            None,
+        )
+
+        if status < 0:
+            msg = f"{_ERR_NTQUERY_THREAD}{status & 4294967295:08X}"
+            raise ToolError(msg)
+
+        teb_address = tbi.TebBaseAddress or 0
+        owner_pid = tbi.ClientId_UniqueProcess or 0
+
+        inherit_handle = False
+        proc_handle = self._kernel32.OpenProcess(
+            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+            inherit_handle,
+            owner_pid,
+        )
+        if not proc_handle:
+            raise ToolError(_ERR_OPEN_FAILED)
+        proc_handle_box[0] = proc_handle
+
+        result = self._read_and_parse_teb(proc_handle, teb_address, exit_status=tbi.ExitStatus)
+        _logger.debug("process_read_teb_completed", tid=tid, teb_address=hex(teb_address))
+        return result
+
+    def _read_and_parse_teb(
+        self,
+        proc_handle: int,
+        teb_address: int,
+        *,
+        exit_status: int,
+    ) -> dict[str, object]:
+        """Read the TEB from process memory and parse its fields.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION | PROCESS_VM_READ`` access.
+            teb_address: Base address of the TEB in the target process.
+            exit_status: Exit status surfaced from
+                ``THREAD_BASIC_INFORMATION`` that is merged into the
+                resulting field map.
+
+        Returns:
+            dict[str, object]: Parsed TEB field map with an extra
+                ``exit_status`` key.
+
+        Raises:
+            ToolError: If ``ReadProcessMemory`` fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        target_is_64bit = self._target_is_64bit(proc_handle)
+        teb_read_size = ctypes.sizeof(TEB64) if target_is_64bit else ctypes.sizeof(TEB32)
+        teb_data = ctypes.create_string_buffer(teb_read_size)
+        bytes_read = ctypes.c_size_t()
+        if not self._kernel32.ReadProcessMemory(
+            proc_handle,
+            ctypes.c_void_p(teb_address),
+            teb_data,
+            teb_read_size,
+            ctypes.byref(bytes_read),
+        ):
+            raise ToolError(_ERR_TEB_READ)
+
+        result = self._parse_teb_fields(
+            teb_data.raw,
+            teb_address,
+            target_is_64bit=target_is_64bit,
+        )
+        result["exit_status"] = exit_status
+        return result
 
     @staticmethod
     def _parse_teb_fields(
@@ -4456,21 +5018,40 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(HEAPLIST32)
 
         try:
-            if self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(entry)):
-                while True:
-                    heaps.append({
-                        "heap_id": entry.th32HeapID,
-                        "flags": entry.dwFlags,
-                        "is_default": bool(entry.dwFlags & 1),
-                    })
-                    entry.dwSize = ctypes.sizeof(HEAPLIST32)
-                    if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(entry)):
-                        break
+            self._collect_heap_list_entries(snapshot, entry, heaps)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         _logger.debug("process_get_heaps_completed", pid=target_pid, count=len(heaps))
         return heaps
+
+    def _collect_heap_list_entries(
+        self,
+        snapshot: int,
+        entry: HEAPLIST32,
+        heaps: list[dict[str, object]],
+    ) -> None:
+        """Iterate a heap list snapshot and append every entry to ``heaps``.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``HEAPLIST32`` buffer used for each call.
+            heaps: Output list that receives a dict per heap with
+                ``heap_id``, ``flags``, and ``is_default`` keys.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(entry)):
+            return
+        while True:
+            heaps.append({
+                "heap_id": entry.th32HeapID,
+                "flags": entry.dwFlags,
+                "is_default": bool(entry.dwFlags & 1),
+            })
+            entry.dwSize = ctypes.sizeof(HEAPLIST32)
+            if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(entry)):
+                break
 
     # ------------------------------------------------------------------
     # Thread context (registers)
@@ -4504,91 +5085,144 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
         try:
-            suspend_count: int = self._kernel32.SuspendThread(thread_handle)
-            if ctypes.c_long(suspend_count).value < 0:
-                raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
-            try:
-                if self._target_is_wow64():
-                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
-                    if wow64_get_ctx is None:
-                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
-                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-                    wow64_get_ctx.restype = wintypes.BOOL
-                    ctx32 = WOW64_CONTEXT()
-                    ctx32.ContextFlags = CONTEXT_I386_ALL
-                    if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
-                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
-                    ctx32_result: dict[str, int] = {
-                        "eax": ctx32.Eax,
-                        "ebx": ctx32.Ebx,
-                        "ecx": ctx32.Ecx,
-                        "edx": ctx32.Edx,
-                        "esi": ctx32.Esi,
-                        "edi": ctx32.Edi,
-                        "ebp": ctx32.Ebp,
-                        "esp": ctx32.Esp,
-                        "eip": ctx32.Eip,
-                        "eflags": ctx32.EFlags,
-                        "cs": ctx32.SegCs,
-                        "ds": ctx32.SegDs,
-                        "es": ctx32.SegEs,
-                        "fs": ctx32.SegFs,
-                        "gs": ctx32.SegGs,
-                        "ss": ctx32.SegSs,
-                        "dr0": ctx32.Dr0,
-                        "dr1": ctx32.Dr1,
-                        "dr2": ctx32.Dr2,
-                        "dr3": ctx32.Dr3,
-                        "dr6": ctx32.Dr6,
-                        "dr7": ctx32.Dr7,
-                    }
-                    _logger.debug("process_get_thread_context_completed", tid=tid, bitness="32")
-                    return ctx32_result
-
-                ctx = CONTEXT64()
-                ctx.ContextFlags = CONTEXT_ALL
-                if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
-                    raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
-                ctx64_result: dict[str, int] = {
-                    "rax": ctx.Rax,
-                    "rbx": ctx.Rbx,
-                    "rcx": ctx.Rcx,
-                    "rdx": ctx.Rdx,
-                    "rsi": ctx.Rsi,
-                    "rdi": ctx.Rdi,
-                    "rbp": ctx.Rbp,
-                    "rsp": ctx.Rsp,
-                    "r8": ctx.R8,
-                    "r9": ctx.R9,
-                    "r10": ctx.R10,
-                    "r11": ctx.R11,
-                    "r12": ctx.R12,
-                    "r13": ctx.R13,
-                    "r14": ctx.R14,
-                    "r15": ctx.R15,
-                    "rip": ctx.Rip,
-                    "eflags": ctx.EFlags,
-                    "cs": ctx.SegCs,
-                    "ds": ctx.SegDs,
-                    "es": ctx.SegEs,
-                    "fs": ctx.SegFs,
-                    "gs": ctx.SegGs,
-                    "ss": ctx.SegSs,
-                    "dr0": ctx.Dr0,
-                    "dr1": ctx.Dr1,
-                    "dr2": ctx.Dr2,
-                    "dr3": ctx.Dr3,
-                    "dr6": ctx.Dr6,
-                    "dr7": ctx.Dr7,
-                }
-                _logger.debug("process_get_thread_context_completed", tid=tid, bitness="64")
-                return ctx64_result
-            finally:
-                self._kernel32.ResumeThread(thread_handle)
+            return self._capture_thread_context(thread_handle, tid)
         finally:
             self._kernel32.CloseHandle(thread_handle)
+
+    def _capture_thread_context(self, thread_handle: int, tid: int) -> dict[str, int]:
+        """Suspend the thread and return its full register context.
+
+        Args:
+            thread_handle: Open thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME`` access.
+            tid: Thread ID (used for logging only).
+
+        Returns:
+            dict[str, int]: Register name to value mapping; the layout
+                depends on whether the target is WOW64 (32-bit) or native
+                64-bit.
+
+        Raises:
+            ToolError: If ``SuspendThread`` reports a negative count or
+                the context cannot be retrieved.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        suspend_count: int = self._kernel32.SuspendThread(thread_handle)
+        if ctypes.c_long(suspend_count).value < 0:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        try:
+            if self._target_is_wow64():
+                result = self._capture_wow64_context(thread_handle)
+                _logger.debug("process_get_thread_context_completed", tid=tid, bitness="32")
+                return result
+            result = self._capture_native_context(thread_handle)
+            _logger.debug("process_get_thread_context_completed", tid=tid, bitness="64")
+            return result
+        finally:
+            self._kernel32.ResumeThread(thread_handle)
+
+    def _capture_wow64_context(self, thread_handle: int) -> dict[str, int]:
+        """Capture the WOW64 (x86) register context for a suspended thread.
+
+        Args:
+            thread_handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            dict[str, int]: Mapping of x86 register names to values.
+
+        Raises:
+            ToolError: If ``Wow64GetThreadContext`` is unavailable or
+                fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+        if wow64_get_ctx is None:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        wow64_get_ctx.restype = wintypes.BOOL
+        ctx32 = WOW64_CONTEXT()
+        ctx32.ContextFlags = CONTEXT_I386_ALL
+        if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        return {
+            "eax": ctx32.Eax,
+            "ebx": ctx32.Ebx,
+            "ecx": ctx32.Ecx,
+            "edx": ctx32.Edx,
+            "esi": ctx32.Esi,
+            "edi": ctx32.Edi,
+            "ebp": ctx32.Ebp,
+            "esp": ctx32.Esp,
+            "eip": ctx32.Eip,
+            "eflags": ctx32.EFlags,
+            "cs": ctx32.SegCs,
+            "ds": ctx32.SegDs,
+            "es": ctx32.SegEs,
+            "fs": ctx32.SegFs,
+            "gs": ctx32.SegGs,
+            "ss": ctx32.SegSs,
+            "dr0": ctx32.Dr0,
+            "dr1": ctx32.Dr1,
+            "dr2": ctx32.Dr2,
+            "dr3": ctx32.Dr3,
+            "dr6": ctx32.Dr6,
+            "dr7": ctx32.Dr7,
+        }
+
+    def _capture_native_context(self, thread_handle: int) -> dict[str, int]:
+        """Capture the native x64 register context for a suspended thread.
+
+        Args:
+            thread_handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            dict[str, int]: Mapping of x64 register names to values.
+
+        Raises:
+            ToolError: If ``GetThreadContext`` fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        ctx = CONTEXT64()
+        ctx.ContextFlags = CONTEXT_ALL
+        if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        return {
+            "rax": ctx.Rax,
+            "rbx": ctx.Rbx,
+            "rcx": ctx.Rcx,
+            "rdx": ctx.Rdx,
+            "rsi": ctx.Rsi,
+            "rdi": ctx.Rdi,
+            "rbp": ctx.Rbp,
+            "rsp": ctx.Rsp,
+            "r8": ctx.R8,
+            "r9": ctx.R9,
+            "r10": ctx.R10,
+            "r11": ctx.R11,
+            "r12": ctx.R12,
+            "r13": ctx.R13,
+            "r14": ctx.R14,
+            "r15": ctx.R15,
+            "rip": ctx.Rip,
+            "eflags": ctx.EFlags,
+            "cs": ctx.SegCs,
+            "ds": ctx.SegDs,
+            "es": ctx.SegEs,
+            "fs": ctx.SegFs,
+            "gs": ctx.SegGs,
+            "ss": ctx.SegSs,
+            "dr0": ctx.Dr0,
+            "dr1": ctx.Dr1,
+            "dr2": ctx.Dr2,
+            "dr3": ctx.Dr3,
+            "dr6": ctx.Dr6,
+            "dr7": ctx.Dr7,
+        }
 
     async def set_thread_context(self, tid: int, registers: dict[str, int]) -> bool:
         """Set CPU register values for a thread.
@@ -4617,80 +5251,144 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_THREAD_OPEN_FAILED)
 
         try:
-            suspend_count_set: int = self._kernel32.SuspendThread(thread_handle)
-            if ctypes.c_long(suspend_count_set).value < 0:
-                raise ToolError(_ERR_CONTEXT_SET_FAILED)
-
-            try:
-                if self._target_is_wow64():
-                    wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
-                    wow64_set_ctx = getattr(self._kernel32, "Wow64SetThreadContext", None)
-                    if wow64_get_ctx is None or wow64_set_ctx is None:
-                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
-                    wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-                    wow64_get_ctx.restype = wintypes.BOOL
-                    wow64_set_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-                    wow64_set_ctx.restype = wintypes.BOOL
-                    ctx32 = WOW64_CONTEXT()
-                    ctx32.ContextFlags = CONTEXT_I386_ALL
-                    if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
-                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
-                    reg_map_wow64: dict[str, str] = {
-                        "eax": "Eax",
-                        "ebx": "Ebx",
-                        "ecx": "Ecx",
-                        "edx": "Edx",
-                        "esi": "Esi",
-                        "edi": "Edi",
-                        "ebp": "Ebp",
-                        "esp": "Esp",
-                        "eip": "Eip",
-                    }
-                    for name, value in registers.items():
-                        attr = reg_map_wow64.get(name.lower())
-                        if attr is not None:
-                            setattr(ctx32, attr, value)
-                    if not wow64_set_ctx(thread_handle, ctypes.byref(ctx32)):
-                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
-                else:
-                    ctx = CONTEXT64()
-                    ctx.ContextFlags = CONTEXT_ALL
-                    if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
-                        raise ToolError(_ERR_CONTEXT_GET_FAILED)
-
-                    reg_map: dict[str, str] = {
-                        "rax": "Rax",
-                        "rbx": "Rbx",
-                        "rcx": "Rcx",
-                        "rdx": "Rdx",
-                        "rsi": "Rsi",
-                        "rdi": "Rdi",
-                        "rbp": "Rbp",
-                        "rsp": "Rsp",
-                        "r8": "R8",
-                        "r9": "R9",
-                        "r10": "R10",
-                        "r11": "R11",
-                        "r12": "R12",
-                        "r13": "R13",
-                        "r14": "R14",
-                        "r15": "R15",
-                        "rip": "Rip",
-                    }
-                    for name, value in registers.items():
-                        attr = reg_map.get(name.lower())
-                        if attr is not None:
-                            setattr(ctx, attr, value)
-
-                    if not self._kernel32.SetThreadContext(thread_handle, ctypes.byref(ctx)):
-                        raise ToolError(_ERR_CONTEXT_SET_FAILED)
-
-                _logger.info("thread_context_set", tid=tid, registers=list(registers.keys()))
-                return True
-            finally:
-                self._kernel32.ResumeThread(thread_handle)
+            return self._apply_thread_context(thread_handle, tid, registers)
         finally:
             self._kernel32.CloseHandle(thread_handle)
+
+    def _apply_thread_context(
+        self,
+        thread_handle: int,
+        tid: int,
+        registers: dict[str, int],
+    ) -> bool:
+        """Suspend the thread and write ``registers`` into its context.
+
+        Args:
+            thread_handle: Open thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SET_CONTEXT |
+                THREAD_SUSPEND_RESUME`` access.
+            tid: Thread ID (used for logging only).
+            registers: Mapping of register names to values to install.
+
+        Returns:
+            bool: ``True`` on success.
+
+        Raises:
+            ToolError: If ``SuspendThread`` fails or context get/set
+                returns a failure status.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+        suspend_count_set: int = self._kernel32.SuspendThread(thread_handle)
+        if ctypes.c_long(suspend_count_set).value < 0:
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+        try:
+            if self._target_is_wow64():
+                self._apply_wow64_context(thread_handle, registers)
+            else:
+                self._apply_native_context(thread_handle, registers)
+            _logger.info("thread_context_set", tid=tid, registers=list(registers.keys()))
+            return True
+        finally:
+            self._kernel32.ResumeThread(thread_handle)
+
+    def _apply_wow64_context(
+        self,
+        thread_handle: int,
+        registers: dict[str, int],
+    ) -> None:
+        """Update the WOW64 (x86) register context for a suspended thread.
+
+        Args:
+            thread_handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SET_CONTEXT`` access.
+            registers: Mapping of register names (lowercase) to values.
+
+        Raises:
+            ToolError: If ``Wow64GetThreadContext`` /
+                ``Wow64SetThreadContext`` is unavailable or fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+        wow64_get_ctx = getattr(self._kernel32, "Wow64GetThreadContext", None)
+        wow64_set_ctx = getattr(self._kernel32, "Wow64SetThreadContext", None)
+        if wow64_get_ctx is None or wow64_set_ctx is None:
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+        wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        wow64_get_ctx.restype = wintypes.BOOL
+        wow64_set_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
+        wow64_set_ctx.restype = wintypes.BOOL
+        ctx32 = WOW64_CONTEXT()
+        ctx32.ContextFlags = CONTEXT_I386_ALL
+        if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+        reg_map_wow64: dict[str, str] = {
+            "eax": "Eax",
+            "ebx": "Ebx",
+            "ecx": "Ecx",
+            "edx": "Edx",
+            "esi": "Esi",
+            "edi": "Edi",
+            "ebp": "Ebp",
+            "esp": "Esp",
+            "eip": "Eip",
+        }
+        for name, value in registers.items():
+            attr = reg_map_wow64.get(name.lower())
+            if attr is not None:
+                setattr(ctx32, attr, value)
+        if not wow64_set_ctx(thread_handle, ctypes.byref(ctx32)):
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+
+    def _apply_native_context(
+        self,
+        thread_handle: int,
+        registers: dict[str, int],
+    ) -> None:
+        """Update the native x64 register context for a suspended thread.
+
+        Args:
+            thread_handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SET_CONTEXT`` access.
+            registers: Mapping of register names (lowercase) to values.
+
+        Raises:
+            ToolError: If ``GetThreadContext`` / ``SetThreadContext``
+                fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
+        ctx = CONTEXT64()
+        ctx.ContextFlags = CONTEXT_ALL
+        if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
+            raise ToolError(_ERR_CONTEXT_GET_FAILED)
+
+        reg_map: dict[str, str] = {
+            "rax": "Rax",
+            "rbx": "Rbx",
+            "rcx": "Rcx",
+            "rdx": "Rdx",
+            "rsi": "Rsi",
+            "rdi": "Rdi",
+            "rbp": "Rbp",
+            "rsp": "Rsp",
+            "r8": "R8",
+            "r9": "R9",
+            "r10": "R10",
+            "r11": "R11",
+            "r12": "R12",
+            "r13": "R13",
+            "r14": "R14",
+            "r15": "R15",
+            "rip": "Rip",
+        }
+        for name, value in registers.items():
+            attr = reg_map.get(name.lower())
+            if attr is not None:
+                setattr(ctx, attr, value)
+
+        if not self._kernel32.SetThreadContext(thread_handle, ctypes.byref(ctx)):
+            raise ToolError(_ERR_CONTEXT_SET_FAILED)
 
     # ------------------------------------------------------------------
     # Stack walk + symbols
@@ -4738,26 +5436,62 @@ class ProcessBridge(ToolBridgeBase):
 
         frames: list[dict[str, object]] = []
         try:
-            sw_suspend: int = self._kernel32.SuspendThread(thread_handle)
-            if ctypes.c_long(sw_suspend).value < 0:
-                raise ToolError(_ERR_THREAD_OPEN_FAILED)
-
-            try:
-                invade_process = True
-                if not self._dbghelp.SymInitialize(self._process_handle, None, invade_process):
-                    raise ToolError(_ERR_DBGHELP_NA)
-                try:
-                    is_wow64_target = self._target_is_wow64()
-                    frames = self._walk_stack_wow64(thread_handle) if is_wow64_target else self._walk_stack_native(thread_handle)
-                finally:
-                    self._dbghelp.SymCleanup(self._process_handle)
-            finally:
-                self._kernel32.ResumeThread(thread_handle)
+            frames = self._stack_walk_with_thread_handle(thread_handle)
         finally:
             self._kernel32.CloseHandle(thread_handle)
 
         _logger.debug("process_stack_walk_completed", tid=tid, frame_count=len(frames))
         return frames
+
+    def _stack_walk_with_thread_handle(self, thread_handle: int) -> list[dict[str, object]]:
+        """Suspend the thread and walk its stack with DbgHelp.
+
+        Args:
+            thread_handle: Open thread handle with
+                ``THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME`` access.
+
+        Returns:
+            list[dict[str, object]]: Stack frame dictionaries as built by
+                :meth:`_walk_stack_wow64` or :meth:`_walk_stack_native`.
+
+        Raises:
+            ToolError: If kernel32/dbghelp are unavailable, ``SuspendThread``
+                fails, or ``SymInitialize`` fails.
+        """
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        sw_suspend: int = self._kernel32.SuspendThread(thread_handle)
+        if ctypes.c_long(sw_suspend).value < 0:
+            raise ToolError(_ERR_THREAD_OPEN_FAILED)
+        try:
+            return self._stack_walk_with_dbghelp(thread_handle)
+        finally:
+            self._kernel32.ResumeThread(thread_handle)
+
+    def _stack_walk_with_dbghelp(self, thread_handle: int) -> list[dict[str, object]]:
+        """Initialise DbgHelp symbols and dispatch to the proper walker.
+
+        Args:
+            thread_handle: Open, already-suspended thread handle with
+                ``THREAD_GET_CONTEXT`` access.
+
+        Returns:
+            list[dict[str, object]]: Stack frame dictionaries.
+
+        Raises:
+            ToolError: If dbghelp is unavailable or ``SymInitialize``
+                fails.
+        """
+        if self._dbghelp is None or self._process_handle is None:
+            raise ToolError(_ERR_DBGHELP_NA)
+        invade_process = True
+        if not self._dbghelp.SymInitialize(self._process_handle, None, invade_process):
+            raise ToolError(_ERR_DBGHELP_NA)
+        try:
+            is_wow64_target = self._target_is_wow64()
+            return self._walk_stack_wow64(thread_handle) if is_wow64_target else self._walk_stack_native(thread_handle)
+        finally:
+            self._dbghelp.SymCleanup(self._process_handle)
 
     def _target_is_wow64(self) -> bool:
         """Return True when the attached process runs under WOW64.
@@ -5157,46 +5891,87 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            policies: dict[str, object] = {}
-            policy_queries: list[tuple[str, int, type[ctypes.Structure]]] = [
-                ("DEP", ProcessDEPPolicy, PROCESS_MITIGATION_DEP_POLICY),
-                ("ASLR", ProcessASLRPolicy, PROCESS_MITIGATION_ASLR_POLICY),
-                ("DynamicCode", ProcessDynamicCodePolicy, PROCESS_MITIGATION_DYNAMIC_CODE_POLICY),
-                ("StrictHandleCheck", ProcessStrictHandleCheckPolicy, PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY),
-                ("SystemCallDisable", ProcessSystemCallDisablePolicy, PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY),
-                ("CFG", ProcessControlFlowGuardPolicy, PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY),
-                ("BinarySignature", ProcessSignaturePolicy, PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY),
-                ("FontDisable", ProcessFontDisablePolicy, PROCESS_MITIGATION_FONT_DISABLE_POLICY),
-                ("ImageLoad", ProcessImageLoadPolicy, PROCESS_MITIGATION_IMAGE_LOAD_POLICY),
-            ]
-
-            get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
-            if get_policy is None:
-                _logger.warning("process_get_mitigation_policies_unavailable", pid=target_pid)
-                return {"error": "GetProcessMitigationPolicy not available"}
-
-            for name, policy_class, struct_type in policy_queries:
-                policy = struct_type()
-                try:
-                    if get_policy(proc_handle, policy_class, ctypes.byref(policy), ctypes.sizeof(policy)):
-                        flags_val = int(getattr(policy, "Flags", 0))
-                        policies[name] = self._decode_mitigation_flags(name, flags_val, policy)
-                    else:
-                        policies[name] = {"enabled": False, "error": "query failed"}
-                except (OSError, ctypes.ArgumentError) as exc:
-                    _logger.warning(
-                        "mitigation_policy_query_unsupported",
-                        policy=name,
-                        exc_type=type(exc).__name__,
-                        error=str(exc),
-                    )
-                    policies[name] = {"enabled": False, "error": "not supported"}
-
+            policies = self._collect_mitigation_policies(proc_handle)
             _logger.debug("process_get_mitigation_policies_completed", pid=target_pid, policy_count=len(policies))
             return policies
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _collect_mitigation_policies(self, proc_handle: int) -> dict[str, object]:
+        """Iterate the known mitigation policies and decode each.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access (or the current-
+                process pseudo handle).
+
+        Returns:
+            dict[str, object]: Mapping of policy name to decoded flag
+                dict, or a single ``{"error": ...}`` entry if
+                ``GetProcessMitigationPolicy`` is unavailable.
+        """
+        if self._kernel32 is None:
+            return {"error": "kernel32 not available"}
+        policies: dict[str, object] = {}
+        policy_queries: list[tuple[str, int, type[ctypes.Structure]]] = [
+            ("DEP", ProcessDEPPolicy, PROCESS_MITIGATION_DEP_POLICY),
+            ("ASLR", ProcessASLRPolicy, PROCESS_MITIGATION_ASLR_POLICY),
+            ("DynamicCode", ProcessDynamicCodePolicy, PROCESS_MITIGATION_DYNAMIC_CODE_POLICY),
+            ("StrictHandleCheck", ProcessStrictHandleCheckPolicy, PROCESS_MITIGATION_STRICT_HANDLE_CHECK_POLICY),
+            ("SystemCallDisable", ProcessSystemCallDisablePolicy, PROCESS_MITIGATION_SYSTEM_CALL_DISABLE_POLICY),
+            ("CFG", ProcessControlFlowGuardPolicy, PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY),
+            ("BinarySignature", ProcessSignaturePolicy, PROCESS_MITIGATION_BINARY_SIGNATURE_POLICY),
+            ("FontDisable", ProcessFontDisablePolicy, PROCESS_MITIGATION_FONT_DISABLE_POLICY),
+            ("ImageLoad", ProcessImageLoadPolicy, PROCESS_MITIGATION_IMAGE_LOAD_POLICY),
+        ]
+
+        get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
+        if get_policy is None:
+            _logger.warning("process_get_mitigation_policies_unavailable")
+            return {"error": "GetProcessMitigationPolicy not available"}
+
+        for name, policy_class, struct_type in policy_queries:
+            policies[name] = self._query_single_mitigation_policy(get_policy, proc_handle, name, policy_class, struct_type)
+        return policies
+
+    def _query_single_mitigation_policy(
+        self,
+        get_policy: Callable[..., int],
+        proc_handle: int,
+        name: str,
+        policy_class: int,
+        struct_type: type[ctypes.Structure],
+    ) -> dict[str, object]:
+        """Query and decode a single mitigation policy.
+
+        Args:
+            get_policy: ``GetProcessMitigationPolicy`` callable.
+            proc_handle: Open process handle.
+            name: Friendly policy name (used in logs and result keys).
+            policy_class: ``PROCESS_MITIGATION_POLICY`` enum value.
+            struct_type: ctypes structure used to receive the policy.
+
+        Returns:
+            dict[str, object]: Decoded flag dictionary, or an
+                ``{"enabled": False, "error": ...}`` entry when the query
+                fails or the policy is unsupported on the current OS.
+        """
+        policy = struct_type()
+        try:
+            ok = bool(get_policy(proc_handle, policy_class, ctypes.byref(policy), ctypes.sizeof(policy)))
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.warning(
+                "mitigation_policy_query_unsupported",
+                policy=name,
+                exc_type=type(exc).__name__,
+                error=str(exc),
+            )
+            return {"enabled": False, "error": "not supported"}
+        if ok:
+            flags_val = int(getattr(policy, "Flags", 0))
+            return self._decode_mitigation_flags(name, flags_val, policy)
+        return {"enabled": False, "error": "query failed"}
 
     @staticmethod
     def _decode_mitigation_flags(
@@ -5280,26 +6055,49 @@ class ProcessBridge(ToolBridgeBase):
         entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
 
         try:
-            if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
-                error_code: int = ctypes.get_last_error()
-                if error_code != _ERROR_NO_MORE_FILES:
-                    msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
-                    raise ToolError(msg)
-                return results
-            while True:
-                results.append({
-                    "pid": entry.th32ProcessID,
-                    "name": entry.szExeFile.decode("utf-8", errors="ignore"),
-                    "parent_pid": entry.th32ParentProcessID,
-                    "thread_count": entry.cntThreads,
-                })
-                if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
-                    break
+            self._collect_system_process_entries(snapshot, entry, results)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         _logger.debug("enumerate_system_processes_completed", count=len(results))
         return results
+
+    def _collect_system_process_entries(
+        self,
+        snapshot: int,
+        entry: PROCESSENTRY32,
+        results: list[dict[str, object]],
+    ) -> None:
+        """Iterate a process snapshot and append every entry to ``results``.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            entry: Pre-sized ``PROCESSENTRY32`` buffer used for each call.
+            results: Output list that receives a dict per process with
+                ``pid``, ``name``, ``parent_pid``, and ``thread_count``
+                keys.
+
+        Raises:
+            ToolError: If ``Process32First`` fails for a reason other
+                than ``_ERROR_NO_MORE_FILES``.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Process32First(snapshot, ctypes.byref(entry)):
+            error_code: int = ctypes.get_last_error()
+            if error_code != _ERROR_NO_MORE_FILES:
+                msg = f"{_ERR_SNAPSHOT_FAILED} (Process32First: {error_code})"
+                raise ToolError(msg)
+            return
+        while True:
+            results.append({
+                "pid": entry.th32ProcessID,
+                "name": entry.szExeFile.decode("utf-8", errors="ignore"),
+                "parent_pid": entry.th32ParentProcessID,
+                "thread_count": entry.cntThreads,
+            })
+            if not self._kernel32.Process32Next(snapshot, ctypes.byref(entry)):
+                break
 
     async def enumerate_handles(self, pid: int | None = None) -> list[dict[str, object]]:
         """Enumerate open handles for a process.
@@ -5387,36 +6185,89 @@ class ProcessBridge(ToolBridgeBase):
         heap32next = getattr(self._kernel32, "Heap32Next", None)
 
         try:
-            if self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(hl)):
-                while True:
-                    blocks: list[dict[str, object]] = []
-                    if heap32first is not None and heap32next is not None:
-                        he = HEAPENTRY32()
-                        he.dwSize = ctypes.sizeof(HEAPENTRY32)
-                        if heap32first(ctypes.byref(he), target_pid, ctypes.c_size_t(hl.th32HeapID)):
-                            while True:
-                                blocks.append({
-                                    "address": he.dwAddress,
-                                    "size": he.dwBlockSize,
-                                    "flags": he.dwFlags,
-                                })
-                                he.dwSize = ctypes.sizeof(HEAPENTRY32)
-                                if not heap32next(ctypes.byref(he)):
-                                    break
-
-                    heaps.append({
-                        "id": hl.th32HeapID,
-                        "flags": hl.dwFlags,
-                        "blocks": blocks,
-                    })
-                    hl.dwSize = ctypes.sizeof(HEAPLIST32)
-                    if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(hl)):
-                        break
+            self._collect_heap_entries(snapshot, hl, heaps, target_pid, heap32first, heap32next)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
         _logger.debug("enumerate_heaps_completed", pid=target_pid, count=len(heaps))
         return heaps
+
+    def _collect_heap_entries(
+        self,
+        snapshot: int,
+        hl: HEAPLIST32,
+        heaps: list[dict[str, object]],
+        target_pid: int,
+        heap32first: Callable[..., int] | None,
+        heap32next: Callable[..., int] | None,
+    ) -> None:
+        """Walk a heap snapshot and collect each heap with its block list.
+
+        Args:
+            snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
+            hl: Pre-sized ``HEAPLIST32`` buffer used for each call.
+            heaps: Output list that receives a dict per heap with
+                ``id``, ``flags``, and ``blocks`` keys.
+            target_pid: Owner PID for the snapshot.
+            heap32first: ``Heap32First`` callable or ``None`` when the API
+                is unavailable.
+            heap32next: ``Heap32Next`` callable or ``None`` when the API
+                is unavailable.
+        """
+        if self._kernel32 is None:
+            return
+        if not self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(hl)):
+            return
+        while True:
+            blocks = self._collect_heap_blocks(target_pid, hl.th32HeapID, heap32first, heap32next)
+            heaps.append({
+                "id": hl.th32HeapID,
+                "flags": hl.dwFlags,
+                "blocks": blocks,
+            })
+            hl.dwSize = ctypes.sizeof(HEAPLIST32)
+            if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(hl)):
+                break
+
+    @staticmethod
+    def _collect_heap_blocks(
+        target_pid: int,
+        heap_id: int,
+        heap32first: Callable[..., int] | None,
+        heap32next: Callable[..., int] | None,
+    ) -> list[dict[str, object]]:
+        """Enumerate every block of a single heap via ``Heap32First/Next``.
+
+        Args:
+            target_pid: Owner PID for the heap.
+            heap_id: Toolhelp32 heap identifier.
+            heap32first: ``Heap32First`` callable or ``None`` when the API
+                is unavailable.
+            heap32next: ``Heap32Next`` callable or ``None`` when the API
+                is unavailable.
+
+        Returns:
+            list[dict[str, object]]: A dict per block with ``address``,
+                ``size``, and ``flags`` keys.  Empty when the APIs are not
+                available or the heap is empty.
+        """
+        blocks: list[dict[str, object]] = []
+        if heap32first is None or heap32next is None:
+            return blocks
+        he = HEAPENTRY32()
+        he.dwSize = ctypes.sizeof(HEAPENTRY32)
+        if not heap32first(ctypes.byref(he), target_pid, ctypes.c_size_t(heap_id)):
+            return blocks
+        while True:
+            blocks.append({
+                "address": he.dwAddress,
+                "size": he.dwBlockSize,
+                "flags": he.dwFlags,
+            })
+            he.dwSize = ctypes.sizeof(HEAPENTRY32)
+            if not heap32next(ctypes.byref(he)):
+                break
+        return blocks
 
     async def enumerate_services(self, *, active: bool = False) -> list[dict[str, object]]:
         """Enumerate Windows services.
@@ -5442,47 +6293,71 @@ class ProcessBridge(ToolBridgeBase):
         state_filter = SERVICE_ACTIVE if active else SERVICE_STATE_ALL
 
         try:
-            bytes_needed = wintypes.DWORD(0)
-            services_returned = wintypes.DWORD(0)
-            resume_handle = wintypes.DWORD(0)
-
-            self._advapi32.EnumServicesStatusExW(
-                scm,
-                0,
-                SERVICE_WIN32,
-                state_filter,
-                None,
-                0,
-                ctypes.byref(bytes_needed),
-                ctypes.byref(services_returned),
-                ctypes.byref(resume_handle),
-                None,
-            )
-
-            buf_size = bytes_needed.value
-            if buf_size == 0:
-                return []
-
-            buffer = ctypes.create_string_buffer(buf_size)
-            if not self._advapi32.EnumServicesStatusExW(
-                scm,
-                0,
-                SERVICE_WIN32,
-                state_filter,
-                buffer,
-                buf_size,
-                ctypes.byref(bytes_needed),
-                ctypes.byref(services_returned),
-                ctypes.byref(resume_handle),
-                None,
-            ):
-                raise ToolError(_ERR_ENUM_SVC)
-
-            services = self._parse_service_entries(buffer, services_returned.value, None)
+            services = self._enumerate_services_by_state(scm, state_filter)
             _logger.debug("enumerate_services_completed", active=active, count=len(services))
             return services
         finally:
             self._advapi32.CloseServiceHandle(scm)
+
+    def _enumerate_services_by_state(
+        self,
+        scm: int,
+        state_filter: int,
+    ) -> list[dict[str, object]]:
+        """Size-probe and enumerate services matching ``state_filter``.
+
+        Args:
+            scm: Open SCM handle with ``SC_MANAGER_ENUMERATE_SERVICE``
+                access.
+            state_filter: ``SERVICE_ACTIVE``, ``SERVICE_INACTIVE``, or
+                ``SERVICE_STATE_ALL``.
+
+        Returns:
+            list[dict[str, object]]: Parsed service descriptors.
+
+        Raises:
+            ToolError: If advapi32 is unavailable or the populated
+                ``EnumServicesStatusExW`` call fails.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+        bytes_needed = wintypes.DWORD(0)
+        services_returned = wintypes.DWORD(0)
+        resume_handle = wintypes.DWORD(0)
+
+        self._advapi32.EnumServicesStatusExW(
+            scm,
+            0,
+            SERVICE_WIN32,
+            state_filter,
+            None,
+            0,
+            ctypes.byref(bytes_needed),
+            ctypes.byref(services_returned),
+            ctypes.byref(resume_handle),
+            None,
+        )
+
+        buf_size = bytes_needed.value
+        if buf_size == 0:
+            return []
+
+        buffer = ctypes.create_string_buffer(buf_size)
+        if not self._advapi32.EnumServicesStatusExW(
+            scm,
+            0,
+            SERVICE_WIN32,
+            state_filter,
+            buffer,
+            buf_size,
+            ctypes.byref(bytes_needed),
+            ctypes.byref(services_returned),
+            ctypes.byref(resume_handle),
+            None,
+        ):
+            raise ToolError(_ERR_ENUM_SVC)
+
+        return self._parse_service_entries(buffer, services_returned.value, None)
 
     async def time_thread_wait(self, tid: int, timeout_ms: int = 0) -> dict[str, object]:
         """Wait on a thread handle and measure elapsed time.
@@ -5515,23 +6390,41 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            start = time.perf_counter()
-            wait_result: int = self._kernel32.WaitForSingleObject(handle, timeout_ms)
-            elapsed_us = int((time.perf_counter() - start) * 1_000_000)
-
-            if wait_result == WAIT_OBJECT_0:
-                result_str = "signaled"
-            elif wait_result == WAIT_TIMEOUT:
-                result_str = "timeout"
-            elif wait_result == WAIT_FAILED:
-                result_str = "failed"
-            else:
-                result_str = f"other_{wait_result}"
-
-            _logger.debug("time_thread_wait_completed", tid=tid, result=result_str, elapsed_us=elapsed_us)
-            return {"result": result_str, "elapsed_us": elapsed_us}
+            return self._time_wait_on_handle(handle, tid, timeout_ms)
         finally:
             self._kernel32.CloseHandle(handle)
+
+    def _time_wait_on_handle(self, handle: int, tid: int, timeout_ms: int) -> dict[str, object]:
+        """Wait on ``handle`` and return the outcome with elapsed time.
+
+        Args:
+            handle: Open thread (or other waitable) handle.
+            tid: Thread ID being timed (used for logging only).
+            timeout_ms: Timeout for ``WaitForSingleObject`` in
+                milliseconds; ``0`` polls and returns immediately.
+
+        Returns:
+            dict[str, object]: ``{"result": str, "elapsed_us": int}``
+                where ``result`` is one of ``"signaled"``, ``"timeout"``,
+                ``"failed"``, or ``"other_<code>"``.
+        """
+        if self._kernel32 is None:
+            return {"result": "failed", "elapsed_us": 0}
+        start = time.perf_counter()
+        wait_result: int = self._kernel32.WaitForSingleObject(handle, timeout_ms)
+        elapsed_us = int((time.perf_counter() - start) * 1_000_000)
+
+        if wait_result == WAIT_OBJECT_0:
+            result_str = "signaled"
+        elif wait_result == WAIT_TIMEOUT:
+            result_str = "timeout"
+        elif wait_result == WAIT_FAILED:
+            result_str = "failed"
+        else:
+            result_str = f"other_{wait_result}"
+
+        _logger.debug("time_thread_wait_completed", tid=tid, result=result_str, elapsed_us=elapsed_us)
+        return {"result": result_str, "elapsed_us": elapsed_us}
 
     async def duplicate_token(self, pid: int) -> int:
         """Duplicate the primary token of a process.
@@ -5563,39 +6456,77 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            token_handle = wintypes.HANDLE()
-            if not self._advapi32.OpenProcessToken(
-                proc_handle,
-                TOKEN_DUPLICATE | TOKEN_QUERY,
-                ctypes.byref(token_handle),
-            ):
-                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
-
-            try:
-                dup_handle = wintypes.HANDLE()
-                security_impersonation = 2
-                token_primary = 1
-                if not self._advapi32.DuplicateTokenEx(
-                    token_handle,
-                    TOKEN_ALL_ACCESS,
-                    None,
-                    security_impersonation,
-                    token_primary,
-                    ctypes.byref(dup_handle),
-                ):
-                    msg = "DuplicateTokenEx failed"
-                    raise ToolError(msg)
-
-                dup_value = dup_handle.value
-                if dup_value is None:
-                    msg = "DuplicateTokenEx returned null handle"
-                    raise ToolError(msg)
-                _logger.debug("duplicate_token_completed", pid=pid, handle=dup_value)
-                return dup_value
-            finally:
-                self._kernel32.CloseHandle(token_handle)
+            return self._duplicate_token_for_handle(proc_handle, pid)
         finally:
             self._kernel32.CloseHandle(proc_handle)
+
+    def _duplicate_token_for_handle(self, proc_handle: int, pid: int) -> int:
+        """Open the process token and dispatch to :meth:`_duplicate_token_impl`.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access.
+            pid: PID being duplicated (used for logging only).
+
+        Returns:
+            int: Handle value of the duplicated token.
+
+        Raises:
+            ToolError: If required DLLs are unavailable or the token
+                cannot be opened.
+        """
+        if self._kernel32 is None or self._advapi32 is None:
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+        token_handle = wintypes.HANDLE()
+        if not self._advapi32.OpenProcessToken(
+            proc_handle,
+            TOKEN_DUPLICATE | TOKEN_QUERY,
+            ctypes.byref(token_handle),
+        ):
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+        try:
+            return self._duplicate_token_impl(token_handle, pid)
+        finally:
+            self._kernel32.CloseHandle(token_handle)
+
+    def _duplicate_token_impl(self, token_handle: wintypes.HANDLE, pid: int) -> int:
+        """Call ``DuplicateTokenEx`` and return the new primary token.
+
+        Args:
+            token_handle: Open token handle with
+                ``TOKEN_DUPLICATE | TOKEN_QUERY`` access.
+            pid: PID being duplicated (used for logging only).
+
+        Returns:
+            int: Handle value of the duplicated token.
+
+        Raises:
+            ToolError: If advapi32 is unavailable, ``DuplicateTokenEx``
+                fails, or returns a null handle.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+        dup_handle = wintypes.HANDLE()
+        security_impersonation = 2
+        token_primary = 1
+        if not self._advapi32.DuplicateTokenEx(
+            token_handle,
+            TOKEN_ALL_ACCESS,
+            None,
+            security_impersonation,
+            token_primary,
+            ctypes.byref(dup_handle),
+        ):
+            msg = "DuplicateTokenEx failed"
+            raise ToolError(msg)
+
+        dup_value = dup_handle.value
+        if dup_value is None:
+            msg = "DuplicateTokenEx returned null handle"
+            raise ToolError(msg)
+        _logger.debug("duplicate_token_completed", pid=pid, handle=dup_value)
+        return dup_value
 
     async def remove_privilege(self, pid: int, privilege_name: str) -> bool:
         """Remove a privilege from the primary token of a process.
@@ -5625,48 +6556,96 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            token_handle = wintypes.HANDLE()
-            if not self._advapi32.OpenProcessToken(
-                proc_handle,
-                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
-                ctypes.byref(token_handle),
-            ):
-                raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
-
-            try:
-                luid = LUID()
-                if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
-                    _logger.warning("remove_privilege_lookup_failed", pid=pid, privilege_name=privilege_name)
-                    return False
-
-                tp = TOKEN_PRIVILEGES()
-                tp.PrivilegeCount = 1
-                tp.Privileges[0].Luid = luid
-                tp.Privileges[0].Attributes = SE_PRIVILEGE_REMOVED
-
-                disable_all = wintypes.BOOL(0)
-                self._advapi32.AdjustTokenPrivileges(
-                    token_handle,
-                    disable_all,
-                    ctypes.byref(tp),
-                    ctypes.sizeof(TOKEN_PRIVILEGES),
-                    None,
-                    None,
-                )
-
-                last_error: int = ctypes.get_last_error()
-                success = last_error != ERROR_NOT_ALL_ASSIGNED
-                _logger.info(
-                    "remove_privilege_completed",
-                    pid=pid,
-                    privilege_name=privilege_name,
-                    success=success,
-                )
-                return success
-            finally:
-                self._kernel32.CloseHandle(token_handle)
+            return self._remove_privilege_for_handle(proc_handle, pid, privilege_name)
         finally:
             self._kernel32.CloseHandle(proc_handle)
+
+    def _remove_privilege_for_handle(
+        self,
+        proc_handle: int,
+        pid: int,
+        privilege_name: str,
+    ) -> bool:
+        """Open the process token and dispatch to :meth:`_remove_privilege_impl`.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access.
+            pid: Process ID being modified (used for logging).
+            privilege_name: Name of the privilege to remove.
+
+        Returns:
+            bool: ``True`` if the privilege was removed.
+
+        Raises:
+            ToolError: If required DLLs are unavailable or the token
+                cannot be opened.
+        """
+        if self._kernel32 is None or self._advapi32 is None:
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+        token_handle = wintypes.HANDLE()
+        if not self._advapi32.OpenProcessToken(
+            proc_handle,
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+            ctypes.byref(token_handle),
+        ):
+            raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
+
+        try:
+            return self._remove_privilege_impl(token_handle, pid, privilege_name)
+        finally:
+            self._kernel32.CloseHandle(token_handle)
+
+    def _remove_privilege_impl(
+        self,
+        token_handle: wintypes.HANDLE,
+        pid: int,
+        privilege_name: str,
+    ) -> bool:
+        """Apply ``SE_PRIVILEGE_REMOVED`` to ``privilege_name`` on the token.
+
+        Args:
+            token_handle: Open token handle with
+                ``TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY`` access.
+            pid: Process ID being modified (used for logging).
+            privilege_name: Name of the privilege to remove.
+
+        Returns:
+            bool: ``True`` if the privilege was removed,
+                ``False`` if it was not present or LookupPrivilegeValueW
+                failed.
+        """
+        if self._advapi32 is None:
+            return False
+        luid = LUID()
+        if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
+            _logger.warning("remove_privilege_lookup_failed", pid=pid, privilege_name=privilege_name)
+            return False
+
+        tp = TOKEN_PRIVILEGES()
+        tp.PrivilegeCount = 1
+        tp.Privileges[0].Luid = luid
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_REMOVED
+
+        disable_all = wintypes.BOOL(0)
+        self._advapi32.AdjustTokenPrivileges(
+            token_handle,
+            disable_all,
+            ctypes.byref(tp),
+            ctypes.sizeof(TOKEN_PRIVILEGES),
+            None,
+            None,
+        )
+
+        last_error: int = ctypes.get_last_error()
+        success = last_error != ERROR_NOT_ALL_ASSIGNED
+        _logger.info(
+            "remove_privilege_completed",
+            pid=pid,
+            privilege_name=privilege_name,
+            success=success,
+        )
+        return success
 
     async def decommit_memory(self, pid: int, address: int, size: int) -> bool:
         """Decommit a region of committed memory in a process.
@@ -5750,23 +6729,44 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            raw, vtype = self._reg_query_value_grow(hkey, value_name)
-            type_name = _REG_TYPE_NAMES.get(vtype, f"REG_UNKNOWN_{vtype}")
-
-            if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
-                decoded = raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
-                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
-                return {"type": type_name, "data": decoded}
-            if vtype == _REG_TYPE_DWORD:
-                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
-                return {"type": type_name, "data": struct.unpack_from("<I", raw)[0]}
-            if vtype == _REG_TYPE_QWORD:
-                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
-                return {"type": type_name, "data": struct.unpack_from("<Q", raw)[0]}
-            _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
-            return {"type": type_name, "data": raw.hex()}
+            return self._read_registry_value(hkey, hive, key_path, value_name)
         finally:
             self._advapi32.RegCloseKey(hkey)
+
+    def _read_registry_value(
+        self,
+        hkey: wintypes.HKEY,
+        hive: str,
+        key_path: str,
+        value_name: str,
+    ) -> dict[str, object]:
+        """Query a registry value and decode it into a Python value.
+
+        Args:
+            hkey: Open key handle returned by ``RegOpenKeyExW``.
+            hive: Hive name forwarded for logging only.
+            key_path: Subkey path forwarded for logging only.
+            value_name: Name of the registry value to read.
+
+        Returns:
+            dict[str, object]: ``{"type": "REG_*", "data": decoded}``
+                where the decoded shape depends on the value's REG_TYPE.
+        """
+        raw, vtype = self._reg_query_value_grow(hkey, value_name)
+        type_name = _REG_TYPE_NAMES.get(vtype, f"REG_UNKNOWN_{vtype}")
+
+        if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
+            decoded = raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
+            _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
+            return {"type": type_name, "data": decoded}
+        if vtype == _REG_TYPE_DWORD:
+            _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
+            return {"type": type_name, "data": struct.unpack_from("<I", raw)[0]}
+        if vtype == _REG_TYPE_QWORD:
+            _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
+            return {"type": type_name, "data": struct.unpack_from("<Q", raw)[0]}
+        _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
+        return {"type": type_name, "data": raw.hex()}
 
     async def detect_kernel_debugger(self, pid: int) -> bool:
         """Detect whether a kernel debugger port is attached to a process.
@@ -5797,23 +6797,41 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            debug_port = ctypes.c_void_p(0)
-            return_length = wintypes.ULONG(0)
-            status: int = self._ntdll.NtQueryInformationProcess(
-                proc_handle,
-                ProcessDebugPort,
-                ctypes.byref(debug_port),
-                ctypes.sizeof(debug_port),
-                ctypes.byref(return_length),
-            )
-            if status < 0:
-                msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
-                raise ToolError(msg)
-            detected = bool(debug_port.value)
-            _logger.debug("detect_kernel_debugger_completed", pid=pid, detected=detected)
-            return detected
+            return self._query_kernel_debugger_port(proc_handle, pid)
         finally:
             self._kernel32.CloseHandle(proc_handle)
+
+    def _query_kernel_debugger_port(self, proc_handle: int, pid: int) -> bool:
+        """Issue ``NtQueryInformationProcess`` to read ``ProcessDebugPort``.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access.
+            pid: PID being queried (used for logging only).
+
+        Returns:
+            bool: ``True`` if a non-zero debug port is reported.
+
+        Raises:
+            ToolError: If ntdll is unavailable or the NT query fails.
+        """
+        if self._ntdll is None:
+            raise ToolError(_ERR_NTDLL_NA)
+        debug_port = ctypes.c_void_p(0)
+        return_length = wintypes.ULONG(0)
+        status: int = self._ntdll.NtQueryInformationProcess(
+            proc_handle,
+            ProcessDebugPort,
+            ctypes.byref(debug_port),
+            ctypes.sizeof(debug_port),
+            ctypes.byref(return_length),
+        )
+        if status < 0:
+            msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
+            raise ToolError(msg)
+        detected = bool(debug_port.value)
+        _logger.debug("detect_kernel_debugger_completed", pid=pid, detected=detected)
+        return detected
 
     async def get_mitigation_policy(self, pid: int | None = None) -> dict[str, object]:
         """Query process mitigation policies with a simplified key schema.
@@ -5917,29 +6935,47 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            policy_buf = ctypes.c_ulong(0)
-            get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
-            disabled = False
-            if get_policy is not None:
-                try:
-                    if get_policy(
-                        proc_handle,
-                        ProcessExtensionPointDisablePolicy,
-                        ctypes.byref(policy_buf),
-                        ctypes.sizeof(policy_buf),
-                    ):
-                        disabled = bool(policy_buf.value & 1)
-                except (OSError, ctypes.ArgumentError) as exc:
-                    _logger.warning(
-                        "extension_policy_query_failed",
-                        pid=target_pid,
-                        error=str(exc),
-                    )
-                    disabled = False
+            disabled = self._query_extension_point_disable(proc_handle, target_pid)
             return {"disable_extension_points": disabled}
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _query_extension_point_disable(self, proc_handle: int, target_pid: int | None) -> bool:
+        """Return whether ``ProcessExtensionPointDisablePolicy`` is enabled.
+
+        Args:
+            proc_handle: Open process handle with
+                ``PROCESS_QUERY_INFORMATION`` access (or the current-
+                process pseudo handle).
+            target_pid: PID being queried, used for logging only.
+
+        Returns:
+            bool: ``True`` when the extension-point disable policy bit is
+                set; ``False`` when the API is unavailable, the query
+                fails, or the policy is not in effect.
+        """
+        if self._kernel32 is None:
+            return False
+        policy_buf = ctypes.c_ulong(0)
+        get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
+        if get_policy is None:
+            return False
+        try:
+            if get_policy(
+                proc_handle,
+                ProcessExtensionPointDisablePolicy,
+                ctypes.byref(policy_buf),
+                ctypes.sizeof(policy_buf),
+            ):
+                return bool(policy_buf.value & 1)
+        except (OSError, ctypes.ArgumentError) as exc:
+            _logger.warning(
+                "extension_policy_query_failed",
+                pid=target_pid,
+                error=str(exc),
+            )
+        return False
 
     # ------------------------------------------------------------------
     # Environment variables
@@ -6689,14 +7725,7 @@ class ProcessBridge(ToolBridgeBase):
         if len(meta_data) < _DOTNET_METADATA_MIN_SIZE:
             return None
         try:
-            signature = int(struct.unpack_from("<I", meta_data, 0)[0])
-            if signature != _DOTNET_METADATA_SIGNATURE:
-                return None
-            version_length = int(struct.unpack_from("<I", meta_data, 12)[0])
-            if version_length == 0 or version_length > _DOTNET_METADATA_VERSION_MAX:
-                return None
-            version_bytes = meta_data[16 : 16 + version_length]
-            version_str = version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
+            version_str = ProcessBridge._parse_dotnet_metadata_version_string(meta_data)
         except struct.error as exc:
             _logger.warning(
                 "dotnet_metadata_header_parse_failed",
@@ -6704,8 +7733,29 @@ class ProcessBridge(ToolBridgeBase):
                 error=str(exc),
             )
             return None
-        else:
-            return version_str or None
+        return version_str or None
+
+    @staticmethod
+    def _parse_dotnet_metadata_version_string(meta_data: bytes) -> str | None:
+        """Parse the .NET metadata signature/version fields.
+
+        Args:
+            meta_data: First ``_DOTNET_METADATA_MIN_SIZE`` (or more) bytes
+                of the metadata header that was read out of the target.
+
+        Returns:
+            str | None: The decoded version string, or ``None`` if the
+                signature does not match or the version length is out of
+                range.
+        """
+        signature = int(struct.unpack_from("<I", meta_data, 0)[0])
+        if signature != _DOTNET_METADATA_SIGNATURE:
+            return None
+        version_length = int(struct.unpack_from("<I", meta_data, 12)[0])
+        if version_length == 0 or version_length > _DOTNET_METADATA_VERSION_MAX:
+            return None
+        version_bytes = meta_data[16 : 16 + version_length]
+        return version_bytes.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip()
 
     # ------------------------------------------------------------------
     # Driver communication
@@ -6883,19 +7933,34 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            is_in_job = wintypes.BOOL(0)
-            self._kernel32.IsProcessInJob(proc_handle, None, ctypes.byref(is_in_job))
-
-            result: dict[str, object] = {"in_job": bool(is_in_job.value)}
-
-            if is_in_job.value:
-                result |= self._query_job_details(proc_handle)
-
-            _logger.debug("process_get_job_info_completed", pid=target_pid, in_job=bool(is_in_job.value))
-            return result
+            return self._collect_job_info(proc_handle, target_pid)
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
+
+    def _collect_job_info(self, proc_handle: int, target_pid: int | None) -> dict[str, object]:
+        """Query whether ``proc_handle`` is in a job and gather details.
+
+        Args:
+            proc_handle: Open process handle.
+            target_pid: PID being queried, used for logging only.
+
+        Returns:
+            dict[str, object]: ``{"in_job": bool, ...}`` merged with the
+                result of :meth:`_query_job_details` when the process is
+                in a job.
+        """
+        if self._kernel32 is None:
+            return {"in_job": False}
+        is_in_job = wintypes.BOOL(0)
+        self._kernel32.IsProcessInJob(proc_handle, None, ctypes.byref(is_in_job))
+
+        result: dict[str, object] = {"in_job": bool(is_in_job.value)}
+        if is_in_job.value:
+            result |= self._query_job_details(proc_handle)
+
+        _logger.debug("process_get_job_info_completed", pid=target_pid, in_job=bool(is_in_job.value))
+        return result
 
     def _query_job_details(self, proc_handle: int) -> dict[str, object]:
         """Query basic/extended job limits for a process in a job object.
@@ -7415,32 +8480,47 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            keys: list[str] = []
-            index = 0
-            name_buf = ctypes.create_unicode_buffer(256)
-            name_size = wintypes.DWORD(256)
-
-            while True:
-                name_size.value = 256
-                result: int = self._advapi32.RegEnumKeyExW(
-                    hkey,
-                    index,
-                    name_buf,
-                    ctypes.byref(name_size),
-                    None,
-                    None,
-                    None,
-                    None,
-                )
-                if result != 0:
-                    break
-                keys.append(name_buf.value)
-                index += 1
-
+            keys = self._reg_enum_subkeys(hkey)
             _logger.debug("process_reg_enum_keys_completed", key_path=key_path, count=len(keys))
             return keys
         finally:
             self._advapi32.RegCloseKey(hkey)
+
+    def _reg_enum_subkeys(self, hkey: wintypes.HKEY) -> list[str]:
+        """Walk ``RegEnumKeyExW`` and collect every subkey name.
+
+        Args:
+            hkey: Open registry key handle with ``KEY_ENUMERATE_SUB_KEYS``
+                access.
+
+        Returns:
+            list[str]: Decoded subkey names in enumeration order.
+        """
+        if self._advapi32 is None:
+            return []
+        keys: list[str] = []
+        index = 0
+        name_buf = ctypes.create_unicode_buffer(256)
+        name_size = wintypes.DWORD(256)
+
+        while True:
+            name_size.value = 256
+            result: int = self._advapi32.RegEnumKeyExW(
+                hkey,
+                index,
+                name_buf,
+                ctypes.byref(name_size),
+                None,
+                None,
+                None,
+                None,
+            )
+            if result != 0:
+                break
+            keys.append(name_buf.value)
+            index += 1
+
+        return keys
 
     async def reg_enum_values(self, key_path: str) -> list[str]:
         """Enumerate values under a registry key.
@@ -7467,32 +8547,47 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(msg)
 
         try:
-            values: list[str] = []
-            index = 0
-            name_buf = ctypes.create_unicode_buffer(16384)
-            name_size = wintypes.DWORD(16384)
-
-            while True:
-                name_size.value = 16384
-                result: int = self._advapi32.RegEnumValueW(
-                    hkey,
-                    index,
-                    name_buf,
-                    ctypes.byref(name_size),
-                    None,
-                    None,
-                    None,
-                    None,
-                )
-                if result != 0:
-                    break
-                values.append(name_buf.value)
-                index += 1
-
+            values = self._reg_enum_value_names(hkey)
             _logger.debug("process_reg_enum_values_completed", key_path=key_path, count=len(values))
             return values
         finally:
             self._advapi32.RegCloseKey(hkey)
+
+    def _reg_enum_value_names(self, hkey: wintypes.HKEY) -> list[str]:
+        """Walk ``RegEnumValueW`` and collect every value name.
+
+        Args:
+            hkey: Open registry key handle with ``KEY_QUERY_VALUE``
+                access.
+
+        Returns:
+            list[str]: Decoded value names in enumeration order.
+        """
+        if self._advapi32 is None:
+            return []
+        values: list[str] = []
+        index = 0
+        name_buf = ctypes.create_unicode_buffer(16384)
+        name_size = wintypes.DWORD(16384)
+
+        while True:
+            name_size.value = 16384
+            result: int = self._advapi32.RegEnumValueW(
+                hkey,
+                index,
+                name_buf,
+                ctypes.byref(name_size),
+                None,
+                None,
+                None,
+                None,
+            )
+            if result != 0:
+                break
+            values.append(name_buf.value)
+            index += 1
+
+        return values
 
     # ------------------------------------------------------------------
     # Section object mapping
@@ -7777,22 +8872,49 @@ class ProcessBridge(ToolBridgeBase):
         """
         exp_ptr_addr = teb_addr + _TLS_EXPANSION_OFFSET_X64
         try:
-            exp_ptr_data = self._sync_read_memory(exp_ptr_addr, 8)
-            exp_ptr = struct.unpack_from("<Q", exp_ptr_data, 0)[0]
-            if exp_ptr == 0:
-                return
-            expansion_count = min(max_slots - TLS_STATIC_SLOT_COUNT, 1024)
-            expansion_read_size = expansion_count * ptr_size
-            try:
-                exp_data = self._sync_read_memory(exp_ptr, expansion_read_size)
-                for j in range(min(expansion_count, len(exp_data) // ptr_size)):
-                    value = struct.unpack_from(fmt, exp_data, j * ptr_size)[0]
-                    if value != 0:
-                        slots.append({"index": TLS_STATIC_SLOT_COUNT + j, "value": value})
-            except ToolError:
-                _logger.warning("tls_expansion_read_failed", tid=tid, address=hex(exp_ptr))
+            self._read_tls_expansion_table(slots, exp_ptr_addr, max_slots, tid, fmt, ptr_size)
         except ToolError:
             _logger.warning("tls_expansion_ptr_read_failed", tid=tid, address=hex(exp_ptr_addr))
+
+    def _read_tls_expansion_table(
+        self,
+        slots: list[dict[str, object]],
+        exp_ptr_addr: int,
+        max_slots: int,
+        tid: int,
+        fmt: str,
+        ptr_size: int,
+    ) -> None:
+        """Read the pointer to the expansion table and walk its entries.
+
+        Propagates any :class:`ToolError` raised by
+        :meth:`_sync_read_memory` while reading the expansion pointer so
+        the caller can record a single ``tls_expansion_ptr_read_failed``
+        log entry.
+
+        Args:
+            slots: Accumulator list to extend in-place.
+            exp_ptr_addr: VA of the ``TlsExpansionSlots`` pointer in the
+                TEB.
+            max_slots: Upper bound on total slots (including static 64).
+            tid: Thread ID (for warning log context only).
+            fmt: ``struct`` format string (``"<Q"`` or ``"<I"``).
+            ptr_size: Pointer size in bytes (8 or 4).
+        """
+        exp_ptr_data = self._sync_read_memory(exp_ptr_addr, 8)
+        exp_ptr = struct.unpack_from("<Q", exp_ptr_data, 0)[0]
+        if exp_ptr == 0:
+            return
+        expansion_count = min(max_slots - TLS_STATIC_SLOT_COUNT, 1024)
+        expansion_read_size = expansion_count * ptr_size
+        try:
+            exp_data = self._sync_read_memory(exp_ptr, expansion_read_size)
+            for j in range(min(expansion_count, len(exp_data) // ptr_size)):
+                value = struct.unpack_from(fmt, exp_data, j * ptr_size)[0]
+                if value != 0:
+                    slots.append({"index": TLS_STATIC_SLOT_COUNT + j, "value": value})
+        except ToolError:
+            _logger.warning("tls_expansion_read_failed", tid=tid, address=hex(exp_ptr))
 
     # ------------------------------------------------------------------
     # Fiber enumeration

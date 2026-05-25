@@ -77,6 +77,29 @@ def _pid_exists(pid: int) -> bool:
     return _pid_exists_posix(pid)
 
 
+def _pid_handle_alive(kernel32: ctypes.CDLL, handle: int) -> bool:
+    """Check whether an opened Windows process handle refers to a live process.
+
+    Args:
+        kernel32: The ``kernel32`` ctypes wrapper exposing
+            ``GetExitCodeProcess``.
+        handle: A non-NULL process handle returned by ``OpenProcess``.
+
+    Returns:
+        bool: True when ``GetExitCodeProcess`` fails (treated as live to avoid
+            false negatives) or the exit code is ``STILL_ACTIVE`` (259);
+            False when the kernel reports the process has exited.
+    """
+    exit_code = ctypes.c_uint32(0)
+    get_exit = kernel32.GetExitCodeProcess
+    get_exit.restype = ctypes.c_int
+    get_exit.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32)]
+    if get_exit(handle, ctypes.byref(exit_code)) == 0:
+        return True
+    still_active = 259
+    return exit_code.value == still_active
+
+
 def _pid_exists_windows(pid: int) -> bool:
     """Verify a PID exists on Windows by attempting to open a handle.
 
@@ -109,14 +132,7 @@ def _pid_exists_windows(pid: int) -> bool:
         return second_error == _WIN_ACCESS_DENIED
 
     try:
-        exit_code = ctypes.c_uint32(0)
-        get_exit = kernel32.GetExitCodeProcess
-        get_exit.restype = ctypes.c_int
-        get_exit.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint32)]
-        if get_exit(handle, ctypes.byref(exit_code)) == 0:
-            return True
-        still_active = 259
-        return exit_code.value == still_active
+        return _pid_handle_alive(kernel32, handle)
     finally:
         kernel32.CloseHandle(handle)
 
@@ -500,12 +516,7 @@ class ProcessManager:
             logger.warning("sync_cleanup_force_kill", count=len(alive))
             for p in alive:
                 try:
-                    if sys.platform == "win32":
-                        p.kill()
-                        _logger.info("win32_terminate_signal_sent", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
-                    else:
-                        p.kill()
-                        _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
+                    ProcessManager._force_kill_process(p)
                 except psutil.NoSuchProcess:
                     _logger.exception("kill_process_target_missing", pid=p.pid)
             psutil.wait_procs(alive, timeout=self.DEFAULT_FORCE_TIMEOUT)
@@ -516,6 +527,26 @@ class ProcessManager:
 
         self._cleanup_in_progress = False
         logger.info("sync_cleanup_complete")
+
+    @staticmethod
+    def _force_kill_process(p: psutil.Process) -> None:
+        """Force-kill a single ``psutil.Process`` with platform-specific logging.
+
+        Propagates :class:`psutil.NoSuchProcess` from ``kill()`` when the
+        target process has already exited so the caller can log the missing
+        target.
+
+        Args:
+            p: The ``psutil.Process`` to kill. The caller is responsible for
+                catching :class:`psutil.NoSuchProcess` if the target has
+                already exited.
+        """
+        if sys.platform == "win32":
+            p.kill()
+            _logger.info("win32_terminate_signal_sent", pid=p.pid, exit_code=_WIN_PROCESS_TERMINATE)
+        else:
+            p.kill()
+            _logger.info("signal_sent", pid=p.pid, signal=_SIGNAL_SIGKILL)
 
     @staticmethod
     def _terminate_process_sync(
@@ -914,6 +945,65 @@ class ProcessManager:
         """
         return f"ProcessManager(tracked={self.process_count}, running={self.running_count})"
 
+    @staticmethod
+    def _communicate_tracked(
+        *,
+        process: Popen[bytes],
+        name: str,
+        timeout: float | None,
+        text: bool,
+        empty_text: str | bytes,
+        logger: structlog.stdlib.BoundLogger,
+    ) -> tuple[str | bytes, str | bytes, int | None]:
+        """Drive ``process.communicate`` and decode its output.
+
+        Performs the blocking ``communicate`` call, decodes stdout/stderr when
+        ``text`` is true, and returns the streams together with the captured
+        ``returncode``. The caller is responsible for handling
+        :class:`TimeoutExpired`, killing the process, and unregistering it.
+        Propagates :class:`TimeoutExpired` from ``process.communicate`` when
+        the process does not exit within ``timeout`` seconds.
+
+        Args:
+            process: The :class:`subprocess.Popen` instance returned by
+                :meth:`run_tracked`.
+            name: Human-readable process name used for log records.
+            timeout: Optional ``communicate`` timeout (seconds).
+            text: When true, decode bytes to ``utf-8`` with ``errors="replace"``.
+            empty_text: Sentinel returned when a stream is ``None``; matches
+                the ``str``/``bytes`` mode chosen by ``text``.
+            logger: Bound logger used to emit the completion record.
+
+        Returns:
+            tuple[str | bytes, str | bytes, int | None]: ``(stdout, stderr,
+            returncode)`` after the process exits.
+        """
+        communicate_result = cast(
+            "tuple[bytes | None, bytes | None]",
+            process.communicate(timeout=timeout),
+        )
+        stdout_data, stderr_data = communicate_result
+
+        stdout_result: str | bytes
+        if stdout_data is None:
+            stdout_result = empty_text
+        elif text:
+            stdout_result = stdout_data.decode("utf-8", errors="replace")
+        else:
+            stdout_result = stdout_data
+
+        stderr_result: str | bytes
+        if stderr_data is None:
+            stderr_result = empty_text
+        elif text:
+            stderr_result = stderr_data.decode("utf-8", errors="replace")
+        else:
+            stderr_result = stderr_data
+
+        returncode = process.returncode
+        logger.debug("subprocess_completed", process_name=name, returncode=returncode)
+        return stdout_result, stderr_result, returncode
+
     def run_tracked(
         self,
         args: list[str],
@@ -974,30 +1064,14 @@ class ProcessManager:
 
         empty_text: str | bytes = "" if text else b""
         try:
-            communicate_result = cast(
-                "tuple[bytes | None, bytes | None]",
-                process.communicate(timeout=timeout),
+            stdout_result, stderr_result, returncode = ProcessManager._communicate_tracked(
+                process=process,
+                name=name,
+                timeout=timeout,
+                text=text,
+                empty_text=empty_text,
+                logger=logger,
             )
-            stdout_data, stderr_data = communicate_result
-
-            stdout_result: str | bytes
-            if stdout_data is None:
-                stdout_result = empty_text
-            elif text:
-                stdout_result = stdout_data.decode("utf-8", errors="replace")
-            else:
-                stdout_result = stdout_data
-
-            stderr_result: str | bytes
-            if stderr_data is None:
-                stderr_result = empty_text
-            elif text:
-                stderr_result = stderr_data.decode("utf-8", errors="replace")
-            else:
-                stderr_result = stderr_data
-
-            returncode = process.returncode
-            logger.debug("subprocess_completed", process_name=name, returncode=returncode)
 
         except TimeoutExpired:
             logger.warning("process_timeout", process_name=name, pid=pid)

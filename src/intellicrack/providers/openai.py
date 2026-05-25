@@ -262,32 +262,7 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            response = await self.client.models.list()
-            models: list[ModelInfo] = []
-
-            for model_data in response.data:
-                model_id = model_data.id
-                if not self._is_chat_model(model_id):
-                    continue
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=model_id,
-                        provider=ProviderName.OPENAI,
-                        context_window=self._infer_context_window(model_id),
-                        supports_tools=True,
-                        supports_vision=self._infer_supports_vision(model_id),
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=None,
-                        output_cost_per_1m_tokens=None,
-                    ),
-                )
-
-            sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
-            self._logger.info(
-                "openai_models_listed",
-                count=len(sorted_models),
-            )
+            sorted_models = await self._fetch_and_sort_models()
         except (ConnectionError, TimeoutError, OSError, openai.APIError) as e:
             self._logger.warning(
                 "openai_list_models_failed",
@@ -296,6 +271,46 @@ class OpenAIProvider(LLMProviderBase):
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
             return sorted_models
+
+    async def _fetch_and_sort_models(self) -> list[ModelInfo]:
+        """Fetch chat-capable models from the OpenAI API and sort them.
+
+        Returns:
+            list[ModelInfo]: Available chat models sorted by identifier in
+            reverse order.
+
+        Raises:
+            ProviderError: If the OpenAI client has not been initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        response = await self.client.models.list()
+        models: list[ModelInfo] = []
+
+        for model_data in response.data:
+            model_id = model_data.id
+            if not self._is_chat_model(model_id):
+                continue
+            models.append(
+                ModelInfo(
+                    id=model_id,
+                    name=model_id,
+                    provider=ProviderName.OPENAI,
+                    context_window=self._infer_context_window(model_id),
+                    supports_tools=True,
+                    supports_vision=self._infer_supports_vision(model_id),
+                    supports_streaming=True,
+                    input_cost_per_1m_tokens=None,
+                    output_cost_per_1m_tokens=None,
+                ),
+            )
+
+        sorted_models = sorted(models, key=lambda m: m.id, reverse=True)
+        self._logger.info(
+            "openai_models_listed",
+            count=len(sorted_models),
+        )
+        return sorted_models
 
     async def chat(
         self,
@@ -840,41 +855,16 @@ class OpenAIProvider(LLMProviderBase):
         reasoning_effort = self._reasoning_effort_for(model=model, thinking=thinking)
 
         try:
-            typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
-            stream: AsyncStream[ChatCompletionChunk] = await self._open_openai_stream(
+            async for text_chunk in self._iter_openai_stream(
                 model=model,
-                messages=typed_messages,
+                openai_messages=openai_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                tools=cast("list[ChatCompletionToolParam] | None", openai_tools) if openai_tools else None,
-                tool_choice=tool_choice_value,
+                openai_tools=openai_tools,
+                tool_choice_value=tool_choice_value,
                 reasoning_effort=reasoning_effort,
-            )
-
-            tc_buffer = ToolCallBufferManager()
-
-            async for chunk in stream:
-                if self._cancel_requested:
-                    break
-                chunk_usage = getattr(chunk, "usage", None)
-                if chunk_usage is not None:
-                    self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    yield delta.content
-                if delta.tool_calls:
-                    for tc_delta in delta.tool_calls:
-                        tc_buffer.accumulate(
-                            index=tc_delta.index,
-                            call_id=tc_delta.id,
-                            name=tc_delta.function.name if tc_delta.function else None,
-                            arguments=tc_delta.function.arguments if tc_delta.function else None,
-                        )
-
-            self._pending_tool_calls = tc_buffer.finalize()
-
+            ):
+                yield text_chunk
         except openai.AuthenticationError as e:
             self._logger.warning("openai_stream_auth_failed", model=model, error=str(e))
             raise AuthenticationError(_ERR_INVALID_KEY % e) from e
@@ -892,6 +882,69 @@ class OpenAIProvider(LLMProviderBase):
                 cancel_requested=self._cancel_requested,
             )
             raise ProviderError(_ERR_STREAM_FAILED % e) from e
+
+    async def _iter_openai_stream(
+        self,
+        *,
+        model: str,
+        openai_messages: list[dict[str, object]],
+        temperature: float,
+        max_tokens: int,
+        openai_tools: list[dict[str, object]] | None,
+        tool_choice_value: ChatCompletionToolChoiceOptionParam | None,
+        reasoning_effort: ReasoningEffort | None,
+    ) -> AsyncIterator[str]:
+        """Open the OpenAI stream and yield content chunks.
+
+        Updates ``self._pending_usage`` and ``self._pending_tool_calls``
+        as the stream progresses and on completion.
+
+        Args:
+            model: Model ID to use.
+            openai_messages: Messages already converted to OpenAI format.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            openai_tools: Tool definitions in OpenAI format, if any.
+            tool_choice_value: OpenAI-format tool-choice value, if any.
+            reasoning_effort: Resolved reasoning effort, if any.
+
+        Yields:
+            str: Text chunks as they arrive.
+        """
+        typed_messages = cast("list[ChatCompletionMessageParam]", openai_messages)
+        stream: AsyncStream[ChatCompletionChunk] = await self._open_openai_stream(
+            model=model,
+            messages=typed_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            tools=cast("list[ChatCompletionToolParam] | None", openai_tools) if openai_tools else None,
+            tool_choice=tool_choice_value,
+            reasoning_effort=reasoning_effort,
+        )
+
+        tc_buffer = ToolCallBufferManager()
+
+        async for chunk in stream:
+            if self._cancel_requested:
+                break
+            chunk_usage = getattr(chunk, "usage", None)
+            if chunk_usage is not None:
+                self._pending_usage = self._build_usage_from_openai_chunk(chunk_usage)
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta.content:
+                yield delta.content
+            if delta.tool_calls:
+                for tc_delta in delta.tool_calls:
+                    tc_buffer.accumulate(
+                        index=tc_delta.index,
+                        call_id=tc_delta.id,
+                        name=tc_delta.function.name if tc_delta.function else None,
+                        arguments=tc_delta.function.arguments if tc_delta.function else None,
+                    )
+
+        self._pending_tool_calls = tc_buffer.finalize()
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request."""

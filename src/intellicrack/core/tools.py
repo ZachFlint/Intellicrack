@@ -137,6 +137,31 @@ class ToolRegistry:
         """
         return self._tools_dir
 
+    def _instantiate_bridge(
+        self,
+        *,
+        tool_name: ToolName,
+        module_path: str,
+        class_name: str,
+    ) -> None:
+        """Import and instantiate a bridge class, registering it in the registry.
+
+        Any exception raised while importing the module, resolving the class,
+        instantiating it, or wiring the session propagates so the caller can
+        decide how to log and recover.
+
+        Args:
+            tool_name: Registry key for the bridge.
+            module_path: Dotted module path containing the bridge class.
+            class_name: Bridge class name within ``module_path``.
+        """
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        bridge_instance = cls()
+        self._bridges[tool_name] = bridge_instance
+        if self._session is not None:
+            bridge_instance.set_session(self._session)
+
     async def initialize(self) -> None:
         """Initialize all tool bridges.
 
@@ -158,12 +183,7 @@ class ToolRegistry:
         ]
         for tool_name, module_path, class_name in bridge_specs:
             try:
-                mod = importlib.import_module(module_path)
-                cls = getattr(mod, class_name)
-                bridge_instance = cls()
-                self._bridges[tool_name] = bridge_instance
-                if self._session is not None:
-                    bridge_instance.set_session(self._session)
+                self._instantiate_bridge(tool_name=tool_name, module_path=module_path, class_name=class_name)
             except Exception:
                 _logger.exception("bridge_import_failed", bridge=tool_name.value)
         _logger.debug(
@@ -180,6 +200,34 @@ class ToolRegistry:
 
         _logger.info("tool_registry_initialized", bridge_count=len(self._bridges))
         self._initialized = True
+
+    async def _initialize_tool_bridge(
+        self,
+        *,
+        name: ToolName,
+        bridge: ToolBridgeBase,
+        port: int | None,
+    ) -> None:
+        """Ensure the tool's binary is available and initialize its bridge.
+
+        Propagates ``OSError`` from the installer when the tool cannot be
+        located or staged, ``RuntimeError`` when bridge initialization reports
+        a runtime failure, and ``ToolError`` when the bridge rejects the
+        initialization request.
+
+        Args:
+            name: Tool identifier; used to choose Ghidra-specific wiring.
+            bridge: The bridge instance previously registered for ``name``.
+            port: Network port forwarded to the Ghidra bridge when set.
+        """
+        tool_path = await self._installer.ensure_tool(name)
+        if name == ToolName.GHIDRA and port is not None:
+            ghidra = cast("GhidraBridge", bridge)
+            ghidra.set_port(port)
+            await ghidra.initialize(tool_path)
+        else:
+            await bridge.initialize(tool_path)
+        _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
 
     async def initialize_tool(
         self,
@@ -210,14 +258,7 @@ class ToolRegistry:
 
         success = False
         try:
-            tool_path = await self._installer.ensure_tool(name)
-            if name == ToolName.GHIDRA and port is not None:
-                ghidra = cast("GhidraBridge", bridge)
-                ghidra.set_port(port)
-                await ghidra.initialize(tool_path)
-            else:
-                await bridge.initialize(tool_path)
-            _logger.info("tool_initialized", tool_name=name.value, tool_path=str(tool_path))
+            await self._initialize_tool_bridge(name=name, bridge=bridge, port=port)
             success = True
         except (OSError, RuntimeError, ToolError) as exc:
             _logger.warning("tool_initialization_failed", tool_name=name.value, error=str(exc))
@@ -402,6 +443,53 @@ class ToolRegistry:
         _logger.debug("get_hex_editor_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
 
+    async def _build_tool_status(
+        self,
+        *,
+        name: ToolName,
+        bridge: ToolBridgeBase,
+    ) -> ToolStatus:
+        """Probe a bridge and assemble its :class:`ToolStatus` snapshot.
+
+        Propagates ``OSError``, ``RuntimeError``, or :class:`ToolError` from
+        the availability probe so the caller can convert those failures into
+        a :class:`ToolStatus` with the error captured.
+
+        Args:
+            name: Tool name being queried.
+            bridge: The bridge instance registered for ``name``.
+
+        Returns:
+            ToolStatus: Status snapshot including availability, connection
+            state, resolved path (for installable tools), and detected version.
+        """
+        available = await bridge.is_available()
+        state = bridge.state
+
+        version = None
+        path = None
+
+        if name not in _LOCAL_INIT_TOOLS:
+            try:
+                path = await self._installer.find_tool(name)
+                if path is not None:
+                    version = await self._installer.get_version(name, path)
+            except (OSError, RuntimeError, ToolError) as e:
+                _logger.exception(
+                    "tool_path_version_lookup_failed",
+                    tool_name=name.value,
+                    error_str=str(e),
+                )
+
+        return ToolStatus(
+            name=name,
+            available=available,
+            connected=state.connected,
+            version=str(version) if version is not None else None,
+            path=path,
+            error=state.last_error,
+        )
+
     async def get_status(self, name: ToolName) -> ToolStatus:
         """Get status of a tool.
 
@@ -423,32 +511,7 @@ class ToolRegistry:
             )
 
         try:
-            available = await bridge.is_available()
-            state = bridge.state
-
-            version = None
-            path = None
-
-            if name not in _LOCAL_INIT_TOOLS:
-                try:
-                    path = await self._installer.find_tool(name)
-                    if path is not None:
-                        version = await self._installer.get_version(name, path)
-                except (OSError, RuntimeError, ToolError) as e:
-                    _logger.exception(
-                        "tool_path_version_lookup_failed",
-                        tool_name=name.value,
-                        error_str=str(e),
-                    )
-
-            return ToolStatus(
-                name=name,
-                available=available,
-                connected=state.connected,
-                version=str(version) if version is not None else None,
-                path=path,
-                error=state.last_error,
-            )
+            return await self._build_tool_status(name=name, bridge=bridge)
 
         except (OSError, RuntimeError, ToolError) as e:
             _logger.warning("tool_status_check_failed", tool_name=name.value, error=str(e))

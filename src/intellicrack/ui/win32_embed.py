@@ -253,26 +253,44 @@ def embed_window(hwnd: int, parent: QWidget) -> QWidget | None:
         return None
 
     try:
-        parent_hwnd = int(parent.winId())
-        if not _reparent_foreign_hwnd(user32, hwnd, parent_hwnd):
-            return None
-
-        foreign_window = QWindow.fromWinId(cast("voidptr", hwnd))
-        if foreign_window is None:
-            _logger.warning("win32_embed_from_winid_failed", hwnd=hex(hwnd))
-            return None
-
-        container = QWidget.createWindowContainer(foreign_window, parent)
-        container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)
-
+        container = _reparent_and_wrap_hwnd(user32, hwnd, parent)
     except (RuntimeError, OSError, ValueError):
         _logger.exception("win32_embed_failed", hwnd=hex(hwnd))
+        return None
+
+    if container is None:
         return None
 
     _logger.info(
         "win32_window_embedded",
         hwnd=hex(hwnd),
     )
+    return container
+
+
+def _reparent_and_wrap_hwnd(user32: ctypes.WinDLL, hwnd: int, parent: QWidget) -> QWidget | None:
+    """Reparent ``hwnd`` under ``parent`` and wrap it in a ``QWidget`` container.
+
+    Args:
+        user32: Loaded ``user32`` dynamic library handle from ``_get_user32``.
+        hwnd: Native window handle to reparent.
+        parent: Qt parent widget that will own the container.
+
+    Returns:
+        QWidget | None: The container QWidget on success, or ``None`` when
+        reparenting fails or the foreign window cannot be wrapped.
+    """
+    parent_hwnd = int(parent.winId())
+    if not _reparent_foreign_hwnd(user32, hwnd, parent_hwnd):
+        return None
+
+    foreign_window = QWindow.fromWinId(cast("voidptr", hwnd))
+    if foreign_window is None:
+        _logger.warning("win32_embed_from_winid_failed", hwnd=hex(hwnd))
+        return None
+
+    container = QWidget.createWindowContainer(foreign_window, parent)
+    container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)
     return container
 
 

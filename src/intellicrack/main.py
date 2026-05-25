@@ -347,6 +347,54 @@ def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> N
     logger.debug("import_timing", imported_module=module_name, elapsed_s=round(elapsed, 3))
 
 
+def _show_early_splash_impl() -> tuple[QApplication, QSplashScreen]:
+    """Build the QApplication and minimal splash screen.
+
+    Imports PyQt6, configures high-DPI behaviour, creates the application,
+    and shows a minimal splash screen using either the bundled icon or a
+    solid-colour fallback. Propagates ``ImportError`` when PyQt6 cannot be
+    imported, ``OSError`` when the icon asset cannot be loaded, and
+    ``RuntimeError`` when Qt rejects the construction sequence.
+
+    Returns:
+        tuple[QApplication, QSplashScreen]: The Qt application and the early
+        splash screen, both already displayed.
+    """
+    from PyQt6.QtCore import Qt as _Qt
+    from PyQt6.QtGui import (
+        QColor as _QColor,
+        QPixmap as _QPixmap,
+    )
+    from PyQt6.QtWidgets import (
+        QApplication as _QApp,
+        QSplashScreen as _QSplash,
+    )
+
+    if _QApp.instance() is None:
+        _QApp.setHighDpiScaleFactorRoundingPolicy(_Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+
+    app = _QApp(sys.argv)
+    _QApp.setApplicationName("Intellicrack")
+    _QApp.setApplicationVersion(_APP_VERSION)
+    app.setStyle("Fusion")
+
+    icon_path = Path(__file__).resolve().parent / "assets" / "icon.ico"
+    if icon_path.exists():
+        early_pixmap = _QPixmap(str(icon_path))
+    else:
+        early_pixmap = _QPixmap(400, 250)
+        early_pixmap.fill(_QColor(_EARLY_SPLASH_BG))
+
+    early_splash = _QSplash(early_pixmap)
+    early_splash.setWindowFlags(
+        _Qt.WindowType.WindowStaysOnTopHint | _Qt.WindowType.FramelessWindowHint | _Qt.WindowType.SplashScreen,
+    )
+    early_splash.show()
+    app.processEvents()
+    return app, early_splash
+
+
 def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
     """Create QApplication and show a minimal splash screen for instant visual feedback.
 
@@ -358,43 +406,52 @@ def _show_early_splash() -> tuple[QApplication, QSplashScreen] | None:
         tuple[QApplication, QSplashScreen] | None: Tuple of (app, early_splash) or None on failure.
     """
     try:
-        from PyQt6.QtCore import Qt as _Qt
-        from PyQt6.QtGui import (
-            QColor as _QColor,
-            QPixmap as _QPixmap,
-        )
-        from PyQt6.QtWidgets import (
-            QApplication as _QApp,
-            QSplashScreen as _QSplash,
-        )
-
-        if _QApp.instance() is None:
-            _QApp.setHighDpiScaleFactorRoundingPolicy(_Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-            _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-
-        app = _QApp(sys.argv)
-        _QApp.setApplicationName("Intellicrack")
-        _QApp.setApplicationVersion(_APP_VERSION)
-        app.setStyle("Fusion")
-
-        icon_path = Path(__file__).resolve().parent / "assets" / "icon.ico"
-        if icon_path.exists():
-            early_pixmap = _QPixmap(str(icon_path))
-        else:
-            early_pixmap = _QPixmap(400, 250)
-            early_pixmap.fill(_QColor(_EARLY_SPLASH_BG))
-
-        early_splash = _QSplash(early_pixmap)
-        early_splash.setWindowFlags(
-            _Qt.WindowType.WindowStaysOnTopHint | _Qt.WindowType.FramelessWindowHint | _Qt.WindowType.SplashScreen,
-        )
-        early_splash.show()
-        app.processEvents()
+        return _show_early_splash_impl()
     except (ImportError, OSError, RuntimeError) as exc:
         _logger.warning("early_splash_failed", error=str(exc), error_type=type(exc).__name__)
         return None
-    else:
-        return app, early_splash
+
+
+def _upgrade_to_full_splash_impl(
+    app: QApplication,
+    early_splash: QSplashScreen,
+    logger: BoundLogger,
+) -> SplashScreen:
+    """Import UI modules and build the full animated splash screen.
+
+    Propagates ``ImportError`` when a UI module cannot be imported,
+    ``OSError`` when a UI asset cannot be loaded, and ``RuntimeError`` when
+    Qt rejects the construction sequence.
+
+    Args:
+        app: Qt application instance.
+        early_splash: The minimal early splash screen to replace.
+        logger: BoundLogger used for import-time telemetry.
+
+    Returns:
+        SplashScreen: The full animated splash screen, already displayed.
+    """
+    t0 = time.perf_counter()
+    theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
+    _log_import_time(logger, "intellicrack.ui.resources", time.perf_counter() - t0)
+
+    t0 = time.perf_counter()
+    splash_cls = _import_splash_screen()
+    _log_import_time(logger, "intellicrack.ui.dialogs", time.perf_counter() - t0)
+
+    theme_manager = theme_mgr_cls.get_instance()
+    theme_manager.apply_theme("dark")
+
+    icon_manager = icon_mgr_cls.get_instance()
+    qt_app_cls = _import_qt_app()
+    qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
+
+    early_splash.close()
+
+    splash = splash_cls(version=_APP_VERSION)
+    splash.show_animated()
+    app.processEvents()
+    return splash
 
 
 def _upgrade_to_full_splash(
@@ -417,31 +474,10 @@ def _upgrade_to_full_splash(
         SplashScreen | None: Full animated splash screen, or None on failure.
     """
     try:
-        t0 = time.perf_counter()
-        theme_mgr_cls, icon_mgr_cls = _import_theme_icon_managers()
-        _log_import_time(logger, "intellicrack.ui.resources", time.perf_counter() - t0)
-
-        t0 = time.perf_counter()
-        splash_cls = _import_splash_screen()
-        _log_import_time(logger, "intellicrack.ui.dialogs", time.perf_counter() - t0)
-
-        theme_manager = theme_mgr_cls.get_instance()
-        theme_manager.apply_theme("dark")
-
-        icon_manager = icon_mgr_cls.get_instance()
-        qt_app_cls = _import_qt_app()
-        qt_app_cls.setWindowIcon(icon_manager.get_app_icon())
-
-        early_splash.close()
-
-        splash = splash_cls(version=_APP_VERSION)
-        splash.show_animated()
-        app.processEvents()
+        return _upgrade_to_full_splash_impl(app, early_splash, logger)
     except (ImportError, OSError, RuntimeError) as exc:
         logger.warning("full_splash_upgrade_failed", error=str(exc), exc_info=True)
         return None
-    else:
-        return splash
 
 
 async def _initialize_providers(
@@ -482,27 +518,41 @@ async def _initialize_providers(
         ],
     )
 
+    async def _init_one_impl(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+        """Construct, optionally connect, and register a single provider.
+
+        Propagates ``ImportError``, ``OSError``, ``RuntimeError``,
+        ``ValueError``, ``TypeError``, and ``AttributeError`` so the caller
+        wrapper can log a single ``provider_init_failed`` warning.
+
+        Args:
+            provider_name: Provider enum value used for log records and
+                credential lookup.
+            provider_class: Concrete :class:`LLMProviderBase` subclass to
+                instantiate.
+        """
+        provider = provider_class()
+        if creds := credentials.get_credentials(provider_name):
+            try:
+                await asyncio.wait_for(
+                    provider.connect(creds),
+                    timeout=_PROVIDER_CONNECT_TIMEOUT,
+                )
+                logger.info("provider_connected", provider=provider_name.value)
+                registry.register(provider)
+            except TimeoutError:
+                logger.warning(
+                    "provider_connect_timeout",
+                    provider=provider_name.value,
+                    timeout=_PROVIDER_CONNECT_TIMEOUT,
+                )
+        else:
+            logger.debug("no_credentials", provider=provider_name.value)
+            registry.register(provider)
+
     async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
         try:
-            provider = provider_class()
-            if creds := credentials.get_credentials(provider_name):
-                try:
-                    await asyncio.wait_for(
-                        provider.connect(creds),
-                        timeout=_PROVIDER_CONNECT_TIMEOUT,
-                    )
-                    logger.info("provider_connected", provider=provider_name.value)
-                    registry.register(provider)
-                except TimeoutError:
-                    logger.warning(
-                        "provider_connect_timeout",
-                        provider=provider_name.value,
-                        timeout=_PROVIDER_CONNECT_TIMEOUT,
-                    )
-            else:
-                logger.debug("no_credentials", provider=provider_name.value)
-                registry.register(provider)
-
+            await _init_one_impl(provider_name, provider_class)
         except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as e:
             logger.warning(
                 "provider_init_failed",

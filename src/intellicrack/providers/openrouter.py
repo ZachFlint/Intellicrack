@@ -170,15 +170,19 @@ class OpenRouterProvider(LLMProviderBase):
     async def disconnect(self) -> None:
         """Disconnect from OpenRouter API."""
         try:
-            await super().disconnect()
-            if self.client:
-                await self.client.aclose()
-                self.client = None
-            self._api_key = None
-            self._logger.info("openrouter_disconnected", was_connected=True)
+            await self._disconnect_impl()
         except (ConnectionError, TimeoutError, OSError, RuntimeError) as exc:
             self._logger.warning("disconnect_cleanup_error", error=str(exc))
             self.connected = False
+
+    async def _disconnect_impl(self) -> None:
+        """Tear down the OpenRouter HTTP client and clear credentials."""
+        await super().disconnect()
+        if self.client:
+            await self.client.aclose()
+            self.client = None
+        self._api_key = None
+        self._logger.info("openrouter_disconnected", was_connected=True)
 
     async def list_models(self) -> list[ModelInfo]:
         """Dynamically fetch available models from OpenRouter.
@@ -193,61 +197,7 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
 
         try:
-            response = await self.client.get(f"{self.BASE_URL}/models")
-            response.raise_for_status()
-            data = response.json()
-
-            models: list[ModelInfo] = []
-            for model_data in data.get("data", []):
-                model_id = model_data.get("id", "")
-                name = model_data.get("name", model_id)
-                context_length = model_data.get("context_length", 4096)
-
-                pricing = model_data.get("pricing", {})
-                input_cost = pricing.get("prompt")
-                output_cost = pricing.get("completion")
-
-                if input_cost is not None:
-                    try:
-                        input_cost = float(input_cost) * 1000000
-                    except (ValueError, TypeError):
-                        self._logger.debug("input_cost_parse_failed", model=model_id)
-                        input_cost = None
-                if output_cost is not None:
-                    try:
-                        output_cost = float(output_cost) * 1000000
-                    except (ValueError, TypeError):
-                        self._logger.debug("output_cost_parse_failed", model=model_id)
-                        output_cost = None
-
-                architecture: dict[str, object] = model_data.get("architecture", {})
-                modality = str(architecture.get("modality", ""))
-                supports_vision = "image" in modality
-
-                supported_params: list[str] = [str(p) for p in model_data.get("supported_parameters", [])]
-                supports_tools = "tools" in supported_params or "tool_choice" in supported_params
-                if not supports_tools and not supported_params:
-                    supports_tools = any(family in model_id.lower() for family in ("claude", "gpt", "gemini", "llama-3", "qwen"))
-
-                models.append(
-                    ModelInfo(
-                        id=model_id,
-                        name=name,
-                        provider=ProviderName.OPENROUTER,
-                        context_window=context_length,
-                        supports_tools=supports_tools,
-                        supports_vision=supports_vision,
-                        supports_streaming=True,
-                        input_cost_per_1m_tokens=input_cost,
-                        output_cost_per_1m_tokens=output_cost,
-                    ),
-                )
-
-            sorted_models = sorted(models, key=lambda m: m.id)
-            self._logger.info(
-                "openrouter_models_listed",
-                count=len(sorted_models),
-            )
+            sorted_models = await self._fetch_and_sort_models()
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as e:
             self._logger.warning(
                 "openrouter_list_models_failed",
@@ -256,6 +206,83 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_LIST_MODELS_FAILED % e) from e
         else:
             return sorted_models
+
+    async def _fetch_and_sort_models(self) -> list[ModelInfo]:
+        """Fetch available models from OpenRouter and sort them by id.
+
+        Returns:
+            list[ModelInfo]: Available models sorted by identifier.
+
+        Raises:
+            ProviderError: If the OpenRouter HTTP client has not been
+                initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        response = await self.client.get(f"{self.BASE_URL}/models")
+        response.raise_for_status()
+        data = response.json()
+
+        models: list[ModelInfo] = [self._build_model_info(model_data) for model_data in data.get("data", [])]
+
+        sorted_models = sorted(models, key=lambda m: m.id)
+        self._logger.info(
+            "openrouter_models_listed",
+            count=len(sorted_models),
+        )
+        return sorted_models
+
+    def _build_model_info(self, model_data: dict[str, Any]) -> ModelInfo:
+        """Convert a raw OpenRouter model dict into a ``ModelInfo``.
+
+        Args:
+            model_data: Single ``data[]`` entry from the OpenRouter
+                ``/models`` response.
+
+        Returns:
+            ModelInfo: Parsed model metadata.
+        """
+        model_id = model_data.get("id", "")
+        name = model_data.get("name", model_id)
+        context_length = model_data.get("context_length", 4096)
+
+        pricing = model_data.get("pricing", {})
+        input_cost = pricing.get("prompt")
+        output_cost = pricing.get("completion")
+
+        if input_cost is not None:
+            try:
+                input_cost = float(input_cost) * 1000000
+            except (ValueError, TypeError):
+                self._logger.debug("input_cost_parse_failed", model=model_id)
+                input_cost = None
+        if output_cost is not None:
+            try:
+                output_cost = float(output_cost) * 1000000
+            except (ValueError, TypeError):
+                self._logger.debug("output_cost_parse_failed", model=model_id)
+                output_cost = None
+
+        architecture: dict[str, object] = model_data.get("architecture", {})
+        modality = str(architecture.get("modality", ""))
+        supports_vision = "image" in modality
+
+        supported_params: list[str] = [str(p) for p in model_data.get("supported_parameters", [])]
+        supports_tools = "tools" in supported_params or "tool_choice" in supported_params
+        if not supports_tools and not supported_params:
+            supports_tools = any(family in model_id.lower() for family in ("claude", "gpt", "gemini", "llama-3", "qwen"))
+
+        return ModelInfo(
+            id=model_id,
+            name=name,
+            provider=ProviderName.OPENROUTER,
+            context_window=context_length,
+            supports_tools=supports_tools,
+            supports_vision=supports_vision,
+            supports_streaming=True,
+            input_cost_per_1m_tokens=input_cost,
+            output_cost_per_1m_tokens=output_cost,
+        )
 
     async def chat(
         self,
@@ -677,71 +704,18 @@ class OpenRouterProvider(LLMProviderBase):
         if enable_cache:
             self._apply_cache_control(openrouter_messages)
         try:
-            request_body: dict[str, object] = {
-                "model": model,
-                "messages": openrouter_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            }
-
-            if tools:
-                request_body["tools"] = self.convert_tools_to_provider_format(tools)
-            if tool_choice is not None and tools:
-                request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
-            reasoning_effort = self._reasoning_effort_for(thinking)
-            if reasoning_effort is not None:
-                request_body["reasoning"] = {"effort": reasoning_effort}
-
-            async with self.client.stream(
-                "POST",
-                f"{self.BASE_URL}/chat/completions",
-                json=request_body,
-            ) as response:
-                if response.status_code >= HTTP_BAD_REQUEST:
-                    body_bytes = await response.aread()
-                    body_text = body_bytes.decode("utf-8", errors="replace")
-                    self._logger.warning(
-                        "openrouter_chat_stream_http_error",
-                        model=model,
-                        status_code=response.status_code,
-                        response_size=len(body_bytes),
-                        response_excerpt=body_text[:256],
-                    )
-                    self._raise_for_stream_status(response.status_code, body_text)
-                async for line in response.aiter_lines():
-                    if self._cancel_requested:
-                        self._logger.info(
-                            "openrouter_chat_stream_cancelled",
-                            model=model,
-                            chunks_yielded=chunks_yielded,
-                        )
-                        break
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        data = self._safe_parse_stream_json(data_str, logger=self._logger)
-                        if data is None:
-                            continue
-                        chunk_usage = self._build_usage_from_data(data)
-                        if chunk_usage is not None:
-                            self._pending_usage = chunk_usage
-                        if choices := data.get("choices", []):
-                            delta = choices[0].get("delta", {})
-                            if content := delta.get("content", ""):
-                                chunks_yielded += 1
-                                yield content
-                            if tc_deltas := delta.get("tool_calls"):
-                                for tc_d in tc_deltas:
-                                    fn = cast("dict[str, Any]", tc_d.get("function") or {})
-                                    tc_buffer.accumulate(
-                                        index=cast("int", tc_d.get("index", 0)),
-                                        call_id=cast("str | None", tc_d.get("id")),
-                                        name=cast("str | None", fn.get("name")),
-                                        arguments=cast("str | None", fn.get("arguments")),
-                                    )
+            async for content in self._iter_openrouter_stream(
+                model=model,
+                openrouter_messages=openrouter_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                tools=tools,
+                tool_choice=tool_choice,
+                thinking=thinking,
+                tc_buffer=tc_buffer,
+            ):
+                chunks_yielded += 1
+                yield content
 
             self._pending_tool_calls = tc_buffer.finalize()
 
@@ -770,6 +744,108 @@ class OpenRouterProvider(LLMProviderBase):
                 cancel_requested=self._cancel_requested,
             )
             raise ProviderError(_ERR_STREAM_FAILED % e) from e
+
+    async def _iter_openrouter_stream(
+        self,
+        *,
+        model: str,
+        openrouter_messages: list[dict[str, object]],
+        temperature: float,
+        max_tokens: int,
+        tools: list[ToolDefinition] | None,
+        tool_choice: ToolChoice | None,
+        thinking: ThinkingConfig | None,
+        tc_buffer: ToolCallBufferManager,
+    ) -> AsyncIterator[str]:
+        """Open the OpenRouter stream and yield visible content chunks.
+
+        Builds the request body, opens the SSE stream, accumulates
+        tool-call deltas into ``tc_buffer``, and updates
+        ``self._pending_usage`` as usage frames arrive.
+
+        Args:
+            model: Model ID to use.
+            openrouter_messages: Messages in OpenRouter (OpenAI-compatible)
+                format.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens in response.
+            tools: Available tools for function calling.
+            tool_choice: How the model should select tools.
+            thinking: Extended thinking configuration.
+            tc_buffer: Buffer that aggregates incoming tool-call deltas.
+
+        Yields:
+            str: Visible content chunks as they arrive.
+
+        Raises:
+            ProviderError: If the OpenRouter HTTP client has not been
+                initialised.
+        """
+        if self.client is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+        request_body: dict[str, object] = {
+            "model": model,
+            "messages": openrouter_messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        if tools:
+            request_body["tools"] = self.convert_tools_to_provider_format(tools)
+        if tool_choice is not None and tools:
+            request_body["tool_choice"] = self._convert_tool_choice_to_openai_format(tool_choice)
+        reasoning_effort = self._reasoning_effort_for(thinking)
+        if reasoning_effort is not None:
+            request_body["reasoning"] = {"effort": reasoning_effort}
+
+        async with self.client.stream(
+            "POST",
+            f"{self.BASE_URL}/chat/completions",
+            json=request_body,
+        ) as response:
+            if response.status_code >= HTTP_BAD_REQUEST:
+                body_bytes = await response.aread()
+                body_text = body_bytes.decode("utf-8", errors="replace")
+                self._logger.warning(
+                    "openrouter_chat_stream_http_error",
+                    model=model,
+                    status_code=response.status_code,
+                    response_size=len(body_bytes),
+                    response_excerpt=body_text[:256],
+                )
+                self._raise_for_stream_status(response.status_code, body_text)
+            async for line in response.aiter_lines():
+                if self._cancel_requested:
+                    self._logger.info(
+                        "openrouter_chat_stream_cancelled",
+                        model=model,
+                    )
+                    break
+                if line.startswith("data: "):
+                    data_str = line[6:]
+                    if data_str == "[DONE]":
+                        break
+                    data = self._safe_parse_stream_json(data_str, logger=self._logger)
+                    if data is None:
+                        continue
+                    chunk_usage = self._build_usage_from_data(data)
+                    if chunk_usage is not None:
+                        self._pending_usage = chunk_usage
+                    if choices := data.get("choices", []):
+                        delta = choices[0].get("delta", {})
+                        if content := delta.get("content", ""):
+                            yield content
+                        if tc_deltas := delta.get("tool_calls"):
+                            for tc_d in tc_deltas:
+                                fn = cast("dict[str, Any]", tc_d.get("function") or {})
+                                tc_buffer.accumulate(
+                                    index=cast("int", tc_d.get("index", 0)),
+                                    call_id=cast("str | None", tc_d.get("id")),
+                                    name=cast("str | None", fn.get("name")),
+                                    arguments=cast("str | None", fn.get("arguments")),
+                                )
 
     async def cancel_request(self) -> None:
         """Cancel any in-flight request.

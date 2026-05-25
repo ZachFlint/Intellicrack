@@ -418,21 +418,34 @@ class TestExternalPidRegistration:
             stderr=subprocess.PIPE,
         )
         try:
-            process_manager.register_external_pid(
-                proc.pid,
-                name="test-external",
-                process_type=ProcessType.SANDBOX,
-                metadata={"test_key": "test_value"},
-            )
-
-            pids = _external_pids(process_manager)
-            assert proc.pid in pids
-            assert pids[proc.pid]["name"] == "test-external"
-            assert pids[proc.pid]["process_type"] == ProcessType.SANDBOX
-            assert pids[proc.pid]["metadata"]["test_key"] == "test_value"
+            TestExternalPidRegistration._assert_external_pid_registered(process_manager, proc.pid)
         finally:
             proc.kill()
             proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
+
+    @staticmethod
+    def _assert_external_pid_registered(
+        process_manager: ProcessManager,
+        pid: int,
+    ) -> None:
+        """Register the external PID and assert all stored fields round-trip.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture.
+            pid: PID of the spawned child process.
+        """
+        process_manager.register_external_pid(
+            pid,
+            name="test-external",
+            process_type=ProcessType.SANDBOX,
+            metadata={"test_key": "test_value"},
+        )
+
+        pids = _external_pids(process_manager)
+        assert pid in pids
+        assert pids[pid]["name"] == "test-external"
+        assert pids[pid]["process_type"] == ProcessType.SANDBOX
+        assert pids[pid]["metadata"]["test_key"] == "test_value"
 
     @staticmethod
     def test_unregister_external_pid_removes_entry(
