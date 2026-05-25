@@ -164,6 +164,7 @@ class Session:
         self.binaries.append(binary)
         self.active_binary_index = max(self.active_binary_index, 0)
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_binary_added", session_id=self.id, binary_count=len(self.binaries))
 
     def add_message(self, message: Message) -> None:
         """Add a message to the conversation.
@@ -173,6 +174,7 @@ class Session:
         """
         self.messages.append(message)
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_message_added", session_id=self.id, message_count=len(self.messages))
 
     def add_patch(self, patch: PatchInfo) -> None:
         """Add a patch to the session.
@@ -182,6 +184,7 @@ class Session:
         """
         self.patches.append(patch)
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_patch_added", session_id=self.id, patch_count=len(self.patches))
 
     def add_bridge_analysis(self, binary_name: str, analysis: BridgeAnalysisSummary) -> None:
         """Add bridge analysis summary for a binary.
@@ -192,6 +195,7 @@ class Session:
         """
         self.bridge_analyses[binary_name] = analysis
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_bridge_analysis_added", session_id=self.id, binary_name=binary_name)
 
     def get_bridge_analysis(self, binary_name: str) -> BridgeAnalysisSummary | None:
         """Get bridge analysis summary for a binary.
@@ -218,6 +222,7 @@ class Session:
         """
         self.tool_states[state.tool] = state
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_tool_state_set", session_id=self.id, tool=state.tool.value)
 
     def clear_tool_state(self, tool: ToolName) -> bool:
         """Remove the recorded state for ``tool`` if present.
@@ -231,6 +236,7 @@ class Session:
         if tool in self.tool_states:
             del self.tool_states[tool]
             self.updated_at = datetime.now(tz=UTC)
+            _logger.debug("session_tool_state_cleared", session_id=self.id, tool=tool.value)
             return True
         return False
 
@@ -253,6 +259,7 @@ class Session:
             return False
         self.tags.append(normalised)
         self.updated_at = datetime.now(tz=UTC)
+        _logger.debug("session_tag_added", session_id=self.id, tag=normalised)
         return True
 
     def remove_tag(self, tag: str) -> bool:
@@ -269,6 +276,7 @@ class Session:
         if normalised in self.tags:
             self.tags.remove(normalised)
             self.updated_at = datetime.now(tz=UTC)
+            _logger.debug("session_tag_removed", session_id=self.id, tag=normalised)
             return True
         return False
 
@@ -1070,7 +1078,6 @@ class SessionManager:
         Args:
             session: Session to update.
         """
-
         async with self._db_lock:
             await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)
@@ -1182,6 +1189,7 @@ class SessionManager:
         Raises:
             ValueError: If session with same ID already exists and replace=False.
         """
+        _logger.info("session_import_json_started", path=str(path), replace=replace)
         session = await asyncio.to_thread(self.store.import_from_json, path)
 
         async with self._db_lock:
@@ -1190,6 +1198,7 @@ class SessionManager:
                 raise ValueError(_ERR_SESSION_EXISTS)
 
             await asyncio.to_thread(self.store.save, session)
+        _logger.info("session_imported", path=str(path), session_id=session.id, replaced=existing is not None)
         return session
 
     async def export_current(self, path: Path) -> None:
@@ -1231,6 +1240,7 @@ class SessionManager:
 
         if self.auto_save:
             self._save_task = asyncio.create_task(self._auto_save_loop())
+            _logger.debug("autosave_task_started", interval=self.save_interval)
 
     async def _stop_auto_save(self) -> None:
         """Stop the auto-save task."""

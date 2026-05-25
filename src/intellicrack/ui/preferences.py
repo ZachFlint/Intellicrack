@@ -159,6 +159,7 @@ class GeneralSettingsWidget(QWidget):
     def _browse_tools(self) -> None:
         """Browse for tools directory."""
         if path := QFileDialog.getExistingDirectory(self, "Select Tools Directory", self._tools_path.text()):
+            _logger.info("preferences_tools_directory_selected", path=path)
             self._tools_path.setText(path)
 
     def _browse_logs(self) -> None:
@@ -652,6 +653,7 @@ class PreferencesDialog(QDialog):
         """Handle apply button click."""
         new_config = self._build_config()
         self._config = new_config
+        _logger.info("preferences_settings_changed_emit")
         self.settings_changed.emit(new_config)
 
         if self._config_path is not None:

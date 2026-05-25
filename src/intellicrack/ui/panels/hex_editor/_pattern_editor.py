@@ -498,7 +498,7 @@ class PatternEditorMixin:
         except OSError:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Save failed")
-            _logger.exception("pattern_save_failed")
+            _logger.exception("pattern_save_failed", path=save_path)
         else:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText(f"Saved to {path.name}")
@@ -517,6 +517,7 @@ class PatternEditorMixin:
         if not file_path_str:
             return
 
+        _logger.info("pattern_open_begin", path=file_path_str)
         try:
             path = Path(file_path_str)
             _logger.info("pattern_open_begin", path=str(path))
@@ -524,7 +525,7 @@ class PatternEditorMixin:
         except OSError:
             if self._pattern_status_label is not None:
                 self._pattern_status_label.setText("Open failed")
-            _logger.exception("pattern_open_failed")
+            _logger.exception("pattern_open_failed", path=file_path_str)
         else:
             if path.suffix == ".json":
                 self._compiled_json = content

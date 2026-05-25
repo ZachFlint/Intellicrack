@@ -982,6 +982,7 @@ class Orchestrator:
         Raises:
             ValueError: If session not found.
         """
+        _logger.info("load_session_started", session_id=session_id)
         session = await self._sessions.load(session_id)
         if session is None:
             error_message = f"Session not found: {session_id}"
@@ -1048,6 +1049,7 @@ class Orchestrator:
                 is re-raised after the in-memory turn rollback so callers can
                 differentiate cancellation from completion.
         """
+        _logger.info("process_user_input_started", text_length=len(text), state=self._state)
         if self._current_session is None:
             error_message = "No active session"
             _logger.error("process_user_input_no_active_session")
@@ -2200,6 +2202,7 @@ class Orchestrator:
         Raises:
             RuntimeError: If no active session.
         """
+        _logger.info("orchestrator_add_binary_started", path=str(path), run_bridge_analysis=run_bridge_analysis)
         if self._current_session is None:
             error_message = "No active session"
             _logger.error("add_binary_no_active_session", path=str(path))
@@ -2327,6 +2330,7 @@ class Orchestrator:
             callback: Function to call with each new message.
         """
         self._on_message = callback
+        _logger.debug("orchestrator_message_callback_set")
 
     def set_tool_call_callback(self, callback: Callable[[ToolCall], None]) -> None:
         """Set callback for tool calls.
@@ -2335,6 +2339,7 @@ class Orchestrator:
             callback: Function to call when tool is called.
         """
         self._on_tool_call = callback
+        _logger.debug("orchestrator_tool_call_callback_set")
 
     def set_tool_result_callback(self, callback: Callable[[ToolResult], None]) -> None:
         """Set callback for tool results.
@@ -2343,6 +2348,7 @@ class Orchestrator:
             callback: Function to call when tool returns result.
         """
         self._on_tool_result = callback
+        _logger.debug("orchestrator_tool_result_callback_set")
 
     def set_stream_callback(self, callback: Callable[[str], None]) -> None:
         """Set callback for streaming response chunks.
@@ -2351,6 +2357,7 @@ class Orchestrator:
             callback: Function to call with each text chunk.
         """
         self._on_stream_chunk = callback
+        _logger.debug("orchestrator_stream_callback_set")
 
     def set_confirmation_callback(
         self,
@@ -2362,6 +2369,7 @@ class Orchestrator:
             callback: Function to call for confirmation, returns True to proceed.
         """
         self._confirmation_callback = callback
+        _logger.debug("orchestrator_confirmation_callback_set")
 
     def set_async_confirmation_callback(
         self,
@@ -2373,6 +2381,7 @@ class Orchestrator:
             callback: Function returning a Future that resolves to True/False.
         """
         self._async_confirmation_callback = callback
+        _logger.debug("orchestrator_async_confirmation_callback_set")
 
     async def get_tool_status(self) -> list[dict[str, Any]]:
         """Get status of all tools.
@@ -2454,6 +2463,7 @@ class Orchestrator:
             )
             return None
         else:
+            _logger.debug("typed_bridge_resolved", tool_name=tool_name, has_bridge=bridge is not None)
             return bridge
 
     async def initialize_tool(self, tool_name: str | ToolName) -> bool:
@@ -2486,6 +2496,7 @@ class Orchestrator:
             level: The desired confirmation level.
         """
         self._config.confirmation_level = level
+        _logger.info("orchestrator_confirmation_level_set", level=str(level))
 
     async def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status report.
@@ -2512,6 +2523,11 @@ class Orchestrator:
             on_bridge_analysis: Callback for bridge analysis completion.
             on_confirmation: Callback for confirmation requests.
         """
+        _logger.debug(
+            "orchestrator_configure_hooks",
+            has_bridge_analysis=on_bridge_analysis is not None,
+            has_confirmation=on_confirmation is not None,
+        )
         if on_bridge_analysis:
             self.set_bridge_analysis_callback(on_bridge_analysis)
         if on_confirmation:

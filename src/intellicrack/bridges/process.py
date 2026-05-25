@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+from intellicrack.bridges._parse_helpers import safe_call
 from intellicrack.bridges._pe_format import (
     PE_DOS_LFANEW_OFFSET,
     PE_OPTIONAL_HEADER_OFFSET,
@@ -159,7 +160,6 @@ from intellicrack.bridges._win32_types import (
     state_to_string,
 )
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
-from intellicrack.bridges._parse_helpers import safe_call
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     MemoryRegion,
@@ -1502,7 +1502,10 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[ProcessInfo]: List of processes.
         """
-        return await self.list_processes(filter_name)
+        _logger.debug("list_dispatch_invoked", filter_name=filter_name)
+        result = await self.list_processes(filter_name)
+        _logger.debug("list_dispatch_completed", count=len(result))
+        return result
 
     async def list_detailed(
         self,
@@ -1519,7 +1522,10 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             list[dict[str, int | str | float]]: Process detail dicts.
         """
-        return await self.list_processes_detailed(filter_name)
+        _logger.debug("list_detailed_dispatch_invoked", filter_name=filter_name)
+        result = await self.list_processes_detailed(filter_name)
+        _logger.debug("list_detailed_dispatch_completed", count=len(result))
+        return result
 
     async def open(
         self,
@@ -1538,7 +1544,10 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if successful.
         """
-        return await self.open_process(pid, access)
+        _logger.debug("open_dispatch_invoked", pid=pid, access=access)
+        result = await self.open_process(pid, access)
+        _logger.debug("open_dispatch_completed", pid=pid, success=result)
+        return result
 
     async def list_processes(
         self,
@@ -1594,6 +1603,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(snapshot)
 
+        _logger.debug("processes_listed", count=len(processes), filter_name=filter_name)
         return processes
 
     async def list_processes_detailed(
@@ -1648,6 +1658,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(snapshot)
 
+        _logger.debug("processes_listed_detailed", count=len(results), filter_name=filter_name)
         return results
 
     async def get_process_memory_mb(self, pid: int) -> float:
@@ -1661,6 +1672,7 @@ class ProcessBridge(ToolBridgeBase):
         """
         _logger.debug("process_get_memory_mb_started", pid=pid)
         if self._kernel32 is None or self._psapi is None:
+            _logger.debug("process_get_memory_mb_unavailable", pid=pid)
             return 0.0
 
         inherit_handle = False
@@ -1670,6 +1682,7 @@ class ProcessBridge(ToolBridgeBase):
             pid,
         )
         if not handle:
+            _logger.debug("process_get_memory_mb_open_failed", pid=pid)
             return 0.0
 
         try:
@@ -1680,10 +1693,13 @@ class ProcessBridge(ToolBridgeBase):
                 ctypes.byref(counters),
                 counters.cb,
             ):
-                return counters.WorkingSetSize / _MB_DIVISOR
+                mem_mb = counters.WorkingSetSize / _MB_DIVISOR
+                _logger.debug("process_get_memory_mb_completed", pid=pid, memory_mb=mem_mb)
+                return mem_mb
         finally:
             self._kernel32.CloseHandle(handle)
 
+        _logger.debug("process_get_memory_mb_unknown", pid=pid)
         return 0.0
 
     async def detect_architecture(self, pid: int) -> str:
@@ -1707,6 +1723,7 @@ class ProcessBridge(ToolBridgeBase):
         """
         _logger.debug("process_detect_architecture_started", pid=pid)
         if self._kernel32 is None:
+            _logger.debug("process_detect_architecture_unavailable", pid=pid)
             return "Unknown"
 
         inherit_handle = False
@@ -1716,18 +1733,23 @@ class ProcessBridge(ToolBridgeBase):
             pid,
         )
         if not handle:
+            _logger.debug("process_detect_architecture_open_failed", pid=pid)
             return "Unknown"
 
         try:
             arch = self._detect_arch_via_iswow64process2(handle)
             if arch is not None and arch != "Unknown":
+                _logger.debug("process_detect_architecture_completed", pid=pid, arch=arch, source="iswow64process2")
                 return arch
 
             pe_arch = self._detect_arch_via_pe_header(pid)
             if pe_arch is not None:
+                _logger.debug("process_detect_architecture_completed", pid=pid, arch=pe_arch, source="pe_header")
                 return pe_arch
 
-            return self._detect_arch_via_iswow64process(handle)
+            legacy = self._detect_arch_via_iswow64process(handle)
+            _logger.debug("process_detect_architecture_completed", pid=pid, arch=legacy, source="iswow64process")
+            return legacy
         finally:
             self._kernel32.CloseHandle(handle)
 
@@ -1937,6 +1959,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If open fails.
         """
+        _logger.info("open_process_started", pid=pid, access=access)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -1976,6 +1999,7 @@ class ProcessBridge(ToolBridgeBase):
         Returns:
             bool: True if closed.
         """
+        _logger.debug("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
         if self._process_handle is not None and self._kernel32 is not None:
             self._kernel32.CloseHandle(self._process_handle)
             self._process_handle = None
@@ -2002,6 +2026,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If termination fails.
         """
+        _logger.info("terminate_started", pid=pid or self._attached_pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -2043,6 +2068,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If suspension fails.
         """
+        _logger.info("suspend_started", pid=pid or self._attached_pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             raise ToolError(_ERR_NO_PROCESS)
@@ -2084,6 +2110,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If resume fails.
         """
+        _logger.info("resume_started", pid=pid or self._attached_pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             raise ToolError(_ERR_NO_PROCESS)
@@ -2143,7 +2170,9 @@ class ProcessBridge(ToolBridgeBase):
             _logger.warning("read_memory_no_kernel32", address=hex(address), size=size)
             raise ToolError(_ERR_KERNEL32_NA)
         _logger.debug("memory_read_starting", address=hex(address), size=size)
-        return self._sync_read_memory(address, size).hex()
+        data = self._sync_read_memory(address, size).hex()
+        _logger.debug("memory_read_completed", address=hex(address), size=size, bytes_read=len(data) // 2)
+        return data
 
     async def write_memory(self, address: int, data: bytes) -> int:
         """Write memory to process.
@@ -2158,6 +2187,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If write fails.
         """
+        _logger.info("write_memory_started", address=hex(address), size=len(data))
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2191,6 +2221,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If allocation fails.
         """
+        _logger.info("allocate_started", size=size, protection=protection)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2226,6 +2257,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If free fails.
         """
+        _logger.info("free_started", address=hex(address))
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2258,6 +2290,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("protect_started", address=hex(address), size=size, protection=protection)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2354,6 +2387,7 @@ class ProcessBridge(ToolBridgeBase):
             if address > _MAX_MEMORY_ADDRESS:
                 break
 
+        _logger.debug("memory_map_completed", region_count=len(regions), resolve_names=resolve_names)
         return regions
 
     async def search_pattern(
@@ -2640,6 +2674,7 @@ class ProcessBridge(ToolBridgeBase):
             if proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
 
+        _logger.debug("process_get_modules_completed", pid=target_pid, count=len(modules))
         return modules
 
     async def get_threads(self, pid: int | None = None) -> list[ThreadInfo]:
@@ -3135,6 +3170,7 @@ class ProcessBridge(ToolBridgeBase):
         """
         try:
             self._privileges_changed_callbacks.remove(callback)
+            _logger.info("privileges_changed_callback_removed")
         except ValueError:
             _logger.warning("privileges_changed_callback_not_registered")
 
@@ -3186,7 +3222,9 @@ class ProcessBridge(ToolBridgeBase):
                 raise ToolError(_ERR_ACCESS_HANDLE_OPEN)
 
             try:
-                return self._read_token_privileges(token_handle)
+                privileges = self._read_token_privileges(token_handle)
+                _logger.debug("process_get_token_privileges_completed", pid=target_pid, count=len(privileges))
+                return privileges
             finally:
                 self._kernel32.CloseHandle(token_handle)
         finally:
@@ -3296,6 +3334,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("adjust_token_privilege_started", privilege=privilege_name, enable=enable, pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -3441,7 +3480,9 @@ class ProcessBridge(ToolBridgeBase):
         if not self._handle_type_cache:
             self._build_handle_type_map()
 
-        return await asyncio.to_thread(self._sync_iterate_handles_for_pid, target_pid)
+        handles = await asyncio.to_thread(self._sync_iterate_handles_for_pid, target_pid)
+        _logger.debug("process_get_handles_completed", pid=target_pid, count=len(handles))
+        return handles
 
     def _sync_iterate_handles_for_pid(self, target_pid: int) -> list[dict[str, object]]:
         """Synchronously iterate the system handle table for a specific PID.
@@ -3651,7 +3692,9 @@ class ProcessBridge(ToolBridgeBase):
         if not self._handle_type_cache:
             self._build_handle_type_map()
 
-        return await asyncio.to_thread(self._sync_enum_handles, pid)
+        handles = await asyncio.to_thread(self._sync_enum_handles, pid)
+        _logger.debug("process_enum_handles_completed", pid=pid, count=len(handles))
+        return handles
 
     def _sync_enum_handles(self, pid: int | None) -> list[dict[str, object]]:
         """Synchronously iterate the system handle table with type-name resolution.
@@ -3779,6 +3822,7 @@ class ProcessBridge(ToolBridgeBase):
 
         enum_callback = enum_proc_type(_enum_impl)
         user32.EnumWindows(enum_callback, 0)
+        _logger.debug("process_get_windows_completed", pid=target_pid, count=len(windows))
         return windows
 
     # ------------------------------------------------------------------
@@ -3867,7 +3911,9 @@ class ProcessBridge(ToolBridgeBase):
             ):
                 raise ToolError(_ERR_ENUM_SVC)
 
-            return self._parse_service_entries(buffer, services_returned.value, filter_pid)
+            services = self._parse_service_entries(buffer, services_returned.value, filter_pid)
+            _logger.debug("process_list_services_completed", filter_pid=filter_pid, count=len(services))
+            return services
         finally:
             close_svc(scm)
 
@@ -3989,7 +4035,15 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            return self._read_peb_from_handle(proc_handle)
+            peb = self._read_peb_from_handle(proc_handle)
+            peb_address_raw = peb.get("peb_address", 0)
+            peb_address_int = int(peb_address_raw) if isinstance(peb_address_raw, (int, str)) else 0
+            _logger.debug(
+                "process_read_peb_completed",
+                pid=target_pid,
+                peb_address=hex(peb_address_int),
+            )
+            return peb
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
@@ -4309,6 +4363,7 @@ class ProcessBridge(ToolBridgeBase):
                 target_is_64bit=target_is_64bit,
             )
             result["exit_status"] = tbi.ExitStatus
+            _logger.debug("process_read_teb_completed", tid=tid, teb_address=hex(teb_address))
             return result
         finally:
             self._kernel32.CloseHandle(thread_handle)
@@ -4414,6 +4469,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(snapshot)
 
+        _logger.debug("process_get_heaps_completed", pid=target_pid, count=len(heaps))
         return heaps
 
     # ------------------------------------------------------------------
@@ -4463,7 +4519,7 @@ class ProcessBridge(ToolBridgeBase):
                     ctx32.ContextFlags = CONTEXT_I386_ALL
                     if not wow64_get_ctx(thread_handle, ctypes.byref(ctx32)):
                         raise ToolError(_ERR_CONTEXT_GET_FAILED)
-                    return {
+                    ctx32_result: dict[str, int] = {
                         "eax": ctx32.Eax,
                         "ebx": ctx32.Ebx,
                         "ecx": ctx32.Ecx,
@@ -4487,13 +4543,15 @@ class ProcessBridge(ToolBridgeBase):
                         "dr6": ctx32.Dr6,
                         "dr7": ctx32.Dr7,
                     }
+                    _logger.debug("process_get_thread_context_completed", tid=tid, bitness="32")
+                    return ctx32_result
 
                 ctx = CONTEXT64()
                 ctx.ContextFlags = CONTEXT_ALL
                 if not self._kernel32.GetThreadContext(thread_handle, ctypes.byref(ctx)):
                     raise ToolError(_ERR_CONTEXT_GET_FAILED)
 
-                return {
+                ctx64_result: dict[str, int] = {
                     "rax": ctx.Rax,
                     "rbx": ctx.Rbx,
                     "rcx": ctx.Rcx,
@@ -4525,6 +4583,8 @@ class ProcessBridge(ToolBridgeBase):
                     "dr6": ctx.Dr6,
                     "dr7": ctx.Dr7,
                 }
+                _logger.debug("process_get_thread_context_completed", tid=tid, bitness="64")
+                return ctx64_result
             finally:
                 self._kernel32.ResumeThread(thread_handle)
         finally:
@@ -4543,6 +4603,7 @@ class ProcessBridge(ToolBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
+        _logger.info("set_thread_context_started", tid=tid, register_count=len(registers))
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -4695,6 +4756,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(thread_handle)
 
+        _logger.debug("process_stack_walk_completed", tid=tid, frame_count=len(frames))
         return frames
 
     def _target_is_wow64(self) -> bool:
@@ -5110,6 +5172,7 @@ class ProcessBridge(ToolBridgeBase):
 
             get_policy = getattr(self._kernel32, "GetProcessMitigationPolicy", None)
             if get_policy is None:
+                _logger.warning("process_get_mitigation_policies_unavailable", pid=target_pid)
                 return {"error": "GetProcessMitigationPolicy not available"}
 
             for name, policy_class, struct_type in policy_queries:
@@ -5129,6 +5192,7 @@ class ProcessBridge(ToolBridgeBase):
                     )
                     policies[name] = {"enabled": False, "error": "not supported"}
 
+            _logger.debug("process_get_mitigation_policies_completed", pid=target_pid, policy_count=len(policies))
             return policies
         finally:
             if close_handle and proc_handle:
@@ -5234,6 +5298,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(snapshot)
 
+        _logger.debug("enumerate_system_processes_completed", count=len(results))
         return results
 
     async def enumerate_handles(self, pid: int | None = None) -> list[dict[str, object]]:
@@ -5280,6 +5345,7 @@ class ProcessBridge(ToolBridgeBase):
                 "object_address": entry.Object or 0,
             })
 
+        _logger.debug("enumerate_handles_completed", pid=pid, count=len(handles))
         return handles
 
     async def enumerate_heaps(self, pid: int | None = None) -> list[dict[str, object]]:
@@ -5349,6 +5415,7 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._kernel32.CloseHandle(snapshot)
 
+        _logger.debug("enumerate_heaps_completed", pid=target_pid, count=len(heaps))
         return heaps
 
     async def enumerate_services(self, *, active: bool = False) -> list[dict[str, object]]:
@@ -5411,7 +5478,9 @@ class ProcessBridge(ToolBridgeBase):
             ):
                 raise ToolError(_ERR_ENUM_SVC)
 
-            return self._parse_service_entries(buffer, services_returned.value, None)
+            services = self._parse_service_entries(buffer, services_returned.value, None)
+            _logger.debug("enumerate_services_completed", active=active, count=len(services))
+            return services
         finally:
             self._advapi32.CloseServiceHandle(scm)
 
@@ -5459,6 +5528,7 @@ class ProcessBridge(ToolBridgeBase):
             else:
                 result_str = f"other_{wait_result}"
 
+            _logger.debug("time_thread_wait_completed", tid=tid, result=result_str, elapsed_us=elapsed_us)
             return {"result": result_str, "elapsed_us": elapsed_us}
         finally:
             self._kernel32.CloseHandle(handle)
@@ -5520,6 +5590,7 @@ class ProcessBridge(ToolBridgeBase):
                 if dup_value is None:
                     msg = "DuplicateTokenEx returned null handle"
                     raise ToolError(msg)
+                _logger.debug("duplicate_token_completed", pid=pid, handle=dup_value)
                 return dup_value
             finally:
                 self._kernel32.CloseHandle(token_handle)
@@ -5565,6 +5636,7 @@ class ProcessBridge(ToolBridgeBase):
             try:
                 luid = LUID()
                 if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
+                    _logger.warning("remove_privilege_lookup_failed", pid=pid, privilege_name=privilege_name)
                     return False
 
                 tp = TOKEN_PRIVILEGES()
@@ -5583,7 +5655,14 @@ class ProcessBridge(ToolBridgeBase):
                 )
 
                 last_error: int = ctypes.get_last_error()
-                return last_error != ERROR_NOT_ALL_ASSIGNED
+                success = last_error != ERROR_NOT_ALL_ASSIGNED
+                _logger.info(
+                    "remove_privilege_completed",
+                    pid=pid,
+                    privilege_name=privilege_name,
+                    success=success,
+                )
+                return success
             finally:
                 self._kernel32.CloseHandle(token_handle)
         finally:
@@ -5628,6 +5707,8 @@ class ProcessBridge(ToolBridgeBase):
             result: bool = bool(self._kernel32.VirtualFreeEx(proc_handle, address, size, MEM_DECOMMIT))
             if not result:
                 _logger.warning("decommit_memory_failed", pid=pid, address=address, error_code=ctypes.get_last_error())
+            else:
+                _logger.debug("decommit_memory_completed", pid=pid, address=address, size=size)
             return result
         finally:
             if close_handle and proc_handle:
@@ -5674,11 +5755,15 @@ class ProcessBridge(ToolBridgeBase):
 
             if vtype in {_REG_TYPE_SZ, _REG_TYPE_EXPAND_SZ}:
                 decoded = raw.decode("utf-16-le", errors="ignore").rstrip("\x00")
+                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
                 return {"type": type_name, "data": decoded}
             if vtype == _REG_TYPE_DWORD:
+                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
                 return {"type": type_name, "data": struct.unpack_from("<I", raw)[0]}
             if vtype == _REG_TYPE_QWORD:
+                _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
                 return {"type": type_name, "data": struct.unpack_from("<Q", raw)[0]}
+            _logger.debug("read_registry_completed", hive=hive, key_path=key_path, value_name=value_name, type=type_name)
             return {"type": type_name, "data": raw.hex()}
         finally:
             self._advapi32.RegCloseKey(hkey)
@@ -5724,7 +5809,9 @@ class ProcessBridge(ToolBridgeBase):
             if status < 0:
                 msg = f"{_ERR_NTQUERY_PROC}{status & 4294967295:08X}"
                 raise ToolError(msg)
-            return bool(debug_port.value)
+            detected = bool(debug_port.value)
+            _logger.debug("detect_kernel_debugger_completed", pid=pid, detected=detected)
+            return detected
         finally:
             self._kernel32.CloseHandle(proc_handle)
 
@@ -5904,7 +5991,9 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_OPEN_FAILED)
 
         try:
-            return self._read_env_block(proc_handle, params_addr)
+            env_vars = self._read_env_block(proc_handle, params_addr)
+            _logger.debug("get_environment_completed", pid=target_pid, var_count=len(env_vars))
+            return env_vars
         finally:
             if close_handle and proc_handle:
                 self._kernel32.CloseHandle(proc_handle)
@@ -6151,7 +6240,9 @@ class ProcessBridge(ToolBridgeBase):
             raise ToolError(_ERR_ADVAPI32_NA)
         modules = await self.get_modules(pid)
         dll_names = {m.name.lower(): str(m.path) for m in modules}
-        return await asyncio.to_thread(self._enumerate_com_servers_sync, dll_names)
+        servers = await asyncio.to_thread(self._enumerate_com_servers_sync, dll_names)
+        _logger.debug("process_enumerate_com_servers_completed", pid=pid, count=len(servers))
+        return servers
 
     def _enumerate_com_servers_sync(self, dll_names: dict[str, str]) -> list[dict[str, str]]:
         r"""Perform the blocking HKCR\CLSID registry walk synchronously.
@@ -6405,6 +6496,13 @@ class ProcessBridge(ToolBridgeBase):
             elif "mscoree.dll" in found_dlls:
                 metadata_version = ".NET Framework"
 
+        _logger.debug(
+            "process_detect_dotnet_completed",
+            pid=pid,
+            managed=managed,
+            version=metadata_version,
+            runtime_dll_count=len(found_dlls),
+        )
         return {
             "managed": managed,
             "version": metadata_version,
@@ -6793,6 +6891,7 @@ class ProcessBridge(ToolBridgeBase):
             if is_in_job.value:
                 result |= self._query_job_details(proc_handle)
 
+            _logger.debug("process_get_job_info_completed", pid=target_pid, in_job=bool(is_in_job.value))
             return result
         finally:
             if close_handle and proc_handle:
@@ -7198,6 +7297,12 @@ class ProcessBridge(ToolBridgeBase):
             gdi_count: int = self._user32.GetGuiResources(proc_handle, GR_GDIOBJECTS)
             user_count: int = self._user32.GetGuiResources(proc_handle, GR_USEROBJECTS)
 
+            _logger.debug(
+                "process_get_gui_resources_completed",
+                pid=target_pid,
+                gdi_objects=gdi_count,
+                user_objects=user_count,
+            )
             return {
                 "gdi_objects": gdi_count,
                 "user_objects": user_count,
@@ -7332,6 +7437,7 @@ class ProcessBridge(ToolBridgeBase):
                 keys.append(name_buf.value)
                 index += 1
 
+            _logger.debug("process_reg_enum_keys_completed", key_path=key_path, count=len(keys))
             return keys
         finally:
             self._advapi32.RegCloseKey(hkey)
@@ -7383,6 +7489,7 @@ class ProcessBridge(ToolBridgeBase):
                 values.append(name_buf.value)
                 index += 1
 
+            _logger.debug("process_reg_enum_values_completed", key_path=key_path, count=len(values))
             return values
         finally:
             self._advapi32.RegCloseKey(hkey)
@@ -7419,6 +7526,7 @@ class ProcessBridge(ToolBridgeBase):
                 ``"SECTION_NAME_COLLISION"`` when the failure was a
                 duplicate name, otherwise ``"SECTION_CREATE_FAILED"``.
         """
+        _logger.info("create_section_started", size=size, section_name=section_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -7761,7 +7869,14 @@ class ProcessBridge(ToolBridgeBase):
                 msg = f"{_ERR_NTQUERY_SYS}{status & 4294967295:08X}"
                 raise ToolError(msg)
 
-            return buffer.raw[: return_length.value].hex()
+            result = buffer.raw[: return_length.value].hex()
+            _logger.debug(
+                "process_query_system_info_completed",
+                info_class=info_class,
+                buffer_size=current_size,
+                return_length=return_length.value,
+            )
+            return result
 
         raise ToolError(_ERR_NTQUERY_SYS_BUF_MAX)
 

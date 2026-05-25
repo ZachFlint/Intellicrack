@@ -2311,6 +2311,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected or the remote call fails.
         """
+        _logger.debug("ghidra_get_function_started", address=hex(address))
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -2416,6 +2417,7 @@ metadata
                 ``address``, decompilation does not complete, or the
                 remote call fails.
         """
+        _logger.debug("ghidra_decompile_started", address=hex(address))
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
@@ -2511,6 +2513,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected or the remote call fails.
         """
+        _logger.debug("ghidra_disassemble_started", address=hex(address), count=count)
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -2574,6 +2577,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_xrefs_to_started", address=hex(address))
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -2622,6 +2626,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_xrefs_from_started", address=hex(address))
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -2699,6 +2704,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_search_strings_started", pattern=pattern, encoding=encoding)
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -3091,6 +3097,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_imports_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -3139,6 +3146,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_exports_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -3189,6 +3197,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_data_type_started", address=hex(address))
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -3393,6 +3402,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_labels_started", address=hex(address), radius=radius)
         if self._bridge is None:
             _logger.error("ghidra_not_connected", address=hex(address))
             error_message = "Ghidra not connected"
@@ -3528,6 +3538,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_bookmarks_started", category=category)
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -3867,6 +3878,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_structures_started", filter_name=filter_name)
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -3964,6 +3976,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_memory_map_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -4018,6 +4031,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected or the RPC fails.
         """
+        _logger.debug("ghidra_get_call_graph_started", address=hex(address), depth=depth)
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 
@@ -4103,6 +4117,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_segments_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -4149,6 +4164,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_program_info_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -5065,6 +5081,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_relocations_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -5149,6 +5166,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_namespaces_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -5283,6 +5301,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_equates_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -5326,6 +5345,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_search_symbols_started", symbol_name=name, symbol_type=symbol_type)
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -5567,6 +5587,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_calling_conventions_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -6064,6 +6085,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected.
         """
+        _logger.debug("ghidra_get_all_comments_started")
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
             error_message = "Ghidra not connected"
@@ -6125,6 +6147,7 @@ metadata
         Raises:
             ToolError: If Ghidra is not connected or the RPC fails.
         """
+        _logger.debug("ghidra_get_program_tree_started")
         if self._bridge is None:
             raise ToolError(_ERR_NOT_CONNECTED)
 

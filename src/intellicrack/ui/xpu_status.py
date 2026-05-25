@@ -94,6 +94,7 @@ class XPUStatusDialog(QDialog):
             parent: Parent widget.
         """
         super().__init__(parent)
+        _logger.info("xpu_status_dialog_opened")
         self.setWindowTitle("XPU Status")
         self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
 

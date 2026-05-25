@@ -517,6 +517,11 @@ class LLMProviderBase(ABC):
                 raise
             except retryable_exceptions as exc:
                 if attempt >= max_retries:
+                    self._logger.exception(
+                        "provider_retry_exhausted",
+                        attempt=attempt + 1,
+                        max_retries=max_retries,
+                    )
                     raise
                 delay = min(base_delay * (2**attempt), max_delay)
                 jitter = _secure_rng.uniform(0, delay * 0.1)

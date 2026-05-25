@@ -110,6 +110,7 @@ class HexPatPreprocessor:
         Returns:
             tuple[str, PragmaInfo]: A tuple of (preprocessed_source, pragma_info).
         """
+        _logger.debug("hexpat_preprocess_started", source_length=len(source), file_path=str(file_path) if file_path else None)
         self._defines = {}
         self._func_defines = {}
         self._included_files = set()
@@ -203,7 +204,9 @@ class HexPatPreprocessor:
             bitfield_order=bitfield_order,
         )
 
-        return "\n".join(output_lines), pragma
+        output_source = "\n".join(output_lines)
+        _logger.debug("hexpat_preprocess_completed", output_length=len(output_source), included_files=len(self._included_files))
+        return output_source, pragma
 
     def _process_source(
         self,
@@ -386,6 +389,7 @@ class HexPatPreprocessor:
 
                 self._included_files.add(resolved_str)
 
+                _logger.debug("hexpat_include_resolved", include_path=include_path, resolved_path=resolved_str, line=line)
                 content = candidate.read_text(encoding="utf-8", errors="replace")
 
                 if _PRAGMA_ONCE_RE.search(content):
@@ -733,6 +737,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
     Returns:
         PragmaInfo: A PragmaInfo with extracted metadata.
     """
+    _logger.debug("hexpat_extract_pragmas_fast_started", source_length=len(source))
     endian: str | None = None
     mime: str | None = None
     magic_list: list[tuple[int, bytes]] = []
@@ -802,7 +807,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             pointer_size = int(m.group(1))
             continue
 
-    return PragmaInfo(
+    result_pragma = PragmaInfo(
         endian=endian,
         mime=mime,
         magic=tuple(magic_list),
@@ -815,3 +820,5 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
         pointer_size=pointer_size,
         bitfield_order=bitfield_order,
     )
+    _logger.debug("hexpat_extract_pragmas_fast_completed", magic_count=len(magic_list), endian=endian, mime=mime)
+    return result_pragma

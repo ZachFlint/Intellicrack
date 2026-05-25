@@ -84,3 +84,4 @@ def move_widget(widget: QWidget, x: int, y: int) -> None:
         y: Y coordinate in screen pixels.
     """
     _resolve(widget, _MOVE)(x, y)
+    _logger.debug("widget_moved", widget_class=type(widget).__name__, x=x, y=y)

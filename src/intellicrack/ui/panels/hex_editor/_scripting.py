@@ -605,6 +605,7 @@ class _DocAPI:
         try:
             codecs.lookup(resolved)
         except LookupError as exc:
+            _logger.warning("scripting_search_text_unknown_encoding", encoding=resolved, error=str(exc))
             msg = f"unknown encoding {resolved!r} for doc.search_text"
             raise LookupError(msg) from exc
         raw = self._doc.search_text(text, resolved, case_sensitive=True, max_results=max_results)
@@ -824,6 +825,7 @@ class _ReadOnlyDocAPI:
         try:
             return self._inner.search_text(text, max_results, encoding=encoding)
         except LookupError as exc:
+            _logger.warning("scripting_search_text_proxy_lookup_failed", encoding=encoding, error=str(exc))
             raise LookupError(str(exc)) from exc
 
     def add_bookmark(
@@ -1054,6 +1056,7 @@ def _resolve_user_print_path(
 
     if name not in opened:
         resolved.parent.mkdir(parents=True, exist_ok=True)
+        _logger.debug("scripting_user_print_file_open", name=name, path=str(resolved))
         opened[name] = resolved.open("w", encoding="utf-8")
     return resolved
 
@@ -1105,6 +1108,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
     stdout_capture = io.StringIO()
     stderr_capture = io.StringIO()
     sandbox_dir = Path(tempfile.mkdtemp(prefix=_SCRIPT_TEMPDIR_PREFIX))
+    _logger.debug("scripting_sandbox_tempdir_created", path=str(sandbox_dir))
     user_opened_files: dict[str, IO[str]] = {}
 
     def _write_to_target(target: IO[str], text: str, *, flush: bool) -> None:
@@ -1183,6 +1187,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         "doc": doc_api,
     }
 
+    _logger.info("scripting_execute_script_started", source_length=len(source), sandbox_dir=str(sandbox_dir))
     error_message: str | None = None
     traceback_text: str | None = None
     try:
@@ -1190,14 +1195,17 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
         exec(compiled, namespace)  # noqa: S102  # nosec B102  # user-facing scripting in restricted namespace
     except BaseException as exc:
         if isinstance(exc, (KeyboardInterrupt, SystemExit, MemoryError)):
+            _logger.warning("scripting_execute_script_critical", exception_type=type(exc).__name__)
             for handle in user_opened_files.values():
                 handle.close()
             raise
+        _logger.exception("scripting_execute_script_failed", exception_type=type(exc).__name__)
         error_message = f"{type(exc).__name__}: {exc}"
         traceback_text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     finally:
         for handle in user_opened_files.values():
             handle.close()
+    _logger.info("scripting_execute_script_completed", had_error=error_message is not None, output_file_count=len(user_opened_files))
 
     user_vars: dict[str, str] = {}
     for key, val in namespace.items():
@@ -1332,6 +1340,7 @@ class ScriptingMixin:
         _: object = worker.call_finished.connect(self._on_script_finished_obj)
         _ = worker.call_error.connect(self._on_script_error_obj)
         self._script_worker = worker
+        _logger.info("script_worker_starting", source_length=len(source))
         worker.start()
 
     def _build_panel_encoding_provider(self) -> Callable[[], str | None]:
@@ -1400,11 +1409,13 @@ class ScriptingMixin:
         )
         script_path = result[0] if result else ""
         if script_path and self._script_editor is not None:
+            _logger.info("script_load_started", path=script_path)
             try:
                 content = Path(script_path).read_text(encoding="utf-8")
                 self._script_editor.setPlainText(content)
+                _logger.info("script_load_completed", path=script_path, size=len(content))
             except OSError:
-                _logger.exception("script_load_failed")
+                _logger.exception("script_load_failed", path=script_path)
 
     def _on_save_script(self) -> None:
         """Save the editor content to a Python file."""
@@ -1430,7 +1441,7 @@ class ScriptingMixin:
                     encoding="utf-8",
                 )
             except OSError:
-                _logger.exception("script_save_failed")
+                _logger.exception("script_save_failed", path=save_path)
 
     def _on_clear_script_output(self) -> None:
         """Clear the script output console."""

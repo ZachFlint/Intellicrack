@@ -457,7 +457,12 @@ class SessionManagerDialog(QDialog):
         self._current_session = current_session
         self._sessions: list[dict[str, object]] = []
 
+        was_present = self.SESSIONS_DIR.exists()
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+        if not was_present:
+            _logger.info("session_manager_sessions_dir_created", path=str(self.SESSIONS_DIR))
+        else:
+            _logger.debug("session_manager_sessions_dir_present", path=str(self.SESSIONS_DIR))
 
         self._setup_ui()
         self._load_sessions()
@@ -909,7 +914,7 @@ class SessionManagerDialog(QDialog):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            _logger.debug("session_load_requested", session_id=session_id)
+            _logger.info("session_load_requested", session_id=session_id)
             self.session_loaded.emit(session_id)
             self.accept()
 
@@ -997,6 +1002,7 @@ class SessionManagerDialog(QDialog):
                 )
                 return False
             else:
+                _logger.info("session_file_deleted", session_id=session_id, path=str(session_file))
                 return True
         return True
 
@@ -1042,10 +1048,11 @@ class SessionManagerDialog(QDialog):
             try:
                 export_data = self._prepare_export_data(session_data)
 
+                _logger.info("session_export_started", session_id=session_id, path=path)
                 with Path(path).open("w", encoding="utf-8") as f:
                     json.dump(export_data, f, indent=2, default=str)
 
-                _logger.debug(
+                _logger.info(
                     "session_exported",
                     session_id=session_id,
                     path=path,

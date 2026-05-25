@@ -684,6 +684,7 @@ class ScriptManager:
         self.scripts_dir = scripts_dir if scripts_dir is not None else Path.cwd() / _DEFAULT_SCRIPTS_DIRNAME
         self.scripts = {}
         self._validator = ScriptValidator()
+        _logger.debug("script_manager_initialized", scripts_dir=str(self.scripts_dir))
 
     def add_script(self, script: Script, *, validate: bool = True) -> bool:
         """Add a script to the manager.
@@ -1389,6 +1390,7 @@ class ScriptGenerator:
             Path: Absolute path the caller can pass to
             :meth:`Script.save` or :meth:`ScriptManager.save_script`.
         """
+        _logger.debug("script_prepare_output_path", name=name, language=language.value, output_dir=str(self.output_dir))
         self.output_dir.mkdir(parents=True, exist_ok=True)
         extensions = {
             ScriptLanguage.JAVASCRIPT: ".js",
@@ -1397,7 +1399,9 @@ class ScriptGenerator:
             ScriptLanguage.R2_COMMANDS: ".r2",
             ScriptLanguage.X64DBG_SCRIPT: ".txt",
         }
-        return self.output_dir / f"{name}{extensions.get(language, '.txt')}"
+        result_path = self.output_dir / f"{name}{extensions.get(language, '.txt')}"
+        _logger.debug("script_output_path_resolved", path=str(result_path))
+        return result_path
 
     prepare_ai_prompt: ClassVar[_PrepareAIPromptDescriptor] = _PrepareAIPromptDescriptor()
     """Build the AI prompt, dispatching as bound or unbound automatically.

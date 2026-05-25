@@ -2305,6 +2305,7 @@ class X64DbgBridge(DebuggerBridge):
             stdin=DEVNULL,
             startupinfo=si,
         )
+        _logger.info("x64dbg_spawned", pid=self._process.pid, path=str(exe_path))
 
         process_manager = ProcessManager.get_instance()
         process_manager.register(
@@ -2931,6 +2932,7 @@ class X64DbgBridge(DebuggerBridge):
 
     async def detach(self) -> None:
         """Detach from current process."""
+        _logger.info("x64dbg_detach_started", pid=self._attached_pid)
         await self._send_command("detach")
         self._release_process_handles()
         self._attached_pid = None
@@ -3111,6 +3113,7 @@ class X64DbgBridge(DebuggerBridge):
             ToolError: When the plugin cannot apply the breakpoint or
                 the post-condition ``bp_list`` lookup fails to find it.
         """
+        _logger.info("set_breakpoint_started", address=hex(address), type=bp_type, has_condition=condition is not None)
         await self._send_pipe_command(
             "bp_set",
             {
@@ -3281,6 +3284,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             bool: True if removed.
         """
+        _logger.info("remove_breakpoint_started", address=hex(address))
         await self._send_pipe_command("bp_remove", {"address": address})
 
         with self._state_lock:
@@ -3298,6 +3302,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
+        _logger.debug("get_breakpoints_started")
         with self._state_lock:
             merged = dict(self._breakpoints)
 
@@ -3337,7 +3342,9 @@ class X64DbgBridge(DebuggerBridge):
                                 condition=cond_value,
                             )
 
-        return list(merged.values())
+        result_list = list(merged.values())
+        _logger.debug("get_breakpoints_completed", count=len(result_list))
+        return result_list
 
     async def set_watchpoint(
         self,
@@ -3355,6 +3362,7 @@ class X64DbgBridge(DebuggerBridge):
         Returns:
             int: Watchpoint ID.
         """
+        _logger.info("set_watchpoint_started", address=hex(address), size=size, watch_type=watch_type)
         type_map = {"read": "r", "write": "w", "execute": "x"}
         access = type_map.get(watch_type, "rw")
 
@@ -3415,6 +3423,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
         """
+        _logger.debug("get_watchpoints_started")
         with self._state_lock:
             merged = dict(self._watchpoints)
 
@@ -3448,7 +3457,9 @@ class X64DbgBridge(DebuggerBridge):
                                 hit_count=raw_wp_hits if isinstance(raw_wp_hits, int) else 0,
                             )
 
-        return list(merged.values())
+        wp_list = list(merged.values())
+        _logger.debug("get_watchpoints_completed", count=len(wp_list))
+        return wp_list
 
     async def get_registers(self) -> RegisterState:
         """Get all register values.
@@ -3685,6 +3696,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If write fails.
         """
+        _logger.info("write_memory_started", address=hex(address), size=len(data))
         if not _IS_WIN32:
             msg = "Windows API not available"
             raise ToolError(msg)
@@ -3727,6 +3739,7 @@ class X64DbgBridge(DebuggerBridge):
         Raises:
             ToolError: If allocation fails.
         """
+        _logger.info("allocate_memory_started", size=size, protection=protection)
         if not _IS_WIN32:
             msg = "Windows API not available"
             raise ToolError(msg)
@@ -8588,11 +8601,13 @@ class X64DbgBridge(DebuggerBridge):
 
             luid = LUID()
             if not advapi32.LookupPrivilegeValueW(None, name, ctypes.byref(luid)):
+                _logger.warning("adjust_privilege_lookup_failed", privilege=name)
                 return {"success": False, "error": f"Privilege {name!r} not found"}
 
             token_handle = wintypes.HANDLE()
             current_process = kernel32.GetCurrentProcess()
             if not advapi32.OpenProcessToken(current_process, 0x0020, ctypes.byref(token_handle)):
+                _logger.warning("adjust_privilege_open_token_failed", privilege=name)
                 return {"success": False, "error": "Failed to open process token"}
 
             try:

@@ -106,12 +106,14 @@ class DetachedPanelWindow(QMainWindow):
     def _on_redock(self) -> None:
         """Handle re-dock button click."""
         self._save_geometry()
+        _logger.info("panel_dock_redock_requested", title=self._title)
         self.reattach_requested.emit(self._panel, self._title)
 
     def _save_geometry(self) -> None:
         """Persist this window's geometry to QSettings."""
         settings = QSettings("Intellicrack", "DetachedPanels")
         settings.setValue(f"{self._settings_key}/geometry", self.saveGeometry())
+        _logger.debug("panel_dock_geometry_saved", key=self._settings_key)
 
     def _restore_geometry(self) -> None:
         """Restore this window's geometry from QSettings."""
@@ -119,6 +121,9 @@ class DetachedPanelWindow(QMainWindow):
         geometry = settings.value(f"{self._settings_key}/geometry")
         if isinstance(geometry, QByteArray):
             self.restoreGeometry(geometry)
+            _logger.debug("panel_dock_geometry_restored", key=self._settings_key)
+        else:
+            _logger.debug("panel_dock_geometry_not_found", key=self._settings_key)
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
@@ -128,6 +133,7 @@ class DetachedPanelWindow(QMainWindow):
             a0: The close event.
         """
         self._save_geometry()
+        _logger.info("panel_dock_close_event_reattach", title=self._title)
         self.reattach_requested.emit(self._panel, self._title)
         if a0 is not None:
             a0.ignore()
