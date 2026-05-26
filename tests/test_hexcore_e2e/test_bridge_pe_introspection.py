@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.pe_format import (
     PE32_OPTIONAL_HEADER_SIZE,
     PE32PLUS_OPTIONAL_HEADER_SIZE,
     PE_DATA_DIRECTORY_ENTRY_SIZE,

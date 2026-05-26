@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import TYPE_CHECKING, Any, Literal, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -24,6 +24,7 @@ __all__ = [
     "WORKER_DEFAULT_EXCEPTIONS",
     "BridgeCallWorker",
     "GenericCallableWorker",
+    "cancel_pending_main_loop_tasks",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "run_bridge_coroutine_logged",
@@ -71,6 +72,26 @@ class _LoopState:
 _state = _LoopState()
 
 _LOOP_READY_TIMEOUT: float = 2.0
+
+
+class _PendingTaskTracker:
+    """Module-level registry of in-flight tasks scheduled on the main loop.
+
+    ``run_bridge_coroutine`` will, when it detects an already-running event loop
+    on the calling thread, schedule the coroutine as a fire-and-forget task on
+    that loop. When the main loop is the Qt application's asyncio loop, it can
+    be blocked inside ``app.exec()`` for the lifetime of the GUI, leaving every
+    scheduled task pending until application teardown. The tracker keeps a
+    reference to each such task so shutdown can cancel them cleanly before the
+    loop is closed, preventing ``Task was destroyed but it is pending!``
+    warnings from cascading through the logging pipeline.
+    """
+
+    tasks: ClassVar[set[asyncio.Task[object]]] = set()
+    lock: threading.Lock = threading.Lock()
+
+
+_pending = _PendingTaskTracker()
 
 
 def _run_loop(loop: asyncio.AbstractEventLoop, ready: threading.Event) -> None:
@@ -271,12 +292,52 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
 
     if running is not None and running.is_running():
         task = running.create_task(coro)
+        with _pending.lock:
+            _pending.tasks.add(task)
         task.add_done_callback(_log_task_exception)
+        task.add_done_callback(_discard_pending_task)
         return None
 
     loop = _ensure_loop()
     future = asyncio.run_coroutine_threadsafe(coro, loop)
     return future.result()
+
+
+def _discard_pending_task(task: asyncio.Task[object]) -> None:
+    """Remove ``task`` from the pending-task registry once it completes.
+
+    Args:
+        task: The completed asyncio task to forget.
+    """
+    with _pending.lock:
+        _pending.tasks.discard(task)
+
+
+def cancel_pending_main_loop_tasks() -> int:
+    """Cancel every tracked main-loop task scheduled via ``run_bridge_coroutine``.
+
+    Intended to be called from the application shutdown sequence after the Qt
+    event loop has exited and before the asyncio loop is closed. The call must
+    be made from a coroutine running on the same loop that originally executed
+    the tasks; the cancellation is queued via ``Task.cancel()`` and the caller
+    is expected to ``await asyncio.sleep(0)`` (or otherwise yield) so the loop
+    can deliver ``CancelledError`` to the suspended coroutines and complete
+    their teardown before the loop is torn down.
+
+    Returns:
+        int: Number of tasks that were still pending and have been requested
+            to cancel.
+    """
+    cancelled = 0
+    with _pending.lock:
+        snapshot = list(_pending.tasks)
+    for task in snapshot:
+        if not task.done():
+            _ = task.cancel()
+            cancelled += 1
+    if cancelled:
+        _logger.debug("bridge_pending_tasks_cancelled", count=cancelled)
+    return cancelled
 
 
 def run_bridge_coroutine_async(

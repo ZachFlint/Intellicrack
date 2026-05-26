@@ -27,13 +27,18 @@ from __future__ import annotations
 import ctypes
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -86,7 +91,7 @@ def _start_script(
     pwsh: str,
     target_pid: int = 0,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Spawn ``dll_monitor.ps1`` with the supplied log directory.
 
     Args:
@@ -97,12 +102,12 @@ def _start_script(
             child process environment.
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
     env = dict(os.environ)
     if extra_env:
         env.update(extra_env)
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -117,8 +122,8 @@ def _start_script(
             "-TargetPid",
             str(target_pid),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -126,7 +131,7 @@ def _start_script(
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -141,7 +146,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:
@@ -149,7 +154,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
     return stdout or "", stderr or "", proc.returncode
 
 
-def _spawn_dll_load_helper(pwsh: str) -> subprocess.Popen[str]:
+def _spawn_dll_load_helper(pwsh: str) -> Popen[str]:
     """Spawn a helper process that periodically loads a Windows DLL.
 
     The helper invokes ``LoadLibraryW`` against ``user32.dll`` (already
@@ -161,7 +166,7 @@ def _spawn_dll_load_helper(pwsh: str) -> subprocess.Popen[str]:
         pwsh: Absolute path to the ``pwsh`` executable.
 
     Returns:
-        subprocess.Popen[str]: The running helper process.
+        Popen[str]: The running helper process.
     """
     helper_script = (
         '$sig = \'[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] '
@@ -173,7 +178,7 @@ def _spawn_dll_load_helper(pwsh: str) -> subprocess.Popen[str]:
         "[AuditDllMon.Native]::LoadLibraryW('user32.dll') | Out-Null;"
         "Start-Sleep -Milliseconds 200}"
     )
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -184,8 +189,8 @@ def _spawn_dll_load_helper(pwsh: str) -> subprocess.Popen[str]:
             "-Command",
             helper_script,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -291,7 +296,7 @@ def test_script_emits_fallback_diagnostic_when_etw_unavailable(tmp_path: Path) -
     poisoned_script = tmp_path / "dll_monitor_poisoned.ps1"
     poisoned_script.write_text(poisoned, encoding="utf-8")
 
-    proc = subprocess.Popen(
+    proc = Popen(
         [
             pwsh,
             "-NoLogo",
@@ -306,8 +311,8 @@ def test_script_emits_fallback_diagnostic_when_etw_unavailable(tmp_path: Path) -
             "-TargetPid",
             "0",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -343,7 +348,7 @@ def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
     log_dir.mkdir()
 
     proc = _start_script(log_dir, pwsh)
-    helper: subprocess.Popen[str] | None = None
+    helper: Popen[str] | None = None
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
         helper = _spawn_dll_load_helper(pwsh)
@@ -384,7 +389,7 @@ def test_etw_load_event_is_captured_when_admin(tmp_path: Path) -> None:
     log_dir.mkdir()
 
     proc = _start_script(log_dir, pwsh)
-    helper: subprocess.Popen[str] | None = None
+    helper: Popen[str] | None = None
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
         helper = _spawn_dll_load_helper(pwsh)

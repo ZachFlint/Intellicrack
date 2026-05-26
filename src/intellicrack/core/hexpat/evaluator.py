@@ -76,9 +76,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, ClassVar
 
-    from intellicrack.core.hexpat._pragma import PragmaInfo
     from intellicrack.core.hexpat.ast_nodes import DeclNode, ExprNode, StmtNode, TypeNode
     from intellicrack.core.hexpat.data_reader import DataReader
+    from intellicrack.core.hexpat.pragma import PragmaInfo
     from intellicrack.core.hexpat.type_system import TypeRegistry
 
 

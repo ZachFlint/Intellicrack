@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -30,6 +29,12 @@ from intellicrack.core.process_manager import (
     ProcessManager,
     ProcessType,
     TrackedProcess,
+)
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    CalledProcessError,
+    Popen,
+    TimeoutExpired,
 )
 
 
@@ -203,7 +208,7 @@ class TestRunTracked:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        with pytest.raises(CalledProcessError) as exc_info:
             process_manager.run_tracked(
                 [sys.executable, "-c", "import sys; sys.exit(1)"],
                 name="test-check-fail",
@@ -221,7 +226,7 @@ class TestRunTracked:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(TimeoutExpired):
             process_manager.run_tracked(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 name="test-timeout",
@@ -346,7 +351,7 @@ class TestRunTrackedAsync:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(TimeoutExpired):
             await process_manager.run_tracked_async(
                 [sys.executable, "-c", "import time; time.sleep(30)"],
                 name="test-async-timeout",
@@ -363,7 +368,7 @@ class TestRunTrackedAsync:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        with pytest.raises(subprocess.CalledProcessError):
+        with pytest.raises(CalledProcessError):
             await process_manager.run_tracked_async(
                 [sys.executable, "-c", "import sys; sys.exit(1)"],
                 name="test-async-check",
@@ -412,10 +417,10 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         try:
             TestExternalPidRegistration._assert_external_pid_registered(process_manager, proc.pid)
@@ -456,10 +461,10 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         try:
             process_manager.register_external_pid(proc.pid, name="test-unregister")
@@ -496,10 +501,10 @@ class TestExternalPidRegistration:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         try:
             process_manager.register_external_pid(proc.pid, name="original-name")
@@ -523,10 +528,10 @@ class TestTerminateExternalPid:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", ""],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         proc.wait(timeout=PROCESS_WAIT_TIMEOUT)
         dead_pid = proc.pid
@@ -555,10 +560,10 @@ class TestTerminateExternalPid:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         pid = proc.pid
@@ -583,10 +588,10 @@ class TestTerminateExternalPid:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         pid = proc.pid
@@ -614,15 +619,15 @@ class TestProcessCleanup:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc1 = subprocess.Popen(
+        proc1 = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
-        proc2 = subprocess.Popen(
+        proc2 = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         process_manager.register(proc1, name="cleanup-test-1")
@@ -650,10 +655,10 @@ class TestProcessCleanup:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         process_manager.register_external_pid(proc.pid, name="external-cleanup-test")
@@ -678,17 +683,17 @@ class TestProcessCleanup:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
         proc = await asyncio.to_thread(
-            subprocess.Popen,
+            Popen,
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         external_proc = await asyncio.to_thread(
-            subprocess.Popen,
+            Popen,
             [sys.executable, "-c", "import time; time.sleep(60)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
         external_pid = external_proc.pid
 
@@ -713,10 +718,10 @@ class TestTrackedProcess:
     @staticmethod
     def test_tracked_process_is_running_for_active_process() -> None:
         """Verify is_running returns True for running process."""
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         tracked = TrackedProcess(
@@ -734,10 +739,10 @@ class TestTrackedProcess:
     @staticmethod
     def test_tracked_process_is_running_false_after_completion() -> None:
         """Verify is_running returns False after process completes."""
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "print('done')"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         proc.wait()
@@ -841,10 +846,10 @@ class TestProcessManagerProperties:
         """
         assert process_manager.process_count == EXPECTED_TRACKED_COUNT_ZERO
 
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         process_manager.register(proc, name="count-test")
@@ -864,15 +869,15 @@ class TestProcessManagerProperties:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc1 = subprocess.Popen(
+        proc1 = Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
-        proc2 = subprocess.Popen(
+        proc2 = Popen(
             [sys.executable, "-c", "print('done')"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         proc2.wait()
@@ -910,10 +915,10 @@ class TestProcessManagerProperties:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc = subprocess.Popen(
+        proc = Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         process_manager.register(proc, name="list-test")
@@ -935,15 +940,15 @@ class TestProcessManagerProperties:
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
-        proc1 = subprocess.Popen(
+        proc1 = Popen(
             [sys.executable, "-c", "import time; time.sleep(5)"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
-        proc2 = subprocess.Popen(
+        proc2 = Popen(
             [sys.executable, "-c", "print('done')"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
         )
 
         proc2.wait()

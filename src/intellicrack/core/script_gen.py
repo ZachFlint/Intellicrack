@@ -44,9 +44,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, ClassVar, Final, Literal
 
-from ._subprocess import CompletedProcess, TimeoutExpired
 from .logging import get_logger
 from .process_manager import ProcessManager
+from .subprocess_compat import CompletedProcess, TimeoutExpired
 
 
 _logger = get_logger(__name__)

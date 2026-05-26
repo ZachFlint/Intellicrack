@@ -26,13 +26,19 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -73,7 +79,7 @@ def _pwsh_argv(pwsh: str, script: Path, log_dir: Path | None) -> list[str]:
 
     Returns:
         list[str]: The full argv list ready to be passed to
-        ``subprocess.Popen`` or ``subprocess.run``.
+        ``Popen`` or ``run``.
     """
     argv = [
         pwsh,
@@ -90,7 +96,7 @@ def _pwsh_argv(pwsh: str, script: Path, log_dir: Path | None) -> list[str]:
     return argv
 
 
-def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
+def _start_script(log_dir: Path, pwsh: str) -> Popen[str]:
     """Spawn ``clipboard_monitor.ps1`` with the supplied log directory.
 
     Args:
@@ -98,19 +104,19 @@ def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
         pwsh: Absolute path to the ``pwsh`` executable.
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
-    return subprocess.Popen(
+    return Popen(
         _pwsh_argv(pwsh, _SCRIPT_PATH, log_dir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -125,7 +131,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:
@@ -142,7 +148,7 @@ def _set_clipboard(value: str, pwsh: str) -> None:
         value: Text to place on the clipboard.
         pwsh: Absolute path to the ``pwsh`` executable.
     """
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",
@@ -304,7 +310,7 @@ def test_script_emits_structured_error_when_logdir_is_unwritable() -> None:
 
     bad_log_dir = Path(f"{drive}:\\intellicrack-audit3-no-such-drive\\logs")
 
-    completed = subprocess.run(
+    completed = run(
         _pwsh_argv(pwsh, _SCRIPT_PATH, bad_log_dir),
         capture_output=True,
         text=True,
@@ -350,10 +356,10 @@ def test_script_logs_structured_json_when_add_type_fails(tmp_path: Path) -> None
     poisoned_script = tmp_path / "clipboard_monitor_poisoned.ps1"
     poisoned_script.write_text(poisoned, encoding="utf-8")
 
-    proc = subprocess.Popen(
+    proc = Popen(
         _pwsh_argv(pwsh, poisoned_script, log_dir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -420,10 +426,10 @@ def test_script_default_logdir_when_omitted(tmp_path: Path) -> None:
     env = dict(os.environ)
     env["USERPROFILE"] = str(tmp_path)
 
-    proc = subprocess.Popen(
+    proc = Popen(
         _pwsh_argv(pwsh, _SCRIPT_PATH, log_dir=None),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",

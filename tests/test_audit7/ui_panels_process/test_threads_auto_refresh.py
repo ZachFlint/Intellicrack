@@ -27,7 +27,7 @@ from PyQt6.QtCore import Qt
 
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.types import ThreadInfo
-from intellicrack.ui.panels.process_panel._threads_tab import ThreadsTab
+from intellicrack.ui.panels.process_panel.threads_tab import ThreadsTab
 
 
 if TYPE_CHECKING:
@@ -239,7 +239,7 @@ class TestF0012ThreadsTabAutoRefresh:
         counter = _RefreshCounter(batches)
 
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
             side_effect=counter,
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
@@ -273,7 +273,7 @@ class TestF0012ThreadsTabAutoRefresh:
         counter = _RefreshCounter(batches)
 
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
             side_effect=counter,
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
@@ -309,7 +309,7 @@ class TestF0012ThreadsTabAutoRefresh:
         counter = _RefreshCounter(batches)
 
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
             side_effect=counter,
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
@@ -333,7 +333,7 @@ class TestF0012ThreadsTabAutoRefresh:
             threads_tab: _TestThreadsTab fixture.
         """
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
             assert threads_tab.get_auto_refresh_button().text() == "Auto-Refresh: ON"
@@ -350,7 +350,7 @@ class TestF0012ThreadsTabAutoRefresh:
         """
         qtbot.addWidget(threads_tab)
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
             assert threads_tab.get_auto_refresh_timer().isActive()
@@ -365,7 +365,7 @@ class TestF0012ThreadsTabAutoRefresh:
             threads_tab: _TestThreadsTab fixture.
         """
         with patch(
-            "intellicrack.ui.panels.process_panel._threads_tab.run_bridge_coroutine_async",
+            "intellicrack.ui.panels.process_panel.threads_tab.run_bridge_coroutine_async",
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
             timer = threads_tab.get_auto_refresh_timer()

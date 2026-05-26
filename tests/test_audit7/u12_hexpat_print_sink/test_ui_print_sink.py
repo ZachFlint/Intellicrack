@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from PyQt6.QtWidgets import QApplication, QPlainTextEdit, QWidget
 
-from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
+from intellicrack.ui.panels.hex_editor.pattern_editor import PatternEditorMixin
 
 
 if TYPE_CHECKING:
@@ -245,11 +245,11 @@ def _install_stub_interpreter(monkeypatch: pytest.MonkeyPatch, stubs: list[_Stub
         return stub
 
     monkeypatch.setattr(
-        "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+        "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
         True,
     )
     monkeypatch.setattr(
-        "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+        "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
         _factory,
     )
 

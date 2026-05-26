@@ -16,7 +16,7 @@ from ctypes import wintypes
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, cast
 
-from intellicrack.bridges._win32_types import (
+from intellicrack.bridges.win32_types import (
     GENERIC_READ,
     GENERIC_WRITE,
     INVALID_HANDLE_VALUE,

@@ -2,14 +2,14 @@
 # Bridge methods dispatched via getattr(), Qt virtual overrides, ctypes _fields_.
 
 intellicrack.__init__.__getattr__  # unused-function
-intellicrack.bridges._pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API, audit Group 20)
-intellicrack.bridges._pe_format.PE_DOS_SIGNATURE  # unused-variable (public API, audit Group 20)
-intellicrack.bridges._pe_format.PE_DOS_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
-intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API, audit Group 20)
-intellicrack.bridges._pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API, audit Group 20)
-intellicrack.bridges._pe_format.PE_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
-intellicrack.bridges._pe_format.iterate_section_headers  # unused-function (public API, audit Group 20)
-intellicrack.bridges._pe_format.rva_to_file_offset  # unused-function (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_DOS_HEADER_SIZE  # unused-variable (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_DOS_SIGNATURE  # unused-variable (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_DOS_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
+intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_PE32  # unused-variable (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_OPTIONAL_HEADER_MAGIC_ROM  # unused-variable (public API, audit Group 20)
+intellicrack.bridges.pe_format.PE_SIGNATURE_INT  # unused-variable (public API, audit Group 3)
+intellicrack.bridges.pe_format.iterate_section_headers  # unused-function (public API, audit Group 20)
+intellicrack.bridges.pe_format.rva_to_file_offset  # unused-function (public API, audit Group 20)
 intellicrack.bridges.base.matched_bytes  # unused-variable
 intellicrack.bridges.cutter.get_function  # unused-method
 intellicrack.bridges.cutter.search_bytes  # unused-method
@@ -185,12 +185,12 @@ intellicrack.ui.app._script_validator  # unused-attribute
 intellicrack.ui.app._model_browse_worker  # unused-attribute
 intellicrack.ui.panels.cutter_panel._asm_highlighter  # unused-attribute
 intellicrack.ui.panels.cutter_panel._c_highlighter  # unused-attribute
-intellicrack.ui.panels.hex_editor._base.hex_state_available  # unused-variable
-intellicrack.ui.panels.hex_editor._base.hex_state_available  # unused-variable
-intellicrack.ui.panels.hex_editor._base.transform_pipeline_available  # unused-variable
-intellicrack.ui.panels.hex_editor._base.transform_pipeline_available  # unused-variable
-intellicrack.ui.panels.hex_editor._bookmarks._on_bookmark_double_clicked  # unused-method
-intellicrack.ui.panels.hex_editor._statistics.classification_block_size  # unused-variable
+intellicrack.ui.panels.hex_editor.base.hex_state_available  # unused-variable
+intellicrack.ui.panels.hex_editor.base.hex_state_available  # unused-variable
+intellicrack.ui.panels.hex_editor.base.transform_pipeline_available  # unused-variable
+intellicrack.ui.panels.hex_editor.base.transform_pipeline_available  # unused-variable
+intellicrack.ui.panels.hex_editor.bookmarks._on_bookmark_double_clicked  # unused-method
+intellicrack.ui.panels.hex_editor.statistics.classification_block_size  # unused-variable
 intellicrack.ui.panels.hex_editor_widget.DISPLAY_MODES  # unused-variable
 intellicrack.ui.panels.hex_editor_widget.DISPLAY_MODES  # unused-variable
 intellicrack.ui.panels.hex_editor_widget.add_highlight_rule  # unused-method
@@ -234,11 +234,11 @@ intellicrack.providers.model_loader._BF16_MULTIPLIER  # unused-variable (API sur
 intellicrack.providers.xpu_utils._B580_DEVICE_IDS  # unused-variable (API surface constant)
 intellicrack.providers.xpu_utils._INTEL_VENDOR_ID  # unused-variable (API surface constant)
 intellicrack.ui.panels.vnc_widget._PIXEL_FORMAT_32BIT  # unused-variable (API surface constant)
-intellicrack.ui.panels.hex_editor._base.hex_state_available  # unused-variable (availability flag)
-intellicrack.ui.panels.hex_editor._base.transform_pipeline_available  # unused-variable (availability flag)
-intellicrack.ui.panels.hex_editor._base.pefile_available  # unused-variable (availability flag, audit Group 22)
-intellicrack.ui.panels.hex_editor._base.disassembler_available  # unused-variable (availability flag, audit Group 22)
-intellicrack.ui.panels.hex_editor._base.yara_scanner_available  # unused-variable (availability flag, audit Group 22)
+intellicrack.ui.panels.hex_editor.base.hex_state_available  # unused-variable (availability flag)
+intellicrack.ui.panels.hex_editor.base.transform_pipeline_available  # unused-variable (availability flag)
+intellicrack.ui.panels.hex_editor.base.pefile_available  # unused-variable (availability flag, audit Group 22)
+intellicrack.ui.panels.hex_editor.base.disassembler_available  # unused-variable (availability flag, audit Group 22)
+intellicrack.ui.panels.hex_editor.base.yara_scanner_available  # unused-variable (availability flag, audit Group 22)
 intellicrack.ui.panels.hex_editor_widget.DISPLAY_MODES  # unused-variable (API surface constant)
 intellicrack.credentials.oauth.AUTHORIZATION_CODE  # unused-variable (enum member)
 intellicrack.core.process_manager.ASYNC_SUBPROCESS  # unused-variable (enum member)
@@ -441,12 +441,12 @@ intellicrack.bridges.sandbox_bridge.detect_c2  # unused-method (tool_definitions
 intellicrack.bridges.sandbox_bridge.diff  # unused-method (tool_definitions dispatch)
 
 # Win32 types - asserted in test_win32_types.py / ctypes self-referential _fields_
-intellicrack.bridges._win32_types.THREAD_ALL_ACCESS  # unused-variable (tested in test_win32_types.py)
-intellicrack.bridges._win32_types.TH32CS_SNAPALL  # unused-variable (tested in test_win32_types.py)
-intellicrack.bridges._win32_types.THREAD_STATE_NAMES  # unused-variable (tested in test_win32_types.py)
-intellicrack.bridges._win32_types.get_kernel32  # unused-function (tested in test_win32_types.py)
-intellicrack.bridges._win32_types.get_psapi  # unused-function (tested in test_win32_types.py)
-intellicrack.bridges._win32_types._fields_  # unused-attribute (EXCEPTION_REGISTRATION_RECORD self-ref ctypes)
+intellicrack.bridges.win32_types.THREAD_ALL_ACCESS  # unused-variable (tested in test_win32_types.py)
+intellicrack.bridges.win32_types.TH32CS_SNAPALL  # unused-variable (tested in test_win32_types.py)
+intellicrack.bridges.win32_types.THREAD_STATE_NAMES  # unused-variable (tested in test_win32_types.py)
+intellicrack.bridges.win32_types.get_kernel32  # unused-function (tested in test_win32_types.py)
+intellicrack.bridges.win32_types.get_psapi  # unused-function (tested in test_win32_types.py)
+intellicrack.bridges.win32_types._fields_  # unused-attribute (EXCEPTION_REGISTRATION_RECORD self-ref ctypes)
 
 # Bridges base - dataclass field declarations consumed by @dataclass
 intellicrack.bridges.base.context_before  # unused-variable (MemorySearchResult dataclass field)
@@ -473,11 +473,11 @@ intellicrack.sandbox.manager.cleanup_stale  # unused-method (tested in test_mana
 intellicrack.sandbox.qemu.PIDFILE_MAX_RETRIES  # unused-variable (tested in test_process_cleanup.py)
 intellicrack.sandbox.qemu.PIDFILE_RETRY_DELAY  # unused-variable (tested in test_process_cleanup.py)
 
-# core/_subprocess.py - public attributes mirroring subprocess.STARTUPINFO API surface
-intellicrack.core._subprocess.hStdInput  # unused-attribute (mirrors subprocess.STARTUPINFO API)
-intellicrack.core._subprocess.hStdOutput  # unused-attribute (mirrors subprocess.STARTUPINFO API)
-intellicrack.core._subprocess.hStdError  # unused-attribute (mirrors subprocess.STARTUPINFO API)
-intellicrack.core._subprocess.lpAttributeList  # unused-attribute (mirrors subprocess.STARTUPINFO API)
+# core/subprocess_compat.py - public attributes mirroring subprocess.STARTUPINFO API surface
+intellicrack.core.subprocess_compat.hStdInput  # unused-attribute (mirrors subprocess.STARTUPINFO API)
+intellicrack.core.subprocess_compat.hStdOutput  # unused-attribute (mirrors subprocess.STARTUPINFO API)
+intellicrack.core.subprocess_compat.hStdError  # unused-attribute (mirrors subprocess.STARTUPINFO API)
+intellicrack.core.subprocess_compat.lpAttributeList  # unused-attribute (mirrors subprocess.STARTUPINFO API)
 
 # Providers - TypedDict fields consumed by metaclass / Protocol used in cast() / tested
 intellicrack.providers.ollama.modified_at  # unused-variable (TypedDict OllamaTagEntry field)

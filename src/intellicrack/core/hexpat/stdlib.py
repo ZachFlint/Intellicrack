@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 
-from intellicrack.core.hexpat._parse_helpers import safe_call, safe_int_from_str
-from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.errors import HexPatRuntimeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, PatternValue
+from intellicrack.core.hexpat.parse_helpers import safe_call, safe_int_from_str
+from intellicrack.core.hexpat.pragma import PragmaInfo
 from intellicrack.core.logging import get_logger
 
 

@@ -17,9 +17,9 @@ from typing import Any, ClassVar
 import pytest
 from PyQt6.QtWidgets import QDialog
 
-import intellicrack.ui.panels.hex_editor._transforms as _t_mod
+import intellicrack.ui.panels.hex_editor.transforms as _t_mod
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor._transforms import TransformsMixin
+from intellicrack.ui.panels.hex_editor.transforms import TransformsMixin
 
 
 class _SpyDoc:

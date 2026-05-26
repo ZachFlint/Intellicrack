@@ -22,7 +22,8 @@ from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.pe_format import (
     PE32_OPTIONAL_HEADER_SIZE,
     PE32PLUS_OPTIONAL_HEADER_SIZE,
     PE_DATA_DIRECTORY_ENTRY_SIZE,
@@ -33,7 +34,6 @@ from intellicrack.bridges._pe_format import (
     PE_OPTIONAL_HEADER_MAGIC_PE32PLUS,
     PE_SIGNATURE,
 )
-from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.types import ToolName
 
 

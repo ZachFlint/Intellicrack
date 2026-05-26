@@ -70,6 +70,9 @@ def _find_hxd_executable() -> Path | None:
                 candidate = Path(str(install_dir)) / _HXD_EXE_NAME
                 if candidate.exists() and candidate.is_file():
                     return candidate
+        except FileNotFoundError:
+            _logger.debug("hxd_registry_path_absent", reg_path=reg_path)
+            continue
         except OSError as exc:
             _logger.warning("hxd_registry_path_unavailable", reg_path=reg_path, error=str(exc))
             continue

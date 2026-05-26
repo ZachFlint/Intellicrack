@@ -14,7 +14,6 @@ consistency and error handling.
 from __future__ import annotations
 
 import shutil
-import subprocess
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -23,6 +22,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
+from intellicrack.core.subprocess_compat import DEVNULL, Popen
 from intellicrack.core.types import (
     Message,
     ModelInfo,
@@ -139,7 +139,7 @@ def _make_multi_turn_messages() -> list[Message]:
 
 
 @pytest.fixture(scope="session")
-def ollama_server() -> Generator[subprocess.Popen[bytes] | None]:
+def ollama_server() -> Generator[Popen[bytes] | None]:
     """Start an Ollama server subprocess for testing.
 
     Starts ``ollama serve`` and polls the health endpoint until the
@@ -147,7 +147,7 @@ def ollama_server() -> Generator[subprocess.Popen[bytes] | None]:
     Kills the server on teardown.
 
     Yields:
-        Generator[subprocess.Popen[bytes] | None]: The Ollama server process, or None if already running.
+        Generator[Popen[bytes] | None]: The Ollama server process, or None if already running.
     """
     try:
         response = httpx.get(_OLLAMA_TAGS_URL, timeout=2.0)
@@ -161,10 +161,10 @@ def ollama_server() -> Generator[subprocess.Popen[bytes] | None]:
     if ollama_path is None:
         pytest.skip("ollama binary not found on PATH")
 
-    proc = subprocess.Popen(
+    proc = Popen(
         [ollama_path, "serve"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=DEVNULL,
+        stderr=DEVNULL,
     )
 
     deadline = time.monotonic() + _OLLAMA_STARTUP_TIMEOUT
@@ -188,7 +188,7 @@ def ollama_server() -> Generator[subprocess.Popen[bytes] | None]:
 @pytest_asyncio.fixture
 async def ollama_e2e_provider(
     credential_loader: CredentialLoader,
-    ollama_server: subprocess.Popen[bytes] | None,
+    ollama_server: Popen[bytes] | None,
 ) -> AsyncGenerator[OllamaProvider]:
     """Create a connected Ollama provider backed by the test server.
 
@@ -1139,7 +1139,7 @@ class TestCrossProviderConsistency:
     async def available_providers(
         self,
         credential_loader: CredentialLoader,
-        ollama_server: subprocess.Popen[bytes] | None,
+        ollama_server: Popen[bytes] | None,
         *,
         has_anthropic_key: bool,
         has_openai_key: bool,

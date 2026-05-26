@@ -19,8 +19,13 @@ from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Protocol, cast
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor, QPainter, QPixmap
+from PyQt6.QtWidgets import QApplication, QSplashScreen
+
 from intellicrack._metadata import __version__
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolError
 
 
 _logger = get_logger(__name__)
@@ -29,7 +34,6 @@ _logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from PyQt6.QtWidgets import QApplication, QSplashScreen
     from structlog.stdlib import BoundLogger
 
     from intellicrack.core.config import Config, LogConfig
@@ -73,6 +77,9 @@ class _SetupLoggingFn(Protocol):
 
 
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
+_EARLY_SPLASH_WIDTH: Final[int] = 600
+_EARLY_SPLASH_HEIGHT: Final[int] = 400
+_EARLY_SPLASH_ASSET: Final[str] = "splash.png"
 _APP_VERSION: str = __version__
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
@@ -347,48 +354,101 @@ def _log_import_time(logger: BoundLogger, module_name: str, elapsed: float) -> N
     logger.debug("import_timing", imported_module=module_name, elapsed_s=round(elapsed, 3))
 
 
+def _compute_early_dpi_scale(app: QApplication) -> float:
+    """Return the primary screen's device pixel ratio for early splash sizing.
+
+    Args:
+        app: The active :class:`QApplication` instance.
+
+    Returns:
+        float: Device pixel ratio of the primary screen, or ``1.0`` when the
+        screen cannot be queried.
+    """
+    screen = app.primaryScreen()
+    if screen is None:
+        return 1.0
+    return float(screen.devicePixelRatio())
+
+
+def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> QPixmap:
+    """Compose the early splash pixmap from ``splash.png`` over a solid background.
+
+    The full splash image is loaded and scaled (preserving aspect ratio) to fit
+    inside ``width`` x ``height``, then centered on a background filled with
+    :data:`_EARLY_SPLASH_BG`. When the asset is missing or fails to decode, the
+    solid-colour background is returned unchanged so the early splash still
+    appears.
+
+    Args:
+        splash_asset: Path to the splash image asset on disk.
+        width: Target pixmap width in physical pixels.
+        height: Target pixmap height in physical pixels.
+
+    Returns:
+        QPixmap: Composed pixmap sized exactly ``width`` x ``height``.
+    """
+    pixmap = QPixmap(width, height)
+    pixmap.fill(QColor(_EARLY_SPLASH_BG))
+
+    if not splash_asset.exists():
+        return pixmap
+
+    source = QPixmap(str(splash_asset))
+    if source.isNull():
+        return pixmap
+
+    scaled = source.scaled(
+        width,
+        height,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+
+    painter = QPainter(pixmap)
+    try:
+        offset_x = (width - scaled.width()) // 2
+        offset_y = (height - scaled.height()) // 2
+        painter.drawPixmap(offset_x, offset_y, scaled)
+    finally:
+        painter.end()
+
+    return pixmap
+
+
 def _show_early_splash_impl() -> tuple[QApplication, QSplashScreen]:
     """Build the QApplication and minimal splash screen.
 
     Imports PyQt6, configures high-DPI behaviour, creates the application,
-    and shows a minimal splash screen using either the bundled icon or a
-    solid-colour fallback. Propagates ``ImportError`` when PyQt6 cannot be
-    imported, ``OSError`` when the icon asset cannot be loaded, and
+    and shows a minimal splash screen rendered from the bundled
+    ``splash.png`` asset (scaled to match the dynamic splash dimensions) or
+    a solid-colour fallback. Propagates ``ImportError`` when PyQt6 cannot be
+    imported, ``OSError`` when the splash asset cannot be loaded, and
     ``RuntimeError`` when Qt rejects the construction sequence.
 
     Returns:
         tuple[QApplication, QSplashScreen]: The Qt application and the early
         splash screen, both already displayed.
     """
-    from PyQt6.QtCore import Qt as _Qt
-    from PyQt6.QtGui import (
-        QColor as _QColor,
-        QPixmap as _QPixmap,
-    )
-    from PyQt6.QtWidgets import (
-        QApplication as _QApp,
-        QSplashScreen as _QSplash,
-    )
+    if QApplication.instance() is None:
+        QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
-    if _QApp.instance() is None:
-        _QApp.setHighDpiScaleFactorRoundingPolicy(_Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-        _QApp.setAttribute(_Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-
-    app = _QApp(sys.argv)
-    _QApp.setApplicationName("Intellicrack")
-    _QApp.setApplicationVersion(_APP_VERSION)
+    app = QApplication(sys.argv)
+    QApplication.setApplicationName("Intellicrack")
+    QApplication.setApplicationVersion(_APP_VERSION)
     app.setStyle("Fusion")
 
-    icon_path = Path(__file__).resolve().parent / "assets" / "icon.ico"
-    if icon_path.exists():
-        early_pixmap = _QPixmap(str(icon_path))
-    else:
-        early_pixmap = _QPixmap(400, 250)
-        early_pixmap.fill(_QColor(_EARLY_SPLASH_BG))
+    dpi_scale = _compute_early_dpi_scale(app)
+    scaled_w = max(1, int(_EARLY_SPLASH_WIDTH * dpi_scale))
+    scaled_h = max(1, int(_EARLY_SPLASH_HEIGHT * dpi_scale))
 
-    early_splash = _QSplash(early_pixmap)
+    splash_path = Path(__file__).resolve().parent / "assets" / _EARLY_SPLASH_ASSET
+    early_pixmap = _build_early_splash_pixmap(splash_path, scaled_w, scaled_h)
+    early_pixmap.setDevicePixelRatio(dpi_scale)
+
+    early_splash = QSplashScreen(early_pixmap)
     early_splash.setWindowFlags(
-        _Qt.WindowType.WindowStaysOnTopHint | _Qt.WindowType.FramelessWindowHint | _Qt.WindowType.SplashScreen,
+        Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen,
     )
     early_splash.show()
     app.processEvents()
@@ -945,11 +1005,10 @@ def _wire_preregistered_sandbox(window: MainWindow, orchestrator: Orchestrator) 
     getter = getattr(tool_registry, "get_sandbox_bridge", None)
     if not callable(getter):
         return
-    from intellicrack.core.types import ToolError as _ToolError
 
     try:
         bridge = getter()
-    except (RuntimeError, ImportError, AttributeError, _ToolError):
+    except (RuntimeError, ImportError, AttributeError, ToolError):
         _logger.debug("preregistered_sandbox_bridge_lookup_failed", exc_info=True)
         return
     manager = getattr(bridge, "manager", None)
@@ -967,6 +1026,70 @@ def _wire_preregistered_sandbox(window: MainWindow, orchestrator: Orchestrator) 
         sandbox_type=type(sandbox).__name__,
         instance_count=len(instances),
     )
+
+
+def _detach_qt_log_handler(logger: BoundLogger) -> None:
+    """Remove the Qt-signaling log handler before the main window is destroyed.
+
+    The handler's internal ``_HandlerBridge`` :class:`QObject` is destroyed
+    automatically when Qt tears down the main window. Any subsequent log record
+    that routes through the handler would attempt to emit a signal on a deleted
+    C++ object and raise ``RuntimeError`` on every call. Detaching the handler
+    here keeps the logging pipeline silent during the asyncio teardown phase.
+
+    Args:
+        logger: BoundLogger used for diagnostic output when the helper is
+            unavailable (for example, when the log viewer module failed to
+            import during startup).
+    """
+    try:
+        handler_mod = importlib.import_module("intellicrack.ui.log_viewer")
+        uninstall = getattr(handler_mod, "uninstall_qt_log_handler", None)
+    except ImportError:
+        logger.debug("qt_log_handler_module_unavailable_during_shutdown")
+        return
+    if not callable(uninstall):
+        return
+    try:
+        uninstall()
+    except (RuntimeError, OSError, ValueError):
+        logger.debug("qt_log_handler_uninstall_failed", exc_info=True)
+
+
+async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
+    """Cancel and drain bridge coroutines still pending on the main loop.
+
+    Calls into :mod:`intellicrack.ui.panels.async_bridge` to cancel every task
+    that ``run_bridge_coroutine`` scheduled on the current loop while Qt was
+    blocking the main thread inside ``app.exec()``. A short yield via
+    :func:`asyncio.sleep` lets the loop deliver ``CancelledError`` to each
+    suspended coroutine so they can complete teardown before the loop is
+    closed, eliminating the cascade of ``Task was destroyed but it is
+    pending!`` warnings that would otherwise appear during shutdown.
+
+    Args:
+        logger: BoundLogger used for diagnostic output when the helper is
+            unavailable.
+    """
+    try:
+        bridge_mod = importlib.import_module("intellicrack.ui.panels.async_bridge")
+        cancel_pending = getattr(bridge_mod, "cancel_pending_main_loop_tasks", None)
+    except ImportError:
+        logger.debug("async_bridge_unavailable_during_shutdown")
+        return
+    if not callable(cancel_pending):
+        return
+    try:
+        cancelled = int(cast("Callable[[], int]", cancel_pending)())
+    except (RuntimeError, OSError, ValueError):
+        logger.debug("async_bridge_task_cancel_failed", exc_info=True)
+        return
+    if cancelled:
+        logger.info("pending_bridge_tasks_cancelled", count=cancelled)
+        try:
+            await asyncio.sleep(0)
+        except asyncio.CancelledError:
+            logger.debug("cancel_drain_interrupted")
 
 
 async def _shutdown_application(
@@ -993,6 +1116,10 @@ async def _shutdown_application(
         discovery_cache: Path of the model discovery cache file.
     """
     logger.info("shutdown_started")
+
+    _detach_qt_log_handler(logger)
+    await _cancel_pending_bridge_tasks(logger)
+
     save_cache = getattr(model_discovery, "save_cache", None)
     if callable(save_cache):
         await cast("Awaitable[None]", save_cache(discovery_cache))

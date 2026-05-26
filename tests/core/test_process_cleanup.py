@@ -16,7 +16,6 @@ Validates that:
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 import threading
 import time
@@ -30,6 +29,7 @@ import intellicrack.sandbox.qemu as qemu_module
 from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import PIPE, Popen
 from intellicrack.core.types import ToolError
 
 
@@ -62,16 +62,16 @@ _BLOCKING_WAIT_TIMEOUT = 30
 # ─── 1. Process termination (sandbox_config.py finally-block pattern) ────────
 
 
-def _spawn_sleeper() -> subprocess.Popen[bytes]:
+def _spawn_sleeper() -> Popen[bytes]:
     """Spawn a subprocess that sleeps for 60 seconds.
 
     Returns:
-        subprocess.Popen[bytes]: The spawned process.
+        Popen[bytes]: The spawned process.
     """
-    return subprocess.Popen(
+    return Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
     )
 
 
@@ -554,8 +554,8 @@ async def test_pid_based_kill_targets_specific_process() -> None:
 
 
 async def _assert_only_target_killed(
-    proc_a: subprocess.Popen[bytes],
-    proc_b: subprocess.Popen[bytes],
+    proc_a: Popen[bytes],
+    proc_b: Popen[bytes],
 ) -> None:
     """Terminate ``proc_a`` by PID and assert ``proc_b`` survives.
 
@@ -580,10 +580,10 @@ def test_process_manager_unregister_after_terminate() -> None:
     The Windows Sandbox stop() method now calls unregister(pid) after
     terminate. This ensures the process is fully cleaned from the registry.
     """
-    process = subprocess.Popen(
+    process = Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
     )
     pid = process.pid
 

@@ -5,7 +5,7 @@
 """Regression tests for audit4 B3 ThreadsTab fixes (F-0011, F-0019).
 
 Each test exercises one finding and would fail without the corresponding
-remediation in ``intellicrack.ui.panels.process_panel._threads_tab``.
+remediation in ``intellicrack.ui.panels.process_panel.threads_tab``.
 
 F-0011: ``_on_tls`` was reading the TID from the Fiber combo instead of
 its own TLS-specific selector.  The fix adds ``_tls_thread_combo`` and wires
@@ -25,7 +25,7 @@ from PyQt6.QtCore import QCoreApplication, QEventLoop, QTimer
 from PyQt6.QtWidgets import QApplication, QComboBox, QMessageBox, QTableWidget, QTableWidgetItem
 
 from intellicrack.bridges.process import ProcessBridge
-from intellicrack.ui.panels.process_panel._threads_tab import ThreadsTab
+from intellicrack.ui.panels.process_panel.threads_tab import ThreadsTab
 
 
 if TYPE_CHECKING:
@@ -138,7 +138,7 @@ def _accept_write_dialog(monkeypatch: pytest.MonkeyPatch) -> None:
         return QMessageBox.StandardButton.Yes
 
     monkeypatch.setattr(
-        "intellicrack.ui.panels.process_panel._threads_tab.QMessageBox.warning",
+        "intellicrack.ui.panels.process_panel.threads_tab.QMessageBox.warning",
         _yes,
     )
 

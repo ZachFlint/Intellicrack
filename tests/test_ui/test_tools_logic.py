@@ -5,8 +5,8 @@
 
 """Tests for ToolOutputPanel and related widgets logic.
 
-Tests interactivity, signal emission, tab close handling, lazy log
-creation, and integration of function list and cross-reference panels.
+Tests interactivity, signal emission, tab close handling, and integration
+of function list and cross-reference panels.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 
 from intellicrack.ui.app import MainWindow
-from intellicrack.ui.tools import FunctionListPanel, ToolOutputPanel, ToolTab, XRefPanel
+from intellicrack.ui.tools import FunctionListPanel, ToolOutputPanel, XRefPanel
 
 from .conftest import NoOpSandboxManager, SignalRecorder
 
@@ -149,89 +149,12 @@ class TestToolOutputPanelNoDefaultTabs:
         assert panel.tab_widget.tabsClosable() is True
 
 
-@pytest.mark.usefixtures("qapp")
-class TestLogTabLazyCreation:
-    """Tests for on-demand Log tab creation."""
-
-    @staticmethod
-    def test_log_creates_tab_on_first_call() -> None:
-        """Verify log() creates the Log tab when it does not exist."""
-        panel = ToolOutputPanel()
-        assert "log" not in panel.tabs
-        assert panel.tab_widget.count() == 0
-
-        panel.log("test message")
-
-        assert "log" in panel.tabs
-        assert panel.tab_widget.count() == 1
-        assert panel.tab_widget.tabText(0) == "Log"
-
-    @staticmethod
-    def test_log_reuses_existing_tab() -> None:
-        """Verify log() does not create duplicate tabs on subsequent calls."""
-        panel = ToolOutputPanel()
-        panel.log("first message")
-        panel.log("second message")
-
-        assert panel.tab_widget.count() == 1
-        assert len(panel.tabs) == 1
-
-    @staticmethod
-    def test_log_tab_is_tooltab_instance() -> None:
-        """Verify the lazily-created Log tab is a ToolTab."""
-        panel = ToolOutputPanel()
-        panel.log("message")
-
-        log_tab = panel.tabs.get("log")
-        assert log_tab is not None
-        assert isinstance(log_tab, ToolTab)
-
-    @staticmethod
-    def test_log_appends_content() -> None:
-        """Verify log() appends message content to the tab."""
-        panel = ToolOutputPanel()
-        panel.log("line one")
-        panel.log("line two")
-
-        log_tab = panel.tabs["log"]
-        content = log_tab.code_display.toPlainText()
-        assert "line one" in content
-        assert "line two" in content
-
-
 _EXPECTED_TABS_AFTER_THREE_ADDS: int = 3
 
 
 @pytest.mark.usefixtures("qapp")
 class TestTabCloseRequested:
     """Tests for _on_tab_close_requested handler."""
-
-    @staticmethod
-    def test_close_tooltab_removes_from_tabs_dict() -> None:
-        """Verify closing a ToolTab removes it from _tabs and the tab widget."""
-        panel = ToolOutputPanel()
-        panel.log("seed the log tab")
-        assert panel.tab_widget.count() == 1
-        assert "log" in panel.tabs
-
-        panel.on_tab_close_requested(0)
-
-        assert panel.tab_widget.count() == 0
-        assert "log" not in panel.tabs
-
-    @staticmethod
-    def test_close_tooltab_allows_recreation() -> None:
-        """Verify a closed Log tab can be recreated by calling log() again."""
-        panel = ToolOutputPanel()
-        panel.log("first")
-        assert panel.tab_widget.count() == 1
-
-        panel.on_tab_close_requested(0)
-        assert panel.tab_widget.count() == 0
-
-        panel.log("second")
-        assert panel.tab_widget.count() == 1
-        assert "log" in panel.tabs
 
     @staticmethod
     def test_close_analysis_panel_nulls_reference() -> None:
@@ -302,9 +225,9 @@ class TestTabCloseRequested:
     def test_close_multiple_tabs_sequentially() -> None:
         """Verify multiple tabs can be closed one after another."""
         panel = ToolOutputPanel()
-        panel.log("log msg")
         panel.add_analysis_panel()
         panel.add_script_panel()
+        panel.add_stack_panel()
         assert panel.tab_widget.count() == _EXPECTED_TABS_AFTER_THREE_ADDS
 
         panel.on_tab_close_requested(0)
@@ -325,9 +248,8 @@ class TestCloseEmbeddedTools:
     def test_close_embedded_tools_clears_all_dicts() -> None:
         """Verify close_embedded_tools empties all tracking dictionaries."""
         panel = ToolOutputPanel()
-        panel.log("message")
         panel.add_analysis_panel()
-        assert len(panel.tabs) > 0
+        panel.add_script_panel()
         assert len(panel.panels) > 0
 
         panel.close_embedded_tools()

@@ -32,8 +32,8 @@ import pytest
 from PyQt6.QtWidgets import QApplication, QTreeWidget, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor import _bookmarks as bookmarks_module
-from intellicrack.ui.panels.hex_editor._bookmarks import BookmarksMixin
+from intellicrack.ui.panels.hex_editor import bookmarks as bookmarks_module
+from intellicrack.ui.panels.hex_editor.bookmarks import BookmarksMixin
 
 
 if TYPE_CHECKING:

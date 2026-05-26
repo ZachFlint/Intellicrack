@@ -31,7 +31,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import pytest
 from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit
 
-from intellicrack.ui.panels.hex_editor._search import SearchMixin
+from intellicrack.ui.panels.hex_editor.search import SearchMixin
 
 
 class _FakeDocument:

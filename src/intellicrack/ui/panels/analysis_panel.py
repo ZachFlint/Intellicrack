@@ -151,12 +151,12 @@ class BridgeAnalysisPanel(QWidget):
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         v_header = table.verticalHeader()
         if v_header is not None:
-            v_header.setVisible(v=False)
+            v_header.setVisible(False)
         table.setFont(self._mono_font)
 
         h_header = table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(stretch=True)
+            h_header.setStretchLastSection(True)
             h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         return table

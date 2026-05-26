@@ -16,12 +16,16 @@ signalled manual-reset handle cannot leak across cases.
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    SubprocessError,
+    run,
+)
 
 
 if TYPE_CHECKING:
@@ -86,7 +90,7 @@ def _reset_named_event(event_name: str) -> None:
         "}"
     )
     try:
-        subprocess.run(
+        run(
             [
                 pwsh,
                 "-NoLogo",
@@ -102,7 +106,7 @@ def _reset_named_event(event_name: str) -> None:
             check=False,
             timeout=_RESET_TIMEOUT_SEC,
         )
-    except (subprocess.SubprocessError, OSError):
+    except (SubprocessError, OSError):
         return
 
 

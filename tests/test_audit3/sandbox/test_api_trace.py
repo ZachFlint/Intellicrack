@@ -32,13 +32,21 @@ from __future__ import annotations
 import ctypes
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    DEVNULL,
+    PIPE,
+    CompletedProcess,
+    Popen,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -191,7 +199,7 @@ def _run_script(
     duration_seconds: int = 1,
     timeout_seconds: float = 30.0,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
+) -> CompletedProcess[str]:
     """Run an ``api_trace.ps1`` (or a copy) to completion.
 
     Args:
@@ -205,13 +213,13 @@ def _run_script(
         extra_env: Extra environment variables to merge into the child.
 
     Returns:
-        subprocess.CompletedProcess[str]: Completed process with stdout,
+        CompletedProcess[str]: Completed process with stdout,
         stderr, and the captured return code.
     """
     env = dict(os.environ)
     if extra_env:
         env.update(extra_env)
-    return subprocess.run(
+    return run(
         [
             pwsh,
             "-NoLogo",
@@ -238,7 +246,7 @@ def _run_script(
     )
 
 
-def _run_smoke_script_and_wait(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
+def _run_smoke_script_and_wait(log_dir: Path, pwsh: str) -> Popen[str]:
     """Start the smoke script and wait for it (or kill on timeout).
 
     Args:
@@ -246,7 +254,7 @@ def _run_smoke_script_and_wait(log_dir: Path, pwsh: str) -> subprocess.Popen[str
         pwsh: Absolute path to ``pwsh.exe``.
 
     Returns:
-        subprocess.Popen[str]: The background script process.
+        Popen[str]: The background script process.
     """
     proc = _start_script_background(
         log_dir=log_dir,
@@ -256,16 +264,16 @@ def _run_smoke_script_and_wait(log_dir: Path, pwsh: str) -> subprocess.Popen[str
     )
     try:
         proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
-    except subprocess.TimeoutExpired:
+    except TimeoutExpired:
         proc.terminate()
         proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
     return proc
 
 
 def _run_handle_churn_helper_and_wait(
-    proc: subprocess.Popen[str],
+    proc: Popen[str],
     pwsh: str,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Spawn the churn helper and wait for the smoke script to settle.
 
     Args:
@@ -273,13 +281,13 @@ def _run_handle_churn_helper_and_wait(
         pwsh: Absolute path to ``pwsh.exe``.
 
     Returns:
-        subprocess.Popen[str]: The spawned churn helper.
+        Popen[str]: The spawned churn helper.
     """
     time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
     helper = _spawn_handle_churn_helper(pwsh)
     try:
         proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_SEC)
-    except subprocess.TimeoutExpired:
+    except TimeoutExpired:
         proc.terminate()
         proc.wait(timeout=_PWSH_KILL_GRACE_SEC)
     return helper
@@ -292,7 +300,7 @@ def _start_script_background(
     target_pid: int = 0,
     duration_seconds: int = 0,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Launch ``api_trace.ps1`` without blocking the caller.
 
     Args:
@@ -303,12 +311,12 @@ def _start_script_background(
         extra_env: Extra environment variables to merge into the child.
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
     env = dict(os.environ)
     if extra_env:
         env.update(extra_env)
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -325,8 +333,8 @@ def _start_script_background(
             "-DurationSeconds",
             str(duration_seconds),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -334,7 +342,7 @@ def _start_script_background(
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -348,7 +356,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:
@@ -356,7 +364,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
     return stdout or "", stderr or "", proc.returncode
 
 
-def _spawn_handle_churn_helper(pwsh: str) -> subprocess.Popen[str]:
+def _spawn_handle_churn_helper(pwsh: str) -> Popen[str]:
     """Spawn a helper that opens/closes its own process handles in a loop.
 
     Each iteration calls ``OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,
@@ -369,7 +377,7 @@ def _spawn_handle_churn_helper(pwsh: str) -> subprocess.Popen[str]:
         pwsh: Absolute path to the ``pwsh`` executable.
 
     Returns:
-        subprocess.Popen[str]: The running helper process.
+        Popen[str]: The running helper process.
     """
     helper_script = (
         "$sig = @'\n"
@@ -388,7 +396,7 @@ def _spawn_handle_churn_helper(pwsh: str) -> subprocess.Popen[str]:
         "    Start-Sleep -Milliseconds 50\n"
         "}\n"
     )
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -399,8 +407,8 @@ def _spawn_handle_churn_helper(pwsh: str) -> subprocess.Popen[str]:
             "-Command",
             helper_script,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -644,7 +652,7 @@ def test_f0013_get_audit_api_name_resolves_each_event_id(tmp_path: Path) -> None
     )
     probe.write_text(probe_body, encoding="utf-8")
 
-    result = subprocess.run(
+    result = run(
         [
             pwsh,
             "-NoLogo",
@@ -740,7 +748,7 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
     )
     probe.write_text(probe_body, encoding="utf-8")
 
-    result = subprocess.run(
+    result = run(
         [
             pwsh,
             "-NoLogo",
@@ -800,12 +808,12 @@ def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> N
     if not notepad_path.is_file():
         pytest.skip(f"notepad.exe not found at {notepad_path}")
 
-    notepad = subprocess.Popen(
+    notepad = Popen(
         [str(notepad_path)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=DEVNULL,
+        stderr=DEVNULL,
     )
-    proc: subprocess.Popen[str] | None = None
+    proc: Popen[str] | None = None
     try:
         proc = _run_smoke_script_and_wait(log_dir, pwsh)
     finally:
@@ -814,7 +822,7 @@ def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> N
         notepad.terminate()
         try:
             notepad.wait(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             notepad.kill()
 
     log_text = _read_log(log_dir)
@@ -859,7 +867,7 @@ def test_smoke_script_emits_event_records_under_admin(tmp_path: Path) -> None:
         target_pid=0,
         duration_seconds=_SMOKE_DURATION_SEC,
     )
-    helper: subprocess.Popen[str] | None = None
+    helper: Popen[str] | None = None
     try:
         helper = _run_handle_churn_helper_and_wait(proc, pwsh)
     finally:
@@ -876,7 +884,7 @@ def test_smoke_script_emits_event_records_under_admin(tmp_path: Path) -> None:
 def test_log_lines_match_consumer_format(tmp_path: Path) -> None:
     """The log format must remain compatible with ``parse_api_trace_log``.
 
-    ``intellicrack.sandbox._log_parsers.parse_api_trace_log`` expects
+    ``intellicrack.sandbox.log_parsers.parse_api_trace_log`` expects
     ``timestamp|process_name|pid|api_name|module|arguments|return_value``
     (7 pipe-fields, ``arguments`` is semicolon-joined). This test
     re-runs the missing-DLL exit path so we have deterministic content,

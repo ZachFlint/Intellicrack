@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics, QIntValidator, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -181,7 +181,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._console = QPlainTextEdit()
         self._console.setFont(FontManager.get_instance().get_code_font(9))
-        self._console.setReadOnly(ro=True)
+        self._console.setReadOnly(True)
         set_max_block_count(self._console, 10000)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
@@ -1219,21 +1219,20 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             result: List of FridaDeviceInfo from the bridge.
         """
-        self._device_combo.blockSignals(b=True)
-        current = self._device_combo.currentText()
-        self._device_combo.clear()
-        if isinstance(result, list):
-            device_list = cast("list[object]", result)
-            for device_obj in device_list:
-                dev_id = str(getattr(device_obj, "id", ""))
-                dev_name = str(getattr(device_obj, "name", dev_id))
-                dev_type = str(getattr(device_obj, "device_type", ""))
-                display = f"{dev_name} ({dev_type})" if dev_type else dev_name
-                self._device_combo.addItem(display, dev_id)
-        idx = self._device_combo.findText(current)
-        if idx >= 0:
-            self._device_combo.setCurrentIndex(idx)
-        self._device_combo.blockSignals(b=False)
+        with QSignalBlocker(self._device_combo):
+            current = self._device_combo.currentText()
+            self._device_combo.clear()
+            if isinstance(result, list):
+                device_list = cast("list[object]", result)
+                for device_obj in device_list:
+                    dev_id = str(getattr(device_obj, "id", ""))
+                    dev_name = str(getattr(device_obj, "name", dev_id))
+                    dev_type = str(getattr(device_obj, "device_type", ""))
+                    display = f"{dev_name} ({dev_type})" if dev_type else dev_name
+                    self._device_combo.addItem(display, dev_id)
+            idx = self._device_combo.findText(current)
+            if idx >= 0:
+                self._device_combo.setCurrentIndex(idx)
 
     def _on_oneshot_script_success(self, script_size: int, result: object) -> None:
         """Handle successful one-shot script execution.
@@ -1640,7 +1639,21 @@ class FridaPanel(AnalysisPanelBase):
         layout.setSpacing(_PANEL_SPACING)
 
         mem_tabs = QTabWidget()
+        mem_tabs.addTab(self._create_memory_rw_tab(), "Read/Write")
+        mem_tabs.addTab(self._create_memory_scan_tab(), "Scan")
+        mem_tabs.addTab(self._create_memory_regions_tab(), "Regions")
+        mem_tabs.addTab(self._create_memory_protect_tab(), "Protect")
 
+        layout.addWidget(mem_tabs)
+        return container
+
+    def _create_memory_rw_tab(self) -> QWidget:
+        """Create the read / write / allocate memory tab widget.
+
+        Returns:
+            QWidget: Container widget hosting the read, write and allocate
+            controls along with the hex display.
+        """
         rw_widget = QWidget()
         rw_layout = QVBoxLayout(rw_widget)
         read_row = QHBoxLayout()
@@ -1661,7 +1674,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._mem_hex_display = QPlainTextEdit()
         self._mem_hex_display.setFont(FontManager.get_instance().get_code_font(9))
-        self._mem_hex_display.setReadOnly(ro=True)
+        self._mem_hex_display.setReadOnly(True)
         rw_layout.addWidget(self._mem_hex_display)
 
         write_row = QHBoxLayout()
@@ -1693,8 +1706,15 @@ class FridaPanel(AnalysisPanelBase):
         alloc_row.addWidget(self._mem_alloc_result)
         alloc_row.addStretch()
         rw_layout.addLayout(alloc_row)
-        mem_tabs.addTab(rw_widget, "Read/Write")
+        return rw_widget
 
+    def _create_memory_scan_tab(self) -> QWidget:
+        """Create the memory pattern scan tab widget.
+
+        Returns:
+            QWidget: Container widget hosting the pattern input, scan button
+            and result table.
+        """
         scan_widget = QWidget()
         scan_layout = QVBoxLayout(scan_widget)
         scan_row = QHBoxLayout()
@@ -1713,8 +1733,15 @@ class FridaPanel(AnalysisPanelBase):
         if scan_h is not None:
             scan_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         scan_layout.addWidget(self._mem_scan_table)
-        mem_tabs.addTab(scan_widget, "Scan")
+        return scan_widget
 
+    def _create_memory_regions_tab(self) -> QWidget:
+        """Create the memory regions enumeration tab widget.
+
+        Returns:
+            QWidget: Container widget hosting the protection filter and the
+            regions table.
+        """
         regions_widget = QWidget()
         regions_layout = QVBoxLayout(regions_widget)
         regions_row = QHBoxLayout()
@@ -1734,8 +1761,15 @@ class FridaPanel(AnalysisPanelBase):
         if reg_h is not None:
             reg_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         regions_layout.addWidget(self._mem_regions_table)
-        mem_tabs.addTab(regions_widget, "Regions")
+        return regions_widget
 
+    def _create_memory_protect_tab(self) -> QWidget:
+        """Create the memory protection-change tab widget.
+
+        Returns:
+            QWidget: Container widget hosting the address / size / protection
+            inputs and the "Set" action.
+        """
         protect_widget = QWidget()
         protect_layout = QVBoxLayout(protect_widget)
         prot_row = QHBoxLayout()
@@ -1761,10 +1795,7 @@ class FridaPanel(AnalysisPanelBase):
         prot_row.addStretch()
         protect_layout.addLayout(prot_row)
         protect_layout.addStretch()
-        mem_tabs.addTab(protect_widget, "Protect")
-
-        layout.addWidget(mem_tabs)
-        return container
+        return protect_widget
 
     def _on_read_memory(self) -> None:
         """Read memory from the target process."""

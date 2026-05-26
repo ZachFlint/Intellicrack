@@ -18,8 +18,8 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem
 
-import intellicrack.ui.panels.process_panel._memory_tab as _mem_mod
-from intellicrack.ui.panels.process_panel._memory_tab import MemoryTab
+import intellicrack.ui.panels.process_panel.memory_tab as _mem_mod
+from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 
 
 if TYPE_CHECKING:

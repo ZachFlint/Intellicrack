@@ -314,6 +314,13 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Decompose complex methods and upgrade dependencies (`fde6d7b`)
+Decomposed several large, high-complexity methods across the bridges, core orchestrator, providers, and UI components into smaller, single-responsibility private helper methods to improve maintainability and satisfy complexity limits. In tandem, upgraded Rust crate dependencies in the hexcore module, updated Node.js and Python dev dependencies, and added a unified update target to the justfile.
+- **Bridges & Core**: Extracted resource cleanup, initialization, and platform-specific API calls into dedicated private methods.
+- **Providers**: Refactored streaming loops and API response parsing for Anthropic, Google, Grok, and Ollama.
+- **UI & Sandbox**: Decomposed window embedding, dialog rendering, and QEMU/Windows sandbox lifecycle management.
+- **Dependencies**: Upgraded Rust crates (including pyo3 to 0.28 and aes to 0.9), Node.js to >=26.2.0, and updated dev tools.
+
 - Clean up unused assignments and fix google provider arguments (`f9aacfb`)
 Remove redundant walrus operator assignments across multiple modules where the assigned variables were never read. Additionally, correct a duplicate keyword argument in the Google provider initialization to properly pass tool support configuration, and bump several project dependencies.
 - **bridges/process**: Remove unused `is_wow64_target` and `target_is_64bit` assignments.
@@ -730,12 +737,14 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Decompose complex methods and upgrade dependencies (``)
-Decomposed several large, high-complexity methods across the bridges, core orchestrator, providers, and UI components into smaller, single-responsibility private helper methods to improve maintainability and satisfy complexity limits. In tandem, upgraded Rust crate dependencies in the hexcore module, updated Node.js and Python dev dependencies, and added a unified update target to the justfile.
-- **Bridges & Core**: Extracted resource cleanup, initialization, and platform-specific API calls into dedicated private methods.
-- **Providers**: Refactored streaming loops and API response parsing for Anthropic, Google, Grok, and Ollama.
-- **UI & Sandbox**: Decomposed window embedding, dialog rendering, and QEMU/Windows sandbox lifecycle management.
-- **Dependencies**: Upgraded Rust crates (including pyo3 to 0.28 and aes to 0.9), Node.js to >=26.2.0, and updated dev tools.
+- Modularize large bridge classes and rename internal modules (``)
+Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor, Process, x64dbg, and ToolOutputPanel) into linear mixin inheritance chains to comply with public method limits and improve maintainability. Removed leading underscores from internal module filenames across the codebase to standardize import paths. Additionally, introduced a live Qt-based log viewer panel and transitioned GPU ReBAR detection to use authoritative PCI BAR sizes.
+- Rename internal modules across bridges, core, sandbox, and UI to remove leading underscores
+- Split monolithic bridge classes into modular, topical mixin inheritance chains
+- Implement a live log viewer window with a custom Qt signaling handler and tail reader
+- Update Windows GPU ReBAR detection to query PCI BAR sizes via cfgmgr32
+- Add a suite of SVG and PNG asset icons for UI actions and tools
+- Ensure clean task cancellation and log handler detachment during application shutdown
 
 
 ### Documentation

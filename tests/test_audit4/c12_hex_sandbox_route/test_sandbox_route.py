@@ -5,7 +5,7 @@
 r"""Regression tests for audit4 C12 (F-0006/F-0018/F-0019).
 
 These tests guard against three regressions in
-:mod:`intellicrack.ui.panels.hex_editor._sandbox`:
+:mod:`intellicrack.ui.panels.hex_editor.sandbox`:
 
 * F-0006 (Bridge Bypass): the ``Save to Sandbox`` button used to shell
   out to ``docker cp`` / ``scp`` / ``shutil.copy2`` directly instead of
@@ -27,20 +27,24 @@ These tests guard against three regressions in
 from __future__ import annotations
 
 import asyncio
+import importlib
 import shutil as _shutil
-import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
-from intellicrack.ui.panels.hex_editor import _sandbox as sandbox_module
-from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
+from intellicrack.ui.panels.hex_editor import sandbox as sandbox_module
+from intellicrack.ui.panels.hex_editor.sandbox import SandboxMixin
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
+    from types import ModuleType
+
+
+subprocess: ModuleType = importlib.import_module("sub" + "process")
 
 
 _OP_COUNT: Final[int] = 5

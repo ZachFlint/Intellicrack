@@ -36,12 +36,12 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor._base import (
+from intellicrack.ui.panels.hex_editor.base import (
     compute_custom_crc,
     compute_streaming_custom_crc,
 )
-from intellicrack.ui.panels.hex_editor._hashing import HashingMixin
-from intellicrack.ui.panels.hex_editor._widgets import CustomCrcDialog
+from intellicrack.ui.panels.hex_editor.hashing import HashingMixin
+from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
 
 
 # CRC-32 parameters that match the bit-serial implementation in
-# intellicrack.ui.panels.hex_editor._base.compute_custom_crc when the
+# intellicrack.ui.panels.hex_editor.base.compute_custom_crc when the
 # input is reflected (matches the legacy zlib CRC-32 surface).
 _CRC32_WIDTH: int = 32
 _CRC32_POLY: int = 0x04C11DB7

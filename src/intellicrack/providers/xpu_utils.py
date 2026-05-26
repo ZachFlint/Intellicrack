@@ -47,6 +47,9 @@ _INTEL_VENDOR_ID: str = "8086"
 _WIN10_MAJOR_VERSION: int = 10
 _WIN10_2004_BUILD: int = 19041
 
+_PRE_REBAR_BAR_CEILING_BYTES: int = 256 * 1024 * 1024
+_REBAR_RECOMMENDED_MIN_BYTES: int = 512 * 1024 * 1024
+
 _ERR_PYTORCH_NOT_INSTALLED = "PyTorch is not installed"
 _ERR_XPU_NOT_AVAILABLE = "PyTorch XPU support is not available"
 _ERR_NO_XPU_DEVICES = "No XPU devices are available"
@@ -154,8 +157,35 @@ def _get_device_name_from_sycl(device_index: int) -> str:
     return ""
 
 
+_GPU_ENUM_PWSH_SCRIPT: str = (
+    "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); "
+    "Get-CimInstance Win32_VideoController -ErrorAction Stop "
+    "| Select-Object Name,PNPDeviceID,DriverVersion "
+    "| ConvertTo-Json -Compress -Depth 3"
+)
+
+
+def _strip_pwsh_payload(stdout: str) -> str:
+    r"""Strip BOM and surrounding whitespace from a PowerShell stdout payload.
+
+    PowerShell on Windows frequently emits a UTF-8 BOM (``﻿``) which is not whitespace and therefore survives :meth:`str.strip`, causing
+    :func:`json.loads` to fail with "Expecting value: line 1 column 1 (char 0)".
+
+    Args:
+        stdout: Raw stdout text returned by the subprocess.
+
+    Returns:
+        str: Payload with BOM and outer whitespace removed.
+    """
+    return stdout.lstrip("﻿").strip()
+
+
 def _query_windows_gpus() -> list[dict[str, str]]:
-    """Run WMI query and parse GPU entries from JSON output.
+    """Run a single CIM query and parse GPU entries from JSON output.
+
+    Uses ``Get-CimInstance`` (the supported successor to the deprecated ``Get-WmiObject``), runs pwsh with ``-NoProfile`` /
+    ``-NonInteractive`` for a faster cold start, and forces UTF-8 output encoding without BOM. The resulting JSON is robustly stripped of BOM
+    bytes before parsing to avoid spurious decode failures on Windows.
 
     Returns:
         list[dict[str, str]]: Normalized GPU info entries (name/pnp/driver_version).
@@ -163,16 +193,36 @@ def _query_windows_gpus() -> list[dict[str, str]]:
     result = ProcessManager.get_instance().run_tracked(
         [
             "pwsh",
+            "-NoProfile",
+            "-NonInteractive",
             "-Command",
-            "Get-WmiObject Win32_VideoController | Select-Object Name,PNPDeviceID,DriverVersion | ConvertTo-Json",
+            _GPU_ENUM_PWSH_SCRIPT,
         ],
         name="xpu-gpu-detect",
         timeout=10,
         check=False,
     )
-    if result.returncode != 0 or not result.stdout.strip():
+    if result.returncode != 0:
+        stderr_text: str = str(result.stderr).strip() if result.stderr else ""
+        _logger.warning(
+            "xpu_gpu_enum_nonzero_exit",
+            returncode=result.returncode,
+            stderr=stderr_text,
+        )
         return []
-    raw: object = json.loads(result.stdout)
+    payload = _strip_pwsh_payload(result.stdout)
+    if not payload:
+        _logger.debug("xpu_gpu_enum_empty_payload")
+        return []
+    try:
+        raw: object = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        _logger.warning(
+            "xpu_gpu_enum_json_parse_failed",
+            error=str(exc),
+            payload_preview=payload[:160],
+        )
+        return []
     if isinstance(raw, dict):
         gpu_entries: list[dict[str, str]] = [cast("dict[str, str]", raw)]
     elif isinstance(raw, list):
@@ -550,7 +600,10 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     Verifies:
     - Windows 10/11 version compatibility
     - Intel GPU driver installation
-    - Resizable BAR (ReBAR) status
+    - Resizable BAR (ReBAR) status via PCI BAR enumeration
+
+    A single PowerShell WMI invocation is used to enumerate video controllers; ReBAR status is then derived in-process via cfgmgr32 BAR
+    enumeration without spawning additional subprocesses.
 
     Returns:
         tuple[bool, list[str]]: Tuple of (all_requirements_met, list_of_warning_messages).
@@ -570,28 +623,26 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     elif win_version.major == _WIN10_MAJOR_VERSION and win_version.build < _WIN10_2004_BUILD:
         warnings.append("Windows 10 version 2004 (build 19041) or later recommended for optimal XPU support")
 
-    driver_ok, driver_warning = _check_intel_driver()
+    gpus = _get_windows_gpu_info()
+
+    driver_ok, driver_warning = _check_intel_driver(gpus)
     if not driver_ok:
         warnings.append(driver_warning)
         all_met = False
 
-    rebar_ok, rebar_warning = _check_rebar_status()
-    if not rebar_ok:
+    rebar_ok, rebar_warning = _check_rebar_status(gpus)
+    if not rebar_ok and rebar_warning:
         warnings.append(rebar_warning)
 
-    gpus = _get_windows_gpu_info()
-
-    for gpu in gpus:
-        pnp_id = gpu.get("pnp_device_id", "")
-        if pnp_id:
-            bar_bytes = max_memory_bar_bytes(pnp_id)
-            if bar_bytes > 0:
-                _logger.debug("gpu_bar_size_audited", gpu=gpu.get("name"), bar_size=bar_bytes)
-                if bar_bytes < 512 * 1024 * 1024:
-                    warnings.append(
-                        f"GPU '{gpu.get('name')}' Resizable BAR is disabled or limited ({bar_bytes // 1024 // 1024} MB). "
-                        "Local LLM context profiles exceeding this size will trigger severe CPU-fallback slowdowns.",
-                    )
+    primary_arc = _pick_primary_arc_gpu(gpus)
+    if rebar_ok and primary_arc is not None:
+        primary_name, primary_bar = primary_arc
+        _logger.debug("gpu_bar_size_audited", gpu=primary_name, bar_size=primary_bar)
+        if 0 < primary_bar < _REBAR_RECOMMENDED_MIN_BYTES:
+            warnings.append(
+                f"GPU '{primary_name}' Resizable BAR is enabled but limited to {primary_bar // 1024 // 1024} MB. "
+                "Local LLM context profiles exceeding this size will trigger severe CPU-fallback slowdowns.",
+            )
 
     _logger.debug(
         "xpu_windows_requirements_check_complete",
@@ -601,70 +652,116 @@ def check_windows_requirements() -> tuple[bool, list[str]]:
     return (all_met, warnings)
 
 
-def _check_intel_driver() -> tuple[bool, str]:
-    """Check Intel GPU driver status.
+def _pick_primary_arc_gpu(gpus: list[dict[str, str]]) -> tuple[str, int] | None:
+    """Pick the Intel Arc GPU :mod:`torch.xpu` will most likely use for compute.
+
+    Selects the Arc-class GPU with the largest allocated PCI MMIO BAR; this is the discrete card on systems that also have a Lunar Lake /
+    Meteor Lake integrated Arc iGPU, whose 256 MB BAR is architectural rather than a ReBAR failure.
+
+    Args:
+        gpus: GPU list returned by :func:`_get_windows_gpu_info`.
 
     Returns:
-        tuple[bool, str]: Tuple of (driver_ok, warning_message).
+        tuple[str, int] | None: ``(device_name, largest_bar_bytes)`` for the selected primary Arc GPU, or ``None`` when no Intel Arc device
+        is present.
+    """
+    primary_name: str | None = None
+    primary_bar = 0
+    for gpu in gpus:
+        name = gpu.get("name", "")
+        if "Intel" not in name or not any(p in name for p in _ARC_DEVICE_PATTERNS):
+            continue
+        pnp_id = gpu.get("pnp_device_id", "")
+        if not pnp_id:
+            continue
+        bar_bytes = max_memory_bar_bytes(pnp_id)
+        if bar_bytes > primary_bar:
+            primary_bar = bar_bytes
+            primary_name = name
+    if primary_name is None:
+        return None
+    return (primary_name, primary_bar)
+
+
+def _check_intel_driver(gpus: list[dict[str, str]] | None = None) -> tuple[bool, str]:
+    """Check Intel GPU driver status from enumerated Win32_VideoController entries.
+
+    Args:
+        gpus: Pre-enumerated GPU list from :func:`_get_windows_gpu_info`. When None,
+            the GPU list is fetched lazily so the helper remains usable standalone.
+
+    Returns:
+        tuple[bool, str]: Tuple of (driver_ok, warning_message). ``driver_ok`` is True when
+        at least one Intel Arc-class GPU is present with a non-empty driver version string.
     """
     _logger.debug("xpu_driver_check_started")
-    try:
-        result = ProcessManager.get_instance().run_tracked(
-            [
-                "pwsh",
-                "-Command",
-                "Get-WmiObject Win32_VideoController | Where-Object {$_.Name -like '*Intel*Arc*'} | Select-Object DriverVersion | ConvertTo-Json",
-            ],
-            name="xpu-driver-check",
-            timeout=10,
-            check=False,
-        )
-    except (OSError, ValueError, RuntimeError) as exc:
-        _logger.debug("xpu_driver_check_failed", error=str(exc))
-        return (False, "Could not verify Intel GPU driver status")
-    else:
-        if result.returncode == 0 and result.stdout.strip():
-            _logger.debug("xpu_driver_detected")
+    gpu_list = gpus if gpus is not None else _get_windows_gpu_info()
+    for gpu in gpu_list:
+        name = gpu.get("name", "")
+        if "Intel" not in name:
+            continue
+        if not any(pattern in name for pattern in _ARC_DEVICE_PATTERNS):
+            continue
+        driver_version = gpu.get("driver_version", "").strip()
+        if driver_version:
+            _logger.debug("xpu_driver_detected", device=name, driver_version=driver_version)
             return (True, "")
-        _logger.debug("xpu_driver_not_found", returncode=result.returncode)
-        return (False, "Intel Arc GPU driver not detected. Install the latest Intel Arc driver from intel.com")
+    _logger.debug("xpu_driver_not_found", gpu_count=len(gpu_list))
+    return (False, "Intel Arc GPU driver not detected. Install the latest Intel Arc driver from intel.com")
 
 
-def _check_rebar_status() -> tuple[bool, str]:
-    """Check Resizable BAR status.
+def _check_rebar_status(gpus: list[dict[str, str]] | None = None) -> tuple[bool, str]:
+    """Check Resizable BAR status by inspecting allocated PCI BAR sizes.
+
+    ReBAR is detected by walking the cfgmgr32 ``ALLOC_LOG_CONF`` resource list for each Intel Arc PnP device and checking whether the largest
+    allocated MEM/MEM_LARGE descriptor exceeds the legacy 256 MB pre-ReBAR ceiling. This is vendor-agnostic and accurate for Intel Arc; the
+    previous registry approach relied on NVIDIA-only ``RmGpuLdPciResizableBar`` keys and always reported disabled on Intel hardware.
+
+    Args:
+        gpus: Pre-enumerated GPU list from :func:`_get_windows_gpu_info`. When None,
+            the GPU list is fetched lazily so the helper remains usable standalone.
 
     Returns:
-        tuple[bool, str]: Tuple of (rebar_enabled, warning_message).
+        tuple[bool, str]: Tuple of (rebar_enabled, warning_message). ``rebar_enabled`` is True when at least one Intel Arc GPU has a BAR
+        larger than 256 MB. The warning string is empty when no warning should be surfaced (including the no-Intel-GPU case, which is already
+        reflected by the driver check).
     """
     _logger.debug("xpu_rebar_check_started")
-    try:
-        result = ProcessManager.get_instance().run_tracked(
-            [
-                "pwsh",
-                "-Command",
-                "(Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Video\\*\\*' -ErrorAction SilentlyContinue | Where-Object {$_.RmGpuLdPciResizableBar -eq 1}).Count",
-            ],
-            name="xpu-rebar-check",
-            timeout=10,
-            check=False,
-        )
-    except (OSError, ValueError, RuntimeError) as exc:
-        _logger.warning("xpu_rebar_check_failed", error=str(exc))
-        return (False, "Could not verify Resizable BAR status; check system permissions")
-    else:
-        if result.returncode == 0:
-            count = result.stdout.strip().splitlines()[-1].strip() if result.stdout.strip() else ""
-            if count:
-                try:
-                    count_value = int(count)
-                except ValueError:
-                    _logger.debug("xpu_rebar_count_unparseable", raw_count=count)
-                else:
-                    if count_value > 0:
-                        _logger.debug("xpu_rebar_enabled", count=count_value)
-                        return (True, "")
-        _logger.debug("xpu_rebar_not_detected")
-        return (False, "Resizable BAR (ReBAR) may not be enabled. Enable in BIOS for optimal performance")
+    gpu_list = gpus if gpus is not None else _get_windows_gpu_info()
+    intel_gpus = [
+        gpu
+        for gpu in gpu_list
+        if "Intel" in gpu.get("name", "") and any(pattern in gpu.get("name", "") for pattern in _ARC_DEVICE_PATTERNS)
+    ]
+    if not intel_gpus:
+        _logger.debug("xpu_rebar_skipped", reason="no_intel_arc_gpu")
+        return (False, "")
+
+    largest_bar = 0
+    for gpu in intel_gpus:
+        pnp_id = gpu.get("pnp_device_id", "")
+        if not pnp_id:
+            continue
+        bar_bytes = max_memory_bar_bytes(pnp_id)
+        largest_bar = max(largest_bar, bar_bytes)
+
+    if largest_bar <= 0:
+        _logger.warning("xpu_rebar_check_indeterminate", reason="no_bar_descriptors")
+        return (False, "Could not verify Resizable BAR status (PCI resource enumeration returned no data)")
+
+    if largest_bar > _PRE_REBAR_BAR_CEILING_BYTES:
+        _logger.debug("xpu_rebar_enabled", largest_bar_bytes=largest_bar)
+        return (True, "")
+
+    _logger.debug("xpu_rebar_not_enabled", largest_bar_bytes=largest_bar)
+    bar_mb = largest_bar // 1024 // 1024
+    return (
+        False,
+        (
+            f"Resizable BAR (ReBAR) is not enabled (PCI BAR limited to {bar_mb} MB). "
+            "Enable Resizable BAR in BIOS/UEFI for optimal performance."
+        ),
+    )
 
 
 def get_optimal_dtype_for_xpu() -> str:

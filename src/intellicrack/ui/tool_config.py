@@ -46,11 +46,11 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.bridges.installer import pefile_available
-from intellicrack.core._subprocess import TimeoutExpired
 from intellicrack.core.config import get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
-from intellicrack.ui._dialogs import show_info, show_warning
+from intellicrack.core.subprocess_compat import TimeoutExpired
+from intellicrack.ui.dialogs_helpers import show_info, show_warning
 from intellicrack.ui.resources import IconManager
 
 

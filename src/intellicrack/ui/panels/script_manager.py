@@ -548,7 +548,7 @@ class ScriptManagerPanel(QWidget):
 
         self._name_edit = QLineEdit()
         self._name_edit.setToolTip("Enter script name")
-        self._name_edit.setClearButtonEnabled(enable=True)
+        self._name_edit.setClearButtonEnabled(True)
         header_layout.addWidget(self._name_edit, 1)
 
         self._type_combo = QComboBox()

@@ -32,13 +32,19 @@ from __future__ import annotations
 import ctypes
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -91,7 +97,7 @@ def _start_script(
     pwsh: str,
     target_pid: int = 0,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Spawn ``injection_monitor.ps1`` with the supplied log directory.
 
     Args:
@@ -102,12 +108,12 @@ def _start_script(
             process environment.
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
     env = dict(os.environ)
     if extra_env:
         env.update(extra_env)
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -122,8 +128,8 @@ def _start_script(
             "-TargetPid",
             str(target_pid),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -131,7 +137,7 @@ def _start_script(
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -146,7 +152,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:
@@ -154,7 +160,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
     return stdout or "", stderr or "", proc.returncode
 
 
-def _spawn_thread_helper(pwsh: str) -> subprocess.Popen[str]:
+def _spawn_thread_helper(pwsh: str) -> Popen[str]:
     r"""Spawn a helper that creates ordinary in-process threads.
 
     The helper invokes ``Thread.Start`` repeatedly inside the helper
@@ -168,7 +174,7 @@ def _spawn_thread_helper(pwsh: str) -> subprocess.Popen[str]:
         pwsh: Absolute path to the ``pwsh`` executable.
 
     Returns:
-        subprocess.Popen[str]: The running helper process.
+        Popen[str]: The running helper process.
     """
     helper_script = (
         "for($i=0;$i -lt 30;$i++){"
@@ -179,7 +185,7 @@ def _spawn_thread_helper(pwsh: str) -> subprocess.Popen[str]:
         "$t.Start();"
         "Start-Sleep -Milliseconds 200}"
     )
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -190,8 +196,8 @@ def _spawn_thread_helper(pwsh: str) -> subprocess.Popen[str]:
             "-Command",
             helper_script,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -237,7 +243,7 @@ def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
 
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",
@@ -319,7 +325,7 @@ def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
     log_dir.mkdir()
 
     helper = _spawn_thread_helper(pwsh)
-    proc: subprocess.Popen[str] | None = None
+    proc: Popen[str] | None = None
     try:
         time.sleep(0.3)
         proc = _start_script(log_dir, pwsh, target_pid=helper.pid)

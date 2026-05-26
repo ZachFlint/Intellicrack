@@ -18,13 +18,15 @@ Covers F-0001..F-0007 from ``audit1.md``:
   with whitespace after the opening brace and around the colon.
 * F-0006 - prompt formatting must tolerate tokenizers without a
   ``chat_template`` attribute at all.
-* F-0007 - the Resizable-BAR PowerShell parser must not raise ``ValueError``
-  when the registry query returns non-numeric output.
+* F-0007 - the Resizable-BAR detector must derive ReBAR state from the
+  authoritative PCI BAR size (cfgmgr32) rather than the NVIDIA-only
+  ``RmGpuLdPciResizableBar`` registry value, and must not raise when BAR
+  enumeration returns no data.
 
 These tests use real provider code paths and structlog loggers; the only
-process boundary they stub is the PowerShell subprocess invocation in
-``ProcessManager``, which is the exact integration point the audit calls
-out as defensively unsafe.
+process boundary they stub for F-0007 is :func:`max_memory_bar_bytes`, the
+cfgmgr32 BAR enumeration shim, which is the integration point Intel Arc
+ReBAR detection now depends on.
 """
 
 from __future__ import annotations
@@ -480,135 +482,128 @@ def test_f0006_format_prompt_handles_tokenizer_without_chat_template() -> None:
 
 
 # ---------------------------------------------------------------------------
-# F-0007: ReBAR parser must not crash on non-numeric output.
+# F-0007: ReBAR detection derives status from authoritative PCI BAR size.
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class _FakeCompletedProcess:
-    """Minimal stand-in for ``subprocess.CompletedProcess``.
-
-    Mirrors the attributes the production parser reads
-    (``returncode``, ``stdout``).
-    """
-
-    returncode: int
-    stdout: str
+_INTEL_ARC_B580_PNP: str = r"PCI\VEN_8086&DEV_E20B&SUBSYS_A003207E&REV_00\6&128604AE&0&00080008"
+_INTEL_ARC_B580_NAME: str = "Intel(R) Arc(TM) B580 Graphics"
+_MB: int = 1024 * 1024
+_GB: int = 1024 * _MB
 
 
-class _FakeProcessManager:
-    """Stand-in returned by ``ProcessManager.get_instance`` in tests.
-
-    Intercepts the single ``run_tracked`` call performed by
-    ``_check_rebar_status`` and yields a deterministic
-    ``CompletedProcess``-shaped result so the real parser can run end to
-    end without spawning ``pwsh``.
-    """
-
-    def __init__(self, completed: _FakeCompletedProcess) -> None:
-        """Store the simulated PowerShell completion result.
-
-        Args:
-            completed: The pre-built fake completion to return on every
-                ``run_tracked`` invocation.
-        """
-        self._completed = completed
-        self.calls: list[list[str]] = []
-
-    def run_tracked(
-        self,
-        command: list[str],
-        *,
-        name: str,
-        timeout: float,
-        check: bool,
-    ) -> _FakeCompletedProcess:
-        """Record the call and return the pre-built simulation.
-
-        Args:
-            command: The argv list the production code wanted to run.
-            name: The structured-logging tag for the spawned process.
-            timeout: Subprocess timeout supplied by the production code.
-            check: Whether the production code wants exit-code enforcement.
-
-        Returns:
-            _FakeCompletedProcess: The simulated completion record.
-        """
-        del name, timeout, check
-        self.calls.append(list(command))
-        return self._completed
-
-
-def _install_fake_process_manager(
-    monkeypatch: pytest.MonkeyPatch,
-    completed: _FakeCompletedProcess,
-) -> _FakeProcessManager:
-    """Replace ``ProcessManager.get_instance`` with a deterministic stand-in.
-
-    The replacement is scoped to the test via ``monkeypatch`` so the
-    global singleton is restored automatically when the test ends.
-
-    Args:
-        monkeypatch: Pytest fixture used to install the temporary
-            attribute.
-        completed: PowerShell completion record to return.
+def _intel_arc_gpu_list() -> list[dict[str, str]]:
+    """Build a representative Intel Arc B580 GPU enumeration entry.
 
     Returns:
-        _FakeProcessManager: The active stand-in, returned so callers
-        can inspect ``calls`` for assertions.
+        list[dict[str, str]]: Single-entry list mirroring the shape returned by
+        :func:`intellicrack.providers.xpu_utils._get_windows_gpu_info`.
     """
-    fake = _FakeProcessManager(completed)
-    monkeypatch.setattr(_xpu_utils_module.ProcessManager, "get_instance", lambda: fake)
-    return fake
+    return [
+        {
+            "name": _INTEL_ARC_B580_NAME,
+            "pnp_device_id": _INTEL_ARC_B580_PNP,
+            "driver_version": "32.0.101.6912",
+        },
+    ]
 
 
-def test_f0007_check_rebar_status_handles_garbage_output(
+def _install_fake_bar_size(
+    monkeypatch: pytest.MonkeyPatch,
+    bar_bytes: int,
+) -> list[str]:
+    """Replace ``max_memory_bar_bytes`` with a deterministic stand-in.
+
+    Args:
+        monkeypatch: Pytest fixture used to install the temporary attribute.
+        bar_bytes: Fixed BAR size in bytes that the stand-in should return.
+
+    Returns:
+        list[str]: Captured ``pnp_device_id`` arguments received by the stand-in,
+        useful for asserting the production code passed the expected PnP ID.
+    """
+    captured: list[str] = []
+
+    def _fake_max_bar(pnp_id: str) -> int:
+        captured.append(pnp_id)
+        return bar_bytes
+
+    monkeypatch.setattr(_xpu_utils_module, "max_memory_bar_bytes", _fake_max_bar)
+    return captured
+
+
+def test_f0007_check_rebar_status_reports_enabled_for_large_bar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Non-numeric PowerShell output must yield ``(False, warning)``.
+    """An Intel Arc GPU with BAR > 256 MB must report ReBAR enabled.
 
-    Pre-fix, ``int(count)`` propagated ``ValueError`` out of
-    ``_check_rebar_status`` and broke
-    ``LocalTransformersProvider.connect``.
+    The legacy registry-based check returned False on Intel hardware
+    because ``RmGpuLdPciResizableBar`` is an NVIDIA driver-private value.
+    The PCI BAR-based check correctly identifies ReBAR by observing that
+    Windows allocated the full VRAM region as MMIO (here 12 GB).
     """
-    fake = _FakeCompletedProcess(returncode=0, stdout="permission denied\n")
-    _install_fake_process_manager(monkeypatch, fake)
+    captured = _install_fake_bar_size(monkeypatch, 12 * _GB)
 
-    ok, message = _check_rebar_status()
-
-    assert ok is False
-    assert "Resizable BAR" in message
-
-
-def test_f0007_check_rebar_status_recognises_positive_count(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A genuine numeric ``count`` of >0 must report ReBAR enabled.
-
-    Regression guard: the defensive parsing must still report the
-    happy path correctly.
-    """
-    fake = _FakeCompletedProcess(returncode=0, stdout="2\n")
-    _install_fake_process_manager(monkeypatch, fake)
-
-    ok, message = _check_rebar_status()
+    ok, message = _check_rebar_status(_intel_arc_gpu_list())
 
     assert ok is True
     assert not message
+    assert captured == [_INTEL_ARC_B580_PNP]
 
 
-def test_f0007_check_rebar_status_recognises_zero_count(
+def test_f0007_check_rebar_status_reports_disabled_for_capped_bar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A numeric ``0`` must report ReBAR not enabled, with the warning text.
+    """An Intel Arc GPU with a 256 MB BAR must report ReBAR not enabled.
 
-    Regression guard: ``int("0") > 0`` evaluates to ``False`` so the
-    function must fall through to the warning branch.
+    256 MB is the legacy pre-ReBAR ceiling; the function must reject this
+    as ReBAR-disabled and surface a warning that names the BAR size.
     """
-    fake = _FakeCompletedProcess(returncode=0, stdout="0\n")
-    _install_fake_process_manager(monkeypatch, fake)
+    _install_fake_bar_size(monkeypatch, 256 * _MB)
 
-    ok, message = _check_rebar_status()
+    ok, message = _check_rebar_status(_intel_arc_gpu_list())
 
     assert ok is False
     assert "Resizable BAR" in message
+    assert "256 MB" in message
+
+
+def test_f0007_check_rebar_status_handles_missing_bar_data(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When PCI enumeration returns no data, surface an indeterminate warning.
+
+    Pre-fix, ``int(count)`` could propagate ``ValueError`` out of the
+    registry-based parser. The PCI-BAR-based replacement must always
+    return ``(bool, str)`` regardless of whether cfgmgr32 produced data.
+    """
+    _install_fake_bar_size(monkeypatch, 0)
+
+    ok, message = _check_rebar_status(_intel_arc_gpu_list())
+
+    assert ok is False
+    assert "Resizable BAR" in message
+
+
+def test_f0007_check_rebar_status_skips_silently_without_intel_arc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No Intel Arc GPU in the enumeration must yield ``(False, "")``.
+
+    The driver-presence check already surfaces a warning when no Intel
+    Arc GPU is found; the ReBAR check must not duplicate that warning.
+    """
+    captured = _install_fake_bar_size(monkeypatch, 12 * _GB)
+
+    gpus_without_intel: list[dict[str, str]] = [
+        {
+            "name": "NVIDIA GeForce RTX 4090",
+            "pnp_device_id": r"PCI\VEN_10DE&DEV_2684",
+            "driver_version": "560.00",
+        },
+    ]
+    ok, message = _check_rebar_status(gpus_without_intel)
+
+    assert ok is False
+    assert not message
+    assert captured == []

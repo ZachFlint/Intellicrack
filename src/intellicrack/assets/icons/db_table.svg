@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="dbTableGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#795548;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3E2723;stop-opacity:1" />
+    </linearGradient>
+    <filter id="dbTableShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#1C0E0B" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Table container -->
+  <rect x="2" y="2" width="20" height="20" rx="2"
+        fill="url(#dbTableGradient)" stroke="#1C0E0B" stroke-width="0.8" filter="url(#dbTableShadowFilter)"/>
+
+  <!-- Table background -->
+  <rect x="3" y="3" width="18" height="18" rx="1" fill="#FFFFFF"/>
+
+  <!-- Table header -->
+  <rect x="3" y="3" width="18" height="3" rx="1" fill="#5D4037"/>
+  <text x="12" y="5.5" font-family="Arial" font-size="2.5" text-anchor="middle" fill="#FFFFFF" font-weight="bold">TABLE</text>
+
+  <!-- Column headers -->
+  <rect x="3" y="6" width="18" height="2" fill="#8D6E63"/>
+  <line x1="9" y1="6" x2="9" y2="8" stroke="#6D4C41" stroke-width="0.5"/>
+  <line x1="15" y1="6" x2="15" y2="8" stroke="#6D4C41" stroke-width="0.5"/>
+
+  <text x="6" y="7.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#FFFFFF">ID</text>
+  <text x="12" y="7.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#FFFFFF">NAME</text>
+  <text x="18" y="7.5" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#FFFFFF">VALUE</text>
+
+  <!-- Data rows -->
+  <rect x="3" y="8" width="18" height="2.5" fill="#F5F5F5"/>
+  <line x1="9" y1="8" x2="9" y2="10.5" stroke="#CCCCCC" stroke-width="0.3"/>
+  <line x1="15" y1="8" x2="15" y2="10.5" stroke="#CCCCCC" stroke-width="0.3"/>
+  <text x="6" y="9.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">001</text>
+  <text x="12" y="9.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">Alice</text>
+  <text x="18" y="9.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">100</text>
+
+  <rect x="3" y="10.5" width="18" height="2.5" fill="#FFFFFF"/>
+  <line x1="9" y1="10.5" x2="9" y2="13" stroke="#CCCCCC" stroke-width="0.3"/>
+  <line x1="15" y1="10.5" x2="15" y2="13" stroke="#CCCCCC" stroke-width="0.3"/>
+  <text x="6" y="12" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">002</text>
+  <text x="12" y="12" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">Bob</text>
+  <text x="18" y="12" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">250</text>
+
+  <rect x="3" y="13" width="18" height="2.5" fill="#F5F5F5"/>
+  <line x1="9" y1="13" x2="9" y2="15.5" stroke="#CCCCCC" stroke-width="0.3"/>
+  <line x1="15" y1="13" x2="15" y2="15.5" stroke="#CCCCCC" stroke-width="0.3"/>
+  <text x="6" y="14.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">003</text>
+  <text x="12" y="14.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">Carol</text>
+  <text x="18" y="14.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#333333">75</text>
+
+  <!-- Table border -->
+  <rect x="3" y="6" width="18" height="9.5" fill="none" stroke="#5D4037" stroke-width="0.5"/>
+
+  <!-- Row count indicator -->
+  <rect x="3" y="16" width="18" height="2" fill="#D7CCC8"/>
+  <text x="12" y="17.2" font-family="monospace" font-size="1.8" text-anchor="middle" fill="#3E2723">3 rows</text>
+
+  <!-- Primary key indicator -->
+  <circle cx="4.5" cy="9.2" r="0.8" fill="#FFD700"/>
+  <text x="4.5" y="9.5" font-family="monospace" font-size="1.2" text-anchor="middle" fill="#3E2723">K</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="8" cy="4" rx="4" ry="1" fill="#FFFFFF" opacity="0.2"/>
+</svg>

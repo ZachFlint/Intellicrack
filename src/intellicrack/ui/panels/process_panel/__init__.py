@@ -9,7 +9,7 @@ Provides a comprehensive process inspection and manipulation panel with bridge i
 
 from __future__ import annotations
 
-from intellicrack.ui.panels.process_panel._base import ProcessPanel
+from intellicrack.ui.panels.process_panel.base import ProcessPanel
 
 
 __all__: list[str] = ["ProcessPanel"]

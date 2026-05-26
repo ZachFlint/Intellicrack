@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="idleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9E9E9E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#424242;stop-opacity:1" />
+    </linearGradient>
+    <filter id="idleShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#212121" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Idle circle background -->
+  <circle cx="12" cy="12" r="11" fill="url(#idleGradient)" stroke="#212121" stroke-width="0.8" filter="url(#idleShadowFilter)"/>
+  <circle cx="12" cy="12" r="8.5" fill="none" stroke="#E0E0E0" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Idle/sleep symbol (moon with zzz) -->
+  <path d="M9 8 Q11 6 13 8 Q15 10 13 12 Q11 14 9 12 Q7 10 9 8" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="11" cy="10" r="1.5" fill="url(#idleGradient)"/>
+
+  <!-- Sleep indicators (zzz) -->
+  <path d="M15 7 L17 7 L15 9 L17 9" stroke="#FFFFFF" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M17 9 L19 9 L17 11 L19 11" stroke="#FFFFFF" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M19 11 L21 11 L19 13 L21 13" stroke="#FFFFFF" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.3"/>
+
+  <!-- Pulse effect -->
+  <circle cx="12" cy="12" r="6" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.3">
+    <animate attributeName="opacity" values="0.1;0.5;0.1" dur="3s" repeatCount="indefinite"/>
+  </circle>
+</svg>

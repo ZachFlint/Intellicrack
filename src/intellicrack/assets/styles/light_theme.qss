@@ -320,6 +320,7 @@ QTreeWidget::item:hover:!selected, QTreeView::item:hover:!selected {
 /* Table Widget */
 QTableWidget, QTableView {
     background-color: #ffffff;
+    alternate-background-color: #f4f4f7;
     color: #1a1a1a;
     border: 1px solid #e0e0e0;
     gridline-color: #e0e0e0;

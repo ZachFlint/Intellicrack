@@ -366,7 +366,12 @@ class TagChipsWidget(QWidget):
             "}"
             "QPushButton#tagChip:hover { background: palette(highlight); color: palette(highlighted-text); }",
         )
-        chip.clicked.connect(lambda _checked=False, t=tag: self._on_chip_clicked(t))
+        bound_tag: str = tag
+
+        def _on_clicked(_state: int = 0, t: str = bound_tag) -> None:
+            self._on_chip_clicked(t)
+
+        chip.clicked.connect(_on_clicked)
         self._chips_layout.addWidget(chip)
         self._chip_buttons[tag] = chip
 
@@ -504,10 +509,10 @@ class SessionManagerDialog(QDialog):
         self._session_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         sm_v_header = self._session_table.verticalHeader()
         if sm_v_header is not None:
-            sm_v_header.setVisible(v=False)
+            sm_v_header.setVisible(False)
         header = self._session_table.horizontalHeader()
         if header is not None:
-            header.setStretchLastSection(stretch=True)
+            header.setStretchLastSection(True)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
@@ -616,7 +621,7 @@ class SessionManagerDialog(QDialog):
         group = QGroupBox("Preview")
         layout = QVBoxLayout()
         self._preview_text = QTextEdit()
-        self._preview_text.setReadOnly(ro=True)
+        self._preview_text.setReadOnly(True)
         self._preview_text.setStyleSheet("font-family: 'Consolas', 'Courier New', monospace; font-size: 10px;")
         layout.addWidget(self._preview_text)
         group.setLayout(layout)
@@ -695,7 +700,7 @@ class SessionManagerDialog(QDialog):
                 for col in range(4):
                     if item := self._session_table.item(row, col):
                         font = item.font()
-                        font.setBold(enable=True)
+                        font.setBold(True)
                         item.setFont(font)
 
         _logger.info("session_list_refreshed", count=len(self._sessions))

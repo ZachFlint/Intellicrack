@@ -27,13 +27,21 @@ from __future__ import annotations
 
 import contextlib
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    DEVNULL,
+    PIPE,
+    Popen,
+    SubprocessError,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -237,7 +245,7 @@ def test_helper_signal_event_then_waitforexit_releases_consumer(tmp_path: Path) 
         "exit 7"
     )
 
-    consumer = subprocess.Popen(
+    consumer = Popen(
         [
             pwsh,
             "-NoLogo",
@@ -248,8 +256,8 @@ def test_helper_signal_event_then_waitforexit_releases_consumer(tmp_path: Path) 
             "-Command",
             consumer_script,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -259,7 +267,7 @@ def test_helper_signal_event_then_waitforexit_releases_consumer(tmp_path: Path) 
     finally:
         if consumer.poll() is None:
             consumer.kill()
-            with contextlib.suppress(subprocess.TimeoutExpired):
+            with contextlib.suppress(TimeoutExpired):
                 consumer.communicate(timeout=_PWSH_KILL_GRACE_SEC)
 
 
@@ -281,7 +289,7 @@ def test_kernel_object_monitor_finally_emits_stopped_record(tmp_path: Path) -> N
     log_dir.mkdir()
     lifecycle_log = log_dir / _KERNEL_OBJECT_LIFECYCLE_LOG
 
-    monitor = subprocess.Popen(
+    monitor = Popen(
         [
             pwsh,
             "-NoLogo",
@@ -296,8 +304,8 @@ def test_kernel_object_monitor_finally_emits_stopped_record(tmp_path: Path) -> N
             "-PollIntervalMilliseconds",
             str(_FAST_POLL_INTERVAL_MS),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -307,12 +315,12 @@ def test_kernel_object_monitor_finally_emits_stopped_record(tmp_path: Path) -> N
     finally:
         if monitor.poll() is None:
             monitor.kill()
-            with contextlib.suppress(subprocess.TimeoutExpired):
+            with contextlib.suppress(TimeoutExpired):
                 monitor.communicate(timeout=_PWSH_KILL_GRACE_SEC)
 
 
 def _drive_consumer_signal_and_wait(
-    consumer: subprocess.Popen[str],
+    consumer: Popen[str],
     pwsh: str,
     test_event_name: str,
 ) -> None:
@@ -326,7 +334,7 @@ def _drive_consumer_signal_and_wait(
     time.sleep(1.5)
     assert consumer.poll() is None, "consumer must still be running before signal"
 
-    signal = subprocess.run(
+    signal = run(
         [
             pwsh,
             "-NoLogo",
@@ -348,7 +356,7 @@ def _drive_consumer_signal_and_wait(
     )
     assert signal.returncode == 0, f"helper SignalEvent must exit 0; stderr={signal.stderr!r}"
 
-    wait = subprocess.run(
+    wait = run(
         [
             pwsh,
             "-NoLogo",
@@ -379,7 +387,7 @@ def _drive_consumer_signal_and_wait(
 
 
 def _drive_kernel_object_monitor_finally(
-    monitor: subprocess.Popen[str],
+    monitor: Popen[str],
     lifecycle_log: Path,
     pwsh: str,
 ) -> None:
@@ -398,7 +406,7 @@ def _drive_kernel_object_monitor_finally(
             f"{_FINALLY_FLUSH_TIMEOUT_SEC}s; stdout={stdout!r} stderr={stderr!r}",
         )
 
-    signal = subprocess.run(
+    signal = run(
         [
             pwsh,
             "-NoLogo",
@@ -424,7 +432,7 @@ def _drive_kernel_object_monitor_finally(
     try:
         monitor.wait(timeout=_FINALLY_FLUSH_TIMEOUT_SEC)
         graceful_exit = True
-    except subprocess.TimeoutExpired:
+    except TimeoutExpired:
         graceful_exit = False
 
     contents = lifecycle_log.read_text(encoding="utf-8", errors="replace") if lifecycle_log.is_file() else ""
@@ -433,7 +441,7 @@ def _drive_kernel_object_monitor_finally(
 
 
 def _drive_stop_monitors_consumer(
-    consumer: subprocess.Popen[bytes],
+    consumer: Popen[bytes],
     cmd: str,
     scripts_dir: Path,
     log_dir: Path,
@@ -449,11 +457,11 @@ def _drive_stop_monitors_consumer(
     time.sleep(2.0)
     assert consumer.poll() is None, "consumer must still be running before stop"
 
-    stop = subprocess.run(
+    stop = run(
         [cmd, "/c", str(scripts_dir / "stop_monitors.cmd"), str(log_dir), "5"],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdin=DEVNULL,
+        stdout=DEVNULL,
+        stderr=DEVNULL,
         check=False,
         timeout=60.0,
     )
@@ -587,7 +595,7 @@ def test_stop_monitors_driver_signals_event_before_taskkill(tmp_path: Path) -> N
     # Start-Process inherited-handle chain in start_monitors.cmd does not
     # interfere with this assertion. The test on start_monitors.cmd itself
     # lives in tests/test_audit3/sandbox/test_start_monitors.py.
-    consumer = subprocess.Popen(
+    consumer = Popen(
         [
             pwsh,
             "-NoLogo",
@@ -600,9 +608,9 @@ def test_stop_monitors_driver_signals_event_before_taskkill(tmp_path: Path) -> N
             "-LogDir",
             str(log_dir),
         ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdin=DEVNULL,
+        stdout=DEVNULL,
+        stderr=DEVNULL,
     )
     pids = [consumer.pid]
     pid_file = log_dir / "monitors.pids"
@@ -613,12 +621,12 @@ def test_stop_monitors_driver_signals_event_before_taskkill(tmp_path: Path) -> N
     finally:
         for pid in pids:
             try:
-                subprocess.run(
+                run(
                     [taskkill_exe, "/PID", str(pid), "/F", "/T"],
                     capture_output=True,
                     text=True,
                     check=False,
                     timeout=10.0,
                 )
-            except (subprocess.SubprocessError, OSError):
+            except (SubprocessError, OSError):
                 continue

@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Final
 import pytest
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QWidget
 
-from intellicrack.ui.panels.hex_editor._signatures import (
+from intellicrack.ui.panels.hex_editor.signatures import (
     SignaturesMixin,
     execute_signature_scan,
     execute_signature_scan_from_source,

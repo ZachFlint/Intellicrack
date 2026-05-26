@@ -131,14 +131,14 @@ if sys.platform == "win32":
 import pytest
 
 from intellicrack.bridges import x64dbg as x64dbg_module
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.pe_format import (
     PE32_OPTIONAL_HEADER_SIZE,
     PE32PLUS_OPTIONAL_HEADER_SIZE,
     PE_OPTIONAL_HEADER_MAGIC_PE32,
     PE_OPTIONAL_HEADER_OFFSET,
     PE_SIGNATURE,
 )
-from intellicrack.bridges._win32_types import NT_HEADERS_OPTIONAL_OFFSET
+from intellicrack.bridges.win32_types import NT_HEADERS_OPTIONAL_OFFSET
 from intellicrack.bridges.x64dbg import (
     MAX_MEMORY_READ_SIZE,
     PE32_MACHINE,

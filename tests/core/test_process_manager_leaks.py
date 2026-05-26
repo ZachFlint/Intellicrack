@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import asyncio
-import subprocess
 import sys
 from collections.abc import Callable
 from typing import cast
@@ -17,6 +16,9 @@ import psutil
 import pytest
 
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+)
 
 
 def _sync_cleanup(pm: ProcessManager) -> Callable[[], None]:
@@ -53,7 +55,7 @@ time.sleep(60)
 """
 
     # 2. Start parent process using asyncio
-    process = await asyncio.create_subprocess_exec(sys.executable, "-c", parent_code, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = await asyncio.create_subprocess_exec(sys.executable, "-c", parent_code, stdout=PIPE, stderr=PIPE)
     parent_pid = process.pid
 
     # 3. Read child PID from parent's stdout
@@ -101,7 +103,7 @@ time.sleep(60)
 """
 
     # 2. Start parent
-    process = await asyncio.create_subprocess_exec(sys.executable, "-c", parent_code, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = await asyncio.create_subprocess_exec(sys.executable, "-c", parent_code, stdout=PIPE, stderr=PIPE)
     parent_pid = process.pid
 
     # 3. Get child PID

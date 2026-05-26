@@ -18,7 +18,7 @@ import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from intellicrack.bridges.process import ProcessBridge
-from intellicrack.ui.panels.process_panel._process_tab import ProcessTab
+from intellicrack.ui.panels.process_panel.process_tab import ProcessTab
 
 
 if TYPE_CHECKING:
@@ -244,7 +244,7 @@ class TestF0013InjectRequiresAttachment:
         with (
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.QFileDialog.getOpenFileName",
+                "intellicrack.ui.panels.process_panel.process_tab.QFileDialog.getOpenFileName",
                 return_value=("", ""),
             ),
         ):
@@ -355,7 +355,7 @@ class TestF0015AttachSurfacesFailure:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -384,7 +384,7 @@ class TestF0015AttachSurfacesFailure:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "information", return_value=None),
@@ -426,7 +426,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -459,7 +459,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -508,12 +508,12 @@ class TestF0017TerminateRefreshesBothTabs:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.QTimer.singleShot",
+                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
                 side_effect=_fire_slot,
             ),
         ):
@@ -559,12 +559,12 @@ class TestF0018TerminateDetachesIfAttached:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.QTimer.singleShot",
+                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
                 side_effect=_fire_slot,
             ),
         ):
@@ -600,12 +600,12 @@ class TestF0018TerminateDetachesIfAttached:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
             patch(
-                "intellicrack.ui.panels.process_panel._process_tab.QTimer.singleShot",
+                "intellicrack.ui.panels.process_panel.process_tab.QTimer.singleShot",
                 side_effect=_fire_slot,
             ),
         ):

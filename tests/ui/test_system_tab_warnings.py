@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from PyQt6.QtWidgets import QMessageBox
 
-from intellicrack.ui.panels.process_panel._system_tab import SystemTab
+from intellicrack.ui.panels.process_panel.system_tab import SystemTab
 
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
 
 
-_BRIDGE_MODULE_PATH: str = "intellicrack.ui.panels.process_panel._system_tab.run_bridge_coroutine_async"
+_BRIDGE_MODULE_PATH: str = "intellicrack.ui.panels.process_panel.system_tab.run_bridge_coroutine_async"
 
 
 class _AsyncSuccess:

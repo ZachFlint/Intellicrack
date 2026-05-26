@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from intellicrack.sandbox._log_parsers import parse_dll_log
+from intellicrack.sandbox.log_parsers import parse_dll_log
 
 
 if TYPE_CHECKING:

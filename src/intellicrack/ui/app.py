@@ -18,7 +18,7 @@ import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
-from PyQt6.QtCore import QByteArray, QObject, QSettings, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -46,21 +46,26 @@ from PyQt6.QtWidgets import (
 
 from intellicrack._metadata import __copyright__, __license__, __version__
 from intellicrack.bridges.installer import ToolInstaller
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.config import get_config_dir, get_config_file
-from intellicrack.core.logging import get_logger
+from intellicrack.core.logging import get_logger, log_tool_call
+from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
-from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderName, ToolCall, ToolName, ToolResult
+from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderError, ProviderName, ToolCall, ToolName, ToolResult
 from intellicrack.providers.discovery import ModelDiscovery
 from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
+from intellicrack.ui.log_viewer import LogViewerWindow, install_qt_log_handler
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.panels.hxd_panel import HxDPanel, find_hxd_executable
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
-from intellicrack.ui.sandbox_config import SandboxConfigDialog
+from intellicrack.ui.sandbox_config import SandboxConfigDialog, SandboxMonitorWidget
 from intellicrack.ui.session_manager import SessionManagerDialog
 from intellicrack.ui.tool_config import ToolConfigDialog, ToolStatusDialog, ToolStatusEntry
 from intellicrack.ui.tools import ToolOutputPanel
+from intellicrack.ui.xpu_status import XPUStatusDialog
 
 
 _logger = get_logger(__name__)
@@ -74,13 +79,19 @@ except ImportError:
     set_global_cache_size = None
 
 
+try:
+    import intellicrack_hexcore as _hexcore
+except ImportError:
+    _logger.debug("hexcore_unavailable")
+    _hexcore = None
+
+
 if TYPE_CHECKING:
     import types
     from collections.abc import Callable, Coroutine
 
     from PyQt6.QtGui import QCloseEvent
 
-    from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.core.config import Config
     from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.template_manager import TemplateManager
@@ -88,6 +99,7 @@ if TYPE_CHECKING:
 
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
+_SPLITTER_PANE_COUNT = 2
 
 _original_excepthook = sys.excepthook
 
@@ -253,6 +265,13 @@ class MainWindow(QMainWindow):
 
         self._icon_manager.preload_icons(["app", "binary", "tools", "provider", "sandbox", "process"])
 
+        try:
+            install_qt_log_handler()
+        except (RuntimeError, OSError, ValueError):
+            _logger.exception("qt_log_handler_install_failed")
+
+        self._log_viewer_window: LogViewerWindow | None = None
+
         self._initialize_model_cache()
 
         _logger.info("ui_init_setup_ui")
@@ -354,7 +373,7 @@ class MainWindow(QMainWindow):
         raw_splitter = settings.value("splitter_sizes")
         if isinstance(raw_splitter, list):
             parsed_sizes: list[int] = [int(val) for val in cast("list[object]", raw_splitter) if isinstance(val, (str, int, float))]
-            if len(parsed_sizes) == 2:  # noqa: PLR2004
+            if len(parsed_sizes) == _SPLITTER_PANE_COUNT:
                 self._splitter.setSizes(parsed_sizes)
 
         tab_state: dict[str, object] = {}
@@ -773,6 +792,7 @@ class MainWindow(QMainWindow):
 
         self._add_menu_action(help_menu, "About", self._on_about)
         help_menu.addSeparator()
+        self._add_menu_action(help_menu, "Log Viewer...", self._on_log_viewer)
         self._add_menu_action(help_menu, "XPU Status...", self._on_xpu_status)
 
     def _setup_menus(self) -> None:
@@ -975,7 +995,6 @@ class MainWindow(QMainWindow):
         """
         if self._shutting_down:
             return
-        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
         async def fetch_status() -> dict[str, object]:
             return await self._orchestrator.get_system_status()
@@ -1255,7 +1274,11 @@ class MainWindow(QMainWindow):
             call: The tool call being executed.
         """
         self.status_update.emit(f"Running: {call.tool_name}.{call.function_name}")
-        self.tool_panel.append_log_message(f"[CALL] {call.tool_name}.{call.function_name}")
+        log_tool_call(
+            call.tool_name,
+            call.function_name,
+            dict(getattr(call, "arguments", {})),
+        )
 
     def _on_tool_result(self, result: ToolResult) -> None:
         """Handle tool result notification.
@@ -1263,23 +1286,35 @@ class MainWindow(QMainWindow):
         Args:
             result: The tool execution result.
         """
-        status = "SUCCESS" if result.success else "FAILED"
-        _logger.debug(
-            "tool_result_received",
-            tool_name=getattr(result, "tool_name", ""),
-            success=result.success,
-            duration_ms=result.duration_ms,
-        )
-        self.tool_panel.append_log_message(f"[{status}] Duration: {result.duration_ms:.1f}ms")
+        tool_name = getattr(result, "tool_name", "")
+        if result.success:
+            _logger.info(
+                "orchestrator_tool_result",
+                call_id=getattr(result, "call_id", ""),
+                tool_name=tool_name,
+                duration_ms=result.duration_ms,
+            )
+        else:
+            _logger.warning(
+                "orchestrator_tool_result_failed",
+                call_id=getattr(result, "call_id", ""),
+                tool_name=tool_name,
+                duration_ms=result.duration_ms,
+                error=result.error,
+            )
         self._accumulate_usage_from_payload(result.result)
 
         if result.success and result.result:
             result_str = str(result.result)
             if len(result_str) > _MAX_RESULT_DISPLAY_LEN:
                 result_str = f"{result_str[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
-            self.tool_panel.append_log_message(f"Result: {result_str}")
+            _logger.info(
+                "orchestrator_tool_result_payload",
+                tool_name=tool_name,
+                call_id=getattr(result, "call_id", ""),
+                result_preview=result_str,
+            )
 
-            tool_name = getattr(result, "tool_name", "")
             if tool_name == "patch_binary" and isinstance(result.result, dict):
                 patch_data = cast("dict[str, object]", result.result)
                 address_val = patch_data.get("offset", 0)
@@ -1296,7 +1331,12 @@ class MainWindow(QMainWindow):
                 )
 
         if result.error:
-            self.tool_panel.append_log_message(f"Error: {result.error}")
+            _logger.error(
+                "orchestrator_tool_error",
+                tool_name=tool_name,
+                call_id=getattr(result, "call_id", ""),
+                error=str(result.error),
+            )
 
     def _accumulate_usage_from_payload(self, payload: object) -> None:
         """Accumulate ``total_tokens`` from a payload's ``usage`` dict into the session token total.
@@ -1977,9 +2017,8 @@ class MainWindow(QMainWindow):
         for index in range(self._provider_combo.count()):
             data = self._provider_combo.itemData(index)
             if isinstance(data, ProviderName) and data == new_active:
-                self._provider_combo.blockSignals(b=True)
-                self._provider_combo.setCurrentIndex(index)
-                self._provider_combo.blockSignals(b=False)
+                with QSignalBlocker(self._provider_combo):
+                    self._provider_combo.setCurrentIndex(index)
                 break
 
         _logger.info("toolbar_provider_synced", provider_id=provider_id)
@@ -2125,8 +2164,6 @@ class MainWindow(QMainWindow):
 
         if self.model_discovery is not None:
             try:
-                from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
-
                 run_bridge_coroutine(self.model_discovery.discover_all())
             except (RuntimeError, OSError):
                 _logger.debug("model_discovery_refresh_failed", exc_info=True)
@@ -2270,7 +2307,6 @@ class MainWindow(QMainWindow):
             _logger.debug("initial_discovery_skipped_no_discovery")
             return
         self._initial_discovery_triggered = True
-        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 
         _logger.info("initial_model_discovery_kickoff")
         run_bridge_coroutine_async(
@@ -2359,8 +2395,6 @@ class MainWindow(QMainWindow):
                 :class:`~intellicrack.ui.sandbox_config.SandboxConfigDialog`.
         """
         new_config = self._build_sandbox_config(settings)
-
-        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
 
         try:
             instances = list(self.sandbox_manager.instances)
@@ -2472,22 +2506,18 @@ class MainWindow(QMainWindow):
         Returns:
             SandboxBridge: An initialized SandboxBridge instance.
         """
-        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
-
         tool_reg = getattr(self._orchestrator, "_tool_registry", None)
         if tool_reg is not None:
             getter = getattr(tool_reg, "get_sandbox_bridge", None)
             if callable(getter):
                 try:
                     bridge = getter()
-                    if isinstance(bridge, _SandboxBridge):
+                    if isinstance(bridge, SandboxBridge):
                         return bridge
                 except (RuntimeError, ImportError, AttributeError):
                     _logger.debug("sandbox_bridge_registry_lookup_failed", exc_info=True)
 
-        bridge = _SandboxBridge()
-        from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
-
+        bridge = SandboxBridge()
         try:
             run_bridge_coroutine(bridge.initialize())
         except (RuntimeError, OSError):
@@ -2599,11 +2629,44 @@ class MainWindow(QMainWindow):
 
     def _on_xpu_status(self) -> None:
         """Open the XPU status dialog showing device, memory, and cache state."""
-        from intellicrack.ui.xpu_status import XPUStatusDialog
-
         _logger.debug("xpu_status_dialog_opened")
         dialog = XPUStatusDialog(self)
         dialog.exec()
+
+    @property
+    def log_viewer_window(self) -> LogViewerWindow | None:
+        """Return the live Log Viewer instance, if one has been opened.
+
+        Returns:
+            LogViewerWindow | None: The cached viewer instance, or
+                ``None`` when it has not been constructed yet (or was
+                disposed after the main window closed).
+        """
+        return self._log_viewer_window
+
+    def open_log_viewer(self) -> LogViewerWindow:
+        """Open (or raise) the modeless Log Viewer window.
+
+        The viewer is constructed lazily on first call and reused on
+        subsequent calls so window state, filters, and history are
+        preserved across re-opens.
+
+        Returns:
+            LogViewerWindow: The active viewer instance.
+        """
+        if self._log_viewer_window is None:
+            self._log_viewer_window = LogViewerWindow(self._config, parent=self)
+        viewer = self._log_viewer_window
+        viewer.show()
+        viewer.raise_()
+        viewer.activateWindow()
+        viewer.setWindowState(viewer.windowState() & ~Qt.WindowState.WindowMinimized)
+        _logger.info("log_viewer_opened")
+        return viewer
+
+    def _on_log_viewer(self) -> None:
+        """Slot for the ``Help -> Log Viewer...`` menu action."""
+        self.open_log_viewer()
 
     def _on_about(self) -> None:
         """Handle about action."""
@@ -2793,14 +2856,12 @@ class MainWindow(QMainWindow):
         Args:
             pid: Process ID that was attached.
         """
-        try:
-            import intellicrack_hexcore as _hc
-        except ImportError:
+        if _hexcore is None:
             _logger.debug("hexcore_unavailable_for_process_memory", pid=pid)
             return
 
         try:
-            regions: list[tuple[int, int, int, int]] = _hc.HexDocument.list_process_memory_regions(pid)
+            regions: list[tuple[int, int, int, int]] = _hexcore.HexDocument.list_process_memory_regions(pid)
         except (RuntimeError, OSError, ValueError) as exc:
             _logger.warning("process_regions_list_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Process Memory", f"Failed to list memory regions: {exc}")
@@ -2905,8 +2966,6 @@ class MainWindow(QMainWindow):
         Args:
             sandbox_widget: Root widget hosting the sandbox panel.
         """
-        from intellicrack.ui.sandbox_config import SandboxMonitorWidget
-
         monitors = sandbox_widget.findChildren(SandboxMonitorWidget)
         for monitor in monitors:
             if monitor in self._sandbox_monitor_wired_widgets:
@@ -2918,10 +2977,9 @@ class MainWindow(QMainWindow):
     def _on_sandbox_monitor_stopped(self) -> None:
         """Reflect a SandboxMonitorWidget stop event in MainWindow state."""
         _logger.info("sandbox_monitor_stopped")
-        self._sandbox_btn.blockSignals(b=True)
-        self._sandbox_btn.setChecked(a0=False)
-        self._sandbox_btn.setText("Sandbox: OFF")
-        self._sandbox_btn.blockSignals(b=False)
+        with QSignalBlocker(self._sandbox_btn):
+            self._sandbox_btn.setChecked(False)
+            self._sandbox_btn.setText("Sandbox: OFF")
         self.status_update.emit("Sandbox stopped")
 
     def _on_debug_current_binary(self) -> None:
@@ -3020,16 +3078,13 @@ class MainWindow(QMainWindow):
             if choice == "configure":
                 self._on_configure_providers()
             else:
-                self._provider_combo.blockSignals(b=True)
-                if prev_idx >= 0:
-                    self._provider_combo.setCurrentIndex(prev_idx)
-                self._provider_combo.blockSignals(b=False)
+                with QSignalBlocker(self._provider_combo):
+                    if prev_idx >= 0:
+                        self._provider_combo.setCurrentIndex(prev_idx)
             self.status_update.emit(
                 f"Provider {provider.value} selected but not connected. Configure credentials in Providers menu.",
             )
             return
-
-        from intellicrack.core.types import ProviderError
 
         try:
             registry.set_active(provider)
@@ -3145,9 +3200,14 @@ class MainWindow(QMainWindow):
         self._save_window_state()
         self.tool_panel.close_detached_windows()
 
-        try:
-            from intellicrack.core.process_manager import ProcessManager
+        if self._log_viewer_window is not None:
+            try:
+                self._log_viewer_window.close()
+            except (RuntimeError, OSError) as e:
+                _logger.warning("log_viewer_close_failed", error=str(e))
+            self._log_viewer_window = None
 
+        try:
             pm = ProcessManager.get_instance()
             request_shutdown = getattr(pm, "request_shutdown", None)
             if callable(request_shutdown):
@@ -3165,8 +3225,6 @@ class MainWindow(QMainWindow):
             self._hxd_panel = None
 
         try:
-            from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
-
             run_bridge_coroutine(self.sandbox_manager.destroy_all())
         except (RuntimeError, OSError) as e:
             _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))

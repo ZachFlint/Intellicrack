@@ -5,7 +5,7 @@
 """Audit1 bridges-core regression tests.
 
 Covers the seven findings tracked in audit1.md against
-``src/intellicrack/bridges/{schemas,__init__,_win32_types,base}.py`` and the
+``src/intellicrack/bridges/{schemas,__init__,win32_types,base}.py`` and the
 ``src/intellicrack/core/orchestrator.py`` validation call site.
 
 Each finding has at least one red/green pair documenting the buggy old
@@ -23,8 +23,22 @@ import pytest
 import structlog.testing
 
 import intellicrack.bridges as bridges_pkg
-from intellicrack.bridges._lazy import resolve as resolve_lazy
-from intellicrack.bridges._win32_types import (
+from intellicrack.bridges.base import ToolBridgeBase
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.lazy import resolve as resolve_lazy
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.schemas import (
+    ValidationError,
+    is_recognized_type,
+    normalize_type,
+    validate_tool_for_provider,
+    validate_tool_parameter,
+)
+from intellicrack.bridges.win32_types import (
     MEM_COMMIT,
     MEM_FREE,
     MEM_IMAGE,
@@ -45,20 +59,6 @@ from intellicrack.bridges._win32_types import (
     mem_type_to_string,
     protection_to_string,
     state_to_string,
-)
-from intellicrack.bridges.base import ToolBridgeBase
-from intellicrack.bridges.cutter import CutterBridge
-from intellicrack.bridges.frida_bridge import FridaBridge
-from intellicrack.bridges.ghidra import GhidraBridge
-from intellicrack.bridges.hex_editor import HexEditorBridge
-from intellicrack.bridges.process import ProcessBridge
-from intellicrack.bridges.sandbox_bridge import SandboxBridge
-from intellicrack.bridges.schemas import (
-    ValidationError,
-    is_recognized_type,
-    normalize_type,
-    validate_tool_for_provider,
-    validate_tool_parameter,
 )
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import (
@@ -249,7 +249,7 @@ def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
 
 
 def test_f0004_bridges_lazy_accessor_returns_class() -> None:
-    """Lazy access via ``_lazy.resolve`` must yield the real bridge class.
+    """Lazy access via ``lazy.resolve`` must yield the real bridge class.
 
     Exercises the typed ``resolve`` entry point directly so the test
     is a fully-typed call rather than a stringly-typed ``getattr``

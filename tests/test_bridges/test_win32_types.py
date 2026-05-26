@@ -13,7 +13,7 @@ import sys
 import pytest
 
 from intellicrack.bridges import named_pipe_client, x64dbg
-from intellicrack.bridges._win32_types import (
+from intellicrack.bridges.win32_types import (
     CONTEXT32,
     CONTEXT64,
     CONTEXT_ALL,
@@ -277,7 +277,7 @@ class TestPeMachineConstants:
 
 
 class TestConsumersUseCanonicalConstants:
-    """Verify Win32 constant consumers import from ``_win32_types`` (audit Group 1)."""
+    """Verify Win32 constant consumers import from ``win32_types`` (audit Group 1)."""
 
     def test_x64dbg_imports_canonical_invalid_handle_value(self) -> None:
         """Verify x64dbg's INVALID_HANDLE_VALUE equals the canonical value."""

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="cheatEngineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6F00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E65100;stop-opacity:1" />
+    </linearGradient>
+    <filter id="cheatEngineShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#BF360C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Cheat Engine background shape -->
+  <rect x="2" y="2" width="20" height="20" rx="2" fill="url(#cheatEngineGradient)" stroke="#BF360C" stroke-width="0.8" filter="url(#cheatEngineShadowFilter)"/>
+
+  <!-- Cheat Engine "CE" text -->
+  <text x="5" y="15" font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#FFFFFF">CE</text>
+
+  <!-- Memory scanner/modifier symbols -->
+  <rect x="15" y="4" width="6" height="4" fill="#212121" stroke="#000000" stroke-width="0.5"/>
+  <rect x="16" y="5" width="4" height="1" fill="#4CAF50"/>
+  <rect x="16" y="6.5" width="4" height="1" fill="#FF9800"/>
+
+  <!-- Gear/engine symbol -->
+  <circle cx="18" cy="14" r="3.5" fill="#37474F" stroke="#263238" stroke-width="0.5"/>
+  <circle cx="18" cy="14" r="2" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+  <path d="M18 11.5 L18 16.5 M20.5 14 L15.5 14 M19.8 12.2 L16.2 15.8 M19.8 15.8 L16.2 12.2" stroke="#FFFFFF" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Memory addresses pattern -->
+  <text x="3" y="7" font-family="monospace" font-size="2.5" fill="#FFFFFF" opacity="0.7">7FF</text>
+  <text x="3" y="19" font-family="monospace" font-size="2.5" fill="#FFFFFF" opacity="0.7">00A</text>
+
+  <!-- Scan/modify indicators -->
+  <circle cx="5" cy="9" r="1" fill="#4CAF50"/>
+  <circle cx="8" cy="9" r="1" fill="#FF9800"/>
+  <circle cx="11" cy="9" r="1" fill="#F44336"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="8" cy="6" rx="4" ry="2" fill="#FFFFFF" opacity="0.2"/>
+</svg>

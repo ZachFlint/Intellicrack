@@ -32,13 +32,19 @@ from __future__ import annotations
 import ctypes
 import json
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final, cast
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -99,7 +105,7 @@ def _service_exists(service_name: str, pwsh: str) -> bool:
     Returns:
         bool: ``True`` if the service is registered, ``False`` otherwise.
     """
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",
@@ -132,7 +138,7 @@ def _control_service(action: str, service_name: str, pwsh: str) -> int:
     cmd = f"{action} -Name {service_name} -Force -ErrorAction Stop"
     if action == "Start-Service":
         cmd = f"{action} -Name {service_name} -ErrorAction Stop"
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",
@@ -168,7 +174,7 @@ def _drive_spooler_stop_start(pwsh: str) -> None:
     time.sleep(_LIFECYCLE_SETTLE_SEC)
 
 
-def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
+def _start_script(log_dir: Path, pwsh: str) -> Popen[str]:
     """Spawn ``service_monitor.ps1`` with the supplied log directory.
 
     Args:
@@ -176,9 +182,9 @@ def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
         pwsh: Absolute path to the ``pwsh`` executable.
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -191,15 +197,15 @@ def _start_script(log_dir: Path, pwsh: str) -> subprocess.Popen[str]:
             "-LogDir",
             str(log_dir),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -214,7 +220,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:

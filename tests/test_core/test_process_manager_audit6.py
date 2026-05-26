@@ -19,7 +19,6 @@ import asyncio
 import importlib
 import os
 import signal
-import subprocess
 import sys
 import threading
 import time
@@ -28,6 +27,10 @@ from typing import TYPE_CHECKING, TypedDict, cast
 import pytest
 
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+)
 
 
 if TYPE_CHECKING:
@@ -63,16 +66,16 @@ def process_manager() -> Generator[ProcessManager]:
     ProcessManager.reset_instance()
 
 
-def _spawn_alive_subprocess() -> subprocess.Popen[bytes]:
+def _spawn_alive_subprocess() -> Popen[bytes]:
     """Spawn a sleeping Python subprocess used as a real, alive PID source.
 
     Returns:
-        subprocess.Popen[bytes]: Running subprocess that the caller must kill.
+        Popen[bytes]: Running subprocess that the caller must kill.
     """
-    return subprocess.Popen(
+    return Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
     )
 
 
@@ -85,10 +88,10 @@ def _guaranteed_dead_pid() -> int:
     Returns:
         int: PID of an exited child process.
     """
-    proc = subprocess.Popen(
+    proc = Popen(
         [sys.executable, "-c", ""],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
     )
     proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_S)
     return proc.pid

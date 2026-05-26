@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="dllGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A148C;stop-opacity:1" />
+    </linearGradient>
+    <filter id="dllShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#2E003E" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- DLL file icon base -->
+  <rect x="4" y="2" width="14" height="20" rx="2"
+        fill="url(#dllGradient)" stroke="#2E003E" stroke-width="0.8" filter="url(#dllShadowFilter)"/>
+
+  <!-- File corner fold -->
+  <polygon points="15,2 18,5 15,5" fill="#6A1B9A"/>
+  <path d="M15 2 L15 5 L18 5" stroke="#8E24AA" stroke-width="0.5"/>
+
+  <!-- DLL text label -->
+  <text x="11" y="10" font-family="monospace" font-size="4" text-anchor="middle" fill="#FFFFFF" font-weight="bold">DLL</text>
+
+  <!-- Library symbols/exports -->
+  <circle cx="7" cy="13" r="1" fill="#FFD54F"/>
+  <text x="7" y="13.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#4A148C">f</text>
+
+  <circle cx="11" cy="13" r="1" fill="#FFA726"/>
+  <text x="11" y="13.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#FFFFFF">g</text>
+
+  <circle cx="15" cy="13" r="1" fill="#FF8F00"/>
+  <text x="15" y="13.5" font-family="monospace" font-size="1.5" text-anchor="middle" fill="#FFFFFF">h</text>
+
+  <!-- Linking arrows -->
+  <path d="M6 15 L8 17" stroke="#FFFFFF" stroke-width="1.5" marker-end="url(#dllArrow)"/>
+  <path d="M11 15 L11 17" stroke="#FFFFFF" stroke-width="1.5" marker-end="url(#dllArrow)"/>
+  <path d="M16 15 L14 17" stroke="#FFFFFF" stroke-width="1.5" marker-end="url(#dllArrow)"/>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="dllArrow" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+      <polygon points="0,0 4,2 0,4" fill="#FFFFFF"/>
+    </marker>
+  </defs>
+
+  <!-- Dynamic library indicator -->
+  <rect x="6" y="18" width="10" height="2" rx="1" fill="#7B1FA2"/>
+  <text x="11" y="19.5" font-family="monospace" font-size="2" text-anchor="middle" fill="#FFFFFF">DYNAMIC</text>
+
+  <!-- Machine code indicators -->
+  <text x="6.5" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">PE</text>
+  <text x="14" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">LIB</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="8" cy="5" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

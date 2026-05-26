@@ -217,7 +217,7 @@ def qt_key_page_up() -> int:
     Returns:
         int: Integer value of Qt.Key.Key_PageUp.
     """
-    from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
+    from PyQt6.QtCore import Qt as _Qt
 
     return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_UP))
 
@@ -228,7 +228,7 @@ def qt_key_page_down() -> int:
     Returns:
         int: Integer value of Qt.Key.Key_PageDown.
     """
-    from PyQt6.QtCore import Qt as _Qt  # noqa: PLC0415
+    from PyQt6.QtCore import Qt as _Qt
 
     return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_DOWN))
 

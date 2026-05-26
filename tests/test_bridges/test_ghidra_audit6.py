@@ -101,7 +101,7 @@ import pytest
 
 import intellicrack.bridges.ghidra as ghidra_mod
 from intellicrack.bridges.ghidra import GhidraBridge, prepare_remote_script
-from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen
+from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, Popen
 from intellicrack.core.types import BinaryInfo, CrossReference, ToolError
 
 

@@ -5,7 +5,7 @@
 """Tests for the hexpat-scoped parsing helpers.
 
 The helpers are functionally identical to their bridge counterparts but
-emit log records under the ``core.hexpat._parse_helpers`` logger. These
+emit log records under the ``core.hexpat.parse_helpers`` logger. These
 tests confirm both the happy path and the debug-logging contract so the
 hexpat runtime never silently swallows parse failures again.
 """
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from intellicrack.core.hexpat import _parse_helpers
-from intellicrack.core.hexpat._parse_helpers import safe_call, safe_int_from_str
+from intellicrack.core.hexpat import parse_helpers
+from intellicrack.core.hexpat.parse_helpers import safe_call, safe_int_from_str
 
 
 class TestHexpatSafeIntFromStr:
@@ -49,7 +49,7 @@ class TestHexpatSafeIntFromStr:
         def _record(event: str, **kwargs: object) -> None:
             events.append((event, kwargs))
 
-        logger = vars(_parse_helpers)["_logger"]
+        logger = vars(parse_helpers)["_logger"]
         monkeypatch.setattr(logger, "debug", _record)
         safe_int_from_str("not-a-number", context="unit_log")
         assert any(name == "safe_int_parse_failed" for name, _ in events), f"expected debug event emitted, got: {events!r}"
@@ -130,7 +130,7 @@ class TestHexpatSafeCall:
         def _record(event: str, **kwargs: object) -> None:
             events.append((event, kwargs))
 
-        logger = vars(_parse_helpers)["_logger"]
+        logger = vars(parse_helpers)["_logger"]
         monkeypatch.setattr(logger, "debug", _record)
         msg = "debug-log-check"
 

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="dbConnectGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+    <filter id="dbConnectShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#1B5E20" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Database cylinder -->
+  <ellipse cx="7" cy="6" rx="4" ry="2" fill="url(#dbConnectGradient)" stroke="#1B5E20" stroke-width="0.8" filter="url(#dbConnectShadowFilter)"/>
+  <rect x="3" y="6" width="8" height="8" fill="url(#dbConnectGradient)"/>
+  <ellipse cx="7" cy="14" rx="4" ry="2" fill="#66BB6A" stroke="#2E7D32" stroke-width="0.5"/>
+
+  <!-- Database layers -->
+  <ellipse cx="7" cy="8" rx="4" ry="1" fill="none" stroke="#A5D6A7" stroke-width="0.5" opacity="0.8"/>
+  <ellipse cx="7" cy="10" rx="4" ry="1" fill="none" stroke="#A5D6A7" stroke-width="0.5" opacity="0.6"/>
+  <ellipse cx="7" cy="12" rx="4" ry="1" fill="none" stroke="#A5D6A7" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Connection cable/link -->
+  <path d="M11 10 Q14 8 16 10 Q18 12 16 14" stroke="#607D8B" stroke-width="2" fill="none"/>
+  <path d="M11 10 Q14 8 16 10 Q18 12 16 14" stroke="#90A4AE" stroke-width="1" fill="none"/>
+
+  <!-- Connection endpoints -->
+  <circle cx="11" cy="10" r="1" fill="#FF9800"/>
+  <circle cx="16" cy="14" r="1" fill="#4CAF50"/>
+
+  <!-- Client/application -->
+  <rect x="14" y="16" width="8" height="6" rx="1" fill="#2196F3" stroke="#0D47A1" stroke-width="0.5"/>
+  <rect x="15" y="17" width="6" height="4" rx="0.5" fill="#BBDEFB"/>
+
+  <!-- Connection status indicator -->
+  <circle cx="19" cy="13" r="1.5" fill="#4CAF50">
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <path d="M18.2 13 L18.8 13.6 L20.2 12.2" stroke="#FFFFFF" stroke-width="0.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Data flow indicators -->
+  <circle cx="13" cy="9" r="0.5" fill="#FFD54F">
+    <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+  </circle>
+  <circle cx="15" cy="11" r="0.5" fill="#FFA726">
+    <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+  </circle>
+  <circle cx="17" cy="13" r="0.5" fill="#FF8F00">
+    <animate attributeName="opacity" values="0;1;0" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+  </circle>
+
+  <!-- Database label -->
+  <text x="7" y="19" font-family="monospace" font-size="2" text-anchor="middle" fill="#2E7D32">DB</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="6" cy="5" rx="2" ry="1" fill="#FFFFFF" opacity="0.3"/>
+</svg>

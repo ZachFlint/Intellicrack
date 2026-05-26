@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Final
 import pytest
 from PyQt6.QtWidgets import QApplication, QLabel, QTreeWidget, QWidget
 
-from intellicrack.ui.panels.hex_editor._comparison import ComparisonMixin
+from intellicrack.ui.panels.hex_editor.comparison import ComparisonMixin
 
 
 if TYPE_CHECKING:
