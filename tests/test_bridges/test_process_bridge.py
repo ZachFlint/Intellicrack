@@ -29,7 +29,6 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 
-from intellicrack.bridges._win32_types import SYMBOL_INFO
 from intellicrack.bridges.process import (
     IMAGEHLP_MODULE64,
     PEB64,
@@ -38,6 +37,7 @@ from intellicrack.bridges.process import (
     TLS_STATIC_SLOT_COUNT,
     ProcessBridge,
 )
+from intellicrack.bridges.win32_types import SYMBOL_INFO
 from intellicrack.core.types import ToolError, ToolName
 
 

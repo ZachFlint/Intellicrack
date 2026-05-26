@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from PyQt6.QtWidgets import QApplication, QComboBox, QLineEdit, QListWidget, QSpinBox
 
-from intellicrack.ui.panels.hex_editor._highlighting import HighlightingMixin, build_rule_label
+from intellicrack.ui.panels.hex_editor.highlighting import HighlightingMixin, build_rule_label
 
 
 if TYPE_CHECKING:

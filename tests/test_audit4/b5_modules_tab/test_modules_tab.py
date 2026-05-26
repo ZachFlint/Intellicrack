@@ -22,7 +22,7 @@ import pytest
 from PyQt6.QtWidgets import QMessageBox, QTreeWidgetItem
 
 from intellicrack.bridges.process import ProcessBridge
-from intellicrack.ui.panels.process_panel._modules_tab import ModulesTab
+from intellicrack.ui.panels.process_panel.modules_tab import ModulesTab
 
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QApplication
 
 
-_BRIDGE_MODULE_PATH: Final[str] = "intellicrack.ui.panels.process_panel._modules_tab.run_bridge_coroutine_async"
+_BRIDGE_MODULE_PATH: Final[str] = "intellicrack.ui.panels.process_panel.modules_tab.run_bridge_coroutine_async"
 
 _MODULE_NAMES: Final[tuple[str, ...]] = (
     "kernel32.dll",

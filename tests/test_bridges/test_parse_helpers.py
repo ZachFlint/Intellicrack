@@ -16,8 +16,8 @@ import struct
 
 import pytest
 
-from intellicrack.bridges import _parse_helpers
-from intellicrack.bridges._parse_helpers import safe_call, safe_int_from_str
+from intellicrack.bridges import parse_helpers
+from intellicrack.bridges.parse_helpers import safe_call, safe_int_from_str
 
 
 class TestSafeIntFromStr:
@@ -68,7 +68,7 @@ class TestSafeIntFromStr:
         def _record(event: str, **kwargs: object) -> None:
             events.append((event, kwargs))
 
-        logger = vars(_parse_helpers)["_logger"]
+        logger = vars(parse_helpers)["_logger"]
         monkeypatch.setattr(logger, "debug", _record)
         result = safe_int_from_str("bogus", context="unit_logging_check")
         assert result is None
@@ -83,7 +83,7 @@ class TestSafeIntFromStr:
         def _record(event: str, **kwargs: object) -> None:
             events.append((event, kwargs))
 
-        logger = vars(_parse_helpers)["_logger"]
+        logger = vars(parse_helpers)["_logger"]
         monkeypatch.setattr(logger, "debug", _record)
         true_value: bool = True
         safe_int_from_str(true_value, context="unit_bool_logging")
@@ -177,7 +177,7 @@ class TestSafeCall:
         def _record(event: str, **kwargs: object) -> None:
             events.append((event, kwargs))
 
-        logger = vars(_parse_helpers)["_logger"]
+        logger = vars(parse_helpers)["_logger"]
         monkeypatch.setattr(logger, "debug", _record)
         msg = "nope"
 

@@ -9,9 +9,10 @@ Provides a live-updating dialog displaying Intel XPU device status, memory utili
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, override
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -67,6 +68,49 @@ _LIVE_REFRESH_MS: Final[int] = 2000
 _DIALOG_WIDTH: Final[int] = 480
 _DIALOG_HEIGHT: Final[int] = 520
 _WARNINGS_MAX_HEIGHT: Final[int] = 100
+_REQUIREMENTS_WORKER_WAIT_MS: Final[int] = 5000
+
+
+@dataclass(frozen=True)
+class _RequirementsResult:
+    """Result payload emitted by :class:`_RequirementsCheckWorker`.
+
+    Attributes:
+        all_met: True when every checked requirement was satisfied.
+        warnings: Human-readable warning strings to display, in order.
+    """
+
+    all_met: bool
+    warnings: list[str]
+
+
+class _RequirementsCheckWorker(QThread):
+    """Background worker that runs :func:`check_windows_requirements` off the GUI thread.
+
+    Emits :attr:`result_ready` with a :class:`_RequirementsResult` on success and :attr:`check_failed` with an error message on exception.
+    The worker is intended to be one-shot per dialog open or manual refresh.
+    """
+
+    result_ready = pyqtSignal(object)
+    check_failed = pyqtSignal(str)
+
+    @override
+    def run(self) -> None:
+        """Execute the Windows requirements probe and emit the result.
+
+        Catches :class:`RuntimeError` / :class:`OSError` raised by subprocess invocation or PCI BAR enumeration so the GUI thread always
+        receives exactly one terminal signal regardless of failure mode.
+        """
+        if check_windows_requirements is None:
+            self.check_failed.emit("Requirements check is not available in this build")
+            return
+        try:
+            all_met, warnings = check_windows_requirements()
+        except (RuntimeError, OSError) as exc:
+            _logger.exception("requirements_check_failed_in_thread")
+            self.check_failed.emit(str(exc))
+            return
+        self.result_ready.emit(_RequirementsResult(all_met=all_met, warnings=list(warnings)))
 
 
 def _restyle(widget: QWidget) -> None:
@@ -101,6 +145,8 @@ class XPUStatusDialog(QDialog):
 
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self._refresh_live_data)
+
+        self._requirements_worker: _RequirementsCheckWorker | None = None
 
         self._setup_ui()
         self._refresh_all()
@@ -386,41 +432,87 @@ class XPUStatusDialog(QDialog):
             self.cache_limit_label.setText("Error")
 
     def _refresh_requirements(self) -> None:
-        """Run Windows requirements check and display results.
+        """Launch the Windows requirements check on a background thread.
 
-        This calls PowerShell subprocesses so it is only invoked on dialog open and manual refresh, never on the periodic timer.
+        The previous synchronous implementation spawned three PowerShell subprocesses on the GUI thread, freezing the dialog for ~20 seconds.
+        Work is now dispatched to :class:`_RequirementsCheckWorker`; results are delivered via :meth:`_on_requirements_ready` /
+        :meth:`_on_requirements_failed`. Concurrent invocations (e.g., rapid Refresh clicks) are debounced by checking
+        :meth:`QThread.isRunning`.
         """
         if check_windows_requirements is None:
             self.requirements_text.setPlainText("Requirements check not available.")
             return
 
-        try:
-            all_met, warnings = check_windows_requirements()
-        except (RuntimeError, OSError):
-            _logger.exception("requirements_check_failed")
-            self.requirements_text.setPlainText("Failed to check requirements.")
+        existing = self._requirements_worker
+        if existing is not None and existing.isRunning():
+            _logger.debug("requirements_refresh_debounced")
+            return
+
+        self.requirements_text.setPlainText("Checking system requirements...")
+
+        worker = _RequirementsCheckWorker(self)
+        worker.result_ready.connect(self._on_requirements_ready)
+        worker.check_failed.connect(self._on_requirements_failed)
+        worker.finished.connect(self._on_requirements_worker_finished)
+        worker.finished.connect(worker.deleteLater)
+        self._requirements_worker = worker
+        worker.start()
+
+    def _on_requirements_ready(self, result: object) -> None:
+        """Render requirements result delivered from the background worker.
+
+        Args:
+            result: The :class:`_RequirementsResult` emitted by the worker. Typed as ``object`` because :class:`pyqtSignal` only carries
+                primitive Qt types or generic ``object`` payloads.
+        """
+        if not isinstance(result, _RequirementsResult):
+            _logger.warning("requirements_result_unexpected_type", actual_type=type(result).__name__)
             return
 
         colors = ThemeManager.get_instance().get_analysis_colors()
         success_hex = colors["success"].name()
         warning_hex = colors["warning"].name()
 
-        if all_met and not warnings:
+        if result.all_met and not result.warnings:
             self.requirements_text.setHtml(f'<span style="color: {success_hex}; font-weight: bold;">All system requirements met.</span>')
-        else:
-            lines = [
-                f'<span style="color: {warning_hex}; font-weight: bold;">Warnings:</span><ul>',
-                *[f"<li>{w}</li>" for w in warnings],
-                "</ul>",
-            ]
-            self.requirements_text.setHtml("".join(lines))
+            return
+
+        lines = [
+            f'<span style="color: {warning_hex}; font-weight: bold;">Warnings:</span><ul>',
+            *[f"<li>{w}</li>" for w in result.warnings],
+            "</ul>",
+        ]
+        self.requirements_text.setHtml("".join(lines))
+
+    def _on_requirements_failed(self, error: str) -> None:
+        """Render a failure message when the background check raises.
+
+        Args:
+            error: Human-readable description of the failure surfaced by the worker.
+        """
+        _logger.warning("requirements_check_failed", error=error)
+        self.requirements_text.setPlainText(f"Failed to check requirements: {error}")
+
+    def _on_requirements_worker_finished(self) -> None:
+        """Clear the worker reference once the QThread emits ``finished``."""
+        self._requirements_worker = None
 
     @override
     def closeEvent(self, a0: QCloseEvent | None) -> None:
-        """Stop the refresh timer when the dialog closes.
+        """Stop the refresh timer and join the requirements worker on close.
 
         Args:
             a0: The close event.
         """
         self.refresh_timer.stop()
+        worker = self._requirements_worker
+        if worker is not None and worker.isRunning():
+            try:
+                worker.result_ready.disconnect(self._on_requirements_ready)
+                worker.check_failed.disconnect(self._on_requirements_failed)
+                worker.finished.disconnect(self._on_requirements_worker_finished)
+            except TypeError:
+                _logger.debug("requirements_worker_signals_already_disconnected")
+            if not worker.wait(_REQUIREMENTS_WORKER_WAIT_MS):
+                _logger.warning("requirements_worker_did_not_finish", timeout_ms=_REQUIREMENTS_WORKER_WAIT_MS)
         super().closeEvent(a0)

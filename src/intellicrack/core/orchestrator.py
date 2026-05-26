@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, cast
 from uuid import uuid4
 
+import lief
 import structlog.contextvars
 import tiktoken
 
@@ -30,11 +31,15 @@ from intellicrack.bridges.schemas import (
 from intellicrack.core.analysis_aggregator import AnalysisAggregator
 from intellicrack.core.logging import get_logger, log_analysis_operation
 from intellicrack.core.types import (
+    BinaryInfo,
     CacheConfig,
     ConfirmationLevel,
+    ExportInfo,
+    ImportInfo,
     Message,
     PatchInfo,
     ProviderName,
+    SectionInfo,
     ThinkingConfig,
     ToolChoice,
     ToolChoiceMode,
@@ -53,11 +58,7 @@ if TYPE_CHECKING:
     from intellicrack.core.session import Session, SessionManager
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.types import (
-        BinaryInfo,
         BridgeAnalysisSummary,
-        ExportInfo,
-        ImportInfo,
-        SectionInfo,
         ToolCall,
         ToolDefinition,
         ToolFunction,
@@ -2824,18 +2825,14 @@ def _extract_sections(binary: object) -> list[SectionInfo]:
     Returns:
         list[SectionInfo]: Extracted section metadata.
     """
-    import lief
-
-    from intellicrack.core.types import SectionInfo as _SectionInfo
-
-    result: list[_SectionInfo] = []
+    result: list[SectionInfo] = []
     for sec in getattr(binary, "sections", []):
         entropy: float = float(sec.entropy) if hasattr(sec, "entropy") else 0.0
         characteristics = 0
         if isinstance(binary, lief.PE.Binary) and isinstance(sec, lief.PE.Section):
             characteristics = int(sec.characteristics)
         result.append(
-            _SectionInfo(
+            SectionInfo(
                 name=str(sec.name),
                 virtual_address=int(sec.virtual_address),
                 virtual_size=int(sec.size),
@@ -2871,18 +2868,14 @@ def extract_imports(binary: object) -> list[ImportInfo]:
         list[ImportInfo]: Imported entries with the full ``(dll, function,
         ordinal, address)`` tuple populated as far as the format reveals.
     """
-    import lief
-
-    from intellicrack.core.types import ImportInfo as _ImportInfo
-
-    result: list[_ImportInfo] = []
+    result: list[ImportInfo] = []
     if isinstance(binary, lief.PE.Binary):
         for imp in binary.imports:
             dll_name = str(imp.name)
             for entry in imp.entries:
                 entry_name = str(entry.name) if entry.name else ""
                 result.append(
-                    _ImportInfo(
+                    ImportInfo(
                         dll=dll_name,
                         function=entry_name or f"ord_{entry.data}",
                         ordinal=None if entry_name else int(entry.data),
@@ -2895,7 +2888,7 @@ def extract_imports(binary: object) -> list[ImportInfo]:
             if not sym_name:
                 continue
             result.append(
-                _ImportInfo(
+                ImportInfo(
                     dll="",
                     function=sym_name,
                     ordinal=None,
@@ -2914,7 +2907,7 @@ def extract_imports(binary: object) -> list[ImportInfo]:
             ordinal_attr = getattr(sym, "library_ordinal", None)
             ordinal_value = int(ordinal_attr) if isinstance(ordinal_attr, int) else None
             result.append(
-                _ImportInfo(
+                ImportInfo(
                     dll=library_name,
                     function=sym_name,
                     ordinal=ordinal_value,
@@ -2933,7 +2926,7 @@ def extract_imports(binary: object) -> list[ImportInfo]:
                 ordinal_attr = getattr(sym, "library_ordinal", None)
                 ordinal_value = int(ordinal_attr) if isinstance(ordinal_attr, int) else None
                 result.append(
-                    _ImportInfo(
+                    ImportInfo(
                         dll=library_name,
                         function=sym_name,
                         ordinal=ordinal_value,
@@ -2963,23 +2956,19 @@ def extract_exports(binary: object) -> list[ExportInfo]:
         populated. Ordinals are ``0`` for ELF / Mach-O because those formats
         do not assign export ordinals.
     """
-    import lief
-
-    from intellicrack.core.types import ExportInfo as _ExportInfo
-
-    result: list[_ExportInfo] = []
+    result: list[ExportInfo] = []
     if isinstance(binary, lief.PE.Binary) and binary.has_exports:
         for exp in binary.get_export().entries:
             exp_name = str(exp.name) if exp.name else ""
             result.append(
-                _ExportInfo(
+                ExportInfo(
                     name=exp_name or f"ord_{exp.ordinal}",
                     ordinal=int(exp.ordinal),
                     address=int(exp.address),
                 ),
             )
     elif isinstance(binary, lief.ELF.Binary):
-        result.extend(_ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols if sym.name)
+        result.extend(ExportInfo(name=str(sym.name), ordinal=0, address=int(sym.value)) for sym in binary.exported_symbols if sym.name)
     elif isinstance(binary, lief.MachO.Binary):
         seen_names: set[str] = set()
         for sym in binary.exported_symbols:
@@ -2987,7 +2976,7 @@ def extract_exports(binary: object) -> list[ExportInfo]:
             if not sym_name or sym_name in seen_names:
                 continue
             seen_names.add(sym_name)
-            result.append(_ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
+            result.append(ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
         for sym in binary.symbols:
             sym_name = str(sym.name) if sym.name else ""
             if not sym_name or sym_name in seen_names:
@@ -2995,7 +2984,7 @@ def extract_exports(binary: object) -> list[ExportInfo]:
             raw_type = int(getattr(sym, "raw_type", 0))
             if raw_type & _MACHO_N_EXT_BIT and (raw_type & _MACHO_N_TYPE_MASK) == _MACHO_N_SECT:
                 seen_names.add(sym_name)
-                result.append(_ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
+                result.append(ExportInfo(name=sym_name, ordinal=0, address=int(sym.value)))
     return result
 
 
@@ -3008,8 +2997,6 @@ def _classify_binary(binary: object) -> tuple[str, str, bool, int]:
     Returns:
         tuple[str, str, bool, int]: (file_type, architecture, is_64bit, entry_point).
     """
-    import lief
-
     if isinstance(binary, lief.PE.Binary):
         machine_str = str(getattr(binary.header, "machine", ""))
         opt = binary.optional_header
@@ -3043,10 +3030,6 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
     Raises:
         FileNotFoundError: If path does not exist.
     """
-    import lief
-
-    from intellicrack.core.types import BinaryInfo as _BinaryInfo
-
     resolved = pathlib.Path(path)
     if not resolved.exists():
         error_message = f"Binary not found: {path}"
@@ -3061,7 +3044,7 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
     binary = lief_parse(str(resolved))
 
     if binary is None:
-        return _BinaryInfo(
+        return BinaryInfo(
             path=resolved,
             name=resolved.name,
             size=len(raw),
@@ -3077,7 +3060,7 @@ def _parse_binary_with_lief(path: Path) -> BinaryInfo:
 
     meta = _classify_binary(binary)
 
-    return _BinaryInfo(
+    return BinaryInfo(
         path=resolved,
         name=resolved.name,
         size=len(raw),

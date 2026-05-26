@@ -27,7 +27,6 @@ because the scripts target Windows-only tooling.
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 import textwrap
 import time
@@ -35,6 +34,12 @@ from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    CompletedProcess,
+    SubprocessError,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -78,17 +83,17 @@ def _resolve_pwsh() -> str:
     return pwsh
 
 
-def _run_stop(log_dir: Path) -> subprocess.CompletedProcess[str]:
+def _run_stop(log_dir: Path) -> CompletedProcess[str]:
     """Invoke ``stop_monitors.cmd`` directly against the supplied log dir.
 
     Args:
         log_dir: Directory containing the PID file.
 
     Returns:
-        subprocess.CompletedProcess[str]: The completed process.
+        CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return subprocess.run(
+    return run(
         [cmd, "/c", str(_STOP_SCRIPT), str(log_dir)],
         capture_output=True,
         text=True,
@@ -132,7 +137,7 @@ def _process_alive(pid: int, pwsh: str) -> bool:
     Returns:
         bool: ``True`` if the process exists.
     """
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",
@@ -160,14 +165,14 @@ def _kill_pids(pids: list[int]) -> None:
         return
     for pid in pids:
         try:
-            subprocess.run(
+            run(
                 [taskkill, "/PID", str(pid), "/F", "/T"],
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=10.0,
             )
-        except (subprocess.SubprocessError, OSError):
+        except (SubprocessError, OSError):
             continue
 
 
@@ -250,7 +255,7 @@ def _build_scratch_scripts_dir(scratch_root: Path, monitor_count: int) -> Path:
 def _run_scratch_start(
     scripts_dir: Path,
     log_dir: Path,
-) -> subprocess.CompletedProcess[str]:
+) -> CompletedProcess[str]:
     """Run ``start_monitors.cmd`` from a scratch scripts directory.
 
     Args:
@@ -258,10 +263,10 @@ def _run_scratch_start(
         log_dir: Directory for the PID file and per-monitor logs.
 
     Returns:
-        subprocess.CompletedProcess[str]: The completed process.
+        CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return subprocess.run(
+    return run(
         [cmd, "/c", str(scripts_dir / "start_monitors.cmd"), str(log_dir)],
         capture_output=True,
         text=True,
@@ -275,7 +280,7 @@ def _run_scratch_start(
 def _run_scratch_stop(
     scripts_dir: Path,
     log_dir: Path,
-) -> subprocess.CompletedProcess[str]:
+) -> CompletedProcess[str]:
     """Run ``stop_monitors.cmd`` from a scratch scripts directory.
 
     Args:
@@ -283,10 +288,10 @@ def _run_scratch_stop(
         log_dir: Directory containing the PID file.
 
     Returns:
-        subprocess.CompletedProcess[str]: The completed process.
+        CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return subprocess.run(
+    return run(
         [cmd, "/c", str(scripts_dir / "stop_monitors.cmd"), str(log_dir)],
         capture_output=True,
         text=True,
@@ -425,7 +430,7 @@ def test_full_lifecycle_no_orphan_pwsh(tmp_path: Path) -> None:
 
 
 def _verify_start_tracks_pids(
-    completed: subprocess.CompletedProcess[str],
+    completed: CompletedProcess[str],
     log_dir: Path,
     monitor_count: int,
     pwsh: str,
@@ -519,7 +524,7 @@ def _list_pwsh_pids(pwsh: str) -> set[int]:
     Returns:
         set[int]: PIDs of all pwsh / powershell instances.
     """
-    completed = subprocess.run(
+    completed = run(
         [
             pwsh,
             "-NoLogo",

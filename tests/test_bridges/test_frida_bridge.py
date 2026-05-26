@@ -15,11 +15,15 @@ import asyncio
 import logging
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypeVar, cast
+
+from intellicrack.core.subprocess_compat import (
+    DEVNULL,
+    Popen,
+)
 
 
 if TYPE_CHECKING:
@@ -314,19 +318,19 @@ def test_fixed_functions_present() -> None:
 
 
 @pytest.fixture(scope="module")
-def notepad_process() -> Generator[subprocess.Popen[bytes]]:
+def notepad_process() -> Generator[Popen[bytes]]:
     """Spawn a real notepad.exe for Frida to attach to.
 
     Yields:
-        Generator[subprocess.Popen[bytes]]: The running notepad process.
+        Generator[Popen[bytes]]: The running notepad process.
     """
     notepad_path = shutil.which("notepad.exe") or str(
         Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
     )
-    proc = subprocess.Popen(
+    proc = Popen(
         [notepad_path],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=DEVNULL,
+        stderr=DEVNULL,
     )
     time.sleep(_NOTEPAD_STARTUP_DELAY)
     yield proc
@@ -335,7 +339,7 @@ def notepad_process() -> Generator[subprocess.Popen[bytes]]:
 
 
 @pytest.fixture(scope="module")
-def frida_bridge(notepad_process: subprocess.Popen[bytes]) -> Generator[FridaBridge]:
+def frida_bridge(notepad_process: Popen[bytes]) -> Generator[FridaBridge]:
     """Create a FridaBridge attached to notepad.exe.
 
     Args:
@@ -748,7 +752,7 @@ def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_enumerate_processes_contains_notepad(
     frida_bridge: FridaBridge,
-    notepad_process: subprocess.Popen[bytes],
+    notepad_process: Popen[bytes],
 ) -> None:
     """Verify our spawned notepad shows up in the process list.
 

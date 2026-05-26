@@ -13,7 +13,7 @@ processes spawned by tests:
   (notepad, ollama, target binaries, debuggee processes) should run only
   inside the sandbox; the root ``conftest.py`` uses this flag to skip those
   tests on the host unless the operator explicitly opts in.
-* :class:`ManagedProcess`: a context manager that wraps :class:`subprocess.Popen`
+* :class:`ManagedProcess`: a context manager that wraps :class:`Popen`
   and guarantees the spawned process tree is killed on context exit, even if
   the test fails, raises, or pytest is interrupted. Cleanup is layered:
   graceful terminate, force kill, then a psutil-backed tree kill so orphaned
@@ -34,12 +34,17 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
 import time
 from contextlib import AbstractContextManager
 from typing import IO, TYPE_CHECKING, Any, Final, Self
 
 import psutil
+
+from intellicrack.core.subprocess_compat import (
+    DEVNULL,
+    Popen,
+    TimeoutExpired,
+)
 
 
 if TYPE_CHECKING:
@@ -167,7 +172,7 @@ def kill_pid_tree(pid: int, *, timeout: float = _TREE_KILL_TIMEOUT_S) -> None:
 
 
 class ManagedProcess(AbstractContextManager["ManagedProcess"]):
-    """Context manager wrapping :class:`subprocess.Popen` with guaranteed cleanup.
+    """Context manager wrapping :class:`Popen` with guaranteed cleanup.
 
     On context exit, regardless of whether the body returned normally, raised,
     or was interrupted, the wrapped process AND its full descendant tree are
@@ -178,16 +183,16 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
     3. :func:`kill_pid_tree` to mop up any orphaned descendants.
 
     This is the canonical way for tests to spawn external processes; tests
-    that use :class:`subprocess.Popen` directly are at risk of leaking
+    that use :class:`Popen` directly are at risk of leaking
     processes when assertions fail mid-test.
 
     Attributes:
-        argv: The argv passed to :class:`subprocess.Popen`.
-        process: The underlying :class:`subprocess.Popen` once entered.
+        argv: The argv passed to :class:`Popen`.
+        process: The underlying :class:`Popen` once entered.
     """
 
     argv: list[str]
-    process: subprocess.Popen[bytes]
+    process: Popen[bytes]
 
     def __init__(
         self,
@@ -196,8 +201,8 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
         graceful_timeout: float = _GRACEFUL_TERMINATE_TIMEOUT_S,
         force_timeout: float = _FORCE_KILL_TIMEOUT_S,
         startup_delay: float = 0.0,
-        stdout: int | IO[Any] | None = subprocess.DEVNULL,
-        stderr: int | IO[Any] | None = subprocess.DEVNULL,
+        stdout: int | IO[Any] | None = DEVNULL,
+        stderr: int | IO[Any] | None = DEVNULL,
         stdin: int | IO[Any] | None = None,
         cwd: str | None = None,
         env: dict[str, str] | None = None,
@@ -205,16 +210,16 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
         """Initialise the manager with the argv to spawn on context entry.
 
         Args:
-            argv: Argument vector passed to :class:`subprocess.Popen`.
+            argv: Argument vector passed to :class:`Popen`.
             graceful_timeout: Seconds to wait after ``terminate()`` before
                 escalating to ``kill()``.
             force_timeout: Seconds to wait after ``kill()`` before invoking
                 the psutil-backed tree kill.
             startup_delay: Optional seconds to sleep after spawn so the child
                 can initialise before tests interact with it.
-            stdout: ``subprocess.Popen`` ``stdout`` argument.
-            stderr: ``subprocess.Popen`` ``stderr`` argument.
-            stdin: ``subprocess.Popen`` ``stdin`` argument.
+            stdout: ``Popen`` ``stdout`` argument.
+            stderr: ``Popen`` ``stderr`` argument.
+            stdin: ``Popen`` ``stdin`` argument.
             cwd: Working directory for the child, or ``None`` for inherited.
             env: Environment dict for the child, or ``None`` for inherited.
         """
@@ -250,7 +255,7 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
         Returns:
             Self: ``self`` so callers can access ``self.process``.
         """
-        self.process = subprocess.Popen(
+        self.process = Popen(
             self.argv,
             stdout=self._stdout,
             stderr=self._stderr,
@@ -307,7 +312,7 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
 
         try:
             proc.wait(timeout=self._graceful_timeout)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             try:
                 proc.kill()
             except OSError as exc:
@@ -317,7 +322,7 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
                 )
             try:
                 proc.wait(timeout=self._force_timeout)
-            except subprocess.TimeoutExpired:
+            except TimeoutExpired:
                 _logger.warning(
                     "managed_process_force_kill_timeout",
                     extra={"pid": pid, "argv": self.argv},

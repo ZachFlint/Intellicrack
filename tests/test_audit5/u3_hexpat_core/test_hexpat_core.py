@@ -67,12 +67,12 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 from intellicrack.core.hexpat import evaluator as evaluator_mod
-from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.ast_nodes import StructDecl
 from intellicrack.core.hexpat.data_reader import DataReader
 from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError, HexPatTypeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, HexPatEvaluator, PatternValue
 from intellicrack.core.hexpat.interpreter import HexPatInterpreter
+from intellicrack.core.hexpat.pragma import PragmaInfo
 from intellicrack.core.hexpat.stdlib import BuiltinFunctions, set_print_sink
 from intellicrack.core.hexpat.type_system import StructTypeInfo, TypeRegistry
 

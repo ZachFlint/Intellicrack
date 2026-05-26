@@ -9,7 +9,7 @@ including Ghidra, x64dbg, Frida, Cutter/Rizin, and direct binary/process
 manipulation.
 
 Heavy bridge submodules are loaded lazily through PEP 562
-``__getattr__`` -- the wiring lives in :mod:`intellicrack.bridges._lazy`
+``__getattr__`` -- the wiring lives in :mod:`intellicrack.bridges.lazy`
 to keep this ``__init__`` focused on docstrings and re-exports. Cheap
 symbols from :mod:`intellicrack.bridges.base` remain eagerly imported
 because every dependent module needs them and they have no transitive
@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from intellicrack.bridges._lazy import resolve as _resolve_lazy
 from intellicrack.bridges.base import (
     BinaryOperationsBridge,
     BridgeCapabilities,
@@ -35,6 +34,7 @@ from intellicrack.bridges.base import (
     ToolBridgeBase,
     WatchpointInfo,
 )
+from intellicrack.bridges.lazy import resolve as _resolve_lazy
 
 
 if TYPE_CHECKING:
@@ -72,9 +72,9 @@ __all__: list[str] = [
 
 
 def __getattr__(name: str) -> type[ToolBridgeBase | ToolInstaller]:
-    """Resolve a lazy export from :data:`intellicrack.bridges._lazy.LAZY_EXPORTS`.
+    """Resolve a lazy export from :data:`intellicrack.bridges.lazy.LAZY_EXPORTS`.
 
-    Delegates to :func:`intellicrack.bridges._lazy.resolve`, which
+    Delegates to :func:`intellicrack.bridges.lazy.resolve`, which
     raises ``AttributeError`` for unregistered names.
 
     Args:

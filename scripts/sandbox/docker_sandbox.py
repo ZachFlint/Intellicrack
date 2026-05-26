@@ -803,8 +803,10 @@ def _configure_driver_logging(level: str) -> None:
     """Configure structlog output for the driver's own logger.
 
     Initializes the shared Intellicrack logger so that driver events are
-    written both to the console and to ``logs/sandbox/driver.log`` in JSON
-    form. Call once per process at startup.
+    written both to the console and to ``logs/sandbox/sandbox.log`` in
+    JSON form. The dedicated filename prevents collision with the main
+    application's ``logs/intellicrack.log``. Call once per process at
+    startup.
 
     Args:
         level: Log level name (``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``).
@@ -819,6 +821,7 @@ def _configure_driver_logging(level: str) -> None:
         backup_count=5,
         retention_days=14,
         json_file=True,
+        filename="sandbox.log",
     )
 
 

@@ -763,12 +763,14 @@ class XRefPanel(QFrame):
                 QTreeWidgetItem(outgoing_root, [f"0x{addr:08X}  {desc}"])
 
 
-class ToolOutputPanel(QFrame):
-    """Main tool output panel widget.
+class _ToolOutputPanelBase(QFrame):
+    """Core layout and tab plumbing for the tool output panel.
 
-    Contains tabbed interface for different tool outputs including
-    decompiled code, disassembly, strings, cross-references, embedded
-    external tools, and specialized analysis panels.
+    Provides UI construction, signal handling, private bridge resolution
+    helpers, and the small set of public tab/output operations that every
+    mixin builds on. Topical mixin classes inherit linearly from this
+    base so cross-references resolve through normal MRO and no single
+    class definition exceeds the public method limit.
 
     Attributes:
         address_clicked: Signal emitted when an address is clicked.
@@ -1112,6 +1114,331 @@ class ToolOutputPanel(QFrame):
         self._pending_script_validator: Any | None = None
         _logger.debug("embedded_tabs_setup_complete")
 
+    def _activate_tab_by_widget(self, widget: QWidget) -> None:
+        """Activate a tab by its widget.
+
+        Args:
+            widget: The widget whose tab should be activated.
+        """
+        index = self.tab_widget.indexOf(widget)
+        if index >= 0:
+            self.tab_widget.setCurrentIndex(index)
+
+    @staticmethod
+    def _cleanup_bridge(bridge: ToolBridgeBase, bridge_attr: str) -> None:
+        """Safely clean up a bridge, handling both sync and async methods.
+
+        Args:
+            bridge: The bridge instance to clean up.
+            bridge_attr: Attribute name for logging.
+        """
+        async_mod = importlib.import_module(".panels.async_bridge", "intellicrack.ui")
+        run_coro = async_mod.run_bridge_coroutine
+
+        for method_name in ("detach", "shutdown", "stop"):
+            method = getattr(bridge, method_name, None)
+            if method is not None and callable(method):
+                try:
+                    if inspect.iscoroutinefunction(method):
+                        run_coro(method())
+                    else:
+                        method()
+                except (RuntimeError, OSError, AttributeError):
+                    _logger.warning(
+                        "bridge_cleanup_error",
+                        exc_info=True,
+                        bridge=bridge_attr,
+                        method=method_name,
+                    )
+
+    def _on_tab_close_requested(self, index: int) -> None:
+        """Handle a tab close request.
+
+        Identifies the widget at the given tab index, stops any associated
+        tool/bridge, removes it from tracking dicts, and frees Qt resources.
+
+        Args:
+            index: Tab index to close.
+        """
+        widget = self.tab_widget.widget(index)
+        if widget is None:
+            return
+
+        panel_registry: tuple[tuple[str, str | None], ...] = (
+            ("_ghidra_widget", "ghidra_bridge"),
+            ("_cutter_widget", "cutter_bridge"),
+            ("_x64dbg_widget", "x64dbg_bridge"),
+            ("_hex_editor_panel", None),
+            ("_frida_panel", "frida_bridge"),
+            ("_process_panel", "process_bridge"),
+            ("sandbox_panel", None),
+            ("analysis_panel", None),
+            ("script_panel", None),
+            ("stack_panel", None),
+        )
+
+        widget_id = id(widget)
+        matched_attrs: list[tuple[str, str | None]] = []
+        for attr_name, bridge_attr in panel_registry:
+            ref = getattr(self, attr_name, None)
+            if ref is not None and id(ref) == widget_id:
+                matched_attrs.append((attr_name, bridge_attr))
+
+        if matched_attrs:
+            stopped = False
+            for attr_name, bridge_attr in matched_attrs:
+                ref = getattr(self, attr_name)
+                if not stopped and hasattr(ref, "stop_tool"):
+                    ref.stop_tool()
+                    stopped = True
+
+                if bridge_attr is not None:
+                    bridge = getattr(self, bridge_attr, None)
+                    if bridge is not None:
+                        self._cleanup_bridge(bridge, bridge_attr)
+                        setattr(self, bridge_attr, None)
+
+                setattr(self, attr_name, None)
+
+            for tracking_dict in (self.embedded_tools, self.panels):
+                keys_to_remove = [k for k, v in tracking_dict.items() if id(v) == widget_id]
+                for k in keys_to_remove:
+                    del tracking_dict[k]
+        else:
+            keys_to_remove = [k for k, v in self.tabs.items() if id(v) == widget_id]
+            for k in keys_to_remove:
+                del self.tabs[k]
+
+        self.tab_widget.removeTab(index)
+        widget.deleteLater()
+        _logger.info("tab_closed", tab_index=index)
+
+    def _on_tab_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu for the tab bar at the given position.
+
+        Args:
+            pos: Position of the right-click in tab bar coordinates.
+        """
+        tab_bar = self.tab_widget.tabBar()
+        if tab_bar is None:
+            return
+        index = tab_bar.tabAt(pos)
+        if index < 0:
+            return
+
+        menu = QMenu(self)
+
+        detach_action = menu.addAction("Detach to Window")
+        if detach_action is not None:
+            detach_action.triggered.connect(lambda: self.detach_tab(index))
+
+        menu.addSeparator()
+
+        close_action = menu.addAction("Close Tab")
+        if close_action is not None:
+            close_action.triggered.connect(lambda: self._on_tab_close_requested(index))
+
+        close_others_action = menu.addAction("Close Other Tabs")
+        if close_others_action is not None:
+            close_others_action.triggered.connect(lambda: self._close_other_tabs(index))
+
+        close_all_action = menu.addAction("Close All Tabs")
+        if close_all_action is not None:
+            close_all_action.triggered.connect(self._close_all_tabs)
+
+        global_pos = tab_bar.mapToGlobal(pos)
+        menu.exec(global_pos)
+
+    def detach_tab(self, index: int) -> DetachedPanelWindow | None:
+        """Detach a tab into a separate floating window.
+
+        Removes the widget from the tab container and hosts it in a
+        ``DetachedPanelWindow``. The panel is not destroyed; it can
+        be re-docked via the window's re-dock button or close event.
+
+        Args:
+            index: Tab index to detach.
+
+        Returns:
+            DetachedPanelWindow | None: The created window, or None
+                if the index is invalid.
+        """
+        widget = self.tab_widget.widget(index)
+        if widget is None:
+            return None
+
+        title = self.tab_widget.tabText(index)
+        self.tab_widget.removeTab(index)
+
+        window = DetachedPanelWindow(widget, title, self)
+        window.reattach_requested.connect(self._reattach_panel)
+        self._detached_windows[title] = window
+        window.show()
+
+        _logger.info("tab_detached", title=title)
+        return window
+
+    def _reattach_panel(self, widget: QWidget, title: str) -> None:
+        """Re-dock a previously detached panel back into the tab bar.
+
+        Args:
+            widget: The panel widget being returned.
+            title: The tab title to restore.
+        """
+        window = self._detached_windows.pop(title, None)
+        if window is not None:
+            window.hide()
+            window.deleteLater()
+
+        self.tab_widget.addTab(widget, title)
+        self.tab_widget.setCurrentWidget(widget)
+        _logger.info("tab_reattached", title=title)
+
+    def _close_other_tabs(self, keep_index: int) -> None:
+        """Close all tabs except the one at the given index.
+
+        Args:
+            keep_index: Tab index to keep open.
+        """
+        keep_widget = self.tab_widget.widget(keep_index)
+        indices_to_close = [i for i in range(self.tab_widget.count() - 1, -1, -1) if self.tab_widget.widget(i) is not keep_widget]
+        for i in indices_to_close:
+            self._on_tab_close_requested(i)
+
+    def _close_all_tabs(self) -> None:
+        """Close every tab in the tab widget."""
+        for i in range(self.tab_widget.count() - 1, -1, -1):
+            self._on_tab_close_requested(i)
+
+    def _wire_hex_editor_state(self, panel_widget: HexEditorPanel) -> None:
+        """Create a shared HexDocumentState and wire it to the bridge and panel.
+
+        Args:
+            panel_widget: The HexEditorPanel instance.
+        """
+        try:
+            self._wire_hex_editor_state_impl(panel_widget)
+        except (RuntimeError, ImportError, AttributeError):
+            _logger.debug("hex_editor_state_wire_failed", exc_info=True)
+
+    def _wire_hex_editor_state_impl(self, panel_widget: HexEditorPanel) -> None:
+        """Build the shared HexDocumentState and connect it to bridge and panel.
+
+        Args:
+            panel_widget: The HexEditorPanel instance.
+        """
+        state_mod = importlib.import_module("intellicrack.bridges.hex_state")
+        state_holder = state_mod.HexDocumentState()
+
+        set_state = getattr(panel_widget, "set_state_holder", None)
+        if callable(set_state):
+            set_state(state_holder)
+
+        reg_getter = getattr(self._tool_registry, "get_hex_editor_bridge", None)
+        if callable(reg_getter):
+            self._attach_hex_editor_bridge(panel_widget, reg_getter, state_holder)
+
+        context_signal = getattr(panel_widget, "context_push_requested", None)
+        if context_signal is not None and hasattr(context_signal, "connect"):
+            context_signal.connect(self._on_hex_context_push)
+
+    def _attach_hex_editor_bridge(
+        self,
+        panel_widget: HexEditorPanel,
+        reg_getter: Callable[[], Any],
+        state_holder: HexDocumentState,
+    ) -> None:
+        """Resolve the hex editor bridge from the registry and wire it.
+
+        Args:
+            panel_widget: The HexEditorPanel instance receiving the bridge.
+            reg_getter: Zero-argument callable returning the bridge instance.
+            state_holder: Shared HexDocumentState instance to propagate.
+        """
+        try:
+            self._attach_hex_editor_bridge_impl(panel_widget, reg_getter, state_holder)
+        except (RuntimeError, ImportError, AttributeError):
+            _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
+
+    def _attach_hex_editor_bridge_impl(
+        self,
+        panel_widget: HexEditorPanel,
+        reg_getter: Callable[[], Any],
+        state_holder: HexDocumentState,
+    ) -> None:
+        """Apply the hex editor bridge wiring once it has been resolved.
+
+        Args:
+            panel_widget: The HexEditorPanel instance receiving the bridge.
+            reg_getter: Zero-argument callable returning the bridge instance.
+            state_holder: Shared HexDocumentState instance to propagate.
+        """
+        bridge = reg_getter()
+        bridge_set_state = getattr(bridge, "set_state_holder", None)
+        if callable(bridge_set_state):
+            bridge_set_state(state_holder)
+        bridge_set_reg = getattr(bridge, "set_tool_registry", None)
+        if callable(bridge_set_reg):
+            bridge_set_reg(self._tool_registry)
+        panel_set_bridge = getattr(panel_widget, "set_bridge", None)
+        if callable(panel_set_bridge):
+            panel_set_bridge(bridge)
+        _logger.info("hex_editor_state_wired", source="registry")
+
+    def _on_hex_context_push(self, context: dict[str, object]) -> None:
+        """Handle hex editor context push for AI integration.
+
+        Formats the hex editor context into a readable analysis prompt
+        and emits it via the ``hex_context_ready`` signal for the chat
+        panel to consume.
+
+        Args:
+            context: Hex editor context dictionary.
+        """
+        cursor_val: object = context.get("cursor", 0)
+        cursor_offset: int = int(cursor_val) if isinstance(cursor_val, (int, float)) else 0
+
+        parts: list[str] = ["[Hex Editor Context]"]
+
+        file_path: object = context.get("file_path")
+        if file_path is not None:
+            parts.append(f"File: {file_path}")
+
+        size_val: object = context.get("size")
+        if isinstance(size_val, int):
+            parts.append(f"Size: {size_val} bytes")
+
+        parts.append(f"Offset: 0x{cursor_offset:08X}")
+
+        bytes_data: object = context.get("bytes_at_cursor")
+        if isinstance(bytes_data, str):
+            parts.append(f"Data: {bytes_data}")
+
+        inspection: object = context.get("inspection")
+        if isinstance(inspection, dict):
+            for key, val in cast("dict[str, str]", inspection).items():
+                parts.append(f"  {key}: {val}")
+
+        parts.append("\nPlease analyze this binary data.")
+
+        formatted = "\n".join(parts)
+        self.hex_context_ready.emit(formatted)
+        self.append_log_message(f"[Hex Editor Context] cursor=0x{cursor_offset:08X}")
+        _logger.info("hex_context_pushed", keys=list(context.keys()))
+
+    def _wire_stack_viewer_bridges(self) -> None:
+        """Wire bridge instances to the stack viewer panel.
+
+        Connects x64dbg and Frida bridges to the stack viewer
+        for stack trace display.
+        """
+        if self.stack_panel is None:
+            return
+        if hasattr(self.stack_panel, "set_x64dbg_bridge") and self.x64dbg_bridge is not None:
+            self.stack_panel.set_x64dbg_bridge(self.x64dbg_bridge)
+        if hasattr(self.stack_panel, "set_frida_bridge") and self.frida_bridge is not None:
+            self.stack_panel.set_frida_bridge(self.frida_bridge)
+
     def set_tool_registry(self, registry: ToolRegistry) -> None:
         """Set the shared tool registry for bridge reuse.
 
@@ -1120,6 +1447,15 @@ class ToolOutputPanel(QFrame):
         """
         self._tool_registry = registry
         _logger.info("tool_registry_set", registry_type=type(registry).__name__)
+
+
+class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
+    """Mixin providing panel/tab creation methods for native tool widgets.
+
+    Bundles ``add_*_panel`` and ``add_*_tab`` factories together with the
+    private ``_create_*`` and ``_resolve_*`` helpers that construct each
+    panel and resolve its backing bridge from the shared tool registry.
+    """
 
     def add_analysis_panel(self) -> BridgeAnalysisPanel:
         """Add the bridge analysis panel as a tab.
@@ -1610,6 +1946,15 @@ class ToolOutputPanel(QFrame):
         _logger.info("sandbox_tab_added", tab="Sandbox")
         return self.sandbox_panel
 
+
+class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
+    """Mixin providing ``open_in_*`` and ``activate_*_tab`` operations.
+
+    Routes binary paths to the appropriate embedded tool panel, lazily
+    materialising the tab when needed and bringing it into focus after
+    the underlying tool reports a successful load.
+    """
+
     def open_in_ghidra(self, file_path: Path | str) -> bool:
         """Open a file in the embedded Ghidra tool.
 
@@ -1745,16 +2090,6 @@ class ToolOutputPanel(QFrame):
         _logger.info("open_in_cutter_completed", binary_path=str(path), success=success)
         return success
 
-    def _activate_tab_by_widget(self, widget: QWidget) -> None:
-        """Activate a tab by its widget.
-
-        Args:
-            widget: The widget whose tab should be activated.
-        """
-        index = self.tab_widget.indexOf(widget)
-        if index >= 0:
-            self.tab_widget.setCurrentIndex(index)
-
     def get_embedded_tool(self, tool_id: OutputType) -> QWidget | None:
         """Get an embedded tool widget by ID.
 
@@ -1824,94 +2159,18 @@ class ToolOutputPanel(QFrame):
         if self.stack_panel is not None:
             self._activate_tab_by_widget(self.stack_panel)
 
-    @staticmethod
-    def _cleanup_bridge(bridge: ToolBridgeBase, bridge_attr: str) -> None:
-        """Safely clean up a bridge, handling both sync and async methods.
 
-        Args:
-            bridge: The bridge instance to clean up.
-            bridge_attr: Attribute name for logging.
-        """
-        async_mod = importlib.import_module(".panels.async_bridge", "intellicrack.ui")
-        run_coro = async_mod.run_bridge_coroutine
+class _ToolOutputPanelTabsMixin(_ToolOutputPanelOpenersMixin):
+    """Mixin providing bulk tab lifecycle operations.
 
-        for method_name in ("detach", "shutdown", "stop"):
-            method = getattr(bridge, method_name, None)
-            if method is not None and callable(method):
-                try:
-                    if inspect.iscoroutinefunction(method):
-                        run_coro(method())
-                    else:
-                        method()
-                except (RuntimeError, OSError, AttributeError):
-                    _logger.warning(
-                        "bridge_cleanup_error",
-                        exc_info=True,
-                        bridge=bridge_attr,
-                        method=method_name,
-                    )
-
-    def _on_tab_close_requested(self, index: int) -> None:
-        """Handle a tab close request.
-
-        Identifies the widget at the given tab index, stops any associated
-        tool/bridge, removes it from tracking dicts, and frees Qt resources.
-
-        Args:
-            index: Tab index to close.
-        """
-        widget = self.tab_widget.widget(index)
-        if widget is None:
-            return
-
-        panel_registry: tuple[tuple[str, str | None], ...] = (
-            ("_ghidra_widget", "ghidra_bridge"),
-            ("_cutter_widget", "cutter_bridge"),
-            ("_x64dbg_widget", "x64dbg_bridge"),
-            ("_hex_editor_panel", None),
-            ("_frida_panel", "frida_bridge"),
-            ("_process_panel", "process_bridge"),
-            ("sandbox_panel", None),
-            ("analysis_panel", None),
-            ("script_panel", None),
-            ("stack_panel", None),
-        )
-
-        widget_id = id(widget)
-        matched_attrs: list[tuple[str, str | None]] = []
-        for attr_name, bridge_attr in panel_registry:
-            ref = getattr(self, attr_name, None)
-            if ref is not None and id(ref) == widget_id:
-                matched_attrs.append((attr_name, bridge_attr))
-
-        if matched_attrs:
-            stopped = False
-            for attr_name, bridge_attr in matched_attrs:
-                ref = getattr(self, attr_name)
-                if not stopped and hasattr(ref, "stop_tool"):
-                    ref.stop_tool()
-                    stopped = True
-
-                if bridge_attr is not None:
-                    bridge = getattr(self, bridge_attr, None)
-                    if bridge is not None:
-                        self._cleanup_bridge(bridge, bridge_attr)
-                        setattr(self, bridge_attr, None)
-
-                setattr(self, attr_name, None)
-
-            for tracking_dict in (self.embedded_tools, self.panels):
-                keys_to_remove = [k for k, v in tracking_dict.items() if id(v) == widget_id]
-                for k in keys_to_remove:
-                    del tracking_dict[k]
-        else:
-            keys_to_remove = [k for k, v in self.tabs.items() if id(v) == widget_id]
-            for k in keys_to_remove:
-                del self.tabs[k]
-
-        self.tab_widget.removeTab(index)
-        widget.deleteLater()
-        _logger.info("tab_closed", tab_index=index)
+    Provides ``close_embedded_tools``, ``detach_current_tab``,
+    ``close_detached_windows``, and ``get_detached_state``. Low-level
+    private helpers used by these methods (``_cleanup_bridge``,
+    ``_on_tab_close_requested``, ``_on_tab_context_menu``,
+    ``_reattach_panel``, ``_close_other_tabs``, ``_close_all_tabs``)
+    live on ``_ToolOutputPanelBase`` because the base class's
+    ``__init__``-time signal wiring already needs to reach them.
+    """
 
     def close_embedded_tools(self) -> None:
         """Close all embedded tool instances and null their references."""
@@ -1963,103 +2222,6 @@ class ToolOutputPanel(QFrame):
 
         _logger.info("embedded_tools_closed", panel_count=len(self.panels))
 
-    def _on_tab_context_menu(self, pos: QPoint) -> None:
-        """Show a context menu for the tab bar at the given position.
-
-        Args:
-            pos: Position of the right-click in tab bar coordinates.
-        """
-        tab_bar = self.tab_widget.tabBar()
-        if tab_bar is None:
-            return
-        index = tab_bar.tabAt(pos)
-        if index < 0:
-            return
-
-        menu = QMenu(self)
-
-        detach_action = menu.addAction("Detach to Window")
-        if detach_action is not None:
-            detach_action.triggered.connect(lambda: self.detach_tab(index))
-
-        menu.addSeparator()
-
-        close_action = menu.addAction("Close Tab")
-        if close_action is not None:
-            close_action.triggered.connect(lambda: self._on_tab_close_requested(index))
-
-        close_others_action = menu.addAction("Close Other Tabs")
-        if close_others_action is not None:
-            close_others_action.triggered.connect(lambda: self._close_other_tabs(index))
-
-        close_all_action = menu.addAction("Close All Tabs")
-        if close_all_action is not None:
-            close_all_action.triggered.connect(self._close_all_tabs)
-
-        global_pos = tab_bar.mapToGlobal(pos)
-        menu.exec(global_pos)
-
-    def detach_tab(self, index: int) -> DetachedPanelWindow | None:
-        """Detach a tab into a separate floating window.
-
-        Removes the widget from the tab container and hosts it in a
-        ``DetachedPanelWindow``. The panel is not destroyed; it can
-        be re-docked via the window's re-dock button or close event.
-
-        Args:
-            index: Tab index to detach.
-
-        Returns:
-            DetachedPanelWindow | None: The created window, or None
-                if the index is invalid.
-        """
-        widget = self.tab_widget.widget(index)
-        if widget is None:
-            return None
-
-        title = self.tab_widget.tabText(index)
-        self.tab_widget.removeTab(index)
-
-        window = DetachedPanelWindow(widget, title, self)
-        window.reattach_requested.connect(self._reattach_panel)
-        self._detached_windows[title] = window
-        window.show()
-
-        _logger.info("tab_detached", title=title)
-        return window
-
-    def _reattach_panel(self, widget: QWidget, title: str) -> None:
-        """Re-dock a previously detached panel back into the tab bar.
-
-        Args:
-            widget: The panel widget being returned.
-            title: The tab title to restore.
-        """
-        window = self._detached_windows.pop(title, None)
-        if window is not None:
-            window.hide()
-            window.deleteLater()
-
-        self.tab_widget.addTab(widget, title)
-        self.tab_widget.setCurrentWidget(widget)
-        _logger.info("tab_reattached", title=title)
-
-    def _close_other_tabs(self, keep_index: int) -> None:
-        """Close all tabs except the one at the given index.
-
-        Args:
-            keep_index: Tab index to keep open.
-        """
-        keep_widget = self.tab_widget.widget(keep_index)
-        indices_to_close = [i for i in range(self.tab_widget.count() - 1, -1, -1) if self.tab_widget.widget(i) is not keep_widget]
-        for i in indices_to_close:
-            self._on_tab_close_requested(i)
-
-    def _close_all_tabs(self) -> None:
-        """Close every tab in the tab widget."""
-        for i in range(self.tab_widget.count() - 1, -1, -1):
-            self._on_tab_close_requested(i)
-
     def detach_current_tab(self) -> DetachedPanelWindow | None:
         """Detach the currently active tab into a floating window.
 
@@ -2088,6 +2250,16 @@ class ToolOutputPanel(QFrame):
         titles = list(self._detached_windows.keys())
         _logger.debug("get_detached_state", count=len(titles))
         return titles
+
+
+class _ToolOutputPanelAccessorsMixin(_ToolOutputPanelTabsMixin):
+    """Mixin providing read-mostly accessors and per-tool delegations.
+
+    Exposes lookup helpers (``find_tab_by_title``, ``get_panel`` siblings),
+    convenience getters for active widgets and bridges, and forwarding
+    methods that delegate into individual panels (Frida hook table,
+    sandbox bridge, script panel state, etc.).
+    """
 
     def find_tab_by_title(self, title: str) -> int:
         """Find a tab index by its title text.
@@ -2298,134 +2470,15 @@ class ToolOutputPanel(QFrame):
         doc = code_display.document()
         return None if doc is None else doc.findChild(QSyntaxHighlighter)
 
-    def _wire_hex_editor_state(self, panel_widget: HexEditorPanel) -> None:
-        """Create a shared HexDocumentState and wire it to the bridge and panel.
 
-        Args:
-            panel_widget: The HexEditorPanel instance.
-        """
-        try:
-            self._wire_hex_editor_state_impl(panel_widget)
-        except (RuntimeError, ImportError, AttributeError):
-            _logger.debug("hex_editor_state_wire_failed", exc_info=True)
+class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
+    """Mixin providing backend wiring, persistence, and save operations.
 
-    def _wire_hex_editor_state_impl(self, panel_widget: HexEditorPanel) -> None:
-        """Build the shared HexDocumentState and connect it to bridge and panel.
-
-        Args:
-            panel_widget: The HexEditorPanel instance.
-        """
-        state_mod = importlib.import_module("intellicrack.bridges.hex_state")
-        state_holder = state_mod.HexDocumentState()
-
-        set_state = getattr(panel_widget, "set_state_holder", None)
-        if callable(set_state):
-            set_state(state_holder)
-
-        reg_getter = getattr(self._tool_registry, "get_hex_editor_bridge", None)
-        if callable(reg_getter):
-            self._attach_hex_editor_bridge(panel_widget, reg_getter, state_holder)
-
-        context_signal = getattr(panel_widget, "context_push_requested", None)
-        if context_signal is not None and hasattr(context_signal, "connect"):
-            context_signal.connect(self._on_hex_context_push)
-
-    def _attach_hex_editor_bridge(
-        self,
-        panel_widget: HexEditorPanel,
-        reg_getter: Callable[[], Any],
-        state_holder: HexDocumentState,
-    ) -> None:
-        """Resolve the hex editor bridge from the registry and wire it.
-
-        Args:
-            panel_widget: The HexEditorPanel instance receiving the bridge.
-            reg_getter: Zero-argument callable returning the bridge instance.
-            state_holder: Shared HexDocumentState instance to propagate.
-        """
-        try:
-            self._attach_hex_editor_bridge_impl(panel_widget, reg_getter, state_holder)
-        except (RuntimeError, ImportError, AttributeError):
-            _logger.debug("hex_editor_bridge_state_wire_failed", exc_info=True)
-
-    def _attach_hex_editor_bridge_impl(
-        self,
-        panel_widget: HexEditorPanel,
-        reg_getter: Callable[[], Any],
-        state_holder: HexDocumentState,
-    ) -> None:
-        """Apply the hex editor bridge wiring once it has been resolved.
-
-        Args:
-            panel_widget: The HexEditorPanel instance receiving the bridge.
-            reg_getter: Zero-argument callable returning the bridge instance.
-            state_holder: Shared HexDocumentState instance to propagate.
-        """
-        bridge = reg_getter()
-        bridge_set_state = getattr(bridge, "set_state_holder", None)
-        if callable(bridge_set_state):
-            bridge_set_state(state_holder)
-        bridge_set_reg = getattr(bridge, "set_tool_registry", None)
-        if callable(bridge_set_reg):
-            bridge_set_reg(self._tool_registry)
-        panel_set_bridge = getattr(panel_widget, "set_bridge", None)
-        if callable(panel_set_bridge):
-            panel_set_bridge(bridge)
-        _logger.info("hex_editor_state_wired", source="registry")
-
-    def _on_hex_context_push(self, context: dict[str, object]) -> None:
-        """Handle hex editor context push for AI integration.
-
-        Formats the hex editor context into a readable analysis prompt
-        and emits it via the ``hex_context_ready`` signal for the chat
-        panel to consume.
-
-        Args:
-            context: Hex editor context dictionary.
-        """
-        cursor_val: object = context.get("cursor", 0)
-        cursor_offset: int = int(cursor_val) if isinstance(cursor_val, (int, float)) else 0
-
-        parts: list[str] = ["[Hex Editor Context]"]
-
-        file_path: object = context.get("file_path")
-        if file_path is not None:
-            parts.append(f"File: {file_path}")
-
-        size_val: object = context.get("size")
-        if isinstance(size_val, int):
-            parts.append(f"Size: {size_val} bytes")
-
-        parts.append(f"Offset: 0x{cursor_offset:08X}")
-
-        bytes_data: object = context.get("bytes_at_cursor")
-        if isinstance(bytes_data, str):
-            parts.append(f"Data: {bytes_data}")
-
-        inspection: object = context.get("inspection")
-        if isinstance(inspection, dict):
-            for key, val in cast("dict[str, str]", inspection).items():
-                parts.append(f"  {key}: {val}")
-
-        parts.append("\nPlease analyze this binary data.")
-
-        formatted = "\n".join(parts)
-        self.hex_context_ready.emit(formatted)
-        self.append_log_message(f"[Hex Editor Context] cursor=0x{cursor_offset:08X}")
-        _logger.info("hex_context_pushed", keys=list(context.keys()))
-
-    def _wire_stack_viewer_bridges(self) -> None:
-        """Wire bridge instances to the stack viewer panel.
-
-        Connects x64dbg and Frida bridges to the stack viewer
-        for stack trace display.
-        """
-        if self.stack_panel is None:
-            return
-        if hasattr(self.stack_panel, "set_x64dbg_bridge") and self.x64dbg_bridge is not None:
-            self.stack_panel.set_x64dbg_bridge(self.x64dbg_bridge)
-        if hasattr(self.stack_panel, "set_frida_bridge") and self.frida_bridge is not None:
-            self.stack_panel.set_frida_bridge(self.frida_bridge)
+    Hosts the public ``wire_*`` adapters, layout save/restore, and
+    hex editor save delegation. The lower-level hex-editor and
+    stack-viewer plumbing helpers live on ``_ToolOutputPanelBase``
+    so the panel factory mixins can call them during ``add_*_tab``.
+    """
 
     def wire_sandbox_bridge(self, bridge: SandboxBridge) -> None:
         """Wire a sandbox bridge to the sandbox panel.
@@ -2565,7 +2618,7 @@ class ToolOutputPanel(QFrame):
 
         sizes_val: object = state.get("splitter_sizes")
         stored_sizes = cast("list[int]", sizes_val) if isinstance(sizes_val, list) else []
-        if len(stored_sizes) == 2:  # noqa: PLR2004
+        if len(stored_sizes) == 2:
             self.main_splitter.setSizes([int(stored_sizes[0]), int(stored_sizes[1])])
 
     def has_unsaved_changes(self) -> bool:
@@ -2598,3 +2651,17 @@ class ToolOutputPanel(QFrame):
         success = bool(save_fn()) if callable(save_fn) else False
         _logger.info("hex_editor_save_result", success=success)
         return success
+
+
+class ToolOutputPanel(_ToolOutputPanelWiringMixin):
+    """Main tool output panel widget.
+
+    Contains tabbed interface for different tool outputs including
+    decompiled code, disassembly, strings, cross-references, embedded
+    external tools, and specialized analysis panels.
+
+    Composed from the ``_ToolOutputPanelBase`` core class together with
+    topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area so
+    no single class definition exceeds the public method limit.
+    """

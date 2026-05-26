@@ -43,8 +43,8 @@ import pytest
 from PyQt6.QtWidgets import QComboBox, QFileDialog, QMessageBox, QTreeWidget, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
-from intellicrack.ui.panels.hex_editor._templates import TemplatesMixin
+from intellicrack.ui.panels.hex_editor.pattern_editor import PatternEditorMixin
+from intellicrack.ui.panels.hex_editor.templates import TemplatesMixin
 
 
 if TYPE_CHECKING:
@@ -738,11 +738,11 @@ class TestPatternApplyBranches:
         # Force the compile branch by disabling the interpreter
         # availability flag in the mixin's import surface.
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             False,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             None,
         )
 
@@ -828,11 +828,11 @@ class TestPatternApplyBranches:
                 return stub
 
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             True,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             _ConstructibleStub(),
         )
 
@@ -891,11 +891,11 @@ class TestPatternApplyBranches:
                 return stub
 
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             True,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             _ConstructibleStub(),
         )
 
@@ -934,11 +934,11 @@ class TestPatternApplyBranches:
                 the interpreter branch so the compile path runs.
         """
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             False,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             None,
         )
 
@@ -1097,11 +1097,11 @@ class TestAudit7TemplateRegisteredOnApply:
                 return stub
 
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             True,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             _ConstructibleStub(),
         )
 
@@ -1146,11 +1146,11 @@ class TestAudit7TemplateRegisteredOnApply:
                 return stub
 
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.hexpat_interpreter_available",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
             True,
         )
         monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor._pattern_editor.HexPatInterpreter_cls",
+            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
             _ConstructibleStub(),
         )
 

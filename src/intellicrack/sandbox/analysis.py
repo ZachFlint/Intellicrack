@@ -18,7 +18,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from intellicrack.core.logging import get_logger
-from intellicrack.sandbox._tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 from intellicrack.sandbox.base import (
     BehaviorMatch,
     ExecutionReport,
@@ -26,6 +25,7 @@ from intellicrack.sandbox.base import (
     NetworkActivity,
     TimelineEvent,
 )
+from intellicrack.sandbox.tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 
 
 _logger = get_logger(__name__)
@@ -45,7 +45,7 @@ _C2_PORTS: frozenset[int] = frozenset(
     {4444, 5555, 8080, 8443, 1337, 31337, 6666, 6667, 9999},
 )
 
-_UNSPECIFIED_ADDR = "0.0.0.0"  # noqa: S104  # nosec B104  # IPv4 sentinel constant; not used as bind address
+_UNSPECIFIED_ADDR = "0.0.0.0"
 
 _PRIVATE_IP_PREFIXES: tuple[str, ...] = (
     "10.",

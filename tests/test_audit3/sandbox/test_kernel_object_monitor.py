@@ -26,13 +26,19 @@ from __future__ import annotations
 import ctypes
 import os
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+    run,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -71,7 +77,7 @@ def _start_monitor(
     log_dir: Path,
     pwsh: str,
     poll_ms: int = _FAST_POLL_INTERVAL_MS,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Spawn ``kernel_object_monitor.ps1`` with the supplied log directory.
 
     Args:
@@ -80,9 +86,9 @@ def _start_monitor(
         poll_ms: Polling interval in milliseconds.
 
     Returns:
-        subprocess.Popen[str]: The running monitor process.
+        Popen[str]: The running monitor process.
     """
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -97,15 +103,15 @@ def _start_monitor(
             "-PollIntervalMilliseconds",
             str(poll_ms),
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -120,7 +126,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_KILL_GRACE_SEC)
     else:
@@ -300,7 +306,7 @@ def test_script_logs_openprocess_failure_for_system_pid(tmp_path: Path) -> None:
     assert has_real_error, f"OpenProcess failures must include the explicit GetLastError code; contents={contents!r}"
 
 
-def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> subprocess.Popen[str]:
+def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[str]:
     """Spawn a helper that creates and closes a named mutex repeatedly.
 
     The helper deliberately holds each mutex for less than the legacy
@@ -314,7 +320,7 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> subproc
         mutex_name: Object name for the named mutex.
 
     Returns:
-        subprocess.Popen[str]: The running helper process.
+        Popen[str]: The running helper process.
     """
     script = (
         "$ErrorActionPreference='Stop';"
@@ -325,7 +331,7 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> subproc
         "  $m.Dispose();"
         "}"
     )
-    return subprocess.Popen(
+    return Popen(
         [
             pwsh,
             "-NoLogo",
@@ -336,8 +342,8 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> subproc
             "-Command",
             script,
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -364,7 +370,7 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     mutex_name = "Local\\IntellicrackAudit3U7"
 
     monitor_proc = _start_monitor(log_dir, pwsh, poll_ms=_FAST_POLL_INTERVAL_MS)
-    helper_proc: subprocess.Popen[str] | None = None
+    helper_proc: Popen[str] | None = None
     try:
         # Wait for the first full sweep to finish - the SeDebug error or
         # the first OpenProcess error in the error log signals the loop
@@ -393,7 +399,7 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
             helper_proc.terminate()
             try:
                 helper_proc.communicate(timeout=_KILL_GRACE_SEC)
-            except subprocess.TimeoutExpired:
+            except TimeoutExpired:
                 helper_proc.kill()
                 helper_proc.communicate(timeout=_KILL_GRACE_SEC)
         _terminate(monitor_proc)
@@ -449,7 +455,7 @@ def test_script_no_orphan_pwsh_after_terminate(tmp_path: Path) -> None:
         _terminate(proc)
 
     # Verify the PID is no longer running.
-    check = subprocess.run(
+    check = run(
         [
             pwsh,
             "-NoLogo",

@@ -30,25 +30,11 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 import psutil
 
 from intellicrack.core._optional_imports import require_yara
-from intellicrack.core._subprocess import (
-    TimeoutExpired as _SubprocessTimeoutExpired,
-    run as _subprocess_run,
-)
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.sandbox._log_helpers import format_yara_match as _format_yara_match
-from intellicrack.sandbox._log_parsers import (
-    parse_api_trace_log,
-    parse_clipboard_log,
-    parse_dll_log,
-    parse_file_log,
-    parse_injection_log,
-    parse_kernel_object_log,
-    parse_network_log,
-    parse_process_log,
-    parse_registry_log,
-    parse_resource_log,
-    parse_service_log,
+from intellicrack.core.subprocess_compat import (
+    TimeoutExpired as _SubprocessTimeoutExpired,
+    run as _subprocess_run,
 )
 from intellicrack.sandbox.base import (
     ApiCall,
@@ -68,6 +54,20 @@ from intellicrack.sandbox.base import (
     SandboxError,
     SandboxTimeoutError,
     ServiceChange,
+)
+from intellicrack.sandbox.log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox.log_parsers import (
+    parse_api_trace_log,
+    parse_clipboard_log,
+    parse_dll_log,
+    parse_file_log,
+    parse_injection_log,
+    parse_kernel_object_log,
+    parse_network_log,
+    parse_process_log,
+    parse_registry_log,
+    parse_resource_log,
+    parse_service_log,
 )
 
 
@@ -2095,7 +2095,7 @@ class QEMUSandbox(SandboxBase):
         ``.exe`` under ``Z:\``, ``System32`` or ``SysWOW64``), and
         (4) emits process, file, and extended network telemetry in the
         ten-field schema parsed by
-        :func:`intellicrack.sandbox._log_parsers.parse_network_log`.
+        :func:`intellicrack.sandbox.log_parsers.parse_network_log`.
 
         Returns:
             str: Full PowerShell script source (UTF-8).
@@ -3042,7 +3042,7 @@ python3 /mnt/shared/monitor/agent.py &
         Returns:
             _MonitoringLogs: All monitor-log parse results collected from
             the shared ``logs`` folder. Each field is populated from the
-            corresponding parser in :mod:`intellicrack.sandbox._log_parsers`
+            corresponding parser in :mod:`intellicrack.sandbox.log_parsers`
             and defaults to an empty list when the matching log file is
             absent.
         """

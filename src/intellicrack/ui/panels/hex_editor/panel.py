@@ -38,10 +38,10 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui._dialogs import show_warning
+from intellicrack.ui.dialogs_helpers import show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
-from intellicrack.ui.panels.hex_editor._base import (
+from intellicrack.ui.panels.hex_editor.base import (
     CURSOR_CONTEXT_BYTES,
     HASH_ALGORITHMS,
     PREVIEW_BYTES,
@@ -50,29 +50,29 @@ from intellicrack.ui.panels.hex_editor._base import (
     hexcore,
     hexcore_available,
 )
-from intellicrack.ui.panels.hex_editor._bookmarks import BookmarksMixin
-from intellicrack.ui.panels.hex_editor._calculator import CalculatorMixin
-from intellicrack.ui.panels.hex_editor._comparison import ComparisonMixin
-from intellicrack.ui.panels.hex_editor._data_inspector import DataInspectorMixin
-from intellicrack.ui.panels.hex_editor._disassembly import DisassemblyMixin
-from intellicrack.ui.panels.hex_editor._hashing import HashingMixin
-from intellicrack.ui.panels.hex_editor._highlighting import HighlightingMixin
-from intellicrack.ui.panels.hex_editor._patches import PatchesMixin
-from intellicrack.ui.panels.hex_editor._pattern_editor import PatternEditorMixin
-from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
-from intellicrack.ui.panels.hex_editor._sandbox import SandboxMixin
-from intellicrack.ui.panels.hex_editor._scripting import ScriptingMixin
-from intellicrack.ui.panels.hex_editor._search import SearchMixin
-from intellicrack.ui.panels.hex_editor._sections import SectionsMixin
-from intellicrack.ui.panels.hex_editor._signatures import SignaturesMixin
-from intellicrack.ui.panels.hex_editor._statistics import StatisticsMixin
-from intellicrack.ui.panels.hex_editor._templates import TemplatesMixin
-from intellicrack.ui.panels.hex_editor._transforms import TransformsMixin
-from intellicrack.ui.panels.hex_editor._widgets import (
+from intellicrack.ui.panels.hex_editor.bookmarks import BookmarksMixin
+from intellicrack.ui.panels.hex_editor.calculator import CalculatorMixin
+from intellicrack.ui.panels.hex_editor.comparison import ComparisonMixin
+from intellicrack.ui.panels.hex_editor.data_inspector import DataInspectorMixin
+from intellicrack.ui.panels.hex_editor.disassembly import DisassemblyMixin
+from intellicrack.ui.panels.hex_editor.hashing import HashingMixin
+from intellicrack.ui.panels.hex_editor.highlighting import HighlightingMixin
+from intellicrack.ui.panels.hex_editor.patches import PatchesMixin
+from intellicrack.ui.panels.hex_editor.pattern_editor import PatternEditorMixin
+from intellicrack.ui.panels.hex_editor.process_memory import ProcessMemoryMixin
+from intellicrack.ui.panels.hex_editor.sandbox import SandboxMixin
+from intellicrack.ui.panels.hex_editor.scripting import ScriptingMixin
+from intellicrack.ui.panels.hex_editor.search import SearchMixin
+from intellicrack.ui.panels.hex_editor.sections import SectionsMixin
+from intellicrack.ui.panels.hex_editor.signatures import SignaturesMixin
+from intellicrack.ui.panels.hex_editor.statistics import StatisticsMixin
+from intellicrack.ui.panels.hex_editor.templates import TemplatesMixin
+from intellicrack.ui.panels.hex_editor.transforms import TransformsMixin
+from intellicrack.ui.panels.hex_editor.widgets import (
     ByteDistributionWidget,
     EntropyGraphWidget,
 )
-from intellicrack.ui.panels.hex_editor._yara import YaraMixin
+from intellicrack.ui.panels.hex_editor.yara import YaraMixin
 from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 
 
@@ -86,7 +86,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.hexpat.completer import HexPatCompleter
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
-    from intellicrack.ui.panels.hex_editor._pattern_code_editor import PatternCodeEditor
+    from intellicrack.ui.panels.hex_editor.pattern_code_editor import PatternCodeEditor
 
 _MODE_LABEL_WIDTH: Final[int] = 30
 _SEARCH_MODE_WIDTH: Final[int] = 80
@@ -353,11 +353,11 @@ class HexEditorPanel(
         self._main_vsplit.addWidget(hsplit)
 
         self._pattern_frame = self._build_pattern_editor()
-        self._pattern_frame.setVisible(visible=False)
+        self._pattern_frame.setVisible(False)
         self._main_vsplit.addWidget(self._pattern_frame)
 
         self._numeric_search_frame = self._build_numeric_search_panel()
-        self._numeric_search_frame.setVisible(visible=False)
+        self._numeric_search_frame.setVisible(False)
         self._main_vsplit.addWidget(self._numeric_search_frame)
 
         if self._search_mode_combo is not None:
@@ -404,30 +404,8 @@ class HexEditorPanel(
         if self._side_tabs is None:
             return
 
-        inspector_container = QWidget()
-        insp_layout = QVBoxLayout(inspector_container)
-        insp_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
-        self._data_inspector_tree = self._make_tree(["Type", "Value"])
-        insp_layout.addWidget(self._data_inspector_tree)
-        insp_layout.addWidget(self._create_bit_editor_group())
-        insp_layout.addWidget(self._create_text_decode_group())
-        insp_layout.addWidget(self._create_highlighting_controls())
-        self._side_tabs.addTab(inspector_container, "Inspector")
-
-        bookmarks_container = QWidget()
-        bm_layout = QVBoxLayout(bookmarks_container)
-        bm_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
-        self._bookmarks_tree = self._make_tree(["Offset", "Length", "Label"])
-        bm_layout.addWidget(self._bookmarks_tree)
-        bm_btn_layout = QHBoxLayout()
-        add_bm_btn = QPushButton("Add")
-        add_bm_btn.clicked.connect(self._on_add_bookmark)
-        bm_btn_layout.addWidget(add_bm_btn)
-        rm_bm_btn = QPushButton("Remove")
-        rm_bm_btn.clicked.connect(self._on_remove_bookmark)
-        bm_btn_layout.addWidget(rm_bm_btn)
-        bm_layout.addLayout(bm_btn_layout)
-        self._side_tabs.addTab(bookmarks_container, "Bookmarks")
+        self._side_tabs.addTab(self._build_inspector_tab(), "Inspector")
+        self._side_tabs.addTab(self._build_bookmarks_tab(), "Bookmarks")
 
         self.sections_tree = self._make_tree(["Name", "VAddr", "VSize", "RawSize"])
         self._side_tabs.addTab(self.sections_tree, "Sections")
@@ -442,6 +420,72 @@ class HexEditorPanel(
         self._strings_tree.itemDoubleClicked.connect(self._on_string_double_clicked)
         self._side_tabs.addTab(self._strings_tree, "Strings")
 
+        self._side_tabs.addTab(self._build_statistics_tab(), "Statistics")
+        self._side_tabs.addTab(self._build_templates_tab(), "Templates")
+        self._side_tabs.addTab(self._build_patches_tab(), "Patches")
+        self._side_tabs.addTab(self._build_hashes_tab(), "Hashes")
+
+        self._side_tabs.addTab(self._create_disassembly_tab(), "Disassembly")
+        self._side_tabs.addTab(self._create_yara_tab(), "YARA")
+        self._side_tabs.addTab(self._create_transforms_tab(), "Transforms")
+        self._side_tabs.addTab(self._create_calculator_tab(), "Calculator")
+        self._side_tabs.addTab(self._create_scripting_tab(), "Python")
+        self._side_tabs.addTab(self._create_signatures_tab(), "Signatures")
+        self._side_tabs.addTab(self._create_sandbox_tab(), "Sandbox")
+        self._side_tabs.addTab(self._create_comparison_tab(), "Diff")
+
+    def _build_inspector_tab(self) -> QWidget:
+        """Build the inspector side-tab widget.
+
+        Creates the data-inspector tree alongside the bit editor, text
+        decoder and highlighting controls used for inspecting bytes at the
+        cursor position.
+
+        Returns:
+            QWidget: Container widget for the inspector tab.
+        """
+        inspector_container = QWidget()
+        insp_layout = QVBoxLayout(inspector_container)
+        insp_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
+        self._data_inspector_tree = self._make_tree(["Type", "Value"])
+        insp_layout.addWidget(self._data_inspector_tree)
+        insp_layout.addWidget(self._create_bit_editor_group())
+        insp_layout.addWidget(self._create_text_decode_group())
+        insp_layout.addWidget(self._create_highlighting_controls())
+        return inspector_container
+
+    def _build_bookmarks_tab(self) -> QWidget:
+        """Build the bookmarks side-tab widget.
+
+        Creates the bookmarks tree and its add / remove action buttons.
+
+        Returns:
+            QWidget: Container widget for the bookmarks tab.
+        """
+        bookmarks_container = QWidget()
+        bm_layout = QVBoxLayout(bookmarks_container)
+        bm_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
+        self._bookmarks_tree = self._make_tree(["Offset", "Length", "Label"])
+        bm_layout.addWidget(self._bookmarks_tree)
+        bm_btn_layout = QHBoxLayout()
+        add_bm_btn = QPushButton("Add")
+        add_bm_btn.clicked.connect(self._on_add_bookmark)
+        bm_btn_layout.addWidget(add_bm_btn)
+        rm_bm_btn = QPushButton("Remove")
+        rm_bm_btn.clicked.connect(self._on_remove_bookmark)
+        bm_btn_layout.addWidget(rm_bm_btn)
+        bm_layout.addLayout(bm_btn_layout)
+        return bookmarks_container
+
+    def _build_statistics_tab(self) -> QWidget:
+        """Build the statistics side-tab widget.
+
+        Creates the entropy graph, byte distribution widget, summary box,
+        byte-frequency tree, and the refresh / digram-matrix action row.
+
+        Returns:
+            QWidget: Container widget for the statistics tab.
+        """
         stats_container = QWidget()
         stats_layout = QVBoxLayout(stats_container)
         stats_layout.setContentsMargins(_STATS_MARGIN, _STATS_MARGIN, _STATS_MARGIN, _STATS_MARGIN)
@@ -449,6 +493,30 @@ class HexEditorPanel(
         self._entropy_graph = EntropyGraphWidget()
         self._entropy_graph.block_clicked.connect(self.goto_offset)
         stats_layout.addWidget(self._entropy_graph)
+        stats_layout.addLayout(self._build_byte_distribution_header())
+        stats_layout.addWidget(self._byte_dist_widget)
+        stats_layout.addWidget(self._build_statistics_summary_box())
+        self._statistics_tree = self._make_tree(["Byte", "Count", "Percentage"])
+        stats_layout.addWidget(self._statistics_tree)
+        stats_btn_row = QHBoxLayout()
+        stats_refresh_btn = QPushButton("Refresh")
+        stats_refresh_btn.clicked.connect(self._on_refresh_statistics)
+        stats_btn_row.addWidget(stats_refresh_btn)
+        stats_digram_btn = QPushButton("Digram Matrix")
+        stats_digram_btn.clicked.connect(self._on_show_digram_matrix)
+        stats_btn_row.addWidget(stats_digram_btn)
+        stats_layout.addLayout(stats_btn_row)
+        return stats_container
+
+    def _build_byte_distribution_header(self) -> QHBoxLayout:
+        """Build the byte-distribution header row with a log-scale toggle.
+
+        Initialises :attr:`_byte_dist_widget` as a side effect so the
+        statistics tab can lay it out directly underneath the header row.
+
+        Returns:
+            QHBoxLayout: Header layout containing the label and toggle button.
+        """
         dist_header = QHBoxLayout()
         dist_header.addWidget(QLabel("Byte Distribution"))
         log_btn = QPushButton("Log Scale")
@@ -465,8 +533,17 @@ class HexEditorPanel(
 
         log_btn.toggled.connect(_log_toggled_slot)
         dist_header.addWidget(log_btn)
-        stats_layout.addLayout(dist_header)
-        stats_layout.addWidget(self._byte_dist_widget)
+        return dist_header
+
+    def _build_statistics_summary_box(self) -> QGroupBox:
+        """Build the statistics-summary group box.
+
+        Creates labels for overall entropy, null/printable/control/high
+        byte percentages, and the classification descriptor.
+
+        Returns:
+            QGroupBox: Group box containing the populated summary form.
+        """
         summary_box = QGroupBox("Summary")
         summary_form = QFormLayout(summary_box)
         self._entropy_label = QLabel("\u2014")
@@ -481,19 +558,17 @@ class HexEditorPanel(
         summary_form.addRow("High bytes:", self._high_pct_label)
         self._classification_label = QLabel("\u2014")
         summary_form.addRow("Classification:", self._classification_label)
-        stats_layout.addWidget(summary_box)
-        self._statistics_tree = self._make_tree(["Byte", "Count", "Percentage"])
-        stats_layout.addWidget(self._statistics_tree)
-        stats_btn_row = QHBoxLayout()
-        stats_refresh_btn = QPushButton("Refresh")
-        stats_refresh_btn.clicked.connect(self._on_refresh_statistics)
-        stats_btn_row.addWidget(stats_refresh_btn)
-        stats_digram_btn = QPushButton("Digram Matrix")
-        stats_digram_btn.clicked.connect(self._on_show_digram_matrix)
-        stats_btn_row.addWidget(stats_digram_btn)
-        stats_layout.addLayout(stats_btn_row)
-        self._side_tabs.addTab(stats_container, "Statistics")
+        return summary_box
 
+    def _build_templates_tab(self) -> QWidget:
+        """Build the templates side-tab widget.
+
+        Creates the templates combo box, apply / import / export / remove
+        action buttons, auto-bookmark button, and the templates tree.
+
+        Returns:
+            QWidget: Container widget for the templates tab.
+        """
         templates_container = QWidget()
         tmpl_layout = QVBoxLayout(templates_container)
         tmpl_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
@@ -520,8 +595,16 @@ class HexEditorPanel(
         tmpl_layout.addWidget(tmpl_auto_bm_btn)
         self._templates_tree = self._make_tree(["Field", "Offset", "Size", "Value"])
         tmpl_layout.addWidget(self._templates_tree)
-        self._side_tabs.addTab(templates_container, "Templates")
+        return templates_container
 
+    def _build_patches_tab(self) -> QWidget:
+        """Build the patches side-tab widget.
+
+        Creates the patches tree and the import / export action buttons.
+
+        Returns:
+            QWidget: Container widget for the patches tab.
+        """
         patches_container = QWidget()
         patches_layout = QVBoxLayout(patches_container)
         patches_layout.setContentsMargins(_ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN, _ZERO_MARGIN)
@@ -535,8 +618,18 @@ class HexEditorPanel(
         import_patches_btn.clicked.connect(self._on_import_patches)
         patches_btn_layout.addWidget(import_patches_btn)
         patches_layout.addLayout(patches_btn_layout)
-        self._side_tabs.addTab(patches_container, "Patches")
+        return patches_container
 
+    def _build_hashes_tab(self) -> QWidget:
+        """Build the hashes side-tab widget.
+
+        Creates the hash algorithm combo, calculate / custom CRC buttons,
+        result display, selection-hashing button, and embeds the PE
+        checksum group widget.
+
+        Returns:
+            QWidget: Container widget for the hashes tab.
+        """
         hashes_container = QWidget()
         hashes_layout = QVBoxLayout(hashes_container)
         hashes_layout.setContentsMargins(_HASH_MARGIN, _HASH_MARGIN, _HASH_MARGIN, _HASH_MARGIN)
@@ -553,7 +646,7 @@ class HexEditorPanel(
         hash_row.addWidget(custom_crc_btn)
         hashes_layout.addLayout(hash_row)
         self._hash_result_label = QLabel("")
-        self._hash_result_label.setWordWrap(on=True)
+        self._hash_result_label.setWordWrap(True)
         self._hash_result_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         hashes_layout.addWidget(self._hash_result_label)
         hash_sel_btn = QPushButton("Hash Selection")
@@ -561,16 +654,7 @@ class HexEditorPanel(
         hashes_layout.addWidget(hash_sel_btn)
         hashes_layout.addWidget(self._create_pe_checksum_group())
         hashes_layout.addStretch()
-        self._side_tabs.addTab(hashes_container, "Hashes")
-
-        self._side_tabs.addTab(self._create_disassembly_tab(), "Disassembly")
-        self._side_tabs.addTab(self._create_yara_tab(), "YARA")
-        self._side_tabs.addTab(self._create_transforms_tab(), "Transforms")
-        self._side_tabs.addTab(self._create_calculator_tab(), "Calculator")
-        self._side_tabs.addTab(self._create_scripting_tab(), "Python")
-        self._side_tabs.addTab(self._create_signatures_tab(), "Signatures")
-        self._side_tabs.addTab(self._create_sandbox_tab(), "Sandbox")
-        self._side_tabs.addTab(self._create_comparison_tab(), "Diff")
+        return hashes_container
 
     @staticmethod
     def _make_tree(headers: list[str]) -> QTreeWidget:
@@ -584,8 +668,8 @@ class HexEditorPanel(
         """
         tree = QTreeWidget()
         tree.setHeaderLabels(headers)
-        tree.setRootIsDecorated(show=False)
-        tree.setAlternatingRowColors(enable=True)
+        tree.setRootIsDecorated(False)
+        tree.setAlternatingRowColors(True)
         return tree
 
     def load_file(self, file_path: Path | str) -> bool:
@@ -898,7 +982,7 @@ class HexEditorPanel(
             elif event_type == evt.HIGHLIGHT_RULE_ADDED:
                 rule = data.get("rule")
                 if isinstance(rule, dict):
-                    self._apply_bridge_highlight_rule_added(rule)
+                    self._apply_bridge_highlight_rule_added(cast("dict[str, Any]", rule))
             elif event_type == evt.HIGHLIGHT_RULE_REMOVED:
                 rule_id = data.get("rule_id")
                 if isinstance(rule_id, str):

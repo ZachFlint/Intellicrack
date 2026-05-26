@@ -39,13 +39,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
 from intellicrack.core.config import get_config_dir, get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
 
-from ._dialogs import show_info, show_warning
+from .dialogs_helpers import show_info, show_warning
 from .panels.async_bridge import run_bridge_coroutine
 from .resources import IconManager
 
@@ -61,6 +61,19 @@ _DIALOG_HEIGHT: Final[int] = 500
 _OUTPUT_MAX_HEIGHT: Final[int] = 150
 _IS_WIN32: bool = os.name == "nt"
 _DEFAULT_CONFIG_ATTR: Final[str] = "_default_config"
+_SANDBOX_FEATURE_NAME: Final[str] = "Containers-DisposableClientVM"
+_SANDBOX_INSTALL_STATE_ENABLED: Final[str] = "1"
+_SANDBOX_AVAILABILITY_TIMEOUT_SECONDS: Final[int] = 10
+
+
+def _windows_sandbox_binary_path() -> Path:
+    r"""Return the expected path to the Windows Sandbox client binary.
+
+    Returns:
+        Path: Absolute path to ``WindowsSandbox.exe`` under ``%SystemRoot%\System32``.
+    """
+    system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
+    return Path(system_root) / "System32" / "WindowsSandbox.exe"
 
 
 class SandboxTestWorker(QThread):
@@ -477,25 +490,58 @@ class SandboxConfigDialog(QDialog):
         layout.addLayout(button_layout)
 
     def _run_sandbox_availability_check(self) -> None:
-        """Probe Windows for the Containers-DisposableClientVM feature."""
-        process_manager = ProcessManager.get_instance()
-        creation_flags = CREATE_NO_WINDOW
-        result = process_manager.run_tracked(
-            [
-                "powershell",
-                "-Command",
-                "Get-WindowsOptionalFeature -FeatureName Containers-DisposableClientVM -Online",
-            ],
-            name="powershell-sandbox-check",
-            check=False,
-            timeout=10,
-            creationflags=creation_flags,
-        )
-        if "Enabled" in result.stdout:
+        r"""Probe Windows for the Containers-DisposableClientVM feature.
+
+        Uses two unelevated detection paths in sequence so the dialog stays
+        functional when launched from a standard (non-admin) Intellicrack
+        session:
+
+        1. Presence of ``WindowsSandbox.exe`` under ``%SystemRoot%\System32``.
+           DISM only installs this binary when the optional feature is
+           enabled, so a hit is a definitive signal.
+        2. CIM ``Win32_OptionalFeature`` query, which - unlike
+           ``Get-WindowsOptionalFeature -Online`` - returns the
+           ``InstallState`` without requiring administrator elevation.
+        """
+        sandbox_binary = _windows_sandbox_binary_path()
+        if sandbox_binary.is_file():
             _logger.info(
                 "sandbox_config_validated",
                 valid=True,
                 sandbox_available=True,
+                detection="windows_sandbox_binary",
+                binary_path=str(sandbox_binary),
+            )
+            self._set_available()
+            return
+
+        ps_command = (
+            "(Get-CimInstance -ClassName Win32_OptionalFeature "
+            f"-Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
+        )
+        process_manager = ProcessManager.get_instance()
+        result = process_manager.run_tracked(
+            [
+                "powershell",
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                ps_command,
+            ],
+            name="powershell-sandbox-check",
+            check=False,
+            timeout=_SANDBOX_AVAILABILITY_TIMEOUT_SECONDS,
+            creationflags=CREATE_NO_WINDOW,
+        )
+        install_state = (result.stdout or "").strip()
+        if install_state == _SANDBOX_INSTALL_STATE_ENABLED:
+            _logger.info(
+                "sandbox_config_validated",
+                valid=True,
+                sandbox_available=True,
+                detection="cim_optional_feature",
+                install_state=install_state,
             )
             self._set_available()
         else:
@@ -503,6 +549,9 @@ class SandboxConfigDialog(QDialog):
                 "sandbox_config_validated",
                 valid=False,
                 reason="feature_not_enabled",
+                detection="cim_optional_feature",
+                install_state=install_state or "unknown",
+                returncode=result.returncode,
             )
             self._set_unavailable("Windows Sandbox feature is not enabled")
 

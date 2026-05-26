@@ -12,14 +12,14 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from intellicrack.core.hexpat._pragma import (
+from intellicrack.core.hexpat.errors import HexPatPreprocessorError
+from intellicrack.core.hexpat.pragma import (
     DEFAULT_ARRAY_LIMIT,
     DEFAULT_EVAL_DEPTH,
     DEFAULT_PATTERN_LIMIT,
     DEFAULT_POINTER_SIZE,
     PragmaInfo,
 )
-from intellicrack.core.hexpat.errors import HexPatPreprocessorError
 from intellicrack.core.logging import get_logger
 
 

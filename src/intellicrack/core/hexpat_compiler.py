@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING, Any, Final
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-from intellicrack.core.hexpat._pragma import PragmaInfo
 from intellicrack.core.hexpat.ast_nodes import (
     AddressOfExpr,
     ArrayType,
@@ -69,6 +68,7 @@ from intellicrack.core.hexpat.ast_nodes import (
 from intellicrack.core.hexpat.errors import HexPatError, HexPatParseError
 from intellicrack.core.hexpat.lexer import HexPatLexer
 from intellicrack.core.hexpat.parser import HexPatParser
+from intellicrack.core.hexpat.pragma import PragmaInfo
 from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor
 from intellicrack.core.hexpat.tokens import Token, TokenType
 from intellicrack.core.logging import get_logger

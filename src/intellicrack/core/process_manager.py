@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
 import psutil
 
-from intellicrack.core._subprocess import PIPE, CalledProcessError, CompletedProcess, Popen, TimeoutExpired
+from intellicrack.core.subprocess_compat import PIPE, CalledProcessError, CompletedProcess, Popen, TimeoutExpired
 
 from .logging import get_logger
 
@@ -355,7 +355,7 @@ class ProcessManager:
         if self.atexit_registered:
             return
 
-        global _atexit_registered_globally  # noqa: PLW0603
+        global _atexit_registered_globally
         with _atexit_guard_lock:
             if not _atexit_registered_globally:
                 atexit.register(ProcessManager._atexit_cleanup_global)

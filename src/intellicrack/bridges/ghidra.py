@@ -28,19 +28,19 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import IO, Any, Literal, cast
 
-from intellicrack.bridges._pe_format import (
-    detect_format,
-    detect_format_and_arch,
-)
 from intellicrack.bridges.base import (
     BridgeCapabilities,
     BridgeState,
     DisassemblyLine,
     StaticAnalysisBridge,
 )
-from intellicrack.core._subprocess import CREATE_NO_WINDOW, PIPE, Popen
+from intellicrack.bridges.pe_format import (
+    detect_format,
+    detect_format_and_arch,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, Popen
 from intellicrack.core.types import (
     BinaryInfo,
     CrossReference,
@@ -228,7 +228,7 @@ def _resolve_debug_info_path(path: str) -> Path:
     return resolved
 
 
-class GhidraBridge(StaticAnalysisBridge):
+class _GhidraBridgeBase(StaticAnalysisBridge):
     """Bridge for Ghidra reverse engineering suite.
 
     Provides advanced static analysis and decompilation capabilities
@@ -2090,7 +2090,7 @@ metadata
     def _detect_format(data: bytes) -> str:
         """Detect binary format from magic bytes.
 
-        Delegates to :func:`detect_format` in ``bridges/_pe_format`` for
+        Delegates to :func:`detect_format` in ``bridges/pe_format`` for
         the shared magic-byte comparison.
 
         Args:
@@ -2110,7 +2110,7 @@ metadata
         ELF (x86, x86_64, ARM, AArch64, MIPS, PPC/PPC64, RISC-V), and
         Mach-O (x86, x86_64, ARM, ARM64, PPC/PPC64) binaries.
         Delegates to :func:`detect_format_and_arch` in
-        ``bridges/_pe_format`` (which itself uses
+        ``bridges/pe_format`` (which itself uses
         :func:`pe_machine_to_arch` for the canonical
         ``IMAGE_FILE_MACHINE_*`` table) and discards the format component
         to preserve the historical ``(arch, is_64bit)`` shape.
@@ -3435,6 +3435,118 @@ metadata
             raise ToolError(error_message) from exc
 
         return cast("list[dict[str, Any]]", result) if result else []
+
+    async def _execute_remote(self, code: str) -> object:
+        """Execute Jython code on the Ghidra bridge and return any trailing expression value.
+
+        Dedents the supplied code via :func:`textwrap.dedent` so call-site
+        indentation does not propagate into the remote ``exec()`` payload.
+        Parses the dedented script with :mod:`ast`; if the final top-level
+        statement is an :class:`ast.Expr`, rewrites it into an assignment to
+        a unique sentinel variable and dispatches the rewritten script via
+        the underlying ``ghidra_bridge`` ``remote_exec`` channel. The
+        sentinel is then read back via ``remote_eval`` so the caller
+        receives the expression value Jython produced.
+
+        Scripts that have no trailing expression (purely side-effect
+        statements such as ``analyzeAll(currentProgram)``) execute via
+        ``remote_exec`` only and return ``None``.
+
+        Args:
+            code: Jython source to execute on the Ghidra side. May be a
+                single expression, a multi-statement block, or a
+                multi-statement block ending in a value-producing
+                expression.
+
+        Returns:
+            object: Deserialized result of the trailing expression, or
+            ``None`` when the script has no trailing expression.
+
+        Raises:
+            ToolError: If the bridge is not connected, the underlying
+                ``ghidra_bridge`` client is missing the required RPC
+                primitives, the Jython source fails to parse on the
+                client, or the remote execution / evaluation raises.
+        """
+        if self._bridge is None:
+            error_message = "Ghidra bridge not connected"
+            raise ToolError(error_message)
+
+        remote_exec_attr = getattr(self._bridge, "remote_exec", None)
+        if remote_exec_attr is None:
+            error_message = "Ghidra bridge missing remote_exec"
+            raise ToolError(error_message)
+        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
+        if remote_eval_attr is None:
+            error_message = "Ghidra bridge missing remote_eval"
+            raise ToolError(error_message)
+        remote_exec = cast("_RemoteExecFunc", remote_exec_attr)
+        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
+
+        exec_source, sentinel = prepare_remote_script(code)
+
+        try:
+            await asyncio.to_thread(remote_exec, exec_source)
+        except Exception as exc:
+            _logger.exception("ghidra_remote_exec_failed")
+            error_message = f"Remote execution failed: {exc}"
+            raise ToolError(error_message) from exc
+
+        if sentinel is None:
+            return None
+
+        try:
+            return await asyncio.to_thread(remote_eval, sentinel)
+        except Exception as exc:
+            _logger.exception("ghidra_remote_eval_failed", sentinel=sentinel)
+            error_message = f"Remote evaluation failed: {exc}"
+            raise ToolError(error_message) from exc
+
+    async def _execute_remote_eval(self, expression: str) -> object:
+        """Evaluate a single Jython expression remotely and return its value.
+
+        ``remote_eval`` ships a single expression to the bridge server and
+        returns the evaluated result, in contrast to ``remote_exec`` which
+        always returns ``None``. This is the canonical primitive for
+        readback verification: after a write, issue an eval that reads the
+        property back so the client can compare it to the requested value.
+
+        The expression is dedented before transmission so callers can
+        embed multi-line conditional expressions inside f-strings without
+        triggering ``IndentationError`` on the remote ``compile``.
+
+        Args:
+            expression: A single Jython expression evaluated on the
+                Ghidra bridge server. Must not be a statement.
+
+        Returns:
+            object: The value the expression evaluates to on the server.
+
+        Raises:
+            ToolError: If the bridge is not connected, the bridge runtime
+                does not expose ``remote_eval``, or the server raises
+                while evaluating.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
+        if remote_eval_attr is None:
+            error_message = "Ghidra bridge missing remote_eval"
+            raise ToolError(error_message)
+        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
+
+        dedented = textwrap.dedent(expression).strip()
+        try:
+            return await asyncio.to_thread(remote_eval, dedented)
+        except Exception as exc:
+            _logger.exception("ghidra_remote_eval_failed")
+            error_message = f"Remote eval failed: {exc}"
+            raise ToolError(error_message) from exc
+
+
+class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
+    """Bookmark, structure, symbol, and program-metadata surface for the Ghidra bridge."""
 
     async def create_bookmark(
         self,
@@ -5433,6 +5545,17 @@ metadata
             raise ToolError(error_message)
         return cast("dict[str, Any]", result)
 
+
+class GhidraBridge(_GhidraBridgeAnalysisMixin):
+    """Bridge for Ghidra reverse engineering suite.
+
+    Composed from the ``_GhidraBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area (core lifecycle and binary loading, bookmarking and structure editing,
+    call-tree analysis and references) so no single class definition exceeds the public method limit. The final class exposes the full
+    Ghidra feature set including call-tree exploration, decompiler configuration, program metadata, external references, thunk handling,
+    and bookmark/label management.
+    """
+
     async def get_function_body(self, address: int) -> dict[str, Any]:
         """Get address ranges, thunk status, and size for a function.
 
@@ -7217,111 +7340,3 @@ metadata
             msg = f"No external references found at {hex(from_addr)}"
             raise ToolError(msg)
         return {"from_addr": hex(from_addr), "removed": removed, "success": True}
-
-    async def _execute_remote(self, code: str) -> object:
-        """Execute Jython code on the Ghidra bridge and return any trailing expression value.
-
-        Dedents the supplied code via :func:`textwrap.dedent` so call-site
-        indentation does not propagate into the remote ``exec()`` payload.
-        Parses the dedented script with :mod:`ast`; if the final top-level
-        statement is an :class:`ast.Expr`, rewrites it into an assignment to
-        a unique sentinel variable and dispatches the rewritten script via
-        the underlying ``ghidra_bridge`` ``remote_exec`` channel. The
-        sentinel is then read back via ``remote_eval`` so the caller
-        receives the expression value Jython produced.
-
-        Scripts that have no trailing expression (purely side-effect
-        statements such as ``analyzeAll(currentProgram)``) execute via
-        ``remote_exec`` only and return ``None``.
-
-        Args:
-            code: Jython source to execute on the Ghidra side. May be a
-                single expression, a multi-statement block, or a
-                multi-statement block ending in a value-producing
-                expression.
-
-        Returns:
-            object: Deserialized result of the trailing expression, or
-            ``None`` when the script has no trailing expression.
-
-        Raises:
-            ToolError: If the bridge is not connected, the underlying
-                ``ghidra_bridge`` client is missing the required RPC
-                primitives, the Jython source fails to parse on the
-                client, or the remote execution / evaluation raises.
-        """
-        if self._bridge is None:
-            error_message = "Ghidra bridge not connected"
-            raise ToolError(error_message)
-
-        remote_exec_attr = getattr(self._bridge, "remote_exec", None)
-        if remote_exec_attr is None:
-            error_message = "Ghidra bridge missing remote_exec"
-            raise ToolError(error_message)
-        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
-        if remote_eval_attr is None:
-            error_message = "Ghidra bridge missing remote_eval"
-            raise ToolError(error_message)
-        remote_exec = cast("_RemoteExecFunc", remote_exec_attr)
-        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
-
-        exec_source, sentinel = prepare_remote_script(code)
-
-        try:
-            await asyncio.to_thread(remote_exec, exec_source)
-        except Exception as exc:
-            _logger.exception("ghidra_remote_exec_failed")
-            error_message = f"Remote execution failed: {exc}"
-            raise ToolError(error_message) from exc
-
-        if sentinel is None:
-            return None
-
-        try:
-            return await asyncio.to_thread(remote_eval, sentinel)
-        except Exception as exc:
-            _logger.exception("ghidra_remote_eval_failed", sentinel=sentinel)
-            error_message = f"Remote evaluation failed: {exc}"
-            raise ToolError(error_message) from exc
-
-    async def _execute_remote_eval(self, expression: str) -> object:
-        """Evaluate a single Jython expression remotely and return its value.
-
-        ``remote_eval`` ships a single expression to the bridge server and
-        returns the evaluated result, in contrast to ``remote_exec`` which
-        always returns ``None``. This is the canonical primitive for
-        readback verification: after a write, issue an eval that reads the
-        property back so the client can compare it to the requested value.
-
-        The expression is dedented before transmission so callers can
-        embed multi-line conditional expressions inside f-strings without
-        triggering ``IndentationError`` on the remote ``compile``.
-
-        Args:
-            expression: A single Jython expression evaluated on the
-                Ghidra bridge server. Must not be a statement.
-
-        Returns:
-            object: The value the expression evaluates to on the server.
-
-        Raises:
-            ToolError: If the bridge is not connected, the bridge runtime
-                does not expose ``remote_eval``, or the server raises
-                while evaluating.
-        """
-        if self._bridge is None:
-            raise ToolError(_ERR_NOT_CONNECTED)
-
-        remote_eval_attr = getattr(self._bridge, "remote_eval", None)
-        if remote_eval_attr is None:
-            error_message = "Ghidra bridge missing remote_eval"
-            raise ToolError(error_message)
-        remote_eval = cast("_RemoteEvalFunc", remote_eval_attr)
-
-        dedented = textwrap.dedent(expression).strip()
-        try:
-            return await asyncio.to_thread(remote_eval, dedented)
-        except Exception as exc:
-            _logger.exception("ghidra_remote_eval_failed")
-            error_message = f"Remote eval failed: {exc}"
-            raise ToolError(error_message) from exc

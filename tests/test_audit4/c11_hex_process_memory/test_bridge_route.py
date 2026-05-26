@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any, Final
 import pytest
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from intellicrack.ui.panels.hex_editor._process_memory import ProcessMemoryMixin
+from intellicrack.ui.panels.hex_editor.process_memory import ProcessMemoryMixin
 
 
 if TYPE_CHECKING:
@@ -244,7 +244,7 @@ def silence_message_box(monkeypatch: pytest.MonkeyPatch) -> None:
         return 0
 
     monkeypatch.setattr(
-        "intellicrack.ui.panels.hex_editor._process_memory.QMessageBox.warning",
+        "intellicrack.ui.panels.hex_editor.process_memory.QMessageBox.warning",
         _no_dialog,
     )
 

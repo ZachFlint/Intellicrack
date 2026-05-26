@@ -5,7 +5,7 @@
 """Regression tests for audit4 C3: hex editor data inspector mixin.
 
 These tests guard against three regressions in
-:class:`~intellicrack.ui.panels.hex_editor._data_inspector.DataInspectorMixin`:
+:class:`~intellicrack.ui.panels.hex_editor.data_inspector.DataInspectorMixin`:
 
 * **F-0003** -- Bit-toggle writes via ``document.set_bit`` must publish
   :meth:`HexDocumentState.notify_data_modified` so bridge subscribers
@@ -34,7 +34,7 @@ import pytest
 from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor._data_inspector import DataInspectorMixin
+from intellicrack.ui.panels.hex_editor.data_inspector import DataInspectorMixin
 
 
 if TYPE_CHECKING:

@@ -5,7 +5,7 @@
 """Regression tests for audit4 B1 ProcessPanel base fixes (F-0001, F-0002, F-0025).
 
 Each test exercises one finding and would fail without the corresponding
-remediation in ``intellicrack.ui.panels.process_panel._base``.
+remediation in ``intellicrack.ui.panels.process_panel.base``.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QApplication
 
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.types import ProcessInfo, ToolError
-from intellicrack.ui.panels.process_panel._base import ProcessPanel
+from intellicrack.ui.panels.process_panel.base import ProcessPanel
 
 
 if TYPE_CHECKING:

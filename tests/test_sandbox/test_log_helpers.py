@@ -21,7 +21,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Final, Protocol
 
-from intellicrack.sandbox._log_helpers import (
+from intellicrack.sandbox.log_helpers import (
     YARA_MATCH_MIN_FIELDS,
     coerce_protocol,
     format_yara_match,

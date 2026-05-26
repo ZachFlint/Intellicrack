@@ -23,7 +23,7 @@ from unittest.mock import patch
 import pytest
 from PyQt6.QtWidgets import QApplication, QPlainTextEdit, QTableWidget, QTableWidgetItem, QTreeWidget
 
-from intellicrack.ui.panels.process_panel._system_tab import SystemTab
+from intellicrack.ui.panels.process_panel.system_tab import SystemTab
 
 
 if TYPE_CHECKING:
@@ -486,7 +486,7 @@ def _attached_pid(tab: SystemTab) -> int | None:
     return cast("int | None", getattr(tab, "_attached_pid"))
 
 
-_MOD = "intellicrack.ui.panels.process_panel._system_tab.run_bridge_coroutine_async"
+_MOD = "intellicrack.ui.panels.process_panel.system_tab.run_bridge_coroutine_async"
 
 
 @pytest.mark.usefixtures("qapp")

@@ -39,7 +39,7 @@ import pytest
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QSpinBox, QTableWidget, QWidget
 
-from intellicrack.ui.panels.hex_editor._disassembly import DisassemblyMixin
+from intellicrack.ui.panels.hex_editor.disassembly import DisassemblyMixin
 
 
 if TYPE_CHECKING:

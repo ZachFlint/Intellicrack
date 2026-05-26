@@ -13,8 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from intellicrack.bridges._pe_format import detect_format_and_arch
 from intellicrack.bridges.base import DisassemblyLine
+from intellicrack.bridges.pe_format import detect_format_and_arch
 from intellicrack.core.logging import get_logger
 
 
@@ -317,7 +317,7 @@ class HexDisassembler:
         """Detect architecture from PE, ELF, or Mach-O binary headers.
 
         Delegates magic-byte and machine-field decoding to
-        :func:`intellicrack.bridges._pe_format.detect_format_and_arch`,
+        :func:`intellicrack.bridges.pe_format.detect_format_and_arch`,
         then maps the canonical ``(arch, is_64bit)`` result into the
         capstone ``(arch, mode)`` shape that :meth:`disassemble`
         expects.

@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import QRegularExpression, Qt, QTimer
+from PyQt6.QtCore import QRegularExpression, QSignalBlocker, Qt, QTimer
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -260,7 +260,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         self._disasm_view = QPlainTextEdit()
         self._disasm_view.setFont(fm.get_code_font(10))
-        self._disasm_view.setReadOnly(ro=True)
+        self._disasm_view.setReadOnly(True)
         set_max_block_count(self._disasm_view, 50000)
         layout.addWidget(self._disasm_view)
 
@@ -538,7 +538,7 @@ class X64DbgPanel(AnalysisPanelBase):
         mem_layout.addLayout(mem_toolbar)
         self._mem_dump = QPlainTextEdit()
         self._mem_dump.setFont(fm.get_code_font(10))
-        self._mem_dump.setReadOnly(ro=True)
+        self._mem_dump.setReadOnly(True)
         set_max_block_count(self._mem_dump, 10000)
         mem_layout.addWidget(self._mem_dump)
         return mem_container
@@ -559,7 +559,7 @@ class X64DbgPanel(AnalysisPanelBase):
         console_layout.setSpacing(_PANEL_SPACING)
         self._console_output = QPlainTextEdit()
         self._console_output.setFont(fm.get_code_font(9))
-        self._console_output.setReadOnly(ro=True)
+        self._console_output.setReadOnly(True)
         set_max_block_count(self._console_output, 10000)
         console_layout.addWidget(self._console_output)
         self._console_input = QLineEdit()
@@ -742,7 +742,7 @@ class X64DbgPanel(AnalysisPanelBase):
         trace_layout.addLayout(trace_toolbar)
         self._trace_output = QPlainTextEdit()
         self._trace_output.setFont(fm.get_code_font(9))
-        self._trace_output.setReadOnly(ro=True)
+        self._trace_output.setReadOnly(True)
         set_max_block_count(self._trace_output, 50000)
         trace_layout.addWidget(self._trace_output)
         return trace_container
@@ -1299,9 +1299,8 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         bridge_64: bool = getattr(self._bridge, "is_64bit", True)
         self._is_64bit = bridge_64
-        self._64bit_toggle.blockSignals(b=True)
-        self._64bit_toggle.setChecked(self._is_64bit)
-        self._64bit_toggle.blockSignals(b=False)
+        with QSignalBlocker(self._64bit_toggle):
+            self._64bit_toggle.setChecked(self._is_64bit)
 
     def _on_toggle_64bit(self, *, checked: bool) -> None:
         """Handle 64-bit toggle.
@@ -1791,24 +1790,22 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         regs = result
-        self._reg_table.blockSignals(b=True)
-        self._reg_table.setRowCount(0)
+        with QSignalBlocker(self._reg_table):
+            self._reg_table.setRowCount(0)
 
-        all_regs = [*_GENERAL_REGS_64, _FLAG_REG, *_SEGMENT_REGS]
+            all_regs = [*_GENERAL_REGS_64, _FLAG_REG, *_SEGMENT_REGS]
 
-        for reg_name in all_regs:
-            value = getattr(regs, reg_name, 0)
-            row = self._reg_table.rowCount()
-            self._reg_table.insertRow(row)
+            for reg_name in all_regs:
+                value = getattr(regs, reg_name, 0)
+                row = self._reg_table.rowCount()
+                self._reg_table.insertRow(row)
 
-            name_item = QTableWidgetItem(reg_name)
-            name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self._reg_table.setItem(row, 0, name_item)
+                name_item = QTableWidgetItem(reg_name)
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self._reg_table.setItem(row, 0, name_item)
 
-            val_item = QTableWidgetItem(f"0x{value:016X}" if self._is_64bit else f"0x{value:08X}")
-            self._reg_table.setItem(row, 1, val_item)
-
-        self._reg_table.blockSignals(b=False)
+                val_item = QTableWidgetItem(f"0x{value:016X}" if self._is_64bit else f"0x{value:08X}")
+                self._reg_table.setItem(row, 1, val_item)
 
         if rip := getattr(regs, "rip", 0):
             self._refresh_disassembly(rip)

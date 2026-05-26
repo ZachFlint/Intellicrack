@@ -20,8 +20,8 @@ import pytest
 from PyQt6.QtCore import QCoreApplication, QEventLoop, QTimer
 from PyQt6.QtWidgets import QApplication
 
-import intellicrack.ui.panels.process_panel._workers as _workers_module
-from intellicrack.ui.panels.process_panel._workers import TrackedRefreshWorker
+import intellicrack.ui.panels.process_panel.workers as _workers_module
+from intellicrack.ui.panels.process_panel.workers import TrackedRefreshWorker
 
 
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ def _pump_until(predicate: Callable[[], bool], qapp: QCoreApplication, timeout_m
 class _RaisingProcessManager:
     """Replacement for ProcessManager whose get_instance raises RuntimeError.
 
-    Substituted into the ``_workers`` module namespace during tests so that
+    Substituted into the ``workers`` module namespace during tests so that
     TrackedRefreshWorker.run() encounters a real exception on the actual
     ProcessManager call site — the same code path that was broken before
     the fix.

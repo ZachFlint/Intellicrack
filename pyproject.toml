@@ -296,7 +296,7 @@ exclude_dirs = [
   "Screenshots",
 ]
 # B405: xml.etree usage is restricted to write-side construction via
-# ``intellicrack.core._xml_gen``. That module never parses untrusted input;
+# ``intellicrack.core.xml_gen``. That module never parses untrusted input;
 # untrusted XML parsing must go through ``defusedxml``. ``defusedxml`` does
 # not provide a hardened replacement for write-side ElementTree, so the
 # stdlib import is the correct API and this project-wide skip is the
@@ -696,6 +696,7 @@ exclude = [
 module = [
   "frida.*",
   "r2pipe.*",
+  "rzpipe.*",
   "ghidra_bridge.*",
   "pefile.*",
   "lief.*",
@@ -735,6 +736,7 @@ pypi-dependencies.keystone-engine = ">=0.9.2, <0.10"
 pypi-dependencies.frida = ">=17.9.11, <18"
 pypi-dependencies.frida-tools = ">=14.8.2, <15"
 pypi-dependencies.r2pipe = ">=1.9.8, <2"
+pypi-dependencies.rzpipe = ">=0.6.2, <0.7"
 pypi-dependencies.ghidra-bridge = ">=1.0.0, <2"
 pypi-dependencies.anthropic = ">=0.104.1, <0.105"
 pypi-dependencies.openai = ">=2.38.0, <3"
@@ -1004,17 +1006,12 @@ lint.ignore = [
   "PLR0913",  # too-many-arguments
   "PLR0915",  # too-many-statements
   "PLR1702",  # too-many-nested-blocks
-  "S405",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core._xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
+  "S405",  # project-wide: write-side xml.etree usage is centralized in ``intellicrack.core.xml_gen``; parsing of untrusted XML uses ``defusedxml`` elsewhere -- see ``[tool.bandit] skips`` for the matching rationale
 ]
 lint.per-file-ignores.".claude/**" = ["S404"]
 lint.per-file-ignores."scripts/**" = ["N999", "S404", "S603", "S607", "T201"]
-lint.per-file-ignores."src/intellicrack/bridges/_win32_types.py" = ["N801"]
-lint.per-file-ignores."src/intellicrack/bridges/frida_bridge.py" = ["PLR0904"]
-lint.per-file-ignores."src/intellicrack/bridges/ghidra.py" = ["PLR0904"]
-lint.per-file-ignores."src/intellicrack/bridges/hex_editor.py" = ["PLR0904"]
-lint.per-file-ignores."src/intellicrack/bridges/cutter.py" = ["PLR0904"]
-lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["N801", "PLR0904"]
-lint.per-file-ignores."src/intellicrack/bridges/x64dbg.py" = ["PLR0904"]
+lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["N801"]
+lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["N801"]
 lint.per-file-ignores."src/intellicrack/core/hexpat/evaluator.py" = [
   "C901",
   "PLR0914",
@@ -1040,7 +1037,6 @@ lint.per-file-ignores."src/intellicrack/ui/panels/hex_editor_panel.py" = [
   "PLR0914",
   "S324",
 ]
-lint.per-file-ignores."src/intellicrack/ui/tools.py" = ["PLR0904"]
 lint.per-file-ignores."tests/**" = [
   "B009",
   "B010",

@@ -13,7 +13,7 @@ code: never called from any consumer). Two regression layers:
   ``execute_pattern_with_output`` / ``execute_pattern_file_with_output``
   that return the captured ``std::print`` text in the response payload
   under the ``hexpat_print`` key.
-* UI layer: :class:`intellicrack.ui.panels.hex_editor._pattern_editor.
+* UI layer: :class:`intellicrack.ui.panels.hex_editor.pattern_editor.
   PatternEditorMixin._apply_via_interpreter` must construct the cached
   interpreter with a ``print_sink`` callback that routes ``std::print``
   output into the pattern panel's dedicated print-output widget.

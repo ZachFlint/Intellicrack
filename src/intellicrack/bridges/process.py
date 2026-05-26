@@ -24,8 +24,9 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from intellicrack.bridges._parse_helpers import safe_call
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
+from intellicrack.bridges.parse_helpers import safe_call
+from intellicrack.bridges.pe_format import (
     PE_DOS_LFANEW_OFFSET,
     PE_OPTIONAL_HEADER_OFFSET,
     PE_SIGNATURE,
@@ -39,7 +40,7 @@ from intellicrack.bridges._pe_format import (
     rva_to_file_offset,
     unpack_coff_header,
 )
-from intellicrack.bridges._win32_types import (
+from intellicrack.bridges.win32_types import (
     CONTEXT64,
     CONTEXT_ALL,
     CONTEXT_I386_ALL,
@@ -159,7 +160,6 @@ from intellicrack.bridges._win32_types import (
     protection_to_string,
     state_to_string,
 )
-from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     MemoryRegion,
@@ -1020,8 +1020,13 @@ class _MODULEINFO(ctypes.Structure):
     ]
 
 
-class ProcessBridge(ToolBridgeBase):
-    """Bridge for Windows process control.
+class _ProcessBridgeBase(ToolBridgeBase):
+    """Base class containing ProcessBridge initialization and Win32 lifecycle plumbing.
+
+    Holds the shared ctypes state, capability advertisement, and bridge
+    initialize/shutdown/is_available primitives. The public ``ProcessBridge``
+    is composed from this base together with topical mixin classes; the
+    split keeps the per-class public method count under the lint cap.
 
     Provides direct process manipulation including memory access,
     thread control, module enumeration, token/privilege management,
@@ -1485,6 +1490,340 @@ class ProcessBridge(ToolBridgeBase):
         self._debug_privilege_enabled = True
         _logger.debug("se_debug_privilege_enabled")
 
+    async def close(self) -> bool:
+        """Close the current process handle.
+
+        Returns:
+            bool: True if closed.
+        """
+        _logger.debug("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
+        if self._process_handle is not None and self._kernel32 is not None:
+            self._kernel32.CloseHandle(self._process_handle)
+            self._process_handle = None
+            self._attached_pid = None
+            _logger.info("process_handle_closed", bridge="process")
+
+        self.state.connected = True
+        self.state.tool_running = True
+        self.state.process_attached = False
+        self.state.target_pid = None
+        self._publish_tool_state()
+
+        return True
+
+    async def unmap_section(self, base_address: int) -> bool:
+        """Unmap a previously mapped section view from the current process.
+
+        Releases the view and, if the originating section handle is
+        tracked in ``self._section_handles`` (i.e., the section was
+        created via :meth:`create_section` rather than imported from
+        outside), closes the section handle as well so a single
+        ``unmap_section`` call leaves no kernel objects leaked. Prefers
+        ``UnmapViewOfFile2`` from kernel32 when available (Windows 10
+        1709+); falls back to ``UnmapViewOfFile`` otherwise.
+
+        Args:
+            base_address: Mapped base address returned from
+                :meth:`map_section`.
+
+        Returns:
+            bool: True on successful unmap.
+
+        Raises:
+            ToolError: If kernel32 is unavailable, the address is not a
+                tracked mapping, or the underlying unmap call fails.
+                ``details["code"]`` is ``"SECTION_NOT_MAPPED"`` for
+                tracking misses and ``"SECTION_UNMAP_FAILED"`` for API
+                failures.
+        """
+        _logger.debug("process_unmap_section_started", base_address=hex(base_address))
+        if self._kernel32 is None:
+            _logger.error("kernel32_unavailable", operation="unmap_section")
+            raise ToolError(_ERR_KERNEL32_NA)
+
+        section_handle = self._section_views.get(base_address)
+        if section_handle is None:
+            _logger.warning(
+                "section_unmap_unknown_base",
+                base_address=hex(base_address),
+            )
+            raise ToolError(
+                _ERR_SECTION_NOT_MAPPED,
+                details={"code": _CODE_SECTION_NOT_MAPPED, "base_address": base_address},
+            )
+
+        ctypes.set_last_error(0)
+        unmap_view_of_file2 = getattr(self._kernel32, "UnmapViewOfFile2", None)
+        if unmap_view_of_file2 is not None:
+            current_process = self._kernel32.GetCurrentProcess()
+            result = unmap_view_of_file2(current_process, ctypes.c_void_p(base_address), 0)
+        else:
+            result = self._kernel32.UnmapViewOfFile(ctypes.c_void_p(base_address))
+        last_error = ctypes.get_last_error()
+
+        if not result:
+            _logger.error(
+                "section_unmap_failed",
+                base_address=hex(base_address),
+                last_error=last_error,
+            )
+            raise ToolError(
+                _ERR_SECTION_UNMAP,
+                error_code=last_error or None,
+                details={"code": _CODE_SECTION_UNMAP_FAILED, "last_error": last_error},
+            )
+
+        del self._section_views[base_address]
+        if section_handle in self._section_handles:
+            self._kernel32.CloseHandle(section_handle)
+            del self._section_handles[section_handle]
+
+        _logger.info(
+            "section_unmapped",
+            base_address=hex(base_address),
+            section_handle=section_handle,
+        )
+        return True
+
+    @staticmethod
+    def _prot_from_string(protection: str) -> int:
+        """Convert a protection string to Win32 PAGE_* constant.
+
+        Args:
+            protection: Protection string like 'rwx', 'rw', 'rx', 'r', 'x'.
+
+        Returns:
+            int: Win32 PAGE_* protection value.
+        """
+        prot_map: dict[str, int] = {
+            "rwx": PAGE_EXECUTE_READWRITE,
+            "rx": PAGE_EXECUTE_READ,
+            "rw": PAGE_READWRITE,
+            "r": PAGE_READONLY,
+            "x": PAGE_EXECUTE,
+        }
+        return prot_map.get(protection, PAGE_EXECUTE_READWRITE)
+
+    def _call_iswow64process2(self, handle: int) -> tuple[int, int] | None:
+        """Invoke the Win10+ ``IsWow64Process2`` API with prepared argtypes.
+
+        Shared helper for every caller that needs the
+        ``(process_machine, native_machine)`` pair. Returns ``None`` on
+        OSes that predate ``IsWow64Process2`` or if the call itself
+        fails so callers can branch into their legacy fallbacks without
+        each re-declaring the argtypes / restype block.
+
+        Args:
+            handle: Open process handle with at least
+                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
+
+        Returns:
+            tuple[int, int] | None: ``(process_machine, native_machine)``
+                as ``IMAGE_FILE_MACHINE_*`` values, or ``None`` on
+                failure / unavailability.
+        """
+        if self._kernel32 is None:
+            return None
+
+        is_wow64_process2 = getattr(self._kernel32, "IsWow64Process2", None)
+        if is_wow64_process2 is None:
+            return None
+
+        is_wow64_process2.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(wintypes.USHORT),
+            ctypes.POINTER(wintypes.USHORT),
+        ]
+        is_wow64_process2.restype = wintypes.BOOL
+
+        process_machine = wintypes.USHORT(0)
+        native_machine = wintypes.USHORT(0)
+        if not is_wow64_process2(
+            handle,
+            ctypes.byref(process_machine),
+            ctypes.byref(native_machine),
+        ):
+            return None
+
+        return process_machine.value, native_machine.value
+
+    def _target_is_wow64(self) -> bool:
+        """Return True when the attached process runs under WOW64.
+
+        Uses ``IsWow64Process2`` when available so the decision works on
+        both x64-hosted and arm64-hosted Windows. Falls back to the
+        legacy ``IsWow64Process`` when the newer API is absent. Raises
+        if both APIs are unavailable so callers never silently assume
+        non-WOW64 when detection is impossible.
+
+        Returns:
+            bool: ``True`` when the attached process is a 32-bit x86
+                binary on a 64-bit host; ``False`` otherwise.
+
+        Raises:
+            ToolError: If kernel32 is unavailable, no process is
+                attached, or both ``IsWow64Process2`` and
+                ``IsWow64Process`` are absent.
+        """
+        if self._kernel32 is None or self._process_handle is None:
+            raise ToolError(_ERR_WOW64_UNAVAILABLE)
+
+        machines = self._call_iswow64process2(self._process_handle)
+        if machines is not None:
+            return machines[0] == IMAGE_FILE_MACHINE_I386
+
+        is_wow64 = wintypes.BOOL(0)
+        if hasattr(self._kernel32, "IsWow64Process"):
+            self._kernel32.IsWow64Process(self._process_handle, ctypes.byref(is_wow64))
+            return bool(is_wow64.value)
+
+        raise ToolError(_ERR_WOW64_UNAVAILABLE)
+
+    def _pid_is_wow64(self, target_pid: int) -> bool:
+        """Return True when the given PID runs under WOW64.
+
+        Opens a fresh ``OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)``
+        handle for ``target_pid``, queries ``IsWow64Process2`` (with the
+        legacy ``IsWow64Process`` fallback), then closes the handle. This
+        is the per-target-pid analogue of :meth:`_target_is_wow64` for
+        callers that operate on processes other than the attached one
+        (for example, ``get_threads(target_pid)`` enumerating threads of
+        a different PID).
+
+        Args:
+            target_pid: PID of the process to query.
+
+        Returns:
+            bool: ``True`` when the target process is a 32-bit x86 binary
+                on a 64-bit host; ``False`` if not, or if the query fails.
+        """
+        if self._kernel32 is None:
+            return False
+
+        inherit_handle = False
+        handle: int = self._kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION,
+            inherit_handle,
+            target_pid,
+        )
+        if not handle:
+            return False
+
+        try:
+            machines = self._call_iswow64process2(handle)
+            if machines is not None:
+                return machines[0] == IMAGE_FILE_MACHINE_I386
+
+            is_wow64 = wintypes.BOOL(0)
+            if hasattr(self._kernel32, "IsWow64Process"):
+                self._kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
+                return bool(is_wow64.value)
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+        return False
+
+    @staticmethod
+    def _parse_registry_path(key_path: str) -> tuple[int, str]:
+        r"""Parse a registry path into root key handle and subpath.
+
+        Args:
+            key_path: Registry path like HKLM\SOFTWARE\...
+
+        Returns:
+            tuple[int, str]: Root key handle and subpath string.
+
+        Raises:
+            ToolError: If root key prefix is invalid.
+        """
+        root_map: dict[str, int] = {
+            "HKLM": HKEY_LOCAL_MACHINE,
+            "HKEY_LOCAL_MACHINE": HKEY_LOCAL_MACHINE,
+            "HKCU": HKEY_CURRENT_USER,
+            "HKEY_CURRENT_USER": HKEY_CURRENT_USER,
+            "HKCR": HKEY_CLASSES_ROOT,
+            "HKEY_CLASSES_ROOT": HKEY_CLASSES_ROOT,
+            "HKU": HKEY_USERS,
+            "HKEY_USERS": HKEY_USERS,
+            "HKCC": HKEY_CURRENT_CONFIG,
+            "HKEY_CURRENT_CONFIG": HKEY_CURRENT_CONFIG,
+        }
+
+        parts = key_path.split("\\", 1)
+        root_name = parts[0].upper()
+        root_key = root_map.get(root_name)
+        if root_key is None:
+            msg = _ERR_INVALID_REG_ROOT + root_name
+            raise ToolError(msg)
+
+        subpath = parts[1] if len(parts) > 1 else ""
+        return root_key, subpath
+
+    def _reg_query_value_grow(
+        self,
+        hkey: wintypes.HKEY,
+        value_name: str,
+    ) -> tuple[bytes, int]:
+        """Read a registry value, growing the buffer on ``ERROR_MORE_DATA``.
+
+        Loops until ``RegQueryValueExW`` either succeeds (return code 0)
+        or fails with a non-recoverable error. On ``ERROR_MORE_DATA``
+        the buffer is reallocated using the kernel-supplied required
+        size (or doubled, whichever is larger) and the call is retried.
+        Retries are bounded by :data:`_REG_GROWTH_RETRY_LIMIT` and the
+        absolute cap :data:`_REG_MAX_BUF_SIZE` so a malicious or
+        runaway value cannot exhaust memory.
+
+        Args:
+            hkey: Open registry key handle.
+            value_name: Name of the value to read.
+
+        Returns:
+            tuple[bytes, int]: ``(raw_value_bytes, value_type)`` where
+            ``raw_value_bytes`` is the populated portion of the buffer
+            and ``value_type`` is the Win32 ``REG_*`` integer.
+
+        Raises:
+            ToolError: If ``advapi32`` is unavailable, the value
+                exceeds :data:`_REG_MAX_BUF_SIZE`, the retry limit is
+                hit, or the kernel returns a non-``ERROR_MORE_DATA``
+                failure.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        buf_size = _REG_INITIAL_BUF_SIZE
+        data_buf = ctypes.create_string_buffer(buf_size)
+        data_size = wintypes.DWORD(buf_size)
+        val_type = wintypes.DWORD(0)
+        attempts = 0
+        while True:
+            data_size.value = buf_size
+            rc: int = self._advapi32.RegQueryValueExW(
+                hkey,
+                value_name,
+                None,
+                ctypes.byref(val_type),
+                data_buf,
+                ctypes.byref(data_size),
+            )
+            if rc == 0:
+                return data_buf.raw[: data_size.value], val_type.value
+            if rc == _ERROR_MORE_DATA:
+                required = data_size.value
+                if required <= buf_size:
+                    required = buf_size * 2
+                if required > _REG_MAX_BUF_SIZE:
+                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
+                attempts += 1
+                if attempts > _REG_GROWTH_RETRY_LIMIT:
+                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
+                buf_size = required
+                data_buf = ctypes.create_string_buffer(buf_size)
+                continue
+            msg = _ERR_REG_VALUE_READ + value_name + f" (rc={rc})"
+            raise ToolError(msg)
+
     async def shutdown(self) -> None:
         """Shutdown and cleanup resources.
 
@@ -1551,6 +1890,18 @@ class ProcessBridge(ToolBridgeBase):
             return False
         else:
             return True
+
+
+class _ProcessBridgeListMixin(_ProcessBridgeBase):
+    """Process listing, lifecycle, and memory operations for ProcessBridge.
+
+    Hosts the high-level process enumeration entry points (``list``,
+    ``list_processes`` and their detailed counterparts), per-process
+    introspection (``open_process``, ``terminate``, ``suspend``,
+    ``resume``), architecture detection, the memory read/write/allocate
+    surface, the memory map walker, and the pattern scanner, together
+    with the private helpers each of those entry points dispatches into.
+    """
 
     # ------------------------------------------------------------------
     # Process listing and management
@@ -1885,49 +2236,6 @@ class ProcessBridge(ToolBridgeBase):
         _logger.debug("process_detect_architecture_completed", pid=pid, arch=legacy, source="iswow64process")
         return legacy
 
-    def _call_iswow64process2(self, handle: int) -> tuple[int, int] | None:
-        """Invoke the Win10+ ``IsWow64Process2`` API with prepared argtypes.
-
-        Shared helper for every caller that needs the
-        ``(process_machine, native_machine)`` pair. Returns ``None`` on
-        OSes that predate ``IsWow64Process2`` or if the call itself
-        fails so callers can branch into their legacy fallbacks without
-        each re-declaring the argtypes / restype block.
-
-        Args:
-            handle: Open process handle with at least
-                ``PROCESS_QUERY_LIMITED_INFORMATION`` access.
-
-        Returns:
-            tuple[int, int] | None: ``(process_machine, native_machine)``
-                as ``IMAGE_FILE_MACHINE_*`` values, or ``None`` on
-                failure / unavailability.
-        """
-        if self._kernel32 is None:
-            return None
-
-        is_wow64_process2 = getattr(self._kernel32, "IsWow64Process2", None)
-        if is_wow64_process2 is None:
-            return None
-
-        is_wow64_process2.argtypes = [
-            wintypes.HANDLE,
-            ctypes.POINTER(wintypes.USHORT),
-            ctypes.POINTER(wintypes.USHORT),
-        ]
-        is_wow64_process2.restype = wintypes.BOOL
-
-        process_machine = wintypes.USHORT(0)
-        native_machine = wintypes.USHORT(0)
-        if not is_wow64_process2(
-            handle,
-            ctypes.byref(process_machine),
-            ctypes.byref(native_machine),
-        ):
-            return None
-
-        return process_machine.value, native_machine.value
-
     def _detect_arch_via_iswow64process2(self, handle: int) -> str | None:
         """Detect architecture using the Win10+ ``IsWow64Process2`` API.
 
@@ -2140,27 +2448,6 @@ class ProcessBridge(ToolBridgeBase):
         self._publish_tool_state()
 
         _logger.info("process_opened", pid=pid, access=access)
-        return True
-
-    async def close(self) -> bool:
-        """Close the current process handle.
-
-        Returns:
-            bool: True if closed.
-        """
-        _logger.debug("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
-        if self._process_handle is not None and self._kernel32 is not None:
-            self._kernel32.CloseHandle(self._process_handle)
-            self._process_handle = None
-            self._attached_pid = None
-            _logger.info("process_handle_closed", bridge="process")
-
-        self.state.connected = True
-        self.state.tool_running = True
-        self.state.process_attached = False
-        self.state.target_pid = None
-        self._publish_tool_state()
-
         return True
 
     async def terminate(self, pid: int | None = None) -> bool:
@@ -3528,6 +3815,18 @@ class ProcessBridge(ToolBridgeBase):
 
         return None
 
+
+class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
+    """Token, privilege, handle, window, and service enumeration for ProcessBridge.
+
+    Hosts the privilege-changed callback registry, token privilege
+    query/adjust, ``get_handles`` and ``enum_handles`` enumeration,
+    Win32 window enumeration, and service inspection. Private helpers
+    that back these public entry points are grouped here so the
+    ``_ProcessBridgeBase`` and listing mixin stay focused on lifecycle
+    and bulk enumeration.
+    """
+
     # ------------------------------------------------------------------
     # Token / privilege manipulation
     # ------------------------------------------------------------------
@@ -3994,8 +4293,8 @@ class ProcessBridge(ToolBridgeBase):
 
         return handles
 
-    @staticmethod
-    def _read_object_type_name(buffer: ctypes.Array[ctypes.c_char], offset: int, ptr_size: int) -> str:
+    @classmethod
+    def _read_object_type_name(cls, buffer: ctypes.Array[ctypes.c_char], offset: int, ptr_size: int) -> str:
         """Read a UNICODE_STRING type name from an OBJECT_TYPE_INFORMATION entry.
 
         The string data is stored at a fixed offset of ``_OBJECT_TYPE_INFO_HEADER_SIZE``
@@ -4005,6 +4304,9 @@ class ProcessBridge(ToolBridgeBase):
         used for bounds checking.
 
         Args:
+            cls: The owning bridge class used to resolve the static
+                ``_decode_object_type_name`` helper through normal
+                attribute lookup.
             buffer: Raw buffer from NtQueryObject.
             offset: Byte offset of the entry (and its UNICODE_STRING header) within buffer.
             ptr_size: Platform pointer size in bytes.
@@ -4015,7 +4317,7 @@ class ProcessBridge(ToolBridgeBase):
         del ptr_size
         str_offset = offset + _OBJECT_TYPE_INFO_HEADER_SIZE
         try:
-            return ProcessBridge._decode_object_type_name(buffer, offset, str_offset)
+            return cls._decode_object_type_name(buffer, offset, str_offset)
         except (ValueError, OSError, ctypes.ArgumentError) as exc:
             _logger.warning(
                 "object_type_name_decode_failed",
@@ -4478,6 +4780,17 @@ class ProcessBridge(ToolBridgeBase):
             })
 
         return services
+
+
+class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
+    """PEB/TEB, heap, thread-context, stack walking and mitigation queries.
+
+    Hosts the kernel-runtime introspection surface for the bridge:
+    ``read_peb``, ``read_teb``, ``get_heaps``, the thread context
+    getter/setter, stack walking, SEH chain reading, and mitigation
+    policy inspection. Each entry point's ctypes-heavy helper is
+    co-located with the public method to keep the dispatch self-contained.
+    """
 
     # ------------------------------------------------------------------
     # PEB / TEB access
@@ -5493,82 +5806,6 @@ class ProcessBridge(ToolBridgeBase):
         finally:
             self._dbghelp.SymCleanup(self._process_handle)
 
-    def _target_is_wow64(self) -> bool:
-        """Return True when the attached process runs under WOW64.
-
-        Uses ``IsWow64Process2`` when available so the decision works on
-        both x64-hosted and arm64-hosted Windows. Falls back to the
-        legacy ``IsWow64Process`` when the newer API is absent. Raises
-        if both APIs are unavailable so callers never silently assume
-        non-WOW64 when detection is impossible.
-
-        Returns:
-            bool: ``True`` when the attached process is a 32-bit x86
-                binary on a 64-bit host; ``False`` otherwise.
-
-        Raises:
-            ToolError: If kernel32 is unavailable, no process is
-                attached, or both ``IsWow64Process2`` and
-                ``IsWow64Process`` are absent.
-        """
-        if self._kernel32 is None or self._process_handle is None:
-            raise ToolError(_ERR_WOW64_UNAVAILABLE)
-
-        machines = self._call_iswow64process2(self._process_handle)
-        if machines is not None:
-            return machines[0] == IMAGE_FILE_MACHINE_I386
-
-        is_wow64 = wintypes.BOOL(0)
-        if hasattr(self._kernel32, "IsWow64Process"):
-            self._kernel32.IsWow64Process(self._process_handle, ctypes.byref(is_wow64))
-            return bool(is_wow64.value)
-
-        raise ToolError(_ERR_WOW64_UNAVAILABLE)
-
-    def _pid_is_wow64(self, target_pid: int) -> bool:
-        """Return True when the given PID runs under WOW64.
-
-        Opens a fresh ``OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)``
-        handle for ``target_pid``, queries ``IsWow64Process2`` (with the
-        legacy ``IsWow64Process`` fallback), then closes the handle. This
-        is the per-target-pid analogue of :meth:`_target_is_wow64` for
-        callers that operate on processes other than the attached one
-        (for example, ``get_threads(target_pid)`` enumerating threads of
-        a different PID).
-
-        Args:
-            target_pid: PID of the process to query.
-
-        Returns:
-            bool: ``True`` when the target process is a 32-bit x86 binary
-                on a 64-bit host; ``False`` if not, or if the query fails.
-        """
-        if self._kernel32 is None:
-            return False
-
-        inherit_handle = False
-        handle: int = self._kernel32.OpenProcess(
-            PROCESS_QUERY_LIMITED_INFORMATION,
-            inherit_handle,
-            target_pid,
-        )
-        if not handle:
-            return False
-
-        try:
-            machines = self._call_iswow64process2(handle)
-            if machines is not None:
-                return machines[0] == IMAGE_FILE_MACHINE_I386
-
-            is_wow64 = wintypes.BOOL(0)
-            if hasattr(self._kernel32, "IsWow64Process"):
-                self._kernel32.IsWow64Process(handle, ctypes.byref(is_wow64))
-                return bool(is_wow64.value)
-        finally:
-            self._kernel32.CloseHandle(handle)
-
-        return False
-
     def _walk_stack_native(self, thread_handle: int) -> list[dict[str, object]]:
         """Walk a native AMD64 thread stack via ``StackWalk64``.
 
@@ -6026,6 +6263,16 @@ class ProcessBridge(ToolBridgeBase):
             decoded["Permanent"] = bool(getattr(policy_struct, "Permanent", 0))
 
         return decoded
+
+
+class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
+    """High-level enumeration helpers exposing named-API aliases.
+
+    Groups the ``enumerate_*`` aliases that delegate into the lower-
+    level enumeration primitives on the listing and privileges mixins,
+    together with token duplication, privilege removal, registry value
+    reads, kernel debugger probing, and mitigation policy aliases.
+    """
 
     # ------------------------------------------------------------------
     # High-level enumeration helpers (named-API aliases)
@@ -6977,6 +7224,17 @@ class ProcessBridge(ToolBridgeBase):
             )
         return False
 
+
+class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
+    """Process I/O: environment, pipes, COM, .NET, devices, jobs, GUI, registry, sections.
+
+    Hosts the heterogeneous I/O and metadata surface: environment
+    block reading, named pipe lifecycle, COM server enumeration, .NET
+    CLR detection, driver communication via DeviceIoControl, job
+    object querying, GDI/User resource counters, registry value
+    access, and section object create/map/unmap.
+    """
+
     # ------------------------------------------------------------------
     # Environment variables
     # ------------------------------------------------------------------
@@ -7701,7 +7959,7 @@ class ProcessBridge(ToolBridgeBase):
             base_address: Module base address in the target process.
             meta_rva: Relative Virtual Address of the MetaData root.
             sections: Section header dicts as returned by
-                :func:`~intellicrack.bridges._pe_format.iterate_section_headers`.
+                :func:`~intellicrack.bridges.pe_format.iterate_section_headers`.
 
         Returns:
             str | None: Version string (e.g. ``"v4.0.30319"``), or
@@ -7725,7 +7983,7 @@ class ProcessBridge(ToolBridgeBase):
         if len(meta_data) < _DOTNET_METADATA_MIN_SIZE:
             return None
         try:
-            version_str = ProcessBridge._parse_dotnet_metadata_version_string(meta_data)
+            version_str = self._parse_dotnet_metadata_version_string(meta_data)
         except struct.error as exc:
             _logger.warning(
                 "dotnet_metadata_header_parse_failed",
@@ -8380,42 +8638,6 @@ class ProcessBridge(ToolBridgeBase):
     # Registry access
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _parse_registry_path(key_path: str) -> tuple[int, str]:
-        r"""Parse a registry path into root key handle and subpath.
-
-        Args:
-            key_path: Registry path like HKLM\SOFTWARE\...
-
-        Returns:
-            tuple[int, str]: Root key handle and subpath string.
-
-        Raises:
-            ToolError: If root key prefix is invalid.
-        """
-        root_map: dict[str, int] = {
-            "HKLM": HKEY_LOCAL_MACHINE,
-            "HKEY_LOCAL_MACHINE": HKEY_LOCAL_MACHINE,
-            "HKCU": HKEY_CURRENT_USER,
-            "HKEY_CURRENT_USER": HKEY_CURRENT_USER,
-            "HKCR": HKEY_CLASSES_ROOT,
-            "HKEY_CLASSES_ROOT": HKEY_CLASSES_ROOT,
-            "HKU": HKEY_USERS,
-            "HKEY_USERS": HKEY_USERS,
-            "HKCC": HKEY_CURRENT_CONFIG,
-            "HKEY_CURRENT_CONFIG": HKEY_CURRENT_CONFIG,
-        }
-
-        parts = key_path.split("\\", 1)
-        root_name = parts[0].upper()
-        root_key = root_map.get(root_name)
-        if root_key is None:
-            msg = _ERR_INVALID_REG_ROOT + root_name
-            raise ToolError(msg)
-
-        subpath = parts[1] if len(parts) > 1 else ""
-        return root_key, subpath
-
     async def reg_read_value(self, key_path: str, value_name: str) -> dict[str, object]:
         r"""Read a registry value.
 
@@ -8725,79 +8947,15 @@ class ProcessBridge(ToolBridgeBase):
         self._section_views[address] = handle
         return address
 
-    async def unmap_section(self, base_address: int) -> bool:
-        """Unmap a previously mapped section view from the current process.
 
-        Releases the view and, if the originating section handle is
-        tracked in ``self._section_handles`` (i.e., the section was
-        created via :meth:`create_section` rather than imported from
-        outside), closes the section handle as well so a single
-        ``unmap_section`` call leaves no kernel objects leaked. Prefers
-        ``UnmapViewOfFile2`` from kernel32 when available (Windows 10
-        1709+); falls back to ``UnmapViewOfFile`` otherwise.
+class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
+    """TLS, fiber, NtQuerySystemInformation, and shared helper utilities.
 
-        Args:
-            base_address: Mapped base address returned from
-                :meth:`map_section`.
-
-        Returns:
-            bool: True on successful unmap.
-
-        Raises:
-            ToolError: If kernel32 is unavailable, the address is not a
-                tracked mapping, or the underlying unmap call fails.
-                ``details["code"]`` is ``"SECTION_NOT_MAPPED"`` for
-                tracking misses and ``"SECTION_UNMAP_FAILED"`` for API
-                failures.
-        """
-        _logger.debug("process_unmap_section_started", base_address=hex(base_address))
-        if self._kernel32 is None:
-            _logger.error("kernel32_unavailable", operation="unmap_section")
-            raise ToolError(_ERR_KERNEL32_NA)
-
-        section_handle = self._section_views.get(base_address)
-        if section_handle is None:
-            _logger.warning(
-                "section_unmap_unknown_base",
-                base_address=hex(base_address),
-            )
-            raise ToolError(
-                _ERR_SECTION_NOT_MAPPED,
-                details={"code": _CODE_SECTION_NOT_MAPPED, "base_address": base_address},
-            )
-
-        ctypes.set_last_error(0)
-        unmap_view_of_file2 = getattr(self._kernel32, "UnmapViewOfFile2", None)
-        if unmap_view_of_file2 is not None:
-            current_process = self._kernel32.GetCurrentProcess()
-            result = unmap_view_of_file2(current_process, ctypes.c_void_p(base_address), 0)
-        else:
-            result = self._kernel32.UnmapViewOfFile(ctypes.c_void_p(base_address))
-        last_error = ctypes.get_last_error()
-
-        if not result:
-            _logger.error(
-                "section_unmap_failed",
-                base_address=hex(base_address),
-                last_error=last_error,
-            )
-            raise ToolError(
-                _ERR_SECTION_UNMAP,
-                error_code=last_error or None,
-                details={"code": _CODE_SECTION_UNMAP_FAILED, "last_error": last_error},
-            )
-
-        del self._section_views[base_address]
-        if section_handle in self._section_handles:
-            self._kernel32.CloseHandle(section_handle)
-            del self._section_handles[section_handle]
-
-        _logger.info(
-            "section_unmapped",
-            base_address=hex(base_address),
-            section_handle=section_handle,
-        )
-        return True
+    Hosts the remaining low-level runtime introspection entry points
+    that read per-thread TLS slots, fiber storage, and global system
+    information through ``NtQuerySystemInformation``, alongside the
+    bridge-wide private helpers used across multiple mixins.
+    """
 
     # ------------------------------------------------------------------
     # TLS slot access
@@ -9002,90 +9160,14 @@ class ProcessBridge(ToolBridgeBase):
 
         raise ToolError(_ERR_NTQUERY_SYS_BUF_MAX)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
-    def _reg_query_value_grow(
-        self,
-        hkey: wintypes.HKEY,
-        value_name: str,
-    ) -> tuple[bytes, int]:
-        """Read a registry value, growing the buffer on ``ERROR_MORE_DATA``.
+class ProcessBridge(_ProcessBridgeRuntimeMixin):
+    """Bridge for Windows process control.
 
-        Loops until ``RegQueryValueExW`` either succeeds (return code 0)
-        or fails with a non-recoverable error. On ``ERROR_MORE_DATA``
-        the buffer is reallocated using the kernel-supplied required
-        size (or doubled, whichever is larger) and the call is retried.
-        Retries are bounded by :data:`_REG_GROWTH_RETRY_LIMIT` and the
-        absolute cap :data:`_REG_MAX_BUF_SIZE` so a malicious or
-        runaway value cannot exhaust memory.
-
-        Args:
-            hkey: Open registry key handle.
-            value_name: Name of the value to read.
-
-        Returns:
-            tuple[bytes, int]: ``(raw_value_bytes, value_type)`` where
-            ``raw_value_bytes`` is the populated portion of the buffer
-            and ``value_type`` is the Win32 ``REG_*`` integer.
-
-        Raises:
-            ToolError: If ``advapi32`` is unavailable, the value
-                exceeds :data:`_REG_MAX_BUF_SIZE`, the retry limit is
-                hit, or the kernel returns a non-``ERROR_MORE_DATA``
-                failure.
-        """
-        if self._advapi32 is None:
-            raise ToolError(_ERR_ADVAPI32_NA)
-
-        buf_size = _REG_INITIAL_BUF_SIZE
-        data_buf = ctypes.create_string_buffer(buf_size)
-        data_size = wintypes.DWORD(buf_size)
-        val_type = wintypes.DWORD(0)
-        attempts = 0
-        while True:
-            data_size.value = buf_size
-            rc: int = self._advapi32.RegQueryValueExW(
-                hkey,
-                value_name,
-                None,
-                ctypes.byref(val_type),
-                data_buf,
-                ctypes.byref(data_size),
-            )
-            if rc == 0:
-                return data_buf.raw[: data_size.value], val_type.value
-            if rc == _ERROR_MORE_DATA:
-                required = data_size.value
-                if required <= buf_size:
-                    required = buf_size * 2
-                if required > _REG_MAX_BUF_SIZE:
-                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
-                attempts += 1
-                if attempts > _REG_GROWTH_RETRY_LIMIT:
-                    raise ToolError(_ERR_REG_VALUE_TOO_LARGE + value_name)
-                buf_size = required
-                data_buf = ctypes.create_string_buffer(buf_size)
-                continue
-            msg = _ERR_REG_VALUE_READ + value_name + f" (rc={rc})"
-            raise ToolError(msg)
-
-    @staticmethod
-    def _prot_from_string(protection: str) -> int:
-        """Convert a protection string to Win32 PAGE_* constant.
-
-        Args:
-            protection: Protection string like 'rwx', 'rw', 'rx', 'r', 'x'.
-
-        Returns:
-            int: Win32 PAGE_* protection value.
-        """
-        prot_map: dict[str, int] = {
-            "rwx": PAGE_EXECUTE_READWRITE,
-            "rx": PAGE_EXECUTE_READ,
-            "rw": PAGE_READWRITE,
-            "r": PAGE_READONLY,
-            "x": PAGE_EXECUTE,
-        }
-        return prot_map.get(protection, PAGE_EXECUTE_READWRITE)
+    Composed from the ``_ProcessBridgeBase`` core class together with
+    topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area so no
+    single class definition exceeds the public method limit. The public
+    interface, attribute set, and behavior are identical to the
+    pre-refactor monolithic class.
+    """

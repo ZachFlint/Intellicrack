@@ -25,14 +25,14 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import httpx
 
-from intellicrack.core._subprocess import (
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager
+from intellicrack.core.subprocess_compat import (
     PIPE,
     CalledProcessError,
     TimeoutExpired,
     run as _subprocess_run,
 )
-from intellicrack.core.logging import get_logger
-from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.types import ToolError, ToolName
 
 

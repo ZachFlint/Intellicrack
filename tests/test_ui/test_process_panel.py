@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QWidget
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels import ProcessPanel as ProcessPanelFromPanels
 from intellicrack.ui.panels.process_panel import ProcessPanel
-from intellicrack.ui.panels.process_panel._memory_tab import MemoryTab
+from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 from tests.test_ui.conftest import SignalRecorder
 
 

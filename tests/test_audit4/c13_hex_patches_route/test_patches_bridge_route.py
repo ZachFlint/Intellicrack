@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Final
 import pytest
 from PyQt6.QtWidgets import QApplication, QFileDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
-from intellicrack.ui.panels.hex_editor._patches import PatchesMixin
+from intellicrack.ui.panels.hex_editor.patches import PatchesMixin
 
 
 if TYPE_CHECKING:
@@ -185,11 +185,11 @@ def silence_dialogs(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str
         return _cap
 
     monkeypatch.setattr(
-        "intellicrack.ui.panels.hex_editor._patches.show_info",
+        "intellicrack.ui.panels.hex_editor.patches.show_info",
         _capture("info"),
     )
     monkeypatch.setattr(
-        "intellicrack.ui.panels.hex_editor._patches.show_warning",
+        "intellicrack.ui.panels.hex_editor.patches.show_warning",
         _capture("warning"),
     )
     return captured

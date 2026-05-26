@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="readyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00BCD4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00695C;stop-opacity:1" />
+    </linearGradient>
+    <filter id="readyShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#004D40" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Ready circle background -->
+  <circle cx="12" cy="12" r="11" fill="url(#readyGradient)" stroke="#004D40" stroke-width="0.8" filter="url(#readyShadowFilter)"/>
+  <circle cx="12" cy="12" r="8.5" fill="none" stroke="#B2EBF2" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Ready symbol (play button / power symbol) -->
+  <path d="M10 8 L16 12 L10 16 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.5"/>
+  <circle cx="12" cy="12" r="6" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- Status indicator dots -->
+  <circle cx="7" cy="7" r="1" fill="#4CAF50"/>
+  <circle cx="17" cy="7" r="1" fill="#4CAF50"/>
+  <circle cx="7" cy="17" r="1" fill="#4CAF50"/>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="10" cy="8" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

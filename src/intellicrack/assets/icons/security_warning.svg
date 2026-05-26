@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="securityWarningGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F44336;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C62828;stop-opacity:1" />
+    </linearGradient>
+    <filter id="securityWarningShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#B71C1C" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Security warning triangle -->
+  <path d="M12 2 L22 20 L2 20 Z" fill="url(#securityWarningGradient)" stroke="#B71C1C" stroke-width="0.8" filter="url(#securityWarningShadowFilter)"/>
+  <path d="M12 4 L20 18.5 L4 18.5 Z" fill="none" stroke="#FFCDD2" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Exclamation mark -->
+  <path d="M12 7 L12 13" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round"/>
+  <circle cx="12" cy="16.5" r="1.3" fill="#FFFFFF"/>
+
+  <!-- Security breach symbols -->
+  <path d="M6 16 L8 18 M8 16 L6 18" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+  <path d="M16 16 L18 18 M18 16 L16 18" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Danger border -->
+  <path d="M12 3 L21 19 L3 19 Z" fill="none" stroke="#FF5722" stroke-width="1" opacity="0.7"/>
+
+  <!-- Alert pulse effect -->
+  <circle cx="12" cy="12" r="8" fill="none" stroke="#FFFFFF" stroke-width="0.8" opacity="0.2">
+    <animate attributeName="opacity" values="0;0.4;0" dur="2s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="11" cy="6" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.3"/>
+</svg>

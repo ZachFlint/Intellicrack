@@ -17,7 +17,7 @@ import struct
 
 import pytest
 
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.pe_format import (
     ELF_CLASS_64,
     ELF_E_MACHINE_OFFSET,
     ELF_EI_CLASS_OFFSET,
@@ -669,7 +669,7 @@ class TestMagicConstants:
     """Validate the canonical magic-byte / signature constants.
 
     These values must match the Microsoft PE/COFF specification exactly
-    because every bridge that consolidates onto :mod:`_pe_format`
+    because every bridge that consolidates onto :mod:`pe_format`
     compares unpacked bytes (or unpacked little-endian integers)
     against them.
     """

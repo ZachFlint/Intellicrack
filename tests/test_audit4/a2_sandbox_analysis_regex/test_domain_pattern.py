@@ -24,9 +24,9 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from intellicrack.sandbox._tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 from intellicrack.sandbox.analysis import extract_iocs
 from intellicrack.sandbox.base import ExecutionReport
+from intellicrack.sandbox.tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
 
 
 _TEST_BINARY_PATH = f"{tempfile.gettempdir()}/sample.bin"

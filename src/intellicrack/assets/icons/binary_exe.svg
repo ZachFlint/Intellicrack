@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="exeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#607D8B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#263238;stop-opacity:1" />
+    </linearGradient>
+    <filter id="exeShadowFilter">
+      <feDropShadow dx="0.5" dy="0.5" stdDeviation="1" flood-color="#102027" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- EXE file icon base -->
+  <rect x="4" y="2" width="14" height="20" rx="2"
+        fill="url(#exeGradient)" stroke="#102027" stroke-width="0.8" filter="url(#exeShadowFilter)"/>
+
+  <!-- File corner fold -->
+  <polygon points="15,2 18,5 15,5" fill="#37474F"/>
+  <path d="M15 2 L15 5 L18 5" stroke="#546E7A" stroke-width="0.5"/>
+
+  <!-- EXE text label -->
+  <text x="11" y="10" font-family="monospace" font-size="4" text-anchor="middle" fill="#FFFFFF" font-weight="bold">EXE</text>
+
+  <!-- Binary code representation -->
+  <rect x="6" y="12" width="10" height="1" rx="0.5" fill="#4CAF50"/>
+  <rect x="6" y="14" width="8" height="1" rx="0.5" fill="#FF9800"/>
+  <rect x="6" y="16" width="12" height="1" rx="0.5" fill="#2196F3"/>
+  <rect x="6" y="18" width="6" height="1" rx="0.5" fill="#F44336"/>
+
+  <!-- Windows executable symbol -->
+  <rect x="19" y="3" width="3" height="3" fill="#FF5722" opacity="0.8"/>
+  <rect x="19.5" y="3.5" width="2" height="2" fill="#FFFFFF"/>
+  <path d="M20 4 L21 5 M21 4 L20 5" stroke="#FF5722" stroke-width="0.8"/>
+
+  <!-- Machine code indicators -->
+  <text x="6.5" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">PE</text>
+  <text x="14" y="7" font-family="monospace" font-size="2" fill="#FFFFFF" opacity="0.7">x64</text>
+
+  <!-- Highlight gloss effect -->
+  <ellipse cx="8" cy="5" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.2"/>
+</svg>

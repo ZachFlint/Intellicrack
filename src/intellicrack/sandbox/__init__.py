@@ -9,7 +9,7 @@ This package provides sandbox environments for safe execution and behavioral ana
 
 from __future__ import annotations
 
-from intellicrack.sandbox import _log_parsers as log_parsers
+from intellicrack.sandbox import log_parsers as log_parsers
 from intellicrack.sandbox.base import (
     ApiCall,
     BehaviorMatch,

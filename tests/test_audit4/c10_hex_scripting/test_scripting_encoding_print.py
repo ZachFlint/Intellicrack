@@ -24,8 +24,8 @@ from typing import Any
 
 import pytest
 
-import intellicrack.ui.panels.hex_editor._scripting as _scripting_module
-from intellicrack.ui.panels.hex_editor._scripting import execute_script
+import intellicrack.ui.panels.hex_editor.scripting as _scripting_module
+from intellicrack.ui.panels.hex_editor.scripting import execute_script
 
 
 _DocAPI = getattr(_scripting_module, "_DocAPI")

@@ -8,10 +8,6 @@
 This module provides a registry for tool bridges that handles
 initialization, availability checking, and tool schema generation
 for LLM function calling.
-
-Bridge imports are deferred to method bodies to break a circular
-dependency: bridges.base -> core.logging -> core.__init__ -> core.tools
--> bridges.<bridge> -> bridges.base.
 """
 
 from __future__ import annotations
@@ -23,6 +19,15 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
+from intellicrack.bridges.base import TOOL_CAPABILITY_MAP
+from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.frida_bridge import FridaBridge
+from intellicrack.bridges.ghidra import GhidraBridge
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.bridges.installer import ToolInstaller
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.bridges.sandbox_bridge import SandboxBridge
+from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.types import ToolDefinition, ToolError, ToolName
 
@@ -31,13 +36,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.bridges.base import ToolBridgeBase
-    from intellicrack.bridges.cutter import CutterBridge
-    from intellicrack.bridges.frida_bridge import FridaBridge
-    from intellicrack.bridges.ghidra import GhidraBridge
-    from intellicrack.bridges.hex_editor import HexEditorBridge
-    from intellicrack.bridges.process import ProcessBridge
-    from intellicrack.bridges.sandbox_bridge import SandboxBridge
-    from intellicrack.bridges.x64dbg import X64DbgBridge
     from intellicrack.core.session import Session
 
 
@@ -97,8 +95,6 @@ class ToolRegistry:
             tools_dir: Directory for tool installations.
         """
         self._bridges: dict[ToolName, ToolBridgeBase] = {}
-        from intellicrack.bridges.installer import ToolInstaller
-
         self._installer = ToolInstaller(tools_dir)
         self._tools_dir = tools_dir
         self._initialized = False
@@ -333,10 +329,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.process import ProcessBridge as _ProcessBridge
-
         bridge = self._bridges.get(ToolName.PROCESS)
-        if bridge is None or not isinstance(bridge, _ProcessBridge):
+        if bridge is None or not isinstance(bridge, ProcessBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_process_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -350,10 +344,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.frida_bridge import FridaBridge as _FridaBridge
-
         bridge = self._bridges.get(ToolName.FRIDA)
-        if bridge is None or not isinstance(bridge, _FridaBridge):
+        if bridge is None or not isinstance(bridge, FridaBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_frida_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -367,10 +359,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.ghidra import GhidraBridge as _GhidraBridge
-
         bridge = self._bridges.get(ToolName.GHIDRA)
-        if bridge is None or not isinstance(bridge, _GhidraBridge):
+        if bridge is None or not isinstance(bridge, GhidraBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_ghidra_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -384,10 +374,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.cutter import CutterBridge as _CutterBridge
-
         bridge = self._bridges.get(ToolName.CUTTER)
-        if bridge is None or not isinstance(bridge, _CutterBridge):
+        if bridge is None or not isinstance(bridge, CutterBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_cutter_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -401,10 +389,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.x64dbg import X64DbgBridge as _X64DbgBridge
-
         bridge = self._bridges.get(ToolName.X64DBG)
-        if bridge is None or not isinstance(bridge, _X64DbgBridge):
+        if bridge is None or not isinstance(bridge, X64DbgBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_x64dbg_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -418,10 +404,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.sandbox_bridge import SandboxBridge as _SandboxBridge
-
         bridge = self._bridges.get(ToolName.SANDBOX)
-        if bridge is None or not isinstance(bridge, _SandboxBridge):
+        if bridge is None or not isinstance(bridge, SandboxBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_sandbox_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -435,10 +419,8 @@ class ToolRegistry:
         Raises:
             ToolError: If bridge not available.
         """
-        from intellicrack.bridges.hex_editor import HexEditorBridge as _HexEditorBridge
-
         bridge = self._bridges.get(ToolName.HEX_EDITOR)
-        if bridge is None or not isinstance(bridge, _HexEditorBridge):
+        if bridge is None or not isinstance(bridge, HexEditorBridge):
             raise ToolError(_ERR_BRIDGE_NA)
         _logger.debug("get_hex_editor_bridge_success", bridge_type=type(bridge).__name__)
         return bridge
@@ -620,8 +602,6 @@ class ToolRegistry:
                 function_name=function_name,
             )
             raise ToolError(_ERR_NOT_CALLABLE)
-
-        from intellicrack.bridges.base import TOOL_CAPABILITY_MAP
 
         caps = getattr(bridge, "capabilities", None)
         required_capability = TOOL_CAPABILITY_MAP.get(attr_name)

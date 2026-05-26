@@ -242,6 +242,7 @@ def _configure_structlog(
     max_file_size_mb: int,
     backup_count: int,
     json_file: bool,
+    filename: str = _DEFAULT_LOG_FILE,
 ) -> None:
     """Configure structlog with processors and handlers.
 
@@ -253,6 +254,11 @@ def _configure_structlog(
         max_file_size_mb: Maximum log file size in MB.
         backup_count: Number of backup files to keep.
         json_file: Whether to output JSON to file.
+        filename: Name of the rotated log file written into ``log_dir``.
+            Defaults to ``intellicrack.log`` so the main application
+            keeps writing its unified log; auxiliary processes (e.g. the
+            docker-sandbox driver) override this to avoid colliding on
+            the same filename.
     """
     shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -291,7 +297,7 @@ def _configure_structlog(
 
     if file_enabled and log_dir is not None:
         log_dir.mkdir(parents=True, exist_ok=True)
-        log_file = log_dir / _DEFAULT_LOG_FILE
+        log_file = log_dir / filename
 
         max_bytes = max_file_size_mb * 1024 * 1024
         file_handler = RotatingFileHandler(
@@ -366,6 +372,7 @@ class IntellicrackLogger:
         backup_count: int = 5,
         retention_days: int = 14,
         json_file: bool = True,
+        filename: str = _DEFAULT_LOG_FILE,
     ) -> None:
         """Configure the logger with structlog handlers.
 
@@ -378,6 +385,10 @@ class IntellicrackLogger:
             backup_count: Number of backup files to keep.
             retention_days: Number of days to retain log files.
             json_file: Whether to output JSON to file.
+            filename: Name of the rotated log file written into
+                ``log_dir``. Defaults to ``intellicrack.log``; auxiliary
+                processes (e.g. the docker-sandbox driver) override this
+                so they don't collide with the application's log file.
         """
         if log_dir is not None and file_enabled:
             cleanup_old_logs(log_dir, retention_days)
@@ -390,6 +401,7 @@ class IntellicrackLogger:
             max_file_size_mb=max_file_size_mb,
             backup_count=backup_count,
             json_file=json_file,
+            filename=filename,
         )
 
     def get_logger(self, name: str | None = None) -> structlog.stdlib.BoundLogger:

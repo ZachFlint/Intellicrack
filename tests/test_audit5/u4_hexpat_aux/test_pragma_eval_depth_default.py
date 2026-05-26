@@ -13,13 +13,13 @@ evaluation. The remediation lifts the default to a value that handles
 real-world patterns while still bounding accidental unbounded recursion.
 
 The new default is exposed as ``DEFAULT_EVAL_DEPTH`` in
-``intellicrack.core.hexpat._pragma`` so the preprocessor and any other
+``intellicrack.core.hexpat.pragma`` so the preprocessor and any other
 consumers share a single source of truth.
 """
 
 from __future__ import annotations
 
-from intellicrack.core.hexpat._pragma import (
+from intellicrack.core.hexpat.pragma import (
     DEFAULT_ARRAY_LIMIT,
     DEFAULT_EVAL_DEPTH,
     DEFAULT_PATTERN_LIMIT,
@@ -33,7 +33,7 @@ class TestPragmaDefaultEvalDepth:
     """F-0028: default eval_depth is high enough for common parent/recursive patterns."""
 
     def test_default_eval_depth_constant_exists(self) -> None:
-        """``DEFAULT_EVAL_DEPTH`` is exposed from ``_pragma`` for shared use."""
+        """``DEFAULT_EVAL_DEPTH`` is exposed from ``pragma`` for shared use."""
         assert isinstance(DEFAULT_EVAL_DEPTH, int)
 
     def test_default_eval_depth_handles_tiff_pattern(self) -> None:
@@ -72,7 +72,7 @@ class TestPragmaDefaultEvalDepth:
     def test_pragma_info_other_defaults_share_module_constants(self) -> None:
         """Other default-bearing fields also reference the shared constants.
 
-        Centralising the defaults in ``_pragma`` is the single-source-of-truth
+        Centralising the defaults in ``pragma`` is the single-source-of-truth
         contract that lets the preprocessor and dataclass agree.
         """
         info = PragmaInfo()

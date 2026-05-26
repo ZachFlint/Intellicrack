@@ -51,8 +51,8 @@ from intellicrack.bridges.installer import (
     path_requires_admin,
 )
 from intellicrack.core import (
-    _subprocess as sp_mod,
     process_manager as pm_mod,
+    subprocess_compat as sp_mod,
 )
 from intellicrack.core.types import ToolError, ToolName
 

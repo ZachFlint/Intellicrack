@@ -2,11 +2,11 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Audit3 U10 regression tests for ``intellicrack.core._xml_gen``.
+"""Audit3 U10 regression tests for ``intellicrack.core.xml_gen``.
 
 Covers:
 
-- F-0011: ``_xml_gen.py`` must not obfuscate its
+- F-0011: ``xml_gen.py`` must not obfuscate its
   ``xml.etree.ElementTree`` dependency. Earlier revisions used
   :func:`importlib.import_module` and later
   ``__import__("xml" + ".etree.ElementTree")`` purely to dodge bandit
@@ -29,8 +29,8 @@ from xml.etree.ElementTree import (
     tostring as _stdlib_tostring,
 )
 
-from intellicrack.core import _xml_gen
-from intellicrack.core._xml_gen import (
+from intellicrack.core import xml_gen
+from intellicrack.core.xml_gen import (
     Element,
     ElementTree,
     SubElement,
@@ -45,13 +45,13 @@ from intellicrack.core._xml_gen import (
 # ---------------------------------------------------------------------------
 
 
-def _xml_gen_source() -> str:
-    """Read the on-disk source of ``_xml_gen.py``.
+def xml_gen_source() -> str:
+    """Read the on-disk source of ``xml_gen.py``.
 
     Returns:
         str: The full source text of the module file.
     """
-    module_file = inspect.getfile(_xml_gen)
+    module_file = inspect.getfile(xml_gen)
     return Path(module_file).read_text(encoding="utf-8")
 
 
@@ -63,9 +63,9 @@ def test_f0011_no_importlib_import_module_for_xml_etree() -> None:
     static type resolution and obscured the security boundary. This test
     asserts the literal pattern is absent from the file.
     """
-    source = _xml_gen_source()
+    source = xml_gen_source()
     assert "importlib.import_module" not in source, (
-        "importlib.import_module must not be used in _xml_gen.py (regression: F-0011 -- audit boundary must be statically resolvable)"
+        "importlib.import_module must not be used in xml_gen.py (regression: F-0011 -- audit boundary must be statically resolvable)"
     )
 
 
@@ -76,8 +76,8 @@ def test_f0011_no_importlib_import_for_xml_etree_dotted_path() -> None:
     arguments or using ``importlib.import_module(name)`` where ``name``
     is a constructed string variable.
     """
-    source = _xml_gen_source()
-    assert "import_module" not in source, "import_module references must not appear in _xml_gen.py"
+    source = xml_gen_source()
+    assert "import_module" not in source, "import_module references must not appear in xml_gen.py"
 
 
 def test_f0011_no_dunder_import_obfuscation() -> None:
@@ -88,8 +88,8 @@ def test_f0011_no_dunder_import_obfuscation() -> None:
     ``__import__("xml" + ".etree.ElementTree")`` -- different API,
     same B405-evasion intent. Both are prohibited.
     """
-    source = _xml_gen_source()
-    assert "__import__" not in source, "_xml_gen.py must not call __import__ to resolve xml.etree (regression: F-0011 second-round)"
+    source = xml_gen_source()
+    assert "__import__" not in source, "xml_gen.py must not call __import__ to resolve xml.etree (regression: F-0011 second-round)"
 
 
 def test_f0011_no_runtime_string_concatenation_of_xml_etree() -> None:
@@ -99,7 +99,7 @@ def test_f0011_no_runtime_string_concatenation_of_xml_etree() -> None:
     audit-evasion patterns; either form means a reader cannot grep the
     dependency.
     """
-    source = _xml_gen_source()
+    source = xml_gen_source()
     assert '"xml" +' not in source, "Runtime string-concatenation of xml module name is forbidden"
     assert '"xml.etree" +' not in source, "Runtime string-concatenation of xml.etree submodule name is forbidden"
 
@@ -112,11 +112,11 @@ def test_f0011_uses_direct_import_statement() -> None:
     node exists. This is the positive form of the obfuscation guards
     above.
     """
-    tree = ast.parse(_xml_gen_source())
+    tree = ast.parse(xml_gen_source())
     plain_imports = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
     from_imports = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module is not None}
     assert "xml.etree.ElementTree" in plain_imports | from_imports, (
-        "_xml_gen.py must contain a direct ``import xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...`` statement"
+        "xml_gen.py must contain a direct ``import xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...`` statement"
     )
 
 
@@ -127,11 +127,11 @@ def test_f0011_no_inline_suppression_directives() -> None:
     B405 exclusion to ``pyproject.toml``. Inline suppressions defeat
     that goal.
     """
-    source = _xml_gen_source()
-    assert "# nosec" not in source, "Inline # nosec directives are forbidden in _xml_gen.py"
-    assert "# noqa" not in source, "Inline # noqa directives are forbidden in _xml_gen.py"
-    assert "# type: ignore" not in source, "Inline # type: ignore directives are forbidden in _xml_gen.py"
-    assert "# pyright: ignore" not in source, "Inline # pyright: ignore directives are forbidden in _xml_gen.py"
+    source = xml_gen_source()
+    assert "# nosec" not in source, "Inline # nosec directives are forbidden in xml_gen.py"
+    assert "# noqa" not in source, "Inline # noqa directives are forbidden in xml_gen.py"
+    assert "# type: ignore" not in source, "Inline # type: ignore directives are forbidden in xml_gen.py"
+    assert "# pyright: ignore" not in source, "Inline # pyright: ignore directives are forbidden in xml_gen.py"
 
 
 def test_f0011_re_exports_are_the_stdlib_objects() -> None:
@@ -140,11 +140,11 @@ def test_f0011_re_exports_are_the_stdlib_objects() -> None:
     Defends against accidental wrapping that would silently change
     behaviour (e.g. swapping ``Element`` for a custom subclass).
     """
-    assert _xml_gen.Element is _StdlibElement
-    assert _xml_gen.SubElement is _stdlib_SubElement
-    assert _xml_gen.ElementTree is _StdlibElementTree
-    assert _xml_gen.indent is _stdlib_indent
-    assert _xml_gen.tostring is _stdlib_tostring
+    assert xml_gen.Element is _StdlibElement
+    assert xml_gen.SubElement is _stdlib_SubElement
+    assert xml_gen.ElementTree is _StdlibElementTree
+    assert xml_gen.indent is _stdlib_indent
+    assert xml_gen.tostring is _stdlib_tostring
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +154,7 @@ def test_f0011_re_exports_are_the_stdlib_objects() -> None:
 
 def test_xml_gen_exports_match_dunder_all() -> None:
     """The module ``__all__`` must list exactly the supported re-exports."""
-    assert set(_xml_gen.__all__) == {
+    assert set(xml_gen.__all__) == {
         "Element",
         "ElementTree",
         "SubElement",

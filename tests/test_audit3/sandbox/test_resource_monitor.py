@@ -24,13 +24,18 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    Popen,
+    TimeoutExpired,
+)
 
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
@@ -69,7 +74,7 @@ def _start_script(
     *,
     sample_interval_seconds: int = 1,
     counter_paths: list[str] | None = None,
-) -> subprocess.Popen[str]:
+) -> Popen[str]:
     """Spawn ``resource_monitor.ps1`` with the supplied parameters.
 
     Args:
@@ -81,7 +86,7 @@ def _start_script(
             ``-CounterPaths`` (used to force counter failures).
 
     Returns:
-        subprocess.Popen[str]: The running script process.
+        Popen[str]: The running script process.
     """
     args: list[str] = [
         pwsh,
@@ -100,17 +105,17 @@ def _start_script(
     if counter_paths:
         args.append("-CounterPaths")
         args.extend(counter_paths)
-    return subprocess.Popen(
+    return Popen(
         args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
 
 
-def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
+def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
     """Terminate the script process and collect its output.
 
     Args:
@@ -125,7 +130,7 @@ def _terminate(proc: subprocess.Popen[str]) -> tuple[str, str, int | None]:
         proc.terminate()
         try:
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
-        except subprocess.TimeoutExpired:
+        except TimeoutExpired:
             proc.kill()
             stdout, stderr = proc.communicate(timeout=_PWSH_KILL_GRACE_SEC)
     else:

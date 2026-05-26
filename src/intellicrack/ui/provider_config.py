@@ -56,7 +56,7 @@ from intellicrack.credentials.oauth import (
     get_oauth_manager,
 )
 from intellicrack.credentials.store import CredentialStore
-from intellicrack.ui._dialogs import show_error, show_info, show_warning
+from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
 from intellicrack.ui.resources.theme_manager import ThemeManager

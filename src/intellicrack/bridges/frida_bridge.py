@@ -1118,7 +1118,7 @@ def _write_typescript_tempfile(source: str) -> Path:
         return Path(temp_file.name)
 
 
-class FridaBridge(InstrumentationBridge):
+class _FridaBridgeBase(InstrumentationBridge):
     """Bridge for Frida dynamic instrumentation.
 
     Provides function hooking, memory manipulation, and script execution capabilities using the Frida framework. Instances own the device
@@ -2549,7 +2549,7 @@ class FridaBridge(InstrumentationBridge):
                 result["error"] = message["description"]
             else:
                 return
-            FridaBridge._set_event_threadsafe(event)
+            self._set_event_threadsafe(event)
 
         script = await asyncio.to_thread(
             self._create_script_with_cancellable,
@@ -2577,8 +2577,8 @@ class FridaBridge(InstrumentationBridge):
 
         return result
 
-    @staticmethod
     def _make_payload_waiter(
+        self,
         messages: list[ScriptMessage],
         dispatch: Callable[[dict[str, object]], None],
     ) -> tuple[
@@ -2626,7 +2626,7 @@ class FridaBridge(InstrumentationBridge):
             dispatch(dict(cast("dict[str, object]", message)))
             msg_type = message["type"]
             if msg_type in {"send", "error"}:
-                FridaBridge._set_event_threadsafe(event)
+                self._set_event_threadsafe(event)
 
         return on_message, event
 
@@ -2882,9 +2882,9 @@ class FridaBridge(InstrumentationBridge):
                 if isinstance(payload, dict):
                     ptype = cast("dict[str, object]", payload).get("type")
                     if isinstance(ptype, str) and ptype in terminal_payload_types:
-                        FridaBridge._set_event_threadsafe(installed_event)
+                        self._set_event_threadsafe(installed_event)
             elif msg_type == "error":
-                FridaBridge._set_event_threadsafe(installed_event)
+                self._set_event_threadsafe(installed_event)
 
         return messages, on_message, installed_event
 
@@ -3767,6 +3767,181 @@ class FridaBridge(InstrumentationBridge):
             if trace_list is not None:
                 trace_list.extend(parsed)
 
+    def _resolve_cancellable(self, cancellable_id: str | None) -> frida.Cancellable | None:
+        """Look up a cancellation token by identifier.
+
+        Args:
+            cancellable_id: Identifier returned from :meth:`create_cancellable`,
+                or ``None`` if no token is requested.
+
+        Returns:
+            frida.Cancellable | None: The registered token, or ``None`` when
+                no identifier was supplied.
+
+        Raises:
+            ToolError: If ``cancellable_id`` is provided but unknown.
+        """
+        if cancellable_id is None:
+            return None
+        cancellable = self._cancellables.get(cancellable_id)
+        if cancellable is None:
+            raise ToolError(
+                _ERR_UNKNOWN_CANCELLABLE,
+                details={"cancellable_id": cancellable_id},
+            )
+        return cancellable
+
+    @staticmethod
+    def _attach_with_cancellable(
+        device: frida.core.Device,
+        pid: int,
+        cancellable: frida.Cancellable | None,
+    ) -> frida.core.Session:
+        """Invoke ``Device.attach`` honoring an optional cancellation token.
+
+        Args:
+            device: Frida device to attach through.
+            pid: Target process identifier.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            frida.core.Session: The attached Frida session.
+        """
+        attach_fn = cast("Callable[..., frida.core.Session]", device.attach)
+        if cancellable is not None:
+            return attach_fn(pid, cancellable=cancellable)
+        return attach_fn(pid)
+
+    @staticmethod
+    def _spawn_with_cancellable(
+        device: frida.core.Device,
+        program: str,
+        argv: Sequence[str | bytes],
+        cancellable: frida.Cancellable | None,
+    ) -> int:
+        """Invoke ``Device.spawn`` honoring an optional cancellation token.
+
+        Args:
+            device: Frida device to spawn on.
+            program: Path to the executable.
+            argv: Argument vector for the spawned process.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            int: PID of the spawned process.
+        """
+        spawn_fn = cast("Callable[..., int]", device.spawn)
+        if cancellable is not None:
+            return spawn_fn(program, argv=list(argv), cancellable=cancellable)
+        return spawn_fn(program, argv=list(argv))
+
+    @staticmethod
+    def _create_script_with_cancellable(
+        session: frida.core.Session,
+        source: str,
+        cancellable: frida.Cancellable | None,
+    ) -> frida.core.Script:
+        """Invoke ``Session.create_script`` honoring an optional cancellation token.
+
+        Args:
+            session: Frida session that will own the script.
+            source: JavaScript source to compile.
+            cancellable: Optional cancellation token; passed as a keyword
+                argument to Frida when provided.
+
+        Returns:
+            frida.core.Script: The created Frida script.
+        """
+        create_fn = cast("Callable[..., frida.core.Script]", session.create_script)
+        if cancellable is not None:
+            return create_fn(source, cancellable=cancellable)
+        return create_fn(source)
+
+    def _teardown_crash_handler(self) -> None:
+        """Best-effort detach of the crash handler called from :meth:`shutdown`.
+
+        Mirrors :meth:`disable_crash_reporting` but never raises so it does not interrupt the rest of the shutdown sequence.
+        """
+        try:
+            self._detach_crash_handler()
+        except Exception:
+            _logger.exception("crash_reporting_teardown_failed")
+
+    def _detach_crash_handler(self) -> None:
+        """Drop the registered crash handler if one is currently active.
+
+        Shared core for :meth:`disable_crash_reporting` and :meth:`_teardown_crash_handler`; the public methods differ only in whether
+        errors are surfaced or logged.
+        """
+        if not self._crash_reporting_enabled:
+            return
+        device = self._device
+        handler = self._crash_handler
+        if device is not None and handler is not None:
+            off_fn = getattr(device, "off", None)
+            if callable(off_fn):
+                off_fn("process-crashed", handler)
+        self._crash_handler = None
+        self._crash_reporting_enabled = False
+
+    @staticmethod
+    def _build_native_call_script(
+        *,
+        function_class: str,
+        validated_address: int,
+        return_type: str,
+        arg_types_js: str,
+        args_code: str,
+        cc_part: str,
+        result_handler_js: str,
+    ) -> str:
+        """Build the JS source for a ``NativeFunction`` / ``SystemFunction`` call.
+
+        Args:
+            function_class: ``NativeFunction`` or ``SystemFunction``.
+            validated_address: Validated target address.
+            return_type: Frida return-type token.
+            arg_types_js: Comma-separated quoted arg-type list.
+            args_code: Comma-separated argument expressions.
+            cc_part: Calling-convention suffix or empty string.
+            result_handler_js: JS statement(s) emitting the result.
+
+        Returns:
+            str: JavaScript source ready for ``Session.create_script``.
+        """
+        return (
+            f"var func = new {function_class}(ptr({validated_address}), "
+            f"'{return_type}', [{arg_types_js}]{cc_part});\n"
+            f"var result = func({args_code});\n"
+            f"{result_handler_js}\n"
+        )
+
+    @staticmethod
+    def _coerce_call_value(result: dict[str, Any]) -> int:
+        """Coerce the ``value``/``valueIsString`` payload into a Python int.
+
+        Args:
+            result: Result dict from ``_execute_script_and_wait``.
+
+        Returns:
+            int: The coerced numeric value, or 0 when the type is unknown.
+        """
+        value_raw = result.get("value", 0)
+        value_is_string = bool(result.get("valueIsString"))
+        if value_is_string and isinstance(value_raw, str):
+            return int(value_raw, 16) if value_raw.startswith("0x") else int(value_raw)
+        if isinstance(value_raw, (bool, int, float)):
+            return int(value_raw)
+        if isinstance(value_raw, str):
+            return int(value_raw, 16) if value_raw.startswith("0x") else int(value_raw)
+        return 0
+
+
+class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
+    """Stalker tracing, child gating, crash reporting, and Objective-C surface for the Frida bridge."""
+
     async def stalker_follow(
         self,
         thread_id: int | None = None,
@@ -3891,10 +4066,10 @@ class FridaBridge(InstrumentationBridge):
                             self._parse_stalker_batch(captured_tid, cast("list[object]", raw_evts))
                     elif inner_type == "stalker_started":
                         start_status["started"] = True
-                        FridaBridge._set_event_threadsafe(started_event)
+                        self._set_event_threadsafe(started_event)
             elif message["type"] == "error":
                 start_status["error"] = message["description"]
-                FridaBridge._set_event_threadsafe(started_event)
+                self._set_event_threadsafe(started_event)
             self._dispatch_message(dict(cast("dict[str, object]", message)))
 
         script.on("message", on_stalker_message)
@@ -4168,33 +4343,6 @@ class FridaBridge(InstrumentationBridge):
             ) from e
         _logger.info("crash_reporting_disabled")
 
-    def _teardown_crash_handler(self) -> None:
-        """Best-effort detach of the crash handler called from :meth:`shutdown`.
-
-        Mirrors :meth:`disable_crash_reporting` but never raises so it does not interrupt the rest of the shutdown sequence.
-        """
-        try:
-            self._detach_crash_handler()
-        except Exception:
-            _logger.exception("crash_reporting_teardown_failed")
-
-    def _detach_crash_handler(self) -> None:
-        """Drop the registered crash handler if one is currently active.
-
-        Shared core for :meth:`disable_crash_reporting` and :meth:`_teardown_crash_handler`; the public methods differ only in whether
-        errors are surfaced or logged.
-        """
-        if not self._crash_reporting_enabled:
-            return
-        device = self._device
-        handler = self._crash_handler
-        if device is not None and handler is not None:
-            off_fn = getattr(device, "off", None)
-            if callable(off_fn):
-                off_fn("process-crashed", handler)
-        self._crash_handler = None
-        self._crash_reporting_enabled = False
-
     async def get_crashes(self) -> list[CrashInfo]:
         """Get all collected crash reports.
 
@@ -4407,98 +4555,6 @@ class FridaBridge(InstrumentationBridge):
         cancellable.cancel()
         _logger.info("operation_cancelled", cancellable_id=cancellable_id)
         return True
-
-    def _resolve_cancellable(self, cancellable_id: str | None) -> frida.Cancellable | None:
-        """Look up a cancellation token by identifier.
-
-        Args:
-            cancellable_id: Identifier returned from :meth:`create_cancellable`,
-                or ``None`` if no token is requested.
-
-        Returns:
-            frida.Cancellable | None: The registered token, or ``None`` when
-                no identifier was supplied.
-
-        Raises:
-            ToolError: If ``cancellable_id`` is provided but unknown.
-        """
-        if cancellable_id is None:
-            return None
-        cancellable = self._cancellables.get(cancellable_id)
-        if cancellable is None:
-            raise ToolError(
-                _ERR_UNKNOWN_CANCELLABLE,
-                details={"cancellable_id": cancellable_id},
-            )
-        return cancellable
-
-    @staticmethod
-    def _attach_with_cancellable(
-        device: frida.core.Device,
-        pid: int,
-        cancellable: frida.Cancellable | None,
-    ) -> frida.core.Session:
-        """Invoke ``Device.attach`` honoring an optional cancellation token.
-
-        Args:
-            device: Frida device to attach through.
-            pid: Target process identifier.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
-
-        Returns:
-            frida.core.Session: The attached Frida session.
-        """
-        attach_fn = cast("Callable[..., frida.core.Session]", device.attach)
-        if cancellable is not None:
-            return attach_fn(pid, cancellable=cancellable)
-        return attach_fn(pid)
-
-    @staticmethod
-    def _spawn_with_cancellable(
-        device: frida.core.Device,
-        program: str,
-        argv: Sequence[str | bytes],
-        cancellable: frida.Cancellable | None,
-    ) -> int:
-        """Invoke ``Device.spawn`` honoring an optional cancellation token.
-
-        Args:
-            device: Frida device to spawn on.
-            program: Path to the executable.
-            argv: Argument vector for the spawned process.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
-
-        Returns:
-            int: PID of the spawned process.
-        """
-        spawn_fn = cast("Callable[..., int]", device.spawn)
-        if cancellable is not None:
-            return spawn_fn(program, argv=list(argv), cancellable=cancellable)
-        return spawn_fn(program, argv=list(argv))
-
-    @staticmethod
-    def _create_script_with_cancellable(
-        session: frida.core.Session,
-        source: str,
-        cancellable: frida.Cancellable | None,
-    ) -> frida.core.Script:
-        """Invoke ``Session.create_script`` honoring an optional cancellation token.
-
-        Args:
-            session: Frida session that will own the script.
-            source: JavaScript source to compile.
-            cancellable: Optional cancellation token; passed as a keyword
-                argument to Frida when provided.
-
-        Returns:
-            frida.core.Script: The created Frida script.
-        """
-        create_fn = cast("Callable[..., frida.core.Script]", session.create_script)
-        if cancellable is not None:
-            return create_fn(source, cancellable=cancellable)
-        return create_fn(source)
 
     async def patch_code(self, address: int, hex_data: str) -> bool:
         """Patch code at an address using Memory.patchCode with instruction cache flush.
@@ -5069,58 +5125,6 @@ class FridaBridge(InstrumentationBridge):
         _logger.debug("interceptor_flushed")
         return True
 
-    @staticmethod
-    def _build_native_call_script(
-        *,
-        function_class: str,
-        validated_address: int,
-        return_type: str,
-        arg_types_js: str,
-        args_code: str,
-        cc_part: str,
-        result_handler_js: str,
-    ) -> str:
-        """Build the JS source for a ``NativeFunction`` / ``SystemFunction`` call.
-
-        Args:
-            function_class: ``NativeFunction`` or ``SystemFunction``.
-            validated_address: Validated target address.
-            return_type: Frida return-type token.
-            arg_types_js: Comma-separated quoted arg-type list.
-            args_code: Comma-separated argument expressions.
-            cc_part: Calling-convention suffix or empty string.
-            result_handler_js: JS statement(s) emitting the result.
-
-        Returns:
-            str: JavaScript source ready for ``Session.create_script``.
-        """
-        return (
-            f"var func = new {function_class}(ptr({validated_address}), "
-            f"'{return_type}', [{arg_types_js}]{cc_part});\n"
-            f"var result = func({args_code});\n"
-            f"{result_handler_js}\n"
-        )
-
-    @staticmethod
-    def _coerce_call_value(result: dict[str, Any]) -> int:
-        """Coerce the ``value``/``valueIsString`` payload into a Python int.
-
-        Args:
-            result: Result dict from ``_execute_script_and_wait``.
-
-        Returns:
-            int: The coerced numeric value, or 0 when the type is unknown.
-        """
-        value_raw = result.get("value", 0)
-        value_is_string = bool(result.get("valueIsString"))
-        if value_is_string and isinstance(value_raw, str):
-            return int(value_raw, 16) if value_raw.startswith("0x") else int(value_raw)
-        if isinstance(value_raw, (bool, int, float)):
-            return int(value_raw)
-        if isinstance(value_raw, str):
-            return int(value_raw, 16) if value_raw.startswith("0x") else int(value_raw)
-        return 0
-
     async def call_system_function(
         self,
         address: int,
@@ -5670,6 +5674,16 @@ class FridaBridge(InstrumentationBridge):
         self._hooks[hook_id] = hook_info
         _logger.info("objc_method_hooked", class_name=class_name, method=method_name)
         return hook_info
+
+
+class FridaBridge(_FridaBridgeAnalysisMixin):
+    """Bridge for Frida dynamic instrumentation.
+
+    Composed from the ``_FridaBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
+    through normal MRO. Each mixin groups one surface area (session and memory primitives, stalker/runtime instrumentation, Java and native
+    bridges) so no single class definition exceeds the public method limit. The final class exposes the full Frida feature set including
+    Java runtime hooks, kernel APIs, socket/file/SQLite helpers, cloak management, TypeScript compilation, and filesystem monitoring.
+    """
 
     async def java_enumerate_loaded_classes(self, pattern: str | None = None) -> list[str]:
         """Enumerate loaded Java classes with optional pattern filter.

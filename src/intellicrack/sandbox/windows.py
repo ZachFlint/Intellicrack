@@ -30,12 +30,20 @@ from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, cast
 
 from intellicrack.core._optional_imports import require_yara
-from intellicrack.core._subprocess import CREATE_NEW_CONSOLE, PIPE, Popen
-from intellicrack.core._xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.sandbox._log_helpers import format_yara_match as _format_yara_match
-from intellicrack.sandbox._log_parsers import (
+from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, Popen
+from intellicrack.core.xml_gen import Element, ElementTree, SubElement, indent
+from intellicrack.sandbox.base import (
+    ExecutionReport,
+    ExecutionResult,
+    SandboxBase,
+    SandboxConfig,
+    SandboxError,
+    SandboxTimeoutError,
+)
+from intellicrack.sandbox.log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox.log_parsers import (
     parse_api_trace_log,
     parse_clipboard_log,
     parse_dll_log,
@@ -48,14 +56,6 @@ from intellicrack.sandbox._log_parsers import (
     parse_resource_log,
     parse_service_log,
 )
-from intellicrack.sandbox.base import (
-    ExecutionReport,
-    ExecutionResult,
-    SandboxBase,
-    SandboxConfig,
-    SandboxError,
-    SandboxTimeoutError,
-)
 
 
 if TYPE_CHECKING:
@@ -66,6 +66,8 @@ _logger = get_logger(__name__)
 
 _WHERE_TIMEOUT = 10
 _FEATURE_CHECK_TIMEOUT = 30
+_SANDBOX_FEATURE_NAME = "Containers-DisposableClientVM"
+_SANDBOX_INSTALL_STATE_ENABLED = "1"
 _DISPATCHER_STARTUP_TIMEOUT = 120
 _DISPATCHER_POLL_INTERVAL = 0.5
 _WORKER_PID_POLL_INTERVAL = 1.0
@@ -384,9 +386,12 @@ class WindowsSandbox(SandboxBase):
     async def _probe_sandbox_availability(self) -> bool:
         """Probe the host for Windows Sandbox availability.
 
-        Runs ``where WindowsSandbox.exe`` and then verifies that the
-        ``Containers-DisposableClientVM`` optional feature reports
-        ``Enabled`` via PowerShell.
+        Runs ``where WindowsSandboxClient.exe`` to confirm the launcher is on
+        ``PATH``, then queries ``Win32_OptionalFeature`` via CIM to verify the
+        ``Containers-DisposableClientVM`` install state. The CIM query is used
+        instead of ``Get-WindowsOptionalFeature -Online`` because the latter
+        requires administrator elevation, which would cause the probe to fail
+        for ordinary unelevated Intellicrack sessions.
 
         Returns:
             bool: True when both the executable lookup and the feature
@@ -403,6 +408,10 @@ class WindowsSandbox(SandboxBase):
             return False
 
         ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
+        ps_command = (
+            "(Get-CimInstance -ClassName Win32_OptionalFeature "
+            f"-Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
+        )
         features_result = await process_manager.run_tracked_async(
             [
                 ps_exe,
@@ -410,18 +419,25 @@ class WindowsSandbox(SandboxBase):
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "(Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM).State",
+                ps_command,
             ],
             name="pwsh-sandbox-feature-check",
             process_timeout=_FEATURE_CHECK_TIMEOUT,
         )
 
-        if "Enabled" in features_result.stdout:
-            _logger.info("windows_sandbox_available", feature_state="Enabled")
+        install_state = (features_result.stdout or "").strip()
+        if install_state == _SANDBOX_INSTALL_STATE_ENABLED:
+            _logger.info(
+                "windows_sandbox_available",
+                feature=_SANDBOX_FEATURE_NAME,
+                install_state=install_state,
+            )
             return True
         _logger.warning(
             "windows_sandbox_feature_not_enabled",
-            feature="Containers-DisposableClientVM",
+            feature=_SANDBOX_FEATURE_NAME,
+            install_state=install_state or "unknown",
+            returncode=features_result.returncode,
         )
         return False
 

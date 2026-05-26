@@ -5,7 +5,7 @@
 
 """Tests for the shared QMessageBox dialog helpers.
 
-Exercises ``intellicrack.ui._dialogs`` against real ``QApplication`` and
+Exercises ``intellicrack.ui.dialogs_helpers`` against real ``QApplication`` and
 ``QMessageBox`` instances. Each test patches the underlying
 ``QMessageBox.warning`` / ``critical`` / ``information`` static methods
 with a recording shim so assertions can be made on the parent, title,
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
-from intellicrack.ui._dialogs import show_error, show_info, show_warning
+from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 
 
 if TYPE_CHECKING:

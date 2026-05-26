@@ -20,8 +20,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
 
-from intellicrack.bridges._parse_helpers import safe_int_from_str
-from intellicrack.bridges._pe_format import (
+from intellicrack.bridges.base import (
+    BridgeCapabilities,
+    BridgeState,
+    DebuggerBridge,
+    DisassemblyLine,
+    MemorySearchResult,
+    StackFrame,
+    WatchpointInfo,
+)
+from intellicrack.bridges.installer import deploy_x64dbg_plugin
+from intellicrack.bridges.named_pipe_client import NamedPipeClient, PipeConfig
+from intellicrack.bridges.parse_helpers import safe_int_from_str
+from intellicrack.bridges.pe_format import (
     PE32_OPTIONAL_HEADER_SIZE,
     PE32PLUS_OPTIONAL_HEADER_SIZE,
     PE_OPTIONAL_HEADER_MAGIC_PE32,
@@ -39,7 +50,7 @@ from intellicrack.bridges._pe_format import (
     unpack_coff_header,
     unpack_section_header,
 )
-from intellicrack.bridges._win32_types import (
+from intellicrack.bridges.win32_types import (
     CMD_LINE_OFFSET_32,
     CMD_LINE_OFFSET_64,
     CONTEXT32,
@@ -81,26 +92,15 @@ from intellicrack.bridges._win32_types import (
     ThreadQuerySetWin32StartAddress,
     get_ntdll,
 )
-from intellicrack.bridges.base import (
-    BridgeCapabilities,
-    BridgeState,
-    DebuggerBridge,
-    DisassemblyLine,
-    MemorySearchResult,
-    StackFrame,
-    WatchpointInfo,
-)
-from intellicrack.bridges.installer import deploy_x64dbg_plugin
-from intellicrack.bridges.named_pipe_client import NamedPipeClient, PipeConfig
-from intellicrack.core._subprocess import (
+from intellicrack.core.error_logging import log_passthrough
+from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.subprocess_compat import (
     DEVNULL,
     STARTF_USESHOWWINDOW,
     STARTUPINFO,
     Popen,
 )
-from intellicrack.core.error_logging import log_passthrough
-from intellicrack.core.logging import get_logger
-from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.types import (
     BreakpointInfo,
     MemoryRegion,
@@ -427,7 +427,7 @@ def _configure_win32_apis() -> None:
 
     The function is idempotent and a no-op on non-Windows platforms.
     """
-    global _win32_apis_configured  # noqa: PLW0603
+    global _win32_apis_configured
     if _win32_apis_configured or not _IS_WIN32:
         return
 
@@ -747,8 +747,16 @@ def _read_unicode_string_from_params(handle: int, params_addr: int, ptr_size: in
     return cmd_bytes.decode("utf-16-le", errors="ignore") if cmd_bytes else None
 
 
-class X64DbgBridge(DebuggerBridge):
-    """Bridge for x64dbg Windows debugger.
+class _X64DbgBridgeBase(DebuggerBridge):
+    """Base class for X64DbgBridge: initialization, properties, and IPC plumbing.
+
+    Owns the bridge state (subprocess, pipe client, attached PID/bitness,
+    breakpoint/watchpoint registries, event-callback list, capability
+    advertisement) and the shared low-level helpers used by the
+    downstream mixins: pipe send/recv, command dispatch, step-waiter
+    bookkeeping, event dispatch, system handle enumeration helpers,
+    token privilege helpers, and the Windows snapshot helpers used by
+    architecture detection and process-info population.
 
     Provides debugging capabilities including breakpoints, stepping,
     register/memory manipulation, and process control. Instances own
@@ -2937,8 +2945,8 @@ class X64DbgBridge(DebuggerBridge):
         self._publish_tool_state()
         _logger.info("x64dbg_attached", pid=pid)
 
-    @staticmethod
-    def _detect_process_arch(pid: int) -> bool | None:
+    @classmethod
+    def _detect_process_arch(cls, pid: int) -> bool | None:
         """Detect whether a running process is 64-bit.
 
         Returns ``True`` for native x86_64 processes, ``False`` for
@@ -2951,6 +2959,8 @@ class X64DbgBridge(DebuggerBridge):
         caller (audit6.md F-0018).
 
         Args:
+            cls: The owning bridge class used to resolve sibling static
+                helpers through normal attribute lookup.
             pid: Process ID of the target process.
 
         Returns:
@@ -2961,16 +2971,18 @@ class X64DbgBridge(DebuggerBridge):
             _logger.debug("x64dbg_arch_detect_skipped_non_windows", pid=pid)
             return None
         try:
-            return X64DbgBridge._open_process_and_detect_arch(pid)
+            return cls._open_process_and_detect_arch(pid)
         except (OSError, AttributeError) as exc:
             _logger.warning("x64dbg_arch_detect_unexpected_error", pid=pid, error=str(exc))
             return None
 
-    @staticmethod
-    def _open_process_and_detect_arch(pid: int) -> bool | None:
+    @classmethod
+    def _open_process_and_detect_arch(cls, pid: int) -> bool | None:
         """Open the target process and read its WOW64 status.
 
         Args:
+            cls: The owning bridge class used to resolve sibling static
+                helpers through normal attribute lookup.
             pid: Process ID of the target process.
 
         Returns:
@@ -2990,7 +3002,7 @@ class X64DbgBridge(DebuggerBridge):
             )
             return None
         try:
-            return X64DbgBridge._read_iswow64_status(handle, pid)
+            return cls._read_iswow64_status(handle, pid)
         finally:
             kernel32.CloseHandle(handle)
 
@@ -4013,8 +4025,9 @@ class X64DbgBridge(DebuggerBridge):
 
         return regions
 
-    @staticmethod
+    @classmethod
     def _walk_committed_memory_regions(
+        cls,
         kernel32: ctypes.WinDLL,
         handle: int,
         mbi: ctypes.Structure,
@@ -4028,6 +4041,9 @@ class X64DbgBridge(DebuggerBridge):
         x86_64 user-mode boundary.
 
         Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_append_committed_region`` helper through normal
+                attribute lookup.
             kernel32: ``ctypes.windll.kernel32`` proxy used to issue
                 ``VirtualQueryEx``.
             handle: Open process handle with ``PROCESS_QUERY_INFORMATION``
@@ -4052,7 +4068,7 @@ class X64DbgBridge(DebuggerBridge):
             if result == 0:
                 break
             if mbi.State == WIN_MEM_COMMIT:
-                X64DbgBridge._append_committed_region(mbi, regions, resolve_module)
+                cls._append_committed_region(mbi, regions, resolve_module)
             address = (mbi.BaseAddress or 0) + mbi.RegionSize
             if address > MAX_USER_ADDRESS_64:
                 break
@@ -4603,8 +4619,8 @@ class X64DbgBridge(DebuggerBridge):
             if not kernel32.Thread32Next(snapshot, ctypes.byref(te32)):
                 break
 
-    @staticmethod
-    def _query_thread_start_address(tid: int) -> int:
+    @classmethod
+    def _query_thread_start_address(cls, tid: int) -> int:
         """Query the Win32 thread start address via ``NtQueryInformationThread``.
 
         Opens the thread with ``THREAD_QUERY_LIMITED_INFORMATION`` (the
@@ -4617,6 +4633,9 @@ class X64DbgBridge(DebuggerBridge):
         access-denied on a single thread.
 
         Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_query_thread_start_address_with_handle`` helper
+                through normal attribute lookup.
             tid: Thread identifier.
 
         Returns:
@@ -4644,7 +4663,7 @@ class X64DbgBridge(DebuggerBridge):
             )
             return 0
         try:
-            return X64DbgBridge._query_thread_start_address_with_handle(ntdll, handle, tid)
+            return cls._query_thread_start_address_with_handle(ntdll, handle, tid)
         finally:
             kernel32.CloseHandle(handle)
 
@@ -4911,6 +4930,239 @@ class X64DbgBridge(DebuggerBridge):
             )
             if not kernel32.Module32NextW(snapshot, ctypes.byref(me32)):
                 break
+
+    async def evaluate_expression(self, expression: str) -> int:
+        """Evaluate an x64dbg expression.
+
+        Args:
+            expression: Expression to evaluate (e.g. 'rax+rbx*4').
+
+        Returns:
+            int: Expression result value.
+
+        Raises:
+            ToolError: If the plugin returns a value that is neither an
+                integer nor a parseable hex/decimal string. A failure to
+                evaluate must not be conflated with a legitimate
+                expression that evaluates to ``0`` (audit6.md F-0014).
+        """
+        _logger.debug("evaluating_expression", expression=expression)
+        result = await self._send_pipe_command("eval", {"expression": expression})
+        if isinstance(result, bool):
+            msg = f"evaluate_expression: plugin returned bool for {expression!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                    "expression": expression,
+                },
+            )
+        if isinstance(result, int):
+            return result
+        if isinstance(result, str):
+            try:
+                return int(result, 0)
+            except ValueError as parse_err:
+                msg = f"evaluate_expression: plugin returned unparseable value {result!r} for {expression!r}"
+                raise ToolError(
+                    msg,
+                    tool_name="x64dbg",
+                    details={
+                        "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                        "expression": expression,
+                    },
+                ) from parse_err
+        msg = f"evaluate_expression: plugin returned unexpected type {type(result).__name__} for {expression!r}"
+        raise ToolError(
+            msg,
+            tool_name="x64dbg",
+            details={
+                "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
+                "expression": expression,
+            },
+        )
+
+    @staticmethod
+    def _parse_stack_frame_entry(entry: dict[str, object]) -> StackFrame:
+        """Parse a single stack frame entry dict from the plugin into a StackFrame.
+
+        Args:
+            entry: Dict with index, address, from, to, comment fields.
+
+        Returns:
+            StackFrame: Parsed stack frame.
+        """
+
+        def _parse_int(val: object) -> int:
+            return int(val, 0) if isinstance(val, str) else (int(val) if isinstance(val, (int, float)) else 0)
+
+        idx = _parse_int(entry.get("index", 0))
+        addr = _parse_int(entry.get("address", 0))
+        from_addr = _parse_int(entry.get("from", 0))
+        to_addr = _parse_int(entry.get("to", 0))
+        comment_raw = entry.get("comment", "")
+        comment = str(comment_raw) if comment_raw else ""
+        function_name: str | None = None
+        module_name: str | None = None
+        if comment and "." in comment:
+            dot_idx = comment.rfind(".")
+            module_name = comment[:dot_idx]
+            function_name = comment[dot_idx + 1 :]
+        elif comment:
+            function_name = comment
+        return StackFrame(
+            index=idx,
+            address=addr,
+            return_address=from_addr,
+            frame_pointer=to_addr,
+            stack_pointer=0,
+            function_name=function_name,
+            module_name=module_name,
+        )
+
+    @staticmethod
+    def _parse_disasm_entry(entry: dict[str, object]) -> DisassemblyLine:
+        """Parse a single disassembly entry dict from the plugin into a DisassemblyLine.
+
+        Args:
+            entry: Dict with address, instruction, bytes, comment, label fields.
+
+        Returns:
+            DisassemblyLine: Parsed disassembly line.
+        """
+        addr_raw = entry.get("address", 0)
+        addr = int(addr_raw, 0) if isinstance(addr_raw, str) else (int(addr_raw) if isinstance(addr_raw, int) else 0)
+        instr_raw = entry.get("instruction", "")
+        instr_str = str(instr_raw) if instr_raw else ""
+        parts = instr_str.split(" ", 1)
+        mnemonic = parts[0] if parts else ""
+        operands = parts[1] if len(parts) > 1 else ""
+        bytes_raw = entry.get("bytes", "")
+        comment_raw = entry.get("comment") or entry.get("label")
+        return DisassemblyLine(
+            address=addr,
+            bytes_str=str(bytes_raw) if bytes_raw else "",
+            mnemonic=mnemonic,
+            operands=operands,
+            comment=str(comment_raw) if comment_raw else None,
+        )
+
+    @classmethod
+    def _get_parent_pid(cls, pid: int) -> int:
+        """Get parent process ID using Windows Toolhelp API.
+
+        Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_find_parent_pid_in_snapshot`` helper through normal
+                attribute lookup.
+            pid: Process ID to get parent for.
+
+        Returns:
+            int: Parent process ID.
+
+        Raises:
+            ToolError: If not on Windows or API call fails.
+        """
+        if not _IS_WIN32:
+            msg = f"_get_parent_pid {_ERR_REQUIRES_WINDOWS}"
+            raise ToolError(msg, tool_name="x64dbg")
+
+        parent_pid: int = 0
+        kernel32 = ctypes.windll.kernel32
+
+        class ProcessEntry32W(ctypes.Structure):
+            _fields_: ClassVar = [
+                ("dwSize", wintypes.DWORD),
+                ("cntUsage", wintypes.DWORD),
+                ("th32ProcessID", wintypes.DWORD),
+                ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+                ("th32ModuleID", wintypes.DWORD),
+                ("cntThreads", wintypes.DWORD),
+                ("th32ParentProcessID", wintypes.DWORD),
+                ("pcPriClassBase", wintypes.LONG),
+                ("dwFlags", wintypes.DWORD),
+                ("szExeFile", ctypes.c_wchar * 260),
+            ]
+
+        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
+            error_code = ctypes.get_last_error()
+            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for process: error {error_code}"
+            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
+        try:
+            parent_pid = cls._find_parent_pid_in_snapshot(
+                kernel32,
+                snapshot,
+                ProcessEntry32W,
+                pid,
+            )
+        except (OSError, ctypes.ArgumentError) as e:
+            _logger.warning("x64dbg_get_parent_pid_failed", pid=pid, error=str(e))
+            msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
+            raise ToolError(msg, tool_name="x64dbg") from e
+        finally:
+            kernel32.CloseHandle(snapshot)
+
+        return parent_pid
+
+    @staticmethod
+    def _find_parent_pid_in_snapshot(
+        kernel32: ctypes.WinDLL,
+        snapshot: int,
+        process_entry_cls: type[ctypes.Structure],
+        pid: int,
+    ) -> int:
+        """Walk a process snapshot and return the parent PID of ``pid``.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to walk the
+                snapshot via ``Process32FirstW`` / ``Process32NextW``.
+            snapshot: Open ``CreateToolhelp32Snapshot`` handle for the
+                ``TH32CS_SNAPPROCESS`` class.
+            process_entry_cls: ``PROCESSENTRY32W`` ctypes structure
+                class whose instances will be populated by the walk.
+            pid: Target process ID whose parent should be located.
+
+        Returns:
+            int: Parent process ID, or ``0`` when the target was not
+            found in the snapshot.
+        """
+        pe32 = process_entry_cls()
+        pe32.dwSize = ctypes.sizeof(process_entry_cls)
+        _logger.debug("initialized_process_entry", size=pe32.dwSize)
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
+            return 0
+        while True:
+            if pe32.th32ProcessID == pid:
+                return int(pe32.th32ParentProcessID)
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
+                return 0
+
+    @staticmethod
+    def _get_command_line(pid: int) -> str | None:
+        """Get process command line using Windows API.
+
+        Args:
+            pid: Process ID to get command line for.
+
+        Returns:
+            str | None: Command line string, or None if not accessible.
+        """
+        return _read_process_command_line(pid) if _IS_WIN32 else None
+
+
+class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
+    """Module/thread enumeration, labels, patching, and breakpoint orchestration.
+
+    Hosts the high-level analysis surface: module/thread/process info,
+    pattern searching, run-to coordination, instruction labels and
+    comments, breakpoint enable/disable + API/DLL/TLS dispatch,
+    instruction patching, memory dump-to-file, PE section/export/entry
+    point readers, and the supporting private helpers each of those
+    entry points dispatches into.
+    """
 
     async def get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
@@ -6526,6 +6778,19 @@ class X64DbgBridge(DebuggerBridge):
             "entry_point_va": hex(entry_va),
         }
 
+
+class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
+    """Tracing, patching, navigation, database, threads, PEB/TEB, watches, animation.
+
+    Hosts the trace controller, patch lifecycle (assemble/nop/save/
+    restore/export), conditional tracing and step counting, cross-
+    reference and string/intermodular discovery, expression evaluator,
+    control-flow graph, database save/load/clear, thread switching
+    and naming, SEH/PEB/TEB readers, PE directory inspection, watch
+    expressions, logging/DLL/anti-debug breakpoint variants, and the
+    animate start/stop loops.
+    """
+
     async def trace_start(
         self,
         address: int | None = None,
@@ -6777,58 +7042,6 @@ class X64DbgBridge(DebuggerBridge):
         )
         references: list[object] = result if isinstance(result, list) else []
         return {"success": True, "module": module, "references": references}
-
-    async def evaluate_expression(self, expression: str) -> int:
-        """Evaluate an x64dbg expression.
-
-        Args:
-            expression: Expression to evaluate (e.g. 'rax+rbx*4').
-
-        Returns:
-            int: Expression result value.
-
-        Raises:
-            ToolError: If the plugin returns a value that is neither an
-                integer nor a parseable hex/decimal string. A failure to
-                evaluate must not be conflated with a legitimate
-                expression that evaluates to ``0`` (audit6.md F-0014).
-        """
-        _logger.debug("evaluating_expression", expression=expression)
-        result = await self._send_pipe_command("eval", {"expression": expression})
-        if isinstance(result, bool):
-            msg = f"evaluate_expression: plugin returned bool for {expression!r}"
-            raise ToolError(
-                msg,
-                tool_name="x64dbg",
-                details={
-                    "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
-                    "expression": expression,
-                },
-            )
-        if isinstance(result, int):
-            return result
-        if isinstance(result, str):
-            try:
-                return int(result, 0)
-            except ValueError as parse_err:
-                msg = f"evaluate_expression: plugin returned unparseable value {result!r} for {expression!r}"
-                raise ToolError(
-                    msg,
-                    tool_name="x64dbg",
-                    details={
-                        "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
-                        "expression": expression,
-                    },
-                ) from parse_err
-        msg = f"evaluate_expression: plugin returned unexpected type {type(result).__name__} for {expression!r}"
-        raise ToolError(
-            msg,
-            tool_name="x64dbg",
-            details={
-                "x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION,
-                "expression": expression,
-            },
-        )
 
     async def get_function_cfg(self, address: int, max_blocks: int = 500) -> dict[str, Any]:
         """Get control flow graph of a function.
@@ -7654,6 +7867,18 @@ class X64DbgBridge(DebuggerBridge):
             )
         return {"success": True, "verified": True}
 
+
+class _X64DbgScriptingMixin(_X64DbgTraceMixin):
+    """Entropy, YARA, scripting, plugins, anti-debug, handles, navigation, privileges.
+
+    Hosts the analytical and integration surface: entropy histogramming,
+    YARA scanning, x64dbg script lifecycle, plugin load/unload/list,
+    anti-debug detection and patching, OEP import reconstruction, status
+    inspection, GUI navigation, TLS callback inspection, raw resource
+    enumeration, handle enumeration and close, and the Windows token
+    privilege query/adjust helpers.
+    """
+
     async def analyze_entropy(self, address: int, size: int, block_size: int = 256) -> list[dict[str, Any]]:
         """Analyze Shannon entropy of a memory region.
 
@@ -8132,18 +8357,20 @@ class X64DbgBridge(DebuggerBridge):
 
         return await asyncio.to_thread(self._query_system_handles, self._attached_pid)
 
-    @staticmethod
-    def _query_system_handles(target_pid: int) -> list[dict[str, Any]]:
+    @classmethod
+    def _query_system_handles(cls, target_pid: int) -> list[dict[str, Any]]:
         """Query system-wide handle information and filter by PID.
 
         Args:
+            cls: The owning bridge class used to resolve sibling static
+                helpers through normal attribute lookup.
             target_pid: Process ID to filter handles by.
 
         Returns:
             list[dict[str, Any]]: Filtered list of handle info dicts.
         """
-        raw_buffer = X64DbgBridge._fetch_handle_buffer()
-        return X64DbgBridge._parse_handle_buffer(raw_buffer, target_pid)
+        raw_buffer = cls._fetch_handle_buffer()
+        return cls._parse_handle_buffer(raw_buffer, target_pid)
 
     @staticmethod
     def _fetch_handle_buffer() -> bytes:
@@ -8769,9 +8996,13 @@ class X64DbgBridge(DebuggerBridge):
         data_rva, size, code_page = struct.unpack_from("<III", blob, offset)
         return module_base + int(data_rva), int(size), int(code_page)
 
-    @staticmethod
-    async def get_privileges() -> list[dict[str, Any]]:
+    @classmethod
+    async def get_privileges(cls) -> list[dict[str, Any]]:
         """Enumerate current process token privileges.
+
+        Args:
+            cls: The owning bridge class used to resolve sibling static
+                helpers through normal attribute lookup.
 
         Returns:
             list[dict[str, Any]]: List of privilege dicts with name and enabled status.
@@ -8781,14 +9012,19 @@ class X64DbgBridge(DebuggerBridge):
             return []
 
         try:
-            return X64DbgBridge._enumerate_process_token_privileges()
+            return cls._enumerate_process_token_privileges()
         except (OSError, ValueError) as e:
             _logger.warning("privileges_enum_failed", error=str(e))
             return []
 
-    @staticmethod
-    def _enumerate_process_token_privileges() -> list[dict[str, Any]]:
+    @classmethod
+    def _enumerate_process_token_privileges(cls) -> list[dict[str, Any]]:
         """Open the current process token and enumerate its privileges.
+
+        Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_read_token_privileges`` helper through normal
+                attribute lookup.
 
         Returns:
             list[dict[str, Any]]: List of privilege dictionaries with
@@ -8802,18 +9038,22 @@ class X64DbgBridge(DebuggerBridge):
         if not advapi32.OpenProcessToken(current_process, 0x0008, ctypes.byref(token_handle)):
             return []
         try:
-            return X64DbgBridge._read_token_privileges(advapi32, token_handle)
+            return cls._read_token_privileges(advapi32, token_handle)
         finally:
             kernel32.CloseHandle(token_handle)
 
-    @staticmethod
+    @classmethod
     def _read_token_privileges(
+        cls,
         advapi32: ctypes.WinDLL,
         token_handle: wintypes.HANDLE,
     ) -> list[dict[str, Any]]:
         """Fetch and parse ``TokenPrivileges`` data for an open token.
 
         Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_append_token_privilege`` helper through normal
+                attribute lookup.
             advapi32: ``ctypes.windll.advapi32`` proxy used to query the
                 token via ``GetTokenInformation`` and resolve LUIDs via
                 ``LookupPrivilegeNameW``.
@@ -8833,7 +9073,7 @@ class X64DbgBridge(DebuggerBridge):
         privileges: list[dict[str, Any]] = []
         offset = 4
         for _ in range(min(count, 100)):
-            X64DbgBridge._append_token_privilege(advapi32, buffer.raw, offset, privileges)
+            cls._append_token_privilege(advapi32, buffer.raw, offset, privileges)
             offset += 12
         return privileges
 
@@ -8878,11 +9118,14 @@ class X64DbgBridge(DebuggerBridge):
                 "enabled_by_default": bool(attrs & 0x00000001),
             })
 
-    @staticmethod
-    async def adjust_privilege(name: str, *, enable: bool = True) -> dict[str, Any]:
+    @classmethod
+    async def adjust_privilege(cls, name: str, *, enable: bool = True) -> dict[str, Any]:
         """Adjust a process token privilege.
 
         Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_adjust_token_privilege_by_name`` helper through
+                normal attribute lookup.
             name: Privilege name (e.g. 'SeDebugPrivilege').
             enable: True to enable, False to disable.
 
@@ -8894,16 +9137,19 @@ class X64DbgBridge(DebuggerBridge):
             return {"success": False, "error": "Windows only"}
 
         try:
-            return X64DbgBridge._adjust_token_privilege_by_name(name, enable=enable)
+            return cls._adjust_token_privilege_by_name(name, enable=enable)
         except (OSError, ValueError) as e:
             _logger.warning("privilege_adjust_failed", error=str(e))
             return {"success": False, "error": str(e)}
 
-    @staticmethod
-    def _adjust_token_privilege_by_name(name: str, *, enable: bool) -> dict[str, Any]:
+    @classmethod
+    def _adjust_token_privilege_by_name(cls, name: str, *, enable: bool) -> dict[str, Any]:
         """Look up ``name``, open the process token, and toggle the privilege.
 
         Args:
+            cls: The owning bridge class used to resolve the sibling
+                ``_invoke_adjust_token_privileges`` helper through
+                normal attribute lookup.
             name: Privilege name (for example ``"SeDebugPrivilege"``).
             enable: ``True`` to enable the privilege,
                 ``False`` to disable it.
@@ -8951,7 +9197,7 @@ class X64DbgBridge(DebuggerBridge):
             return {"success": False, "error": "Failed to open process token"}
 
         try:
-            return X64DbgBridge._invoke_adjust_token_privileges(
+            return cls._invoke_adjust_token_privileges(
                 advapi32,
                 token_handle,
                 TokenPrivileges,
@@ -9005,168 +9251,14 @@ class X64DbgBridge(DebuggerBridge):
         )
         return {"success": bool(result), "privilege": name, "enabled": enable}
 
-    @staticmethod
-    def _parse_stack_frame_entry(entry: dict[str, object]) -> StackFrame:
-        """Parse a single stack frame entry dict from the plugin into a StackFrame.
 
-        Args:
-            entry: Dict with index, address, from, to, comment fields.
+class X64DbgBridge(_X64DbgScriptingMixin):
+    """Bridge for x64dbg Windows debugger.
 
-        Returns:
-            StackFrame: Parsed stack frame.
-        """
-
-        def _parse_int(val: object) -> int:
-            return int(val, 0) if isinstance(val, str) else (int(val) if isinstance(val, (int, float)) else 0)
-
-        idx = _parse_int(entry.get("index", 0))
-        addr = _parse_int(entry.get("address", 0))
-        from_addr = _parse_int(entry.get("from", 0))
-        to_addr = _parse_int(entry.get("to", 0))
-        comment_raw = entry.get("comment", "")
-        comment = str(comment_raw) if comment_raw else ""
-        function_name: str | None = None
-        module_name: str | None = None
-        if comment and "." in comment:
-            dot_idx = comment.rfind(".")
-            module_name = comment[:dot_idx]
-            function_name = comment[dot_idx + 1 :]
-        elif comment:
-            function_name = comment
-        return StackFrame(
-            index=idx,
-            address=addr,
-            return_address=from_addr,
-            frame_pointer=to_addr,
-            stack_pointer=0,
-            function_name=function_name,
-            module_name=module_name,
-        )
-
-    @staticmethod
-    def _parse_disasm_entry(entry: dict[str, object]) -> DisassemblyLine:
-        """Parse a single disassembly entry dict from the plugin into a DisassemblyLine.
-
-        Args:
-            entry: Dict with address, instruction, bytes, comment, label fields.
-
-        Returns:
-            DisassemblyLine: Parsed disassembly line.
-        """
-        addr_raw = entry.get("address", 0)
-        addr = int(addr_raw, 0) if isinstance(addr_raw, str) else (int(addr_raw) if isinstance(addr_raw, int) else 0)
-        instr_raw = entry.get("instruction", "")
-        instr_str = str(instr_raw) if instr_raw else ""
-        parts = instr_str.split(" ", 1)
-        mnemonic = parts[0] if parts else ""
-        operands = parts[1] if len(parts) > 1 else ""
-        bytes_raw = entry.get("bytes", "")
-        comment_raw = entry.get("comment") or entry.get("label")
-        return DisassemblyLine(
-            address=addr,
-            bytes_str=str(bytes_raw) if bytes_raw else "",
-            mnemonic=mnemonic,
-            operands=operands,
-            comment=str(comment_raw) if comment_raw else None,
-        )
-
-    @staticmethod
-    def _get_parent_pid(pid: int) -> int:
-        """Get parent process ID using Windows Toolhelp API.
-
-        Args:
-            pid: Process ID to get parent for.
-
-        Returns:
-            int: Parent process ID.
-
-        Raises:
-            ToolError: If not on Windows or API call fails.
-        """
-        if not _IS_WIN32:
-            msg = f"_get_parent_pid {_ERR_REQUIRES_WINDOWS}"
-            raise ToolError(msg, tool_name="x64dbg")
-
-        parent_pid: int = 0
-        kernel32 = ctypes.windll.kernel32
-
-        class ProcessEntry32W(ctypes.Structure):
-            _fields_: ClassVar = [
-                ("dwSize", wintypes.DWORD),
-                ("cntUsage", wintypes.DWORD),
-                ("th32ProcessID", wintypes.DWORD),
-                ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
-                ("th32ModuleID", wintypes.DWORD),
-                ("cntThreads", wintypes.DWORD),
-                ("th32ParentProcessID", wintypes.DWORD),
-                ("pcPriClassBase", wintypes.LONG),
-                ("dwFlags", wintypes.DWORD),
-                ("szExeFile", ctypes.c_wchar * 260),
-            ]
-
-        snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
-            error_code = ctypes.get_last_error()
-            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for process: error {error_code}"
-            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
-
-        try:
-            parent_pid = X64DbgBridge._find_parent_pid_in_snapshot(
-                kernel32,
-                snapshot,
-                ProcessEntry32W,
-                pid,
-            )
-        except (OSError, ctypes.ArgumentError) as e:
-            _logger.warning("x64dbg_get_parent_pid_failed", pid=pid, error=str(e))
-            msg = f"{_ERR_GET_PARENT_PID_FAILED}: {e}"
-            raise ToolError(msg, tool_name="x64dbg") from e
-        finally:
-            kernel32.CloseHandle(snapshot)
-
-        return parent_pid
-
-    @staticmethod
-    def _find_parent_pid_in_snapshot(
-        kernel32: ctypes.WinDLL,
-        snapshot: int,
-        process_entry_cls: type[ctypes.Structure],
-        pid: int,
-    ) -> int:
-        """Walk a process snapshot and return the parent PID of ``pid``.
-
-        Args:
-            kernel32: ``ctypes.windll.kernel32`` proxy used to walk the
-                snapshot via ``Process32FirstW`` / ``Process32NextW``.
-            snapshot: Open ``CreateToolhelp32Snapshot`` handle for the
-                ``TH32CS_SNAPPROCESS`` class.
-            process_entry_cls: ``PROCESSENTRY32W`` ctypes structure
-                class whose instances will be populated by the walk.
-            pid: Target process ID whose parent should be located.
-
-        Returns:
-            int: Parent process ID, or ``0`` when the target was not
-            found in the snapshot.
-        """
-        pe32 = process_entry_cls()
-        pe32.dwSize = ctypes.sizeof(process_entry_cls)
-        _logger.debug("initialized_process_entry", size=pe32.dwSize)
-        if not kernel32.Process32FirstW(snapshot, ctypes.byref(pe32)):
-            return 0
-        while True:
-            if pe32.th32ProcessID == pid:
-                return int(pe32.th32ParentProcessID)
-            if not kernel32.Process32NextW(snapshot, ctypes.byref(pe32)):
-                return 0
-
-    @staticmethod
-    def _get_command_line(pid: int) -> str | None:
-        """Get process command line using Windows API.
-
-        Args:
-            pid: Process ID to get command line for.
-
-        Returns:
-            str | None: Command line string, or None if not accessible.
-        """
-        return _read_process_command_line(pid) if _IS_WIN32 else None
+    Composed from the ``_X64DbgBridgeBase`` core class together with
+    topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area so no
+    single class definition exceeds the public method limit. The public
+    interface, attribute set, and behavior are identical to the
+    pre-refactor monolithic class.
+    """

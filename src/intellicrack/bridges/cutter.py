@@ -4,8 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Cutter/Rizin bridge for static and dynamic analysis.
 
-This module provides integration with Cutter/Rizin for disassembly, analysis, and debugging capabilities using r2pipe (wire-compatible with
-Rizin's pipe protocol).
+This module provides integration with Cutter/Rizin for disassembly, analysis,
+and debugging capabilities. Dispatch transparently selects ``rzpipe`` when the
+``rizin`` binary is available and ``r2pipe`` when the ``radare2`` binary is
+available, so installations that ship only one of the two toolchains (for
+example the Cutter+rizin desktop bundle) still initialize successfully.
 """
 
 from __future__ import annotations
@@ -17,9 +20,14 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Literal, cast, override
+from typing import TYPE_CHECKING, Any, Literal, cast, override
 
 import r2pipe
+import rzpipe
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 from intellicrack.bridges.base import (
     BridgeCapabilities,
@@ -122,6 +130,123 @@ _RZ_64BIT_CLASS_TOKENS: frozenset[str] = frozenset(
 )
 
 _RZ_COMMAND_CONTROL_CHARS: frozenset[str] = frozenset({";", "\n", "\r", "@", "|", "~", "`", ">", "<", "$", "#"})
+
+
+type _AnalysisPipe = r2pipe.open | rzpipe.open
+
+
+class _PipeBackend:
+    """Resolved analysis-pipe backend description.
+
+    Bundles the chosen pipe module (``rzpipe`` or ``r2pipe``), the binary
+    name expected by that module (``rizin`` / ``radare2``), and the absolute
+    install directory that owns the binary's sibling DLLs. The install
+    directory is mandatory on Windows: launchers placed in a separate
+    "Links" directory via symlink load with ``STATUS_DLL_NOT_FOUND`` because
+    the OS's DLL search begins in the launcher's directory rather than the
+    real install directory. Passing the resolved directory back into the
+    backend's ``rizin_home`` / ``radare2home`` keyword forces the backend to
+    spawn the binary by its real path, where Windows can resolve the
+    sibling DLLs.
+    """
+
+    __slots__ = ("binary", "install_dir", "module")
+
+    def __init__(self, module: ModuleType, binary: str, install_dir: Path) -> None:
+        """Initialize the backend description.
+
+        Args:
+            module: The pipe module to invoke (``rzpipe`` or ``r2pipe``).
+            binary: Binary basename on disk (``"rizin"`` or ``"radare2"``).
+            install_dir: Absolute path to the directory containing the
+                resolved binary and its sibling DLLs.
+        """
+        self.module: ModuleType = module
+        self.binary: str = binary
+        self.install_dir: Path = install_dir
+
+
+def _resolve_backend_for(binary: str) -> Path | None:
+    """Resolve the install directory for a candidate analysis backend binary.
+
+    Walks ``shutil.which`` to find the binary on ``PATH``, follows any
+    symlink to its real on-disk location via :meth:`Path.resolve`, and
+    returns the resulting parent directory. Returns ``None`` if the binary
+    is not on ``PATH``.
+
+    Args:
+        binary: Binary basename to probe (``"rizin"`` or ``"radare2"``).
+
+    Returns:
+        Path | None: Absolute path to the resolved install directory, or
+            ``None`` if the binary is not discoverable.
+    """
+    located = shutil.which(binary)
+    if located is None:
+        return None
+    return Path(located).resolve().parent
+
+
+def _select_pipe_backend() -> _PipeBackend | None:
+    """Pick the analysis-pipe backend that matches an installed binary.
+
+    Prefers ``rzpipe`` when the rizin binary is available (Cutter's native
+    backend and the modern rebrand of radare2) and falls back to ``r2pipe``
+    when only ``radare2`` is on ``PATH``. Returning a
+    :class:`_PipeBackend` rather than just the module lets callers log the
+    resolved backend, recover the real install directory for DLL resolution,
+    and reject mismatched stacks early.
+
+    Returns:
+        _PipeBackend | None: Backend description for the chosen pipe, or
+            ``None`` when neither rizin nor radare2 is on ``PATH``.
+    """
+    rizin_dir = _resolve_backend_for("rizin")
+    if rizin_dir is not None:
+        return _PipeBackend(rzpipe, "rizin", rizin_dir)
+    radare2_dir = _resolve_backend_for("radare2")
+    if radare2_dir is not None:
+        return _PipeBackend(r2pipe, "radare2", radare2_dir)
+    return None
+
+
+def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _AnalysisPipe:
+    """Open an analysis-pipe session against the installed rizin/radare2 binary.
+
+    Resolves the appropriate backend via :func:`_select_pipe_backend` and
+    invokes the backend's ``open`` constructor with the resolved install
+    directory passed as ``rizin_home`` / ``radare2home``. Threading the
+    install directory through this kwarg makes the backend spawn the binary
+    by its real path so Windows can locate its sibling DLLs even when the
+    binary on ``PATH`` is a symlink in a separate launcher directory.
+
+    Args:
+        target: Path (or ``"-"`` sentinel) passed straight to ``open``.
+        flags: Optional list of CLI flags forwarded to the backend.
+
+    Returns:
+        _AnalysisPipe: Open pipe session ready for ``cmd``/``cmdj`` calls.
+
+    Raises:
+        ToolError: If neither ``rizin`` nor ``radare2`` is on ``PATH``.
+    """
+    backend = _select_pipe_backend()
+    if backend is None:
+        raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
+    pipe_flags: list[str] = flags or []
+    install_dir_str = str(backend.install_dir)
+    _logger.debug(
+        "analysis_pipe_open",
+        backend=backend.binary,
+        target=target,
+        flags=pipe_flags,
+        install_dir=install_dir_str,
+    )
+    if backend.binary == "rizin":
+        pipe = backend.module.open(target, pipe_flags, rizin_home=install_dir_str)
+    else:
+        pipe = backend.module.open(target, pipe_flags, radare2home=install_dir_str)
+    return cast("_AnalysisPipe", pipe)
 
 
 def is_rizin_64bit(bits: int, arch: str, file_class: str) -> bool:
@@ -969,12 +1094,12 @@ def _build_tool_functions() -> list[ToolFunction]:
     ]
 
 
-class CutterBridge(StaticAnalysisBridge):
-    """Bridge for Cutter/Rizin reverse engineering framework.
+class _CutterBridgeBase(StaticAnalysisBridge):
+    """Core base class for the Cutter/Rizin bridge.
 
-    Provides static analysis, disassembly, and debugging capabilities using the r2pipe interface. Instances own the r2pipe connection, the
-    tracked binary and tool paths, the analysis-state flags, the registered Rizin process identifier, and the declared
-    ``BridgeCapabilities`` that describe the static-analysis features this bridge exposes to the orchestrator.
+    Holds the r2pipe connection, tracked binary and tool paths, analysis-state flags, registered Rizin process identifier, and declared
+    ``BridgeCapabilities``. Provides the initialization, shutdown, availability check, raw command transport, and binary-loading primitives
+    shared by every topical mixin in the bridge inheritance chain.
     """
 
     def __init__(self) -> None:
@@ -1008,20 +1133,22 @@ class CutterBridge(StaticAnalysisBridge):
         )
 
     @property
-    def r2(self) -> r2pipe.open | None:
-        """Access the r2pipe connection instance.
+    def r2(self) -> _AnalysisPipe | None:
+        """Access the active analysis-pipe connection instance.
 
         Returns:
-            r2pipe.open | None: The r2pipe connection or None if not connected.
+            _AnalysisPipe | None: The active ``rzpipe.open`` / ``r2pipe.open``
+                connection object, or ``None`` if no session is currently open.
         """
         return self._r2
 
     @r2.setter
-    def r2(self, value: r2pipe.open | None) -> None:
-        """Set the r2pipe connection instance.
+    def r2(self, value: _AnalysisPipe | None) -> None:
+        """Set the active analysis-pipe connection instance.
 
         Args:
-            value: The r2pipe connection instance or None.
+            value: The active ``rzpipe.open`` / ``r2pipe.open`` connection
+                object, or ``None`` to clear the slot.
         """
         _logger.debug("r2_connection_set", has_connection=value is not None)
         self._r2 = value
@@ -1074,6 +1201,124 @@ class CutterBridge(StaticAnalysisBridge):
             msg = f"{_ERR_CMD_FAILED}: {command}"
             raise ToolError(msg) from e
         return "" if result is None else result
+
+    async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
+        """Execute command and parse JSON output.
+
+        Args:
+            command: Command to execute.
+
+        Returns:
+            list[dict[str, Any]]: Parsed JSON as list of dicts. An empty
+            list is only returned when the command produced an empty
+            response (which rizin uses to indicate ``no results``); a
+            response that fails to parse as JSON is treated as a
+            command-execution failure and surfaces as ``ToolError``.
+
+        Raises:
+            ToolError: If no binary is loaded or the command output
+                cannot be decoded as JSON.
+        """
+        if self._r2 is None:
+            _logger.warning("cmd_json_without_binary", command=command)
+            raise ToolError(_ERR_NO_BINARY)
+
+        result = await self._r2_cmd(command)
+
+        if not result or not result.strip():
+            return []
+
+        try:
+            parsed = json.loads(result)
+        except json.JSONDecodeError as exc:
+            _logger.warning(
+                "json_parse_failed",
+                command=command,
+                error=str(exc),
+                response_prefix=result[:120],
+            )
+            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
+            raise ToolError(msg) from exc
+        if isinstance(parsed, list):
+            return cast("list[dict[str, Any]]", parsed)
+        return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
+
+    async def _get_sections_internal(self) -> list[SectionInfo]:
+        """Get section information.
+
+        Returns:
+            list[SectionInfo]: List of section info.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("_get_sections_internal_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        sections = await self._cmd_json("iSj")
+
+        return [
+            SectionInfo(
+                name=_get_str(s, "name"),
+                virtual_address=_get_int(s, "vaddr"),
+                virtual_size=_get_int(s, "vsize"),
+                raw_size=_get_int(s, "size"),
+                characteristics=_get_int(s, "perm"),
+                entropy=_get_float(s, "entropy"),
+            )
+            for s in sections
+        ]
+
+    async def _get_imports_internal(self) -> list[ImportInfo]:
+        """Get import information.
+
+        Returns:
+            list[ImportInfo]: List of import info.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("_get_imports_internal_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        imports = await self._cmd_json("iij")
+
+        return [
+            ImportInfo(
+                dll=_get_str(i, "lib"),
+                function=_get_str(i, "name"),
+                ordinal=_get_optional_int(i, "ordinal"),
+                address=_get_int(i, "plt"),
+            )
+            for i in imports
+        ]
+
+    async def _get_exports_internal(self) -> list[ExportInfo]:
+        """Get export information.
+
+        Returns:
+            list[ExportInfo]: List of export info.
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("_get_exports_internal_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        exports = await self._cmd_json("iEj")
+
+        result: list[ExportInfo] = [
+            ExportInfo(
+                name=_get_str(e, "name"),
+                ordinal=_get_int(e, "ordinal", idx),
+                address=_get_int(e, "vaddr"),
+            )
+            for idx, e in enumerate(exports)
+        ]
+        return result
 
     @property
     def name(self) -> ToolName:
@@ -1177,34 +1422,65 @@ class CutterBridge(StaticAnalysisBridge):
     async def is_available(self) -> bool:
         """Check if Cutter/Rizin is available.
 
+        Verifies the selected backend binary actually launches by invoking
+        it with ``-v`` and checking the exit status. Using the raw binary
+        rather than opening an analysis-pipe session avoids the platform-
+        specific stdin-handshake hang exhibited by ``rzpipe.open("-")`` on
+        Windows, where the rizin process blocks on a banner read for an
+        input filename that never gets supplied.
+
         Returns:
             bool: True if Cutter/Rizin can be used.
         """
-        has_in_path = shutil.which("rizin") is not None or shutil.which("radare2") is not None
+        backend = _select_pipe_backend()
         has_stored = self._tool_path is not None and self._tool_path.exists()
-        if not (has_in_path or has_stored):
+        if backend is None and not has_stored:
             _logger.debug("cutter_not_in_path")
             return False
 
-        r2: Any = None
+        if backend is None:
+            return has_stored
+
+        binary_basename = backend.binary + (".exe" if os.name == "nt" else "")
+        resolved_binary = backend.install_dir / binary_basename
+        if not resolved_binary.exists():
+            _logger.debug(
+                "cutter_binary_disappeared",
+                binary=backend.binary,
+                resolved=str(resolved_binary),
+            )
+            return False
+
         try:
-            r2 = await asyncio.to_thread(r2pipe.open, "-")
-            version: str | None = await asyncio.to_thread(r2.cmd, "?V")
-        except (OSError, RuntimeError, ValueError) as e:
+            proc = await asyncio.create_subprocess_exec(
+                str(resolved_binary),
+                "-v",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_bytes, _stderr_bytes = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=_R2_COMMAND_TIMEOUT,
+            )
+        except (OSError, RuntimeError, TimeoutError) as e:
             _logger.warning(
                 "cutter_availability_check_failed",
                 error=str(e),
                 error_type=type(e).__name__,
             )
             return False
-        else:
-            return bool(version)
-        finally:
-            if r2 is not None:
-                try:
-                    await asyncio.to_thread(r2.quit)
-                except (OSError, RuntimeError) as e:
-                    _logger.warning("cutter_cleanup_failed", error=str(e))
+
+        if proc.returncode != 0:
+            _logger.warning(
+                "cutter_version_probe_nonzero",
+                backend=backend.binary,
+                returncode=proc.returncode,
+            )
+            return False
+
+        version_line = stdout_bytes.decode("utf-8", errors="replace").strip()
+        _logger.debug("cutter_backend_probed", backend=backend.binary, version=version_line)
+        return bool(version_line)
 
     async def _close_existing_r2(self) -> None:
         """Close existing Rizin session and unregister process."""
@@ -1328,8 +1604,8 @@ class CutterBridge(StaticAnalysisBridge):
         """Open the binary in rizin and gather metadata for ``load_binary``.
 
         :class:`OSError`, :class:`RuntimeError`, and :class:`ValueError`
-        raised by r2pipe, filesystem access, or metadata parsing
-        propagate to the caller, which converts them into a
+        raised by the analysis-pipe backend, filesystem access, or metadata
+        parsing propagate to the caller, which converts them into a
         :class:`ToolError`.
 
         Args:
@@ -1343,7 +1619,7 @@ class CutterBridge(StaticAnalysisBridge):
         await self._close_existing_r2()
 
         open_flags: list[str] = ["-d"] if debug else ["-2"]
-        self.r2 = await asyncio.to_thread(r2pipe.open, str(path), open_flags)
+        self.r2 = await asyncio.to_thread(_open_analysis_pipe, str(path), open_flags)
         self._binary_path = await asyncio.to_thread(path.resolve)
         self._analyzed = False
         self._debug_mode = debug
@@ -1379,6 +1655,10 @@ class CutterBridge(StaticAnalysisBridge):
             imports=imports,
             exports=exports,
         )
+
+
+class CutterAnalysisMixin(_CutterBridgeBase):
+    """Static analysis, function enumeration, decompilation, and disassembly operations."""
 
     async def analyze(self, level: str = "normal") -> None:
         """Run analysis on the loaded binary.
@@ -1688,6 +1968,10 @@ class CutterBridge(StaticAnalysisBridge):
 
         return result
 
+
+class CutterXRefSearchMixin(CutterAnalysisMixin):
+    """Cross-reference lookup and byte/string pattern search operations."""
+
     async def get_xrefs_to(self, address: int) -> list[CrossReference]:
         """Get cross-references to an address.
 
@@ -1884,82 +2168,9 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("wildcard_byte_search_completed", hex_pattern=hex_pattern, result_count=len(addrs))
         return addrs
 
-    async def _get_sections_internal(self) -> list[SectionInfo]:
-        """Get section information.
 
-        Returns:
-            list[SectionInfo]: List of section info.
-
-        Raises:
-            ToolError: If no binary is loaded.
-        """
-        if self._r2 is None:
-            _logger.warning("_get_sections_internal_without_binary")
-            raise ToolError(_ERR_NO_BINARY)
-
-        sections = await self._cmd_json("iSj")
-
-        return [
-            SectionInfo(
-                name=_get_str(s, "name"),
-                virtual_address=_get_int(s, "vaddr"),
-                virtual_size=_get_int(s, "vsize"),
-                raw_size=_get_int(s, "size"),
-                characteristics=_get_int(s, "perm"),
-                entropy=_get_float(s, "entropy"),
-            )
-            for s in sections
-        ]
-
-    async def _get_imports_internal(self) -> list[ImportInfo]:
-        """Get import information.
-
-        Returns:
-            list[ImportInfo]: List of import info.
-
-        Raises:
-            ToolError: If no binary is loaded.
-        """
-        if self._r2 is None:
-            _logger.warning("_get_imports_internal_without_binary")
-            raise ToolError(_ERR_NO_BINARY)
-
-        imports = await self._cmd_json("iij")
-
-        return [
-            ImportInfo(
-                dll=_get_str(i, "lib"),
-                function=_get_str(i, "name"),
-                ordinal=_get_optional_int(i, "ordinal"),
-                address=_get_int(i, "plt"),
-            )
-            for i in imports
-        ]
-
-    async def _get_exports_internal(self) -> list[ExportInfo]:
-        """Get export information.
-
-        Returns:
-            list[ExportInfo]: List of export info.
-
-        Raises:
-            ToolError: If no binary is loaded.
-        """
-        if self._r2 is None:
-            _logger.warning("_get_exports_internal_without_binary")
-            raise ToolError(_ERR_NO_BINARY)
-
-        exports = await self._cmd_json("iEj")
-
-        result: list[ExportInfo] = [
-            ExportInfo(
-                name=_get_str(e, "name"),
-                ordinal=_get_int(e, "ordinal", idx),
-                address=_get_int(e, "vaddr"),
-            )
-            for idx, e in enumerate(exports)
-        ]
-        return result
+class CutterSymbolsMixin(CutterXRefSearchMixin):
+    """Section, import, and export enumeration operations."""
 
     async def get_imports(self) -> list[ImportInfo]:
         """Get imported functions.
@@ -2026,6 +2237,10 @@ class CutterBridge(StaticAnalysisBridge):
         result = await self._get_sections_internal()
         _logger.debug("sections_queried", result_count=len(result))
         return result
+
+
+class CutterEditingMixin(CutterSymbolsMixin):
+    """Rename, comment, write, and assemble operations on the loaded binary."""
 
     async def rename_function(self, address: int, new_name: str) -> bool:
         """Rename a function.
@@ -2157,6 +2372,10 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.info("instruction_assembled", instruction=instruction, address=hex(address))
         return assembled_bytes
 
+
+class CutterCommandMixin(CutterEditingMixin):
+    """Raw command execution, JSON command transport, seeking, and function-address resolution."""
+
     async def execute_command(self, command: str) -> str:
         """Execute raw Rizin command.
 
@@ -2168,47 +2387,6 @@ class CutterBridge(StaticAnalysisBridge):
         """
         _logger.debug("raw_command_executed", command=command)
         return await self._r2_cmd(command)
-
-    async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
-        """Execute command and parse JSON output.
-
-        Args:
-            command: Command to execute.
-
-        Returns:
-            list[dict[str, Any]]: Parsed JSON as list of dicts. An empty
-            list is only returned when the command produced an empty
-            response (which rizin uses to indicate ``no results``); a
-            response that fails to parse as JSON is treated as a
-            command-execution failure and surfaces as ``ToolError``.
-
-        Raises:
-            ToolError: If no binary is loaded or the command output
-                cannot be decoded as JSON.
-        """
-        if self._r2 is None:
-            _logger.warning("cmd_json_without_binary", command=command)
-            raise ToolError(_ERR_NO_BINARY)
-
-        result = await self._r2_cmd(command)
-
-        if not result or not result.strip():
-            return []
-
-        try:
-            parsed = json.loads(result)
-        except json.JSONDecodeError as exc:
-            _logger.warning(
-                "json_parse_failed",
-                command=command,
-                error=str(exc),
-                response_prefix=result[:120],
-            )
-            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
-            raise ToolError(msg) from exc
-        if isinstance(parsed, list):
-            return cast("list[dict[str, Any]]", parsed)
-        return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
 
     async def seek(self, address: int) -> str:
         """Seek to a specific address.
@@ -2292,6 +2470,10 @@ class CutterBridge(StaticAnalysisBridge):
         entry = info[0]
         resolved_name = _get_str(entry, "name")
         return None if resolved_name != name else _get_optional_int(entry, "offset")
+
+
+class CutterMetadataMixin(CutterCommandMixin):
+    """String, symbol, library, header, debug-info, class, relocation, and resource enumeration."""
 
     async def get_all_strings(self) -> list[StringInfo]:
         """Get all strings from the binary including non-data sections.
@@ -2586,6 +2768,10 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("resources_queried", result_count=len(result))
         return result
 
+
+class CutterRopMixin(CutterMetadataMixin):
+    """ROP gadget search, callgraph, vtable, syscall, raw byte read, and binary save operations."""
+
     async def search_rop_gadgets(self, pattern: str = "") -> list[GadgetInfo]:
         """Search for ROP gadgets in the binary.
 
@@ -2741,6 +2927,10 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.info("binary_saved", path=target)
         return True
 
+
+class CutterAnnotationMixin(CutterRopMixin):
+    """Comment, flag, and address-label annotation operations."""
+
     async def get_comments(self) -> list[CommentInfo]:
         """Get all comments/annotations in the binary.
 
@@ -2857,6 +3047,10 @@ class CutterBridge(StaticAnalysisBridge):
 
         _logger.debug("flag_resolved", address=hex(address), flag=flag_name)
         return flag_name
+
+
+class CutterTypesMixin(CutterAnnotationMixin):
+    """Type, struct, union, enum, typedef, function-signature, and C header import operations."""
 
     async def get_types(self) -> list[dict[str, Any]]:
         """Get all defined types from the binary analysis.
@@ -2994,6 +3188,10 @@ class CutterBridge(StaticAnalysisBridge):
             await asyncio.to_thread(temp_path.unlink, missing_ok=True)
         return True
 
+
+class CutterEsilMixin(CutterTypesMixin):
+    """ESIL emulator evaluation, stepping, and state-control operations."""
+
     async def esil_eval(self, expression: str) -> str:
         """Evaluate an ESIL expression.
 
@@ -3093,6 +3291,10 @@ class CutterBridge(StaticAnalysisBridge):
         _logger.debug("esil_pc_set", address=hex(address))
         return True
 
+
+class CutterZignatureMixin(CutterEsilMixin):
+    """Zignature management and matching operations."""
+
     async def get_zignatures(self) -> list[dict[str, Any]]:
         """Get all zignatures (function signatures).
 
@@ -3171,6 +3373,10 @@ class CutterBridge(StaticAnalysisBridge):
         result = await self._cmd_json("z/j")
         _logger.debug("zignatures_searched", result_count=len(result))
         return result
+
+
+class CutterProjectConfigMixin(CutterZignatureMixin):
+    """Rizin project save/open/list and runtime configuration operations."""
 
     async def save_project(self, name: str) -> bool:
         """Save the current analysis as a Rizin project.
@@ -3270,6 +3476,10 @@ class CutterBridge(StaticAnalysisBridge):
         await self._r2_cmd(f"e {key}={value}")
         _logger.debug("config_set", key=key, value=value)
         return True
+
+
+class CutterWriteOpsMixin(CutterProjectConfigMixin):
+    """Binary write transforms: XOR, arithmetic, file IO, typed value, and string writes."""
 
     async def write_xor(self, address: int, length: int, key: int) -> bool:
         """XOR bytes at an address with a key.
@@ -3435,6 +3645,10 @@ class CutterBridge(StaticAnalysisBridge):
         await self._r2_cmd(f'w "{escaped}" @ {address}')
         _logger.info("string_written", address=hex(address), length=len(text))
         return True
+
+
+class CutterSearchOpsMixin(CutterWriteOpsMixin):
+    """Live string/assembly/value/crypto/magic searches and byte/disassembly comparison."""
 
     async def search_string_live(self, text: str) -> list[int]:
         """Search for a literal string in binary content.
@@ -3615,6 +3829,10 @@ class CutterBridge(StaticAnalysisBridge):
             sections.append(json_diff.rstrip())
         return "\n".join(sections)
 
+
+class CutterDisplayMixin(CutterSearchOpsMixin):
+    """Segment enumeration, hex dump, and disassembly view operations."""
+
     async def get_segments(self) -> list[SegmentInfo]:
         """Get binary segment information.
 
@@ -3733,6 +3951,10 @@ class CutterBridge(StaticAnalysisBridge):
         ]
         _logger.debug("basic_blocks_queried", address=hex(address), result_count=len(result))
         return result
+
+
+class CutterDebugMixin(CutterDisplayMixin):
+    """Dynamic-analysis debugging operations: attach, breakpoints, stepping, memory, threads, modules."""
 
     def _require_attached(self, operation: str) -> None:
         """Ensure a debug session is attached before issuing dynamic commands.
@@ -4311,3 +4533,12 @@ class CutterBridge(StaticAnalysisBridge):
             )
         _logger.debug("cutter_modules_queried", count=len(modules))
         return modules
+
+
+class CutterBridge(CutterDebugMixin):
+    """Bridge for Cutter/Rizin reverse engineering framework.
+
+    Provides static analysis, disassembly, and debugging capabilities through a backend-agnostic analysis-pipe (rzpipe/r2pipe) interface. Composed from the ``_CutterBridgeBase``
+    core class together with topical mixin classes that inherit linearly so cross-references resolve through normal MRO. Each mixin groups
+    one surface area so no single class definition exceeds the public method limit.
+    """
