@@ -17,9 +17,13 @@ import re
 import string
 from dataclasses import dataclass, field
 from itertools import starmap
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 from intellicrack.core.logging import get_logger
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 _logger = get_logger(__name__)
@@ -80,18 +84,18 @@ except ImportError:
     _logger.debug("hexcore_module_import_failed")
 
 
-_BINARY_OPS: dict[type[ast.operator], Any] = {
-    ast.Add: operator.add,
-    ast.Sub: operator.sub,
-    ast.Mult: operator.mul,
-    ast.FloorDiv: operator.floordiv,
-    ast.Mod: operator.mod,
-    ast.Pow: operator.pow,
-    ast.LShift: operator.lshift,
-    ast.RShift: operator.rshift,
-    ast.BitOr: operator.or_,
-    ast.BitXor: operator.xor,
-    ast.BitAnd: operator.and_,
+_BINARY_OPS: dict[type[ast.operator], Callable[[int, int], int]] = {
+    ast.Add: lambda a, b: int(a + b),
+    ast.Sub: lambda a, b: int(a - b),
+    ast.Mult: lambda a, b: int(a * b),
+    ast.FloorDiv: lambda a, b: int(a // b),
+    ast.Mod: lambda a, b: int(a % b),
+    ast.Pow: lambda a, b: int(a**b),
+    ast.LShift: lambda a, b: int(a << b),
+    ast.RShift: lambda a, b: int(a >> b),
+    ast.BitOr: lambda a, b: int(a | b),
+    ast.BitXor: lambda a, b: int(a ^ b),
+    ast.BitAnd: lambda a, b: int(a & b),
 }
 
 _UNARY_OPS: dict[type[ast.unaryop], Any] = {
@@ -154,7 +158,7 @@ def _eval_ast_node(node: ast.expr, b: int, i: int) -> int:
             raise ExpressionError(msg)
         left = _eval_ast_node(node.left, b, i)
         right = _eval_ast_node(node.right, b, i)
-        return int(op_fn(left, right))
+        return op_fn(left, right)
 
     if isinstance(node, ast.UnaryOp):
         op_fn = _UNARY_OPS.get(type(node.op))

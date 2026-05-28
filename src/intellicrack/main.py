@@ -75,7 +75,6 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
-
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -1046,14 +1045,14 @@ def _detach_qt_log_handler(logger: BoundLogger) -> None:
         handler_mod = importlib.import_module("intellicrack.ui.log_viewer")
         uninstall = getattr(handler_mod, "uninstall_qt_log_handler", None)
     except ImportError:
-        logger.debug("qt_log_handler_module_unavailable_during_shutdown")
+        logger.info("qt_log_handler_module_unavailable_during_shutdown")
         return
     if not callable(uninstall):
         return
     try:
         uninstall()
     except (RuntimeError, OSError, ValueError):
-        logger.debug("qt_log_handler_uninstall_failed", exc_info=True)
+        logger.warning("qt_log_handler_uninstall_failed", exc_info=True)
 
 
 async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
@@ -1075,21 +1074,21 @@ async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
         bridge_mod = importlib.import_module("intellicrack.ui.panels.async_bridge")
         cancel_pending = getattr(bridge_mod, "cancel_pending_main_loop_tasks", None)
     except ImportError:
-        logger.debug("async_bridge_unavailable_during_shutdown")
+        logger.info("async_bridge_unavailable_during_shutdown")
         return
     if not callable(cancel_pending):
         return
     try:
         cancelled = int(cast("Callable[[], int]", cancel_pending)())
     except (RuntimeError, OSError, ValueError):
-        logger.debug("async_bridge_task_cancel_failed", exc_info=True)
+        logger.warning("async_bridge_task_cancel_failed", exc_info=True)
         return
     if cancelled:
         logger.info("pending_bridge_tasks_cancelled", count=cancelled)
         try:
             await asyncio.sleep(0)
         except asyncio.CancelledError:
-            logger.debug("cancel_drain_interrupted")
+            logger.warning("cancel_drain_interrupted", exc_info=True)
 
 
 async def _shutdown_application(

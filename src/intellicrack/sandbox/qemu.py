@@ -836,9 +836,7 @@ class GuestAgentClient:
             ``msg``.
         """
         exit_code_raw = msg.data.get("exit_code")
-        exit_code_val = (
-            int(exit_code_raw) if exit_code_raw is not None and isinstance(exit_code_raw, (int, str)) else -1
-        )
+        exit_code_val = int(exit_code_raw) if exit_code_raw is not None and isinstance(exit_code_raw, (int, str)) else -1
         return (
             exit_code_val,
             str(msg.data.get("stdout", "")),
@@ -1858,8 +1856,7 @@ class QEMUSandbox(SandboxBase):
     async def _spawn_qemu_process(self) -> None:
         """Build the QEMU command line and run the launcher subprocess to completion.
 
-        QEMU itself daemonizes by writing a PID file; the launcher process
-        exits once the VM is running.
+        QEMU itself daemonizes by writing a PID file; the launcher process exits once the VM is running.
         """
         cmd = await self._build_qemu_command()
         _logger.info("qemu_starting", command=" ".join(cmd))
@@ -2100,7 +2097,8 @@ class QEMUSandbox(SandboxBase):
         Returns:
             str: Full PowerShell script source (UTF-8).
         """
-        return r"""$ErrorActionPreference = 'SilentlyContinue'
+        return\
+               r"""$ErrorActionPreference = 'SilentlyContinue'
 
 $shareHost = '10.0.2.4'
 $shareName = 'qemu'

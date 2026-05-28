@@ -342,7 +342,7 @@ class TemplatesMixin:
             Path(save_path).write_text(json_str, encoding="utf-8")
         except (OSError, ValueError, AttributeError) as exc:
             QMessageBox.warning(parent, "Export Template", f"Export failed:\n{exc}")
-            _logger.exception("template_export_failed", template_name=name, path=save_path, error=str(exc))
+            _logger.exception("template_export_failed", template_name=name, path=save_path)
         else:
             _logger.info(
                 "file_written",

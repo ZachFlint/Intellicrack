@@ -51,6 +51,32 @@ _EMBED_MAX_RETRIES: Final[int] = 15
 _PROCESS_TERM_TIMEOUT_MS: Final[int] = 3000
 
 
+def _read_hxd_install_dir(reg_path: str) -> str | None:
+    r"""Read the HxD ``InstallDir`` value from a registry path.
+
+    Probes ``HKLM\reg_path`` for an ``InstallDir`` value. Returns
+    ``None`` when the registry path is absent (a normal probe outcome)
+    or when the value cannot be read due to permissions or registry
+    corruption. The unavailable case is logged at WARNING; the absent
+    case is logged by the caller at DEBUG.
+
+    Args:
+        reg_path: Registry key path under ``HKEY_LOCAL_MACHINE``.
+
+    Returns:
+        str | None: ``InstallDir`` string when found, otherwise ``None``.
+    """
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
+            value, _ = winreg.QueryValueEx(key, "InstallDir")
+            return str(value)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        _logger.warning("hxd_registry_path_unavailable", reg_path=reg_path, exc_info=True)
+        return None
+
+
 def _find_hxd_executable() -> Path | None:
     """Locate the HxD executable on the system.
 
@@ -64,18 +90,13 @@ def _find_hxd_executable() -> Path | None:
         return None
 
     for reg_path in _HXD_REGISTRY_PATHS:
-        try:
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_path) as key:
-                install_dir, _ = winreg.QueryValueEx(key, "InstallDir")
-                candidate = Path(str(install_dir)) / _HXD_EXE_NAME
-                if candidate.exists() and candidate.is_file():
-                    return candidate
-        except FileNotFoundError:
+        install_dir = _read_hxd_install_dir(reg_path)
+        if install_dir is None:
             _logger.debug("hxd_registry_path_absent", reg_path=reg_path)
             continue
-        except OSError as exc:
-            _logger.warning("hxd_registry_path_unavailable", reg_path=reg_path, error=str(exc))
-            continue
+        candidate = Path(install_dir) / _HXD_EXE_NAME
+        if candidate.exists() and candidate.is_file():
+            return candidate
 
     for common_dir in _HXD_COMMON_DIRS:
         candidate = Path(common_dir) / _HXD_EXE_NAME

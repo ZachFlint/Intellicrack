@@ -893,8 +893,8 @@ def get_kernel32() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="kernel32")
         try:
             _kernel32_cache = ctypes.windll.kernel32
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="kernel32", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="kernel32")
             raise
     return _kernel32_cache
 
@@ -913,8 +913,8 @@ def get_ntdll() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="ntdll")
         try:
             _ntdll_cache = ctypes.WinDLL("ntdll")
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="ntdll", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="ntdll")
             raise
     return _ntdll_cache
 
@@ -933,8 +933,8 @@ def get_advapi32() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="advapi32")
         try:
             _advapi32_cache = ctypes.WinDLL("advapi32")
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="advapi32", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="advapi32")
             raise
     return _advapi32_cache
 
@@ -953,8 +953,8 @@ def get_user32() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="user32")
         try:
             _user32_cache = ctypes.WinDLL("user32")
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="user32", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="user32")
             raise
     return _user32_cache
 
@@ -973,8 +973,8 @@ def get_dbghelp() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="dbghelp")
         try:
             _dbghelp_cache = ctypes.WinDLL("dbghelp")
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="dbghelp", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="dbghelp")
             raise
     return _dbghelp_cache
 
@@ -993,8 +993,8 @@ def get_psapi() -> ctypes.WinDLL:
         _logger.debug("dll_cache_miss_loading", dll_name="psapi")
         try:
             _psapi_cache = ctypes.windll.psapi
-        except OSError as exc:
-            _logger.exception("dll_load_failed", dll_name="psapi", error=str(exc))
+        except OSError:
+            _logger.exception("dll_load_failed", dll_name="psapi")
             raise
     return _psapi_cache
 

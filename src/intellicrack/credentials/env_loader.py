@@ -354,14 +354,14 @@ class CredentialLoader:
 
         try:
             text = self.env_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            _logger.exception("env_file_read_failed", path=str(self.env_path), error=str(exc))
+        except OSError:
+            _logger.exception("env_file_read_failed", path=str(self.env_path))
             return
 
         try:
             parsed = _parse_env_text(text)
-        except (ValueError, KeyError) as exc:
-            _logger.exception("env_file_parse_failed", path=str(self.env_path), error=str(exc))
+        except (ValueError, KeyError):
+            _logger.exception("env_file_parse_failed", path=str(self.env_path))
             return
 
         for key, value in parsed.items():
@@ -598,8 +598,8 @@ class CredentialLoader:
             try:
                 with self.env_path.open("r", encoding="utf-8", newline="") as f:
                     existing_text = f.read()
-            except OSError as exc:
-                _logger.exception("env_file_read_existing_failed", path=str(self.env_path), error=str(exc))
+            except OSError:
+                _logger.exception("env_file_read_existing_failed", path=str(self.env_path))
                 raise
 
         eol = _detect_eol(existing_text) if existing_text else "\n"
@@ -640,8 +640,8 @@ class CredentialLoader:
         try:
             with self.env_path.open("w", encoding="utf-8", newline="") as f:
                 f.writelines(lines)
-        except OSError as exc:
-            _logger.exception("env_file_write_failed", path=str(self.env_path), error=str(exc))
+        except OSError:
+            _logger.exception("env_file_write_failed", path=str(self.env_path))
             raise
 
         _logger.info(
@@ -701,8 +701,8 @@ OPENROUTER_API_KEY=sk-or-v1-...
     try:
         with path.open("w", encoding="utf-8") as f:
             f.write(template)
-    except OSError as exc:
-        _logger.exception("env_template_write_failed", path=str(path), error=str(exc))
+    except OSError:
+        _logger.exception("env_template_write_failed", path=str(path))
         raise
     _logger.debug("env_template_created", path=str(path))
 

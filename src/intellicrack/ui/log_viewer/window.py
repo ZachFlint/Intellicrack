@@ -4,10 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Modeless :class:`QMainWindow` exposing the live log stream.
 
-Provides filter controls (min level, logger regex, free-text), pause /
-resume, auto-scroll, save-as, and per-row details viewing. The window
-subscribes to a :class:`QtSignalingHandler` for live records and uses a
-:class:`LogFileTailReader` to backfill history from the on-disk file.
+Provides filter controls (min level, logger regex, free-text), pause / resume, auto-scroll, save-as, and per-row details viewing. The window
+subscribes to a :class:`QtSignalingHandler` for live records and uses a :class:`LogFileTailReader` to backfill history from the on-disk
+file.
 """
 
 from __future__ import annotations
@@ -104,6 +103,7 @@ def _coerce_int(value: object) -> int | None:
         try:
             return int(value)
         except ValueError:
+            _logger.warning("log_viewer_settings_int_coerce_failed", raw_value=value, exc_info=True)
             return None
     return None
 
@@ -217,8 +217,7 @@ class LogRecordDetailsDialog(QDialog):
 class _LogTableView(QTableView):
     """Specialized table view that opens the details dialog on double-click.
 
-    The view is configured for read-only, full-row selection and shows
-    no vertical row headers, matching typical log-viewer UX.
+    The view is configured for read-only, full-row selection and shows no vertical row headers, matching typical log-viewer UX.
     """
 
     def __init__(self, proxy: LogFilterProxyModel, parent: QWidget) -> None:
@@ -244,6 +243,7 @@ class _LogTableView(QTableView):
             horizontal_header.setStretchLastSection(True)
             horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.doubleClicked.connect(self._on_double_clicked)
+        _logger.debug("log_viewer_table_view_initialized")
 
     def _on_double_clicked(self, index: QModelIndex) -> None:
         """Open the :class:`LogRecordDetailsDialog` for the clicked row.
@@ -368,8 +368,7 @@ class LogViewerWindow(QMainWindow):
     def clear(self) -> None:
         """Clear all records from the model.
 
-        Public entry point exposed for callers that don't have access
-        to the toolbar's Clear action.
+        Public entry point exposed for callers that don't have access to the toolbar's Clear action.
         """
         self._on_clear()
 

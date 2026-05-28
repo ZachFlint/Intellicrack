@@ -229,7 +229,7 @@ class StatisticsMixin:
                 _logger.debug(
                     "statistics_doc_length_unavailable",
                     error_type=type(exc).__name__,
-                    error=str(exc),
+                    exc_info=True,
                 )
         _logger.info(
             "statistics_update_started",

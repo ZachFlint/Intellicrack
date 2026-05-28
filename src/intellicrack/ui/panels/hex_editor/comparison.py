@@ -174,7 +174,7 @@ class ComparisonMixin:
                 _logger.exception("diff_temp_write_failed", size=len(data_a))
                 return
             self._diff_temp_path = Path(path_a)
-            _logger.debug("diff_temp_write_complete", path=path_a, size=len(data_a))
+            _logger.info("diff_temp_write_complete", path=path_a, size=len(data_a))
 
         if self._diff_summary_label is not None:
             self._diff_summary_label.setText("Computing diff...")

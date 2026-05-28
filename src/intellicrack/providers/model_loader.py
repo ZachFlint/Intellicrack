@@ -543,6 +543,11 @@ def _load_xpu_model_impl(
         ImportError: If required transformers symbols are unavailable.
     """
     if AutoModelForCausalLM is None or AutoTokenizer is None:
+        _logger.error(
+            "xpu_model_load_transformers_unavailable",
+            model_id=config.model_id,
+            dtype=dtype_str,
+        )
         raise ImportError(_ERR_MISSING_DEPS)
     torch_dtype = _get_torch_dtype(dtype_str)
     device = initialize_xpu(0)

@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """JSON-Lines tail reader for the Log Viewer.
 
-Backfills the table model with historical records on first open and
-monitors the file (plus its parent directory) so subsequent appends and
+Backfills the table model with historical records on first open and monitors the file (plus its parent directory) so subsequent appends and
 log rotations propagate into the live view.
 """
 
@@ -196,8 +195,7 @@ class LogFileTailReader(QObject):
     def start(self) -> None:
         """Begin the initial historical load and set up file watching.
 
-        Repeated calls are no-ops once a load is in progress. Tests can
-        call :meth:`force_poll` after :meth:`start` if needed.
+        Repeated calls are no-ops once a load is in progress. Tests can call :meth:`force_poll` after :meth:`start` if needed.
         """
         if self._stopped or self._initial_worker is not None:
             return
@@ -224,8 +222,7 @@ class LogFileTailReader(QObject):
     def force_poll(self) -> None:
         """Trigger an immediate incremental read.
 
-        Useful for tests where signals from :class:`QFileSystemWatcher`
-        may be delivered asynchronously.
+        Useful for tests where signals from :class:`QFileSystemWatcher` may be delivered asynchronously.
         """
         self._read_incremental()
 

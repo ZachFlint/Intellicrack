@@ -720,6 +720,11 @@ class AnthropicProvider(LLMProviderBase):
                 initialised.
         """
         if self._client is None:
+            self._logger.error(
+                "anthropic_stream_client_not_initialised",
+                provider="anthropic",
+                model=api_kwargs.get("model"),
+            )
             raise ProviderError(_MSG_NOT_CONNECTED)
         stream_context = self._client.messages.stream(**api_kwargs)
         async with stream_context as stream:

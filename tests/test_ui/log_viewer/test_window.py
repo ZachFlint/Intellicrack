@@ -88,6 +88,7 @@ def _wait_until_rows(qtbot: QtBot, window: LogViewerWindow, count: int, timeout:
         count: Minimum number of rows required.
         timeout: Maximum wait in milliseconds.
     """
+
     def predicate() -> bool:
         return window.model.rowCount() >= count
 
@@ -455,8 +456,7 @@ def test_save_records_oserror_routes_to_warning_dialog(
     warning_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(
         "intellicrack.ui.log_viewer.window.QMessageBox.warning",
-        lambda _parent, title, message, *_a, **_k: warning_calls.append((title, message))
-        or QMessageBox.StandardButton.Ok,
+        lambda _parent, title, message, *_a, **_k: warning_calls.append((title, message)) or QMessageBox.StandardButton.Ok,
     )
     monkeypatch.setattr(
         "intellicrack.ui.log_viewer.window.QMessageBox.information",
@@ -517,8 +517,7 @@ def test_open_logs_folder_missing_directory_shows_warning(
     warning_calls: list[tuple[str, str]] = []
     monkeypatch.setattr(
         "intellicrack.ui.log_viewer.window.QMessageBox.warning",
-        lambda _parent, title, message, *_a, **_k: warning_calls.append((title, message))
-        or QMessageBox.StandardButton.Ok,
+        lambda _parent, title, message, *_a, **_k: warning_calls.append((title, message)) or QMessageBox.StandardButton.Ok,
     )
     _trigger_action(window, "Open Logs Folder")
     assert warning_calls

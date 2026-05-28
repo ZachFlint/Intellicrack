@@ -408,10 +408,7 @@ class WindowsSandbox(SandboxBase):
             return False
 
         ps_exe = "pwsh" if shutil.which("pwsh") else "powershell"
-        ps_command = (
-            "(Get-CimInstance -ClassName Win32_OptionalFeature "
-            f"-Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
-        )
+        ps_command = f"(Get-CimInstance -ClassName Win32_OptionalFeature -Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
         features_result = await process_manager.run_tracked_async(
             [
                 ps_exe,

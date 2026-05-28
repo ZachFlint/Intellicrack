@@ -219,6 +219,10 @@ class GoogleProvider(LLMProviderBase):
             ProviderError: If the Google client has not been initialised.
         """
         if self.client is None:
+            self._logger.error(
+                "google_fetch_models_client_not_initialised",
+                provider="google",
+            )
             raise ProviderError(_MSG_NOT_CONNECTED)
         models_response = await asyncio.to_thread(self.client.models.list)
 

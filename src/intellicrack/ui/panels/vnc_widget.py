@@ -296,6 +296,14 @@ class RFBClient:
         self.framebuffer.fill(QColor(0, 0, 0))
         self._fb_dirty = True
         self._connected = True
+        _logger.info(
+            "vnc_handshake_completed",
+            host=host,
+            port=port,
+            server_name=self.server_name,
+            width=self.width,
+            height=self.height,
+        )
         return True
 
     async def connect(self, host: str, port: int, **options: Unpack[_ConnectOptions]) -> bool:
@@ -1844,8 +1852,7 @@ class VNCWidget(QWidget):
     async def _pump_server_loop(self) -> None:
         """Run the request/handle loop until the client disconnects or the task is cancelled.
 
-        This is the body of :meth:`_pump_server` extracted into a helper so the
-        outer method can keep its try/finally short.
+        This is the body of :meth:`_pump_server` extracted into a helper so the outer method can keep its try/finally short.
         """
         while self.client.connected:
             try:

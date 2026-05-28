@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Filter proxy for the Log Viewer table.
 
-Combines a minimum log-level filter, a compiled logger-name regex, and a
-free-text search across the event identifier and the JSON-rendered
+Combines a minimum log-level filter, a compiled logger-name regex, and a free-text search across the event identifier and the JSON-rendered
 extras. Invalid regular expressions silently disable the logger filter.
 """
 
@@ -17,12 +16,15 @@ from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import QSortFilterProxyModel, Qt
 
+from intellicrack.core.logging import get_logger
 from intellicrack.ui.log_viewer._record import LogRecordDict, extras_to_compact_json
 
 
 if TYPE_CHECKING:
     from PyQt6.QtCore import QModelIndex, QObject
 
+
+_logger = get_logger(__name__)
 
 _LEVEL_NAME_TO_INT: Final[dict[str, int]] = {
     "DEBUG": logging.DEBUG,
@@ -96,6 +98,7 @@ class LogFilterProxyModel(QSortFilterProxyModel):
             try:
                 new_pattern = re.compile(pattern)
             except re.error:
+                _logger.warning("log_viewer_logger_filter_regex_invalid", pattern=pattern, exc_info=True)
                 new_pattern = None
         if new_pattern == self._logger_pattern:
             return

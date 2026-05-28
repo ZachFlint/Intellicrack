@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Type-name completion source for the HexPat pattern editor.
 
-Provides :class:`HexPatCompleter`, a backend-agnostic identifier provider that
-combines built-in primitive type names from :class:`BuiltinTypes` with the
-user-declared identifiers harvested from a :class:`TypeRegistry` produced by
-the most recent successful interpreter run. The UI consumes its output via a
-``QCompleter`` driven by ``QStringListModel``.
+Provides :class:`HexPatCompleter`, a backend-agnostic identifier provider that combines built-in primitive type names from
+:class:`BuiltinTypes` with the user-declared identifiers harvested from a :class:`TypeRegistry` produced by the most recent successful
+interpreter run. The UI consumes its output via a ``QCompleter`` driven by ``QStringListModel``.
 """
 
 from __future__ import annotations
@@ -29,10 +27,8 @@ _logger = get_logger(__name__)
 class HexPatCompleter:
     """Type-name completion source for the HexPat pattern editor.
 
-    Tracks the union of built-in primitive type names (always present) and
-    user-declared type names harvested from a :class:`TypeRegistry`. Refresh
-    the user-name set after every successful pattern execution by calling
-    :meth:`update_from_registry`.
+    Tracks the union of built-in primitive type names (always present) and user-declared type names harvested from a :class:`TypeRegistry`.
+    Refresh the user-name set after every successful pattern execution by calling :meth:`update_from_registry`.
     """
 
     def __init__(self) -> None:

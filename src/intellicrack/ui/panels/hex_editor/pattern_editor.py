@@ -385,10 +385,8 @@ class PatternEditorMixin:
     def _refresh_pattern_completer(self) -> None:
         """Refresh the DSL editor's type-name completer from the interpreter.
 
-        Reads the :class:`TypeRegistry` produced by the most recent
-        successful interpreter execution (exposed through
-        :attr:`HexPatInterpreter.last_type_registry`) and rebuilds the
-        editor's completion model so the popup offers built-in primitives
+        Reads the :class:`TypeRegistry` produced by the most recent successful interpreter execution (exposed through
+        :attr:`HexPatInterpreter.last_type_registry`) and rebuilds the editor's completion model so the popup offers built-in primitives
         plus all user-declared identifiers from the last run.
         """
         if self._interpreter is None or self._pattern_completer is None or self._pattern_dsl_editor is None:
@@ -624,10 +622,10 @@ class PatternEditorMixin:
             name: Display name of the pattern.
         """
         try:
-            _logger.info("hexpat_library_load_begin", path=file_path, name=name)
+            _logger.info("hexpat_library_load_begin", path=file_path, pattern_name=name)
             source = Path(file_path).read_text(encoding="utf-8", errors="replace")
         except OSError:
-            _logger.exception("hexpat_library_load_failed", path=file_path, name=name)
+            _logger.exception("hexpat_library_load_failed", path=file_path, pattern_name=name)
             return
 
         if self._pattern_dsl_editor is not None:

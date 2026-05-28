@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Qt-signaling logging handler for the Log Viewer.
 
-Bridges the stdlib ``logging`` pipeline (which is fed by structlog via
-``ProcessorFormatter``) into a Qt signal so the viewer can react to live
-records on the GUI thread.
+Bridges the stdlib ``logging`` pipeline (which is fed by structlog via ``ProcessorFormatter``) into a Qt signal so the viewer can react to
+live records on the GUI thread.
 """
 
 from __future__ import annotations
@@ -20,6 +19,7 @@ import structlog
 from PyQt6 import sip
 from PyQt6.QtCore import QObject, pyqtBoundSignal, pyqtSignal
 
+from intellicrack.core.logging import get_logger, get_stdlib_root_logger
 from intellicrack.ui.log_viewer._record import LogRecordDict, from_logging_record
 
 
@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 
 _HANDLER_NAME: Final[str] = "intellicrack.log_viewer.qt"
+
+_logger = get_logger(__name__)
 
 
 class _HandlerBridge(QObject):
@@ -77,8 +79,7 @@ def _shared_processors() -> list[Processor]:
 class _ReentrancyGuard:
     """Thread-local guard preventing recursive ``emit`` calls.
 
-    Slots connected to ``record_received`` may themselves log, which
-    would otherwise produce unbounded recursion. The guard drops inner
+    Slots connected to ``record_received`` may themselves log, which would otherwise produce unbounded recursion. The guard drops inner
     emissions silently while leaving disk/console logging untouched.
     """
 
@@ -145,6 +146,7 @@ class QtSignalingHandler(logging.Handler):
                 foreign_pre_chain=_shared_processors(),
             ),
         )
+        _logger.info("qt_signaling_handler_initialized", handler_name=_HANDLER_NAME)
 
     @property
     def record_received(self) -> pyqtBoundSignal:
@@ -233,7 +235,7 @@ def install_qt_log_handler() -> QtSignalingHandler:
         if _handler_state.handler is None:
             _handler_state.handler = QtSignalingHandler()
         handler = _handler_state.handler
-        root = logging.getLogger()
+        root = get_stdlib_root_logger()
         if handler not in root.handlers:
             root.addHandler(handler)
         return handler
@@ -242,14 +244,13 @@ def install_qt_log_handler() -> QtSignalingHandler:
 def uninstall_qt_log_handler() -> None:
     """Detach and forget the shared handler if one is installed.
 
-    Used by tests to keep state clean between cases. Safe to call when no
-    handler has been installed.
+    Used by tests to keep state clean between cases. Safe to call when no handler has been installed.
     """
     with _handler_state_lock:
         handler = _handler_state.handler
         if handler is None:
             return
-        root = logging.getLogger()
+        root = get_stdlib_root_logger()
         if handler in root.handlers:
             root.removeHandler(handler)
         _safe_close_handler(handler)

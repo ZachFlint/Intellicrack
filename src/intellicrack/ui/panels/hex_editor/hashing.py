@@ -97,7 +97,7 @@ class HashingMixin:
                     _logger.debug(
                         "custom_crc_doc_path_unavailable",
                         error_type=type(exc).__name__,
-                        error=str(exc),
+                        exc_info=True,
                     )
                     doc_path = None
                 if isinstance(doc_path, str):
@@ -204,7 +204,6 @@ class HashingMixin:
                 algo=algo,
                 start=sel_start,
                 end=sel_end,
-                error=str(exc),
             )
         else:
             self._hash_result_label.setText(

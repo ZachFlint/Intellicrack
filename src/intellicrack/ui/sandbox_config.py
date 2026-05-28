@@ -515,10 +515,7 @@ class SandboxConfigDialog(QDialog):
             self._set_available()
             return
 
-        ps_command = (
-            "(Get-CimInstance -ClassName Win32_OptionalFeature "
-            f"-Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
-        )
+        ps_command = f"(Get-CimInstance -ClassName Win32_OptionalFeature -Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
         process_manager = ProcessManager.get_instance()
         result = process_manager.run_tracked(
             [

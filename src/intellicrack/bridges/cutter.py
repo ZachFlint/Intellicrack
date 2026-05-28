@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Cutter/Rizin bridge for static and dynamic analysis.
 
-This module provides integration with Cutter/Rizin for disassembly, analysis,
-and debugging capabilities. Dispatch transparently selects ``rzpipe`` when the
-``rizin`` binary is available and ``r2pipe`` when the ``radare2`` binary is
-available, so installations that ship only one of the two toolchains (for
-example the Cutter+rizin desktop bundle) still initialize successfully.
+This module provides integration with Cutter/Rizin for disassembly, analysis, and debugging capabilities. Dispatch transparently selects
+``rzpipe`` when the ``rizin`` binary is available and ``r2pipe`` when the ``radare2`` binary is available, so installations that ship only
+one of the two toolchains (for example the Cutter+rizin desktop bundle) still initialize successfully.
 """
 
 from __future__ import annotations
@@ -232,6 +230,11 @@ def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _Analysi
     """
     backend = _select_pipe_backend()
     if backend is None:
+        _logger.error(
+            "analysis_pipe_backend_unavailable",
+            target=target,
+            flags=flags or [],
+        )
         raise ToolError(_ERR_TOOL_NOT_AVAILABLE)
     pipe_flags: list[str] = flags or []
     install_dir_str = str(backend.install_dir)
@@ -1389,8 +1392,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
     async def _release_cutter_resources(self) -> None:
         """Release rizin handles, registered PIDs, and per-binary debug state.
 
-        Each step is wrapped in its own ``try/except/finally`` so a failure
-        cleaning up one resource does not prevent the others from being
+        Each step is wrapped in its own ``try/except/finally`` so a failure cleaning up one resource does not prevent the others from being
         released. Errors are logged but never re-raised.
         """
         if self._r2 is not None:
@@ -4538,7 +4540,7 @@ class CutterDebugMixin(CutterDisplayMixin):
 class CutterBridge(CutterDebugMixin):
     """Bridge for Cutter/Rizin reverse engineering framework.
 
-    Provides static analysis, disassembly, and debugging capabilities through a backend-agnostic analysis-pipe (rzpipe/r2pipe) interface. Composed from the ``_CutterBridgeBase``
-    core class together with topical mixin classes that inherit linearly so cross-references resolve through normal MRO. Each mixin groups
-    one surface area so no single class definition exceeds the public method limit.
+    Provides static analysis, disassembly, and debugging capabilities through a backend-agnostic analysis-pipe (rzpipe/r2pipe) interface.
+    Composed from the ``_CutterBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
+    through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit.
     """

@@ -2235,7 +2235,7 @@ class _ToolOutputPanelTabsMixin(_ToolOutputPanelOpenersMixin):
     def close_detached_windows(self) -> None:
         """Close all detached panel windows and re-dock their panels."""
         titles = list(self._detached_windows)
-        _logger.debug("close_detached_windows", count=len(titles))
+        _logger.info("close_detached_windows", count=len(titles))
         for title in titles:
             window = self._detached_windows.get(title)
             if window is not None:
@@ -2248,7 +2248,7 @@ class _ToolOutputPanelTabsMixin(_ToolOutputPanelOpenersMixin):
             list[str]: Titles of detached panel windows.
         """
         titles = list(self._detached_windows.keys())
-        _logger.debug("get_detached_state", count=len(titles))
+        _logger.debug("panel_titles_queried", scope="detached", count=len(titles))
         return titles
 
 
@@ -2378,7 +2378,7 @@ class _ToolOutputPanelAccessorsMixin(_ToolOutputPanelTabsMixin):
         _logger.info(
             "frida_hook_registered",
             address=str(hook_info.get("address", "")),
-            module=str(hook_info.get("module", "")),
+            target_module=str(hook_info.get("module", "")),
             function=str(hook_info.get("function", "")),
             status=str(hook_info.get("status", "Active")),
             hook_id=str(hook_info.get("hook_id", "")),

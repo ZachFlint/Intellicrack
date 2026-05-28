@@ -356,7 +356,9 @@ def _build_xpu_device_info(torch: types.ModuleType, device_index: int) -> XPUDev
     device_id = ""
     try:
         total_memory, driver_version, device_name = _extract_torch_xpu_properties(
-            torch, device_index, device_name,
+            torch,
+            device_index,
+            device_name,
         )
     except (RuntimeError, OSError, AttributeError) as exc:
         _logger.warning("xpu_properties_failed", error=str(exc))
@@ -364,7 +366,9 @@ def _build_xpu_device_info(torch: types.ModuleType, device_index: int) -> XPUDev
         driver_version = ""
 
     device_name, driver_version, device_id = _enrich_from_windows_gpus(
-        device_name, driver_version, device_id,
+        device_name,
+        driver_version,
+        device_id,
     )
     if total_memory == 0:
         total_memory = _estimate_memory_from_name(device_name)
@@ -572,8 +576,8 @@ def get_xpu_memory_info(device_index: int = 0) -> tuple[int, int]:
         return (0, 0)
     try:
         return _query_xpu_memory(torch, device_index)
-    except (RuntimeError, OSError, AttributeError) as exc:
-        _logger.debug("xpu_memory_info_failed", device_index=device_index, error=str(exc))
+    except (RuntimeError, OSError, AttributeError):
+        _logger.debug("xpu_memory_info_failed", device_index=device_index, exc_info=True)
         return (0, 0)
 
 

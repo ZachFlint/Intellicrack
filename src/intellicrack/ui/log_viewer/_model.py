@@ -4,10 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Qt table model backing the Log Viewer.
 
-Holds a bounded ring buffer of :class:`LogRecordDict` rows, batches
-incoming records through a short coalescing timer for high-volume
-streams, and provides level-based foreground and background colors
-so WARNING / ERROR / CRITICAL records remain scannable.
+Holds a bounded ring buffer of :class:`LogRecordDict` rows, batches incoming records through a short coalescing timer for high-volume
+streams, and provides level-based foreground and background colors so WARNING / ERROR / CRITICAL records remain scannable.
 """
 
 from __future__ import annotations

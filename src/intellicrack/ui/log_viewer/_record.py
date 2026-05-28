@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Log record data structures and parsers for the Log Viewer.
 
-Provides a normalized :class:`LogRecordDict` representation that bridges
-structlog-enriched ``logging.LogRecord`` instances and JSON-Lines disk
-records into a single shape consumed by the Qt model layer.
+Provides a normalized :class:`LogRecordDict` representation that bridges structlog-enriched ``logging.LogRecord`` instances and JSON-Lines
+disk records into a single shape consumed by the Qt model layer.
 """
 
 from __future__ import annotations
@@ -217,9 +216,7 @@ def _extract_extras(record: logging.LogRecord) -> dict[str, object]:
         return {key: value for key, value in event_dict.items() if key not in _KNOWN_STRUCTLOG_KEYS}
 
     return {
-        key: value
-        for key, value in record.__dict__.items()
-        if key not in _RESERVED_LOGRECORD_FIELDS and key not in _KNOWN_STRUCTLOG_KEYS
+        key: value for key, value in record.__dict__.items() if key not in _RESERVED_LOGRECORD_FIELDS and key not in _KNOWN_STRUCTLOG_KEYS
     }
 
 
@@ -275,9 +272,7 @@ def from_logging_record(record: logging.LogRecord) -> LogRecordDict:
 
     return LogRecordDict(
         timestamp=_resolve_timestamp(payload, record),
-        level=(
-            str(level_val).upper() if isinstance(level_val, str) and level_val else record.levelname
-        ).upper(),
+        level=(str(level_val).upper() if isinstance(level_val, str) and level_val else record.levelname).upper(),
         logger=str(logger_val) if isinstance(logger_val, str) and logger_val else record.name,
         module=module_val if isinstance(module_val, str) and module_val else record.module,
         function=func_val if isinstance(func_val, str) and func_val else record.funcName,

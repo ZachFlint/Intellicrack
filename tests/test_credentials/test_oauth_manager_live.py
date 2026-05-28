@@ -264,6 +264,7 @@ async def _drive_oauth_callback(
     Returns:
         oauth_module.OAuthToken: Token returned by ``handle_callback``.
     """
+
     def fire_callback() -> None:
         query = urlencode({"code": "auth-code-xyz", "state": oauth_state.state})
         with httpx.Client(timeout=5.0) as client:

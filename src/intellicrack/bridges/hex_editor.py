@@ -403,10 +403,8 @@ def _is_standard_crc32(
 class _SandboxCopyProgress:
     """Tracks ``save_to_sandbox`` progress so cleanup observes the latest state.
 
-    Stores the latest sandbox ``instance_id`` returned by ``create`` so
-    the caller's ``finally`` block can tear it down on partial failure,
-    plus a ``copy_succeeded`` flag flipped to True once the copy step
-    finishes without error.
+    Stores the latest sandbox ``instance_id`` returned by ``create`` so the caller's ``finally`` block can tear it down on partial failure,
+    plus a ``copy_succeeded`` flag flipped to True once the copy step finishes without error.
     """
 
     __slots__ = ("copy_succeeded", "instance_id")
@@ -2132,7 +2130,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             data = self._read_all_doc_bytes()
             return _pefile_mod.PE(data=data, fast_load=True)
         except (AttributeError, ValueError, OSError):
-            _logger.exception(error_event)
+            _logger.exception("pe_open_for_inspection_failed", source_event=error_event)
             return None
 
     @staticmethod
@@ -2200,7 +2198,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         if original_path is None:
             return self._read_all_doc_bytes()
-        _logger.debug("resolve_patch_source_reading", path=original_path)
+        _logger.info("resolve_patch_source_reading", path=original_path)
         return await asyncio.to_thread(Path(original_path).read_bytes)
 
     @staticmethod
@@ -2533,6 +2531,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         document = self.document
         if document is None:
+            _logger.error(
+                "native_transform_document_closed",
+                native_op=native_op,
+                operation=operation,
+                start=start,
+                length=length,
+            )
             msg = "document closed before native transform invocation"
             raise RuntimeError(msg)
         result_raw = document.transform_data(native_op, start, length, params)
@@ -4705,9 +4710,9 @@ def _generate_pdf(
     pdf.set_font("Courier", "", 6)
 
     _pdf_render_hex_rows(pdf, data, start_offset, bytes_per_row, bookmark_map, col_widths)
-    _logger.debug("generate_pdf_writing", path=output_path, byte_count=len(data))
+    _logger.info("generate_pdf_writing", path=output_path, byte_count=len(data))
     pdf.output(output_path)
-    _logger.debug("generate_pdf_written", path=output_path)
+    _logger.info("generate_pdf_written", path=output_path)
     return output_path
 
 
@@ -5078,7 +5083,7 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".bin")
             os.close(tmp_fd)
             self.document.save(tmp_path)
-            _logger.debug("save_to_sandbox_temp_file_written", path=tmp_path)
+            _logger.info("save_to_sandbox_temp_file_written", path=tmp_path)
             file_path_str = tmp_path
 
         create_fn = getattr(sandbox_bridge, "create", None)
@@ -9247,8 +9252,6 @@ class HexEditorScriptMixin(HexEditorScanMixin):
 class HexEditorBridge(HexEditorScriptMixin):
     """Bridge for the hex editor panel.
 
-    Composed from the ``_HexEditorBridgeBase`` core class together with
-    topical mixin classes that inherit linearly so cross-references
-    resolve through normal MRO. Each mixin groups one surface area so no
-    single class definition exceeds the public method limit.
+    Composed from the ``_HexEditorBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit.
     """

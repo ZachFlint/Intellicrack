@@ -298,7 +298,7 @@ class ToolInstallWorker(QThread):
 
             self.progress.emit(100)
             success = True
-            _logger.info("tool_install_completed", tool_id=self._tool_id, name=name)
+            _logger.info("tool_install_completed", tool_id=self._tool_id, tool_name=name)
             self.install_finished.emit(success, f"{name} installed successfully")
 
     def _resolve_download_url(self, tool_info: dict[str, str]) -> tuple[str | None, str]:
@@ -1265,7 +1265,7 @@ class ToolSettingsWidget(QFrame):
             "tool_install_finished",
             tool_id=self._tool_id,
             success=success,
-            message=message,
+            status_message=message,
         )
         self._install_btn.setEnabled(True)
         self._install_progress.setVisible(False)

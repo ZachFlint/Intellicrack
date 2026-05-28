@@ -434,8 +434,8 @@ class XPUStatusDialog(QDialog):
     def _refresh_requirements(self) -> None:
         """Launch the Windows requirements check on a background thread.
 
-        The previous synchronous implementation spawned three PowerShell subprocesses on the GUI thread, freezing the dialog for ~20 seconds.
-        Work is now dispatched to :class:`_RequirementsCheckWorker`; results are delivered via :meth:`_on_requirements_ready` /
+        The previous synchronous implementation spawned three PowerShell subprocesses on the GUI thread, freezing the dialog for ~20
+        seconds. Work is now dispatched to :class:`_RequirementsCheckWorker`; results are delivered via :meth:`_on_requirements_ready` /
         :meth:`_on_requirements_failed`. Concurrent invocations (e.g., rapid Refresh clicks) are debounced by checking
         :meth:`QThread.isRunning`.
         """
@@ -512,7 +512,7 @@ class XPUStatusDialog(QDialog):
                 worker.check_failed.disconnect(self._on_requirements_failed)
                 worker.finished.disconnect(self._on_requirements_worker_finished)
             except TypeError:
-                _logger.debug("requirements_worker_signals_already_disconnected")
+                _logger.debug("requirements_worker_signals_already_disconnected", exc_info=True)
             if not worker.wait(_REQUIREMENTS_WORKER_WAIT_MS):
                 _logger.warning("requirements_worker_did_not_finish", timeout_ms=_REQUIREMENTS_WORKER_WAIT_MS)
         super().closeEvent(a0)

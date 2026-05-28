@@ -516,7 +516,8 @@ class PreferencesDialog(QDialog):
             QListWidget::item:hover:!selected {
                 background-color: #2a2d2e;
             }
-        """,
+        """
+           ,
         )
 
         categories = ["General", "Appearance", "Session", "Logging"]
@@ -584,7 +585,8 @@ class PreferencesDialog(QDialog):
             QPushButton:pressed {
                 background-color: #0d5a8c;
             }
-        """,
+        """
+           ,
         )
 
         general_widget = GeneralSettingsWidget(self._config)
@@ -612,7 +614,8 @@ class PreferencesDialog(QDialog):
                 background-color: #2d2d30;
                 border-top: 1px solid #3e3e42;
             }
-        """,
+        """
+           ,
         )
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(16, 12, 16, 12)

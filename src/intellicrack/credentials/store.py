@@ -686,7 +686,7 @@ class CredentialStore:
             _logger.debug("credentials_get_source_completed", provider=provider.value, source="env_file")
             return CredentialSource.ENV_FILE
 
-        _logger.debug("credentials_get_source_completed", provider=provider.value, source=None)
+        _logger.debug("credentials_get_source_completed", provider=provider.value, source="unset")
         return None
 
 
