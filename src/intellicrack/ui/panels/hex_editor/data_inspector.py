@@ -414,7 +414,6 @@ class DataInspectorMixin:
                 encoding=encoding,
                 text_length=len(text),
                 error_type=type(exc).__name__,
-                error=str(exc),
             )
             self._encode_output.setText(f"Error: {exc}")
             return

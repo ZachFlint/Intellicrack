@@ -460,7 +460,6 @@ class NamedPipeClient:
                 self._read_failure = exc
                 _logger.exception(
                     "pipe_reader_failed",
-                    error=str(exc),
                     error_type=type(exc).__name__,
                 )
                 self._fail_pending(exc)

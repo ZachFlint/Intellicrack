@@ -219,6 +219,13 @@ class TypeRegistry:
                 primitive type.
         """
         if BuiltinTypes.is_reserved_name(decl.name):
+            _logger.error(
+                "hexpat_struct_redeclares_builtin",
+                name=decl.name,
+                namespace=namespace,
+                line=decl.line,
+                column=decl.column,
+            )
             msg = f"cannot redeclare built-in type '{decl.name}'"
             raise HexPatTypeError(msg, decl.line, decl.column)
         info = StructTypeInfo(name=decl.name, parent=decl.parent, decl=decl)

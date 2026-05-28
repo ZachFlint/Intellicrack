@@ -60,7 +60,6 @@ This tuple is the union of error types currently raised by hex-editor mixin call
 via the ``exceptions`` constructor argument.
 """
 
-
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
 
@@ -77,14 +76,11 @@ _LOOP_READY_TIMEOUT: float = 2.0
 class _PendingTaskTracker:
     """Module-level registry of in-flight tasks scheduled on the main loop.
 
-    ``run_bridge_coroutine`` will, when it detects an already-running event loop
-    on the calling thread, schedule the coroutine as a fire-and-forget task on
-    that loop. When the main loop is the Qt application's asyncio loop, it can
-    be blocked inside ``app.exec()`` for the lifetime of the GUI, leaving every
-    scheduled task pending until application teardown. The tracker keeps a
-    reference to each such task so shutdown can cancel them cleanly before the
-    loop is closed, preventing ``Task was destroyed but it is pending!``
-    warnings from cascading through the logging pipeline.
+    ``run_bridge_coroutine`` will, when it detects an already-running event loop on the calling thread, schedule the coroutine as a fire-
+    and-forget task on that loop. When the main loop is the Qt application's asyncio loop, it can be blocked inside ``app.exec()`` for the
+    lifetime of the GUI, leaving every scheduled task pending until application teardown. The tracker keeps a reference to each such task so
+    shutdown can cancel them cleanly before the loop is closed, preventing ``Task was destroyed but it is pending!`` warnings from cascading
+    through the logging pipeline.
     """
 
     tasks: ClassVar[set[asyncio.Task[object]]] = set()

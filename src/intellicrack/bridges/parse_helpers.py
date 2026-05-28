@@ -149,6 +149,6 @@ def safe_call[T, D](
             "safe_call_failed",
             context=context,
             exc_type=type(exc).__name__,
-            error=str(exc),
+            exc_info=True,
         )
         return default

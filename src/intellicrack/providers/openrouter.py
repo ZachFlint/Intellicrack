@@ -218,6 +218,10 @@ class OpenRouterProvider(LLMProviderBase):
                 initialised.
         """
         if self.client is None:
+            self._logger.error(
+                "openrouter_fetch_models_client_not_initialised",
+                provider="openrouter",
+            )
             raise ProviderError(_ERR_NOT_CONNECTED)
         response = await self.client.get(f"{self.BASE_URL}/models")
         response.raise_for_status()

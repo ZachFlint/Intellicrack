@@ -1440,6 +1440,11 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
+        self._logger.debug(
+            "ollama_native_stream_chunks_started",
+            provider="ollama",
+            endpoint=endpoint,
+        )
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",
@@ -1622,6 +1627,7 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
+
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",
@@ -1830,7 +1836,17 @@ class OllamaProvider(LLMProviderBase):
             ProviderError: If the local Ollama client is unavailable.
         """
         if self._local_client is None:
+            self._logger.error(
+                "ollama_pull_progress_local_client_unavailable",
+                provider="ollama",
+                model=actual_model,
+            )
             raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE, provider_name="ollama")
+        self._logger.info(
+            "ollama_pull_progress_stream_started",
+            provider="ollama",
+            model=actual_model,
+        )
         async with self._local_client.stream(
             "POST",
             f"{self._local_url}/api/pull",

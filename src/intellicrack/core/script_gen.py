@@ -1405,7 +1405,7 @@ class ScriptGenerator:
             Path: Absolute path the caller can pass to
             :meth:`Script.save` or :meth:`ScriptManager.save_script`.
         """
-        _logger.debug("script_prepare_output_path", name=name, language=language.value, output_dir=str(self.output_dir))
+        _logger.debug("script_prepare_output_path", script_name=name, language=language.value, output_dir=str(self.output_dir))
         self.output_dir.mkdir(parents=True, exist_ok=True)
         extensions = {
             ScriptLanguage.JAVASCRIPT: ".js",

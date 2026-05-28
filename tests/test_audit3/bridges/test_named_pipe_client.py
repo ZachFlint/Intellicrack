@@ -520,6 +520,7 @@ async def _exchange_and_assert_handler_error(
     Returns:
         dict[str, Any]: Decoded response returned by ``send_command``.
     """
+
     def respond(frame: dict[str, Any]) -> list[dict[str, Any]]:
         """Build event-then-response replies for a single client frame.
 

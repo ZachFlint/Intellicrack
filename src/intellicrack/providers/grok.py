@@ -274,6 +274,10 @@ class GrokProvider(LLMProviderBase):
             ProviderError: If the Grok client has not been initialised.
         """
         if self.client is None:
+            self._logger.error(
+                "grok_fetch_models_client_not_initialised",
+                provider="grok",
+            )
             raise ProviderError(_ERR_NOT_CONNECTED)
         response = await self.client.models.list()
         models: list[ModelInfo] = []

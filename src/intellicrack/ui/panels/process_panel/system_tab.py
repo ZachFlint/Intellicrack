@@ -135,7 +135,7 @@ class SystemTab(QWidget):
             log_event: Structured log event name identifying the failing action.
         """
         message = str(exc)
-        _logger.warning(log_event, error=message)
+        _logger.warning("system_tab_bridge_error", log_event=log_event, error=message, title=title)
         QMessageBox.warning(self, title, message)
 
     def _setup_ui(self) -> None:
@@ -1012,6 +1012,7 @@ class SystemTab(QWidget):
                         "raw_query_hex_parse_failed",
                         length=len(result),
                         info_class=info_class,
+                        exc_info=True,
                     )
                     self._raw_output.setPlainText(result)
                     return

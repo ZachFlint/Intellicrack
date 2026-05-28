@@ -656,7 +656,9 @@ class SearchMixin:
 
         try:
             min_val, max_val = self._parse_numeric_search_bounds(
-                params.value_text, params.max_text, is_float=fmt_info.is_float,
+                params.value_text,
+                params.max_text,
+                is_float=fmt_info.is_float,
             )
         except ValueError as exc:
             _logger.warning(

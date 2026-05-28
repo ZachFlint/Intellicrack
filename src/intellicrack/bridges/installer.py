@@ -1138,7 +1138,7 @@ class ToolInstaller:
             install_path = await self._extract_archive(download_path, tool)
         finally:
             await asyncio.to_thread(download_path.unlink, missing_ok=True)
-            _logger.debug("download_temp_unlinked", path=str(download_path))
+            _logger.info("download_temp_unlinked", path=str(download_path))
 
         if install_path is None:
             return InstallResult(
@@ -1457,7 +1457,7 @@ class ToolInstaller:
         finally:
             if not success:
                 await asyncio.to_thread(temp_path.unlink, missing_ok=True)
-                _logger.debug("download_partial_removed", path=str(temp_path))
+                _logger.info("download_partial_removed", path=str(temp_path))
 
         return temp_path
 
@@ -1481,6 +1481,7 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
+
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))
@@ -1986,8 +1987,8 @@ def _cmake_timeout(env_var: str, default_s: int) -> int:
         return default_s
     try:
         value = int(raw)
-    except ValueError as exc:
-        _logger.exception("cmake_timeout_env_invalid", env_var=env_var, value=raw, error=str(exc))
+    except ValueError:
+        _logger.exception("cmake_timeout_env_invalid", env_var=env_var, value=raw)
         return default_s
     return max(value, default_s)
 

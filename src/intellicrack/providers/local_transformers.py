@@ -1213,6 +1213,11 @@ class LocalTransformersProvider(LLMProviderBase):
             ImportError: If ``torch`` is not installed.
         """
         if _torch is None:
+            self._logger.error(
+                "local_transformers_generation_torch_unavailable",
+                provider="local_transformers",
+                max_tokens=max_tokens,
+            )
             raise ImportError(_MSG_TORCH_REQUIRED)
         for _ in range(max_tokens):
             if self._cancel_requested:

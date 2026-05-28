@@ -548,7 +548,9 @@ class MainWindow(QMainWindow):
                 background-color: #007acc;
                 color: white;
             }
-        """,
+        """
+
+           ,
         )
 
     @property
@@ -1457,7 +1459,7 @@ class MainWindow(QMainWindow):
         Args:
             path: Path to the binary.
         """
-        _logger.info("binary_loaded", path=str(path), name=path.name)
+        _logger.info("binary_loaded", path=str(path), binary_name=path.name)
         self.current_binary = path
         self._binary_label.setText(f"Binary: {path.name}")
         for button in self._binary_dependent_buttons:
@@ -1524,7 +1526,7 @@ class MainWindow(QMainWindow):
             "session_create_requested",
             provider=str(provider),
             model=model,
-            name=session_name or None,
+            session_name=session_name or None,
         )
         self._chat_panel.clear_messages()
         self.tool_panel.clear_all()
@@ -2987,7 +2989,7 @@ class MainWindow(QMainWindow):
         if self.current_binary is None:
             self._show_no_binary_warning("debug")
             return
-        _logger.info("debug_binary_requested", binary=str(self.current_binary))
+        _logger.info("binary_debug_requested", binary=str(self.current_binary))
         if not self.tool_panel.open_in_x64dbg(self.current_binary):
             self._show_tool_error("x64dbg", "Failed to open binary in x64dbg")
 

@@ -1232,12 +1232,9 @@ class _FridaBridgeBase(InstrumentationBridge):
     async def _release_frida_resources(self) -> None:
         """Release every Frida-side resource owned by this bridge.
 
-        Runs the individual cleanup phases (stalker scripts, child
-        gating, file monitors, call probes, exception handler, alloc
-        scripts, regular scripts, session detach, spawn kill, in-memory
-        bookkeeping) in order. Each phase wraps its own
-        exception-tolerant logic so a failure in one phase does not
-        prevent later phases from running.
+        Runs the individual cleanup phases (stalker scripts, child gating, file monitors, call probes, exception handler, alloc scripts,
+        regular scripts, session detach, spawn kill, in-memory bookkeeping) in order. Each phase wraps its own exception-tolerant logic so a
+        failure in one phase does not prevent later phases from running.
         """
         await self._shutdown_stalker_scripts()
         await self._shutdown_child_gating()
@@ -2649,7 +2646,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         loop = getattr(event, "_loop", None)
         if loop is None:
             try:
-                loop = asyncio.get_event_loop_policy().get_event_loop()
+                loop = asyncio.get_running_loop()
             except RuntimeError:
                 event.set()
                 return
@@ -6585,7 +6582,7 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
         result = await self._execute_script_and_wait(script_code)
         if "error" in result or result.get("type") == "file_error":
             raise ToolError(_ERR_FILE_FAILED)
-        _logger.debug("frida_file_write_target_completed", path=path, bytes_written=len(byte_values))
+        _logger.info("frida_file_write_target_completed", path=path, bytes_written=len(byte_values))
         return True
 
     async def sqlite_open(self, path: str) -> str:
@@ -6860,7 +6857,7 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
         Raises:
             ToolError: If not attached or operation fails.
         """
-        _logger.debug("frida_cloak_remove_thread_started", thread_id=thread_id)
+        _logger.info("frida_cloak_remove_thread_started", thread_id=thread_id)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6921,7 +6918,7 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
         Raises:
             ToolError: If not attached or operation fails.
         """
-        _logger.debug("frida_cloak_remove_range_started", address=hex(address), size=size)
+        _logger.info("frida_cloak_remove_range_started", address=hex(address), size=size)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 

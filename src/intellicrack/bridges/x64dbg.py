@@ -2135,6 +2135,12 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 the residual case where ``cleanup_errors`` contains an
                 exception class outside the typed-handler tuples).
         """
+        _logger.info(
+            "x64dbg_shutdown_started",
+            bridge="x64dbg",
+            attached_pid=self._attached_pid,
+            has_process=self._process is not None,
+        )
         cleanup_errors: list[BaseException] = []
 
         try:
@@ -6782,13 +6788,10 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
 class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     """Tracing, patching, navigation, database, threads, PEB/TEB, watches, animation.
 
-    Hosts the trace controller, patch lifecycle (assemble/nop/save/
-    restore/export), conditional tracing and step counting, cross-
-    reference and string/intermodular discovery, expression evaluator,
-    control-flow graph, database save/load/clear, thread switching
-    and naming, SEH/PEB/TEB readers, PE directory inspection, watch
-    expressions, logging/DLL/anti-debug breakpoint variants, and the
-    animate start/stop loops.
+    Hosts the trace controller, patch lifecycle (assemble/nop/save/ restore/export), conditional tracing and step counting, cross- reference
+    and string/intermodular discovery, expression evaluator, control-flow graph, database save/load/clear, thread switching and naming,
+    SEH/PEB/TEB readers, PE directory inspection, watch expressions, logging/DLL/anti-debug breakpoint variants, and the animate start/stop
+    loops.
     """
 
     async def trace_start(
@@ -9104,8 +9107,8 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         class LUID(ctypes.Structure):
             """Windows ``LUID`` structure used for privilege lookup.
 
-            A locally unique identifier is a 64-bit value that the OS assigns to privileges and other securable objects.
-            Declared inline so it can be passed by reference into ``LookupPrivilegeNameW``.
+            A locally unique identifier is a 64-bit value that the OS assigns to privileges and other securable objects. Declared inline so
+            it can be passed by reference into ``LookupPrivilegeNameW``.
             """
 
             _fields_: ClassVar = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
@@ -9175,8 +9178,8 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         class TokenPrivileges(ctypes.Structure):
             """Windows ``TOKEN_PRIVILEGES`` payload for one privilege.
 
-            Simplified single-entry variant of the standard Windows structure, which is all ``AdjustTokenPrivileges`` needs when
-            toggling a single privilege at a time.
+            Simplified single-entry variant of the standard Windows structure, which is all ``AdjustTokenPrivileges`` needs when toggling a
+            single privilege at a time.
             """
 
             _fields_: ClassVar = [
@@ -9255,10 +9258,7 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
 class X64DbgBridge(_X64DbgScriptingMixin):
     """Bridge for x64dbg Windows debugger.
 
-    Composed from the ``_X64DbgBridgeBase`` core class together with
-    topical mixin classes that inherit linearly so cross-references
-    resolve through normal MRO. Each mixin groups one surface area so no
-    single class definition exceeds the public method limit. The public
-    interface, attribute set, and behavior are identical to the
-    pre-refactor monolithic class.
+    Composed from the ``_X64DbgBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
+    through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit. The public
+    interface, attribute set, and behavior are identical to the pre-refactor monolithic class.
     """

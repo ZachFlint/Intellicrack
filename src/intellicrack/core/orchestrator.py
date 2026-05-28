@@ -521,7 +521,6 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
-
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -1121,6 +1120,10 @@ class Orchestrator:
                 helper is invoked.
         """
         if self._current_session is None:
+            _logger.error(
+                "orchestrator_run_user_turn_no_active_session",
+                state=self._state,
+            )
             error_message = "No active session"
             raise RuntimeError(error_message)
         loop_succeeded = False

@@ -257,7 +257,8 @@ class ChatInput(QFrame):
             QTextEdit:focus {
                 border: 1px solid #007acc;
             }
-        """,
+        """
+           ,
         )
         layout.addWidget(self._text_edit)
 
@@ -282,7 +283,8 @@ class ChatInput(QFrame):
                 background-color: #3e3e42;
                 color: #888888;
             }
-        """,
+        """
+           ,
         )
         self._send_button.clicked.connect(self._on_send)
         layout.addWidget(self._send_button)
@@ -293,7 +295,9 @@ class ChatInput(QFrame):
                 background-color: #252526;
                 border-top: 1px solid #3e3e42;
             }
-        """,
+        """
+
+           ,
         )
 
     def _on_send(self) -> None:
@@ -365,7 +369,8 @@ class ChatPanel(QFrame):
                 background-color: #2d2d30;
                 border-bottom: 1px solid #3e3e42;
             }
-        """,
+        """
+           ,
         )
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)

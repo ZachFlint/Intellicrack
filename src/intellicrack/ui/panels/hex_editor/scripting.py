@@ -1057,7 +1057,7 @@ def _resolve_user_print_path(
 
     if name not in opened:
         resolved.parent.mkdir(parents=True, exist_ok=True)
-        _logger.debug("scripting_user_print_file_open", name=name, path=str(resolved))
+        _logger.debug("scripting_user_print_file_open", file_name=name, path=str(resolved))
         opened[name] = resolved.open("w", encoding="utf-8")
     return resolved
 

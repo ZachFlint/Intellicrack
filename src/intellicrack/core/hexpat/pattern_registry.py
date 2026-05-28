@@ -210,13 +210,13 @@ class PatternRegistry:
         Raises:
             OSError: If the file cannot be read.
         """
-        _logger.debug("pattern_load_source_started", name=metadata.name, path=str(metadata.file_path))
+        _logger.debug("pattern_load_source_started", pattern_name=metadata.name, path=str(metadata.file_path))
         try:
             source = metadata.file_path.read_text(encoding="utf-8", errors="replace")
         except OSError:
-            _logger.exception("pattern_load_source_failed", name=metadata.name, path=str(metadata.file_path))
+            _logger.exception("pattern_load_source_failed", pattern_name=metadata.name, path=str(metadata.file_path))
             raise
-        _logger.debug("pattern_load_source_completed", name=metadata.name, source_length=len(source))
+        _logger.debug("pattern_load_source_completed", pattern_name=metadata.name, source_length=len(source))
         return source
 
     @staticmethod

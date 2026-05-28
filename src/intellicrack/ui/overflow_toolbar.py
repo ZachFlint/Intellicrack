@@ -57,9 +57,9 @@ class OverflowToolBar(QToolBar):
     """:class:`QToolBar` that exposes hidden widget actions through a popup.
 
     The toolbar installs itself onto Qt's extension button once it is created by the layout, replaces the button's attached menu with a
-    custom :class:`QMenu` populated on demand, and intercepts left-button mouse presses so Qt's built-in (empty) popup never opens.
-    Each menu entry proxies activation back to the corresponding clipped widget (or directly triggers the underlying :class:`QAction`
-    for non-widget actions), so users can reach every Tools-row button even when the window is too narrow to display all of them.
+    custom :class:`QMenu` populated on demand, and intercepts left-button mouse presses so Qt's built-in (empty) popup never opens. Each
+    menu entry proxies activation back to the corresponding clipped widget (or directly triggers the underlying :class:`QAction` for non-
+    widget actions), so users can reach every Tools-row button even when the window is too narrow to display all of them.
     """
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
@@ -132,9 +132,9 @@ class OverflowToolBar(QToolBar):
     def _hook_extension_button(self) -> None:
         """Locate and rewire Qt's extension button when it becomes available.
 
-        Replaces the menu Qt's layout attached to the button with the overflow menu, installs the press/key event filter, and disables
-        the disconnect of any internal slots. The replacement of :meth:`QToolButton.setMenu` ensures that even when Qt's
-        ``InstantPopup`` path runs ahead of the event filter, it still shows the populated overflow menu.
+        Replaces the menu Qt's layout attached to the button with the overflow menu, installs the press/key event filter, and disables the
+        disconnect of any internal slots. The replacement of :meth:`QToolButton.setMenu` ensures that even when Qt's ``InstantPopup`` path
+        runs ahead of the event filter, it still shows the populated overflow menu.
         """
         if self._hooked:
             return
@@ -153,10 +153,8 @@ class OverflowToolBar(QToolBar):
     def _show_overflow_menu(self) -> None:
         """Pop up the overflow menu beneath Qt's extension button.
 
-        Uses :meth:`QMenu.popup` rather than :meth:`QMenu.exec` so the call
-        does not run a modal event loop; menu activations are routed through
-        action ``triggered`` signal handlers, which are wired before the menu
-        is shown via the ``aboutToShow`` connection.
+        Uses :meth:`QMenu.popup` rather than :meth:`QMenu.exec` so the call does not run a modal event loop; menu activations are routed
+        through action ``triggered`` signal handlers, which are wired before the menu is shown via the ``aboutToShow`` connection.
         """
         button = self._ext_button
         if button is None:
@@ -198,10 +196,8 @@ class OverflowToolBar(QToolBar):
     def populate_overflow_menu(self) -> None:
         """Public entry point that rebuilds the overflow menu on demand.
 
-        Delegates to :meth:`_populate_overflow_menu`. Provided so callers
-        can pre-populate the menu (for example, to enumerate clipped
-        actions before triggering them) without invoking the private
-        slot directly.
+        Delegates to :meth:`_populate_overflow_menu`. Provided so callers can pre-populate the menu (for example, to enumerate clipped
+        actions before triggering them) without invoking the private slot directly.
         """
         self._populate_overflow_menu()
 

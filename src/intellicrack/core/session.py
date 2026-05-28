@@ -184,7 +184,7 @@ class Session:
         """
         self.patches.append(patch)
         self.updated_at = datetime.now(tz=UTC)
-        _logger.debug("session_patch_added", session_id=self.id, patch_count=len(self.patches))
+        _logger.info("session_patch_added", session_id=self.id, patch_count=len(self.patches))
 
     def add_bridge_analysis(self, binary_name: str, analysis: BridgeAnalysisSummary) -> None:
         """Add bridge analysis summary for a binary.
@@ -236,7 +236,7 @@ class Session:
         if tool in self.tool_states:
             del self.tool_states[tool]
             self.updated_at = datetime.now(tz=UTC)
-            _logger.debug("session_tool_state_cleared", session_id=self.id, tool=tool.value)
+            _logger.info("session_tool_state_cleared", session_id=self.id, tool=tool.value)
             return True
         return False
 
@@ -276,7 +276,7 @@ class Session:
         if normalised in self.tags:
             self.tags.remove(normalised)
             self.updated_at = datetime.now(tz=UTC)
-            _logger.debug("session_tag_removed", session_id=self.id, tag=normalised)
+            _logger.info("session_tag_removed", session_id=self.id, tag=normalised)
             return True
         return False
 
@@ -334,18 +334,21 @@ class SessionStore:
                 NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, active_binary_index INTEGER DEFAULT -1, notes TEXT DEFAULT '',
 
                 data TEXT NOT NULL )
-                """,
+                """
+                   ,
             )
 
             conn.execute(
-                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)""",
+                """CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions (updated_at DESC)"""
+                                                                                                   ,
             )
 
             conn.execute(
                 """CREATE TABLE IF NOT EXISTS session_tags ( session_id TEXT NOT NULL, tag TEXT NOT NULL, PRIMARY KEY (session_id, tag),
 
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE )
-                """,
+                """
+                   ,
             )
 
             _logger.debug("database_schema_initialized", db_path=str(self.db_path))
@@ -381,7 +384,8 @@ class SessionStore:
             conn.execute(
                 """INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, provider, model, active_binary_index, notes, data)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                """
+                   ,
                 (
                     session.id,
                     session.name,
@@ -530,7 +534,8 @@ class SessionStore:
         _logger.debug("session_list_all_query", limit=limit)
         with self._connection() as conn:
             rows = conn.execute(
-                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?""",
+                """SELECT id, name, created_at, updated_at, provider, model, data FROM sessions ORDER BY updated_at DESC LIMIT ?"""
+                                                                                                                                   ,
                 (limit,),
             ).fetchall()
 
@@ -1103,6 +1108,7 @@ class SessionManager:
         Args:
             session: Session to update.
         """
+
         async with self._db_lock:
             await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)

@@ -4,8 +4,7 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Live log viewer package.
 
-Provides a standalone :class:`QMainWindow` (``LogViewerWindow``) that
-subscribes to the structlog stream via :class:`QtSignalingHandler` and
+Provides a standalone :class:`QMainWindow` (``LogViewerWindow``) that subscribes to the structlog stream via :class:`QtSignalingHandler` and
 backfills history from the on-disk JSON-Lines log file.
 """
 

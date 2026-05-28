@@ -1291,10 +1291,8 @@ class _ProcessBridgeBase(ToolBridgeBase):
     def _initialize_impl(self) -> None:
         """Load all required DLLs and elevate debug privilege.
 
-        Loads kernel32, psapi, ntdll, advapi32, user32, and dbghelp DLL
-        references, attempts to enable ``SeDebugPrivilege`` on the current
-        process token, and updates :attr:`state` to reflect a fully
-        initialized bridge.
+        Loads kernel32, psapi, ntdll, advapi32, user32, and dbghelp DLL references, attempts to enable ``SeDebugPrivilege`` on the current
+        process token, and updates :attr:`state` to reflect a fully initialized bridge.
         """
         self._kernel32 = ctypes.windll.kernel32
         self._psapi = ctypes.windll.psapi
@@ -1319,10 +1317,8 @@ class _ProcessBridgeBase(ToolBridgeBase):
     def _load_optional_dlls(self) -> None:
         """Load optional Win32 DLL references used by the bridge.
 
-        Loads ntdll, advapi32, user32, and dbghelp.  Each is attempted in
-        isolation so that the failure of one DLL does not prevent the
-        others from being loaded.  Failures are logged at exception
-        level via the module logger.
+        Loads ntdll, advapi32, user32, and dbghelp.  Each is attempted in isolation so that the failure of one DLL does not prevent the
+        others from being loaded.  Failures are logged at exception level via the module logger.
         """
         try:
             self._ntdll = get_ntdll()
@@ -1496,7 +1492,7 @@ class _ProcessBridgeBase(ToolBridgeBase):
         Returns:
             bool: True if closed.
         """
-        _logger.debug("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
+        _logger.info("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
         if self._process_handle is not None and self._kernel32 is not None:
             self._kernel32.CloseHandle(self._process_handle)
             self._process_handle = None
@@ -1895,12 +1891,9 @@ class _ProcessBridgeBase(ToolBridgeBase):
 class _ProcessBridgeListMixin(_ProcessBridgeBase):
     """Process listing, lifecycle, and memory operations for ProcessBridge.
 
-    Hosts the high-level process enumeration entry points (``list``,
-    ``list_processes`` and their detailed counterparts), per-process
-    introspection (``open_process``, ``terminate``, ``suspend``,
-    ``resume``), architecture detection, the memory read/write/allocate
-    surface, the memory map walker, and the pattern scanner, together
-    with the private helpers each of those entry points dispatches into.
+    Hosts the high-level process enumeration entry points (``list``, ``list_processes`` and their detailed counterparts), per-process
+    introspection (``open_process``, ``terminate``, ``suspend``, ``resume``), architecture detection, the memory read/write/allocate
+    surface, the memory map walker, and the pattern scanner, together with the private helpers each of those entry points dispatches into.
     """
 
     # ------------------------------------------------------------------
@@ -5796,6 +5789,13 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
                 fails.
         """
         if self._dbghelp is None or self._process_handle is None:
+            _logger.error(
+                "stack_walk_dbghelp_unavailable",
+                bridge="process",
+                pid=self._attached_pid,
+                has_dbghelp=self._dbghelp is not None,
+                has_process_handle=self._process_handle is not None,
+            )
             raise ToolError(_ERR_DBGHELP_NA)
         invade_process = True
         if not self._dbghelp.SymInitialize(self._process_handle, None, invade_process):
@@ -6268,10 +6268,8 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
 class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
     """High-level enumeration helpers exposing named-API aliases.
 
-    Groups the ``enumerate_*`` aliases that delegate into the lower-
-    level enumeration primitives on the listing and privileges mixins,
-    together with token duplication, privilege removal, registry value
-    reads, kernel debugger probing, and mitigation policy aliases.
+    Groups the ``enumerate_*`` aliases that delegate into the lower- level enumeration primitives on the listing and privileges mixins,
+    together with token duplication, privilege removal, registry value reads, kernel debugger probing, and mitigation policy aliases.
     """
 
     # ------------------------------------------------------------------
@@ -7228,11 +7226,9 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
 class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
     """Process I/O: environment, pipes, COM, .NET, devices, jobs, GUI, registry, sections.
 
-    Hosts the heterogeneous I/O and metadata surface: environment
-    block reading, named pipe lifecycle, COM server enumeration, .NET
-    CLR detection, driver communication via DeviceIoControl, job
-    object querying, GDI/User resource counters, registry value
-    access, and section object create/map/unmap.
+    Hosts the heterogeneous I/O and metadata surface: environment block reading, named pipe lifecycle, COM server enumeration, .NET CLR
+    detection, driver communication via DeviceIoControl, job object querying, GDI/User resource counters, registry value access, and section
+    object create/map/unmap.
     """
 
     # ------------------------------------------------------------------
@@ -8951,10 +8947,8 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
 class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
     """TLS, fiber, NtQuerySystemInformation, and shared helper utilities.
 
-    Hosts the remaining low-level runtime introspection entry points
-    that read per-thread TLS slots, fiber storage, and global system
-    information through ``NtQuerySystemInformation``, alongside the
-    bridge-wide private helpers used across multiple mixins.
+    Hosts the remaining low-level runtime introspection entry points that read per-thread TLS slots, fiber storage, and global system
+    information through ``NtQuerySystemInformation``, alongside the bridge-wide private helpers used across multiple mixins.
     """
 
     # ------------------------------------------------------------------
@@ -9164,10 +9158,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
 class ProcessBridge(_ProcessBridgeRuntimeMixin):
     """Bridge for Windows process control.
 
-    Composed from the ``_ProcessBridgeBase`` core class together with
-    topical mixin classes that inherit linearly so cross-references
-    resolve through normal MRO. Each mixin groups one surface area so no
-    single class definition exceeds the public method limit. The public
-    interface, attribute set, and behavior are identical to the
-    pre-refactor monolithic class.
+    Composed from the ``_ProcessBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references
+    resolve through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit. The public
+    interface, attribute set, and behavior are identical to the pre-refactor monolithic class.
     """

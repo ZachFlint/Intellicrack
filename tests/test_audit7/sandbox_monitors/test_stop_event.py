@@ -474,9 +474,7 @@ def _drive_stop_monitors_consumer(
     assert graceful_count >= 1, f"at least one PID must exit gracefully; info={info_contents!r}"
 
     consumer_lifecycle = log_dir / "consumer.lifecycle.log"
-    assert consumer_lifecycle.is_file(), (
-        f"consumer.ps1 finally clause must have written its lifecycle log; dir={list(log_dir.iterdir())!r}"
-    )
+    assert consumer_lifecycle.is_file(), f"consumer.ps1 finally clause must have written its lifecycle log; dir={list(log_dir.iterdir())!r}"
     consumer_text = consumer_lifecycle.read_text(encoding="utf-8", errors="replace")
     assert "|consumer|stopped" in consumer_text, f"consumer finally did not run; contents={consumer_text!r}"
 

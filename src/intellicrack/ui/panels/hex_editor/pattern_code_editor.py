@@ -4,12 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Pattern DSL editor widget with an in-line identifier completer.
 
-Provides :class:`PatternCodeEditor`, a ``QPlainTextEdit`` subclass that hosts
-a ``QCompleter`` backed by :class:`HexPatCompleter`. The popup triggers on
-``Ctrl+Space`` and after the user types two or more identifier characters,
-matching Qt's recommended custom-completer pattern. Tab, Enter, Esc and
-Backtab are forwarded to the popup while it is visible so the user can
-accept or dismiss suggestions without leaving the keyboard.
+Provides :class:`PatternCodeEditor`, a ``QPlainTextEdit`` subclass that hosts a ``QCompleter`` backed by :class:`HexPatCompleter`. The popup
+triggers on ``Ctrl+Space`` and after the user types two or more identifier characters, matching Qt's recommended custom-completer pattern.
+Tab, Enter, Esc and Backtab are forwarded to the popup while it is visible so the user can accept or dismiss suggestions without leaving the
+keyboard.
 """
 
 from __future__ import annotations
@@ -40,10 +38,9 @@ _POPUP_MIN_WIDTH_FUDGE: Final[int] = 20
 class PatternCodeEditor(QPlainTextEdit):
     """QPlainTextEdit subclass with a HexPat identifier completer popup.
 
-    The completer popup activates on ``Ctrl+Space`` regardless of the
-    cursor's current word, and automatically when the user has typed at
-    least :data:`_AUTO_POPUP_PREFIX_LEN` identifier characters. Selection
-    inserts the remainder of the chosen completion into the cursor word.
+    The completer popup activates on ``Ctrl+Space`` regardless of the cursor's current word, and automatically when the user has typed at
+    least :data:`_AUTO_POPUP_PREFIX_LEN` identifier characters. Selection inserts the remainder of the chosen completion into the cursor
+    word.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -129,17 +126,15 @@ class PatternCodeEditor(QPlainTextEdit):
             e.ignore()
             return
 
-        is_shortcut = (
-            (e.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
-            and e.key() == int(Qt.Key.Key_Space)
+        is_shortcut = (e.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier and e.key() == int(
+            Qt.Key.Key_Space
         )
         if not is_shortcut:
             super().keyPressEvent(e)
 
-        ctrl_or_shift = (
-            (e.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
-            or (e.modifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
-        )
+        ctrl_or_shift = (e.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier or (
+            e.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ) == Qt.KeyboardModifier.ShiftModifier
         if not is_shortcut and (ctrl_or_shift and not e.text()):
             return
 
@@ -167,8 +162,6 @@ class PatternCodeEditor(QPlainTextEdit):
         scrollbar = popup.verticalScrollBar()
         scrollbar_width = scrollbar.sizeHint().width() if scrollbar is not None else 0
         rect.setWidth(
-            popup.sizeHintForColumn(0)
-            + scrollbar_width
-            + _POPUP_MIN_WIDTH_FUDGE,
+            popup.sizeHintForColumn(0) + scrollbar_width + _POPUP_MIN_WIDTH_FUDGE,
         )
         self._completer.complete(rect)

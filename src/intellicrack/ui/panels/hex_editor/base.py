@@ -667,7 +667,7 @@ def compute_hash(algo: str, data: bytes) -> str:
     try:
         result = _compute_hash_impl(algo, data)
     except (ValueError, TypeError, OSError, RuntimeError, ImportError) as exc:
-        _logger.exception("compute_hash_failed", algo=algo, error=str(exc))
+        _logger.exception("compute_hash_failed", algo=algo)
         return f"Error: {exc}"
     else:
         return result if result is not None else f"Error: unknown algorithm {algo}"

@@ -2019,7 +2019,7 @@ class BuiltinFunctions:
             _logger.exception("hexpat_file_write_failed", handle=handle, size=len(payload))
             msg = f"std::file::write failed: {exc}"
             raise HexPatRuntimeError(msg) from exc
-        _logger.debug("hexpat_file_write_completed", handle=handle, bytes_written=len(payload))
+        _logger.info("hexpat_file_write_completed", handle=handle, bytes_written=len(payload))
         return PatternValue(value=None)
 
     def _file_seek(self, *args: object) -> PatternValue:

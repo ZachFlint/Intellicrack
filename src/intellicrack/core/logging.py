@@ -491,6 +491,22 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     return cast("structlog.stdlib.BoundLogger", structlog.get_logger(logger_name))
 
 
+def get_stdlib_root_logger() -> logging.Logger:
+    """Return the stdlib ``logging`` root logger for handler installation.
+
+    Centralises the single legitimate use of :func:`logging.getLogger` with
+    no argument: callers that need to add or remove a :class:`logging.Handler`
+    on the root logger (for example, the Qt log viewer's signaling handler)
+    must operate on the stdlib ``Logger`` instance directly because structlog
+    ``BoundLogger`` does not expose handler-management APIs.
+
+    Returns:
+        logging.Logger: The stdlib root logger that owns every installed
+        handler in the process.
+    """
+    return logging.getLogger()
+
+
 def log_tool_call(
     tool_name: str,
     function_name: str,

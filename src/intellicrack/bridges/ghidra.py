@@ -4503,7 +4503,8 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         _logger.debug("undo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.undo() True.""",
+                """currentProgram.undo() True."""
+                                                 ,
             )
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
@@ -4529,7 +4530,8 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         _logger.debug("redo_requested")
         try:
             result = await self._execute_remote(
-                """currentProgram.redo() True.""",
+                """currentProgram.redo() True."""
+                                                 ,
             )
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
@@ -5549,11 +5551,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 class GhidraBridge(_GhidraBridgeAnalysisMixin):
     """Bridge for Ghidra reverse engineering suite.
 
-    Composed from the ``_GhidraBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references
-    resolve through normal MRO. Each mixin groups one surface area (core lifecycle and binary loading, bookmarking and structure editing,
-    call-tree analysis and references) so no single class definition exceeds the public method limit. The final class exposes the full
-    Ghidra feature set including call-tree exploration, decompiler configuration, program metadata, external references, thunk handling,
-    and bookmark/label management.
+    Composed from the ``_GhidraBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
+    through normal MRO. Each mixin groups one surface area (core lifecycle and binary loading, bookmarking and structure editing, call-tree
+    analysis and references) so no single class definition exceeds the public method limit. The final class exposes the full Ghidra feature
+    set including call-tree exploration, decompiler configuration, program metadata, external references, thunk handling, and bookmark/label
+    management.
     """
 
     async def get_function_body(self, address: int) -> dict[str, Any]:

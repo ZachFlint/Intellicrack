@@ -283,6 +283,10 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If the OpenAI client has not been initialised.
         """
         if self.client is None:
+            self._logger.error(
+                "openai_fetch_models_client_not_initialised",
+                provider="openai",
+            )
             raise ProviderError(_ERR_NOT_CONNECTED)
         response = await self.client.models.list()
         models: list[ModelInfo] = []

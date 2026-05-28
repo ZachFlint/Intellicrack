@@ -117,11 +117,7 @@ def test_mouse_press_opens_overflow_menu_with_clipped_buttons(
     captured_labels: list[str] = []
 
     def _on_about_to_show() -> None:
-        captured_labels.extend(
-            action.text()
-            for action in menu.actions()
-            if action.text() and action.text() != "(no hidden items)"
-        )
+        captured_labels.extend(action.text() for action in menu.actions() if action.text() and action.text() != "(no hidden items)")
 
     menu.aboutToShow.connect(_on_about_to_show)
     press_local = QPoint(ext.width() // 2, ext.height() // 2)

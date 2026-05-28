@@ -22,7 +22,6 @@ YARA_MATCH_MIN_FIELDS: Final[int] = 3
 Each entry is expected to be ``(offset, identifier, data)``; entries with fewer than three positional members are skipped.
 """
 
-
 def split_addr_port(value: str) -> tuple[str, int]:
     """Split an ``address:port`` literal into its components.
 

@@ -314,6 +314,15 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Modularize large bridge classes and rename internal modules (`3ede9d9`)
+Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor, Process, x64dbg, and ToolOutputPanel) into linear mixin inheritance chains to comply with public method limits and improve maintainability. Removed leading underscores from internal module filenames across the codebase to standardize import paths. Additionally, introduced a live Qt-based log viewer panel and transitioned GPU ReBAR detection to use authoritative PCI BAR sizes.
+- Rename internal modules across bridges, core, sandbox, and UI to remove leading underscores
+- Split monolithic bridge classes into modular, topical mixin inheritance chains
+- Implement a live log viewer window with a custom Qt signaling handler and tail reader
+- Update Windows GPU ReBAR detection to query PCI BAR sizes via cfgmgr32
+- Add a suite of SVG and PNG asset icons for UI actions and tools
+- Ensure clean task cancellation and log handler detachment during application shutdown
+
 - Decompose complex methods and upgrade dependencies (`fde6d7b`)
 Decomposed several large, high-complexity methods across the bridges, core orchestrator, providers, and UI components into smaller, single-responsibility private helper methods to improve maintainability and satisfy complexity limits. In tandem, upgraded Rust crate dependencies in the hexcore module, updated Node.js and Python dev dependencies, and added a unified update target to the justfile.
 - **Bridges & Core**: Extracted resource cleanup, initialization, and platform-specific API calls into dedicated private methods.
@@ -737,14 +746,13 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Modularize large bridge classes and rename internal modules (``)
-Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor, Process, x64dbg, and ToolOutputPanel) into linear mixin inheritance chains to comply with public method limits and improve maintainability. Removed leading underscores from internal module filenames across the codebase to standardize import paths. Additionally, introduced a live Qt-based log viewer panel and transitioned GPU ReBAR detection to use authoritative PCI BAR sizes.
-- Rename internal modules across bridges, core, sandbox, and UI to remove leading underscores
-- Split monolithic bridge classes into modular, topical mixin inheritance chains
-- Implement a live log viewer window with a custom Qt signaling handler and tail reader
-- Update Windows GPU ReBAR detection to query PCI BAR sizes via cfgmgr32
-- Add a suite of SVG and PNG asset icons for UI actions and tools
-- Ensure clean task cancellation and log handler detachment during application shutdown
+- Clean up logging calls, error handling, and formatting (``)
+Standardize logging calls across bridges, providers, and UI panels by replacing string-interpolated exceptions with structured `exc_info=True` parameters or dedicated error events. Clean up redundant try/except blocks, fix type annotations in the transform pipeline, and format long string literals and comments to adhere to the 120-character line limit.
+* Standardize logging events and remove redundant `str(exc)` formatting in bridges and UI panels
+* Add explicit error log events for unhandled or critical failure paths in providers and orchestrator
+* Refactor `_BINARY_OPS` in `transform_pipeline.py` to use explicit lambda casting to `int`
+* Introduce `get_stdlib_root_logger()` in `core/logging.py` to centralize stdlib root logger access
+* Wrap long lines, comments, and multi-line string literals across multiple modules
 
 
 ### Documentation

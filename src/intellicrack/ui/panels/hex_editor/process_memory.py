@@ -199,7 +199,7 @@ class ProcessMemoryDialog(QDialog):
         _logger.info(
             "win32_open_process_call",
             pid=pid,
-            access=f"0x{access_mask:08X}",
+            access_mask=access_mask,
             inherit_handle=False,
         )
         handle = kernel32.OpenProcess(
@@ -213,7 +213,7 @@ class ProcessMemoryDialog(QDialog):
             _logger.warning(
                 "win32_open_process_failed",
                 pid=pid,
-                access=f"0x{access_mask:08X}",
+                access_mask=access_mask,
             )
             return
 
@@ -251,7 +251,7 @@ class ProcessMemoryDialog(QDialog):
         )
 
         close_status = kernel32.CloseHandle(handle)
-        _logger.debug(
+        _logger.info(
             "win32_close_handle_called",
             pid=pid,
             status=int(close_status) if close_status is not None else None,
@@ -277,7 +277,7 @@ class ProcessMemoryDialog(QDialog):
             self._list_regions_ctypes_impl(pid, access_mask)
         except (OSError, AttributeError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_ctypes_failed", pid=pid, error=str(exc))
+            _logger.exception("process_regions_ctypes_failed", pid=pid)
 
     def _list_regions_procfs(self, pid: int) -> None:
         """List process memory regions from /proc on Linux.
@@ -295,7 +295,7 @@ class ProcessMemoryDialog(QDialog):
             regions = self._parse_procfs_maps(pid, maps_path)
         except (OSError, ValueError) as exc:
             self._status_label.setText(f"Error: {exc}")
-            _logger.exception("process_regions_procfs_failed", pid=pid, error=str(exc))
+            _logger.exception("process_regions_procfs_failed", pid=pid)
             return
 
         self._populate_regions(regions)
