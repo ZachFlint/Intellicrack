@@ -1096,3 +1096,165 @@ QPushButton#execute_button:hover {
 QPushButton#execute_button:pressed {
     background-color: #094771;
 }
+
+/* ========================================
+   Chat Header & Input Bar
+   ======================================== */
+
+QFrame#chat_header {
+    background-color: #2d2d30;
+    border-bottom: 1px solid #3e3e42;
+}
+
+QFrame#chat_input_bar {
+    background-color: #252526;
+    border-top: 1px solid #3e3e42;
+}
+
+QTextEdit#chat_input_textedit {
+    background-color: #2d2d30;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+QTextEdit#chat_input_textedit:focus {
+    border: 1px solid #007acc;
+}
+
+QPushButton#chat_send_button {
+    background-color: #0e639c;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+}
+
+QPushButton#chat_send_button:hover {
+    background-color: #1177bb;
+}
+
+QPushButton#chat_send_button:pressed {
+    background-color: #0d5289;
+}
+
+QPushButton#chat_send_button:disabled {
+    background-color: #3e3e42;
+    color: #888888;
+}
+
+/* ========================================
+   Confirmation Dialog
+   ======================================== */
+
+QLabel#confirm_header {
+    font-size: 14px;
+    font-weight: bold;
+    color: #d4d4d4;
+}
+
+QLabel#confirm_tool {
+    font-size: 16px;
+    font-weight: bold;
+    color: #569cd6;
+    padding: 8px;
+    background-color: #252526;
+    border-radius: 4px;
+}
+
+QLabel#confirm_args_label {
+    font-size: 12px;
+    color: #d4d4d4;
+    margin-top: 8px;
+}
+
+QTextEdit#confirm_args_text {
+    background-color: #1e1e1e;
+    color: #ce9178;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    padding: 8px;
+}
+
+QLabel#confirm_warning {
+    font-size: 11px;
+    color: #ce9178;
+    padding: 8px;
+    background-color: #332200;
+    border-radius: 4px;
+}
+
+QCheckBox#confirm_remember {
+    color: #d4d4d4;
+    font-size: 11px;
+}
+
+QPushButton#confirm_deny_button {
+    background-color: #6e2e2e;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+
+QPushButton#confirm_deny_button:hover {
+    background-color: #8e3e3e;
+}
+
+QPushButton#confirm_deny_button:pressed {
+    background-color: #5e2e2e;
+}
+
+QPushButton#confirm_approve_button {
+    background-color: #0e639c;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+
+QPushButton#confirm_approve_button:hover {
+    background-color: #1177bb;
+}
+
+QPushButton#confirm_approve_button:pressed {
+    background-color: #0d5a8c;
+}
+
+/* ========================================
+   Preferences Dialog
+   ======================================== */
+
+QListWidget#preferences_category_list {
+    background-color: #252526;
+    border: none;
+    border-right: 1px solid #3e3e42;
+    outline: none;
+}
+
+QListWidget#preferences_category_list::item {
+    color: #d4d4d4;
+    padding: 12px 16px;
+    border: none;
+}
+
+QListWidget#preferences_category_list::item:selected {
+    background-color: #094771;
+}
+
+QListWidget#preferences_category_list::item:hover:!selected {
+    background-color: #2a2d2e;
+}
+
+QStackedWidget#preferences_stack {
+    background-color: #1e1e1e;
+}
+
+QWidget#preferences_button_bar {
+    background-color: #2d2d30;
+    border-top: 1px solid #3e3e42;
+}

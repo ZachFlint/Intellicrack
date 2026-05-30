@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import IntellicrackError
 
 
 __all__ = [
@@ -59,6 +60,24 @@ WORKER_DEFAULT_EXCEPTIONS: tuple[type[BaseException], ...] = (
 This tuple is the union of error types currently raised by hex-editor mixin callables. Worker callers may pass a narrower or broader tuple
 via the ``exceptions`` constructor argument.
 """
+
+
+_BRIDGE_CALL_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    IntellicrackError,
+    *WORKER_DEFAULT_EXCEPTIONS,
+    asyncio.CancelledError,
+)
+"""Exception classes caught by ``BridgeCallWorker``.
+
+Extends ``WORKER_DEFAULT_EXCEPTIONS`` with the Intellicrack domain hierarchy
+(``IntellicrackError`` and every subclass, including ``ToolError`` raised by
+the bridges) and task cancellation. Without ``ToolError`` in this tuple a
+failing bridge coroutine would propagate out of ``BridgeCallWorker.run`` and
+terminate the worker thread without emitting ``call_finished`` or
+``call_error``, leaving callers (e.g. the process panel's "Refreshing..."
+button) stuck indefinitely with no result and no surfaced error.
+"""
+
 
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
@@ -193,7 +212,7 @@ class BridgeCallWorker(QThread):
             future = asyncio.run_coroutine_threadsafe(self._coro, loop)
             result = future.result()
             self.call_finished.emit(result)
-        except (TimeoutError, RuntimeError, OSError, ValueError, TypeError, asyncio.CancelledError) as exc:
+        except _BRIDGE_CALL_EXCEPTIONS as exc:
             _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
 

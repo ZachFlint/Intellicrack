@@ -18,7 +18,6 @@ Tests validate:
 
 from __future__ import annotations
 
-import asyncio
 import math
 from pathlib import Path
 from typing import Final
@@ -54,6 +53,7 @@ from intellicrack.sandbox.base import (
 _TS: Final[str] = "2026-03-15T10:00:00"
 _SAMPLE_SIZE: Final[int] = 1024
 _SAMPLE_DLL_SIZE: Final[int] = 65536
+_SAMPLE_ETW_IMAGE_LOAD_ID: Final[int] = 10
 _SAMPLE_CPU: Final[float] = 42.5
 _SAMPLE_MEM: Final[float] = 256.0
 _SAMPLE_CLIPBOARD_SIZE: Final[int] = 11
@@ -167,9 +167,12 @@ class TestTypedDictConstruction:
             dll_path="C:\\Windows\\System32\\ntdll.dll",
             base_address="0x7FFE0000",
             size=_SAMPLE_DLL_SIZE,
+            event_id=_SAMPLE_ETW_IMAGE_LOAD_ID,
+            payload_schema="",
         )
         assert dl["dll_path"] == "C:\\Windows\\System32\\ntdll.dll"
         assert dl["size"] == _SAMPLE_DLL_SIZE
+        assert dl["event_id"] == _SAMPLE_ETW_IMAGE_LOAD_ID
 
     def test_injection_event(self) -> None:
         """InjectionEvent accepts all required fields."""
@@ -358,129 +361,138 @@ class TestSandboxState:
 class TestSandboxBase:
     """Verify SandboxBase abstract methods raise SandboxError."""
 
-    def test_is_available_returns_false(self) -> None:
+    @pytest.mark.asyncio
+    async def test_is_available_returns_false(self) -> None:
         """Base is_available returns False."""
         sb = SandboxBase()
-        result = asyncio.get_event_loop().run_until_complete(sb.is_available())
+        result = await sb.is_available()
         assert result is False
 
-    def test_start_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_start_raises(self) -> None:
         """Base start raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.start())
+            await sb.start()
 
-    def test_stop_when_already_stopped(self) -> None:
+    @pytest.mark.asyncio
+    async def test_stop_when_already_stopped(self) -> None:
         """Base stop returns cleanly when already stopped."""
         sb = SandboxBase()
-        asyncio.get_event_loop().run_until_complete(sb.stop())
+        await sb.stop()
 
-    def test_stop_when_running_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_stop_when_running_raises(self) -> None:
         """Base stop raises SandboxError when status is not stopped."""
         sb = SandboxBase()
         sb.state.status = "running"
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.stop())
+            await sb.stop()
 
-    def test_run_command_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_command_raises(self) -> None:
         """Base run_command raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.run_command("echo hi"))
+            await sb.run_command("echo hi")
 
-    def test_run_binary_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_binary_raises(self) -> None:
         """Base run_binary raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(
-                sb.run_binary(Path("test.exe")),
-            )
+            await sb.run_binary(Path("test.exe"))
 
-    def test_copy_to_sandbox_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_copy_to_sandbox_raises(self) -> None:
         """Base copy_to_sandbox raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(
-                sb.copy_to_sandbox(Path("src.txt"), "dest.txt"),
-            )
+            await sb.copy_to_sandbox(Path("src.txt"), "dest.txt")
 
-    def test_copy_from_sandbox_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_copy_from_sandbox_raises(self) -> None:
         """Base copy_from_sandbox raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(
-                sb.copy_from_sandbox("src.txt", Path("dest.txt")),
-            )
+            await sb.copy_from_sandbox("src.txt", Path("dest.txt"))
 
-    def test_take_snapshot_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_take_snapshot_raises(self) -> None:
         """Base take_snapshot raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.take_snapshot("snap1"))
+            await sb.take_snapshot("snap1")
 
-    def test_restore_snapshot_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_restore_snapshot_raises(self) -> None:
         """Base restore_snapshot raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(
-                sb.restore_snapshot("snap-001"),
-            )
+            await sb.restore_snapshot("snap-001")
 
-    def test_list_snapshots_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_list_snapshots_raises(self) -> None:
         """Base list_snapshots raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.list_snapshots())
+            await sb.list_snapshots()
 
-    def test_delete_snapshot_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_delete_snapshot_raises(self) -> None:
         """Base delete_snapshot raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.delete_snapshot("snap1"))
+            await sb.delete_snapshot("snap1")
 
-    def test_start_pcap_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_start_pcap_raises(self) -> None:
         """Base start_pcap_capture raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.start_pcap_capture())
+            await sb.start_pcap_capture()
 
-    def test_stop_pcap_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_stop_pcap_raises(self) -> None:
         """Base stop_pcap_capture raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(
-                sb.stop_pcap_capture("cap-001"),
-            )
+            await sb.stop_pcap_capture("cap-001")
 
-    def test_screenshot_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_screenshot_raises(self) -> None:
         """Base capture_screenshot raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.capture_screenshot())
+            await sb.capture_screenshot()
 
-    def test_anti_evasion_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_anti_evasion_raises(self) -> None:
         """Base apply_anti_evasion raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.apply_anti_evasion())
+            await sb.apply_anti_evasion()
 
-    def test_dump_memory_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dump_memory_raises(self) -> None:
         """Base dump_memory raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.dump_memory())
+            await sb.dump_memory()
 
-    def test_extract_dropped_files_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_extract_dropped_files_raises(self) -> None:
         """Base extract_dropped_files raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.extract_dropped_files())
+            await sb.extract_dropped_files()
 
-    def test_yara_scan_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_yara_scan_raises(self) -> None:
         """Base yara_scan raises SandboxError."""
         sb = SandboxBase()
         with pytest.raises(SandboxError):
-            asyncio.get_event_loop().run_until_complete(sb.yara_scan())
+            await sb.yara_scan()
 
     def test_vnc_port_returns_none(self) -> None:
         """Base vnc_port returns None."""

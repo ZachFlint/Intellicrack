@@ -316,7 +316,7 @@ class IconManager:
             QIcon: QIcon containing the rendered text.
         """
         if color is None:
-            color = QColor("#d4d4d4") if ThemeManager.get_instance().is_dark_theme() else QColor("#1a1a1a")
+            color = QColor("#d4d4d4") if ThemeManager.get_instance().is_dark_theme() else QColor("#1a1d21")
 
         pixmap = QPixmap(size, size)
         pixmap.fill(QColor(0, 0, 0, 0))
@@ -379,7 +379,7 @@ class IconManager:
             return loaded
 
         _logger.debug("app_icon_using_fallback")
-        accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0078d4")
+        accent = QColor("#007acc") if ThemeManager.get_instance().is_dark_theme() else QColor("#0067c0")
         fallback = IconManager._render_text_icon("IC", 256, accent)
         self.icon_cache["app_icon"] = fallback
         return fallback

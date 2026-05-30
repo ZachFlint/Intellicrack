@@ -21,7 +21,7 @@ the text output and performs the same annotation contract.
 
 ## Layout
 
-```
+```text
 .semgrep/logging/
   01-logger-identity.yml + .py         # Category A - logger acquisition
   02-event-names.yml + .py             # Category B - event-name quality

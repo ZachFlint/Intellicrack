@@ -40,7 +40,7 @@ capabilities feel like one coherent application rather than a collection of
 disconnected integrations. The defining value of Intellicrack is that it
 unifies tools, context, and AI connectivity into a single operational surface.
 
-**TOOLS**
+## Tools
 
 ## USE THESE TOOLS
 
@@ -50,7 +50,8 @@ unifies tools, context, and AI connectivity into a single operational surface.
 
 ## CRITICAL: SHELL USAGE
 
-- **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER `powershell.exe` (PowerShell 5)**
+- **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER
+  `powershell.exe` (PowerShell 5)**
 - When executing PowerShell commands, use `pwsh -Command '...'` or `pwsh -File ...`
 
 ## CRITICAL: VIRTUAL ENVIRONMENT USAGE
@@ -83,8 +84,9 @@ unifies tools, context, and AI connectivity into a single operational surface.
   issues, or any other mechanism to suppress type checking findings be used.
   This includes ALL forms of inline suppression comments. Fix the actual type
   error instead.
-- **NEVER edit the basedpyright configuration** - The `[tool.basedpyright]` section in
-  `pyproject.toml` must never be modified to weaken type checking strictness,
+- **NEVER edit the basedpyright configuration** - The
+  `[tool.basedpyright]` section in `pyproject.toml` must never be modified to
+  weaken type checking strictness,
   add exclusions, or suppress diagnostics. The basedpyright config is locked and
   immutable.
 - **ALL code must pass `darglint`** - Full darglint compliance required with zero
@@ -138,8 +140,8 @@ instead:**
 - Request any necessary API endpoints, data structures, or specifications
 - Explain what information is needed to create a fully functional implementation
 
-**This is non-negotiable: Every line of code the AI assistant writes must be ready for
-production use.**
+**This is non-negotiable: Every line of code the AI assistant writes must
+be ready for production use.**
 
 ### User Clarification
 

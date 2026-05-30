@@ -13,10 +13,12 @@ Help menu integration using real XPU backend APIs.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import time
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QGroupBox,
@@ -40,11 +42,12 @@ from intellicrack.ui.xpu_status import XPUStatusDialog
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from PyQt6.QtCore import QTimer
-    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtCore import QThread, QTimer
 
 
 _LIVE_REFRESH_MS: int = 2000
+_REQUIREMENTS_RENDER_TIMEOUT_S: float = 15.0
+_REQUIREMENTS_CHECKING_TEXT: str = "Checking system requirements"
 _PROVIDER_MEM_REFRESH_MS: int = 15000
 _CACHE_DEFAULT_MB: int = 10240
 _CACHE_MIN_MB: int = 512
@@ -52,6 +55,29 @@ _CACHE_MAX_MB: int = 65536
 _CACHE_STEP_MB: int = 512
 _BYTES_PER_GB: float = 1024.0 * 1024.0 * 1024.0
 _PROGRESS_BAR_MAX: int = 100
+
+
+def _wait_for_requirements_render(dialog: XPUStatusDialog, timeout_s: float = _REQUIREMENTS_RENDER_TIMEOUT_S) -> None:
+    """Block until the dialog's asynchronous requirements check has rendered its result.
+
+    The requirements probe runs on a background ``QThread`` and delivers its outcome via a queued signal, so the rendered text is not
+    available immediately after construction. This joins the worker thread and pumps the Qt event loop until the placeholder "Checking..."
+    text is replaced or the timeout elapses.
+
+    Args:
+        dialog: The XPU status dialog whose requirements worker should be awaited.
+        timeout_s: Maximum time to wait for the rendered result, in seconds.
+    """
+    worker = cast("QThread | None", getattr(dialog, "_requirements_worker", None))
+    if worker is not None:
+        worker.wait(int(timeout_s * 1000))
+    app = QApplication.instance()
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if app is not None:
+            app.processEvents()
+        if _REQUIREMENTS_CHECKING_TEXT not in dialog.requirements_text.toPlainText():
+            return
 
 
 @pytest.fixture
@@ -383,6 +409,7 @@ class TestXPUStatusDialogRequirements:
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
+        _wait_for_requirements_render(xpu_dialog)
         html = xpu_dialog.requirements_text.toHtml()
         has_met = "requirements met" in html.lower()
         has_warnings = "warning" in html.lower() or "<li>" in html.lower()

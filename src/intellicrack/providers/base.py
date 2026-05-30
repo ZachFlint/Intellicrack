@@ -17,7 +17,7 @@ import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypedDict, TypeVar, cast
 
 import openai
 
@@ -35,6 +35,7 @@ from intellicrack.core.types import (
     ToolChoice,
     ToolChoiceMode,
     ToolDefinition,
+    ToolParameter,
 )
 
 
@@ -102,6 +103,9 @@ class JSONSchemaProperty(TypedDict, total=False):
     description: str
     enum: list[str]
     default: str | int | float | bool | None
+    items: JSONSchemaProperty
+    properties: dict[str, JSONSchemaProperty]
+    required: list[str]
 
 
 class JSONSchemaParameters(TypedDict):
@@ -304,6 +308,40 @@ class LLMProviderBase(ABC):
             bool: True if the provider is ready to accept requests.
         """
         return self.connected
+
+    @staticmethod
+    def _httpx_client_rebind_target(
+        bound_loop: asyncio.AbstractEventLoop | None,
+    ) -> asyncio.AbstractEventLoop | None:
+        """Return the running loop when an httpx client must be rebuilt.
+
+        httpcore binds a connection pool's internal asyncio
+        synchronization primitives to the event loop on which the client
+        first issues a request. A raw :class:`httpx.AsyncClient` created
+        during :meth:`connect` therefore cannot be reused from a
+        different running loop: doing so raises
+        ``RuntimeError: ... is bound to a different event loop``. This is
+        exactly the situation that occurs when providers connect on the
+        application bootstrap loop but model discovery (and subsequent
+        chat traffic) runs on the persistent background bridge loop. The
+        official OpenAI / Anthropic / google-genai SDK clients rebind
+        their transport transparently; providers backed by a raw
+        ``httpx.AsyncClient`` must rebuild the client explicitly.
+
+        Args:
+            bound_loop: The loop the existing client was bound to, or
+                ``None`` when no client exists yet.
+
+        Returns:
+            asyncio.AbstractEventLoop | None: The current running loop
+            when a rebuild is required (``bound_loop`` is ``None`` or
+            differs from the running loop); ``None`` when the existing
+            client is still valid for the running loop.
+        """
+        running = asyncio.get_running_loop()
+        if bound_loop is running:
+            return None
+        return running
 
     @abstractmethod
     async def connect(self, credentials: ProviderCredentials) -> None:
@@ -1007,6 +1045,9 @@ class LLMProviderBase(ABC):
             self._logger.warning("provider_call_auth_failed", log_prefix=log_prefix, error=str(exc), **extra)
             raise AuthenticationError(messages.auth_invalid % exc) from exc
         except openai.RateLimitError as exc:
+            if is_permanent_quota_error(str(exc)):
+                self._logger.warning("provider_call_quota_exhausted", log_prefix=log_prefix, error=str(exc), **extra)
+                raise ProviderError(messages.api_error % exc) from exc
             self._logger.warning("provider_call_rate_limited", log_prefix=log_prefix, error=str(exc), **extra)
             raise RateLimitError(messages.rate_limited % exc) from exc
         except openai.APIError as exc:
@@ -1114,28 +1155,107 @@ class ToolCallBufferManager:
         return results
 
 
+_PERMANENT_QUOTA_MARKERS: Final = (
+    "spending cap",
+    "spend cap",
+    "monthly spending",
+    "insufficient_quota",
+    "exceeded your current quota",
+    "billing hard limit",
+)
+
+
+def is_permanent_quota_error(message: str) -> bool:
+    """Determine whether a 429 message signals permanent quota/billing exhaustion.
+
+    Providers return HTTP 429 for two very different conditions: a transient
+    per-interval rate limit (safe to retry with backoff) and a permanent
+    billing or spend-cap exhaustion (cannot succeed on retry within the
+    session). This helper detects the latter so callers can fail fast with an
+    actionable message instead of exhausting retries against a hard cap.
+
+    Args:
+        message: The provider error message text to inspect.
+
+    Returns:
+        bool: True if the message indicates a permanent, non-retryable quota
+            or billing exhaustion; False for transient rate limits.
+    """
+    lowered = message.lower()
+    return any(marker in lowered for marker in _PERMANENT_QUOTA_MARKERS)
+
+
+def _build_items_schema(
+    items_type: str,
+    item_properties: list[ToolParameter] | None,
+    *,
+    uppercase: bool,
+) -> JSONSchemaProperty:
+    """Build the ``items`` schema for an array property.
+
+    Args:
+        items_type: JSON Schema type of the array elements.
+        item_properties: Nested property definitions when ``items_type`` is
+            ``"object"``; describes the element object's shape.
+        uppercase: Whether type strings must be uppercased for the target
+            provider (Google Gemini) rather than left lowercase
+            (Anthropic, OpenAI).
+
+    Returns:
+        JSONSchemaProperty: Schema describing a single array element.
+    """
+    element_type = items_type.upper() if uppercase else items_type
+    items: JSONSchemaProperty = {"type": element_type}
+    if items_type == "object" and item_properties:
+        properties: dict[str, JSONSchemaProperty] = {}
+        required: list[str] = []
+        for param in item_properties:
+            properties[param.name] = _build_schema_property(
+                param_type=param.type.upper() if uppercase else param.type,
+                description=param.description,
+                enum_values=param.enum,
+                default=param.default,
+                items_type=param.items_type,
+                item_properties=param.item_properties,
+            )
+            if param.required:
+                required.append(param.name)
+        items["properties"] = properties
+        items["required"] = required
+    return items
+
+
 def _build_schema_property(
     param_type: str,
     description: str,
     enum_values: list[str] | None = None,
     default: object = None,
+    items_type: str = "string",
+    item_properties: list[ToolParameter] | None = None,
 ) -> JSONSchemaProperty:
     """Build a JSON Schema property from parameters.
 
     Args:
-        param_type: The JSON Schema type string.
+        param_type: The JSON Schema type string. Uppercase (e.g. ``"ARRAY"``)
+            signals Google Gemini formatting; lowercase signals
+            Anthropic/OpenAI formatting.
         description: Description of the parameter.
         enum_values: Optional list of allowed values.
         default: Optional default value.
+        items_type: JSON Schema type of array elements when ``param_type`` is
+            an array. Emitted as the required ``items`` definition.
+        item_properties: Nested property definitions for object array
+            elements when ``items_type`` is ``"object"``.
 
     Returns:
         JSONSchemaProperty: JSONSchemaProperty with the specified values.
     """
-    _logger.debug("build_schema_property", param_type=param_type, has_enum=enum_values is not None)
     prop: JSONSchemaProperty = {
         "type": param_type,
         "description": description,
     }
+    if param_type.upper() == "ARRAY":
+        prop["items"] = _build_items_schema(items_type, item_properties, uppercase=param_type.isupper())
     if enum_values is not None:
         prop["enum"] = enum_values
     if default is not None and isinstance(default, (str, int, float, bool)):
@@ -1167,6 +1287,8 @@ def create_anthropic_tool_schema(
                 description=param.description,
                 enum_values=param.enum,
                 default=param.default,
+                items_type=param.items_type,
+                item_properties=param.item_properties,
             )
             if param.required:
                 required.append(param.name)
@@ -1210,6 +1332,8 @@ def create_openai_tool_schema(
                 description=param.description,
                 enum_values=param.enum,
                 default=param.default,
+                items_type=param.items_type,
+                item_properties=param.item_properties,
             )
             if param.required:
                 required.append(param.name)
@@ -1256,6 +1380,8 @@ def create_google_tool_schema(
                 description=param.description,
                 enum_values=param.enum,
                 default=param.default,
+                items_type=param.items_type,
+                item_properties=param.item_properties,
             )
             if param.required:
                 required.append(param.name)

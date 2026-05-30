@@ -85,6 +85,9 @@ class JSONSchemaProperty(TypedDict, total=False):
     description: str
     enum: list[str]
     default: str | int | float | bool | list[str | int | float | bool] | None
+    items: JSONSchemaProperty
+    properties: dict[str, JSONSchemaProperty]
+    required: list[str]
 
 
 class JSONSchemaParameters(TypedDict):
@@ -102,6 +105,9 @@ class GoogleSchemaProperty(TypedDict, total=False):
     description: str
     enum: list[str]
     default: str | int | float | bool | list[str | int | float | bool] | None
+    items: JSONSchemaProperty
+    properties: dict[str, JSONSchemaProperty]
+    required: list[str]
 
 
 class GoogleSchemaParameters(TypedDict):
@@ -227,11 +233,45 @@ def normalize_type(param_type: str) -> str:
     return "string"
 
 
+def _build_array_items(
+    param: ToolParameter,
+    *,
+    uppercase_types: bool,
+) -> JSONSchemaProperty:
+    """Build the JSON Schema ``items`` definition for an array parameter.
+
+    Strict providers such as Google Gemini reject array schemas that omit
+    ``items``; object element schemas additionally require non-empty
+    ``properties``. This helper emits a typed element schema, recursing into
+    ``param.item_properties`` for object elements.
+
+    Args:
+        param: The array parameter whose element schema is built.
+        uppercase_types: If True, use uppercase type names (for Google).
+
+    Returns:
+        JSONSchemaProperty: Schema describing a single array element.
+    """
+    element_type = normalize_type(param.items_type)
+    cased_type = GOOGLE_TYPE_MAP.get(element_type, element_type.upper()) if uppercase_types else element_type
+    items: JSONSchemaProperty = {"type": cased_type}
+    if element_type == "object" and param.item_properties:
+        properties: dict[str, JSONSchemaProperty] = {}
+        required: list[str] = []
+        for nested in param.item_properties:
+            properties[nested.name] = build_schema_property(nested, uppercase_types=uppercase_types)
+            if nested.required:
+                required.append(nested.name)
+        items["properties"] = properties
+        items["required"] = required
+    return items
+
+
 def build_schema_property(
     param: ToolParameter,
     *,
     uppercase_types: bool = False,
-) -> JSONSchemaProperty | GoogleSchemaProperty:
+) -> JSONSchemaProperty:
     """Build a JSON Schema property from a ToolParameter.
 
     Args:
@@ -239,16 +279,19 @@ def build_schema_property(
         uppercase_types: If True, use uppercase type names (for Google).
 
     Returns:
-        JSONSchemaProperty | GoogleSchemaProperty: JSONSchemaProperty or GoogleSchemaProperty dict.
+        JSONSchemaProperty: JSONSchemaProperty dict; type strings are
+            uppercased when ``uppercase_types`` is set (Google format).
     """
-    param_type = normalize_type(param.type)
-    if uppercase_types:
-        param_type = GOOGLE_TYPE_MAP.get(param_type, param_type.upper())
+    normalized = normalize_type(param.type)
+    param_type = GOOGLE_TYPE_MAP.get(normalized, normalized.upper()) if uppercase_types else normalized
 
     prop: JSONSchemaProperty = {
         "type": param_type,
         "description": param.description,
     }
+
+    if normalized == "array":
+        prop["items"] = _build_array_items(param, uppercase_types=uppercase_types)
 
     if param.enum is not None and len(param.enum) > 0:
         prop["enum"] = param.enum
@@ -301,19 +344,7 @@ def _build_google_schema_parameters(
     required: list[str] = []
 
     for param in params:
-        param_type = normalize_type(param.type)
-        google_type = GOOGLE_TYPE_MAP.get(param_type, param_type.upper())
-
-        prop: GoogleSchemaProperty = {
-            "type": google_type,
-            "description": param.description,
-        }
-        if param.enum is not None and len(param.enum) > 0:
-            prop["enum"] = param.enum
-        if param.default is not None:
-            prop["default"] = param.default
-
-        properties[param.name] = prop
+        properties[param.name] = build_schema_property(param, uppercase_types=True)
         if param.required:
             required.append(param.name)
 
@@ -383,6 +414,24 @@ def validate_tool_parameter(
                 "warning",
             ),
         )
+
+    if normalize_type(param.type) == "array":
+        if not is_recognized_type(param.items_type):
+            errors.append(
+                ValidationError(
+                    f"Array parameter has unrecognized items_type '{param.items_type}'",
+                    location,
+                    "warning",
+                ),
+            )
+        elif normalize_type(param.items_type) == "object" and not param.item_properties:
+            errors.append(
+                ValidationError(
+                    "Array of objects requires item_properties; providers such as "
+                    "Google Gemini reject object schemas with empty properties",
+                    location,
+                ),
+            )
 
     if not param.description:
         errors.append(

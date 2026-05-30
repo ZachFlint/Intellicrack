@@ -333,158 +333,158 @@ class TestManagerProperties:
 class TestManagerCreate:
     """Verify manager create behavior."""
 
-    def test_create_returns_instance(self) -> None:
+    @pytest.mark.asyncio
+    async def test_create_returns_instance(self) -> None:
         """create() returns an instance with an ID."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(mgr.create())
+        inst = await mgr.create()
         assert inst.id is not None
 
-    def test_create_adds_to_list(self) -> None:
+    @pytest.mark.asyncio
+    async def test_create_adds_to_list(self) -> None:
         """Created instance appears in manager's instance list."""
         mgr = _TestableManager()
-        asyncio.get_event_loop().run_until_complete(mgr.create())
+        await mgr.create()
         assert len(mgr.instances) == 1
 
-    def test_max_instances_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_max_instances_raises(self) -> None:
         """Exceeding max_instances raises SandboxError."""
         mgr = _TestableManager(max_instances=2)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.create())
+        await mgr.create()
+        await mgr.create()
         with pytest.raises(SandboxError, match="Maximum"):
-            loop.run_until_complete(mgr.create())
+            await mgr.create()
 
-    def test_auto_start_starts_sandbox(self) -> None:
+    @pytest.mark.asyncio
+    async def test_auto_start_starts_sandbox(self) -> None:
         """auto_start=True sets status to running."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(
-            mgr.create(auto_start=True),
-        )
+        inst = await mgr.create(auto_start=True)
         assert inst.sandbox.state.status == "running"
 
-    def test_auto_start_false_stays_stopped(self) -> None:
+    @pytest.mark.asyncio
+    async def test_auto_start_false_stays_stopped(self) -> None:
         """auto_start=False keeps status as stopped."""
         mgr = _TestableManager()
-        inst = asyncio.get_event_loop().run_until_complete(
-            mgr.create(auto_start=False),
-        )
+        inst = await mgr.create(auto_start=False)
         assert inst.sandbox.state.status == "stopped"
 
 
 class TestManagerGet:
     """Verify manager get behavior."""
 
-    def test_existing_returns_instance(self) -> None:
+    @pytest.mark.asyncio
+    async def test_existing_returns_instance(self) -> None:
         """get() returns the instance for a valid ID."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create())
-        found = loop.run_until_complete(mgr.get(inst.id))
+        inst = await mgr.create()
+        found = await mgr.get(inst.id)
         assert found is inst
 
-    def test_nonexistent_returns_none(self) -> None:
+    @pytest.mark.asyncio
+    async def test_nonexistent_returns_none(self) -> None:
         """get() returns None for an invalid ID."""
         mgr = _TestableManager()
-        found = asyncio.get_event_loop().run_until_complete(mgr.get("no-such-id"))
+        found = await mgr.get("no-such-id")
         assert found is None
 
 
 class TestManagerDestroy:
     """Verify manager destroy behavior."""
 
-    def test_removes_instance(self) -> None:
+    @pytest.mark.asyncio
+    async def test_removes_instance(self) -> None:
         """destroy() removes the instance from the manager."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.destroy(inst.id))
+        inst = await mgr.create()
+        await mgr.destroy(inst.id)
         assert len(mgr.instances) == 0
 
-    def test_nonexistent_raises(self) -> None:
+    @pytest.mark.asyncio
+    async def test_nonexistent_raises(self) -> None:
         """destroy() raises SandboxError for unknown ID."""
         mgr = _TestableManager()
         with pytest.raises(SandboxError, match="not found"):
-            asyncio.get_event_loop().run_until_complete(mgr.destroy("bad-id"))
+            await mgr.destroy("bad-id")
 
-    def test_destroy_all_empties(self) -> None:
+    @pytest.mark.asyncio
+    async def test_destroy_all_empties(self) -> None:
         """destroy_all() removes all instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.create())
-        loop.run_until_complete(mgr.destroy_all())
+        await mgr.create()
+        await mgr.create()
+        await mgr.destroy_all()
         assert len(mgr.instances) == 0
 
 
 class TestManagerRunBinary:
     """Verify manager run_binary behavior."""
 
-    def test_returns_instance_and_report(self) -> None:
+    @pytest.mark.asyncio
+    async def test_returns_instance_and_report(self) -> None:
         """run_binary() returns a (instance, report) tuple."""
         mgr = _TestableManager()
-        inst, report = asyncio.get_event_loop().run_until_complete(
-            mgr.run_binary(Path("test.exe")),
-        )
+        inst, report = await mgr.run_binary(Path("test.exe"))
         assert inst is not None
         assert report is not None
         assert report.result == "success"
 
-    def test_stores_last_report(self) -> None:
+    @pytest.mark.asyncio
+    async def test_stores_last_report(self) -> None:
         """run_binary() stores the report on the instance."""
         mgr = _TestableManager()
-        inst, report = asyncio.get_event_loop().run_until_complete(
-            mgr.run_binary(Path("test.exe")),
-        )
+        inst, report = await mgr.run_binary(Path("test.exe"))
         assert inst.last_report is report
 
-    def test_creates_new_instance(self) -> None:
+    @pytest.mark.asyncio
+    async def test_creates_new_instance(self) -> None:
         """run_binary() adds an instance to the manager."""
         mgr = _TestableManager()
-        asyncio.get_event_loop().run_until_complete(
-            mgr.run_binary(Path("test.exe")),
-        )
+        await mgr.run_binary(Path("test.exe"))
         assert len(mgr.instances) == 1
 
 
 class TestManagerStatus:
     """Verify manager status reporting."""
 
-    def test_status_has_expected_keys(self) -> None:
+    @pytest.mark.asyncio
+    async def test_status_has_expected_keys(self) -> None:
         """get_status() returns dict with required keys."""
         mgr = _TestableManager()
-        status = asyncio.get_event_loop().run_until_complete(mgr.get_status())
+        status = await mgr.get_status()
         assert "max_instances" in status
         assert "active_count" in status
         assert "total_count" in status
         assert "instances" in status
 
-    def test_active_count_correct(self) -> None:
+    @pytest.mark.asyncio
+    async def test_active_count_correct(self) -> None:
         """active_count reflects running instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create(auto_start=True))
-        loop.run_until_complete(mgr.create(auto_start=False))
+        await mgr.create(auto_start=True)
+        await mgr.create(auto_start=False)
         assert mgr.active_count == 1
 
 
 class TestManagerCleanup:
     """Verify stale instance cleanup."""
 
-    def test_removes_old_instances(self) -> None:
+    @pytest.mark.asyncio
+    async def test_removes_old_instances(self) -> None:
         """cleanup_stale removes instances idle longer than threshold."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        inst = loop.run_until_complete(mgr.create(auto_start=True))
+        inst = await mgr.create(auto_start=True)
         inst.last_used = datetime.now(UTC) - timedelta(seconds=7200)
-        removed = loop.run_until_complete(mgr.cleanup_stale(max_idle_seconds=3600))
+        removed = await mgr.cleanup_stale(max_idle_seconds=3600)
         assert removed == 1
         assert len(mgr.instances) == 0
 
-    def test_keeps_recent_instances(self) -> None:
+    @pytest.mark.asyncio
+    async def test_keeps_recent_instances(self) -> None:
         """cleanup_stale keeps recently-used instances."""
         mgr = _TestableManager()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(mgr.create(auto_start=True))
-        removed = loop.run_until_complete(mgr.cleanup_stale(max_idle_seconds=3600))
+        await mgr.create(auto_start=True)
+        removed = await mgr.cleanup_stale(max_idle_seconds=3600)
         assert removed == 0
         assert len(mgr.instances) == 1

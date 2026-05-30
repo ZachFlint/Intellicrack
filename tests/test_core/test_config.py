@@ -109,7 +109,7 @@ def test_sandbox_config_defaults() -> None:
 def test_ui_config_defaults() -> None:
     """Verify UIConfig defaults."""
     uc = UIConfig()
-    assert uc.theme == "dark"
+    assert uc.theme == "system"
     assert uc.font_family == "JetBrains Mono"
     assert uc.font_size == _DEFAULT_FONT_SIZE
     assert uc.show_tool_calls is True
@@ -282,7 +282,7 @@ def test_config_parse_sub_configs_defaults() -> None:
     """Verify _parse_sub_configs returns defaults for empty data."""
     sandbox, ui, session, log = Config.parse_sub_configs({})
     assert sandbox.enabled is True
-    assert ui.theme == "dark"
+    assert ui.theme == "system"
     assert session.auto_save is True
     assert log.level == "INFO"
 

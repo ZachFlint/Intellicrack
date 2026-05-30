@@ -5,9 +5,17 @@
     ".venv*/**",
     ".pixi/**",
     ".claude/**",
+    ".github/**",
+    ".serena/**",
     "build/**",
     "dist/**",
     "tools/**",
-    "vendor/**"
+    "vendor/**",
+    "audit/**",
+    "CHANGELOG.md",
+    "prompts.md",
+    "skylos_true_positives.md",
+    "GEMINI.md",
+    "QWEN.md"
   ]
 }

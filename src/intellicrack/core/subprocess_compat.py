@@ -63,6 +63,7 @@ CompletedProcess = _sp.CompletedProcess
 Popen = _sp.Popen
 SubprocessError = _sp.SubprocessError
 TimeoutExpired = _sp.TimeoutExpired
+list2cmdline = _sp.list2cmdline
 run = _sp.run
 
 __all__: list[str] = [
@@ -78,5 +79,6 @@ __all__: list[str] = [
     "Popen",
     "SubprocessError",
     "TimeoutExpired",
+    "list2cmdline",
     "run",
 ]

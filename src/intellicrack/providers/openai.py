@@ -34,6 +34,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
+    is_permanent_quota_error,
     map_thinking_budget_to_effort,
 )
 
@@ -873,6 +874,9 @@ class OpenAIProvider(LLMProviderBase):
             self._logger.warning("openai_stream_auth_failed", model=model, error=str(e))
             raise AuthenticationError(_ERR_INVALID_KEY % e) from e
         except openai.RateLimitError as e:
+            if is_permanent_quota_error(str(e)):
+                self._logger.warning("openai_stream_quota_exhausted", model=model, error=str(e))
+                raise ProviderError(_ERR_API_ERROR % e) from e
             self._logger.warning("openai_stream_rate_limited", model=model, error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:

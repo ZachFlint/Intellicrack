@@ -1,5 +1,21 @@
 {
   "enabledPlugins": {
     "basedpyright@claude-code-lsps": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pixi run ruff check *)",
+      "Bash(pixi run basedpyright *)",
+      "Bash(pixi run pydoclint *)",
+      "Bash(pixi run dead *)",
+      "Bash(pixi run vermin *)",
+      "PowerShell(pixi run ruff check *)",
+      "PowerShell(pixi run basedpyright *)",
+      "PowerShell(pixi run pydoclint *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Process *)"
+    ]
   }
 }

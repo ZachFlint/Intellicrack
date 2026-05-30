@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ModelInfo, ProviderName
+from intellicrack.core.types import ModelInfo, ProviderError, ProviderName
 
 
 if TYPE_CHECKING:
@@ -640,7 +640,7 @@ class ModelDiscovery:
                         duration_ms=duration_ms,
                     ),
                 )
-            except (ConnectionError, OSError, RuntimeError, ValueError) as exc:
+            except (ConnectionError, OSError, RuntimeError, ValueError, ProviderError) as exc:
                 duration_ms = (time.time() - start_time) * 1000
                 _logger.exception(
                     "discovery_failed",
@@ -757,7 +757,7 @@ class ModelDiscovery:
             )
             await self._cache.ainvalidate(provider)
             return []
-        except (ConnectionError, OSError, RuntimeError, ValueError):
+        except (ConnectionError, OSError, RuntimeError, ValueError, ProviderError):
             _logger.exception("discovery_failed", provider=provider.value)
             await self._cache.ainvalidate(provider)
             return []

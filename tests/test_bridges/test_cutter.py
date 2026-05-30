@@ -191,7 +191,7 @@ def loaded_bridge(recorder: _CommandRecorder) -> CutterBridge:
     """
     b = CutterBridge()
     b.r2 = _as_r2pipe(recorder)
-    asyncio.get_event_loop().run_until_complete(b.analyze())
+    asyncio.run(b.analyze())
     recorder.commands.clear()
     return b
 

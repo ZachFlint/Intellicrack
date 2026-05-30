@@ -136,64 +136,21 @@ class ToolConfirmationDialog(QDialog):
         layout.setSpacing(16)
 
         header_label = QLabel("AI wants to execute the following tool:")
-        header_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #d4d4d4;
-            }
-        """
-           ,
-        )
+        header_label.setObjectName("confirm_header")
         layout.addWidget(header_label)
 
         tool_label = QLabel(f"{self._call.tool_name}.{self._call.function_name}")
-        tool_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 16px;
-                font-weight: bold;
-                color: #569cd6;
-                padding: 8px;
-                background-color: #252526;
-                border-radius: 4px;
-            }
-        """
-           ,
-        )
+        tool_label.setObjectName("confirm_tool")
         layout.addWidget(tool_label)
 
         args_label = QLabel("Arguments:")
-        args_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 12px;
-                color: #d4d4d4;
-                margin-top: 8px;
-            }
-        """
-           ,
-        )
+        args_label.setObjectName("confirm_args_label")
         layout.addWidget(args_label)
 
         self._args_text = QTextEdit()
+        self._args_text.setObjectName("confirm_args_text")
         self._args_text.setReadOnly(True)
         self._args_text.setMinimumHeight(150)
-        self._args_text.setStyleSheet(
-            """
-            QTextEdit {
-                background-color: #1e1e1e;
-                color: #ce9178;
-                border: 1px solid #3e3e42;
-                border-radius: 4px;
-                font-family: 'Consolas', 'Courier New', monospace;
-                font-size: 12px;
-                padding: 8px;
-            }
-        """
-           ,
-        )
         try:
             formatted_args = json.dumps(self._call.arguments, indent=2, default=str)
         except (TypeError, ValueError):
@@ -207,35 +164,12 @@ class ToolConfirmationDialog(QDialog):
         layout.addWidget(self._args_text)
 
         warning_label = QLabel("This operation may modify data or have side effects. Review the details above before proceeding.")
+        warning_label.setObjectName("confirm_warning")
         warning_label.setWordWrap(True)
-        warning_label.setStyleSheet(
-            """
-            QLabel {
-                font-size: 11px;
-                color: #ce9178;
-                padding: 8px;
-                background-color: #332200;
-                border-radius: 4px;
-            }
-        """
-           ,
-        )
         layout.addWidget(warning_label)
 
         self._remember_checkbox = QCheckBox("Remember for similar operations this session")
-        self._remember_checkbox.setStyleSheet(
-            """
-            QCheckBox {
-                color: #d4d4d4;
-                font-size: 11px;
-            }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-            }
-        """
-           ,
-        )
+        self._remember_checkbox.setObjectName("confirm_remember")
         layout.addWidget(self._remember_checkbox)
 
         button_layout = QHBoxLayout()
@@ -243,64 +177,19 @@ class ToolConfirmationDialog(QDialog):
         button_layout.addStretch()
 
         deny_btn = QPushButton("Deny")
+        deny_btn.setObjectName("confirm_deny_button")
         deny_btn.setMinimumWidth(100)
-        deny_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #6e2e2e;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #8e3e3e;
-            }
-            QPushButton:pressed {
-                background-color: #5e2e2e;
-            }
-        """
-           ,
-        )
         deny_btn.clicked.connect(self._on_deny)
         button_layout.addWidget(deny_btn)
 
         approve_btn = QPushButton("Approve")
+        approve_btn.setObjectName("confirm_approve_button")
         approve_btn.setMinimumWidth(100)
-        approve_btn.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #0e639c;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1177bb;
-            }
-            QPushButton:pressed {
-                background-color: #0d5a8c;
-            }
-        """
-           ,
-        )
         approve_btn.clicked.connect(self._on_approve)
         approve_btn.setDefault(True)
         button_layout.addWidget(approve_btn)
 
         layout.addLayout(button_layout)
-
-        self.setStyleSheet(
-            """
-            QDialog {
-                background-color: #2d2d30;
-            }
-        """
-           ,
-        )
 
     def exec(self) -> int:
         """Show the dialog modally, honoring any remembered decision.

@@ -2097,8 +2097,7 @@ class QEMUSandbox(SandboxBase):
         Returns:
             str: Full PowerShell script source (UTF-8).
         """
-        return\
-               r"""$ErrorActionPreference = 'SilentlyContinue'
+        return r"""$ErrorActionPreference = 'SilentlyContinue'
 
 $shareHost = '10.0.2.4'
 $shareName = 'qemu'

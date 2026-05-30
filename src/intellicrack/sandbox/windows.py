@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import ctypes
 import json
+import re
 import secrets
 import shutil
 import sys
@@ -27,7 +28,7 @@ else:
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, cast
+from typing import IO, TYPE_CHECKING, Any, NoReturn, cast
 
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
@@ -123,7 +124,55 @@ _ERR_WMI_HIJACK_COMPILE_FAILED = "Failed to compile anti-evasion MOF via mofcomp
 _ERR_WMI_HIJACK_VERIFY_FAILED = "WMI hijack verification did not return spoofed values"
 _ERR_WMI_HIJACK_NO_SHARED = "Cannot stage anti-evasion MOF: shared folder not initialized"
 
+_ERR_LAUNCH_CLIENT_EXITED = (
+    "WindowsSandboxClient.exe exited during startup before the in-guest dispatcher "
+    "became ready. Confirm the Windows Sandbox feature is healthy and that no other "
+    "sandbox instance is running, then reboot the host if the failure persists."
+)
+_ERR_LAUNCH_DIALOG = "Windows Sandbox reported a launch failure"
+_ERR_LAUNCH_RPC_ENDPOINT = (
+    "Windows Sandbox could not initialize its RPC connection "
+    "(0x800706d9, EPT_S_NOT_REGISTERED). This is a host-side Hyper-V / Host Compute "
+    "Service state problem, not an Intellicrack fault. Ensure only one sandbox runs at "
+    "a time (destroy any prior session and confirm no WindowsSandboxClient.exe / "
+    "vmwp.exe processes remain), then reboot the host to re-register the Host Compute "
+    "Service endpoints. Restarting the hns, vmcompute, and WinNat services may clear "
+    "it without a reboot."
+)
+
+_SANDBOX_DIALOG_CLASS = "#32770"
+_SANDBOX_RPC_ENDPOINT_ERROR = "0x800706d9"
+_SANDBOX_ERROR_CODE_RE = re.compile(r"0x[0-9A-Fa-f]{8}")
+_SANDBOX_FAILURE_MARKERS = (
+    "could not be initialized",
+    "endpoint mapper",
+    "no more endpoints",
+    "failed to start",
+    "cannot start",
+)
+_GET_CLASS_NAME_BUFFER = 256
+
 _SCRIPTS_DIR = Path(__file__).resolve().parent / "scripts"
+
+
+def _is_sandbox_failure_text(text: str) -> bool:
+    """Classify combined dialog text as a Windows Sandbox launch failure.
+
+    Args:
+        text: Combined window title and static-text content of a dialog.
+
+    Returns:
+        bool: True when the text contains a Windows error code (``0x........``)
+        or a known failure phrase; False otherwise. Requiring one of these
+        markers prevents the transient ``Starting Windows Sandbox`` progress
+        dialog from being treated as a failure.
+    """
+    if not text:
+        return False
+    if _SANDBOX_ERROR_CODE_RE.search(text):
+        return True
+    lowered = text.lower()
+    return any(marker in lowered for marker in _SANDBOX_FAILURE_MARKERS)
 
 
 @dataclass(frozen=True)
@@ -460,6 +509,142 @@ class WindowsSandbox(SandboxBase):
             _logger.error("windows_sandbox_process_terminated", returncode=self.process.returncode)
             raise SandboxError(_ERR_SANDBOX_TERMINATED)
 
+    @staticmethod
+    def _detect_client_failure_dialog(client_pid: int) -> str | None:
+        """Detect a native Windows Sandbox failure dialog for the client process.
+
+        The Windows Sandbox client raises its own modal dialog (window class
+        ``#32770``, title ``Windows Sandbox``) when the guest VM cannot be
+        connected -- for example the ``0x800706d9`` (``EPT_S_NOT_REGISTERED``)
+        endpoint-mapper error. Because that dialog blocks while the client
+        process stays alive, the readiness poll would otherwise wait the full
+        dispatcher timeout. This enumerates top-level dialogs owned by
+        ``client_pid`` (or titled ``Windows Sandbox``), reads their static-text
+        children, and returns the combined text only when it looks like a real
+        failure, so the transient startup progress dialog is ignored.
+
+        Args:
+            client_pid: PID of the ``WindowsSandboxClient.exe`` process.
+
+        Returns:
+            str | None: Combined dialog text when a failure dialog is present,
+            otherwise None (including on every non-Windows platform).
+        """
+        if sys.platform != "win32":
+            return None
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        enum_windows_proc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+
+        user32.EnumWindows.argtypes = [enum_windows_proc, ctypes.c_void_p]
+        user32.EnumWindows.restype = ctypes.c_bool
+        user32.EnumChildWindows.argtypes = [ctypes.c_void_p, enum_windows_proc, ctypes.c_void_p]
+        user32.EnumChildWindows.restype = ctypes.c_bool
+        user32.GetWindowThreadProcessId.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+        user32.GetWindowThreadProcessId.restype = ctypes.c_ulong
+        user32.GetClassNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+        user32.GetClassNameW.restype = ctypes.c_int
+        user32.GetWindowTextW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+        user32.GetWindowTextW.restype = ctypes.c_int
+        user32.GetWindowTextLengthW.argtypes = [ctypes.c_void_p]
+        user32.GetWindowTextLengthW.restype = ctypes.c_int
+
+        def _window_text(hwnd: int) -> str:
+            length = user32.GetWindowTextLengthW(hwnd)
+            if length <= 0:
+                return ""
+            buffer = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buffer, length + 1)
+            return buffer.value
+
+        def _class_name(hwnd: int) -> str:
+            buffer = ctypes.create_unicode_buffer(_GET_CLASS_NAME_BUFFER)
+            user32.GetClassNameW(hwnd, buffer, _GET_CLASS_NAME_BUFFER)
+            return buffer.value
+
+        collected: list[str] = []
+
+        def _child_cb(hwnd: int, _: int) -> bool:
+            text = _window_text(hwnd)
+            if text:
+                collected.append(text)
+            return True
+
+        child_proc = enum_windows_proc(_child_cb)
+        matched: dict[str, str] = {}
+
+        def _top_cb(hwnd: int, _: int) -> bool:
+            if "text" in matched:
+                return True
+            title = _window_text(hwnd)
+            owner_pid = ctypes.c_ulong(0)
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner_pid))
+            owned_by_client = owner_pid.value == client_pid
+            sandbox_titled = "windows sandbox" in title.lower()
+            if not (owned_by_client or sandbox_titled):
+                return True
+            if _class_name(hwnd) != _SANDBOX_DIALOG_CLASS:
+                return True
+            collected.clear()
+            collected.append(title)
+            user32.EnumChildWindows(hwnd, child_proc, None)
+            combined = "\n".join(part for part in collected if part).strip()
+            if _is_sandbox_failure_text(combined):
+                matched["text"] = combined
+            return True
+
+        try:
+            user32.EnumWindows(enum_windows_proc(_top_cb), None)
+        except OSError as err:
+            _logger.debug("sandbox_failure_dialog_enum_failed", client_pid=client_pid, error=str(err))
+            return None
+        return matched.get("text")
+
+    @staticmethod
+    def _raise_launch_dialog_failure(detail: str) -> NoReturn:
+        """Raise an actionable :class:`SandboxError` for a detected failure dialog.
+
+        Args:
+            detail: Combined dialog text captured from the failure dialog.
+
+        Raises:
+            SandboxError: Always. Uses the RPC-endpoint guidance when the
+                ``0x800706d9`` code is present, otherwise a generic message that
+                embeds the captured dialog text.
+        """
+        code_match = _SANDBOX_ERROR_CODE_RE.search(detail)
+        error_code = code_match.group(0) if code_match else None
+        _logger.error(
+            "windows_sandbox_launch_failure_dialog",
+            error_code=error_code,
+            dialog_text=detail[:500],
+        )
+        if error_code is not None and error_code.lower() == _SANDBOX_RPC_ENDPOINT_ERROR:
+            raise SandboxError(_ERR_LAUNCH_RPC_ENDPOINT)
+        normalized = " ".join(detail.split())
+        suffix = f": {normalized}" if normalized else ""
+        msg = f"{_ERR_LAUNCH_DIALOG}{suffix}"
+        raise SandboxError(msg)
+
+    async def _check_startup_health(self) -> None:
+        """Detect an early client exit or native failure dialog during startup.
+
+        Raises:
+            SandboxError: If the sandbox client exited before signalling
+                readiness, or a Windows Sandbox failure dialog (such as the
+                ``0x800706d9`` endpoint-mapper error) was detected.
+        """
+        if self.process is None:
+            return
+        if self.process.poll() is not None:
+            returncode = self.process.returncode
+            _logger.error("windows_sandbox_client_exited_during_startup", returncode=returncode)
+            msg = f"{_ERR_LAUNCH_CLIENT_EXITED} (client exit code {returncode})"
+            raise SandboxError(msg)
+        detail = await asyncio.to_thread(self._detect_client_failure_dialog, self.process.pid)
+        if detail is not None:
+            self._raise_launch_dialog_failure(detail)
+
     async def _prepare_shared_folders(self) -> None:
         """Create the temp dir, shared folder, monitor folder, and ticket subdirectories."""
         self._temp_dir = Path(
@@ -517,6 +702,8 @@ class WindowsSandbox(SandboxBase):
             metadata={"wsb_config": str(self._wsb_path)},
             cleanup_callback=self.stop,
         )
+
+        await self._check_startup_health()
 
     async def _attach_sandbox_worker(self) -> None:
         """Wait for dispatcher readiness, resolve worker PID, and finalize state.
@@ -576,12 +763,54 @@ class WindowsSandbox(SandboxBase):
 
         try:
             await self._start_impl()
-        except (OSError, RuntimeError, SandboxError) as e:
-            _logger.warning("windows_sandbox_start_failed", error=str(e))
-            self.state.status = "error"
-            self.state.last_error = str(e)
-            await self._cleanup()
+        except SandboxError as e:
+            await self._handle_start_failure(e)
+            raise
+        except (OSError, RuntimeError) as e:
+            await self._handle_start_failure(e)
             raise SandboxError(_ERR_START_FAILED) from e
+
+    async def _handle_start_failure(self, error: Exception) -> None:
+        """Record error state and tear down the partially-started sandbox.
+
+        Args:
+            error: The exception that aborted the start sequence.
+        """
+        _logger.warning("windows_sandbox_start_failed", error=str(error))
+        self.state.status = "error"
+        self.state.last_error = str(error)
+        await self._abort_client()
+        await self._cleanup()
+
+    async def _abort_client(self) -> None:
+        """Force-terminate a sandbox client (and its modal failure dialog) after a failed start.
+
+        Unlike :meth:`stop`, this skips the graceful ``WM_CLOSE`` path because a
+        failed launch typically leaves the client blocked on a modal error
+        dialog that never honours a close request; the client is force-killed
+        and unregistered so the next launch attempt is not blocked by a stale
+        instance.
+        """
+        if self.process is None:
+            return
+
+        pid = self.process.pid
+        process_manager = ProcessManager.get_instance()
+        if self.process.poll() is None:
+            await self._force_kill_sandbox(pid)
+
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(self.process.wait),
+                timeout=_PROCESS_WAIT_TIMEOUT,
+            )
+        except TimeoutError:
+            _logger.warning("sandbox_client_abort_wait_timeout", pid=pid)
+            self.process.kill()
+            await asyncio.to_thread(self.process.wait)
+
+        process_manager.unregister(pid)
+        self.process = None
 
     async def _terminate_sandbox_client(self, process_manager: ProcessManager) -> None:
         """Terminate the sandbox client process gracefully or forcefully.
@@ -887,7 +1116,7 @@ class WindowsSandbox(SandboxBase):
         deadline = time.monotonic() + _DISPATCHER_STARTUP_TIMEOUT
 
         while time.monotonic() < deadline:
-            self._check_sandbox_alive()
+            await self._check_startup_health()
             if await asyncio.to_thread(marker.exists):
                 _logger.info("dispatcher_ready_signalled")
                 return

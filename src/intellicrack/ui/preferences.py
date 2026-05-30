@@ -13,7 +13,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 
 
 if TYPE_CHECKING:
@@ -495,30 +495,9 @@ class PreferencesDialog(QDialog):
         layout.setSpacing(0)
 
         self._category_list = QListWidget()
+        self._category_list.setObjectName("preferences_category_list")
         self._category_list.setFixedWidth(160)
         self._category_list.currentRowChanged.connect(self._on_category_changed)
-        self._category_list.setStyleSheet(
-            """
-            QListWidget {
-                background-color: #252526;
-                border: none;
-                border-right: 1px solid #3e3e42;
-                outline: none;
-            }
-            QListWidget::item {
-                color: #d4d4d4;
-                padding: 12px 16px;
-                border: none;
-            }
-            QListWidget::item:selected {
-                background-color: #094771;
-            }
-            QListWidget::item:hover:!selected {
-                background-color: #2a2d2e;
-            }
-        """
-           ,
-        )
 
         categories = ["General", "Appearance", "Session", "Logging"]
         for category in categories:
@@ -533,61 +512,7 @@ class PreferencesDialog(QDialog):
         right_layout.setSpacing(0)
 
         self._stack = QStackedWidget()
-        self._stack.setStyleSheet(
-            """
-            QStackedWidget {
-                background-color: #1e1e1e;
-            }
-            QGroupBox {
-                color: #d4d4d4;
-                font-weight: bold;
-                border: 1px solid #3e3e42;
-                border-radius: 4px;
-                margin-top: 16px;
-                padding-top: 16px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                padding: 0 8px;
-            }
-            QLabel {
-                color: #d4d4d4;
-            }
-            QLineEdit, QSpinBox, QComboBox {
-                background-color: #3e3e42;
-                color: #d4d4d4;
-                border: 1px solid #3e3e42;
-                border-radius: 4px;
-                padding: 6px;
-            }
-            QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
-                border-color: #0e639c;
-            }
-            QCheckBox {
-                color: #d4d4d4;
-                spacing: 8px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QPushButton {
-                background-color: #0e639c;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 16px;
-            }
-            QPushButton:hover {
-                background-color: #1177bb;
-            }
-            QPushButton:pressed {
-                background-color: #0d5a8c;
-            }
-        """
-           ,
-        )
+        self._stack.setObjectName("preferences_stack")
 
         general_widget = GeneralSettingsWidget(self._config)
         self._stack.addWidget(general_widget)
@@ -608,15 +533,8 @@ class PreferencesDialog(QDialog):
         right_layout.addWidget(self._stack)
 
         button_container = QWidget()
-        button_container.setStyleSheet(
-            """
-            QWidget {
-                background-color: #2d2d30;
-                border-top: 1px solid #3e3e42;
-            }
-        """
-           ,
-        )
+        button_container.setObjectName("preferences_button_bar")
+        button_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(16, 12, 16, 12)
 

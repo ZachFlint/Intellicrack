@@ -417,7 +417,7 @@ class TestF0002AgentConnectCalled:
 
             await fake_agent.connect()
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
         assert fake_agent.connect_called >= 1, "connect() was never called on GuestAgentClient"
 
     def test_agent_is_connected_after_explicit_connect(self) -> None:
@@ -429,7 +429,7 @@ class TestF0002AgentConnectCalled:
         fake = _FakeAgent()
         assert not fake.is_connected, "Precondition: agent starts disconnected"
 
-        asyncio.get_event_loop().run_until_complete(fake.connect())
+        asyncio.run(fake.connect())
 
         assert fake.is_connected, "is_connected must be True after connect() returns True"
 
@@ -455,7 +455,7 @@ class TestF0003PollForResult:
             result_file.write_text("42\n", encoding="utf-8")
             return await sb.poll_for_result_for_test(result_file, 5)
 
-        exit_code, _stdout, _stderr = asyncio.get_event_loop().run_until_complete(_run())
+        exit_code, _stdout, _stderr = asyncio.run(_run())
         assert exit_code == 42, f"Expected exit code 42, got {exit_code}"
 
     def test_poll_raises_on_timeout(self, tmp_path: Path) -> None:
@@ -471,7 +471,7 @@ class TestF0003PollForResult:
             return await sb.poll_for_result_for_test(missing, 1)
 
         with pytest.raises(SandboxTimeoutError):
-            asyncio.get_event_loop().run_until_complete(_run())
+            asyncio.run(_run())
 
     def test_poll_returns_nonzero_exit_on_nonzero_file(self, tmp_path: Path) -> None:
         """_poll_for_result preserves non-zero exit codes.
@@ -489,7 +489,7 @@ class TestF0003PollForResult:
             result_file.write_text("1\n", encoding="utf-8")
             return await sb.poll_for_result_for_test(result_file, 5)
 
-        exit_code, _stdout, _stderr = asyncio.get_event_loop().run_until_complete(_run())
+        exit_code, _stdout, _stderr = asyncio.run(_run())
         assert exit_code == 1, f"Expected exit code 1, got {exit_code}"
 
     def test_poll_returns_stdout_and_stderr_from_sidecars(self, tmp_path: Path) -> None:
@@ -522,7 +522,7 @@ class TestF0003PollForResult:
                 script_path=script_file,
             )
 
-        exit_code, stdout, stderr = asyncio.get_event_loop().run_until_complete(_run())
+        exit_code, stdout, stderr = asyncio.run(_run())
         assert exit_code == 0, f"Expected exit code 0, got {exit_code}"
         assert "hello-out" in stdout, f"stdout sidecar content missing; got {stdout!r}"
         assert "hello-err" in stderr, f"stderr sidecar content missing; got {stderr!r}"
@@ -551,7 +551,7 @@ class TestF0003PollForResult:
                 stderr_path=absent_stderr,
             )
 
-        exit_code, stdout, stderr = asyncio.get_event_loop().run_until_complete(_run())
+        exit_code, stdout, stderr = asyncio.run(_run())
         assert exit_code == 0
         assert not stdout, f"Expected empty stdout when sidecar missing; got {stdout!r}"
         assert not stderr, f"Expected empty stderr when sidecar missing; got {stderr!r}"
@@ -581,7 +581,7 @@ class TestF0003PollForResult:
                 script_path=script_file,
             )
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         assert not result_file.exists(), "result file should be cleaned up after poll"
         assert not stdout_file.exists(), "stdout sidecar should be cleaned up"
@@ -661,7 +661,7 @@ class TestF0004CpuArgNotHostForTCG:
         sb.set_qemu_path(Path("qemu-system-x86_64"))
         sb.set_temp_dir(tmp_path)
 
-        return asyncio.get_event_loop().run_until_complete(sb.build_qemu_command_for_test())
+        return asyncio.run(sb.build_qemu_command_for_test())
 
     def test_cpu_host_absent_with_tcg(self, tmp_path: Path) -> None:
         """-cpu host must not appear in the QEMU argv when accel is TCG.
@@ -726,7 +726,7 @@ class TestF0005SharedFolderWindowsCompatible:
         sb.set_shared_folder(shared)
         sb.set_temp_dir(tmp_path)
 
-        cmd = asyncio.get_event_loop().run_until_complete(sb.build_qemu_command_for_test())
+        cmd = asyncio.run(sb.build_qemu_command_for_test())
         cmd_str = " ".join(cmd)
 
         assert "fat:rw:" in cmd_str, "Expected FAT-drive shared folder for Windows guest"
@@ -794,7 +794,7 @@ class TestF0016WhpxRequiresHyperV:
             ):
                 return await sb.detect_accelerator_for_test()
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert result != AcceleratorType.WHPX, "_detect_accelerator must not return WHPX when Hyper-V prerequisites are not met"
 
     def test_probe_whpx_returns_false_on_non_windows(self) -> None:
@@ -835,7 +835,7 @@ class TestF0022F0029AntiEvasion:
             sb.set_qmp(MagicMock())
             return await sb.apply_anti_evasion(profile="workstation")
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert result["profile"] == "workstation", f"apply_anti_evasion did not use the profile argument; got {result['profile']}"
 
     def test_anti_evasion_different_profiles_produce_different_smbios(self) -> None:
@@ -872,7 +872,7 @@ class TestF0022F0029AntiEvasion:
             sb.set_qmp(MagicMock())
             return await sb.apply_anti_evasion(profile="laptop")
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert result["profile"] == "laptop"
         assert any("smbios" in t for t in result["techniques"]), "Techniques must include SMBIOS entries when profile is applied"
 
@@ -949,7 +949,7 @@ class TestF0023ListSnapshotsParsing:
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert "clean_state" in result, f"Expected 'clean_state' in {result}"
         assert "post_install" in result, f"Expected 'post_install' in {result}"
 
@@ -962,7 +962,7 @@ class TestF0023ListSnapshotsParsing:
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert "ID" not in result, f"Header 'ID' must not appear in snapshot list: {result}"
         assert "TAG" not in result, f"Header 'TAG' must not appear in snapshot list: {result}"
 
@@ -974,7 +974,7 @@ class TestF0023ListSnapshotsParsing:
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert result == [], f"Expected [] for empty QMP output; got {result}"
 
 
@@ -1006,7 +1006,7 @@ class TestF0025StopClearsCaptures:
                 sb.set_qemu_pid(None)
                 await sb.stop()
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         assert len(sb.get_active_captures()) == 0, "stop() must clear _active_captures; resource leak remains if not emptied"
 
@@ -1073,7 +1073,7 @@ class TestF0028YaraScanFallback:
             with patch.object(_real_yara, "compile", side_effect=_FakeYara.compile):
                 return await sb.yara_scan(scan_target="files")
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         for p in scanned_paths:
             assert "user_submitted" not in p, f"yara_scan must not scan user input; found '{p}' in scan_files"
@@ -1132,7 +1132,7 @@ class TestF0028YaraScanFallback:
             with patch.object(_real_yara, "compile", side_effect=_FakeYara2.compile):
                 return await sb.yara_scan(scan_target="files")
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         assert len(scanned_paths) > 0, "yara_scan did not scan any files from the zip"
 
@@ -1175,7 +1175,7 @@ class TestF0031RunBinaryNoFixedSleep:
                 await sb.run_binary(binary, monitor=False)
                 return time.monotonic() - t0
 
-        elapsed = asyncio.get_event_loop().run_until_complete(_run())
+        elapsed = asyncio.run(_run())
         assert elapsed < 1.5, f"run_binary without monitoring took {elapsed:.2f}s — a hard-coded asyncio.sleep(2) would make this >= 2s"
 
 
@@ -1217,7 +1217,7 @@ class TestF0035RunBinarySuccessMatchesExitCode:
                 report = await sb.run_binary(binary, monitor=False)
             return report.result
 
-        return asyncio.get_event_loop().run_until_complete(_run())
+        return asyncio.run(_run())
 
     def test_exit_code_zero_produces_success(self, tmp_path: Path) -> None:
         """exit_code 0 must yield result == 'success'.
@@ -1272,7 +1272,7 @@ class TestF0006AgentScriptStartupWired:
         async def _run() -> None:
             await sb.create_agent_script_for_test()
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         startup_scripts = list(monitor_dir.glob("start_agent.*"))
         agent_scripts = list(monitor_dir.glob("agent.*"))
@@ -1294,7 +1294,7 @@ class TestF0006AgentScriptStartupWired:
         async def _run() -> None:
             await sb.create_agent_script_for_test()
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         sh_scripts = list(monitor_dir.glob("*.sh"))
         agent_scripts = list(monitor_dir.glob("agent.*"))
@@ -1329,7 +1329,7 @@ class TestF0015AcceleratorNotRedoneOnStart:
                 await sb.is_available()
                 await sb.is_available()
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        asyncio.run(_run())
 
         assert detect_call_count == 0, f"_detect_accelerator was called {detect_call_count} times but must be 0 when cache is already valid"
 
@@ -1366,7 +1366,7 @@ class TestF0007ExtractDroppedFiles:
         async def _run() -> Path:
             return await sb.extract_dropped_files()
 
-        result = asyncio.get_event_loop().run_until_complete(_run())
+        result = asyncio.run(_run())
         assert result.exists(), "extract_dropped_files must return an existing zip path"
         assert result.suffix == ".zip", f"Expected .zip file; got {result.suffix}"
         assert zipfile.is_zipfile(result), "Output file must be a valid zip archive"

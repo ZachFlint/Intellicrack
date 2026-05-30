@@ -25,6 +25,7 @@ from intellicrack.core.types import (
 from intellicrack.providers.base import (
     HttpErrorMessages,
     LLMProviderBase,
+    is_permanent_quota_error,
 )
 
 
@@ -209,3 +210,41 @@ def test_http_error_messages_uses_slots() -> None:
     mutable: object = msgs
     with pytest.raises((AttributeError, TypeError)):
         setattr(mutable, attribute_to_inject, "y")
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "429 RESOURCE_EXHAUSTED. Your project has exceeded its monthly spending cap.",
+        "You exceeded your current quota, please check your plan and billing details.",
+        "Error code: 429 - insufficient_quota",
+        "Request blocked: billing hard limit has been reached",
+    ],
+)
+def test_permanent_quota_messages_detected(message: str) -> None:
+    """Billing and spend-cap exhaustion messages classify as permanent.
+
+    Args:
+        message: A provider 429 message describing a non-retryable
+            billing or quota-cap condition.
+    """
+    assert is_permanent_quota_error(message) is True
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "429 Too Many Requests: rate limit exceeded, retry after 20s",
+        "Resource has been exhausted (e.g. check quota) per-minute limit",
+        "Quota exceeded for requests per minute. Try again later.",
+        "Internal server error",
+    ],
+)
+def test_transient_rate_limit_messages_not_permanent(message: str) -> None:
+    """Transient per-interval throttling must remain retryable (not permanent).
+
+    Args:
+        message: A provider 429 message describing a transient, retryable
+            rate limit that must not be misclassified as a hard cap.
+    """
+    assert is_permanent_quota_error(message) is False

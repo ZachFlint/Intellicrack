@@ -84,6 +84,34 @@ class _RequirementsResult:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class _StatusSnapshot:
+    """Immutable snapshot of the discrete XPU status fields used for change detection.
+
+    Equality across two snapshots determines whether the dialog re-emits a status log line. Volatile live metrics (allocated VRAM, cache
+    usage) are deliberately excluded so steady-state polling stays silent; only meaningful device-state transitions trigger a new log entry.
+
+    Attributes:
+        available: True when an XPU device is currently usable.
+        device_name: Resolved device name, or a status marker string when unavailable.
+        driver_version: Driver version string, or ``N/A`` when unavailable.
+        optimal_dtype: Detected optimal dtype name.
+        capabilities: Human-readable capability summary (e.g. ``FP16 / BF16 / INT8``).
+        total_memory_bytes: Total device VRAM in bytes (0 when unknown).
+        requirements_met: Windows requirements outcome, or None before the first check completes.
+        requirements_warnings: Ordered requirement warning strings.
+    """
+
+    available: bool
+    device_name: str
+    driver_version: str
+    optimal_dtype: str
+    capabilities: str
+    total_memory_bytes: int
+    requirements_met: bool | None
+    requirements_warnings: tuple[str, ...]
+
+
 class _RequirementsCheckWorker(QThread):
     """Background worker that runs :func:`check_windows_requirements` off the GUI thread.
 
@@ -148,6 +176,16 @@ class XPUStatusDialog(QDialog):
 
         self._requirements_worker: _RequirementsCheckWorker | None = None
 
+        self._last_logged_snapshot: _StatusSnapshot | None = None
+        self._cur_available: bool = False
+        self._cur_device_name: str = ""
+        self._cur_driver_version: str = ""
+        self._cur_optimal_dtype: str = ""
+        self._cur_capabilities: str = ""
+        self._cur_total_memory_bytes: int = 0
+        self._cur_requirements_met: bool | None = None
+        self._cur_requirements_warnings: tuple[str, ...] = ()
+
         self._setup_ui()
         self._refresh_all()
         self.refresh_timer.start(_LIVE_REFRESH_MS)
@@ -171,8 +209,8 @@ class XPUStatusDialog(QDialog):
         group = QGroupBox("Device Status")
         form = QFormLayout()
 
-        self._status_label = QLabel("Checking...")
-        form.addRow("Status:", self._status_label)
+        self.status_label = QLabel("Checking...")
+        form.addRow("Status:", self.status_label)
 
         self.device_name_label = QLabel("--")
         form.addRow("Device:", self.device_name_label)
@@ -265,17 +303,63 @@ class XPUStatusDialog(QDialog):
         return row
 
     def _refresh_all(self) -> None:
-        """Run a full refresh of all status fields including expensive checks."""
+        """Run a full refresh of all status fields including expensive checks.
+
+        Called on dialog open and whenever the user presses Refresh; both are treated as an explicit request, so the resulting status is
+        always logged even when it is identical to the previously logged snapshot.
+        """
         self._refresh_device_info()
         self._refresh_live_data()
         self._refresh_requirements()
+        self._log_status_if_changed(forced=True)
+
+    def _build_status_snapshot(self) -> _StatusSnapshot:
+        """Assemble a :class:`_StatusSnapshot` from the current accumulator values.
+
+        Returns:
+            _StatusSnapshot: The discrete status snapshot for change detection and logging.
+        """
+        return _StatusSnapshot(
+            available=self._cur_available,
+            device_name=self._cur_device_name,
+            driver_version=self._cur_driver_version,
+            optimal_dtype=self._cur_optimal_dtype,
+            capabilities=self._cur_capabilities,
+            total_memory_bytes=self._cur_total_memory_bytes,
+            requirements_met=self._cur_requirements_met,
+            requirements_warnings=self._cur_requirements_warnings,
+        )
+
+    def _log_status_if_changed(self, *, forced: bool) -> None:
+        """Emit a status log line when the discrete status changed or a log was explicitly requested.
+
+        Args:
+            forced: When True, always log (used for the initial open and manual Refresh). When False, log only if the snapshot differs from
+                the last logged one (used by the auto-refresh timer and asynchronous requirement completion).
+        """
+        snapshot = self._build_status_snapshot()
+        if not forced and snapshot == self._last_logged_snapshot:
+            return
+        self._last_logged_snapshot = snapshot
+        _logger.info(
+            "xpu_status",
+            available=snapshot.available,
+            device=snapshot.device_name,
+            driver=snapshot.driver_version,
+            optimal_dtype=snapshot.optimal_dtype,
+            capabilities=snapshot.capabilities,
+            total_memory_gb=round(snapshot.total_memory_bytes / _BYTES_PER_GB, 2),
+            requirements_met=snapshot.requirements_met,
+            warning_count=len(snapshot.requirements_warnings),
+        )
 
     def _refresh_device_info(self) -> None:
         """Refresh static device information (name, driver, dtype, caps)."""
         if is_xpu_available is None:
-            self._status_label.setText("XPU utilities not available")
-            self._status_label.setProperty("status", "error")
-            _restyle(self._status_label)
+            self.status_label.setText("XPU utilities not available")
+            self.status_label.setProperty("status", "error")
+            _restyle(self.status_label)
+            self._set_unavailable_device_state("XPU utilities not available")
             return
 
         try:
@@ -285,39 +369,64 @@ class XPUStatusDialog(QDialog):
             available = False
 
         if not available:
-            self._status_label.setText("CPU Only")
-            self._status_label.setProperty("status", "warning")
-            _restyle(self._status_label)
+            self.status_label.setText("CPU Only")
+            self.status_label.setProperty("status", "warning")
+            _restyle(self.status_label)
             self.device_name_label.setText("No XPU device detected")
             self.driver_label.setText("N/A")
             self._dtype_label.setText("float32")
             self.caps_label.setText("N/A")
+            self._set_unavailable_device_state("No XPU device detected")
             return
 
-        self._status_label.setText("XPU Active")
-        self._status_label.setProperty("status", "success")
-        _restyle(self._status_label)
+        self.status_label.setText("XPU Active")
+        self.status_label.setProperty("status", "success")
+        _restyle(self.status_label)
+        self._cur_available = True
 
         self._refresh_device_details()
         self._refresh_dtype()
 
+    def _set_unavailable_device_state(self, device_name: str) -> None:
+        """Record accumulator values for a state with no usable XPU device.
+
+        Args:
+            device_name: Status marker describing why no device is active.
+        """
+        self._cur_available = False
+        self._cur_device_name = device_name
+        self._cur_driver_version = "N/A"
+        self._cur_optimal_dtype = "float32"
+        self._cur_capabilities = "N/A"
+
     def _refresh_device_details(self) -> None:
         """Populate device name, driver version, and capability flags."""
         if get_xpu_device_info is None:
+            self._cur_device_name = "Device info unavailable"
+            self._cur_driver_version = "Unknown"
+            self._cur_capabilities = "Unknown"
             return
 
         try:
             info: XPUDeviceInfo | None = get_xpu_device_info(0)
         except (RuntimeError, OSError):
             _logger.exception("xpu_device_info_failed")
+            self._cur_device_name = "Unknown device"
+            self._cur_driver_version = "Unknown"
+            self._cur_capabilities = "Unknown"
             return
 
         if info is None:
             self.device_name_label.setText("Unknown device")
+            self._cur_device_name = "Unknown device"
+            self._cur_driver_version = "Unknown"
+            self._cur_capabilities = "Unknown"
             return
 
-        self.device_name_label.setText(str(info.device_name))
-        self.driver_label.setText(str(info.driver_version) if info.driver_version else "Unknown")
+        device_name = str(info.device_name)
+        driver_version = str(info.driver_version) if info.driver_version else "Unknown"
+        self.device_name_label.setText(device_name)
+        self.driver_label.setText(driver_version)
 
         caps_parts: list[str] = []
         if info.supports_fp16:
@@ -326,24 +435,51 @@ class XPUStatusDialog(QDialog):
             caps_parts.append("BF16")
         if info.supports_int8:
             caps_parts.append("INT8")
-        self.caps_label.setText(" / ".join(caps_parts) if caps_parts else "None detected")
+        capabilities = " / ".join(caps_parts) if caps_parts else "None detected"
+        self.caps_label.setText(capabilities)
+
+        self._cur_device_name = device_name
+        self._cur_driver_version = driver_version
+        self._cur_capabilities = capabilities
 
     def _refresh_dtype(self) -> None:
         """Detect and display the optimal dtype."""
         if get_optimal_dtype_for_xpu is None:
+            self._cur_optimal_dtype = "Unknown"
             return
 
         try:
             dtype = get_optimal_dtype_for_xpu()
             self._dtype_label.setText(dtype)
+            self._cur_optimal_dtype = dtype
         except (RuntimeError, OSError):
             _logger.exception("xpu_dtype_detection_failed")
             self._dtype_label.setText("Detection failed")
+            self._cur_optimal_dtype = "Detection failed"
 
     def _refresh_live_data(self) -> None:
-        """Refresh memory and cache metrics (cheap, timer-safe)."""
+        """Refresh memory and cache metrics (cheap, timer-safe).
+
+        After refreshing the volatile metrics this performs a cheap availability probe. When XPU availability has flipped since the last full
+        device probe (for example, the discrete GPU was physically removed or re-attached) a full device refresh is triggered and the
+        resulting state change is logged. Steady-state ticks where nothing meaningful changed stay silent.
+        """
         self._refresh_memory()
         self._refresh_cache()
+        self._detect_availability_change()
+
+    def _detect_availability_change(self) -> None:
+        """Re-probe XPU availability and refresh device info only when it has changed."""
+        if is_xpu_available is None:
+            return
+        try:
+            available = is_xpu_available()
+        except (RuntimeError, OSError):
+            _logger.exception("xpu_availability_check_failed")
+            return
+        if available != self._cur_available:
+            self._refresh_device_info()
+            self._log_status_if_changed(forced=False)
 
     @staticmethod
     def _read_xpu_allocation() -> tuple[int, int] | None:
@@ -365,6 +501,7 @@ class XPUStatusDialog(QDialog):
             self.memory_text.setText("XPU memory info not available")
             self.memory_text.setProperty("status", "idle")
             _restyle(self.memory_text)
+            self._cur_total_memory_bytes = 0
             return
 
         try:
@@ -373,6 +510,7 @@ class XPUStatusDialog(QDialog):
             _logger.exception("xpu_memory_info_failed")
             self.memory_bar.setValue(0)
             self.memory_text.setText("Failed to read memory")
+            self._cur_total_memory_bytes = 0
             return
 
         if allocation is None:
@@ -380,9 +518,11 @@ class XPUStatusDialog(QDialog):
             self.memory_text.setText("No XPU device")
             self.memory_text.setProperty("status", "idle")
             _restyle(self.memory_text)
+            self._cur_total_memory_bytes = 0
             return
 
         allocated, total = allocation
+        self._cur_total_memory_bytes = total
 
         if total > 0:
             pct = int((allocated / total) * 100)
@@ -469,6 +609,10 @@ class XPUStatusDialog(QDialog):
             _logger.warning("requirements_result_unexpected_type", actual_type=type(result).__name__)
             return
 
+        self._cur_requirements_met = result.all_met
+        self._cur_requirements_warnings = tuple(result.warnings)
+        self._log_status_if_changed(forced=False)
+
         colors = ThemeManager.get_instance().get_analysis_colors()
         success_hex = colors["success"].name()
         warning_hex = colors["warning"].name()
@@ -491,6 +635,8 @@ class XPUStatusDialog(QDialog):
             error: Human-readable description of the failure surfaced by the worker.
         """
         _logger.warning("requirements_check_failed", error=error)
+        self._cur_requirements_met = None
+        self._cur_requirements_warnings = (f"Requirements check failed: {error}",)
         self.requirements_text.setPlainText(f"Failed to check requirements: {error}")
 
     def _on_requirements_worker_finished(self) -> None:
@@ -515,4 +661,5 @@ class XPUStatusDialog(QDialog):
                 _logger.debug("requirements_worker_signals_already_disconnected", exc_info=True)
             if not worker.wait(_REQUIREMENTS_WORKER_WAIT_MS):
                 _logger.warning("requirements_worker_did_not_finish", timeout_ms=_REQUIREMENTS_WORKER_WAIT_MS)
+        self._requirements_worker = None
         super().closeEvent(a0)

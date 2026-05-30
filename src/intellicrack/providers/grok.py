@@ -35,6 +35,7 @@ from intellicrack.providers.base import (
     LLMProviderBase,
     OpenAIErrorMessages,
     ToolCallBufferManager,
+    is_permanent_quota_error,
     map_thinking_budget_to_effort,
 )
 
@@ -882,6 +883,9 @@ class GrokProvider(LLMProviderBase):
             self._logger.warning("grok_stream_auth_failed", error=str(e))
             raise AuthenticationError(_ERR_INVALID_API_KEY % e) from e
         except openai.RateLimitError as e:
+            if is_permanent_quota_error(str(e)):
+                self._logger.warning("grok_stream_quota_exhausted", error=str(e))
+                raise ProviderError(_ERR_API_ERROR % e) from e
             self._logger.warning("grok_stream_rate_limited", error=str(e))
             raise RateLimitError(_ERR_RATE_LIMITED % e) from e
         except openai.APIError as e:

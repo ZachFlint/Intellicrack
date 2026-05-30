@@ -58,6 +58,8 @@ _ERR_GET_GENERATION_FAILED = "Failed to get generation: %s"
 
 HTTP_BAD_REQUEST = 400
 
+_HTTP_REFERER = "http://localhost"
+
 _REST_HTTP_MSGS = HttpErrorMessages(
     auth_invalid=_ERR_INVALID_KEY,
     rate_limited=_ERR_RATE_LIMITED,
@@ -78,16 +80,59 @@ class OpenRouterProvider(LLMProviderBase):
         BASE_URL: OpenRouter unified LLM API base URL.
     """
 
-    BASE_URL = "https://openrouter.ai/api/v1"
+    BASE_URL: str = "https://openrouter.ai/api/v1"
 
     def __init__(self) -> None:
         """Initialize the OpenRouterProvider instance."""
         super().__init__()
         self.client: httpx.AsyncClient | None = None
         self._api_key: str | None = None
+        self._base_url: str = self.BASE_URL
+        self._client_loop: asyncio.AbstractEventLoop | None = None
         self._current_task: asyncio.Task[object] | None = None
         self._logger = get_logger(__name__).bind(provider="openrouter")
         self._logger.info("openrouter_provider_initialized")
+
+    @staticmethod
+    def _build_client(credentials: ProviderCredentials) -> httpx.AsyncClient:
+        """Construct the OpenRouter HTTP client from credentials.
+
+        Args:
+            credentials: Validated credentials carrying the API key and
+                request timeout.
+
+        Returns:
+            httpx.AsyncClient: A configured client with the OpenRouter
+            authorization and attribution headers applied.
+        """
+        return httpx.AsyncClient(
+            timeout=httpx.Timeout(credentials.timeout or 120.0),
+            headers={
+                "Authorization": f"Bearer {credentials.api_key}",
+                "HTTP-Referer": _HTTP_REFERER,
+                "X-Title": "Intellicrack",
+            },
+        )
+
+    def _ensure_client_loop(self) -> None:
+        """Rebind the HTTP client to the current event loop when it changed.
+
+        Must be called from within a running event loop (i.e. at the
+        start of an async public method) while connected. When the
+        running loop differs from the loop the cached client was bound
+        to, the client is rebuilt from the stored credentials so its
+        connection pool is valid for the active loop. See
+        :meth:`LLMProviderBase._httpx_client_rebind_target` for the
+        rationale.
+        """
+        if self.client is None or self._credentials is None:
+            return
+        target_loop = self._httpx_client_rebind_target(self._client_loop)
+        if target_loop is None:
+            return
+        self._logger.debug("openrouter_client_rebound", reason="event_loop_changed")
+        self.client = self._build_client(self._credentials)
+        self._client_loop = target_loop
 
     @property
     def name(self) -> ProviderName:
@@ -106,7 +151,10 @@ class OpenRouterProvider(LLMProviderBase):
         :meth:`LLMProviderBase._raise_typed_for_status`.
 
         Args:
-            credentials: Must contain api_key.
+            credentials: Must contain api_key. ``api_base`` optionally
+                overrides the API endpoint for proxy or self-hosted
+                OpenRouter-compatible gateways; it defaults to
+                :data:`BASE_URL`.
 
         Raises:
             AuthenticationError: If API key is invalid.
@@ -126,18 +174,13 @@ class OpenRouterProvider(LLMProviderBase):
                 )
             self.client = None
 
+        self._base_url = (credentials.api_base or self.BASE_URL).rstrip("/")
+
         try:
             self._api_key = credentials.api_key
-            self.client = httpx.AsyncClient(
-                timeout=httpx.Timeout(credentials.timeout or 120.0),
-                headers={
-                    "Authorization": f"Bearer {credentials.api_key}",
-                    "HTTP-Referer": credentials.api_base or "http://localhost",
-                    "X-Title": "Intellicrack",
-                },
-            )
+            self.client = self._build_client(credentials)
 
-            response = await self.client.get(f"{self.BASE_URL}/models")
+            response = await self.client.get(f"{self._base_url}/models")
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
             self.connected = False
@@ -161,6 +204,7 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_CONNECT_FAILED % e) from e
         else:
             self._credentials = credentials
+            self._client_loop = asyncio.get_running_loop()
             self.connected = True
             self._logger.info(
                 "openrouter_connected",
@@ -182,6 +226,8 @@ class OpenRouterProvider(LLMProviderBase):
             await self.client.aclose()
             self.client = None
         self._api_key = None
+        self._base_url = self.BASE_URL
+        self._client_loop = None
         self._logger.info("openrouter_disconnected", was_connected=True)
 
     async def list_models(self) -> list[ModelInfo]:
@@ -195,6 +241,8 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
+
+        self._ensure_client_loop()
 
         try:
             sorted_models = await self._fetch_and_sort_models()
@@ -223,7 +271,7 @@ class OpenRouterProvider(LLMProviderBase):
                 provider="openrouter",
             )
             raise ProviderError(_ERR_NOT_CONNECTED)
-        response = await self.client.get(f"{self.BASE_URL}/models")
+        response = await self.client.get(f"{self._base_url}/models")
         response.raise_for_status()
         data = response.json()
 
@@ -333,6 +381,8 @@ class OpenRouterProvider(LLMProviderBase):
         """
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
+
+        self._ensure_client_loop()
 
         self._cancel_requested = False
         self._pending_usage = None
@@ -454,7 +504,7 @@ class OpenRouterProvider(LLMProviderBase):
             raise ProviderError(_ERR_NOT_CONNECTED)
         try:
             response = await self.client.post(
-                f"{self.BASE_URL}/chat/completions",
+                f"{self._base_url}/chat/completions",
                 json=request_body,
             )
         except httpx.RequestError as e:
@@ -686,6 +736,8 @@ class OpenRouterProvider(LLMProviderBase):
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
+        self._ensure_client_loop()
+
         self._cancel_requested = False
         self._pending_usage = None
         if enable_cache:
@@ -806,7 +858,7 @@ class OpenRouterProvider(LLMProviderBase):
 
         async with self.client.stream(
             "POST",
-            f"{self.BASE_URL}/chat/completions",
+            f"{self._base_url}/chat/completions",
             json=request_body,
         ) as response:
             if response.status_code >= HTTP_BAD_REQUEST:
@@ -916,6 +968,8 @@ class OpenRouterProvider(LLMProviderBase):
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
+        self._ensure_client_loop()
+
         self._logger.info(
             "openrouter_get_generation_started",
             generation_id=generation_id,
@@ -923,7 +977,7 @@ class OpenRouterProvider(LLMProviderBase):
 
         try:
             response = await self.client.get(
-                f"{self.BASE_URL}/generation",
+                f"{self._base_url}/generation",
                 params={"id": generation_id},
             )
             response.raise_for_status()

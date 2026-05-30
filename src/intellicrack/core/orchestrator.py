@@ -521,6 +521,7 @@ classify as destructive. Method names not present in the relevant set are read-o
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
 
+
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
 
@@ -720,6 +721,15 @@ class Orchestrator:
             confirmation_level=self._config.confirmation_level.value,
             max_iterations=self._config.max_iterations,
         )
+
+    @property
+    def tool_registry(self) -> ToolRegistry:
+        """Get the tool registry backing this orchestrator.
+
+        Returns:
+            ToolRegistry: The registry of initialized tool bridges.
+        """
+        return self._tools
 
     @property
     def state(self) -> OrchestratorState:

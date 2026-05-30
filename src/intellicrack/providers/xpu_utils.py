@@ -101,8 +101,6 @@ def is_xpu_available() -> bool:
             return False
 
         is_available: bool = torch.xpu.is_available()
-        if is_available:
-            _logger.debug("xpu_available", device_count=torch.xpu.device_count())
     except (RuntimeError, OSError, AttributeError) as exc:
         _logger.debug("xpu_check_failed", error=str(exc))
         return False
