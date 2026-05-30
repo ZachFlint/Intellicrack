@@ -99,10 +99,10 @@ class TestBinaryExpressions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(16)
+        data = bytes(256)
         source = "u8 result @ (0xF0 | 0x0F);"
         results = interp.execute_bytes(source, data)
-        assert results[0]["offset"] == 0xFF % 16
+        assert results[0]["offset"] == 0xFF
 
     def test_bitwise_xor(self, interp: HexPatInterpreter) -> None:
         """Bitwise XOR operator flips bits correctly.
@@ -339,7 +339,7 @@ class TestFunctionDefinitions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes(16)
-        source = "fn double(u8 x) {\n    return x * 2;\n}\nu8 result @ double(4);"
+        source = "fn doubler(u8 x) {\n    return x * 2;\n}\nu8 result @ doubler(4);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 8
 
@@ -374,7 +374,7 @@ class TestTypeCoercion:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = struct.pack("<I", 300) + bytes(12)
+        data = struct.pack("<I", 300) + bytes(252)
         source = "u32 wide @ 0;\nu8 narrow = 100;\nu8 check @ (narrow + 0);"
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "check" for r in results)
@@ -407,7 +407,7 @@ class TestTypeCoercion:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(16)
+        data = bytes(256)
         source = "u8 result @ (u8)(0x1FF);"
         results = interp.execute_bytes(source, data)
-        assert results[0]["offset"] == 0xFF % 16
+        assert results[0]["offset"] == 0xFF

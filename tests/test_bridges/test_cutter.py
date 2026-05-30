@@ -537,7 +537,10 @@ class TestLoadBinary:
         """
         fake_binary = tmp_path / "test.exe"
         fake_binary.write_bytes(b"\x00" * 64)
-        with pytest.raises(ToolError, match="cutter not available"):
+        with (
+            patch("shutil.which", return_value=None),
+            pytest.raises(ToolError, match="cutter not available"),
+        ):
             await bridge.load_binary(str(fake_binary))
 
     @pytest.mark.asyncio
@@ -550,7 +553,10 @@ class TestLoadBinary:
         """
         fake_binary = tmp_path / "test.exe"
         fake_binary.write_bytes(b"\x00" * 64)
-        with pytest.raises(ToolError, match="cutter not available"):
+        with (
+            patch("shutil.which", return_value=None),
+            pytest.raises(ToolError, match="cutter not available"),
+        ):
             await bridge.load_binary(fake_binary)
 
     @pytest.mark.asyncio
@@ -690,7 +696,11 @@ class TestAssembleAt:
         self,
         recorder: _CommandRecorder,
     ) -> None:
-        """Verify assemble_at sends wa command with correct address.
+        """Verify assemble_at commits the validated hex via wx at the address.
+
+        ``assemble_at`` dry-runs the encoding with ``pa`` and then commits a
+        single ``wx <hex>`` write, rather than re-running the assembler with
+        ``wa``, so the committed bytes match the validated encoding exactly.
 
         Args:
             recorder: Command recorder fixture.
@@ -701,10 +711,10 @@ class TestAssembleAt:
         await b.analyze()
         recorder.commands.clear()
         await b.assemble_at(0x401000, "nop")
-        wa_cmds = [c for c in recorder.commands if c.startswith("wa")]
-        assert len(wa_cmds) == 1
-        assert "nop" in wa_cmds[0]
-        assert f"@ {0x401000}" in wa_cmds[0]
+        wx_cmds = [c for c in recorder.commands if c.startswith("wx")]
+        assert len(wx_cmds) == 1
+        assert "90" in wx_cmds[0]
+        assert f"@ {0x401000}" in wx_cmds[0]
 
     @pytest.mark.asyncio
     async def test_uses_pa_not_rasm2(
@@ -1164,11 +1174,15 @@ class TestSaveBinary:
     """Verify save_binary sends wtf command (Bug 3 fix)."""
 
     @pytest.mark.asyncio
-    async def test_sends_wtf_command(
+    async def test_sends_wcf_command(
         self,
         recorder: _CommandRecorder,
     ) -> None:
-        """Verify save_binary sends wtf with the given path.
+        """Verify save_binary writes the full IO cache via wcf to the path.
+
+        ``save_binary`` uses ``wcf <file>`` (write cache to file) so the
+        entire patched IO image is emitted, rather than ``wtf`` which dumps
+        only the current 256-byte block.
 
         Args:
             recorder: Command recorder fixture.
@@ -1180,9 +1194,9 @@ class TestSaveBinary:
         output_path = f"{tempfile.gettempdir()}/output.exe"
         result = await b.save_binary(output_path)
         assert result is True
-        wtf_cmds = [c for c in recorder.commands if c.startswith("wtf")]
-        assert len(wtf_cmds) == 1
-        assert output_path in wtf_cmds[0]
+        wcf_cmds = [c for c in recorder.commands if c.startswith("wcf")]
+        assert len(wcf_cmds) == 1
+        assert output_path in wcf_cmds[0]
 
 
 class TestGetSymbols:

@@ -35,7 +35,7 @@ class TestMemoryFunctions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes([0xAB] + [0] * 15)
+        data = bytes([0xAB] + [0] * 255)
         source = "u8 result @ read_unsigned(0, 1);"
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 0xAB
@@ -115,11 +115,16 @@ class TestMemoryFunctions:
         assert result == -100
 
     def test_mem_find_sequence_direct_found(self) -> None:
-        """BuiltinFunctions._mem_find_sequence finds a 3-byte pattern."""
+        """BuiltinFunctions._mem_find_sequence finds a 3-byte pattern.
+
+        The builtin mirrors ImHex's ``find_sequence_in_range(occurrence_index,
+        offsetFrom, offsetTo, bytes...)``, so the leading argument selects the
+        zero-indexed occurrence.
+        """
         data = bytes([0, 1, 2, 0xCA, 0xFE, 0xBA, 0, 0])
         reader = DataReader.from_bytes(data)
         builtin = BuiltinFunctions(reader)
-        result: int = getattr(builtin, "_mem_find_sequence")(0, 8, 0xCA, 0xFE, 0xBA)
+        result: int = getattr(builtin, "_mem_find_sequence")(0, 0, 8, 0xCA, 0xFE, 0xBA)
         assert result == 3
 
     def test_mem_find_sequence_direct_not_found(self) -> None:

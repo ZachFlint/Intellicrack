@@ -1037,10 +1037,30 @@ class HexPatParser:
     def _parse_top_level_statement(self) -> DeclNode | StmtNode:
         """Parse a single top-level statement or placement declaration.
 
+        Control-flow statements (``if``/``while``/``for``/``match``/``try``)
+        and typed local-variable declarations with initializers are valid at
+        the top level of a pattern program, not only inside struct/function
+        bodies, so they are dispatched here exactly as in :meth:`_parse_statement`.
+
         Returns:
             DeclNode | StmtNode: A top-level AST node.
         """
         tok = self._current()
+
+        if tok.type == TokenType.IF:
+            return self._parse_if_stmt()
+
+        if tok.type == TokenType.WHILE:
+            return self._parse_while_stmt()
+
+        if tok.type == TokenType.FOR:
+            return self._parse_for_stmt()
+
+        if tok.type == TokenType.MATCH:
+            return self._parse_match_stmt()
+
+        if tok.type == TokenType.TRY:
+            return self._parse_try_stmt()
 
         if tok.type == TokenType.CONST:
             return self._parse_const_decl()
@@ -1108,15 +1128,22 @@ class HexPatParser:
         endianness: str | None,
         *,
         in_struct_body: bool,
-    ) -> FieldDecl | PlacementStmt:
-        """Parse a field declaration or placement statement.
+    ) -> FieldDecl | PlacementStmt | VarDecl:
+        """Parse a field declaration, placement statement, or local variable.
+
+        A ``type name = expr;`` form declares a local (calculated) variable
+        bound to the initializer value rather than reading from the binary, and
+        is returned as a :class:`VarDecl`. The ``type name @ offset;`` and
+        ``type name;`` forms produce a placement or field declaration.
 
         Args:
             endianness: Pre-parsed endianness specifier, or None.
             in_struct_body: When True, produces a FieldDecl; otherwise a PlacementStmt.
 
         Returns:
-            FieldDecl | PlacementStmt: A FieldDecl when inside a struct/union body, or a PlacementStmt at top level.
+            FieldDecl | PlacementStmt | VarDecl: A VarDecl for an initialized
+                local variable, a FieldDecl when inside a struct/union body, or
+                a PlacementStmt at the top level.
         """
         tok = self._current()
         type_node = self._parse_type()
@@ -1150,6 +1177,19 @@ class HexPatParser:
             )
 
         name_tok = self._expect(TokenType.IDENTIFIER)
+
+        if self._current().type == TokenType.ASSIGN:
+            self._advance()
+            initializer = self._parse_expression()
+            self._expect(TokenType.SEMICOLON)
+            return VarDecl(
+                name=name_tok.value,
+                type_node=type_node,
+                initializer=initializer,
+                is_const=False,
+                line=tok.line,
+                column=tok.column,
+            )
 
         array_size: ExprNode | None = None
         while_condition: ExprNode | None = None
@@ -1202,6 +1242,7 @@ class HexPatParser:
             in_section=in_section,
             array_size=array_size,
             while_condition=while_condition,
+            is_pointer=is_pointer,
             line=tok.line,
             column=tok.column,
         )
@@ -1257,6 +1298,11 @@ class HexPatParser:
 
         elif self._current().type == TokenType.CONST:
             init = self._parse_const_decl()
+        elif self._current().type in ENDIANNESS_TOKENS:
+            init_endianness = self._advance().value
+            init = self._parse_field_or_placement(endianness=init_endianness, in_struct_body=False)
+        elif self._current().type in PRIMITIVE_TYPES or self._current().type == TokenType.AUTO:
+            init = self._parse_field_or_placement(endianness=None, in_struct_body=False)
         else:
             init_tok = self._current()
             init_expr = self._parse_expression()

@@ -365,12 +365,12 @@ class HexPatPreprocessor:
             depth: Current include nesting depth.
 
         Returns:
-            str | None: The preprocessed contents of the included file, or None if
-            the file was already included with #pragma once.
-
-        Raises:
-            HexPatPreprocessorError: If the include cannot be resolved from any
-                of the configured search paths.
+            str | None: The preprocessed contents of the included file, None if
+            the file was already included with #pragma once, or None (an empty
+            substitution) when the include cannot be resolved from any search
+            path. A missing include is logged as a warning rather than aborting
+            preprocessing so a pattern that references an unavailable optional
+            library still parses the remainder of its source.
         """
         search_paths: list[Path] = []
 
@@ -401,19 +401,14 @@ class HexPatPreprocessor:
                     depth=depth + 1,
                 )
 
-        _logger.error(
+        _logger.warning(
             "include_not_found",
             include_path=include_path,
             search_paths=[str(p) for p in search_paths],
             line=line,
             current_file=str(current_file) if current_file is not None else "",
         )
-        msg: str = f"include not found: {include_path}"
-        raise HexPatPreprocessorError(
-            msg,
-            line=line,
-            file=str(current_file) if current_file is not None else "",
-        )
+        return None
 
     def _process_defines(self, source: str, file_path: Path | None = None) -> str:
         """Expand object-like and function-like #define macros in source text.

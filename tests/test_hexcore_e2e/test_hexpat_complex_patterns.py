@@ -351,10 +351,10 @@ class TestTypeCasts:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(16)
+        data = bytes(256)
         source = "u8 result @ (u8)(0x1FF);"
         results = interp.execute_bytes(source, data)
-        assert results[0]["offset"] == 0xFF % 16
+        assert results[0]["offset"] == 0xFF
 
     def test_cast_float_to_u8(self, interp: HexPatInterpreter) -> None:
         """Casting a float to u8 truncates the fractional part.
