@@ -311,8 +311,24 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- Implement Windows self-elevation and system theme tracking (``)
+Introduce Windows UAC self-elevation to automatically request administrative privileges when required, enabling full process-bridge access to protected targets. Add support for tracking and dynamically responding to the operating system's light/dark color scheme.
+* Add self-elevation logic via Windows `runas` verb with pixi environment reactivation
+* Implement system theme detection and live OS color-scheme tracking in `ThemeManager`
+* Add robust failure-dialog and early-exit detection for Windows Sandbox startup
+* Refactor tool schema builders to ensure strict array and object element compliance for Google Gemini
+* Rebind raw `httpx.AsyncClient` instances across event loops in OpenRouter and Ollama providers
+
 
 ### Changed
+
+- Clean up logging calls, error handling, and formatting (`3f369fc`)
+Standardize logging calls across bridges, providers, and UI panels by replacing string-interpolated exceptions with structured `exc_info=True` parameters or dedicated error events. Clean up redundant try/except blocks, fix type annotations in the transform pipeline, and format long string literals and comments to adhere to the 120-character line limit.
+* Standardize logging events and remove redundant `str(exc)` formatting in bridges and UI panels
+* Add explicit error log events for unhandled or critical failure paths in providers and orchestrator
+* Refactor `_BINARY_OPS` in `transform_pipeline.py` to use explicit lambda casting to `int`
+* Introduce `get_stdlib_root_logger()` in `core/logging.py` to centralize stdlib root logger access
+* Wrap long lines, comments, and multi-line string literals across multiple modules
 
 - Modularize large bridge classes and rename internal modules (`3ede9d9`)
 Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor, Process, x64dbg, and ToolOutputPanel) into linear mixin inheritance chains to comply with public method limits and improve maintainability. Removed leading underscores from internal module filenames across the codebase to standardize import paths. Additionally, introduced a live Qt-based log viewer panel and transitioned GPU ReBAR detection to use authoritative PCI BAR sizes.
@@ -745,14 +761,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Clean up logging calls, error handling, and formatting (``)
-Standardize logging calls across bridges, providers, and UI panels by replacing string-interpolated exceptions with structured `exc_info=True` parameters or dedicated error events. Clean up redundant try/except blocks, fix type annotations in the transform pipeline, and format long string literals and comments to adhere to the 120-character line limit.
-* Standardize logging events and remove redundant `str(exc)` formatting in bridges and UI panels
-* Add explicit error log events for unhandled or critical failure paths in providers and orchestrator
-* Refactor `_BINARY_OPS` in `transform_pipeline.py` to use explicit lambda casting to `int`
-* Introduce `get_stdlib_root_logger()` in `core/logging.py` to centralize stdlib root logger access
-* Wrap long lines, comments, and multi-line string literals across multiple modules
 
 
 ### Documentation

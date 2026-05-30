@@ -439,7 +439,7 @@ def test_translate_openai_errors_authentication() -> None:
 
 
 def test_translate_openai_errors_rate_limit() -> None:
-    """``openai.RateLimitError`` maps to :class:`RateLimitError`."""
+    """A transient ``openai.RateLimitError`` maps to :class:`RateLimitError`."""
     provider = _BareProvider()
     rate_failure = _build_rate_error()
     with (
@@ -451,6 +451,40 @@ def test_translate_openai_errors_rate_limit() -> None:
         ),
     ):
         raise rate_failure
+
+
+def _build_quota_error() -> openai.RateLimitError:
+    """Construct an ``openai.RateLimitError`` describing permanent quota exhaustion.
+
+    Returns:
+        openai.RateLimitError: A 429 carrying an ``insufficient_quota`` body,
+        the shape OpenAI returns when an account is out of credits.
+    """
+    return openai.RateLimitError(
+        message="Error code: 429 - insufficient_quota: You exceeded your current quota",
+        response=_make_httpx_response(429),
+        body=None,
+    )
+
+
+def test_translate_openai_errors_permanent_quota_fails_fast() -> None:
+    """A billing/quota-exhaustion 429 maps to :class:`ProviderError`, not retryable.
+
+    ``insufficient_quota`` cannot succeed on retry, so the helper must raise
+    the non-retryable :class:`ProviderError` (built from ``api_error``) rather
+    than :class:`RateLimitError`, which the backoff wrapper would retry.
+    """
+    provider = _BareProvider()
+    quota_failure = _build_quota_error()
+    with (
+        pytest.raises(ProviderError, match="api error"),
+        _translator(
+            provider,
+            log_prefix="test",
+            messages=_TEST_ERROR_MESSAGES,
+        ),
+    ):
+        raise quota_failure
 
 
 def test_translate_openai_errors_transport_oserror() -> None:

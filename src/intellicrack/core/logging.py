@@ -32,9 +32,16 @@ if TYPE_CHECKING:
 
 
 _DEFAULT_LOG_FILE = "intellicrack.log"
-_CALL_INFO_DEPTH = 2
+_CALL_INFO_DEPTH = 1
 _COLLECTION_TRUNCATE_SIZE = 10
 _STRING_TRUNCATE_SIZE = 200
+
+_THIRD_PARTY_NOISY_LOGGERS: tuple[str, ...] = (
+    "httpx",
+    "httpcore",
+    "openai._base_client",
+    "anthropic._base_client",
+)
 
 
 def _default_log_dir() -> Path:
@@ -281,6 +288,9 @@ def _configure_structlog(
     intellicrack_logger.setLevel(level)
     intellicrack_logger.handlers.clear()
     intellicrack_logger.propagate = True
+
+    for noisy_name in _THIRD_PARTY_NOISY_LOGGERS:
+        logging.getLogger(noisy_name).setLevel(logging.WARNING)
 
     if console_enabled:
         console_handler = logging.StreamHandler(sys.stdout)

@@ -10,7 +10,7 @@ This module provides the chat interface for interacting with the AI orchestrator
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, override
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -31,6 +31,8 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from PyQt6.QtGui import QKeyEvent
 
 _logger = get_logger(__name__)
 
@@ -214,6 +216,41 @@ class MessageBubble(QFrame):
         return frame
 
 
+class _ChatTextEdit(QTextEdit):
+    """Multi-line chat input that submits on Enter.
+
+    Pressing Enter (or the numeric keypad Enter) emits :attr:`submitted` so the
+    composed message is sent, while Shift+Enter inserts a newline for composing
+    multi-line messages.
+
+    Attributes:
+        submitted: Qt signal emitted when the user presses Enter without the
+            Shift modifier.
+    """
+
+    submitted = pyqtSignal()
+
+    @override
+    def keyPressEvent(self, e: QKeyEvent | None) -> None:
+        """Send on Enter, insert a newline on Shift+Enter.
+
+        Args:
+            e: The incoming key event, or ``None`` if Qt delivered no event.
+        """
+        if e is None:
+            super().keyPressEvent(e)
+            return
+
+        is_enter = e.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}
+        shift_held = bool(e.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        if is_enter and not shift_held:
+            e.accept()
+            self.submitted.emit()
+            return
+
+        super().keyPressEvent(e)
+
+
 class ChatInput(QFrame):
     """Chat input widget with send button.
 
@@ -241,64 +278,22 @@ class ChatInput(QFrame):
         layout.setContentsMargins(_INPUT_MARGIN, _INPUT_MARGIN, _INPUT_MARGIN, _INPUT_MARGIN)
         layout.setSpacing(8)
 
-        self._text_edit = QTextEdit()
+        self._text_edit = _ChatTextEdit()
+        self._text_edit.setObjectName("chat_input_textedit")
         self._text_edit.setFont(FontManager.get_instance().get_ui_font(10))
         self._text_edit.setMaximumHeight(_INPUT_MAX_HEIGHT)
-        self._text_edit.setPlaceholderText("Type a message...")
-        self._text_edit.setStyleSheet(
-            """
-            QTextEdit {
-                background-color: #2d2d30;
-                border: 1px solid #3e3e42;
-                border-radius: 8px;
-                padding: 8px;
-                color: #d4d4d4;
-            }
-            QTextEdit:focus {
-                border: 1px solid #007acc;
-            }
-        """
-           ,
-        )
+        self._text_edit.setPlaceholderText("Type a message... (Enter to send, Shift+Enter for newline)")
+        self._text_edit.submitted.connect(self._on_send)
         layout.addWidget(self._text_edit)
 
         self._send_button = QPushButton("Send")
+        self._send_button.setObjectName("chat_send_button")
         self._send_button.setFont(FontManager.get_instance().get_ui_font_bold(10))
         self._send_button.setFixedSize(_SEND_BTN_WIDTH, _SEND_BTN_HEIGHT)
-        self._send_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #0e639c;
-                border: none;
-                border-radius: 6px;
-                color: white;
-            }
-            QPushButton:hover {
-                background-color: #1177bb;
-            }
-            QPushButton:pressed {
-                background-color: #0d5289;
-            }
-            QPushButton:disabled {
-                background-color: #3e3e42;
-                color: #888888;
-            }
-        """
-           ,
-        )
         self._send_button.clicked.connect(self._on_send)
         layout.addWidget(self._send_button)
 
-        self.setStyleSheet(
-            """
-            QFrame {
-                background-color: #252526;
-                border-top: 1px solid #3e3e42;
-            }
-        """
-
-           ,
-        )
+        self.setObjectName("chat_input_bar")
 
     def _on_send(self) -> None:
         """Handle send button click."""
@@ -362,16 +357,8 @@ class ChatPanel(QFrame):
         layout.setSpacing(0)
 
         header = QFrame()
+        header.setObjectName("chat_header")
         header.setFixedHeight(_HEADER_HEIGHT)
-        header.setStyleSheet(
-            """
-            QFrame {
-                background-color: #2d2d30;
-                border-bottom: 1px solid #3e3e42;
-            }
-        """
-           ,
-        )
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(_HEADER_MARGIN_H, 0, _HEADER_MARGIN_H, 0)
 

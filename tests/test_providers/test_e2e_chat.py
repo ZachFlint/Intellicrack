@@ -100,6 +100,34 @@ def _make_test_tool() -> list[ToolDefinition]:
                             description="Path to the binary file.",
                             required=True,
                         ),
+                        ToolParameter(
+                            name="section_names",
+                            type="array",
+                            description="Optional section names to restrict the size calculation to.",
+                            required=False,
+                            items_type="string",
+                        ),
+                        ToolParameter(
+                            name="regions",
+                            type="array",
+                            description="Optional explicit byte regions to measure.",
+                            required=False,
+                            items_type="object",
+                            item_properties=[
+                                ToolParameter(
+                                    name="start",
+                                    type="integer",
+                                    description="Region start offset in bytes.",
+                                    required=True,
+                                ),
+                                ToolParameter(
+                                    name="end",
+                                    type="integer",
+                                    description="Region end offset in bytes.",
+                                    required=True,
+                                ),
+                            ],
+                        ),
                     ],
                     returns="File size in bytes as an integer.",
                 ),
@@ -1154,13 +1182,13 @@ class TestCrossProviderConsistency:
 
         Args:
             credential_loader: The credential loader instance.
+            ollama_server: The Ollama server process fixture.
             has_anthropic_key: Whether Anthropic key is configured.
             has_openai_key: Whether OpenAI key is configured.
             has_google_key: Whether Google key is configured.
             has_grok_key: Whether Grok key is configured.
             has_openrouter_key: Whether OpenRouter key is configured.
             has_huggingface_key: Whether HuggingFace key is configured.
-            ollama_server: The Ollama server process fixture.
 
         Yields:
             AsyncGenerator[list[tuple[str, str, LLMProviderBase]]]: List of available provider tuples.

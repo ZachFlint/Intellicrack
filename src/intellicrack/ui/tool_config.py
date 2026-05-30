@@ -64,6 +64,9 @@ HTTP_NOT_FOUND = 404
 EXPECTED_TOOL_COUNT = 6
 _RETURNCODE_SUCCESS = 0
 
+_BUILTIN_TOOL_IDS: Final[frozenset[str]] = frozenset({"frida", "process", "binary"})
+_IN_PROCESS_TOOL_IDS: Final[frozenset[str]] = frozenset({"process", "binary"})
+
 _GITHUB_API_TIMEOUT: Final[float] = 30.0
 _GITHUB_API_HEADERS: Final[dict[str, str]] = {
     "Accept": "application/vnd.github+json",
@@ -664,7 +667,7 @@ class ToolStatusCheckWorker(QThread):
         Returns:
             tuple[bool, str]: Tuple of (is_available, status_message).
         """
-        if self._tool_id in {"frida", "process", "binary"}:
+        if self._tool_id in _BUILTIN_TOOL_IDS:
             return self._check_builtin()
 
         if not self._tool_path:
@@ -1033,7 +1036,7 @@ class ToolSettingsWidget(QFrame):
         status_group.setLayout(status_layout)
         layout.addWidget(status_group)
 
-        path_group = QGroupBox("Installation")
+        self._path_group = QGroupBox("Installation")
         path_layout = QFormLayout()
 
         path_row = QHBoxLayout()
@@ -1064,10 +1067,10 @@ class ToolSettingsWidget(QFrame):
 
         path_layout.addRow(install_row)
 
-        path_group.setLayout(path_layout)
-        layout.addWidget(path_group)
+        self._path_group.setLayout(path_layout)
+        layout.addWidget(self._path_group)
 
-        options_group = QGroupBox("Options")
+        self._options_group = QGroupBox("Options")
         options_layout = QFormLayout()
 
         self._timeout_spin = QSpinBox()
@@ -1076,8 +1079,8 @@ class ToolSettingsWidget(QFrame):
         self._timeout_spin.setSuffix(" seconds")
         options_layout.addRow("Startup Timeout:", self._timeout_spin)
 
-        options_group.setLayout(options_layout)
-        layout.addWidget(options_group)
+        self._options_group.setLayout(options_layout)
+        layout.addWidget(self._options_group)
 
         layout.addStretch()
 
@@ -1101,12 +1104,10 @@ class ToolSettingsWidget(QFrame):
         self._auto_install_checkbox.setChecked(saved_settings.get("auto_install", True))
         self._timeout_spin.setValue(saved_settings.get("startup_timeout_seconds", 60))
 
-        if self._tool_id in {"frida", "process", "binary"}:
-            self._path_input.setEnabled(False)
-            self._browse_btn.setEnabled(False)
-            self._install_btn.setEnabled(False)
-            self._auto_install_checkbox.setEnabled(False)
-            self._path_input.setToolTip("This tool does not require a path")
+        if self._tool_id in _BUILTIN_TOOL_IDS:
+            self._path_group.setVisible(False)
+            if self._tool_id in _IN_PROCESS_TOOL_IDS:
+                self._options_group.setVisible(False)
         elif self._tool_id in {"x64dbg", "cutter"} and not pefile_available():
             self._install_btn.setEnabled(False)
             self._install_btn.setToolTip("Installation disabled: 'pefile' dependency is missing.")
@@ -1199,7 +1200,7 @@ class ToolSettingsWidget(QFrame):
 
     def _install_tool(self) -> None:
         """Install the tool."""
-        if self._tool_id in {"frida", "process", "binary"}:
+        if self._tool_id in _BUILTIN_TOOL_IDS:
             show_info(
                 self,
                 "Installation",

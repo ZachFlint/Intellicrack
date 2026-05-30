@@ -36,7 +36,12 @@ from intellicrack.core.types import (
     ToolChoiceMode,
     ToolDefinition,
 )
-from intellicrack.providers.base import LLMProviderBase, UsageInfo, create_google_tool_schema
+from intellicrack.providers.base import (
+    LLMProviderBase,
+    UsageInfo,
+    create_google_tool_schema,
+    is_permanent_quota_error,
+)
 
 
 if TYPE_CHECKING:
@@ -55,6 +60,10 @@ _MSG_RATE_LIMITED = "Rate limited"
 _MSG_STREAM_FAILED = "Stream failed"
 _MSG_CONTENT_BLOCKED = "Response blocked by safety filters"
 _MSG_PROHIBITED_CONTENT = "Response blocked for prohibited content"
+_MSG_QUOTA_EXHAUSTED = (
+    "Google Gemini quota or spending cap exhausted; requests cannot succeed until the "
+    "cap is raised at https://ai.studio/spend or a different key or provider is selected"
+)
 
 _AUTH_STATUS_CODES: Final = frozenset({401, 403})
 _RATE_LIMIT_STATUS_CODES: Final = frozenset({429})
@@ -569,6 +578,8 @@ class GoogleProvider(LLMProviderBase):
             )
             if e.code in _AUTH_STATUS_CODES:
                 raise AuthenticationError(_MSG_INVALID_API_KEY) from e
+            if e.code in _RATE_LIMIT_STATUS_CODES and is_permanent_quota_error(str(e)):
+                raise ProviderError(_MSG_QUOTA_EXHAUSTED) from e
             if e.code in _RATE_LIMIT_STATUS_CODES:
                 raise RateLimitError(_MSG_RATE_LIMITED) from e
             raise ProviderError(_MSG_STREAM_FAILED) from e
@@ -793,7 +804,10 @@ class GoogleProvider(LLMProviderBase):
         Raises:
             APIError: Re-raised for non-retryable status codes after
                 the helper inspects them.
-            RateLimitError: When the API returns 429 or any 5xx status.
+            ProviderError: When a 429 reflects permanent quota or spend-cap
+                exhaustion that cannot succeed on retry.
+            RateLimitError: When the API returns a transient 429 or any 5xx
+                status that the caller should retry with backoff.
         """
         try:
             return await client.aio.models.generate_content(
@@ -803,6 +817,14 @@ class GoogleProvider(LLMProviderBase):
             )
         except APIError as exc:
             code = int(exc.code or 0)
+            if code in _RATE_LIMIT_STATUS_CODES and is_permanent_quota_error(str(exc)):
+                self._logger.warning(
+                    "google_chat_quota_exhausted",
+                    model=model,
+                    code=code,
+                    error=str(exc),
+                )
+                raise ProviderError(_MSG_QUOTA_EXHAUSTED) from exc
             if code in _RATE_LIMIT_STATUS_CODES or code >= _HTTP_SERVER_ERROR_MIN:
                 self._logger.warning(
                     "google_chat_retryable",

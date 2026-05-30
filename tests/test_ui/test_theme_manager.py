@@ -12,6 +12,7 @@ using real stylesheet assets.
 from __future__ import annotations
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from intellicrack.ui.resources.resource_helper import get_assets_path
 from intellicrack.ui.resources.theme_manager import (
@@ -20,6 +21,7 @@ from intellicrack.ui.resources.theme_manager import (
     LIGHT_THEME_FALLBACK,
     THEME_DARK,
     THEME_LIGHT,
+    THEME_SYSTEM,
     ThemeManager,
 )
 
@@ -272,6 +274,141 @@ class TestAvailableThemes:
         """Available themes includes light."""
         themes = ThemeManager.get_available_themes()
         assert THEME_LIGHT in themes
+
+    @staticmethod
+    def test_available_themes_contains_system() -> None:
+        """Available themes includes system."""
+        themes = ThemeManager.get_available_themes()
+        assert THEME_SYSTEM in themes
+
+
+class TestSystemThemeResolution:
+    """Tests for system theme detection and resolution."""
+
+    @staticmethod
+    def test_theme_system_constant() -> None:
+        """THEME_SYSTEM constant is defined correctly."""
+        assert THEME_SYSTEM == "system"
+
+    @staticmethod
+    def test_resolve_dark_is_identity() -> None:
+        """resolve_theme returns dark unchanged."""
+        assert ThemeManager.resolve_theme(THEME_DARK) == THEME_DARK
+
+    @staticmethod
+    def test_resolve_light_is_identity() -> None:
+        """resolve_theme returns light unchanged."""
+        assert ThemeManager.resolve_theme(THEME_LIGHT) == THEME_LIGHT
+
+    @staticmethod
+    def test_resolve_invalid_uses_default() -> None:
+        """resolve_theme falls back to default for unknown names."""
+        assert ThemeManager.resolve_theme("not_a_theme") == DEFAULT_THEME
+
+    @staticmethod
+    def test_resolve_system_returns_concrete_theme() -> None:
+        """resolve_theme('system') resolves to a concrete theme."""
+        assert ThemeManager.resolve_theme(THEME_SYSTEM) in {THEME_DARK, THEME_LIGHT}
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_detect_system_theme_returns_concrete() -> None:
+        """detect_system_theme returns a concrete theme name."""
+        assert ThemeManager.detect_system_theme() in {THEME_DARK, THEME_LIGHT}
+
+
+class TestApplySystemTheme:
+    """Tests for applying and tracking the system theme."""
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_apply_system_succeeds(theme_manager: ThemeManager) -> None:
+        """Applying the system theme succeeds and resolves concretely.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        assert theme_manager.apply_theme(THEME_SYSTEM)
+        assert theme_manager.requested_theme == THEME_SYSTEM
+        assert theme_manager.current_theme in {THEME_DARK, THEME_LIGHT}
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_current_theme_never_reports_system(theme_manager: ThemeManager) -> None:
+        """current_theme exposes the resolved theme, not the requested mode.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        theme_manager.apply_theme(THEME_SYSTEM)
+        assert theme_manager.current_theme != THEME_SYSTEM
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_theme_changed_signal_emits_resolved(theme_manager: ThemeManager) -> None:
+        """theme_changed emits the resolved theme on every apply.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        received: list[str] = []
+        theme_manager.theme_changed.connect(received.append)
+        theme_manager.apply_theme(THEME_LIGHT)
+        assert received == [THEME_LIGHT]
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_system_theme_enables_live_watch(theme_manager: ThemeManager) -> None:
+        """Applying the system theme subscribes to live OS color-scheme changes.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        theme_manager.apply_theme(THEME_SYSTEM)
+        assert theme_manager._system_watch_connected is True
+
+        theme_manager.apply_theme(THEME_DARK)
+        assert theme_manager._system_watch_connected is False
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_system_theme_responds_to_os_change(theme_manager: ThemeManager) -> None:
+        """While system is active, an OS color-scheme change restyles the app.
+
+        Drives the live-tracking handler with the color scheme Qt would deliver
+        so the assertion is deterministic across platforms and test ordering,
+        unlike forcing a global override that some QPA plugins ignore.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        theme_manager.apply_theme(THEME_SYSTEM)
+        received: list[str] = []
+        theme_manager.theme_changed.connect(received.append)
+
+        theme_manager._on_system_color_scheme_changed(Qt.ColorScheme.Light)
+        assert theme_manager.current_theme == THEME_LIGHT
+
+        theme_manager._on_system_color_scheme_changed(Qt.ColorScheme.Dark)
+        assert theme_manager.current_theme == THEME_DARK
+
+        theme_manager._on_system_color_scheme_changed(Qt.ColorScheme.Light)
+        assert theme_manager.current_theme == THEME_LIGHT
+
+        assert THEME_DARK in received
+        assert THEME_LIGHT in received
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_explicit_theme_ignores_os_change(theme_manager: ThemeManager) -> None:
+        """An explicit dark/light selection does not follow OS changes.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        theme_manager.apply_theme(THEME_DARK)
+        theme_manager._on_system_color_scheme_changed(Qt.ColorScheme.Light)
+        assert theme_manager.current_theme == THEME_DARK
 
 
 class TestFallbackStylesheets:

@@ -1385,6 +1385,14 @@ class ToolParameter:
         required: Whether the parameter is required.
         enum: List of allowed values if enumerated.
         default: Default value if optional.
+        items_type: JSON Schema type of array elements when ``type`` is
+            ``"array"`` (e.g. ``"string"``, ``"integer"``, ``"object"``).
+            Ignored for non-array parameters. Required by strict providers
+            such as Google Gemini, which reject array schemas missing an
+            ``items`` definition.
+        item_properties: Nested property definitions describing the object
+            shape when ``items_type`` is ``"object"``. Required by Gemini,
+            which rejects object schemas with empty ``properties``.
     """
 
     name: str
@@ -1393,6 +1401,8 @@ class ToolParameter:
     required: bool = True
     enum: list[str] | None = None
     default: str | int | float | bool | list[str | int | float | bool] | None = None
+    items_type: str = "string"
+    item_properties: list[ToolParameter] | None = None
 
 
 @dataclass

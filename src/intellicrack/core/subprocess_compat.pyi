@@ -11,6 +11,7 @@ from subprocess import (
     Popen as Popen,
     SubprocessError as SubprocessError,
     TimeoutExpired as TimeoutExpired,
+    list2cmdline as list2cmdline,
     run as run,
 )
 

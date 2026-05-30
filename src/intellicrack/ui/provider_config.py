@@ -111,13 +111,17 @@ except ImportError:
 
 try:
     from intellicrack.providers.model_loader import (
+        RECOMMENDED_MODELS_B580,
         clear_global_cache,
         set_global_cache_size,
     )
+
+    _recommended_local_models: list[dict[str, object]] = RECOMMENDED_MODELS_B580
 except ImportError:
     _logger.debug("model_loader_unavailable")
     clear_global_cache = None
     set_global_cache_size = None
+    _recommended_local_models = []
 
 _DIALOG_WIDTH: Final[int] = 800
 _DIALOG_HEIGHT: Final[int] = 550
@@ -472,11 +476,55 @@ class ConnectionTestWorker(QThread):
             return self._test_huggingface(timeout)
         if self.provider_id == "grok":
             return self._test_grok(timeout)
+        if self.provider_id == "local_transformers":
+            return self._test_local_transformers()
         _logger.warning(
             "provider_connection_test_unknown_provider",
             provider=self.provider_id,
         )
         return False, f"Unknown provider: {self.provider_id}"
+
+    @staticmethod
+    def _test_local_transformers() -> tuple[bool, str]:
+        """Verify the local Transformers inference backend is usable.
+
+        Local inference exposes no network endpoint, so the connection
+        test routes through a real ``LocalTransformersProvider`` instance:
+        ``connect`` probes PyTorch availability and selects the compute
+        backend (CUDA, Intel XPU, or CPU). The resolved device is reported
+        back so the user sees exactly what inference will run on. No API
+        key or credentials are involved.
+
+        Returns:
+            tuple[bool, str]: Tuple of (success, message).
+        """
+        if LocalTransformersProvider is None:
+            _logger.warning("local_transformers_provider_unavailable")
+            return False, "Local Transformers provider is unavailable (install PyTorch and transformers)"
+
+        provider = LocalTransformersProvider()
+
+        async def _probe() -> tuple[bool, str]:
+            try:
+                await provider.connect(ProviderCredentials())
+            except ProviderError as exc:
+                _logger.warning("provider_test_failed", provider="local_transformers", error=str(exc))
+                return False, str(exc)
+            try:
+                device_labels = {"cuda": "CUDA GPU", "xpu": "Intel XPU", "cpu": "CPU"}
+                label = device_labels.get(provider.device_type, provider.device_type)
+                return True, f"Ready for local inference on {label}"
+            finally:
+                await provider.disconnect()
+
+        try:
+            result = run_bridge_coroutine(_probe())
+        except (RuntimeError, OSError, ValueError) as exc:
+            _logger.warning("provider_test_failed", provider="local_transformers", error=str(exc))
+            return False, str(exc)
+        if result is None:
+            return False, "Local Transformers test scheduled on running loop"
+        return result
 
     def _test_anthropic(self, timeout: httpx.Timeout) -> tuple[bool, str]:
         """Test Anthropic API connection.
@@ -797,7 +845,28 @@ class ModelRefreshWorker(QThread):
             return self._fetch_huggingface_models(timeout)
         if self.provider_id == "grok":
             return self._fetch_grok_models(timeout)
+        if self.provider_id == "local_transformers":
+            return self._fetch_local_transformers_models()
         return False, [], f"Unknown provider: {self.provider_id}"
+
+    @staticmethod
+    def _fetch_local_transformers_models() -> tuple[bool, list[str], str]:
+        """Return locally loadable Transformers model identifiers.
+
+        Local inference needs no API call or credentials: the curated
+        recommended-model catalogue is returned directly so the dropdown
+        is populated even before any model is downloaded or the provider
+        is connected. When a connected provider is present the caller has
+        already preferred its richer ``list_models`` result; this method
+        is the always-available fallback.
+
+        Returns:
+            tuple[bool, list[str], str]: Tuple of (success, model_list, message).
+        """
+        model_ids = sorted({str(entry["model_id"]) for entry in _recommended_local_models if "model_id" in entry})
+        if not model_ids:
+            return False, [], "No local Transformers models available"
+        return True, model_ids, f"Found {len(model_ids)} local models"
 
     def _fetch_anthropic_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch Anthropic models from the /v1/models API with pagination.
@@ -1942,6 +2011,16 @@ class ProviderSettingsWidget(QFrame):
         credentials_group.setLayout(credentials_layout)
         layout.addWidget(credentials_group)
 
+        if self.provider_id == "local_transformers":
+            credentials_group.setVisible(False)
+            no_credentials_note = QLabel(
+                "Local Transformers runs models directly on this machine (CPU/Intel XPU/CUDA). "
+                "No API key or credentials are required.",
+            )
+            no_credentials_note.setWordWrap(True)
+            no_credentials_note.setObjectName("hint_label")
+            layout.addWidget(no_credentials_note)
+
         model_group = QGroupBox("Model Settings")
         model_layout = QFormLayout()
 
@@ -2597,7 +2676,7 @@ class ProviderSettingsWidget(QFrame):
         self._update_recommended_model()
 
         has_key = bool(self._api_key_input.text().strip())
-        if has_key or self.provider_id == "ollama":
+        if has_key or self.provider_id in self._NO_KEY_PROVIDERS:
             QTimer.singleShot(200, self._auto_refresh_models)
 
     def _load_from_config(self) -> dict[str, Any]:
@@ -2650,7 +2729,7 @@ class ProviderSettingsWidget(QFrame):
             if isinstance(saved_cache, int):
                 cache_sp.setValue(saved_cache)
 
-    _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama"}
+    _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama", "local_transformers"}
 
     def _populate_default_models(self) -> None:
         """Populate model dropdown with initial status text before API fetch."""
@@ -2673,7 +2752,7 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id != "ollama":
+        if not api_key and self.provider_id not in self._NO_KEY_PROVIDERS:
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_warning", 16))
             self._status_label.setText("API key required to refresh models")
             self._refresh_models_btn.setEnabled(True)
@@ -2759,7 +2838,7 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id != "ollama":
+        if not api_key and self.provider_id not in self._NO_KEY_PROVIDERS:
             _logger.warning(
                 "provider_connection_test_failed",
                 provider=self.provider_id,

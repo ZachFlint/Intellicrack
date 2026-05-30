@@ -39,7 +39,6 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QTableWidget,
     QTableWidgetItem,
-    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -51,13 +50,30 @@ from intellicrack.core.config import get_config_dir, get_config_file
 from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
-from intellicrack.core.types import Message, ModelInfo, ProviderCredentials, ProviderError, ProviderName, ToolCall, ToolName, ToolResult
+from intellicrack.core.types import (
+    ConfigurationError,
+    Message,
+    ModelInfo,
+    ProviderCredentials,
+    ProviderError,
+    ProviderName,
+    ToolCall,
+    ToolError,
+    ToolName,
+    ToolResult,
+)
+from intellicrack.credentials import get_credentials
 from intellicrack.providers.discovery import ModelDiscovery
 from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
 from intellicrack.ui.log_viewer import LogViewerWindow, install_qt_log_handler
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
+from intellicrack.ui.panels.async_bridge import (
+    run_bridge_coroutine,
+    run_bridge_coroutine_async,
+    run_bridge_coroutine_logged,
+)
 from intellicrack.ui.panels.hxd_panel import HxDPanel, find_hxd_executable
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
@@ -259,6 +275,7 @@ class MainWindow(QMainWindow):
         self._font_manager = FontManager.get_instance()
         _logger.debug("loading_theme_manager")
         self._theme_manager = ThemeManager.get_instance()
+        self._theme_manager.theme_changed.connect(self._on_theme_changed)
 
         _logger.debug("loading_fonts")
         self._font_manager.load_fonts()
@@ -291,6 +308,9 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Intellicrack")
         self.setWindowIcon(self._icon_manager.get_app_icon())
+
+        _logger.info("ui_init_apply_configured_theme", theme=self._config.ui.theme)
+        self._theme_manager.apply_theme(self._config.ui.theme)
 
         self._apply_smart_window_size()
         self._restore_window_state()
@@ -516,42 +536,6 @@ class MainWindow(QMainWindow):
         self._splitter.setSizes([500, 900])
 
         layout.addWidget(self._splitter)
-
-        self.setStyleSheet(
-            """
-            QMainWindow {
-                background-color: #1e1e1e;
-            }
-            QMenuBar {
-                background-color: #2d2d30;
-                color: #d4d4d4;
-                border-bottom: 1px solid #3e3e42;
-            }
-            QMenuBar::item:selected {
-                background-color: #3e3e42;
-            }
-            QMenu {
-                background-color: #2d2d30;
-                color: #d4d4d4;
-                border: 1px solid #3e3e42;
-            }
-            QMenu::item:selected {
-                background-color: #094771;
-            }
-            QToolBar {
-                background-color: #2d2d30;
-                border: none;
-                border-bottom: 1px solid #3e3e42;
-                spacing: 4px;
-            }
-            QStatusBar {
-                background-color: #007acc;
-                color: white;
-            }
-        """
-
-           ,
-        )
 
     @property
     def hxd_panel(self) -> HxDPanel | None:
@@ -818,7 +802,7 @@ class MainWindow(QMainWindow):
 
     def _setup_toolbar(self) -> None:
         """Set up the toolbar."""
-        toolbar = QToolBar("Main Toolbar")
+        toolbar = OverflowToolBar("Main Toolbar")
         toolbar.setMovable(False)
         toolbar.setFixedHeight(40)
         self.addToolBar(toolbar)
@@ -914,12 +898,6 @@ class MainWindow(QMainWindow):
         self.process_btn.setToolTip("Open Process Manager")
         self.process_btn.clicked.connect(self._on_open_process)
         toolbar.addWidget(self.process_btn)
-
-        self._binary_btn = QPushButton("Open Binary")
-        self._binary_btn.setObjectName("tool_button")
-        self._binary_btn.setToolTip("Load a binary file into Intellicrack")
-        self._binary_btn.clicked.connect(self._on_open_binary)
-        toolbar.addWidget(self._binary_btn)
 
         self._sandbox_tool_btn = QPushButton("Sandbox")
         self._sandbox_tool_btn.setObjectName("tool_button")
@@ -1133,10 +1111,9 @@ class MainWindow(QMainWindow):
         available_tools = self._orchestrator.get_available_tool_names()
         _logger.info("orchestrator_tools_available", tools=available_tools)
 
-        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-        if tool_reg is not None:
-            self.tool_panel.set_tool_registry(tool_reg)
-            _logger.info("tool_registry_wired_to_panel", registry=type(tool_reg).__name__)
+        tool_reg = self._orchestrator.tool_registry
+        self.tool_panel.set_tool_registry(tool_reg)
+        _logger.info("tool_registry_wired_to_panel", registry=type(tool_reg).__name__)
 
         bridge = self._orchestrator.get_typed_bridge("process")
         if bridge is not None:
@@ -1242,9 +1219,27 @@ class MainWindow(QMainWindow):
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
 
+        When no session is active yet, a new one is created implicitly from the
+        provider and model currently selected in the toolbar so the message can
+        be processed without requiring an explicit "New Session" action first.
+
         Args:
             text: User's message text.
         """
+        needs_session = self._orchestrator.current_session is None
+        provider: str | ProviderName | None = None
+        model = ""
+        if needs_session:
+            provider, model = self._selected_provider_model()
+            if not model:
+                self.status_update.emit("Select a model before sending")
+                QMessageBox.warning(
+                    self,
+                    "No Model Selected",
+                    "Select a model in the toolbar before sending a message.",
+                )
+                return
+
         self._chat_panel.set_input_enabled(enabled=False)
         self._stream_append = self._chat_panel.add_streaming_message()
         self.status_update.emit("Processing...")
@@ -1255,9 +1250,84 @@ class MainWindow(QMainWindow):
             _logger.debug("user_message_process_context", pid=active_pid)
 
         async def process() -> None:
+            if needs_session and provider is not None:
+                await self._ensure_active_session(provider, model)
             await self._orchestrator.process_user_input(text)
 
         self._run_async(process())
+
+    def _selected_provider_model(self) -> tuple[str | ProviderName, str]:
+        """Return the provider and model currently selected in the toolbar.
+
+        Returns:
+            tuple[str | ProviderName, str]: The selected provider (a
+            :class:`ProviderName` when the combo carries enum data, otherwise
+            its string form) and the trimmed model identifier.
+        """
+        provider_data: object = self._provider_combo.currentData()
+        model = self.model_combo.currentText().strip()
+        provider: str | ProviderName = (
+            provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
+        )
+        return provider, model
+
+    async def _ensure_active_session(self, provider: str | ProviderName, model: str) -> None:
+        """Ensure an active session exists, creating one if necessary.
+
+        Connects the selected provider first when it is not already connected,
+        loading saved credentials from the credential store, then starts a new
+        session bound to the provider and model.
+
+        Args:
+            provider: Provider selected in the toolbar.
+            model: Model identifier selected in the toolbar.
+        """
+        if self._orchestrator.current_session is not None:
+            return
+
+        provider_name = provider if isinstance(provider, ProviderName) else ProviderName(str(provider).lower())
+
+        registry = self._orchestrator.provider_registry
+        instance = registry.get(provider_name)
+        if instance is None or not instance.is_connected:
+            await self._connect_provider_for_session(provider_name)
+
+        _logger.info("implicit_session_create", provider=provider_name.value, model=model)
+        await self._orchestrator.start_session(provider_name, model)
+
+    async def _connect_provider_for_session(self, provider: ProviderName) -> None:
+        """Connect a provider using stored credentials for implicit session start.
+
+        Args:
+            provider: Provider to connect.
+
+        Raises:
+            RuntimeError: If the provider cannot be connected, with guidance to
+                configure credentials in Preferences.
+        """
+        credentials = await get_credentials(provider)
+        if credentials is None:
+            credentials = ProviderCredentials()
+
+        registry = self._orchestrator.provider_registry
+        try:
+            await registry.connect_provider(provider, credentials)
+        except (
+            ProviderError,
+            ConfigurationError,
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            RuntimeError,
+            ValueError,
+        ) as exc:
+            _logger.warning("implicit_provider_connect_failed", provider=provider.value, error=str(exc))
+            message = (
+                f"Could not connect to provider '{provider.value}'. "
+                "Configure its credentials in Preferences, then try again.\n\n"
+                f"Details: {exc}"
+            )
+            raise RuntimeError(message) from exc
 
     def _on_stream_chunk(self, chunk: str) -> None:
         """Handle streaming response chunk.
@@ -1505,14 +1575,11 @@ class MainWindow(QMainWindow):
                 description = str(get_desc()).strip()
             _logger.debug("new_session_dialog", session_name=session_name, description=description)
 
-        provider_data: object = self._provider_combo.currentData()
-        model = self.model_combo.currentText()
+        provider, model = self._selected_provider_model()
 
         if not model:
             QMessageBox.warning(self, "Warning", "Please select a model first.")
             return
-
-        provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
 
         async def create_session() -> None:
             await self._orchestrator.start_session(
@@ -1852,7 +1919,7 @@ class MainWindow(QMainWindow):
         Constructs :class:`ToolStatusDialog` without a pre-fetched status map so the dialog spawns its own background status-check workers
         and the Qt event loop is never blocked while ``_on_tool_status`` runs.
         """
-        tool_registry = getattr(self._orchestrator, "_tool_registry", None)
+        tool_registry = self._orchestrator.tool_registry
         dialog = ToolStatusDialog(
             tool_registry=tool_registry,
             parent=self,
@@ -1868,7 +1935,7 @@ class MainWindow(QMainWindow):
         status checks. Wires :attr:`ToolConfigDialog.tool_updated` and each :attr:`ToolSettingsWidget.status_changed` signal to MainWindow
         handlers so config saves and per-tool status changes update the application state and status bar in real time.
         """
-        tool_registry = getattr(self._orchestrator, "_tool_registry", None)
+        tool_registry = self._orchestrator.tool_registry
         dialog = ToolConfigDialog(
             tool_registry=tool_registry,
             tools_directory=self._config.tools_directory,
@@ -2188,8 +2255,16 @@ class MainWindow(QMainWindow):
         """
         self.model_combo.setEnabled(True)
         if success and models:
-            self.model_combo.clear()
-            self.model_combo.addItems(models)
+            previous_model = self.model_combo.currentText().strip()
+            with QSignalBlocker(self.model_combo):
+                self.model_combo.clear()
+                self.model_combo.addItems(models)
+                if previous_model:
+                    idx = self.model_combo.findText(previous_model)
+                    if idx >= 0:
+                        self.model_combo.setCurrentIndex(idx)
+                    else:
+                        self.model_combo.setCurrentText(previous_model)
             self.status_update.emit(f"Found {len(models)} models")
         else:
             self.status_update.emit("Failed to refresh models")
@@ -2508,16 +2583,10 @@ class MainWindow(QMainWindow):
         Returns:
             SandboxBridge: An initialized SandboxBridge instance.
         """
-        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-        if tool_reg is not None:
-            getter = getattr(tool_reg, "get_sandbox_bridge", None)
-            if callable(getter):
-                try:
-                    bridge = getter()
-                    if isinstance(bridge, SandboxBridge):
-                        return bridge
-                except (RuntimeError, ImportError, AttributeError):
-                    _logger.debug("sandbox_bridge_registry_lookup_failed", exc_info=True)
+        try:
+            return self._orchestrator.tool_registry.get_sandbox_bridge()
+        except ToolError:
+            _logger.debug("sandbox_bridge_registry_lookup_failed", exc_info=True)
 
         bridge = SandboxBridge()
         try:
@@ -2592,38 +2661,50 @@ class MainWindow(QMainWindow):
     def _on_preferences_changed(self, new_config: Config) -> None:
         """Handle preferences applied without dialog acceptance.
 
+        Re-applies the selected UI theme so changing it in the Preferences
+        dialog takes effect immediately, then refreshes model state.
+
         Args:
             new_config: The freshly built :class:`Config` emitted by the dialog
                 when the user pressed Apply.
         """
+        theme_changed = new_config.ui.theme != self._config.ui.theme
         self._config = new_config
+        if theme_changed:
+            _logger.info("preferences_theme_changed", theme=new_config.ui.theme)
+            self._theme_manager.apply_theme(new_config.ui.theme)
         self._initialize_model_cache()
         _logger.info("preferences_applied")
         self.status_update.emit("Preferences applied")
 
     def _on_toggle_theme(self) -> None:
-        """Toggle between dark and light themes."""
-        self._theme_manager.toggle_theme()
-        self._icon_manager.clear_cache()
-        is_dark = self._theme_manager.is_dark_theme()
-        theme_name = "dark" if is_dark else "light"
+        """Toggle the live theme between dark and light."""
+        theme_name = self._theme_manager.toggle_theme()
         _logger.info("theme_toggled", theme=theme_name)
-
-        heading_font = self._font_manager.get_heading_font(12)
-        code_bold = self._font_manager.get_code_font_bold(10)
-        ui_bold = self._font_manager.get_ui_font_bold(9)
-        _logger.debug(
-            "theme_fonts_resolved",
-            heading=heading_font.family(),
-            code_bold=code_bold.family(),
-            ui_bold=ui_bold.family(),
-        )
-
-        code_highlighter = self.tool_panel.get_code_highlighter()
-        if code_highlighter is not None:
-            code_highlighter.rehighlight()
-
         self.status_update.emit(f"Theme switched to {theme_name}")
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Refresh theme-dependent widgets when the active theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed`, this runs for explicit
+        theme selections, the Toggle Theme action, and live OS color-scheme
+        changes while the ``"system"`` theme is active. The application
+        stylesheet is re-applied by the theme manager itself; this handler
+        refreshes elements that are not styled purely through that stylesheet:
+        cached icon colors and the code-output syntax highlighter.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        self._icon_manager.clear_cache()
+
+        tool_panel = getattr(self, "tool_panel", None)
+        if tool_panel is not None:
+            code_highlighter = tool_panel.get_code_highlighter()
+            if code_highlighter is not None:
+                code_highlighter.rehighlight()
+
+        _logger.debug("theme_refreshed", resolved=resolved_theme)
 
     def _on_focus_chat_input(self) -> None:
         """Focus the chat input field."""
@@ -2707,11 +2788,15 @@ class MainWindow(QMainWindow):
 
     def _open_x64dbg_impl(self) -> None:
         """Initialize the x64dbg panel and start the tool."""
-        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-        if tool_reg is not None:
-            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-            if callable(ensure_ready):
-                ensure_ready("x64dbg")
+        run_bridge_coroutine_logged(
+            self._orchestrator.tool_registry.ensure_tool_ready(ToolName.X64DBG),
+            None,
+            None,
+            self,
+            event="ensure_tool_ready",
+            logger=_logger,
+            tool=ToolName.X64DBG.value,
+        )
 
         widget = self.tool_panel.add_x64dbg_tab(is_64bit=True)
         if widget is None:
@@ -2792,11 +2877,15 @@ class MainWindow(QMainWindow):
 
     def _open_ghidra_impl(self) -> None:
         """Initialize the Ghidra panel and start the tool."""
-        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-        if tool_reg is not None:
-            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-            if callable(ensure_ready):
-                ensure_ready("ghidra")
+        run_bridge_coroutine_logged(
+            self._orchestrator.tool_registry.ensure_tool_ready(ToolName.GHIDRA),
+            None,
+            None,
+            self,
+            event="ensure_tool_ready",
+            logger=_logger,
+            tool=ToolName.GHIDRA.value,
+        )
 
         widget = self.tool_panel.add_ghidra_tab()
         if widget is None:
@@ -2814,11 +2903,15 @@ class MainWindow(QMainWindow):
 
     def _open_frida_impl(self) -> None:
         """Initialize the Frida panel and start the tool."""
-        tool_reg = getattr(self._orchestrator, "_tool_registry", None)
-        if tool_reg is not None:
-            ensure_ready = getattr(tool_reg, "ensure_tool_ready", None)
-            if callable(ensure_ready):
-                ensure_ready("frida")
+        run_bridge_coroutine_logged(
+            self._orchestrator.tool_registry.ensure_tool_ready(ToolName.FRIDA),
+            None,
+            None,
+            self,
+            event="ensure_tool_ready",
+            logger=_logger,
+            tool=ToolName.FRIDA.value,
+        )
 
         panel = self.tool_panel.add_frida_tab()
         if panel is None:
@@ -2935,10 +3028,6 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
 
         task.add_done_callback(_on_done)
-
-    def _on_open_binary(self) -> None:
-        """Open a binary file into Intellicrack."""
-        self._on_load_binary()
 
     def _on_open_sandbox_panel(self) -> None:
         """Open sandbox manager panel."""

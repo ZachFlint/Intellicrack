@@ -337,7 +337,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="Call a function in the target process with typed arguments",
         parameters=[
             ToolParameter(name="address", type="integer", description="Function address", required=True),
-            ToolParameter(name="args", type="array", description="Function arguments (integers)", required=False),
+            ToolParameter(name="args", type="array", description="Function arguments (integers)", required=False, items_type="integer"),
             ToolParameter(name="return_type", type="string", description="Return type (default 'pointer')", required=False),
             ToolParameter(name="arg_types", type="array", description="Argument types list", required=False),
             ToolParameter(
@@ -717,7 +717,7 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         description="Call a system function capturing errno and GetLastError",
         parameters=[
             ToolParameter(name="address", type="integer", description="Function address", required=True),
-            ToolParameter(name="args", type="array", description="Function arguments (integers)", required=False),
+            ToolParameter(name="args", type="array", description="Function arguments (integers)", required=False, items_type="integer"),
             ToolParameter(name="return_type", type="string", description="Return type (default 'pointer')", required=False),
             ToolParameter(name="arg_types", type="array", description="Argument types list", required=False),
             ToolParameter(

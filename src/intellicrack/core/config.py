@@ -115,13 +115,13 @@ class UIConfig:
     """User interface configuration.
 
     Attributes:
-        theme: UI theme name.
+        theme: UI theme name ("dark", "light", or "system").
         font_family: Font family for code display.
         font_size: Font size in points.
         show_tool_calls: Whether to show tool calls in chat.
     """
 
-    theme: str = "dark"
+    theme: str = "system"
     font_family: str = "JetBrains Mono"
     font_size: int = 11
     show_tool_calls: bool = True
@@ -464,7 +464,7 @@ class Config:
 
         ui_data = data.get("ui", {})
         ui = UIConfig(
-            theme=ui_data.get("theme", "dark"),
+            theme=ui_data.get("theme", "system"),
             font_family=ui_data.get("font_family", "JetBrains Mono"),
             font_size=ui_data.get("font_size", 11),
             show_tool_calls=ui_data.get("show_tool_calls", True),

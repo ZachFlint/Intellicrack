@@ -24,6 +24,7 @@ from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
 
 from intellicrack._metadata import __version__
+from intellicrack.core.elevation import maybe_elevate
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
 
@@ -75,6 +76,7 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
+
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -98,12 +100,18 @@ class _CLIOptions:
         disable_file_log: When True, disable the file log sink.
         config_path: Explicit path to a TOML configuration file, or None to
             use the project-local config directory.
+        disable_elevation: When True, do not attempt to relaunch with
+            administrator privileges (``--no-elevate``).
+        already_elevated: When True, this process was started by a prior UAC
+            relaunch and must not attempt to elevate again (``--elevated``).
     """
 
     log_level: str | None = None
     disable_console_log: bool = False
     disable_file_log: bool = False
     config_path: Path | None = None
+    disable_elevation: bool = False
+    already_elevated: bool = False
 
 
 def _parse_args() -> tuple[_CLIOptions, list[str]]:
@@ -165,6 +173,18 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
         metavar="PATH",
         help="Path to a TOML configuration file (overrides the default project-local location)",
     )
+    _ = parser.add_argument(
+        "--no-elevate",
+        action="store_true",
+        default=False,
+        help="Do not attempt to relaunch with administrator privileges (Windows)",
+    )
+    _ = parser.add_argument(
+        "--elevated",
+        action="store_true",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
 
     namespace, remaining = parser.parse_known_args()
     ns_dict: dict[str, object] = vars(namespace)
@@ -186,6 +206,8 @@ def _parse_args() -> tuple[_CLIOptions, list[str]]:
             disable_console_log=bool(ns_dict.get("no_console_log")),
             disable_file_log=bool(ns_dict.get("no_file_log")),
             config_path=resolved_config_path,
+            disable_elevation=bool(ns_dict.get("no_elevate")),
+            already_elevated=bool(ns_dict.get("elevated")),
         ),
         remaining,
     )
@@ -447,7 +469,7 @@ def _show_early_splash_impl() -> tuple[QApplication, QSplashScreen]:
 
     early_splash = QSplashScreen(early_pixmap)
     early_splash.setWindowFlags(
-        Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen,
+        Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen,
     )
     early_splash.show()
     app.processEvents()
@@ -475,6 +497,7 @@ def _upgrade_to_full_splash_impl(
     app: QApplication,
     early_splash: QSplashScreen,
     logger: BoundLogger,
+    theme: str,
 ) -> SplashScreen:
     """Import UI modules and build the full animated splash screen.
 
@@ -486,6 +509,8 @@ def _upgrade_to_full_splash_impl(
         app: Qt application instance.
         early_splash: The minimal early splash screen to replace.
         logger: BoundLogger used for import-time telemetry.
+        theme: Configured UI theme name ("dark", "light", or "system") to
+            apply so the splash and main window honor the user's preference.
 
     Returns:
         SplashScreen: The full animated splash screen, already displayed.
@@ -499,7 +524,7 @@ def _upgrade_to_full_splash_impl(
     _log_import_time(logger, "intellicrack.ui.dialogs", time.perf_counter() - t0)
 
     theme_manager = theme_mgr_cls.get_instance()
-    theme_manager.apply_theme("dark")
+    theme_manager.apply_theme(theme)
 
     icon_manager = icon_mgr_cls.get_instance()
     qt_app_cls = _import_qt_app()
@@ -517,23 +542,25 @@ def _upgrade_to_full_splash(
     app: QApplication,
     early_splash: QSplashScreen,
     logger: BoundLogger,
+    theme: str,
 ) -> SplashScreen | None:
     """Replace the early splash with the full animated splash screen.
 
     Imports the heavier UI resource modules (ThemeManager, IconManager,
-    SplashScreen), applies the dark theme, closes the early splash,
+    SplashScreen), applies the configured theme, closes the early splash,
     and shows the full animated splash.
 
     Args:
         app: Qt application instance.
         early_splash: The minimal early splash screen to replace.
         logger: BoundLogger for error reporting.
+        theme: Configured UI theme name ("dark", "light", or "system").
 
     Returns:
         SplashScreen | None: Full animated splash screen, or None on failure.
     """
     try:
-        return _upgrade_to_full_splash_impl(app, early_splash, logger)
+        return _upgrade_to_full_splash_impl(app, early_splash, logger, theme)
     except (ImportError, OSError, RuntimeError) as exc:
         logger.warning("full_splash_upgrade_failed", error=str(exc), exc_info=True)
         return None
@@ -700,7 +727,17 @@ def main() -> int:
     Returns:
         int: Exit code (0 for success, non-zero for failure).
     """
+    original_args = sys.argv[1:]
     cli_options, remaining_args = _parse_args()
+
+    if maybe_elevate(
+        disabled=cli_options.disable_elevation,
+        already_attempted=cli_options.already_elevated,
+        original_args=original_args,
+        working_dir=str(Path.cwd()),
+    ):
+        return 0
+
     sys.argv = [sys.argv[0], *remaining_args]
 
     early_result = _show_early_splash()
@@ -713,7 +750,7 @@ def main() -> int:
         return 1
     config, logger, process_manager = startup
 
-    splash = _upgrade_to_full_splash(app, early_splash, logger)
+    splash = _upgrade_to_full_splash(app, early_splash, logger, config.ui.theme)
     if splash is None:
         process_manager.uninstall_handlers()
         return 1

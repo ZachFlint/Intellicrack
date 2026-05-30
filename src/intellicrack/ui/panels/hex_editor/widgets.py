@@ -71,7 +71,7 @@ def _get_widget_colors() -> dict[str, QColor]:
         "entropy_low": QColor("#2E7D32"),
         "entropy_mid": QColor("#EF6C00"),
         "entropy_high": QColor("#C62828"),
-        "axis": QColor("#757575"),
+        "axis": QColor("#5a6370"),
         "bar_normal": QColor("#1565C0"),
         "bar_hovered": QColor("#2E7D32"),
         "gradient_low": QColor("#E8F5E9"),

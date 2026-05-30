@@ -40,7 +40,7 @@ capabilities feel like one coherent application rather than a collection of
 disconnected integrations. The defining value of Intellicrack is that it
 unifies tools, context, and AI connectivity into a single operational surface.
 
-**TOOLS**
+## Tools
 
 ## USE THESE TOOLS
 
@@ -56,7 +56,8 @@ unifies tools, context, and AI connectivity into a single operational surface.
   equivalent (e.g., piping to `jq` with complex single-quoted filters,
   here-docs that PowerShell cannot express cleanly, or invoking a script
   that hard-requires bash). Default tool of choice is `PowerShell`.
-- **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER `powershell.exe` (PowerShell 5)**
+- **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER
+  `powershell.exe` (PowerShell 5)**
 - When executing PowerShell commands, use `pwsh -Command '...'` or `pwsh -File ...`
 
 ## CRITICAL: VIRTUAL ENVIRONMENT USAGE
@@ -89,8 +90,9 @@ unifies tools, context, and AI connectivity into a single operational surface.
   issues, or any other mechanism to suppress type checking findings be used.
   This includes ALL forms of inline suppression comments. Fix the actual type
   error instead.
-- **NEVER edit the basedpyright configuration** - The `[tool.basedpyright]` section in
-  `pyproject.toml` must never be modified to weaken type checking strictness,
+- **NEVER edit the basedpyright configuration** - The
+  `[tool.basedpyright]` section in `pyproject.toml` must never be modified to
+  weaken type checking strictness,
   add exclusions, or suppress diagnostics. The basedpyright config is locked and
   immutable.
 - **ALL code must pass `pydoclint` and `pydocstyle`** - Full compliance required

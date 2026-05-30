@@ -175,7 +175,7 @@ class SplashScreen(QSplashScreen):
         super().__init__(transparent_pixmap)
 
         self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen,
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen,
         )
 
         self._dpi_scale: float = dpi_scale

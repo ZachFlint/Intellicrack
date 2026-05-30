@@ -398,3 +398,124 @@ def test_google_uppercase_conversion(
     schemas = create_google_tool_schema(tool)
     prop_type = schemas[0]["parameters"]["properties"]["param"].get("type")
     assert prop_type == expected_google_type
+
+
+def _make_array_tool() -> ToolDefinition:
+    """Build a ToolDefinition exercising every array element-type path.
+
+    Covers a default (string) element array, an explicit integer element
+    array, and an object element array with nested property definitions.
+
+    Returns:
+        ToolDefinition: A ToolDefinition whose single function declares three
+            array parameters.
+    """
+    return ToolDefinition(
+        tool_name=ToolName.GHIDRA,
+        description="Array schema tool",
+        functions=[
+            ToolFunction(
+                name="test.arrays",
+                description="Function with array parameters",
+                parameters=[
+                    ToolParameter(
+                        name="tags",
+                        type="array",
+                        description="Default string element array",
+                        required=True,
+                    ),
+                    ToolParameter(
+                        name="offsets",
+                        type="array",
+                        description="Integer element array",
+                        required=False,
+                        items_type="integer",
+                    ),
+                    ToolParameter(
+                        name="fields",
+                        type="array",
+                        description="Object element array",
+                        required=False,
+                        items_type="object",
+                        item_properties=[
+                            ToolParameter(name="name", type="string", description="Field name", required=True),
+                            ToolParameter(name="size", type="integer", description="Field size", required=False),
+                        ],
+                    ),
+                ],
+                returns="Result",
+            ),
+        ],
+    )
+
+
+def test_openai_array_items_present_and_typed() -> None:
+    """Every OpenAI array property must carry a typed items definition."""
+    props = create_openai_tool_schema(_make_array_tool())[0]["function"]["parameters"]["properties"]
+
+    assert props["tags"].get("items") == {"type": "string"}
+    assert props["offsets"].get("items") == {"type": "integer"}
+    fields_items = props["fields"].get("items")
+    assert fields_items is not None
+    assert fields_items.get("type") == "object"
+
+
+def test_anthropic_array_items_present_and_typed() -> None:
+    """Every Anthropic array property must carry a typed items definition."""
+    props = create_anthropic_tool_schema(_make_array_tool())[0]["input_schema"]["properties"]
+
+    assert props["tags"].get("items") == {"type": "string"}
+    assert props["offsets"].get("items") == {"type": "integer"}
+    fields_items = props["fields"].get("items")
+    assert fields_items is not None
+    assert fields_items.get("type") == "object"
+
+
+def test_google_array_items_uppercase_typed() -> None:
+    """Google array items must use uppercase element types (Gemini requirement)."""
+    props = create_google_tool_schema(_make_array_tool())[0]["parameters"]["properties"]
+
+    assert props["tags"].get("items") == {"type": "STRING"}
+    assert props["offsets"].get("items") == {"type": "INTEGER"}
+    fields_items = props["fields"].get("items")
+    assert fields_items is not None
+    assert fields_items.get("type") == "OBJECT"
+
+
+def test_google_object_array_items_have_nonempty_properties() -> None:
+    """Object element arrays must expose non-empty nested properties.
+
+    Gemini rejects OBJECT schemas with empty properties, so an object array's
+    items must carry a populated, correctly-cased properties map and required
+    list.
+    """
+    props = create_google_tool_schema(_make_array_tool())[0]["parameters"]["properties"]
+    items = props["fields"].get("items")
+    assert items is not None
+
+    nested = items.get("properties")
+    assert nested is not None
+    assert nested["name"].get("type") == "STRING"
+    assert nested["size"].get("type") == "INTEGER"
+    assert items.get("required") == ["name"]
+
+
+def test_all_providers_emit_items_for_every_array() -> None:
+    """No array property may be emitted without items in any provider format.
+
+    A missing items field on an array is the exact schema defect that causes
+    Gemini to reject the entire request with INVALID_ARGUMENT.
+    """
+    tool = _make_array_tool()
+    property_sets = [
+        create_openai_tool_schema(tool)[0]["function"]["parameters"]["properties"],
+        create_anthropic_tool_schema(tool)[0]["input_schema"]["properties"],
+        create_google_tool_schema(tool)[0]["parameters"]["properties"],
+    ]
+
+    for props in property_sets:
+        for name, prop in props.items():
+            if prop.get("type", "").upper() == "ARRAY":
+                items = prop.get("items")
+                assert items is not None, f"array property {name} missing items"
+                assert items.get("type"), f"array property {name} has untyped items"

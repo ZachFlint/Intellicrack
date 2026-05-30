@@ -146,6 +146,8 @@ class OllamaProvider(LLMProviderBase):
         super().__init__()
         self._local_client: httpx.AsyncClient | None = None
         self._cloud_client: httpx.AsyncClient | None = None
+        self._local_client_loop: asyncio.AbstractEventLoop | None = None
+        self._cloud_client_loop: asyncio.AbstractEventLoop | None = None
         self._local_url: str = self.DEFAULT_LOCAL_URL
         self._cloud_api_key: str | None = None
         self._local_available: bool = False
@@ -153,6 +155,52 @@ class OllamaProvider(LLMProviderBase):
         self._connect_timeout: float = 300.0
         self._logger = get_logger(__name__).bind(provider="ollama")
         self._logger.info("ollama_provider_initialized")
+
+    def _build_local_client(self) -> httpx.AsyncClient:
+        """Construct the local Ollama HTTP client.
+
+        Returns:
+            httpx.AsyncClient: A client configured with the connect
+            timeout for the local Ollama REST endpoint.
+        """
+        return httpx.AsyncClient(timeout=httpx.Timeout(self._connect_timeout))
+
+    def _build_cloud_client(self) -> httpx.AsyncClient:
+        """Construct the cloud Ollama HTTP client.
+
+        Returns:
+            httpx.AsyncClient: A client configured with the connect
+            timeout and the bearer authorization header for the Ollama
+            cloud API.
+        """
+        return httpx.AsyncClient(
+            timeout=httpx.Timeout(self._connect_timeout),
+            headers={"Authorization": f"Bearer {self._cloud_api_key}"},
+        )
+
+    def _ensure_clients_on_loop(self) -> None:
+        """Rebind the local/cloud HTTP clients to the current event loop.
+
+        Must be called from within a running event loop (i.e. at the
+        start of an async method) while connected. Each available client
+        is rebuilt when the running loop differs from the loop it was
+        bound to, so its connection pool stays valid across the
+        bootstrap-loop to bridge-loop transition. See
+        :meth:`LLMProviderBase._httpx_client_rebind_target` for the
+        rationale.
+        """
+        if self._local_available and self._local_client is not None:
+            local_target = self._httpx_client_rebind_target(self._local_client_loop)
+            if local_target is not None:
+                self._logger.debug("ollama_local_client_rebound", reason="event_loop_changed")
+                self._local_client = self._build_local_client()
+                self._local_client_loop = local_target
+        if self._cloud_available and self._cloud_client is not None:
+            cloud_target = self._httpx_client_rebind_target(self._cloud_client_loop)
+            if cloud_target is not None:
+                self._logger.debug("ollama_cloud_client_rebound", reason="event_loop_changed")
+                self._cloud_client = self._build_cloud_client()
+                self._cloud_client_loop = cloud_target
 
     @property
     def name(self) -> ProviderName:
@@ -220,11 +268,11 @@ class OllamaProvider(LLMProviderBase):
     async def _connect_local(self) -> None:
         """Probe the local Ollama ``/api/tags`` endpoint and record availability."""
         try:
-            self._local_client = httpx.AsyncClient(timeout=httpx.Timeout(self._connect_timeout))
+            self._local_client = self._build_local_client()
             response = await self._local_client.get(f"{self._local_url}/api/tags")
             self._raise_for_status(response)
             self._local_available = True
-            self._logger.info("local_ollama_connected", url=self._local_url)
+            self._local_client_loop = asyncio.get_running_loop()
         except AuthenticationError as e:
             self._local_available = False
             self._logger.warning("local_ollama_auth_failed", error=str(e))
@@ -237,6 +285,8 @@ class OllamaProvider(LLMProviderBase):
             if self._local_client:
                 await self._local_client.aclose()
                 self._local_client = None
+        else:
+            self._logger.info("local_ollama_connected", url=self._local_url)
 
     async def _connect_cloud(self) -> None:
         """Probe the Ollama cloud ``/api/tags`` endpoint and record availability."""
@@ -244,14 +294,11 @@ class OllamaProvider(LLMProviderBase):
             return
 
         try:
-            self._cloud_client = httpx.AsyncClient(
-                timeout=httpx.Timeout(self._connect_timeout),
-                headers={"Authorization": f"Bearer {self._cloud_api_key}"},
-            )
+            self._cloud_client = self._build_cloud_client()
             response = await self._cloud_client.get(f"{self.CLOUD_API_URL}/api/tags")
             self._raise_for_status(response)
             self._cloud_available = True
-            self._logger.info("cloud_ollama_connected", cloud_url=self.CLOUD_API_URL)
+            self._cloud_client_loop = asyncio.get_running_loop()
         except AuthenticationError as e:
             self._cloud_available = False
             self._logger.warning("cloud_api_key_invalid", error=str(e))
@@ -269,6 +316,8 @@ class OllamaProvider(LLMProviderBase):
             if self._cloud_client:
                 await self._cloud_client.aclose()
                 self._cloud_client = None
+        else:
+            self._logger.info("cloud_ollama_connected", cloud_url=self.CLOUD_API_URL)
 
     async def disconnect(self) -> None:
         """Disconnect from both local and cloud Ollama."""
@@ -287,6 +336,8 @@ class OllamaProvider(LLMProviderBase):
         if self._cloud_client:
             await self._cloud_client.aclose()
             self._cloud_client = None
+        self._local_client_loop = None
+        self._cloud_client_loop = None
         self._local_available = False
         self._cloud_available = False
         self._pending_usage = None
@@ -378,6 +429,8 @@ class OllamaProvider(LLMProviderBase):
         if not self.connected:
             self._logger.error("ollama_list_models_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
+
+        self._ensure_clients_on_loop()
 
         self._logger.debug("ollama_listing_models")
         models: list[ModelInfo] = []
@@ -689,6 +742,7 @@ class OllamaProvider(LLMProviderBase):
         """
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
+        self._ensure_clients_on_loop()
         normalized = source.lower()
         if normalized == "cloud":
             if self._cloud_available and self._cloud_client:
@@ -809,6 +863,7 @@ class OllamaProvider(LLMProviderBase):
         Raises:
             ProviderError: If requested source is not available.
         """
+        self._ensure_clients_on_loop()
         if model.startswith("cloud/"):
             if not self._cloud_available or not self._cloud_client:
                 self._logger.error("ollama_cloud_unavailable", model=model)
@@ -1627,7 +1682,6 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
-
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",
@@ -1799,6 +1853,7 @@ class OllamaProvider(LLMProviderBase):
                 error occurs, or the server returns any other non-2xx
                 status.
         """
+        self._ensure_clients_on_loop()
         if not self._local_available or not self._local_client:
             raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE, provider_name="ollama")
 

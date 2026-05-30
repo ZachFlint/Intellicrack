@@ -99,7 +99,7 @@ class TestAnalysisAggregatorNoBridges:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = asyncio.run(aggregator.aggregate("binary.exe", binary_info))
 
         assert isinstance(result, BridgeAnalysisSummary)
         assert result.binary_name == "binary.exe"
@@ -117,7 +117,7 @@ class TestAnalysisAggregatorNoBridges:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = asyncio.run(aggregator.aggregate("binary.exe", binary_info))
 
         notes_text = " ".join(result.analysis_notes)
         assert "No bridges connected" in notes_text
@@ -142,7 +142,7 @@ class TestAnalysisAggregatorExceptionHandling:
         aggregator = AnalysisAggregator(registry)
         binary_info = _make_binary_info()
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = asyncio.run(aggregator.aggregate("binary.exe", binary_info))
 
         assert isinstance(result, BridgeAnalysisSummary)
         assert any("ghidra" in note for note in result.analysis_notes)
@@ -171,7 +171,7 @@ class TestDeduplication:
         binary_info = _make_binary_info()
         aggregator = AnalysisAggregator(registry)
 
-        result = asyncio.get_event_loop().run_until_complete(aggregator.aggregate("binary.exe", binary_info))
+        result = asyncio.run(aggregator.aggregate("binary.exe", binary_info))
 
         import_addrs = [imp.address for imp in result.imports]
         assert import_addrs.count(ADDR_IMPORT) == 1

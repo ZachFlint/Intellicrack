@@ -666,9 +666,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--workers",
         type=_workers_arg,
-        default=4,
+        default=16,
         metavar="N",
-        help="Number of parallel linter workers, clamped to [1, 16] (default 4).",
+        help="Number of parallel linter workers, clamped to [1, 16] (default 16).",
     )
     return parser
 

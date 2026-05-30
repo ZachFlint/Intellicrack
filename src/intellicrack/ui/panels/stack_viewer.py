@@ -70,14 +70,14 @@ def _get_stack_colors() -> dict[str, QColor]:
             "connected": QColor("#4ec9b0"),
         }
     return {
-        "index_highlight": QColor("#0078d4"),
+        "index_highlight": QColor("#0067c0"),
         "address": QColor("#0451a5"),
         "function_known": QColor("#795e26"),
-        "function_unknown": QColor("#757575"),
-        "module": QColor("#0078d4"),
+        "function_unknown": QColor("#5a6370"),
+        "module": QColor("#0067c0"),
         "offset": QColor("#098658"),
         "pointer": QColor("#a31515"),
-        "muted": QColor("#757575"),
+        "muted": QColor("#5a6370"),
         "error": QColor("#c62828"),
         "connected": QColor("#2e7d32"),
     }
