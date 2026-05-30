@@ -660,6 +660,8 @@ class PlacementStmt:
         in_section: Optional expression naming the section the placement belongs to.
         array_size: Optional expression giving the fixed array length.
         while_condition: Optional expression for a while-terminated array.
+        is_pointer: Whether the placed field is a pointer (``Type *name``)
+            whose stored integer addresses a dereferenced pointee.
         line: Source line number where this node appears.
         column: Source column number where this node appears.
     """
@@ -671,6 +673,7 @@ class PlacementStmt:
     in_section: ExprNode | None
     array_size: ExprNode | None
     while_condition: ExprNode | None
+    is_pointer: bool
     line: int
     column: int
 

@@ -1420,36 +1420,62 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         self._threads.clear()
         self._current_thread_id = None
 
+    @staticmethod
+    def _resolve_stored_binary(tool_path: Path) -> Path | None:
+        """Resolve a real rizin/radare2 executable within a stored tool path.
+
+        Args:
+            tool_path: The path supplied to :meth:`initialize`, either the
+                backend executable itself or its containing directory.
+
+        Returns:
+            Path | None: The resolved executable, or ``None`` when neither a
+                rizin nor a radare2 binary is present at ``tool_path``.
+        """
+        if tool_path.is_file():
+            return tool_path
+        suffix = ".exe" if os.name == "nt" else ""
+        for name in ("rizin", "radare2"):
+            candidate = tool_path / f"{name}{suffix}"
+            if candidate.exists():
+                return candidate
+        return None
+
     @override
     async def is_available(self) -> bool:
         """Check if Cutter/Rizin is available.
 
-        Verifies the selected backend binary actually launches by invoking
-        it with ``-v`` and checking the exit status. Using the raw binary
-        rather than opening an analysis-pipe session avoids the platform-
-        specific stdin-handshake hang exhibited by ``rzpipe.open("-")`` on
-        Windows, where the rizin process blocks on a banner read for an
-        input filename that never gets supplied.
+        Resolves the backend executable -- preferring a binary discovered on
+        ``PATH`` and otherwise falling back to a real rizin/radare2 binary
+        inside the stored ``tool_path`` -- then verifies it actually launches
+        by invoking it with ``-v`` and checking the exit status. Probing the
+        raw binary rather than opening an analysis-pipe session avoids the
+        platform-specific stdin-handshake hang exhibited by ``rzpipe.open("-")``
+        on Windows, where the rizin process blocks on a banner read for an
+        input filename that never gets supplied. A stored ``tool_path`` that
+        contains no rizin/radare2 binary reports unavailable rather than
+        trusting mere directory existence.
 
         Returns:
             bool: True if Cutter/Rizin can be used.
         """
         backend = _select_pipe_backend()
-        has_stored = self._tool_path is not None and self._tool_path.exists()
-        if backend is None and not has_stored:
-            _logger.debug("cutter_not_in_path")
-            return False
+        if backend is not None:
+            binary_basename = backend.binary + (".exe" if os.name == "nt" else "")
+            resolved_binary = backend.install_dir / binary_basename
+            backend_label = backend.binary
+        elif self._tool_path is not None:
+            resolved_binary = await asyncio.to_thread(self._resolve_stored_binary, self._tool_path)
+            backend_label = "stored"
+        else:
+            resolved_binary = None
+            backend_label = "none"
 
-        if backend is None:
-            return has_stored
-
-        binary_basename = backend.binary + (".exe" if os.name == "nt" else "")
-        resolved_binary = backend.install_dir / binary_basename
-        if not resolved_binary.exists():
+        if resolved_binary is None or not await asyncio.to_thread(resolved_binary.exists):
             _logger.debug(
-                "cutter_binary_disappeared",
-                binary=backend.binary,
-                resolved=str(resolved_binary),
+                "cutter_not_available",
+                backend=backend_label,
+                resolved=str(resolved_binary) if resolved_binary is not None else None,
             )
             return False
 
@@ -1475,13 +1501,13 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         if proc.returncode != 0:
             _logger.warning(
                 "cutter_version_probe_nonzero",
-                backend=backend.binary,
+                backend=backend_label,
                 returncode=proc.returncode,
             )
             return False
 
         version_line = stdout_bytes.decode("utf-8", errors="replace").strip()
-        _logger.debug("cutter_backend_probed", backend=backend.binary, version=version_line)
+        _logger.debug("cutter_backend_probed", backend=backend_label, version=version_line)
         return bool(version_line)
 
     async def _close_existing_r2(self) -> None:

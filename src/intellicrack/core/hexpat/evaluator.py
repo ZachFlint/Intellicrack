@@ -114,11 +114,13 @@ class BuiltinCallable:
     """Wrapper for a built-in Python callable stored as a PatternValue.
 
     Attributes:
-        fn: The underlying Python callable accepting PatternValue arguments.
+        fn: The underlying Python callable accepting PatternValue arguments
+            and returning either a host scalar (boxed by the evaluator) or a
+            PatternValue when the result carries structure.
         name: The name of the built-in function.
     """
 
-    fn: Callable[..., PatternValue]
+    fn: Callable[..., object]
     name: str
 
 
@@ -1014,10 +1016,18 @@ class HexPatEvaluator:
         color = self._next_color()
         description = self._extract_description(node.annotations)
 
-        type_node: TypeNode = node.type_node
+        element_node: TypeNode = node.type_node
+        if node.is_pointer:
+            element_node = PointerType(
+                pointee=node.type_node,
+                line=node.line,
+                column=node.column,
+            )
+
+        type_node: TypeNode = element_node
         if node.array_size is not None or node.while_condition is not None:
             type_node = ArrayType(
-                element=node.type_node,
+                element=element_node,
                 size=node.array_size,
                 while_condition=node.while_condition,
                 line=node.line,
@@ -1036,8 +1046,7 @@ class HexPatEvaluator:
             self._results.append(result)
             self._pattern_count += 1
             res_size = int(result["size"])
-            if node.at_offset is None:
-                self._offset = target_offset + res_size
+            self._offset = target_offset + res_size
             raw_value = result.pop("_value", None)
             bound_value: _PrimValue | FunctionDecl | BuiltinCallable = (
                 raw_value if isinstance(raw_value, (int, float, str, bool, bytes)) else None
@@ -2272,13 +2281,41 @@ class HexPatEvaluator:
         args = [self._eval_expr(a) for a in node.arguments]
 
         if isinstance(callee.value, BuiltinCallable):
-            return callee.value.fn(*args)
+            return self._box_builtin_result(callee.value.fn(*args))
 
         if isinstance(callee.value, FunctionDecl):
             return self._call_user_function(callee.value, args)
 
         msg = "callee is not callable"
         raise HexPatRuntimeError(msg, node.line, node.column)
+
+    @staticmethod
+    def _box_builtin_result(result: object) -> PatternValue:
+        """Normalize a builtin return value into a PatternValue.
+
+        Native builtins return host scalars (``int``/``float``/``str``/
+        ``bytes``/``bool``/``None``); builtins whose result carries structure
+        (members, offset, size, or type info) return a :class:`PatternValue`
+        directly. This boxes the former and passes the latter through so
+        expression evaluation always operates on :class:`PatternValue`.
+
+        Args:
+            result: The value returned by a :class:`BuiltinCallable`.
+
+        Returns:
+            PatternValue: ``result`` unchanged when already a PatternValue,
+                otherwise a fresh PatternValue wrapping the host value.
+
+        Raises:
+            HexPatRuntimeError: When ``result`` is neither a PatternValue nor
+                a supported host scalar.
+        """
+        if isinstance(result, PatternValue):
+            return result
+        if result is None or isinstance(result, (bool, int, float, str, bytes)):
+            return PatternValue(value=result)
+        msg = f"builtin returned unsupported value type: {type(result).__name__}"
+        raise HexPatRuntimeError(msg)
 
     def _call_user_function(
         self,
@@ -2563,6 +2600,10 @@ class HexPatEvaluator:
             PatternValue: A PatternValue containing the size in bytes as an integer.
         """
         target = node.target
+        if isinstance(target, NamedType):
+            bound = self._scope.get(target.name)
+            if bound is not None and self._types.resolve(target.name) is None:
+                return PatternValue(value=bound.size)
         if isinstance(target, (PrimitiveType, NamedType, PointerType, ArrayType, PaddingType, AutoType)):
             size = self._sizeof_type_node(target)
             return PatternValue(value=size)

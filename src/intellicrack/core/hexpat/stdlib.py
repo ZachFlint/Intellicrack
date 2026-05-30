@@ -417,6 +417,7 @@ class BuiltinFunctions:
             "builtin::std::string::starts_with": self._string_starts_with,
             "builtin::std::string::ends_with": self._string_ends_with,
             "builtin::std::string::parse_int": self._string_parse_int,
+            "builtin::std::string::to_int": self._string_to_int,
             "builtin::std::string::parse_float": self._string_parse_float,
             "builtin::std::string::reverse": self._string_reverse,
             "std::string::length": self._string_length,
@@ -426,6 +427,7 @@ class BuiltinFunctions:
             "std::string::starts_with": self._string_starts_with,
             "std::string::ends_with": self._string_ends_with,
             "std::string::parse_int": self._string_parse_int,
+            "std::string::to_int": self._string_to_int,
             "std::string::parse_float": self._string_parse_float,
             "std::string::reverse": self._string_reverse,
             "builtin::std::math::abs": self._math_abs,
@@ -581,7 +583,7 @@ class BuiltinFunctions:
         for name, func in builtins.items():
             scope.define(name, PatternValue(value=BuiltinCallable(fn=func, name=name)))
 
-    def _mem_read_unsigned(self, *args: object) -> PatternValue:
+    def _mem_read_unsigned(self, *args: object) -> int:
         """Read an unsigned integer from binary data.
 
         Args:
@@ -590,16 +592,16 @@ class BuiltinFunctions:
                 endian tag (0=Native, 1=Big, 2=Little).
 
         Returns:
-            PatternValue: A PatternValue containing the unsigned integer value.
+            int: The unsigned integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
         endian_tag = int(self._unwrap(args[2])) if len(args) > 2 else _ENDIAN_NATIVE
         raw = self._data.read(offset, size)
         byteorder = self._resolve_endian(endian_tag)
-        return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=False))
+        return int.from_bytes(raw, byteorder=byteorder, signed=False)
 
-    def _mem_read_signed(self, *args: object) -> PatternValue:
+    def _mem_read_signed(self, *args: object) -> int:
         """Read a signed integer from binary data.
 
         Args:
@@ -608,23 +610,23 @@ class BuiltinFunctions:
                 (0=Native, 1=Big, 2=Little).
 
         Returns:
-            PatternValue: A PatternValue containing the signed integer value.
+            int: The signed integer value.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         size = int(self._unwrap(args[1])) if len(args) > 1 else 1
         endian_tag = int(self._unwrap(args[2])) if len(args) > 2 else _ENDIAN_NATIVE
         raw = self._data.read(offset, size)
         byteorder = self._resolve_endian(endian_tag)
-        return PatternValue(value=int.from_bytes(raw, byteorder=byteorder, signed=True))
+        return int.from_bytes(raw, byteorder=byteorder, signed=True)
 
-    def _mem_read_string(self, *args: object) -> PatternValue:
+    def _mem_read_string(self, *args: object) -> str:
         """Read a string from binary data.
 
         Args:
             *args: ``(offset: int, length: int)``.
 
         Returns:
-            PatternValue: A PatternValue containing the decoded string.
+            str: The decoded string.
         """
         offset = int(self._unwrap(args[0])) if args else 0
         length = int(self._unwrap(args[1])) if len(args) > 1 else 256
@@ -632,9 +634,9 @@ class BuiltinFunctions:
         null_idx = raw.find(b"\x00")
         if null_idx >= 0:
             raw = raw[:null_idx]
-        return PatternValue(value=raw.decode("utf-8", errors="replace"))
+        return raw.decode("utf-8", errors="replace")
 
-    def _mem_find_sequence(self, *args: object) -> PatternValue:
+    def _mem_find_sequence(self, *args: object) -> int:
         """Find a byte sequence in a range of binary data.
 
         Args:
@@ -643,44 +645,43 @@ class BuiltinFunctions:
                 full span fits in ``[offsetFrom, offsetTo)`` is returned.
 
         Returns:
-            PatternValue: A PatternValue containing the absolute byte offset of
-                the selected occurrence, or ``-1`` when fewer than
-                ``occurrence_index + 1`` matches exist.
+            int: The absolute byte offset of the selected occurrence, or ``-1``
+                when fewer than ``occurrence_index + 1`` matches exist.
         """
         if len(args) < 4:
-            return PatternValue(value=-1)
+            return -1
         occurrence_index = int(self._unwrap(args[0]))
         offset_from = int(self._unwrap(args[1]))
         offset_to = int(self._unwrap(args[2]))
         pattern_args = [self._unwrap(a) for a in args[3:]]
         pattern = bytes(int(b) & 0xFF for b in pattern_args)
         if not pattern or occurrence_index < 0:
-            return PatternValue(value=-1)
+            return -1
         pos = offset_from
         found_count = 0
         while True:
             result = self._data.find_sequence(pattern, pos)
             if result < 0:
-                return PatternValue(value=-1)
+                return -1
             if result + len(pattern) > offset_to:
-                return PatternValue(value=-1)
+                return -1
             if found_count == occurrence_index:
-                return PatternValue(value=result)
+                return result
             found_count += 1
             pos = result + 1
 
-    def _mem_size(self, *_args: object) -> PatternValue:
+    def _mem_size(self, *_args: object) -> int:
         """Get the total size of the binary data.
 
         Args:
             *_args: Unused arguments for API compatibility.
 
         Returns:
-            PatternValue: A PatternValue containing the data size in bytes.
+            int: The data size in bytes.
         """
-        return PatternValue(value=self._data.size)
+        return self._data.size
 
-    def _mem_base_address(self, *_args: object) -> PatternValue:
+    def _mem_base_address(self, *_args: object) -> int:
         """Get the base address as configured by ``#pragma base_address``.
 
         The result is the integer base address recorded in the active
@@ -691,11 +692,11 @@ class BuiltinFunctions:
             *_args: Unused arguments for API compatibility.
 
         Returns:
-            PatternValue: A PatternValue containing the base address.
+            int: The base address.
         """
-        return PatternValue(value=int(self._pragma.base_address))
+        return int(self._pragma.base_address)
 
-    def _mem_read_bits(self, *args: object) -> PatternValue:
+    def _mem_read_bits(self, *args: object) -> int:
         """Read an arbitrary-width unsigned bitfield from the binary.
 
         Bits are extracted starting at ``bit_offset`` within the byte at
@@ -707,8 +708,7 @@ class BuiltinFunctions:
             *args: ``(byte_offset: int, bit_offset: int, bit_size: int)``.
 
         Returns:
-            PatternValue: A PatternValue carrying the unsigned integer
-                composed from the requested bit range.
+            int: The unsigned integer composed from the requested bit range.
 
         Raises:
             HexPatRuntimeError: When the requested bit-size is non-positive,
@@ -738,9 +738,9 @@ class BuiltinFunctions:
         big_value = int.from_bytes(raw, byteorder="big", signed=False)
         shift = (bytes_needed * 8) - bit_offset - bit_size
         mask = (1 << bit_size) - 1
-        return PatternValue(value=(big_value >> shift) & mask)
+        return (big_value >> shift) & mask
 
-    def _mem_find_string_in_range(self, *args: object) -> PatternValue:
+    def _mem_find_string_in_range(self, *args: object) -> int:
         """Locate the Nth occurrence of ``needle`` in a byte range.
 
         Args:
@@ -749,31 +749,31 @@ class BuiltinFunctions:
                 supplied as a string.
 
         Returns:
-            PatternValue: A PatternValue holding the absolute byte offset of
-                the matching occurrence, or ``-1`` when fewer matches exist.
+            int: The absolute byte offset of the matching occurrence, or ``-1``
+                when fewer matches exist.
         """
         if len(args) < 4:
-            return PatternValue(value=-1)
+            return -1
         occurrence_index = int(self._unwrap(args[0]))
         offset_from = int(self._unwrap(args[1]))
         offset_to = int(self._unwrap(args[2]))
         needle = self._unwrap_bytes(args[3])
         if not needle or occurrence_index < 0:
-            return PatternValue(value=-1)
+            return -1
         pos = offset_from
         found_count = 0
         while True:
             result = self._data.find_sequence(needle, pos)
             if result < 0:
-                return PatternValue(value=-1)
+                return -1
             if result + len(needle) > offset_to:
-                return PatternValue(value=-1)
+                return -1
             if found_count == occurrence_index:
-                return PatternValue(value=result)
+                return result
             found_count += 1
             pos = result + 1
 
-    def _mem_current_bit_offset(self, *_args: object) -> PatternValue:
+    def _mem_current_bit_offset(self, *_args: object) -> int:
         """Return the current bit offset within an active bitfield read.
 
         Bit-level reflection is provided by the evaluator's reflection
@@ -784,16 +784,16 @@ class BuiltinFunctions:
             *_args: Unused arguments for API compatibility.
 
         Returns:
-            PatternValue: A PatternValue carrying the bit offset (``0``-``7``).
+            int: The bit offset (``0``-``7``).
         """
         if self._reflection is not None:
             hook = getattr(self._reflection, "current_bit_offset", None)
             if callable(hook):
                 hook_result = hook()
                 if isinstance(hook_result, int):
-                    return PatternValue(value=hook_result)
-                return PatternValue(value=0)
-        return PatternValue(value=0)
+                    return hook_result
+                return 0
+        return 0
 
     def _mem_create_section(self, *args: object) -> PatternValue:
         """Allocate a fresh in-memory section and return its handle.
@@ -990,97 +990,98 @@ class BuiltinFunctions:
         handle = int(self._unwrap(arg))
         return self._sections.get(handle)
 
-    def _string_length(self, *args: object) -> PatternValue:
+    def _string_length(self, *args: object) -> int:
         """Get the length of a string.
 
         Args:
             *args: ``(s: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing the string length.
+            int: The string length.
         """
-        return PatternValue(value=len(str(self._unwrap(args[0]))) if args else 0)
+        return len(str(self._unwrap(args[0]))) if args else 0
 
-    def _string_at(self, *args: object) -> PatternValue:
+    def _string_at(self, *args: object) -> str:
         """Get a character at an index.
 
         Args:
             *args: ``(s: str, index: int)``.
 
         Returns:
-            PatternValue: A PatternValue containing the character at the given index.
+            str: The character at the given index, or an empty string when the
+                index is out of bounds.
         """
         if len(args) < 2:
-            return PatternValue(value="")
+            return ""
         s = str(self._unwrap(args[0]))
         idx = int(self._unwrap(args[1]))
         if 0 <= idx < len(s):
-            return PatternValue(value=s[idx])
-        return PatternValue(value="")
+            return s[idx]
+        return ""
 
-    def _string_substr(self, *args: object) -> PatternValue:
+    def _string_substr(self, *args: object) -> str:
         """Extract a substring.
 
         Args:
             *args: ``(s: str, start: int, length: int)``.
 
         Returns:
-            PatternValue: A PatternValue containing the extracted substring.
+            str: The extracted substring.
         """
         if len(args) < 3:
-            return PatternValue(value="")
+            return ""
         s = str(self._unwrap(args[0]))
         start = int(self._unwrap(args[1]))
         length = int(self._unwrap(args[2]))
-        return PatternValue(value=s[start : start + length])
+        return s[start : start + length]
 
-    def _string_contains(self, *args: object) -> PatternValue:
+    def _string_contains(self, *args: object) -> bool:
         """Check if a string contains a substring.
 
         Args:
             *args: ``(s: str, sub: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing True if the substring is found.
+            bool: True if the substring is found.
         """
         if len(args) < 2:
-            return PatternValue(value=False)
-        return PatternValue(value=str(self._unwrap(args[1])) in str(self._unwrap(args[0])))
+            return False
+        return str(self._unwrap(args[1])) in str(self._unwrap(args[0]))
 
-    def _string_starts_with(self, *args: object) -> PatternValue:
+    def _string_starts_with(self, *args: object) -> bool:
         """Check if a string starts with a prefix.
 
         Args:
             *args: ``(s: str, prefix: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing True if the string starts with the prefix.
+            bool: True if the string starts with the prefix.
         """
         if len(args) < 2:
-            return PatternValue(value=False)
-        return PatternValue(value=str(self._unwrap(args[0])).startswith(str(self._unwrap(args[1]))))
+            return False
+        return str(self._unwrap(args[0])).startswith(str(self._unwrap(args[1])))
 
-    def _string_ends_with(self, *args: object) -> PatternValue:
+    def _string_ends_with(self, *args: object) -> bool:
         """Check if a string ends with a suffix.
 
         Args:
             *args: ``(s: str, suffix: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing True if the string ends with the suffix.
+            bool: True if the string ends with the suffix.
         """
         if len(args) < 2:
-            return PatternValue(value=False)
-        return PatternValue(value=str(self._unwrap(args[0])).endswith(str(self._unwrap(args[1]))))
+            return False
+        return str(self._unwrap(args[0])).endswith(str(self._unwrap(args[1])))
 
-    def _string_parse_int(self, *args: object) -> PatternValue:
-        """Parse a string as an integer.
+    def _string_parse_int(self, *args: object) -> int:
+        """Parse a string as an integer, raising on malformed input.
 
         Args:
             *args: ``(s: str, base: int)``.
 
         Returns:
-            PatternValue: A PatternValue containing the parsed integer value.
+            int: The parsed integer value.
 
         Raises:
             HexPatRuntimeError: When the input cannot be parsed in the
@@ -1100,16 +1101,41 @@ class BuiltinFunctions:
             _logger.exception("hexpat_string_parse_int_failed", input=s, base=base)
             msg = f"std::string::parse_int: cannot parse {s!r} as base-{base} integer"
             raise HexPatRuntimeError(msg) from exc
-        return PatternValue(value=result)
+        return result
 
-    def _string_parse_float(self, *args: object) -> PatternValue:
+    def _string_to_int(self, *args: object) -> int:
+        """Convert a string to an integer, returning 0 on malformed input.
+
+        Unlike :meth:`_string_parse_int`, which raises on bad input, this
+        lenient variant mirrors C-style ``strtol`` semantics and yields ``0``
+        when the string cannot be interpreted in the requested base.
+
+        Args:
+            *args: ``(s: str, base: int)``. ``base`` defaults to 10 and accepts
+                0 (auto-detect) or any radix in ``[2, 36]``.
+
+        Returns:
+            int: The parsed integer value, or ``0`` when the input is invalid.
+        """
+        if not args:
+            return 0
+        s = str(self._unwrap(args[0])).strip()
+        base = int(self._unwrap(args[1])) if len(args) > 1 else 10
+        if base != 0 and (base < 2 or base > 36):
+            return 0
+        try:
+            return int(s, base)
+        except ValueError:
+            return 0
+
+    def _string_parse_float(self, *args: object) -> float:
         """Parse a string as a floating-point value.
 
         Args:
             *args: ``(s: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing the parsed float value.
+            float: The parsed float value.
 
         Raises:
             HexPatRuntimeError: When the input cannot be parsed as a float.
@@ -1124,243 +1150,241 @@ class BuiltinFunctions:
             _logger.exception("hexpat_string_parse_float_failed", input=s)
             msg = f"std::string::parse_float: cannot parse {s!r} as float"
             raise HexPatRuntimeError(msg) from exc
-        return PatternValue(value=result)
+        return result
 
-    def _string_reverse(self, *args: object) -> PatternValue:
+    def _string_reverse(self, *args: object) -> str:
         """Reverse a string.
 
         Args:
             *args: ``(s: str)``.
 
         Returns:
-            PatternValue: A PatternValue containing the reversed string.
+            str: The reversed string.
         """
-        return PatternValue(value=str(self._unwrap(args[0]))[::-1] if args else "")
+        return str(self._unwrap(args[0]))[::-1] if args else ""
 
-    def _math_abs(self, *args: object) -> PatternValue:
+    def _math_abs(self, *args: object) -> int | float:
         """Compute the absolute value.
 
         Args:
             *args: ``(x: int | float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the absolute value.
+            int | float: The absolute value.
         """
         if not args:
-            return PatternValue(value=0)
+            return 0
         val = self._unwrap(args[0])
         if isinstance(val, float):
-            return PatternValue(value=abs(val))
-        return PatternValue(value=abs(int(val)))
+            return abs(val)
+        return abs(int(val))
 
-    def _math_min(self, *args: object) -> PatternValue:
+    def _math_min(self, *args: object) -> int | float:
         """Return the minimum of two values.
 
         Args:
             *args: ``(a: int | float, b: int | float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the smaller value.
+            int | float: The smaller value.
         """
         if len(args) < 2:
-            return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
+            return int(self._unwrap(args[0])) if args else 0
         a, b = self._unwrap(args[0]), self._unwrap(args[1])
         if isinstance(a, float) or isinstance(b, float):
-            return PatternValue(value=min(float(a), float(b)))
-        return PatternValue(value=min(int(a), int(b)))
+            return min(float(a), float(b))
+        return min(int(a), int(b))
 
-    def _math_max(self, *args: object) -> PatternValue:
+    def _math_max(self, *args: object) -> int | float:
         """Return the maximum of two values.
 
         Args:
             *args: ``(a: int | float, b: int | float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the larger value.
+            int | float: The larger value.
         """
         if len(args) < 2:
-            return PatternValue(value=int(self._unwrap(args[0])) if args else 0)
+            return int(self._unwrap(args[0])) if args else 0
         a, b = self._unwrap(args[0]), self._unwrap(args[1])
         if isinstance(a, float) or isinstance(b, float):
-            return PatternValue(value=max(float(a), float(b)))
-        return PatternValue(value=max(int(a), int(b)))
+            return max(float(a), float(b))
+        return max(int(a), int(b))
 
-    def _math_floor(self, *args: object) -> PatternValue:
+    def _math_floor(self, *args: object) -> int:
         """Compute the floor of a value.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the floor as an integer.
+            int: The floor as an integer.
         """
-        return PatternValue(value=math.floor(float(self._unwrap(args[0]))) if args else 0)
+        return math.floor(float(self._unwrap(args[0]))) if args else 0
 
-    def _math_ceil(self, *args: object) -> PatternValue:
+    def _math_ceil(self, *args: object) -> int:
         """Compute the ceiling of a value.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the ceiling as an integer.
+            int: The ceiling as an integer.
         """
-        return PatternValue(value=math.ceil(float(self._unwrap(args[0]))) if args else 0)
+        return math.ceil(float(self._unwrap(args[0]))) if args else 0
 
-    def _math_round(self, *args: object) -> PatternValue:
+    def _math_round(self, *args: object) -> int:
         """Round a value to the nearest integer using banker's rounding.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the rounded integer value.
+            int: The rounded integer value.
         """
-        return PatternValue(value=round(float(self._unwrap(args[0]))) if args else 0)
+        return round(float(self._unwrap(args[0]))) if args else 0
 
-    def _math_trunc(self, *args: object) -> PatternValue:
+    def _math_trunc(self, *args: object) -> int:
         """Truncate a value toward zero.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the truncated integer value.
+            int: The truncated integer value.
         """
-        return PatternValue(value=math.trunc(float(self._unwrap(args[0]))) if args else 0)
+        return math.trunc(float(self._unwrap(args[0]))) if args else 0
 
-    def _math_log(self, *args: object) -> PatternValue:
+    def _math_log(self, *args: object) -> float:
         """Compute the natural logarithm.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the natural log of ``x``.
+            float: The natural log of ``x``.
 
         Raises:
             HexPatRuntimeError: If the value is non-positive.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val <= 0:
             msg = "ln of non-positive value"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.log(val))
+        return math.log(val)
 
-    def _math_log2(self, *args: object) -> PatternValue:
+    def _math_log2(self, *args: object) -> float:
         """Compute the base-2 logarithm.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the log base 2 value.
+            float: The log base 2 value.
 
         Raises:
             HexPatRuntimeError: If the value is non-positive.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val <= 0:
             msg = "log2 of non-positive value"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.log2(val))
+        return math.log2(val)
 
-    def _math_log10(self, *args: object) -> PatternValue:
+    def _math_log10(self, *args: object) -> float:
         """Compute the base-10 logarithm.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the log base 10 value.
+            float: The log base 10 value.
 
         Raises:
             HexPatRuntimeError: If the value is non-positive.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val <= 0:
             msg = "log10 of non-positive value"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.log10(val))
+        return math.log10(val)
 
-    def _math_pow(self, *args: object) -> PatternValue:
+    def _math_pow(self, *args: object) -> float:
         """Compute a power.
 
         Args:
             *args: ``(base: float, exp: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing base raised to the power of exp.
+            float: Base raised to the power of exp.
         """
         if len(args) < 2:
-            return PatternValue(value=0.0)
-        return PatternValue(
-            value=math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1]))),
-        )
+            return 0.0
+        return math.pow(float(self._unwrap(args[0])), float(self._unwrap(args[1])))
 
-    def _math_sqrt(self, *args: object) -> PatternValue:
+    def _math_sqrt(self, *args: object) -> float:
         """Compute the square root.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the square root.
+            float: The square root.
 
         Raises:
             HexPatRuntimeError: If the value is negative.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val < 0:
             msg = "sqrt of negative value"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.sqrt(val))
+        return math.sqrt(val)
 
-    def _math_cbrt(self, *args: object) -> PatternValue:
+    def _math_cbrt(self, *args: object) -> float:
         """Compute the cube root, preserving the sign of negative inputs.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing the cube root.
+            float: The cube root.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val < 0:
-            return PatternValue(value=-((-val) ** (1.0 / 3.0)))
-        return PatternValue(value=val ** (1.0 / 3.0))
+            return -((-val) ** (1.0 / 3.0))
+        return val ** (1.0 / 3.0)
 
-    def _math_exp(self, *args: object) -> PatternValue:
+    def _math_exp(self, *args: object) -> float:
         """Compute e raised to the given power.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``e ** x``.
+            float: The value ``e ** x``.
         """
         if not args:
-            return PatternValue(value=1.0)
-        return PatternValue(value=math.exp(float(self._unwrap(args[0]))))
+            return 1.0
+        return math.exp(float(self._unwrap(args[0])))
 
-    def _math_fmod(self, *args: object) -> PatternValue:
+    def _math_fmod(self, *args: object) -> float:
         """Compute the floating-point remainder of the division.
 
         Args:
             *args: ``(x: float, y: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``fmod(x, y)``.
+            float: The value ``fmod(x, y)``.
 
         Raises:
             HexPatRuntimeError: When fewer than two arguments are supplied or
@@ -1374,192 +1398,190 @@ class BuiltinFunctions:
         if math.isclose(y, 0.0, abs_tol=0.0):
             msg = "fmod divisor is zero"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.fmod(x, y))
+        return math.fmod(x, y)
 
-    def _math_sin(self, *args: object) -> PatternValue:
+    def _math_sin(self, *args: object) -> float:
         """Compute the sine of the given radians value.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``sin(x)``.
+            float: The value ``sin(x)``.
         """
-        return PatternValue(value=math.sin(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.sin(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_cos(self, *args: object) -> PatternValue:
+    def _math_cos(self, *args: object) -> float:
         """Compute the cosine of the given radians value.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``cos(x)``.
+            float: The value ``cos(x)``.
         """
-        return PatternValue(value=math.cos(float(self._unwrap(args[0]))) if args else 1.0)
+        return math.cos(float(self._unwrap(args[0]))) if args else 1.0
 
-    def _math_tan(self, *args: object) -> PatternValue:
+    def _math_tan(self, *args: object) -> float:
         """Compute the tangent of the given radians value.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``tan(x)``.
+            float: The value ``tan(x)``.
         """
-        return PatternValue(value=math.tan(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.tan(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_asin(self, *args: object) -> PatternValue:
+    def _math_asin(self, *args: object) -> float:
         """Compute the arc sine in radians.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``asin(x)``.
+            float: The value ``asin(x)``.
 
         Raises:
             HexPatRuntimeError: When ``x`` is outside ``[-1, 1]``.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val < -1.0 or val > 1.0:
             msg = "asin argument out of domain"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.asin(val))
+        return math.asin(val)
 
-    def _math_acos(self, *args: object) -> PatternValue:
+    def _math_acos(self, *args: object) -> float:
         """Compute the arc cosine in radians.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``acos(x)``.
+            float: The value ``acos(x)``.
 
         Raises:
             HexPatRuntimeError: When ``x`` is outside ``[-1, 1]``.
         """
         if not args:
-            return PatternValue(value=math.pi / 2.0)
+            return math.pi / 2.0
         val = float(self._unwrap(args[0]))
         if val < -1.0 or val > 1.0:
             msg = "acos argument out of domain"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.acos(val))
+        return math.acos(val)
 
-    def _math_atan(self, *args: object) -> PatternValue:
+    def _math_atan(self, *args: object) -> float:
         """Compute the arc tangent in radians.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``atan(x)``.
+            float: The value ``atan(x)``.
         """
-        return PatternValue(value=math.atan(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.atan(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_atan2(self, *args: object) -> PatternValue:
+    def _math_atan2(self, *args: object) -> float:
         """Compute the two-argument arc tangent in radians.
 
         Args:
             *args: ``(y: float, x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``atan2(y, x)``.
+            float: The value ``atan2(y, x)``.
         """
         if len(args) < 2:
-            return PatternValue(value=0.0)
-        return PatternValue(
-            value=math.atan2(float(self._unwrap(args[0])), float(self._unwrap(args[1]))),
-        )
+            return 0.0
+        return math.atan2(float(self._unwrap(args[0])), float(self._unwrap(args[1])))
 
-    def _math_sinh(self, *args: object) -> PatternValue:
+    def _math_sinh(self, *args: object) -> float:
         """Compute the hyperbolic sine.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``sinh(x)``.
+            float: The value ``sinh(x)``.
         """
-        return PatternValue(value=math.sinh(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.sinh(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_cosh(self, *args: object) -> PatternValue:
+    def _math_cosh(self, *args: object) -> float:
         """Compute the hyperbolic cosine.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``cosh(x)``.
+            float: The value ``cosh(x)``.
         """
-        return PatternValue(value=math.cosh(float(self._unwrap(args[0]))) if args else 1.0)
+        return math.cosh(float(self._unwrap(args[0]))) if args else 1.0
 
-    def _math_tanh(self, *args: object) -> PatternValue:
+    def _math_tanh(self, *args: object) -> float:
         """Compute the hyperbolic tangent.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``tanh(x)``.
+            float: The value ``tanh(x)``.
         """
-        return PatternValue(value=math.tanh(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.tanh(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_asinh(self, *args: object) -> PatternValue:
+    def _math_asinh(self, *args: object) -> float:
         """Compute the inverse hyperbolic sine.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``asinh(x)``.
+            float: The value ``asinh(x)``.
         """
-        return PatternValue(value=math.asinh(float(self._unwrap(args[0]))) if args else 0.0)
+        return math.asinh(float(self._unwrap(args[0]))) if args else 0.0
 
-    def _math_acosh(self, *args: object) -> PatternValue:
+    def _math_acosh(self, *args: object) -> float:
         """Compute the inverse hyperbolic cosine.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``acosh(x)``.
+            float: The value ``acosh(x)``.
 
         Raises:
             HexPatRuntimeError: When ``x`` is less than 1.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val < 1.0:
             msg = "acosh argument out of domain"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.acosh(val))
+        return math.acosh(val)
 
-    def _math_atanh(self, *args: object) -> PatternValue:
+    def _math_atanh(self, *args: object) -> float:
         """Compute the inverse hyperbolic tangent.
 
         Args:
             *args: ``(x: float)``.
 
         Returns:
-            PatternValue: A PatternValue containing ``atanh(x)``.
+            float: The value ``atanh(x)``.
 
         Raises:
             HexPatRuntimeError: When ``x`` is outside ``(-1, 1)``.
         """
         if not args:
-            return PatternValue(value=0.0)
+            return 0.0
         val = float(self._unwrap(args[0]))
         if val <= -1.0 or val >= 1.0:
             msg = "atanh argument out of domain"
             raise HexPatRuntimeError(msg)
-        return PatternValue(value=math.atanh(val))
+        return math.atanh(val)
 
-    def _math_accumulate(self, *args: object) -> PatternValue:
+    def _math_accumulate(self, *args: object) -> int:
         """Fold a memory range using a numeric accumulation operation.
 
         Args:
@@ -1569,7 +1591,7 @@ class BuiltinFunctions:
                 ``operation`` tag (0=Add, 1=Multiply, 2=Modulo, 3=Min, 4=Max).
 
         Returns:
-            PatternValue: A PatternValue containing the folded integer result.
+            int: The folded integer result.
 
         Raises:
             HexPatRuntimeError: When arguments are missing or invalid.
@@ -1586,7 +1608,7 @@ class BuiltinFunctions:
             msg = "std::math::accumulate valueSize must be between 1 and 16"
             raise HexPatRuntimeError(msg)
         if offset_to <= offset_from:
-            return PatternValue(value=0)
+            return 0
         byteorder = self._resolve_endian(endian_tag)
         pos = offset_from
         accumulator: int | None = None
@@ -1613,8 +1635,8 @@ class BuiltinFunctions:
                 raise HexPatRuntimeError(msg)
             pos += value_size
         if accumulator is None:
-            return PatternValue(value=0)
-        return PatternValue(value=accumulator)
+            return 0
+        return accumulator
 
     def _hash_bytes_from_pattern(self, pattern_arg: object) -> bytes:
         """Materialise the byte range associated with a pattern argument.
@@ -2349,18 +2371,18 @@ class BuiltinFunctions:
                 self._endian_listener(new_endian)
         return PatternValue(value=None)
 
-    def _core_get_endian(self, *_args: object) -> PatternValue:
+    def _core_get_endian(self, *_args: object) -> int:
         """Get the current endianness.
 
         Args:
             *_args: Unused arguments for API compatibility.
 
         Returns:
-            PatternValue: A PatternValue containing 0 for little-endian, 1 for big-endian.
+            int: 0 for little-endian, 1 for big-endian.
         """
-        return PatternValue(value=1 if self._endian == "big" else 0)
+        return 1 if self._endian == "big" else 0
 
-    def _core_array_index(self, *_args: object) -> PatternValue:
+    def _core_array_index(self, *_args: object) -> int:
         """Get the current array iteration index.
 
         When the evaluator has wired an array-index provider via
@@ -2372,11 +2394,11 @@ class BuiltinFunctions:
             *_args: Unused arguments for API compatibility.
 
         Returns:
-            PatternValue: A PatternValue containing the current array index.
+            int: The current array index.
         """
         if self._array_index_listener is not None:
-            return PatternValue(value=int(self._array_index_listener()))
-        return PatternValue(value=self._array_index)
+            return int(self._array_index_listener())
+        return self._array_index
 
     @staticmethod
     def _require_pattern(arg: object, where: str) -> PatternValue:
@@ -2698,18 +2720,18 @@ class BuiltinFunctions:
             sink(formatted)
         return PatternValue(value=None)
 
-    def _io_format(self, *args: object) -> PatternValue:
+    def _io_format(self, *args: object) -> str:
         """Format a string with arguments using hexpat field substitution semantics.
 
         Args:
             *args: ``(format_str: str, ...values)``.
 
         Returns:
-            PatternValue: A PatternValue containing the formatted string.
+            str: The formatted string.
         """
         if not args:
-            return PatternValue(value="")
-        return PatternValue(value=self._format_string(args[0], list(args[1:])))
+            return ""
+        return self._format_string(args[0], list(args[1:]))
 
     def _io_error(self, *args: object) -> NoReturn:
         """Raise a fatal pattern error.

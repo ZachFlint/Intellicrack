@@ -9,6 +9,14 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Implement Windows self-elevation and system theme tracking (`7bdf420`)
+Introduce Windows UAC self-elevation to automatically request administrative privileges when required, enabling full process-bridge access to protected targets. Add support for tracking and dynamically responding to the operating system's light/dark color scheme.
+* Add self-elevation logic via Windows `runas` verb with pixi environment reactivation
+* Implement system theme detection and live OS color-scheme tracking in `ThemeManager`
+* Add robust failure-dialog and early-exit detection for Windows Sandbox startup
+* Refactor tool schema builders to ensure strict array and object element compliance for Google Gemini
+* Rebind raw `httpx.AsyncClient` instances across event loops in OpenRouter and Ollama providers
+
 - Add autocomplete to HexPat pattern editor (`23d9ae2`)
 Introduce an in-line identifier completer for the HexPat pattern DSL editor, offering both built-in primitive types and user-declared types harvested from the most recent successful interpreter run.
 - Add `HexPatCompleter` to track and merge built-in and user-declared type names
@@ -310,14 +318,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Implement Windows self-elevation and system theme tracking (``)
-Introduce Windows UAC self-elevation to automatically request administrative privileges when required, enabling full process-bridge access to protected targets. Add support for tracking and dynamically responding to the operating system's light/dark color scheme.
-* Add self-elevation logic via Windows `runas` verb with pixi environment reactivation
-* Implement system theme detection and live OS color-scheme tracking in `ThemeManager`
-* Add robust failure-dialog and early-exit detection for Windows Sandbox startup
-* Refactor tool schema builders to ensure strict array and object element compliance for Google Gemini
-* Rebind raw `httpx.AsyncClient` instances across event loops in OpenRouter and Ollama providers
 
 
 ### Changed
@@ -761,6 +761,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
+
+- Simplify hexpat builtins and improve cutter operations (``)
+Simplify the HexPat evaluator and standard library by returning native Python types from builtins and boxing them centrally in the evaluator. This change also enables top-level control-flow statements and initialized local variables in the parser, and relaxes preprocessor include failures to warnings. Additionally, the Cutter bridge is updated to resolve local backend binaries more robustly and use more reliable command sequences (`wx` and `wcf`) for assembly and saving.
+- **HexPat Evaluator & Stdlib**: Centralized `PatternValue` boxing for builtins, added `std::string::to_int`, and fixed `sizeof` resolution for scoped types.
+- **HexPat Parser & Preprocessor**: Allowed top-level control-flow statements and local variable declarations, and demoted missing include errors to warnings.
+- **Cutter Bridge**: Improved binary resolution in `is_available`, switched assembly to direct hex writes (`wx`), and fixed binary saving to dump the full cache (`wcf`).
 
 
 ### Documentation
