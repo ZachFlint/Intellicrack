@@ -150,9 +150,29 @@ RUN $ErrorActionPreference = 'Stop'; \
     Remove-Item -Recurse -Force 'C:\app\src\intellicrack-hexcore\target' -ErrorAction SilentlyContinue; \
     Write-Host 'intellicrack_hexcore native module built and installed.'
 
+# Pre-cache tiktoken BPE encodings so the orchestrator's token counting works
+# inside the network-isolated sandbox. The build host has network; the cache is
+# baked into the image and TIKTOKEN_CACHE_DIR points runtime lookups at it.
+ENV TIKTOKEN_CACHE_DIR="C:\\app\\.tiktoken_cache"
+
 # Bring in the rest of the project (docs, scripts, docker/, tests, configs).
 # Changes here do not invalidate the pixi-install / hexcore-build layers above.
 COPY . ./
+
+# Warm the tiktoken cache via a script file (an inline Python one-liner gets
+# mangled by the Windows PowerShell RUN shell). Runs after COPY so the script
+# is present in the image.
+RUN $ErrorActionPreference = 'Stop'; \
+    & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_tiktoken.py'; \
+    if ($LASTEXITCODE -ne 0) { throw 'tiktoken encoding cache warm failed' }
+
+# Bake the local-inference test model into the Hugging Face cache so the
+# transformers/CPU-inference tests run against a real model. HF_HOME points
+# both the build-time download and runtime lookups at the same baked cache.
+ENV HF_HOME="C:\\app\\.hf_cache"
+RUN $ErrorActionPreference = 'Stop'; \
+    & 'C:\app\.pixi\envs\default\python.exe' 'C:\app\docker\warm_model.py'; \
+    if ($LASTEXITCODE -ne 0) { throw 'local inference model cache warm failed' }
 
 # Stage 4 -- final image
 FROM pixi-env AS final

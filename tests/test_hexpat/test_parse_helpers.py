@@ -13,8 +13,8 @@ hexpat runtime never silently swallows parse failures again.
 from __future__ import annotations
 
 import pytest
+from structlog.testing import capture_logs
 
-from intellicrack.core.hexpat import parse_helpers
 from intellicrack.core.hexpat.parse_helpers import safe_call, safe_int_from_str
 
 
@@ -42,21 +42,19 @@ class TestHexpatSafeIntFromStr:
         true_value: bool = True
         assert safe_int_from_str(true_value, context="unit_bool") is None
 
-    def test_logs_at_debug_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A failed parse emits a debug-level structured record."""
-        events: list[tuple[str, dict[str, object]]] = []
+    def test_emits_structured_event_on_failure(self) -> None:
+        """A failed parse emits a ``safe_int_parse_failed`` structured event.
 
-        def _record(event: str, **kwargs: object) -> None:
-            events.append((event, kwargs))
-
-        logger = vars(parse_helpers)["_logger"]
-        monkeypatch.setattr(logger, "debug", _record)
-        safe_int_from_str("not-a-number", context="unit_log")
-        assert any(name == "safe_int_parse_failed" for name, _ in events), f"expected debug event emitted, got: {events!r}"
-        for name, kwargs in events:
-            if name == "safe_int_parse_failed":
-                assert kwargs["context"] == "unit_log"
-                break
+        Uses :func:`structlog.testing.capture_logs` to observe the real logging
+        pipeline rather than patching the module's private logger, so the test
+        exercises the genuine structured-event emission contract.
+        """
+        with capture_logs() as records:
+            result = safe_int_from_str("not-a-number", context="unit_log")
+        assert result is None
+        matches = [record for record in records if record.get("event") == "safe_int_parse_failed"]
+        assert matches, f"expected structured event emitted, got: {records!r}"
+        assert matches[0]["context"] == "unit_log"
 
 
 class TestHexpatSafeCall:
@@ -123,24 +121,26 @@ class TestHexpatSafeCall:
                 default=None,
             )
 
-    def test_logs_at_debug_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Caught exception emits a ``safe_call_failed`` debug record."""
-        events: list[tuple[str, dict[str, object]]] = []
+    def test_emits_structured_event_on_failure(self) -> None:
+        """A caught exception emits a ``safe_call_failed`` structured event.
 
-        def _record(event: str, **kwargs: object) -> None:
-            events.append((event, kwargs))
-
-        logger = vars(parse_helpers)["_logger"]
-        monkeypatch.setattr(logger, "debug", _record)
-        msg = "debug-log-check"
+        Observes the real logging pipeline via
+        :func:`structlog.testing.capture_logs` instead of patching the private
+        module logger.
+        """
+        msg = "structured-event-check"
 
         def _raise() -> None:
             raise ValueError(msg)
 
-        safe_call(
-            _raise,
-            exceptions=ValueError,
-            context="unit_log",
-            default=None,
-        )
-        assert any(name == "safe_call_failed" for name, _ in events), f"expected debug event emitted, got: {events!r}"
+        with capture_logs() as records:
+            result = safe_call(
+                _raise,
+                exceptions=ValueError,
+                context="unit_log",
+                default=None,
+            )
+        assert result is None
+        matches = [record for record in records if record.get("event") == "safe_call_failed"]
+        assert matches, f"expected structured event emitted, got: {records!r}"
+        assert matches[0]["context"] == "unit_log"

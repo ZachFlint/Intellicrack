@@ -2107,64 +2107,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 impact="assemble_at will raise ToolError",
             )
 
-    async def shutdown(self) -> None:
-        """Shutdown x64dbg and cleanup resources.
-
-        Each cleanup phase is wrapped so that a fault in one stage cannot
-        strand a later one. An exception from ``_close_connection`` no
-        longer leaks the spawned ``x64dbg.exe`` process (audit6.md
-        F-0011): the process-termination block is reached
-        unconditionally, and the bookkeeping state (attached PID,
-        breakpoints, watchpoints, pending step waiters, cached process
-        handles) is always cleared in the ``finally`` arm even when
-        termination itself raises. The first captured cleanup exception
-        is re-raised after every other stage has run so callers can
-        observe shutdown failures.
-
-        Raises:
-            ToolError: Re-raises the first ``ToolError`` captured from
-                ``_close_connection`` or ``super().shutdown()`` after
-                every other cleanup stage has run.
-            OSError: Re-raises the first ``OSError`` captured from
-                process termination, kill, ``super().shutdown()``, or
-                ``_release_process_handles``.
-            KeyError: Re-raises a ``KeyError`` from the process manager
-                if it could not unregister the captured PID.
-            RuntimeError: Re-raises the first ``RuntimeError`` captured
-                from any other cleanup stage (this branch also handles
-                the residual case where ``cleanup_errors`` contains an
-                exception class outside the typed-handler tuples).
-        """
-        _logger.info(
-            "x64dbg_shutdown_started",
-            bridge="x64dbg",
-            attached_pid=self._attached_pid,
-            has_process=self._process is not None,
-        )
-        cleanup_errors: list[BaseException] = []
-
-        try:
-            await self._run_shutdown_phase(cleanup_errors)
-        finally:
-            await self._run_shutdown_finalization(cleanup_errors)
-
-        if cleanup_errors:
-            first = cleanup_errors[0]
-            if isinstance(first, ToolError):
-                raise ToolError(
-                    first.message,
-                    tool_name=first.tool_name,
-                    exit_code=first.exit_code,
-                    stderr=first.stderr,
-                    error_code=first.error_code,
-                    details=dict(first.details),
-                ) from first
-            if isinstance(first, OSError):
-                raise OSError(*first.args) from first
-            if isinstance(first, KeyError):
-                raise KeyError(*first.args) from first
-            raise RuntimeError(*first.args) from first
-
     async def _run_shutdown_phase(self, cleanup_errors: list[BaseException]) -> None:
         """Close the IPC connection and terminate the spawned debugger.
 
@@ -9262,3 +9204,61 @@ class X64DbgBridge(_X64DbgScriptingMixin):
     through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit. The public
     interface, attribute set, and behavior are identical to the pre-refactor monolithic class.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown x64dbg and cleanup resources.
+
+        Each cleanup phase is wrapped so that a fault in one stage cannot
+        strand a later one. An exception from ``_close_connection`` no
+        longer leaks the spawned ``x64dbg.exe`` process (audit6.md
+        F-0011): the process-termination block is reached
+        unconditionally, and the bookkeeping state (attached PID,
+        breakpoints, watchpoints, pending step waiters, cached process
+        handles) is always cleared in the ``finally`` arm even when
+        termination itself raises. The first captured cleanup exception
+        is re-raised after every other stage has run so callers can
+        observe shutdown failures.
+
+        Raises:
+            ToolError: Re-raises the first ``ToolError`` captured from
+                ``_close_connection`` or ``super().shutdown()`` after
+                every other cleanup stage has run.
+            OSError: Re-raises the first ``OSError`` captured from
+                process termination, kill, ``super().shutdown()``, or
+                ``_release_process_handles``.
+            KeyError: Re-raises a ``KeyError`` from the process manager
+                if it could not unregister the captured PID.
+            RuntimeError: Re-raises the first ``RuntimeError`` captured
+                from any other cleanup stage (this branch also handles
+                the residual case where ``cleanup_errors`` contains an
+                exception class outside the typed-handler tuples).
+        """
+        _logger.info(
+            "x64dbg_shutdown_started",
+            bridge="x64dbg",
+            attached_pid=self._attached_pid,
+            has_process=self._process is not None,
+        )
+        cleanup_errors: list[BaseException] = []
+
+        try:
+            await self._run_shutdown_phase(cleanup_errors)
+        finally:
+            await self._run_shutdown_finalization(cleanup_errors)
+
+        if cleanup_errors:
+            first = cleanup_errors[0]
+            if isinstance(first, ToolError):
+                raise ToolError(
+                    first.message,
+                    tool_name=first.tool_name,
+                    exit_code=first.exit_code,
+                    stderr=first.stderr,
+                    error_code=first.error_code,
+                    details=dict(first.details),
+                ) from first
+            if isinstance(first, OSError):
+                raise OSError(*first.args) from first
+            if isinstance(first, KeyError):
+                raise KeyError(*first.args) from first
+            raise RuntimeError(*first.args) from first

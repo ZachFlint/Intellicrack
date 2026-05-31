@@ -53,20 +53,18 @@ Findings exercised:
 
 from __future__ import annotations
 
-import inspect
-import logging
 import struct
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from unittest import mock
 
 import pytest
+from structlog.testing import capture_logs
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from intellicrack.core.hexpat import evaluator as evaluator_mod
 from intellicrack.core.hexpat.ast_nodes import StructDecl
 from intellicrack.core.hexpat.data_reader import DataReader
 from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError, HexPatTypeError
@@ -169,8 +167,7 @@ def test_mem_base_address_uses_pragma_directly() -> None:
     reader = DataReader.from_bytes(_zeros(16))
     stdlib = BuiltinFunctions(reader, pragma)
     result = _bound(stdlib, "_mem_base_address")()
-    assert isinstance(result, PatternValue)
-    assert result.value == 0x10_0000
+    assert result == 0x10_0000
 
 
 def test_mem_base_address_smoke_through_pattern(interp: HexPatInterpreter) -> None:
@@ -200,16 +197,16 @@ def test_array_index_listener_returns_live_value() -> None:
     stdlib = BuiltinFunctions(reader, pragma)
     stdlib.set_array_index_provider(evaluator.current_array_index)
     array_index = _bound(stdlib, "_core_array_index")
-    assert array_index().value == 0
+    assert array_index() == 0
     raw_stack = _attr(evaluator, "_array_index_stack")
     assert isinstance(raw_stack, list)
     stack = cast("list[int]", raw_stack)
     stack.append(7)
     try:
-        assert array_index().value == 7
+        assert array_index() == 7
     finally:
         stack.pop()
-    assert array_index().value == 0
+    assert array_index() == 0
 
 
 # ---------------------------------------------------------------------------
@@ -406,8 +403,8 @@ def test_string_parse_int_returns_value() -> None:
     reader = DataReader.from_bytes(_zeros(16))
     stdlib = BuiltinFunctions(reader)
     parse_int = _bound(stdlib, "_string_parse_int")
-    assert parse_int("123", 10).value == 123
-    assert parse_int("ff", 16).value == 0xFF
+    assert parse_int("123", 10) == 123
+    assert parse_int("ff", 16) == 0xFF
 
 
 def test_string_parse_int_invalid_raises() -> None:
@@ -424,7 +421,7 @@ def test_string_parse_float_returns_value() -> None:
     reader = DataReader.from_bytes(_zeros(16))
     stdlib = BuiltinFunctions(reader)
     parse_float = _bound(stdlib, "_string_parse_float")
-    parsed = parse_float("3.5").value
+    parsed = parse_float("3.5")
     assert isinstance(parsed, float)
     assert abs(parsed - 3.5) < 1e-12
 
@@ -435,8 +432,7 @@ def test_mem_read_bits_extracts_high_nibble() -> None:
     stdlib = BuiltinFunctions(reader)
     read_bits = _bound(stdlib, "_mem_read_bits")
     result = read_bits(0, 0, 4)
-    assert isinstance(result, PatternValue)
-    assert result.value == 0b1011
+    assert result == 0b1011
 
 
 def test_mem_read_bits_low_nibble() -> None:
@@ -444,7 +440,7 @@ def test_mem_read_bits_low_nibble() -> None:
     reader = DataReader.from_bytes(bytes([0b1011_0101]))
     stdlib = BuiltinFunctions(reader)
     read_bits = _bound(stdlib, "_mem_read_bits")
-    assert read_bits(0, 4, 4).value == 0b0101
+    assert read_bits(0, 4, 4) == 0b0101
 
 
 def test_mem_section_lifecycle() -> None:
@@ -480,8 +476,7 @@ def test_mem_find_string_in_range_locates_match() -> None:
     stdlib = BuiltinFunctions(reader)
     find_str = _bound(stdlib, "_mem_find_string_in_range")
     result = find_str(0, 0, 16, "MZ")
-    assert isinstance(result, PatternValue)
-    assert result.value == 2
+    assert result == 2
 
 
 def test_mem_current_bit_offset_default_zero() -> None:
@@ -489,7 +484,7 @@ def test_mem_current_bit_offset_default_zero() -> None:
     reader = DataReader.from_bytes(bytes(8))
     stdlib = BuiltinFunctions(reader)
     bit_offset = _bound(stdlib, "_mem_current_bit_offset")
-    assert bit_offset().value == 0
+    assert bit_offset() == 0
 
 
 def test_mem_builtins_registered_in_scope() -> None:
@@ -636,33 +631,69 @@ def test_namespaced_struct_qualified_lookup_distinct() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_break_continue_no_warning_log(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """Direct break/continue signals through evaluator must log at DEBUG only.
+def test_break_continue_no_warning_log(interp: HexPatInterpreter) -> None:
+    """Legitimate break/continue in while/for loops must not emit WARNING logs.
 
     The audit calls out that the legitimate ``break``/``continue`` paths
     inside :meth:`HexPatEvaluator._eval_while` and
-    :meth:`HexPatEvaluator._eval_for` were emitting WARNING records on every
-    legitimate exit, polluting structured logs. The fix downgrades those
-    branches to DEBUG.
+    :meth:`HexPatEvaluator._run_for_body` were emitting WARNING records on
+    every legitimate exit, polluting structured logs. The fix downgrades
+    those branches to DEBUG. This exercises the interpreter directly and
+    asserts the four loop-control events are emitted at DEBUG and that none
+    of them is emitted at WARNING or higher. Events are captured with
+    :func:`structlog.testing.capture_logs` because the evaluator logs through
+    structlog, whose events do not reach the stdlib ``caplog`` fixture.
 
     Args:
-        caplog: Pytest log-capture fixture.
+        interp: A fresh interpreter fixture.
     """
-    while_source = inspect.getsource(getattr(evaluator_mod.HexPatEvaluator, "_eval_while"))
-    for_source = inspect.getsource(getattr(evaluator_mod.HexPatEvaluator, "_eval_for"))
-    caplog.set_level(logging.DEBUG, logger="intellicrack.core.hexpat.evaluator")
-    assert "hexpat_while_break" in while_source
-    assert "hexpat_while_continue" in while_source
-    assert "hexpat_for_break" in for_source
-    assert "hexpat_for_continue" in for_source
-    assert '_logger.warning("hexpat_while_break"' not in while_source
-    assert '_logger.warning("hexpat_while_continue"' not in while_source
-    assert '_logger.warning("hexpat_for_break"' not in for_source
-    assert '_logger.warning("hexpat_for_continue"' not in for_source
-    assert '_logger.debug("hexpat_while_break"' in while_source
-    assert '_logger.debug("hexpat_for_break"' in for_source
+    source = """
+    fn loops() {
+        u32 acc = 0;
+        for (u32 i = 0; i < 4; i = i + 1) {
+            if (i == 1) {
+                continue;
+            }
+            if (i == 3) {
+                break;
+            }
+            acc = acc + 1;
+        }
+        u32 j = 0;
+        while (j < 4) {
+            if (j == 1) {
+                j = j + 1;
+                continue;
+            }
+            if (j == 3) {
+                break;
+            }
+            j = j + 1;
+        }
+        return acc;
+    };
+
+    u8 mark @ loops();
+    """
+    with capture_logs() as captured:
+        interp.execute_bytes(source, _zeros(8))
+
+    control_events = {
+        "hexpat_for_break",
+        "hexpat_for_continue",
+        "hexpat_while_break",
+        "hexpat_while_continue",
+    }
+    control_records = [entry for entry in captured if entry.get("event") in control_events]
+    elevated = [
+        str(entry.get("event"))
+        for entry in control_records
+        if entry.get("log_level") in {"warning", "error", "critical"}
+    ]
+    assert not elevated, elevated
+
+    debug_events = {str(entry["event"]) for entry in control_records if entry.get("log_level") == "debug"}
+    assert debug_events == control_events, f"missing debug control events: {control_events - debug_events}"
 
 
 # ---------------------------------------------------------------------------
@@ -793,5 +824,4 @@ def test_bare_name_format_supports_format_spec() -> None:
     callable_box = fmt_pv.value
     assert isinstance(callable_box, BuiltinCallable)
     result = callable_box.fn(PatternValue(value="0x{:08X}"), PatternValue(value=0xCAFE))
-    assert isinstance(result, PatternValue)
-    assert result.value == "0x0000CAFE"
+    assert result == "0x0000CAFE"

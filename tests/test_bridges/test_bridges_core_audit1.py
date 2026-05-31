@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import Final
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Final
 
 import pytest
 import structlog.testing
@@ -68,6 +69,11 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+    from types import ModuleType
 
 
 _PARAM_DESC: Final[str] = "test parameter"
@@ -223,6 +229,60 @@ def test_f0003_validate_tool_for_provider_flags_missing_function() -> None:
 # ---------------------------------------------------------------------------
 
 
+@contextmanager
+def _preserved_sys_modules(names: Sequence[str]) -> Iterator[None]:
+    """Snapshot and restore module-import state around a test body.
+
+    The lazy-import findings exercise their behaviour by evicting bridge
+    modules from :data:`sys.modules` and re-importing them. Two distinct
+    pieces of global state leak out of such a test unless restored:
+
+    * The :data:`sys.modules` entries themselves. A class bound at import
+      time keeps the original module object as its ``__globals__``, while a
+      subsequent :func:`unittest.mock.patch` re-imports a fresh module object
+      and patches that one instead, so the patch silently has no effect.
+    * The parent-package *attribute* bindings. Re-importing a package rebinds
+      ``intellicrack.bridges`` (and its submodule attributes) on the parent to
+      throwaway objects. :func:`getattr`-based resolution (used by
+      :meth:`pytest.MonkeyPatch.setattr` with a dotted string target) then
+      walks into the package's lazy ``__getattr__`` and raises spuriously.
+
+    Both are snapshotted before the body and restored on exit so the global
+    import graph is identical before and after the test.
+
+    Args:
+        names: Fully qualified module names to snapshot and restore.
+
+    Yields:
+        Control to the ``with`` body; the snapshotted state is restored on
+        exit regardless of how the body terminates.
+    """
+    saved_modules: dict[str, ModuleType] = {name: sys.modules[name] for name in names if name in sys.modules}
+    saved_attrs: dict[str, tuple[ModuleType, str, bool, object]] = {}
+    for name in names:
+        parent_name, _, attr = name.rpartition(".")
+        if not parent_name:
+            continue
+        parent = sys.modules.get(parent_name)
+        if parent is None:
+            continue
+        saved_attrs[name] = (parent, attr, attr in parent.__dict__, parent.__dict__.get(attr))
+    try:
+        yield
+    finally:
+        for name in names:
+            original = saved_modules.get(name)
+            if original is not None:
+                sys.modules[name] = original
+            else:
+                sys.modules.pop(name, None)
+        for parent, attr, present, value in saved_attrs.values():
+            if present:
+                setattr(parent, attr, value)
+            elif attr in parent.__dict__:
+                delattr(parent, attr)
+
+
 def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
     """Importing ``intellicrack.bridges`` must NOT load heavy submodules.
 
@@ -241,11 +301,12 @@ def test_f0004_bridges_package_does_not_eager_load_heavy_submodules() -> None:
         "intellicrack.bridges.process",
         "intellicrack.bridges.installer",
     ]
-    for mod in [*heavy, "intellicrack.bridges"]:
-        sys.modules.pop(mod, None)
-    importlib.import_module("intellicrack.bridges")
-    loaded = [m for m in heavy if m in sys.modules]
-    assert not loaded, f"unexpected eager imports: {loaded}"
+    with _preserved_sys_modules([*heavy, "intellicrack.bridges"]):
+        for mod in [*heavy, "intellicrack.bridges"]:
+            sys.modules.pop(mod, None)
+        importlib.import_module("intellicrack.bridges")
+        loaded = [m for m in heavy if m in sys.modules]
+        assert not loaded, f"unexpected eager imports: {loaded}"
 
 
 def test_f0004_bridges_lazy_accessor_returns_class() -> None:
@@ -256,13 +317,14 @@ def test_f0004_bridges_lazy_accessor_returns_class() -> None:
     workaround. The package-level ``__getattr__`` is a one-line
     delegate to this function.
     """
-    sys.modules.pop("intellicrack.bridges.process", None)
-    scratch_globals: dict[str, object] = {}
-    cls = resolve_lazy("ProcessBridge", scratch_globals)
-    assert cls.__name__ == "ProcessBridge"
-    assert "intellicrack.bridges.process" in sys.modules
-    assert "ProcessBridge" in scratch_globals
-    assert bridges_pkg.__name__ == "intellicrack.bridges"
+    with _preserved_sys_modules(["intellicrack.bridges.process"]):
+        sys.modules.pop("intellicrack.bridges.process", None)
+        scratch_globals: dict[str, object] = {}
+        cls = resolve_lazy("ProcessBridge", scratch_globals)
+        assert cls.__name__ == "ProcessBridge"
+        assert "intellicrack.bridges.process" in sys.modules
+        assert "ProcessBridge" in scratch_globals
+        assert bridges_pkg.__name__ == "intellicrack.bridges"
 
 
 def test_f0004_bridges_unknown_attribute_raises() -> None:

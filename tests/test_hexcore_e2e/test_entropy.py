@@ -301,18 +301,19 @@ class TestDigramMatrix:
 class TestContentClassification:
     """Tests for the content_classification() method on HexDocument.
 
-    Verifies that the method returns a list of integers with each value in
-    the range [0, 4] and that the count of blocks matches the expected ceiling.
+    Verifies that the method returns a bytes object whose per-block class
+    codes are each in the range [0, 4] and that the number of blocks matches
+    the expected ceiling.
     """
 
-    def test_content_classification_returns_list(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that content_classification() returns a list.
+    def test_content_classification_returns_bytes(self, sample_doc_from_bytes: HexDocument) -> None:
+        """Verify that content_classification() returns a bytes object of per-block class codes.
 
         Args:
             sample_doc_from_bytes: HexDocument loaded from bytes(range(256)).
         """
         result = sample_doc_from_bytes.content_classification(64)
-        assert isinstance(result, list)
+        assert isinstance(result, bytes)
 
     def test_content_classification_values_in_range(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every classification value is an integer in the range [0, 4].

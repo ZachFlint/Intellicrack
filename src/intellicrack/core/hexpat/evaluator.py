@@ -907,10 +907,10 @@ class HexPatEvaluator:
                 for stmt in node.body:
                     self._eval_stmt(stmt)
             except _BreakSignalError:
-                _logger.warning("hexpat_while_break", line=node.line, column=node.column)
+                _logger.debug("hexpat_while_break", line=node.line, column=node.column)
                 break
             except _ContinueSignalError:
-                _logger.warning("hexpat_while_continue", line=node.line, column=node.column)
+                _logger.debug("hexpat_while_continue", line=node.line, column=node.column)
                 continue
 
     def _eval_for(self, node: ForStmt) -> None:
@@ -949,10 +949,10 @@ class HexPatEvaluator:
                 for stmt in node.body:
                     self._eval_stmt(stmt)
             except _BreakSignalError:
-                _logger.warning("hexpat_for_break", line=node.line, column=node.column)
+                _logger.debug("hexpat_for_break", line=node.line, column=node.column)
                 break
             except _ContinueSignalError:
-                _logger.warning("hexpat_for_continue", line=node.line, column=node.column)
+                _logger.debug("hexpat_for_continue", line=node.line, column=node.column)
             if node.update is not None:
                 self._eval_expr(node.update)
 

@@ -24,11 +24,32 @@ from intellicrack.bridges.sandbox_bridge import (
     json_safe,
 )
 from intellicrack.core.types import SandboxError, ToolError
+from intellicrack.sandbox import ExecutionReport
 
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from pathlib import Path
+
+
+def _make_execution_report() -> ExecutionReport:
+    """Build a real, empty-activity ``ExecutionReport`` for run_binary tests.
+
+    The production ``run_binary`` serialises the report it receives from the
+    manager through ``dataclass_to_dict``, which (correctly) rejects anything
+    that is not a real dataclass instance. Tests that exercise the success path
+    therefore need a genuine :class:`ExecutionReport`, not a mock stand-in.
+
+    Returns:
+        ExecutionReport: A successful report with empty activity lists.
+    """
+    return ExecutionReport(
+        result="success",
+        exit_code=0,
+        stdout="",
+        stderr="",
+        duration_seconds=1.0,
+    )
 
 
 class TestF0001ContBroadException:
@@ -748,31 +769,12 @@ class TestF0010BridgeStateUpdates:
 
         mock_instance = MagicMock()
         mock_instance.id = "test-id"
-        mock_report = MagicMock()
-        mock_report.result = "success"
-        mock_report.exit_code = 0
-        mock_report.stdout = ""
-        mock_report.stderr = ""
-        mock_report.duration_seconds = 1.0
-        for attr in [
-            "file_changes",
-            "registry_changes",
-            "network_activity",
-            "process_activity",
-            "api_calls",
-            "service_changes",
-            "kernel_objects",
-            "dll_loads",
-            "injection_events",
-            "resource_samples",
-            "clipboard_events",
-        ]:
-            setattr(mock_report, attr, [])
+        report = _make_execution_report()
 
         async def run() -> None:
             with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
-                manager.run_binary = AsyncMock(return_value=(mock_instance, mock_report))
+                manager.run_binary = AsyncMock(return_value=(mock_instance, report))
                 mock_mgr.return_value = manager
                 await bridge.run_binary(str(binary))
 
@@ -1358,31 +1360,12 @@ class TestF0010LastErrorLifecycleSymmetric:
 
         mock_instance = MagicMock()
         mock_instance.id = "rb-id"
-        mock_report = MagicMock()
-        mock_report.result = "success"
-        mock_report.exit_code = 0
-        mock_report.stdout = ""
-        mock_report.stderr = ""
-        mock_report.duration_seconds = 1.0
-        for attr in [
-            "file_changes",
-            "registry_changes",
-            "network_activity",
-            "process_activity",
-            "api_calls",
-            "service_changes",
-            "kernel_objects",
-            "dll_loads",
-            "injection_events",
-            "resource_samples",
-            "clipboard_events",
-        ]:
-            setattr(mock_report, attr, [])
+        report = _make_execution_report()
 
         async def run() -> None:
             with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
-                manager.run_binary = AsyncMock(return_value=(mock_instance, mock_report))
+                manager.run_binary = AsyncMock(return_value=(mock_instance, report))
                 mock_mgr.return_value = manager
                 await bridge.run_binary(str(binary))
 

@@ -1217,18 +1217,6 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._publish_tool_state()
             raise ToolError(_ERR_INIT_FAILED) from e
 
-    async def shutdown(self) -> None:
-        """Shutdown Frida and cleanup resources.
-
-        The base class ``_finalize_shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when
-        one of the per-resource cleanup steps raises an unexpected error.
-        """
-        try:
-            await self._release_frida_resources()
-        finally:
-            await super().shutdown()
-            _logger.info("frida_bridge_shutdown", bridge="frida")
-
     async def _release_frida_resources(self) -> None:
         """Release every Frida-side resource owned by this bridge.
 
@@ -5681,6 +5669,18 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
     bridges) so no single class definition exceeds the public method limit. The final class exposes the full Frida feature set including
     Java runtime hooks, kernel APIs, socket/file/SQLite helpers, cloak management, TypeScript compilation, and filesystem monitoring.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown Frida and cleanup resources.
+
+        The base class ``shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when one of
+        the per-resource cleanup steps raises an unexpected error.
+        """
+        try:
+            await self._release_frida_resources()
+        finally:
+            await super().shutdown()
+            _logger.info("frida_bridge_shutdown", bridge="frida")
 
     async def java_enumerate_loaded_classes(self, pattern: str | None = None) -> list[str]:
         """Enumerate loaded Java classes with optional pattern filter.

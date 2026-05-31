@@ -836,17 +836,21 @@ def test_f0004_providers_use_retry_with_backoff_in_chat_path() -> None:
     """Static check: each provider references _retry_with_backoff.
 
     Confirms the retry wrapper is present in each provider's
-    non-streaming chat source so transient rate-limit failures
+    non-streaming chat path so transient rate-limit failures
     actually back off instead of fast-failing.  Source-level inspection
     avoids running live network code while still verifying wiring.
+    Grok and OpenRouter perform the retried request inside ``chat``
+    itself, whereas Google's ``chat`` is a thin wrapper that delegates
+    to the ``_run_google_chat`` implementation where the retry lives, so
+    that helper is the method inspected for Google.
     """
     sources: dict[str, str] = {
         "grok": inspect.getsource(GrokProvider.chat),
         "openrouter": inspect.getsource(OpenRouterProvider.chat),
-        "google": inspect.getsource(GoogleProvider.chat),
+        "google": inspect.getsource(GoogleProvider._run_google_chat),
     }
     for name, src in sources.items():
-        assert "_retry_with_backoff" in src, f"{name}.chat missing _retry_with_backoff"
+        assert "_retry_with_backoff" in src, f"{name} chat path missing _retry_with_backoff"
 
 
 # ---------------------------------------------------------------------------

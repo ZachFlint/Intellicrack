@@ -65,6 +65,7 @@ _CONTAINER_REPORTS = f"{_CONTAINER_WORKSPACE}\\reports"
 _CONTAINER_SPEC_PATH = f"{_CONTAINER_REPORTS}\\tests\\_run_spec.json"
 _HOST_SPEC_PATH = _REPORTS_ROOT / "_run_spec.json"
 _EXIT_CODE_FILE = _REPORTS_ROOT / "_last_exitcode"
+_QUOTE_PAIR_LEN = 2
 
 _DOCKER_DESKTOP_PATHS: tuple[Path, ...] = (
     Path(r"C:\Program Files\Docker\Docker\Docker Desktop.exe"),
@@ -104,6 +105,41 @@ def _docker_binary() -> str:
         return str(default)
     message = "docker CLI not found on PATH or at default Docker Desktop location"
     raise SandboxError(message)
+
+
+def _env_file_docker_args(env_file: Path) -> list[str]:
+    """Forward a host ``.env`` file as ``docker run --env`` arguments.
+
+    Windows containers cannot bind-mount a single file, so real provider
+    credentials are passed as individual environment variables instead. Each
+    ``KEY=VALUE`` line is parsed with surrounding single/double quotes stripped
+    so dotenv-quoted secrets reach the container unquoted; blank lines, ``#``
+    comments, ``export`` prefixes, and lines without a valid identifier key are
+    skipped. A missing file yields no arguments.
+
+    Args:
+        env_file: Path to the host ``.env`` file.
+
+    Returns:
+        list[str]: Flat ``["--env", "KEY=VALUE", ...]`` argument list, empty
+        when the file is absent.
+    """
+    if not env_file.is_file():
+        return []
+    args: list[str] = []
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.removeprefix("export ").strip()
+        if not key.isidentifier():
+            continue
+        value = value.strip()
+        if len(value) >= _QUOTE_PAIR_LEN and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        args.extend(["--env", f"{key}={value}"])
+    return args
 
 
 def _pixi_version() -> str:
@@ -410,6 +446,15 @@ def _build_docker_run_argv(
         docker_mount,
         "--volume",
         src_mount,
+    ]
+    # Mount the committed vendor corpus when present so real-data tests that
+    # drive the shipped ``.hexpat`` pattern files (and other vendored fixtures)
+    # exercise genuine inputs instead of skipping. Mounting conditionally keeps
+    # sparse checkouts that omit the submodules working.
+    vendor_dir = _PROJECT_ROOT / "vendor"
+    if vendor_dir.is_dir():
+        argv.extend(["--volume", f"{vendor_dir}:{_CONTAINER_WORKSPACE}\\vendor:ro"])
+    argv.extend([
         "--workdir",
         _CONTAINER_WORKSPACE,
         "--env",
@@ -430,14 +475,27 @@ def _build_docker_run_argv(
         f"SANDBOX_SPEC_PATH={_CONTAINER_SPEC_PATH}",
         "--label",
         f"{_IMAGE_LABEL}=1",
-    ]
+    ])
+    # Inject real provider API keys from the host ``.env`` into the container
+    # environment (Windows cannot bind-mount a single file). ``CredentialLoader``
+    # falls back to ``os.environ`` after the ``.env`` file, so live cloud-provider
+    # tests resolve real credentials. The file stays on the host and is never
+    # baked into the image; runs without an ``.env`` simply forward nothing and
+    # the key-gated tests skip themselves.
+    argv.extend(_env_file_docker_args(_PROJECT_ROOT / ".env"))
     if spec.module:
         argv.extend(["--env", f"TEST_MODULE={spec.module}"])
     if interactive:
         argv.extend(["-it"])
     else:
         argv.extend(["-t"])
-    argv.append(tag)
+    # Pass the test type as the explicit container command so it overrides the
+    # image's ``CMD ["unit"]`` default. Without this the default positional arg
+    # binds the entrypoint's ``$TestType`` to ``unit`` regardless of the
+    # ``TEST_TYPE`` environment variable, causing the entrypoint's host-spec
+    # branch (which requires ``$TestType -eq $Spec.test_type``) to be skipped
+    # and the full unit suite to run instead of the requested selection.
+    argv.extend((tag, spec.test_type.value))
     return argv
 
 

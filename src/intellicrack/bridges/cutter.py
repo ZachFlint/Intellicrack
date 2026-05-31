@@ -1186,18 +1186,19 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         if self._r2 is None:
             _logger.warning("_r2_cmd_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
+        timeout = R2_COMMAND_TIMEOUT
         try:
             result = await asyncio.wait_for(
                 asyncio.to_thread(self._r2.cmd, command),
-                timeout=_R2_COMMAND_TIMEOUT,
+                timeout=timeout,
             )
         except TimeoutError:
             _logger.warning(
                 "r2_command_timeout",
                 command=command,
-                timeout=_R2_COMMAND_TIMEOUT,
+                timeout=timeout,
             )
-            msg = f"{_ERR_CMD_TIMEOUT} after {_R2_COMMAND_TIMEOUT}s: {command}"
+            msg = f"{_ERR_CMD_TIMEOUT} after {timeout}s: {command}"
             raise ToolError(msg) from None
         except (OSError, RuntimeError, ValueError) as e:
             _logger.warning("r2_command_failed", command=command, error=str(e))
@@ -1375,19 +1376,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             last_error=None,
         )
         _logger.info("cutter_bridge_initialized", bridge="cutter")
-
-    async def shutdown(self) -> None:
-        """Shutdown Cutter bridge and cleanup resources.
-
-        Wraps every reference-releasing step in ``try/finally`` so ``super().shutdown()`` is guaranteed to run even when an intermediate
-        cleanup step raises. Without the guarantee a ``ProcessManager`` failure would leave the base ``BridgeState`` marked
-        ``connected=True`` after the bridge had released its rizin handle, presenting observers with a stuck-alive state.
-        """
-        try:
-            await self._release_cutter_resources()
-        finally:
-            await super().shutdown()
-            _logger.info("cutter_bridge_shutdown", bridge="cutter")
 
     async def _release_cutter_resources(self) -> None:
         """Release rizin handles, registered PIDs, and per-binary debug state.
@@ -4570,3 +4558,16 @@ class CutterBridge(CutterDebugMixin):
     Composed from the ``_CutterBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references resolve
     through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown Cutter bridge and cleanup resources.
+
+        Wraps every reference-releasing step in ``try/finally`` so ``super().shutdown()`` is guaranteed to run even when an intermediate
+        cleanup step raises. Without the guarantee a ``ProcessManager`` failure would leave the base ``BridgeState`` marked
+        ``connected=True`` after the bridge had released its rizin handle, presenting observers with a stuck-alive state.
+        """
+        try:
+            await self._release_cutter_resources()
+        finally:
+            await super().shutdown()
+            _logger.info("cutter_bridge_shutdown", bridge="cutter")

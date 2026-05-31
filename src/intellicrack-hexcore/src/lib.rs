@@ -23,7 +23,7 @@ use mmap_io::MmapDocument;
 use templates::TemplateRegistry;
 use undo::{Operation, UndoManager};
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Bookmark {
     #[pyo3(get, set)]
@@ -226,14 +226,14 @@ impl HexDocument {
         max_results: usize,
     ) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
-        let results = py.allow_threads(move || search::search_bytes(&data, &pattern, max_results));
+        let results = py.detach(move || search::search_bytes(&data, &pattern, max_results));
         results.into_iter().map(|r| (r.offset, r.length)).collect()
     }
 
     fn search_hex(&self, py: Python<'_>, pattern: &str, max_results: usize) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
         let results =
-            py.allow_threads(|| search::search_hex_with_wildcards(&data, pattern, max_results));
+            py.detach(|| search::search_hex_with_wildcards(&data, pattern, max_results));
         results.into_iter().map(|r| (r.offset, r.length)).collect()
     }
 
@@ -248,7 +248,7 @@ impl HexDocument {
         let data = self.inner.read_all();
         let text_owned = text.to_string();
         let encoding_owned = encoding.to_string();
-        let results = py.allow_threads(|| {
+        let results = py.detach(|| {
             search::search_text(
                 &data,
                 &text_owned,
@@ -268,7 +268,7 @@ impl HexDocument {
     ) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
         let pattern_owned = pattern.to_string();
-        let results = py.allow_threads(|| search::search_regex(&data, &pattern_owned, max_results));
+        let results = py.detach(|| search::search_regex(&data, &pattern_owned, max_results));
         results.into_iter().map(|r| (r.offset, r.length)).collect()
     }
 
@@ -287,7 +287,7 @@ impl HexDocument {
         count
     }
 
-    fn inspect_at(&self, py: Python<'_>, offset: usize) -> PyResult<PyObject> {
+    fn inspect_at(&self, py: Python<'_>, offset: usize) -> PyResult<Py<PyAny>> {
         let needed = 16.min(self.inner.document_size().saturating_sub(offset));
         let slice = self.inner.read(offset, needed);
         let inspection = data_inspector::inspect_at(&slice, 0);
@@ -309,7 +309,7 @@ impl HexDocument {
             offset += len;
         }
         let algo = algorithm.to_string();
-        let result = py.allow_threads(|| hash::compute_hash(&all_data, &algo));
+        let result = py.detach(|| hash::compute_hash(&all_data, &algo));
         match result {
             Ok(r) => Ok(r.hex_digest),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
@@ -331,7 +331,7 @@ impl HexDocument {
         }
         let range_data = self.inner.read(start, actual_end - start);
         let algo = algorithm.to_string();
-        let result = py.allow_threads(|| hash::compute_hash(&range_data, &algo));
+        let result = py.detach(|| hash::compute_hash(&range_data, &algo));
         match result {
             Ok(r) => Ok(r.hex_digest),
             Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
@@ -389,8 +389,8 @@ impl HexDocument {
             .collect()
     }
 
-    fn apply_template(&self, py: Python<'_>, name: &str, offset: usize) -> PyResult<PyObject> {
-        fn field_to_dict(py: Python<'_>, field: &templates::ParsedField) -> PyResult<PyObject> {
+    fn apply_template(&self, py: Python<'_>, name: &str, offset: usize) -> PyResult<Py<PyAny>> {
+        fn field_to_dict(py: Python<'_>, field: &templates::ParsedField) -> PyResult<Py<PyAny>> {
             let dict = PyDict::new(py);
             dict.set_item("name", &field.name)?;
             dict.set_item("offset", field.offset)?;
@@ -462,33 +462,33 @@ impl HexDocument {
 
     fn entropy(&self, py: Python<'_>) -> f64 {
         let data = self.inner.read_all();
-        py.allow_threads(|| entropy::compute_entropy(&data))
+        py.detach(|| entropy::compute_entropy(&data))
     }
 
     fn entropy_map(&self, py: Python<'_>, block_size: usize) -> Vec<f64> {
         let data = self.inner.read_all();
-        py.allow_threads(|| entropy::entropy_map(&data, block_size))
+        py.detach(|| entropy::entropy_map(&data, block_size))
     }
 
     fn byte_distribution_full(&self, py: Python<'_>) -> Vec<u64> {
         let data = self.inner.read_all();
-        let dist = py.allow_threads(|| entropy::byte_distribution(&data));
+        let dist = py.detach(|| entropy::byte_distribution(&data));
         dist.to_vec()
     }
 
     fn byte_type_distribution(&self, py: Python<'_>) -> (u64, u64, u64, u64) {
         let data = self.inner.read_all();
-        py.allow_threads(|| entropy::byte_type_distribution(&data))
+        py.detach(|| entropy::byte_type_distribution(&data))
     }
 
     fn digram_matrix(&self, py: Python<'_>) -> Vec<u64> {
         let data = self.inner.read_all();
-        py.allow_threads(|| entropy::digram_matrix(&data))
+        py.detach(|| entropy::digram_matrix(&data))
     }
 
     fn content_classification(&self, py: Python<'_>, block_size: usize) -> Vec<u8> {
         let data = self.inner.read_all();
-        py.allow_threads(|| entropy::content_classification(&data, block_size))
+        py.detach(|| entropy::content_classification(&data, block_size))
     }
 
     fn transform_data(
@@ -502,7 +502,7 @@ impl HexDocument {
         let data = self.inner.read(offset, length);
         let name_owned = name.to_string();
         let result =
-            py.allow_threads(move || transforms::apply_transform(&name_owned, &data, &params));
+            py.detach(move || transforms::apply_transform(&name_owned, &data, &params));
         result.map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
@@ -597,7 +597,7 @@ impl HexDocument {
         let data = self.inner.read_all();
         let text_owned = text.to_string();
         let enc_owned = encoding.to_string();
-        py.allow_threads(|| {
+        py.detach(|| {
             encodings::search_text_encoded(
                 &data,
                 &text_owned,
@@ -619,7 +619,7 @@ impl HexDocument {
         max_results: usize,
     ) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
-        let results = py.allow_threads(|| {
+        let results = py.detach(|| {
             search::search_numeric_int(
                 &data,
                 value,
@@ -644,7 +644,7 @@ impl HexDocument {
         max_results: usize,
     ) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
-        let results = py.allow_threads(|| {
+        let results = py.detach(|| {
             search::search_numeric_float(
                 &data,
                 value,
@@ -670,7 +670,7 @@ impl HexDocument {
     ) -> Vec<(usize, usize)> {
         let (min_val, max_val) = value_range;
         let data = self.inner.read_all();
-        let results = py.allow_threads(|| {
+        let results = py.detach(|| {
             search::search_numeric_range(
                 &data,
                 min_val,
@@ -704,7 +704,7 @@ impl HexDocument {
             )));
         }
         let range_data = self.inner.read(start, actual_end - start);
-        let result = py.allow_threads(|| {
+        let result = py.detach(|| {
             hash::compute_crc_custom(&range_data, width, poly, init, refin, refout, xorout)
         });
         result.map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
@@ -1033,7 +1033,7 @@ impl HexDocument {
         include_ascii: bool,
         include_utf16: bool,
         max_results: usize,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let data = self.inner.read_all();
         let matches =
             strings::extract_strings(&data, min_length, include_ascii, include_utf16, max_results);
@@ -1052,7 +1052,7 @@ impl HexDocument {
 
     // --- PE Checksum ---
 
-    fn verify_pe_checksum(&self, py: Python<'_>) -> PyResult<PyObject> {
+    fn verify_pe_checksum(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let data = self.inner.read_all();
         let result = hash::verify_pe_checksum(&data)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("{e:?}")))?;
@@ -1139,7 +1139,7 @@ impl HexDocument {
 }
 
 #[pyfunction]
-fn diff_files(py: Python<'_>, path_a: &str, path_b: &str) -> PyResult<PyObject> {
+fn diff_files(py: Python<'_>, path_a: &str, path_b: &str) -> PyResult<Py<PyAny>> {
     let data_a = std::fs::read(path_a).map_err(|e| {
         pyo3::exceptions::PyIOError::new_err(format!("Failed to read {path_a}: {e}"))
     })?;
@@ -1151,11 +1151,11 @@ fn diff_files(py: Python<'_>, path_a: &str, path_b: &str) -> PyResult<PyObject> 
 }
 
 #[pyfunction]
-fn diff_bytes(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<PyObject> {
+fn diff_bytes(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<Py<PyAny>> {
     diff_result_to_py(py, data_a, data_b)
 }
 
-fn diff_result_to_py(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<PyObject> {
+fn diff_result_to_py(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<Py<PyAny>> {
     let result = diff::diff_data(data_a, data_b);
 
     let dict = PyDict::new(py);

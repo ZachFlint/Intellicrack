@@ -322,6 +322,12 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Simplify hexpat builtins and improve cutter operations (`76eb871`)
+Simplify the HexPat evaluator and standard library by returning native Python types from builtins and boxing them centrally in the evaluator. This change also enables top-level control-flow statements and initialized local variables in the parser, and relaxes preprocessor include failures to warnings. Additionally, the Cutter bridge is updated to resolve local backend binaries more robustly and use more reliable command sequences (`wx` and `wcf`) for assembly and saving.
+- **HexPat Evaluator & Stdlib**: Centralized `PatternValue` boxing for builtins, added `std::string::to_int`, and fixed `sizeof` resolution for scoped types.
+- **HexPat Parser & Preprocessor**: Allowed top-level control-flow statements and local variable declarations, and demoted missing include errors to warnings.
+- **Cutter Bridge**: Improved binary resolution in `is_available`, switched assembly to direct hex writes (`wx`), and fixed binary saving to dump the full cache (`wcf`).
+
 - Clean up logging calls, error handling, and formatting (`3f369fc`)
 Standardize logging calls across bridges, providers, and UI panels by replacing string-interpolated exceptions with structured `exc_info=True` parameters or dedicated error events. Clean up redundant try/except blocks, fix type annotations in the transform pipeline, and format long string literals and comments to adhere to the 120-character line limit.
 * Standardize logging events and remove redundant `str(exc)` formatting in bridges and UI panels
@@ -762,11 +768,13 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Simplify hexpat builtins and improve cutter operations (``)
-Simplify the HexPat evaluator and standard library by returning native Python types from builtins and boxing them centrally in the evaluator. This change also enables top-level control-flow statements and initialized local variables in the parser, and relaxes preprocessor include failures to warnings. Additionally, the Cutter bridge is updated to resolve local backend binaries more robustly and use more reliable command sequences (`wx` and `wcf`) for assembly and saving.
-- **HexPat Evaluator & Stdlib**: Centralized `PatternValue` boxing for builtins, added `std::string::to_int`, and fixed `sizeof` resolution for scoped types.
-- **HexPat Parser & Preprocessor**: Allowed top-level control-flow statements and local variable declarations, and demoted missing include errors to warnings.
-- **Cutter Bridge**: Improved binary resolution in `is_available`, switched assembly to direct hex writes (`wx`), and fixed binary saving to dump the full cache (`wcf`).
+- Resolve audit findings and add real-data test coverage (``)
+This change removes the static audit reports and addresses their findings by replacing mock-heavy unit tests with a comprehensive suite of real-data integration tests. The new tests execute genuine PE, ELF, and Mach-O binaries against the Rust hexcore, live Win32 process APIs, and local sandbox environments to guarantee operational correctness.
+- Audit: Removed all static audit criteria, master reports, and shard files.
+- Rust Core: Updated `blake2` dependency, refactored AES-ECB block transforms to use safe array conversions, and updated PyO3 bindings to use detached threads.
+- Bridges: Hardened process heap enumeration with strict time and count budgets, disabled the insecure in-process Python scripting bridge, and fixed x64dbg/Cutter resource cleanup paths.
+- Sandbox: Added a real loopback TCP listener to simulate C2 traffic and integrated real-process/network monitors under PowerShell.
+- Testing: Introduced a massive suite of `realcov` integration tests validating PE/ELF/Mach-O parsing, named pipe communication, and UI panel rendering.
 
 
 ### Documentation

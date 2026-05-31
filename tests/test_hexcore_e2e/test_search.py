@@ -439,7 +439,9 @@ class TestSearchNumericRange:
         struct.pack_into("<I", buf, 28, 100)
         struct.pack_into("<I", buf, 52, 45)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(40, 60, 4, signed=False, big_endian=False, alignment=1, max_results=100)
+        results: list[tuple[int, int]] = doc.search_numeric_range(
+            (40, 60), 4, signed=False, big_endian=False, alignment=1, max_results=100,
+        )
         offsets = [r[0] for r in results]
         assert 8 in offsets
         assert 52 in offsets
@@ -453,7 +455,9 @@ class TestSearchNumericRange:
         """
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(100, 200, 4, signed=False, big_endian=False, alignment=1, max_results=100)
+        results: list[tuple[int, int]] = doc.search_numeric_range(
+            (100, 200), 4, signed=False, big_endian=False, alignment=1, max_results=100,
+        )
         assert not results
 
     def test_signed_range_includes_negative_values(self, hexcore: types.ModuleType) -> None:
@@ -467,7 +471,9 @@ class TestSearchNumericRange:
         struct.pack_into("<i", buf, 40, -10)
         struct.pack_into("<i", buf, 70, 5)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(-100, -1, 4, signed=True, big_endian=False, alignment=1, max_results=100)
+        results: list[tuple[int, int]] = doc.search_numeric_range(
+            (-100, -1), 4, signed=True, big_endian=False, alignment=1, max_results=100,
+        )
         offsets = [r[0] for r in results]
         assert 16 in offsets
         assert 40 in offsets
@@ -483,7 +489,9 @@ class TestSearchNumericRange:
         struct.pack_into(">I", buf, 20, 75)
         struct.pack_into(">I", buf, 50, 200)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
-        results: list[tuple[int, int]] = doc.search_numeric_range(70, 80, 4, signed=False, big_endian=True, alignment=1, max_results=100)
+        results: list[tuple[int, int]] = doc.search_numeric_range(
+            (70, 80), 4, signed=False, big_endian=True, alignment=1, max_results=100,
+        )
         offsets = [r[0] for r in results]
         assert 20 in offsets
         assert 50 not in offsets
@@ -500,7 +508,7 @@ class TestReplaceBytes:
         """
         data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
-        count: int = doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
+        count: int = doc.replace_bytes(b"\xaa\xbb", b"\xcc\xdd")
         assert count == 2
 
     def test_document_bytes_reflect_replacement(self, hexcore: types.ModuleType) -> None:
@@ -511,7 +519,7 @@ class TestReplaceBytes:
         """
         data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
-        doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
+        doc.replace_bytes(b"\xaa\xbb", b"\xcc\xdd")
         assert doc.read(10, 2) == b"\xcc\xdd"
         assert doc.read(22, 2) == b"\xcc\xdd"
 
@@ -523,7 +531,7 @@ class TestReplaceBytes:
         """
         data = b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10 + b"\xaa\xbb" + b"\x00" * 10
         doc = hexcore.HexDocument.open_bytes(data)
-        doc.replace_bytes([0xAA, 0xBB], [0xCC, 0xDD])
+        doc.replace_bytes(b"\xaa\xbb", b"\xcc\xdd")
         remaining: list[tuple[int, int]] = doc.search_bytes(b"\xaa\xbb", 100)
         assert not remaining
 
@@ -535,7 +543,7 @@ class TestReplaceBytes:
         """
         data = b"\x00" * 32
         doc = hexcore.HexDocument.open_bytes(data)
-        count: int = doc.replace_bytes([0xFF, 0xFE], [0x00, 0x01])
+        count: int = doc.replace_bytes(b"\xff\xfe", b"\x00\x01")
         assert count == 0
 
     def test_single_occurrence_replaced_correctly(self, hexcore: types.ModuleType) -> None:
@@ -546,6 +554,6 @@ class TestReplaceBytes:
         """
         data = b"\x00" * 5 + b"\xde\xad\xbe\xef" + b"\x00" * 5
         doc = hexcore.HexDocument.open_bytes(data)
-        count: int = doc.replace_bytes([0xDE, 0xAD, 0xBE, 0xEF], [0x11, 0x22, 0x33, 0x44])
+        count: int = doc.replace_bytes(b"\xde\xad\xbe\xef", b"\x11\x22\x33\x44")
         assert count == 1
         assert doc.read(5, 4) == b"\x11\x22\x33\x44"

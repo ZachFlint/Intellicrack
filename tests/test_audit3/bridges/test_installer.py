@@ -756,7 +756,7 @@ class TestProgressLoggingPerMB:
 
         monkeypatch.setattr(ToolInstaller, "_get_client", _stub_get_client)
 
-        original_debug = installer_mod.logger.debug
+        original_debug = installer_mod._logger.debug
 
         def capture(event: str, *args: object, **kw: object) -> object:
             if event == "download_progress":
@@ -765,7 +765,7 @@ class TestProgressLoggingPerMB:
                     log_events.append(float(pct))
             return original_debug(event, *args, **kw)
 
-        monkeypatch.setattr(installer_mod.logger, "debug", capture)
+        monkeypatch.setattr(installer_mod._logger, "debug", capture)
 
         path = _run(ti.download_file("https://example.invalid/a.zip"))
         assert path is not None
@@ -882,13 +882,13 @@ class TestBuildSubprocessHandling:
 
         monkeypatch.setattr(installer_mod, "_subprocess_run", stub_run)
 
-        original_warning = installer_mod.logger.warning
+        original_warning = installer_mod._logger.warning
 
         def capture(event: str, **kw: object) -> object:
             warnings.append({"event": event, **kw})
             return original_warning(event, **kw)
 
-        monkeypatch.setattr(installer_mod.logger, "warning", capture)
+        monkeypatch.setattr(installer_mod._logger, "warning", capture)
 
         ok = installer_mod.run_cmake_step(
             ["cmake", "-G", "X"],
@@ -930,7 +930,7 @@ class TestBuildSubprocessHandling:
         def _capture_warn(event: str, **_kw: object) -> None:
             warnings.append(event)
 
-        monkeypatch.setattr(installer_mod.logger, "warning", _capture_warn)
+        monkeypatch.setattr(installer_mod._logger, "warning", _capture_warn)
 
         result = installer_mod.find_cmake()
         assert result is None

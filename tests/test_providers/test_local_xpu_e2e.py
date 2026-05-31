@@ -1383,8 +1383,14 @@ class TestDtypeSelection:
         selected = select_dtype_for_memory(tinyllama_model_id, _TWELVE_GB)
         assert selected in {"float16", "bfloat16"}
 
-    async def test_tensor_operations_at_selected_dtype(self) -> None:
-        """Matrix multiplication on XPU at the selected dtype should succeed."""
+    async def test_tensor_operations_at_selected_dtype(self, *, has_xpu_available: bool) -> None:
+        """Matrix multiplication on XPU at the selected dtype should succeed.
+
+        Args:
+            has_xpu_available: Whether XPU hardware is available.
+        """
+        if not has_xpu_available:
+            pytest.skip("XPU not available")
         torch = pytest.importorskip("torch")
         dtype_name = get_optimal_dtype_for_xpu()
         dtype_map = {
@@ -1400,8 +1406,14 @@ class TestDtypeSelection:
         assert result.shape == (4, 4)
         assert result.device.type == "xpu"
 
-    async def test_optimal_dtype_detection(self) -> None:
-        """Optimal dtype for XPU should be float16 or bfloat16."""
+    async def test_optimal_dtype_detection(self, *, has_xpu_available: bool) -> None:
+        """Optimal dtype for XPU should be float16 or bfloat16.
+
+        Args:
+            has_xpu_available: Whether XPU hardware is available.
+        """
+        if not has_xpu_available:
+            pytest.skip("XPU not available")
         dtype = get_optimal_dtype_for_xpu()
         assert dtype in {"float16", "bfloat16"}
 

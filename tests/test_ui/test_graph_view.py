@@ -253,7 +253,7 @@ class TestCFGGraphScene:
             LAYOUT_BLOCK_ADDR_B: {"jump": LAYOUT_BLOCK_ADDR_C},
             LAYOUT_BLOCK_ADDR_C: {},
         }
-        layers = CFGGraphScene.compute_layers(block_map)
+        layers = CFGGraphScene._compute_layers(block_map)
         assert len(layers) == EXPECTED_LINEAR_LAYERS
         assert layers[0] == [LAYOUT_BLOCK_ADDR_A]
         assert layers[1] == [LAYOUT_BLOCK_ADDR_B]
@@ -267,7 +267,7 @@ class TestCFGGraphScene:
             LAYOUT_BLOCK_ADDR_B: {},
             LAYOUT_BLOCK_ADDR_C: {},
         }
-        layers = CFGGraphScene.compute_layers(block_map)
+        layers = CFGGraphScene._compute_layers(block_map)
         assert len(layers) == EXPECTED_BRANCH_LAYERS
         assert LAYOUT_BLOCK_ADDR_A in layers[0]
         layer1 = set(layers[1])
@@ -277,7 +277,7 @@ class TestCFGGraphScene:
     @staticmethod
     def test_compute_layers_empty() -> None:
         """Verify empty block map returns empty layers."""
-        layers = CFGGraphScene.compute_layers({})
+        layers = CFGGraphScene._compute_layers({})
         assert layers == {}
 
     @staticmethod

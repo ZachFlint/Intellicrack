@@ -75,14 +75,18 @@ class TestVerifyPEChecksum:
         assert result["valid"] is False
 
     def test_verify_non_pe_raises(self, bridge: HexEditorBridge, elf_binary: Path) -> None:
-        """Verify that verifying checksum on an ELF file raises RuntimeError.
+        """Verify that verifying checksum on an ELF file is rejected.
+
+        The native ``HexDocument.verify_pe_checksum`` maps its ``HashError`` to a
+        ``ValueError`` whose message reports the missing ``MZ`` signature, so a
+        non-PE input raises ``ValueError`` rather than ``RuntimeError``.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             elf_binary: Path to an ELF binary.
         """
         _run(bridge.open_file(str(elf_binary)))
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError, match="not a PE file"):
             _run(bridge.verify_pe_checksum())
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:

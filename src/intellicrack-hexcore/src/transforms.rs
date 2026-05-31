@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::io::{Read, Write};
 
-use aes::cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt, KeyInit};
+use aes::cipher::{Array, BlockCipherDecrypt, BlockCipherEncrypt, KeyInit};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -422,40 +422,40 @@ fn strip_plaintext(mut data: Vec<u8>, padding: PaddingMode) -> Result<Vec<u8>, T
     }
 }
 
+fn run_aes_ecb<C>(cipher: &C, blocks: &mut [u8], encrypt: bool)
+where
+    C: BlockCipherEncrypt + BlockCipherDecrypt,
+{
+    for chunk in blocks.chunks_exact_mut(16) {
+        let block = <&mut aes::cipher::Block<C>>::try_from(chunk)
+            .expect("chunks_exact_mut(16) yields exact-size AES blocks");
+        if encrypt {
+            cipher.encrypt_block(block);
+        } else {
+            cipher.decrypt_block(block);
+        }
+    }
+}
+
 fn aes_ecb_transform_blocks(blocks: &mut [u8], key: &[u8], encrypt: bool) {
     match key.len() {
         16 => {
-            let cipher = aes::Aes128::new(GenericArray::from_slice(key));
-            for chunk in blocks.chunks_exact_mut(16) {
-                let block = GenericArray::from_mut_slice(chunk);
-                if encrypt {
-                    cipher.encrypt_block(block);
-                } else {
-                    cipher.decrypt_block(block);
-                }
-            }
+            let cipher = aes::Aes128::new(
+                <&Array<u8, _>>::try_from(key).expect("validated 16-byte AES-128 key"),
+            );
+            run_aes_ecb(&cipher, blocks, encrypt);
         }
         24 => {
-            let cipher = aes::Aes192::new(GenericArray::from_slice(key));
-            for chunk in blocks.chunks_exact_mut(16) {
-                let block = GenericArray::from_mut_slice(chunk);
-                if encrypt {
-                    cipher.encrypt_block(block);
-                } else {
-                    cipher.decrypt_block(block);
-                }
-            }
+            let cipher = aes::Aes192::new(
+                <&Array<u8, _>>::try_from(key).expect("validated 24-byte AES-192 key"),
+            );
+            run_aes_ecb(&cipher, blocks, encrypt);
         }
         32 => {
-            let cipher = aes::Aes256::new(GenericArray::from_slice(key));
-            for chunk in blocks.chunks_exact_mut(16) {
-                let block = GenericArray::from_mut_slice(chunk);
-                if encrypt {
-                    cipher.encrypt_block(block);
-                } else {
-                    cipher.decrypt_block(block);
-                }
-            }
+            let cipher = aes::Aes256::new(
+                <&Array<u8, _>>::try_from(key).expect("validated 32-byte AES-256 key"),
+            );
+            run_aes_ecb(&cipher, blocks, encrypt);
         }
         _ => unreachable!("caller must validate key length before dispatch"),
     }

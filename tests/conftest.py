@@ -43,6 +43,14 @@ from tests._helpers.process_cleanup import (
     kill_new_descendants,
     snapshot_descendants,
 )
+from tests._helpers.real_binaries import (
+    FixtureUnavailableError,
+    load_real_elf,
+    load_real_macho,
+    resolve_real_pe_dll,
+    resolve_real_pe_dlls,
+    resolve_real_pe_exe,
+)
 
 
 if TYPE_CHECKING:
@@ -57,6 +65,7 @@ _HOST_SKIP_REASON = (
     f"'just test' (Docker sandbox) or set {ALLOW_HOST_PROCESS_TESTS_ENV}=1 "
     "to override."
 )
+_HOST_SPAWN_FIXTURES = frozenset({"notepad_process"})
 
 _logger = get_logger("tests.conftest")
 
@@ -84,7 +93,9 @@ def pytest_collection_modifyitems(
     sandbox. When pytest is invoked directly on the host, those tests would
     leak processes onto the developer's machine, so they are auto-skipped
     unless :data:`tests._helpers.process_cleanup.ALLOW_HOST_PROCESS_TESTS_ENV`
-    is truthy.
+    is truthy. As a defence in depth, tests that request a known
+    process-spawning fixture (see :data:`_HOST_SPAWN_FIXTURES`) are skipped on
+    the host even when they omit the ``spawns_process`` marker.
 
     Args:
         config: Active pytest configuration object.
@@ -95,7 +106,10 @@ def pytest_collection_modifyitems(
         return
     skip_marker = pytest.mark.skip(reason=_HOST_SKIP_REASON)
     for item in items:
-        if item.get_closest_marker(_SPAWNS_PROCESS_MARKER) is not None:
+        marked = item.get_closest_marker(_SPAWNS_PROCESS_MARKER) is not None
+        requested_fixtures: tuple[str, ...] = tuple(getattr(item, "fixturenames", ()))
+        spawns_via_fixture = bool(_HOST_SPAWN_FIXTURES.intersection(requested_fixtures))
+        if marked or spawns_via_fixture:
             item.add_marker(skip_marker)
 
 
@@ -168,10 +182,14 @@ def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[
 def project_root() -> Path:
     """Get the project root directory.
 
+    Resolved from this file's location (``tests/conftest.py``) rather than a
+    hardcoded absolute path so the fixture works both on the host and inside
+    the sandbox container, where the project lives under a different drive.
+
     Returns:
         Path: Path to the Intellicrack project root.
     """
-    return Path("D:/Intellicrack")
+    return Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(scope="session")
@@ -481,3 +499,68 @@ def has_arc_b580() -> bool:
         bool: True if an Arc B580 is detected.
     """
     return is_arc_b580()
+
+
+@pytest.fixture(scope="session")
+def real_pe_dll() -> Path:
+    """Provide a real PE DLL resolved from the running Windows system.
+
+    Returns:
+        Path: Validated path to ``kernel32.dll`` in System32.
+    """
+    try:
+        return resolve_real_pe_dll()
+    except FixtureUnavailableError as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.fixture(scope="session")
+def real_pe_dlls() -> list[Path]:
+    """Provide several real PE DLLs resolved from the running Windows system.
+
+    Returns:
+        list[Path]: Validated paths to standard System32 DLLs.
+    """
+    try:
+        return resolve_real_pe_dlls()
+    except FixtureUnavailableError as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.fixture(scope="session")
+def real_pe_exe() -> Path:
+    """Provide a real PE executable resolved from the running Windows system.
+
+    Returns:
+        Path: Validated path to a System32 executable.
+    """
+    try:
+        return resolve_real_pe_exe()
+    except FixtureUnavailableError as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.fixture(scope="session")
+def real_elf_binary() -> Path:
+    """Provide the committed real ELF fixture from the binary corpus.
+
+    Returns:
+        Path: Validated path to the committed ELF binary.
+    """
+    try:
+        return load_real_elf()
+    except FixtureUnavailableError as exc:
+        pytest.skip(str(exc))
+
+
+@pytest.fixture(scope="session")
+def real_macho_binary() -> Path:
+    """Provide the committed real Mach-O fixture from the binary corpus.
+
+    Returns:
+        Path: Validated path to the committed Mach-O binary.
+    """
+    try:
+        return load_real_macho()
+    except FixtureUnavailableError as exc:
+        pytest.skip(str(exc))

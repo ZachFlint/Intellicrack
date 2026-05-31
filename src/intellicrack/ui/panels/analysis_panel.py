@@ -89,15 +89,15 @@ class BridgeAnalysisPanel(QWidget):
         header_layout.setSpacing(_HEADER_SPACING)
 
         self._binary_label = QLabel("No binary loaded")
-        self._binary_label.setProperty("heading", value=True)
+        self._binary_label.setProperty("heading", "true")
         header_layout.addWidget(self._binary_label, 0, 0, 1, 2)
 
         self._format_label = QLabel("")
-        self._format_label.setProperty("muted", value=True)
+        self._format_label.setProperty("muted", "true")
         header_layout.addWidget(self._format_label, 1, 0)
 
         self._arch_label = QLabel("")
-        self._arch_label.setProperty("muted", value=True)
+        self._arch_label.setProperty("muted", "true")
         header_layout.addWidget(self._arch_label, 1, 1)
 
         self._bridges_label = QLabel("")

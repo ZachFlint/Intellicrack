@@ -32,11 +32,15 @@ class TestBinaryExpressions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(16)
+        data = bytearray(16)
+        data[7] = 0x5A
         source = "u8 result @ (3 + 4);"
-        results = interp.execute_bytes(source, data)
+        results = interp.execute_bytes(source, bytes(data))
         assert len(results) == 1
         assert results[0]["offset"] == 7
+        assert results[0]["size"] == 1
+        assert results[0]["raw_bytes"] == [0x5A]
+        assert results[0]["display_value"] == "0x5A"
 
     def test_subtraction(self, interp: HexPatInterpreter) -> None:
         """Subtraction operator produces the correct difference.
@@ -143,11 +147,15 @@ class TestBinaryExpressions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes([5, 1, 2])
-        source = "u8 cond = (5 == 5);\nif (cond) { u8 yes @ 0; }"
+        data = bytes([0x5A, 1, 2])
+        source = "u8 cond = (5 == 5);\nif (cond) { u8 yes @ 0; } else { u8 no @ 2; }"
         results = interp.execute_bytes(source, data)
         named = [r["name"] for r in results]
         assert "yes" in named
+        assert "no" not in named
+        yes = next(r for r in results if r["name"] == "yes")
+        assert yes["offset"] == 0
+        assert yes["display_value"] == "0x5A"
 
     def test_not_equal_comparison(self, interp: HexPatInterpreter) -> None:
         """!= comparison returns truthy value when operands differ.
@@ -226,9 +234,13 @@ class TestUnaryExpressions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(4)
-        source = "u8 zero = 0;\nu8 result = -5 + 5;\n"
-        interp.execute_bytes(source, data)
+        data = bytearray(16)
+        data[5] = 0x99
+        source = "u8 placed @ (-5 + 10);"
+        results = interp.execute_bytes(source, bytes(data))
+        assert results[0]["offset"] == 5
+        assert results[0]["raw_bytes"] == [0x99]
+        assert results[0]["display_value"] == "0x99"
 
     def test_logical_not_of_false(self, interp: HexPatInterpreter) -> None:
         """Logical NOT of a falsy value produces a truthy result.
@@ -310,12 +322,12 @@ class TestVariableScoping:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(8)
+        data = bytes([0, 0, 0xA0, 0xA1, 0xA2, 0, 0, 0])
         source = "u8 base = 2;\nfor (u8 i = 0; i < 3; i = i + 1) {\n    u8 val @ (base + i);\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
-        assert results[0]["offset"] == 2
-        assert results[1]["offset"] == 3
+        assert [r["offset"] for r in results] == [2, 3, 4]
+        assert [r["display_value"] for r in results] == ["0xA0", "0xA1", "0xA2"]
 
     def test_loop_variable_isolated_to_loop(self, interp: HexPatInterpreter) -> None:
         """Loop variable defined in for init does not leak to outer scope.
@@ -360,9 +372,14 @@ class TestFunctionDefinitions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(8)
+        data = bytearray(8)
+        data[2] = 0x7E
         source = "fn side_effect(u8 x) {\n    u8 placed @ x;\n}\nside_effect(2);"
-        interp.execute_bytes(source, data)
+        results = interp.execute_bytes(source, bytes(data))
+        placed = next(r for r in results if r["name"] == "placed")
+        assert placed["offset"] == 2
+        assert placed["raw_bytes"] == [0x7E]
+        assert placed["display_value"] == "0x7E"
 
 
 class TestTypeCoercion:
@@ -374,10 +391,17 @@ class TestTypeCoercion:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = struct.pack("<I", 300) + bytes(252)
+        data = bytearray(256)
+        struct.pack_into("<I", data, 0, 300)
+        data[100] = 0x3C
         source = "u32 wide @ 0;\nu8 narrow = 100;\nu8 check @ (narrow + 0);"
-        results = interp.execute_bytes(source, data)
-        assert any(r["name"] == "check" for r in results)
+        results = interp.execute_bytes(source, bytes(data))
+        wide = next(r for r in results if r["name"] == "wide")
+        assert int(wide["display_value"], 16) == 300
+        assert wide["size"] == 4
+        check = next(r for r in results if r["name"] == "check")
+        assert check["offset"] == 100
+        assert check["display_value"] == "0x3C"
 
     def test_cast_float_to_int_truncates(self, interp: HexPatInterpreter) -> None:
         """Explicit cast of float to integer type truncates towards zero.
