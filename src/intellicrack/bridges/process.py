@@ -277,6 +277,10 @@ _DOTNET_METADATA_MIN_SIZE = 20
 _MAX_SYM_NAME: int = 2000
 _MAX_PATH: int = 260
 
+_MAX_HEAPS_PER_PROCESS: int = 4096
+_MAX_BLOCKS_PER_HEAP: int = 65_536
+_HEAP_WALK_BUDGET_SECONDS: float = 10.0
+
 _MITIGATION_FLAG_NAMES: dict[str, tuple[str, ...]] = {
     "DEP": ("Enable", "DisableAtlThunkEmulation"),
     "ASLR": (
@@ -1492,7 +1496,6 @@ class _ProcessBridgeBase(ToolBridgeBase):
         Returns:
             bool: True if closed.
         """
-        _logger.info("close_started", pid=self._attached_pid, has_handle=self._process_handle is not None)
         if self._process_handle is not None and self._kernel32 is not None:
             self._kernel32.CloseHandle(self._process_handle)
             self._process_handle = None
@@ -1819,58 +1822,6 @@ class _ProcessBridgeBase(ToolBridgeBase):
                 continue
             msg = _ERR_REG_VALUE_READ + value_name + f" (rc={rc})"
             raise ToolError(msg)
-
-    async def shutdown(self) -> None:
-        """Shutdown and cleanup resources.
-
-        Releases every Win32 handle the bridge tracked during the
-        session before dropping references to the loaded DLLs:
-
-        * Each mapped section view is unmapped through
-          :meth:`unmap_section`, which also releases the underlying
-          section handle.
-        * Any section handles that were created but never mapped (or
-          whose view-tracking entry was already cleared) are closed
-          directly via ``CloseHandle``.
-        * Pipe handles in :attr:`_pipe_handles` and device handles in
-          :attr:`_device_handles` are closed with ``CloseHandle`` and
-          purged from the tracking dicts.
-        * Finally, the attached process handle is released via
-          :meth:`close` and the cached DLL handles are cleared so the
-          bridge can be re-initialized cleanly.
-        """
-        for base_address in list(self._section_views):
-            try:
-                await self.unmap_section(base_address)
-            except ToolError:
-                _logger.warning("shutdown_unmap_section_failed", base_address=hex(base_address))
-
-        if self._kernel32 is not None:
-            close_handle = getattr(self._kernel32, "CloseHandle", None)
-            if close_handle is not None:
-                close_handle.argtypes = [wintypes.HANDLE]
-                close_handle.restype = wintypes.BOOL
-                for handle in list(self._section_handles):
-                    close_handle(handle)
-                for handle in list(self._pipe_handles):
-                    close_handle(handle)
-                for handle in list(self._device_handles):
-                    close_handle(handle)
-
-        self._section_handles.clear()
-        self._section_views.clear()
-        self._pipe_handles.clear()
-        self._device_handles.clear()
-
-        await self.close()
-        self._kernel32 = None
-        self._psapi = None
-        self._ntdll = None
-        self._advapi32 = None
-        self._user32 = None
-        self._dbghelp = None
-        await super().shutdown()
-        _logger.info("process_bridge_shutdown", bridge="process")
 
     @override
     async def is_available(self) -> bool:
@@ -2409,7 +2360,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If open fails.
         """
-        _logger.info("open_process_started", pid=pid, access=access)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -2455,7 +2405,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If termination fails.
         """
-        _logger.info("terminate_started", pid=pid or self._attached_pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -2497,7 +2446,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If suspension fails.
         """
-        _logger.info("suspend_started", pid=pid or self._attached_pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             raise ToolError(_ERR_NO_PROCESS)
@@ -2539,7 +2487,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If resume fails.
         """
-        _logger.info("resume_started", pid=pid or self._attached_pid)
         target_pid = pid or self._attached_pid
         if target_pid is None:
             raise ToolError(_ERR_NO_PROCESS)
@@ -2616,7 +2563,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If write fails.
         """
-        _logger.info("write_memory_started", address=hex(address), size=len(data))
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2650,7 +2596,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If allocation fails.
         """
-        _logger.info("allocate_started", size=size, protection=protection)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2686,7 +2631,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If free fails.
         """
-        _logger.info("free_started", address=hex(address))
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -2719,7 +2663,6 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("protect_started", address=hex(address), size=size, protection=protection)
         if self._process_handle is None:
             raise ToolError(_ERR_NOT_ATTACHED)
         if self._kernel32 is None:
@@ -3830,7 +3773,6 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         Args:
             callback: Zero-argument callable invoked after a privilege mutation.
         """
-        _logger.info("add_privileges_changed_callback_started")
         if callback not in self._privileges_changed_callbacks:
             self._privileges_changed_callbacks.append(callback)
 
@@ -4030,7 +3972,6 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("adjust_token_privilege_started", privilege=privilege_name, enable=enable, pid=pid)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -4297,9 +4238,6 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         used for bounds checking.
 
         Args:
-            cls: The owning bridge class used to resolve the static
-                ``_decode_object_type_name`` helper through normal
-                attribute lookup.
             buffer: Raw buffer from NtQueryObject.
             offset: Byte offset of the entry (and its UNICODE_STRING header) within buffer.
             ptr_size: Platform pointer size in bytes.
@@ -5543,7 +5481,6 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         Raises:
             ToolError: If operation fails.
         """
-        _logger.info("set_thread_context_started", tid=tid, register_count=len(registers))
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -6395,7 +6332,17 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         """Enumerate process heaps with per-heap block details.
 
         Uses ``Toolhelp32Snapshot`` to walk the heap list and each heap's
-        blocks via ``Heap32First`` / ``Heap32Next``.
+        blocks via ``Heap32First`` / ``Heap32Next``. Walking the blocks of a
+        live process is inherently unbounded -- the heap mutates underneath the
+        snapshot, so ``Heap32Next`` can return entries effectively forever on a
+        busy target. To keep the call bounded the walk stops on the first of
+        three conditions: a wall-clock budget of
+        :data:`_HEAP_WALK_BUDGET_SECONDS`, a per-heap block cap of
+        :data:`_MAX_BLOCKS_PER_HEAP`, or a heap-count cap of
+        :data:`_MAX_HEAPS_PER_PROCESS`. Reaching any limit is logged and the
+        partial result is returned; the heap list is always walked first so the
+        per-heap ``id``/``flags`` metadata is complete even when block
+        collection is truncated.
 
         Args:
             pid: Process ID (uses current if not specified).
@@ -6428,9 +6375,10 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
 
         heap32first = getattr(self._kernel32, "Heap32First", None)
         heap32next = getattr(self._kernel32, "Heap32Next", None)
+        deadline = time.monotonic() + _HEAP_WALK_BUDGET_SECONDS
 
         try:
-            self._collect_heap_entries(snapshot, hl, heaps, target_pid, heap32first, heap32next)
+            self._collect_heap_entries(snapshot, hl, heaps, target_pid, heap32first, heap32next, deadline)
         finally:
             self._kernel32.CloseHandle(snapshot)
 
@@ -6445,8 +6393,13 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         target_pid: int,
         heap32first: Callable[..., int] | None,
         heap32next: Callable[..., int] | None,
+        deadline: float,
     ) -> None:
         """Walk a heap snapshot and collect each heap with its block list.
+
+        Enumeration stops after :data:`_MAX_HEAPS_PER_PROCESS` heaps, or once
+        ``deadline`` is reached, so a process with a pathological heap count or
+        an actively mutating heap cannot stall the walk.
 
         Args:
             snapshot: ``CreateToolhelp32Snapshot`` handle to iterate.
@@ -6458,18 +6411,35 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
                 is unavailable.
             heap32next: ``Heap32Next`` callable or ``None`` when the API
                 is unavailable.
+            deadline: ``time.monotonic`` value past which the walk halts and
+                returns the partial result gathered so far.
         """
         if self._kernel32 is None:
             return
         if not self._kernel32.Heap32ListFirst(snapshot, ctypes.byref(hl)):
             return
         while True:
-            blocks = self._collect_heap_blocks(target_pid, hl.th32HeapID, heap32first, heap32next)
+            blocks = self._collect_heap_blocks(target_pid, hl.th32HeapID, heap32first, heap32next, deadline)
             heaps.append({
                 "id": hl.th32HeapID,
                 "flags": hl.dwFlags,
                 "blocks": blocks,
             })
+            if len(heaps) >= _MAX_HEAPS_PER_PROCESS:
+                _logger.warning(
+                    "heap_list_enumeration_capped",
+                    pid=target_pid,
+                    cap=_MAX_HEAPS_PER_PROCESS,
+                )
+                break
+            if time.monotonic() >= deadline:
+                _logger.warning(
+                    "heap_enumeration_budget_exhausted",
+                    pid=target_pid,
+                    budget_seconds=_HEAP_WALK_BUDGET_SECONDS,
+                    heaps_collected=len(heaps),
+                )
+                break
             hl.dwSize = ctypes.sizeof(HEAPLIST32)
             if not self._kernel32.Heap32ListNext(snapshot, ctypes.byref(hl)):
                 break
@@ -6480,8 +6450,16 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         heap_id: int,
         heap32first: Callable[..., int] | None,
         heap32next: Callable[..., int] | None,
+        deadline: float,
     ) -> list[dict[str, object]]:
-        """Enumerate every block of a single heap via ``Heap32First/Next``.
+        """Enumerate blocks of a single heap via ``Heap32First/Next``.
+
+        Block collection stops on the first of three conditions:
+        :data:`_MAX_BLOCKS_PER_HEAP` entries, the ``deadline`` wall-clock value,
+        or ``Heap32Next`` reporting no further blocks. The deadline guard is the
+        guarantee of termination: a live heap with millions of blocks (or one
+        mutating during the walk so ``Heap32Next`` never reports the end) cannot
+        make this enumeration run unbounded.
 
         Args:
             target_pid: Owner PID for the heap.
@@ -6490,6 +6468,8 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
                 is unavailable.
             heap32next: ``Heap32Next`` callable or ``None`` when the API
                 is unavailable.
+            deadline: ``time.monotonic`` value past which the walk halts and
+                returns the partial block list gathered so far.
 
         Returns:
             list[dict[str, object]]: A dict per block with ``address``,
@@ -6509,6 +6489,22 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
                 "size": he.dwBlockSize,
                 "flags": he.dwFlags,
             })
+            if len(blocks) >= _MAX_BLOCKS_PER_HEAP:
+                _logger.warning(
+                    "heap_block_enumeration_capped",
+                    pid=target_pid,
+                    heap_id=heap_id,
+                    cap=_MAX_BLOCKS_PER_HEAP,
+                )
+                break
+            if time.monotonic() >= deadline:
+                _logger.warning(
+                    "heap_block_budget_exhausted",
+                    pid=target_pid,
+                    heap_id=heap_id,
+                    blocks_collected=len(blocks),
+                )
+                break
             he.dwSize = ctypes.sizeof(HEAPENTRY32)
             if not heap32next(ctypes.byref(he)):
                 break
@@ -6789,7 +6785,6 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         Raises:
             ToolError: If the process or token cannot be opened.
         """
-        _logger.info("remove_privilege_started", pid=pid, privilege_name=privilege_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
         if self._advapi32 is None:
@@ -7470,7 +7465,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         Raises:
             ToolError: If write fails.
         """
-        _logger.info("process_pipe_write_started", handle=handle, data_size=len(data))
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_write")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -7494,7 +7488,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.info("process_pipe_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="pipe_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -8124,7 +8117,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         Raises:
             ToolError: If kernel32 is unavailable or CloseHandle fails.
         """
-        _logger.info("process_device_close_started", handle=handle)
         if self._kernel32 is None:
             _logger.error("kernel32_unavailable", operation="device_close")
             raise ToolError(_ERR_KERNEL32_NA)
@@ -8839,7 +8831,6 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
                 ``"SECTION_NAME_COLLISION"`` when the failure was a
                 duplicate name, otherwise ``"SECTION_CREATE_FAILED"``.
         """
-        _logger.info("create_section_started", size=size, section_name=section_name)
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
@@ -9162,3 +9153,55 @@ class ProcessBridge(_ProcessBridgeRuntimeMixin):
     resolve through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit. The public
     interface, attribute set, and behavior are identical to the pre-refactor monolithic class.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown and cleanup resources.
+
+        Releases every Win32 handle the bridge tracked during the
+        session before dropping references to the loaded DLLs:
+
+        * Each mapped section view is unmapped through
+          :meth:`unmap_section`, which also releases the underlying
+          section handle.
+        * Any section handles that were created but never mapped (or
+          whose view-tracking entry was already cleared) are closed
+          directly via ``CloseHandle``.
+        * Pipe handles in :attr:`_pipe_handles` and device handles in
+          :attr:`_device_handles` are closed with ``CloseHandle`` and
+          purged from the tracking dicts.
+        * Finally, the attached process handle is released via
+          :meth:`close` and the cached DLL handles are cleared so the
+          bridge can be re-initialized cleanly.
+        """
+        for base_address in list(self._section_views):
+            try:
+                await self.unmap_section(base_address)
+            except ToolError:
+                _logger.warning("shutdown_unmap_section_failed", base_address=hex(base_address))
+
+        if self._kernel32 is not None:
+            close_handle = getattr(self._kernel32, "CloseHandle", None)
+            if close_handle is not None:
+                close_handle.argtypes = [wintypes.HANDLE]
+                close_handle.restype = wintypes.BOOL
+                for handle in list(self._section_handles):
+                    close_handle(handle)
+                for handle in list(self._pipe_handles):
+                    close_handle(handle)
+                for handle in list(self._device_handles):
+                    close_handle(handle)
+
+        self._section_handles.clear()
+        self._section_views.clear()
+        self._pipe_handles.clear()
+        self._device_handles.clear()
+
+        await self.close()
+        self._kernel32 = None
+        self._psapi = None
+        self._ntdll = None
+        self._advapi32 = None
+        self._user32 = None
+        self._dbghelp = None
+        await super().shutdown()
+        _logger.info("process_bridge_shutdown", bridge="process")

@@ -47,8 +47,10 @@ class TestMemoryFunctions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("<I", 0x12345678) + bytes(16)
-        source = "u8 offset_result @ 0;\nu32 check = read_unsigned(0, 4);\n"
-        interp.execute_bytes(source, data)
+        source = "u32 check = read_unsigned(0, 4);\nu8 marker @ (check == 0x12345678 ? 5 : 6);"
+        results = interp.execute_bytes(source, data)
+        marker = next(r for r in results if r["name"] == "marker")
+        assert marker["offset"] == 5
 
     def test_read_signed_negative(self, interp: HexPatInterpreter) -> None:
         """read_signed reads a negative signed byte.
@@ -57,10 +59,13 @@ class TestMemoryFunctions:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = struct.pack("b", -42) + bytes(15)
+        assert data[0] == 0xD6
         source = "s8 val @ 0;\nu8 ok @ 0;"
         results = interp.execute_bytes(source, data)
         signed_field = next(r for r in results if r["name"] == "val")
         assert signed_field["display_value"] == "-42"
+        assert signed_field["raw_bytes"] == [0xD6]
+        assert signed_field["size"] == 1
 
     def test_read_string_returns_text(self, interp: HexPatInterpreter) -> None:
         """read_string reads a null-terminated UTF-8 string from data.
@@ -68,10 +73,14 @@ class TestMemoryFunctions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = b"Hello\x00" + bytes(10)
-        source = "str text @ 0;\n"
+        data = b"Hello\x00World\x00" + bytes(10)
+        source = "str text @ 0;\nstr second @ 6;\n"
         results = interp.execute_bytes(source, data)
-        assert any("Hello" in str(r["display_value"]) for r in results)
+        text = next(r for r in results if r["name"] == "text")
+        second = next(r for r in results if r["name"] == "second")
+        assert "Hello" in str(text["display_value"])
+        assert "World" not in str(text["display_value"])
+        assert "World" in str(second["display_value"])
 
     def test_find_sequence_finds_pattern(self, interp: HexPatInterpreter) -> None:
         """find_sequence returns the correct offset of a byte pattern.
@@ -79,10 +88,13 @@ class TestMemoryFunctions:
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes([0, 1, 2, 0xDE, 0xAD, 0xBE, 0xEF, 0, 0, 0])
-        source = 'u8 found = find_sequence(0, "DEADBEEF");\nu8 ok @ 0;'
+        data = bytes([0, 1, 2]) + b"MAGIC" + bytes([0xAB, 0, 0])
+        assert data.index(b"MAGIC") == 3
+        source = 'u8 found = find_sequence(0, "MAGIC");\nu8 at_found @ (found + 5);'
         results = interp.execute_bytes(source, data)
-        assert any(r["name"] == "ok" for r in results)
+        at_found = next(r for r in results if r["name"] == "at_found")
+        assert at_found["offset"] == 8
+        assert at_found["display_value"] == "0xAB"
 
     def test_mem_size_via_builtin(self) -> None:
         """BuiltinFunctions._mem_size returns the data length."""

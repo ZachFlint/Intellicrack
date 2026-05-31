@@ -102,7 +102,7 @@ def safe_int_from_str(
     try:
         return int(value, base)
     except (ValueError, TypeError) as exc:
-        _logger.warning(
+        _logger.debug(
             "safe_int_parse_failed",
             context=context,
             raw_repr=repr(value),

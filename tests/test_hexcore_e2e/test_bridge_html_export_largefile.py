@@ -134,9 +134,9 @@ class TestHTMLExport:
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
         html = _run(bridge.export_annotated_html())
-        assert "&#38;" in html
-        assert "&#60;" in html
-        assert "&#62;" in html
+        assert "&amp;" in html
+        assert "&lt;" in html
+        assert "&gt;" in html
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:
         """Verify export_annotated_html raises RuntimeError without a document.

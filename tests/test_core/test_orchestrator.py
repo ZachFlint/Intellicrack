@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -18,7 +19,7 @@ from intellicrack.core.orchestrator import (
 )
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ConfirmationLevel
+from intellicrack.core.types import ConfirmationLevel, ToolCall
 from intellicrack.providers.registry import ProviderRegistry
 
 
@@ -159,14 +160,36 @@ async def test_start_session_no_provider(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_cancel(tmp_path: Path) -> None:
-    """Verify cancel executes without error.
+async def test_cancel_resolves_in_flight_confirmation(tmp_path: Path) -> None:
+    """Verify cancel actually cancels an outstanding confirmation future.
+
+    Drives a real destructive tool call through ``request_confirmation`` so a
+    confirmation future is genuinely pending, then asserts ``cancel()`` marshals
+    it: the awaiting coroutine resolves to ``False`` and the underlying future
+    is cancelled rather than left dangling.
 
     Args:
         tmp_path: Pytest temporary directory.
     """
     orch = _make_orchestrator(tmp_path)
+    loop = asyncio.get_running_loop()
+    awaited_future: asyncio.Future[bool] = loop.create_future()
+
+    def _callback(_call: ToolCall) -> asyncio.Future[bool]:
+        return awaited_future
+
+    orch.set_async_confirmation_callback(_callback)
+    call = ToolCall(id="cancel-1", tool_name="frida", function_name="frida.write_memory", arguments={})
+    confirm_task = asyncio.create_task(orch.request_confirmation(call))
+    await asyncio.sleep(0)
+    assert orch.pending_confirmation is not None
+
     await orch.cancel()
+
+    result = await asyncio.wait_for(confirm_task, timeout=1.0)
+    assert result is False
+    assert awaited_future.cancelled()
+    assert orch.pending_confirmation is None
 
 
 def test_orchestrator_custom_config(tmp_path: Path) -> None:

@@ -150,6 +150,7 @@ class _PatternHarness(QWidget, PatternEditorMixin):
         self._hex_widget = None
         self._file_path = None
         self._pattern_frame = None
+        self._pattern_completer = None
         self._pattern_dsl_editor = None
         self._pattern_json_preview = None
         self._pattern_library_tree = None

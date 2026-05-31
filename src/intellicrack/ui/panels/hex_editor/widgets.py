@@ -118,6 +118,22 @@ class EntropyGraphWidget(QWidget):
         self._block_size = block_size
         self.update()
 
+    def entropy_values(self) -> list[float]:
+        """Return the per-block entropy values currently displayed.
+
+        Returns:
+            list[float]: A copy of the loaded per-block entropy values.
+        """
+        return list(self._entropy_values)
+
+    def block_size(self) -> int:
+        """Return the block size currently used to map clicks to offsets.
+
+        Returns:
+            int: Block size in bytes.
+        """
+        return self._block_size
+
     @override
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         """Render the entropy line chart.
@@ -222,6 +238,22 @@ class ByteDistributionWidget(QWidget):
         """
         self._counts = list(counts) if len(counts) == BYTE_VALUES_COUNT else ([0] * BYTE_VALUES_COUNT)
         self.update()
+
+    def counts(self) -> list[int]:
+        """Return the byte-frequency counts currently displayed.
+
+        Returns:
+            list[int]: A copy of the 256-element histogram counts.
+        """
+        return list(self._counts)
+
+    def log_scale(self) -> bool:
+        """Return whether the histogram is currently in logarithmic scale.
+
+        Returns:
+            bool: ``True`` when the logarithmic Y scale is active.
+        """
+        return self._log_scale
 
     def toggle_log_scale(self) -> None:
         """Toggle between linear and logarithmic Y scale."""

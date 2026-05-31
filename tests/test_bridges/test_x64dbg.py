@@ -24,10 +24,10 @@ import os
 import sys
 from dataclasses import fields
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 
+from intellicrack.bridges.base import WatchpointInfo
 from intellicrack.bridges.x64dbg import (
     X64DbgBridge,
     get_capstone,
@@ -38,10 +38,6 @@ from intellicrack.core.types import (
     ToolError,
     ToolName,
 )
-
-
-if TYPE_CHECKING:
-    from intellicrack.bridges.base import WatchpointInfo
 
 
 if sys.platform == "win32":
@@ -65,7 +61,6 @@ TEST_BP_ID_THIRD = 3
 TEST_BP_COUNT_TWO = 2
 TEST_BP_COUNT_THREE = 3
 BUFFER_SIZE_4K = 4096
-DUMMY_RETURN_VALUE = 42
 
 
 def test_bridge_instantiation() -> None:
@@ -133,8 +128,13 @@ def test_breakpoint_id_increments(x64dbg_bridge: X64DbgBridge) -> None:
     assert x64dbg_bridge.next_bp_id == TEST_BP_COUNT_TWO
 
 
-def test_breakpoint_storage(x64dbg_bridge: X64DbgBridge) -> None:
-    """Verify breakpoints can be stored in internal dict.
+@pytest.mark.asyncio
+async def test_breakpoint_retrieved_via_get_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
+    """Verify a stored breakpoint is returned by the real get_breakpoints path.
+
+    Drives the actual ``get_breakpoints`` retrieval logic (local tracking
+    merge, with the plugin skipped because no pipe is connected) rather than
+    inspecting the backing dict directly.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
@@ -148,12 +148,18 @@ def test_breakpoint_storage(x64dbg_bridge: X64DbgBridge) -> None:
         condition=None,
     )
     x64dbg_bridge.breakpoints[TEST_ADDR_CODE_1] = bp
-    assert TEST_ADDR_CODE_1 in x64dbg_bridge.breakpoints
-    assert x64dbg_bridge.breakpoints[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
+
+    retrieved = await x64dbg_bridge.get_breakpoints()
+    by_address = {entry.address: entry for entry in retrieved}
+    assert TEST_ADDR_CODE_1 in by_address
+    assert by_address[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
+    assert by_address[TEST_ADDR_CODE_1].bp_type == "software"
+    assert by_address[TEST_ADDR_CODE_1].enabled is True
 
 
-def test_multiple_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
-    """Verify multiple breakpoints can be tracked.
+@pytest.mark.asyncio
+async def test_multiple_breakpoints_via_get_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
+    """Verify multiple stored breakpoints surface through get_breakpoints.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
@@ -169,9 +175,11 @@ def test_multiple_breakpoints(x64dbg_bridge: X64DbgBridge) -> None:
         )
         x64dbg_bridge.breakpoints[addr] = bp
 
-    assert len(x64dbg_bridge.breakpoints) == TEST_BP_COUNT_THREE
-    assert x64dbg_bridge.breakpoints[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
-    assert x64dbg_bridge.breakpoints[TEST_ADDR_CODE_3].id == TEST_BP_ID_THIRD
+    retrieved = await x64dbg_bridge.get_breakpoints()
+    by_address = {entry.address: entry for entry in retrieved}
+    assert len(by_address) == TEST_BP_COUNT_THREE
+    assert by_address[TEST_ADDR_CODE_1].id == TEST_BP_ID_FIRST
+    assert by_address[TEST_ADDR_CODE_3].id == TEST_BP_ID_THIRD
 
 
 def test_watchpoint_id_increments(x64dbg_bridge: X64DbgBridge) -> None:
@@ -185,43 +193,51 @@ def test_watchpoint_id_increments(x64dbg_bridge: X64DbgBridge) -> None:
     assert x64dbg_bridge.next_wp_id == TEST_BP_COUNT_TWO
 
 
-def test_watchpoint_storage(x64dbg_bridge: X64DbgBridge) -> None:
-    """Verify watchpoints can be stored.
+@pytest.mark.asyncio
+async def test_watchpoint_retrieved_via_get_watchpoints(x64dbg_bridge: X64DbgBridge) -> None:
+    """Verify a stored watchpoint is returned by the real get_watchpoints path.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
-    wp: WatchpointInfo = {
-        "id": TEST_BP_ID_FIRST,
-        "address": TEST_ADDR_DATA_1,
-        "size": TEST_WATCHPOINT_SIZE,
-        "watch_type": "write",
-        "enabled": True,
-        "hit_count": 0,
-    }
+    wp = WatchpointInfo(
+        id=TEST_BP_ID_FIRST,
+        address=TEST_ADDR_DATA_1,
+        size=TEST_WATCHPOINT_SIZE,
+        watch_type="write",
+        enabled=True,
+        hit_count=0,
+    )
     x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST] = wp
-    assert TEST_BP_ID_FIRST in x64dbg_bridge.watchpoints
-    assert x64dbg_bridge.watchpoints[TEST_BP_ID_FIRST].address == TEST_ADDR_DATA_1
+
+    retrieved = await x64dbg_bridge.get_watchpoints()
+    by_address = {entry.address: entry for entry in retrieved}
+    assert TEST_ADDR_DATA_1 in by_address
+    assert by_address[TEST_ADDR_DATA_1].id == TEST_BP_ID_FIRST
+    assert by_address[TEST_ADDR_DATA_1].size == TEST_WATCHPOINT_SIZE
+    assert by_address[TEST_ADDR_DATA_1].watch_type == "write"
 
 
-def test_tool_definition_exists(x64dbg_bridge: X64DbgBridge) -> None:
-    """Verify tool_definition property returns valid definition.
+def test_tool_definition_maps_to_callable_methods(x64dbg_bridge: X64DbgBridge) -> None:
+    """Verify the tool definition is the x64dbg tool and resolves to real methods.
+
+    Strengthens the trivial existence check: confirms the tool definition is
+    bound to this bridge, exposes functions, and that every advertised function
+    resolves to a callable method actually implemented on the bridge instance.
 
     Args:
         x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
     """
     tool_def = x64dbg_bridge.tool_definition
-    assert tool_def is not None
-
-
-def test_tool_definition_has_functions(x64dbg_bridge: X64DbgBridge) -> None:
-    """Verify tool definition includes functions.
-
-    Args:
-        x64dbg_bridge: Fresh X64DbgBridge instance supplied by the fixture.
-    """
-    tool_def = x64dbg_bridge.tool_definition
+    assert tool_def.tool_name == ToolName.X64DBG
     assert len(tool_def.functions) > 0
+
+    aliases = {"disassemble": "disassemble_at"}
+    for func in tool_def.functions:
+        method_name = func.name.replace("x64dbg.", "")
+        resolved = aliases.get(method_name, method_name)
+        method = getattr(x64dbg_bridge, resolved, None)
+        assert callable(method), f"Tool function {func.name} has no callable method {resolved}"
 
 
 def test_tool_definition_function_names(x64dbg_bridge: X64DbgBridge) -> None:
@@ -340,8 +356,14 @@ async def test_disassemble_requires_capstone(
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
-async def test_disassemble_real_code(x64dbg_bridge_64bit: X64DbgBridge) -> None:
-    """Test disassembling real code from current process.
+async def test_disassemble_real_exported_function(x64dbg_bridge_64bit: X64DbgBridge) -> None:
+    """Disassemble a real exported kernel32 function and verify real mnemonics.
+
+    Resolves the address of ``kernel32!Sleep`` (a genuine block of x86-64
+    machine code), disassembles it through the bridge, and verifies the
+    decoded instructions are real: every line has a non-empty mnemonic, the
+    decoded raw bytes match the bytes actually present in process memory, and
+    the instruction addresses advance monotonically from the entry.
 
     Args:
         x64dbg_bridge_64bit: Bridge fixture configured for 64-bit disassembly.
@@ -349,16 +371,29 @@ async def test_disassemble_real_code(x64dbg_bridge_64bit: X64DbgBridge) -> None:
     if get_capstone() is None:
         pytest.skip("capstone not available")
 
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_proc_address = kernel32.GetProcAddress
+    get_proc_address.restype = ctypes.c_void_p
+    get_proc_address.argtypes = [wintypes.HMODULE, ctypes.c_char_p]
+    module_handle = ctypes.c_void_p(kernel32._handle).value
+    proc = get_proc_address(module_handle, b"Sleep")
+    assert proc, "Failed to resolve kernel32!Sleep address"
+    func_addr = int(proc)
+
     x64dbg_bridge_64bit.attached_pid = os.getpid()
-
-    def dummy_function() -> int:
-        return DUMMY_RETURN_VALUE
-
-    func_addr = id(dummy_function.__code__)
 
     result = await x64dbg_bridge_64bit.disassemble_at(func_addr, TEST_DISASM_COUNT_SMALL)
     assert isinstance(result, list)
     assert len(result) > 0
+
+    raw = await x64dbg_bridge_64bit.read_memory(func_addr, TEST_DISASM_COUNT_SMALL * 15)
+
+    assert result[0].address == func_addr
+    for line in result:
+        assert line.mnemonic, "Disassembled line is missing a mnemonic"
+        decoded_bytes = bytes.fromhex(line.bytes_str.replace(" ", ""))
+        offset = line.address - func_addr
+        assert raw[offset : offset + len(decoded_bytes)] == decoded_bytes
 
 
 @pytest.mark.asyncio
@@ -371,16 +406,17 @@ async def test_find_pattern_in_own_memory(x64dbg_bridge: X64DbgBridge) -> None:
     """
     x64dbg_bridge.attached_pid = os.getpid()
 
-    test_pattern = b"UNIQUE_PATTERN_FOR_TEST_12345"
-    buffer = ctypes.create_string_buffer(test_pattern)
-    start_addr = ctypes.addressof(buffer)
+    needle = b"UNIQUE_PATTERN_FOR_TEST_12345"
+    buffer = ctypes.create_string_buffer(needle)
+    buffer_addr = ctypes.addressof(buffer)
 
-    results = await x64dbg_bridge.scan_memory(
-        pattern=b"UNIQUE_PATTERN_FOR_TEST",
-    )
+    results = await x64dbg_bridge.scan_memory(pattern=needle)
 
     assert isinstance(results, list)
-    assert any(r.address >= start_addr for r in results)
+    matches_at_buffer = [r for r in results if r.address == buffer_addr]
+    assert matches_at_buffer, "Pattern not found at the address of the planted buffer"
+    matched_bytes = bytes.fromhex(matches_at_buffer[0].matched_bytes.replace(" ", ""))
+    assert matched_bytes == needle
 
 
 @pytest.mark.asyncio
@@ -469,8 +505,13 @@ async def _assert_readonly_region_present(bridge: X64DbgBridge, buffer_address: 
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 async def test_assemble_with_keystone(x64dbg_bridge_64bit: X64DbgBridge) -> None:
-    """Test assembling with keystone if available.
+    """Assemble a real instruction and verify it is written into live memory.
+
+    Assembles ``nop`` with keystone and writes it into a real writable buffer
+    in the current process, then reads the buffer back through the bridge to
+    confirm the assembled byte was actually committed to process memory.
 
     Args:
         x64dbg_bridge_64bit: Bridge fixture configured for 64-bit disassembly.
@@ -478,5 +519,12 @@ async def test_assemble_with_keystone(x64dbg_bridge_64bit: X64DbgBridge) -> None
     if get_keystone() is None:
         pytest.skip("keystone not available")
 
-    result = await x64dbg_bridge_64bit.assemble_at(TEST_ADDR_CODE_1, "nop")
+    x64dbg_bridge_64bit.attached_pid = os.getpid()
+    buffer = ctypes.create_string_buffer(16)
+    buffer_address = ctypes.addressof(buffer)
+
+    result = await x64dbg_bridge_64bit.assemble_at(buffer_address, "nop")
     assert result == b"\x90"
+
+    written = await x64dbg_bridge_64bit.read_memory(buffer_address, 1)
+    assert written == b"\x90"

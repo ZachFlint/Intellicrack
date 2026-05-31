@@ -502,12 +502,12 @@ class TestInitialization:
         assert await process_bridge.is_available() is True
 
     async def test_tool_definition_count(self, process_bridge: ProcessBridge) -> None:
-        """Verify tool definition has 53 functions.
+        """Verify tool definition has 54 functions.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert len(process_bridge.tool_definition.functions) == 53
+        assert len(process_bridge.tool_definition.functions) == 54
 
 
 class TestProcessListing:
@@ -564,7 +564,7 @@ class TestProcessListing:
             assert key in entry
 
     async def test_list_processes_detailed_self_arch(self, process_bridge: ProcessBridge) -> None:
-        """Verify our process architecture is x64 or x86.
+        """Verify our process architecture is x86_64 or x86.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
@@ -574,7 +574,7 @@ class TestProcessListing:
         assert self_proc is not None
         arch = self_proc["architecture"]
         assert isinstance(arch, str)
-        assert arch in {"x64", "x86"}
+        assert arch in {"x86_64", "x86"}
 
     async def test_list_processes_detailed_self_memory(self, process_bridge: ProcessBridge) -> None:
         """Verify our process has positive memory usage.
@@ -2861,7 +2861,8 @@ class TestF0021StaticTLSSlots:
         """
         k32.TlsSetValue(slot, ctypes.c_void_p(sentinel))
         main_tid = k32.GetCurrentThreadId()
-        tls_values = await attached_bridge.get_tls_values(main_tid)
+        max_slots = max(TLS_STATIC_SLOT_COUNT, slot + 1)
+        tls_values = await attached_bridge.get_tls_values(main_tid, max_slots=max_slots)
 
         found = next((s for s in tls_values if s.get("index") == slot), None)
         assert found is not None, f"TLS slot {slot} with value {hex(sentinel)} not found in {tls_values}"

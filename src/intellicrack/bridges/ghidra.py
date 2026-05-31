@@ -1359,47 +1359,6 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             self._publish_tool_state()
             _logger.info("ghidra_bridge_connected", port=self._port)
 
-    async def shutdown(self) -> None:
-        """Shutdown Ghidra and cleanup resources.
-
-        Closes the active ghidra_bridge RPC client (preventing socket leaks), terminates the headless subprocess, joins the stdout/stderr
-        drain threads, and removes the bridge script under a process-wide lock to prevent races with concurrent ``start_headless``
-        invocations.
-        """
-        if self._bridge is not None:
-            await asyncio.to_thread(self._close_bridge_client, self._bridge)
-            self._bridge = None
-
-        if self._process is not None:
-            pid = self._process.pid
-            process_manager = ProcessManager.get_instance()
-
-            self._process.terminate()
-            try:
-                await asyncio.wait_for(
-                    asyncio.to_thread(self._process.wait),
-                    timeout=10,
-                )
-            except TimeoutError:
-                _logger.warning("ghidra_process_terminate_timeout", pid=pid)
-                self._process.kill()
-                await asyncio.to_thread(self._process.wait)
-
-            process_manager.unregister(pid)
-            self._process = None
-
-        await self._join_drain_threads()
-
-        if self._bridge_script_path is not None:
-            await asyncio.to_thread(self._cleanup_bridge_script, self._bridge_script_path)
-            self._bridge_script_path = None
-
-        self._binary_path = None
-        project_path_str = str(self._project_path) if self._project_path is not None else None
-        self._project_path = None
-        await super().shutdown()
-        _logger.info("ghidra_bridge_shutdown", bridge="ghidra", project_path=project_path_str)
-
     async def _join_drain_threads(self, join_seconds: float = 5.0) -> None:
         """Wait for stdout/stderr drain threads to terminate.
 
@@ -5585,6 +5544,47 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
     set including call-tree exploration, decompiler configuration, program metadata, external references, thunk handling, and bookmark/label
     management.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown Ghidra and cleanup resources.
+
+        Closes the active ghidra_bridge RPC client (preventing socket leaks), terminates the headless subprocess, joins the stdout/stderr
+        drain threads, and removes the bridge script under a process-wide lock to prevent races with concurrent ``start_headless``
+        invocations.
+        """
+        if self._bridge is not None:
+            await asyncio.to_thread(self._close_bridge_client, self._bridge)
+            self._bridge = None
+
+        if self._process is not None:
+            pid = self._process.pid
+            process_manager = ProcessManager.get_instance()
+
+            self._process.terminate()
+            try:
+                await asyncio.wait_for(
+                    asyncio.to_thread(self._process.wait),
+                    timeout=10,
+                )
+            except TimeoutError:
+                _logger.warning("ghidra_process_terminate_timeout", pid=pid)
+                self._process.kill()
+                await asyncio.to_thread(self._process.wait)
+
+            process_manager.unregister(pid)
+            self._process = None
+
+        await self._join_drain_threads()
+
+        if self._bridge_script_path is not None:
+            await asyncio.to_thread(self._cleanup_bridge_script, self._bridge_script_path)
+            self._bridge_script_path = None
+
+        self._binary_path = None
+        project_path_str = str(self._project_path) if self._project_path is not None else None
+        self._project_path = None
+        await super().shutdown()
+        _logger.info("ghidra_bridge_shutdown", bridge="ghidra", project_path=project_path_str)
 
     async def get_function_body(self, address: int) -> dict[str, Any]:
         """Get address ranges, thunk status, and size for a function.

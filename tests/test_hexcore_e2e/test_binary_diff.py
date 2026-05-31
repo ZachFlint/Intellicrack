@@ -46,7 +46,12 @@ class TestDiffBytes:
         assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
 
     def test_completely_different_bytes_shows_low_similarity(self, hexcore: types.ModuleType) -> None:
-        """Verify that diff_bytes on disjoint payloads reports low similarity.
+        """Verify that diff_bytes on disjoint payloads reports them as different.
+
+        The native diff returns ``files_identical``, ``total_differences`` and a
+        list of ``regions``; there is no ``similarity`` field. Two disjoint
+        64-byte payloads must be reported as not identical with a large number
+        of differing bytes and no full-length matching region.
 
         Args:
             hexcore: The native module fixture.
@@ -55,10 +60,12 @@ class TestDiffBytes:
         data_b = b"\xff" * 64
         result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b)
         assert isinstance(result, dict)
-        if not result.get("files_identical"):
-            similarity: float = result.get("similarity", 1.0)
-            assert isinstance(similarity, float)
-            assert similarity < 0.5
+        assert result.get("files_identical") is False
+        total_differences: int = result["total_differences"]
+        assert total_differences >= 64
+        regions: list[dict[str, Any]] = result["regions"]
+        match_lengths = [r["length"] for r in regions if r["diff_type"] == "match"]
+        assert all(length < 64 for length in match_lengths)
 
     def test_diff_bytes_result_is_dict(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes always returns a dict regardless of input.
@@ -152,10 +159,13 @@ class TestDiffFiles:
         f_a = _write_bin(tmp_path, "a.bin", data_a)
         f_b = _write_bin(tmp_path, "b.bin", data_b)
         result: dict[str, Any] = hexcore.diff_files(str(f_a), str(f_b))
-        assert not result.get("files_identical")
-        similarity: float = result.get("similarity", 1.0)
-        assert isinstance(similarity, float)
-        assert similarity < 1.0
+        assert result.get("files_identical") is False
+        assert result["total_differences"] >= 50
+        regions: list[dict[str, Any]] = result["regions"]
+        non_match = [r for r in regions if r["diff_type"] != "match" and r["length"] > 0]
+        assert non_match, "expected at least one non-match region for the modified tail"
+        modified_offsets = [r["offset_a"] for r in non_match]
+        assert any(offset >= 50 for offset in modified_offsets)
 
     def test_diff_files_on_different_sizes(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files handles files of different lengths without error.

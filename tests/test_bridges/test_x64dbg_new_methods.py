@@ -204,11 +204,11 @@ class TestFindPattern:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\x48\x89\x5c\x24\x08"
+        marker = b"\x48\x89\x5c\x24\x08\x57\x48\x83\xec\x20\x48\x8b\xd9\x90\xcc\xc3"
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.find_pattern("48 89 5C 24 08")
+        results = await attached_bridge.find_pattern("48 89 5C 24 08 57 48 83 EC 20 48 8B D9 90 CC C3")
         assert isinstance(results, list)
         found = any(int(r["offset"]) == buf_addr for r in results)
         assert found, f"Pattern not found at expected address {hex(buf_addr)}"
@@ -220,11 +220,11 @@ class TestFindPattern:
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
-        marker = b"\xcc\xcc\xcc\xcc"
+        marker = b"\xfa\xce\xfe\xed\xca\xfe\xba\xbe\xde\xad\xc0\xde\x13\x37\x42\x99"
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.find_pattern("CCCCCCCC")
+        results = await attached_bridge.find_pattern("FACEFEEDCAFEBABEDEADC0DE13374299")
         assert isinstance(results, list)
         found = any(int(r["offset"]) == buf_addr for r in results)
         assert found, f"Compact pattern not found at {hex(buf_addr)}"

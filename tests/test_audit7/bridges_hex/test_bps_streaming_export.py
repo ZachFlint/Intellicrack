@@ -45,10 +45,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import mmap
-import os
-import tempfile
 import tracemalloc
-from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import intellicrack_hexcore
@@ -59,6 +56,7 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
+    from pathlib import Path
 
 
 _LARGE_SOURCE_BYTES: Final[int] = 2 * 1024 * 1024 * 1024 + 4096
@@ -147,23 +145,27 @@ def _make_sparse_source(path: Path, size: int) -> None:
         fh.truncate(size)
 
 
-def _open_bridge_with_target(payload: bytes) -> tuple[HexEditorBridge, Path]:
-    """Return a bridge whose document holds ``payload``.
+def _open_bridge_with_target(payload: bytes) -> HexEditorBridge:
+    """Return a bridge whose document holds ``payload`` in memory.
+
+    The target document is opened from bytes rather than from a temp
+    file so the bridge holds no operating-system handle on a deletable
+    path. On Windows a file kept open (or memory-mapped) by the native
+    ``HexDocument`` cannot be unlinked, which previously made the
+    per-test target cleanup raise ``PermissionError``; an in-memory
+    target removes that handle entirely while exercising the same
+    export code path (the export reads the target from
+    ``bridge.document`` regardless of how the document was opened).
 
     Args:
         payload: Raw bytes the bridge's document should expose.
 
     Returns:
-        tuple[HexEditorBridge, Path]: The bridge instance and the
-        backing temp-file path the caller is responsible for unlinking.
+        HexEditorBridge: The bridge instance with an in-memory document.
     """
-    fd, path_str = tempfile.mkstemp(suffix=".bin")
-    os.close(fd)
-    path = Path(path_str)
-    path.write_bytes(payload)
     bridge = HexEditorBridge()
-    bridge.document = intellicrack_hexcore.HexDocument.open(str(path))
-    return bridge, path
+    bridge.document = intellicrack_hexcore.HexDocument.open_bytes(payload)
+    return bridge
 
 
 class _SourceCapture:
@@ -276,7 +278,7 @@ class TestBpsStreamingPyfallback:
         """
         source_path = tmp_path / "small_bps_source.bin"
         _make_sparse_source(source_path, _SMALL_SOURCE_BYTES)
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_bps_patch", capture)
         try:
@@ -286,7 +288,6 @@ class TestBpsStreamingPyfallback:
             fn(str(source_path))
         finally:
             restore()
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
         assert capture.source_type is mmap.mmap, (
             f"BPS fallback handed encoder source of type {capture.source_type}; expected mmap.mmap (F-0042 regression)"
@@ -312,14 +313,13 @@ class TestBpsStreamingPyfallback:
         """
         source_path = tmp_path / "large_bps_source.bin"
         _make_sparse_source(source_path, _LARGE_SOURCE_BYTES)
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_bps_patch", capture)
         try:
             peak = _trace_pyfallback(bridge, "_export_patches_bps_pyfallback", source_path)
         finally:
             restore()
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
         assert capture.source_type is mmap.mmap, (
             f"BPS fallback materialised source as {capture.source_type} instead of mmap.mmap (F-0042 regression)"
@@ -344,11 +344,10 @@ class TestBpsStreamingPyfallback:
         """
         source_path = tmp_path / "empty_bps_source.bin"
         source_path.write_bytes(b"")
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         try:
             self._assert_empty_source_returns_bps1(bridge, source_path)
         finally:
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
 
     @staticmethod
@@ -383,11 +382,10 @@ class TestBpsStreamingPyfallback:
         target[100:108] = b"\xde\xad\xbe\xef\xca\xfe\xba\xbe"
         source_path = tmp_path / "small_bps_roundtrip_source.bin"
         source_path.write_bytes(source)
-        bridge, target_path = _open_bridge_with_target(bytes(target))
+        bridge = _open_bridge_with_target(bytes(target))
         try:
             self._assert_small_source_roundtrip(bridge, source_path, source, bytes(target))
         finally:
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
 
     @staticmethod
@@ -428,7 +426,7 @@ class TestUpsStreamingPyfallback:
         """
         source_path = tmp_path / "small_ups_source.bin"
         _make_sparse_source(source_path, _SMALL_SOURCE_BYTES)
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_ups_patch", capture)
         try:
@@ -438,7 +436,6 @@ class TestUpsStreamingPyfallback:
             fn(str(source_path))
         finally:
             restore()
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
         assert capture.source_type is mmap.mmap, (
             f"UPS fallback handed encoder source of type {capture.source_type}; expected mmap.mmap (F-0042 regression)"
@@ -462,14 +459,13 @@ class TestUpsStreamingPyfallback:
         """
         source_path = tmp_path / "large_ups_source.bin"
         _make_sparse_source(source_path, _LARGE_SOURCE_BYTES)
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         capture = _SourceCapture()
         restore = _patch_builder(bridge, "_build_ups_patch", capture)
         try:
             peak = _trace_pyfallback(bridge, "_export_patches_ups_pyfallback", source_path)
         finally:
             restore()
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
         assert capture.source_type is mmap.mmap, (
             f"UPS fallback materialised source as {capture.source_type} instead of mmap.mmap (F-0042 regression)"
@@ -516,7 +512,7 @@ class TestBpsStreamingBackend:
         target[200:204] = b"\xff\xfe\xfd\xfc"
         source_path = tmp_path / "rust_path_bps_source.bin"
         source_path.write_bytes(source)
-        bridge, target_path = _open_bridge_with_target(bytes(target))
+        bridge = _open_bridge_with_target(bytes(target))
         try:
             b64 = _run(bridge.export_patches_bps(str(source_path)))
             decoded = base64.b64decode(b64)
@@ -524,7 +520,6 @@ class TestBpsStreamingBackend:
             applied = _call_apply(bridge, "_apply_bps_patch", decoded, source)
             assert applied == bytes(target)
         finally:
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
 
     def test_path_based_ups_export_returns_valid_patch(
@@ -541,7 +536,7 @@ class TestBpsStreamingBackend:
         target[300:308] = b"\x10\x11\x12\x13\x14\x15\x16\x17"
         source_path = tmp_path / "rust_path_ups_source.bin"
         source_path.write_bytes(source)
-        bridge, target_path = _open_bridge_with_target(bytes(target))
+        bridge = _open_bridge_with_target(bytes(target))
         try:
             b64 = _run(bridge.export_patches_ups(str(source_path)))
             decoded = base64.b64decode(b64)
@@ -549,7 +544,6 @@ class TestBpsStreamingBackend:
             applied = _call_apply(bridge, "_apply_ups_patch", decoded, source)
             assert applied == bytes(target)
         finally:
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
 
     def test_legacy_byte_slice_path_accepts_mmap(self, tmp_path: Path) -> None:
@@ -568,7 +562,7 @@ class TestBpsStreamingBackend:
         """
         source_path = tmp_path / "rust_legacy_bps_source.bin"
         _make_sparse_source(source_path, _SMALL_SOURCE_BYTES)
-        bridge, target_path = _open_bridge_with_target(_TARGET_PAYLOAD)
+        bridge = _open_bridge_with_target(_TARGET_PAYLOAD)
         captured: list[type] = []
 
         class _LegacyDoc:
@@ -623,7 +617,6 @@ class TestBpsStreamingBackend:
         try:
             _run(bridge.export_patches_bps(str(source_path)))
         finally:
-            target_path.unlink(missing_ok=True)
             source_path.unlink(missing_ok=True)
         assert captured, "legacy byte-slice path was not exercised"
         assert captured[-1] is mmap.mmap, (

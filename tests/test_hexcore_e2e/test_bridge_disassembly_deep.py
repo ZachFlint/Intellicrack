@@ -102,26 +102,38 @@ class TestDisassemblePeTextSection:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 
     def test_disassemble_pe_text_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that arch='auto' on the PE .text section produces non-empty results.
+        """Verify that arch='auto' from the PE header produces a result list.
+
+        Architecture auto-detection inspects the byte window passed to
+        ``disassemble``; the magic and machine fields it needs are at offset 0,
+        so ``arch='auto'`` is driven from offset 0 where the PE header lives.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=4, arch="auto"))
+        results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
         assert isinstance(results, list)
 
     def test_disassemble_pe_text_explicit_x86_64_matches_auto(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that arch='x86',mode='64' returns the same mnemonic as auto on PE .text.
+        """Verify auto-detected arch matches explicit x86-64 for the PE header.
+
+        Architecture auto-detection reads the magic and machine fields at the
+        start of the disassembled window, so both runs start at offset 0 where
+        the AMD64 PE header lives. The auto run must resolve to x86-64 and yield
+        the same first-instruction mnemonic as the explicit ``x86``/``64`` run.
+        The .text section's known ``int3`` bytes are validated separately.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        auto_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="auto"))
-        explicit_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="x86", mode="64"))
+        auto_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=1, arch="auto"))
+        explicit_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=1, arch="x86", mode="64"))
+        text_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(_PE_TEXT_OFFSET, count=1, arch="x86", mode="64"))
         assert explicit_results
-        assert explicit_results[0]["mnemonic"] == "int3"
-        if auto_results:
-            assert auto_results[0]["mnemonic"] == explicit_results[0]["mnemonic"]
+        assert auto_results
+        assert auto_results[0]["mnemonic"] == explicit_results[0]["mnemonic"]
+        assert text_results
+        assert text_results[0]["mnemonic"] == "int3"
 
 
 class TestDisassembleMzHeader:

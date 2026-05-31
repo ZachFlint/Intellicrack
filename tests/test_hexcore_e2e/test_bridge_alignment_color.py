@@ -48,7 +48,11 @@ class TestSnapToAlignment:
     """Tests for cursor alignment snapping."""
 
     def test_snap_to_alignment_512(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify snapping cursor at 1000 to 512-byte alignment returns 512.
+        """Verify snapping cursor at 1000 to 512-byte alignment returns 1024.
+
+        ``snap_to_alignment`` snaps to the nearest boundary. With the cursor at
+        1000 the boundaries are 512 (floor) and 1024 (ceil); 1000 is closer to
+        1024, so the result is the upper boundary 1024.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -59,7 +63,7 @@ class TestSnapToAlignment:
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(1000))
         result = _run(bridge.snap_to_alignment(512))
-        assert result == 512
+        assert result == 1024
 
     def test_snap_to_alignment_4096(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify snapping cursor at 5000 to 4096-byte alignment returns 4096.

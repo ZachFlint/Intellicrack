@@ -129,11 +129,14 @@ class TestHashAlgorithms:
     def test_blake2b_matches_hashlib_if_supported(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
         """Verify that compute_hash('blake2b') matches hashlib when the algorithm is built in.
 
+        The hexcore 'blake2b' algorithm is BLAKE2b with a 256-bit (32-byte) digest,
+        so the hashlib reference must use ``digest_size=32`` to match.
+
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
             sample_bytes: 256-byte test payload (0x00-0xFF).
         """
-        expected: str = hashlib.blake2b(sample_bytes).hexdigest()
+        expected: str = hashlib.blake2b(sample_bytes, digest_size=32).hexdigest()
         try:
             result: str = sample_doc_from_bytes.compute_hash("blake2b")
         except (RuntimeError, ValueError):
@@ -283,14 +286,12 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(sample_bytes) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0,
-            doc_length,
+            (0, doc_length),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -306,14 +307,12 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(sample_bytes[start:end]) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            start,
-            end,
+            (start, end),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -330,14 +329,12 @@ class TestCustomCRC:
         crc_val: int = _crc16_arc(sample_bytes)
         expected: str = f"{crc_val:04x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0,
-            doc_length,
+            (0, doc_length),
             0x8005,
             0x0000,
             16,
-            refin=True,
-            refout=True,
-            xorout=0x0000,
+            (True, True),
+            0x0000,
         )
         assert result.lower() == expected.lower()
 
@@ -352,7 +349,7 @@ class TestCustomCRC:
         end = 64
         crc_val: int = _crc16_arc(sample_bytes[start:end])
         expected: str = f"{crc_val:04x}"
-        result: str = sample_doc_from_bytes.compute_hash_custom_crc(start, end, 0x8005, 0x0000, 16, refin=True, refout=True, xorout=0x0000)
+        result: str = sample_doc_from_bytes.compute_hash_custom_crc((start, end), 0x8005, 0x0000, 16, (True, True), 0x0000)
         assert result.lower() == expected.lower()
 
     def test_crc32_output_format_is_hex_string(self, sample_doc_from_bytes: HexDocument) -> None:
@@ -363,14 +360,12 @@ class TestCustomCRC:
         """
         doc_length: int = sample_doc_from_bytes.length()
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0,
-            doc_length,
+            (0, doc_length),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         assert isinstance(result, str)
         assert result
@@ -387,14 +382,12 @@ class TestCustomCRC:
         crc_val: int = binascii.crc32(bytes([sample_bytes[offset]])) & 0xFFFFFFFF
         expected: str = f"{crc_val:08x}"
         result: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            offset,
-            offset + 1,
+            (offset, offset + 1),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         assert result.lower() == expected.lower()
 
@@ -405,23 +398,19 @@ class TestCustomCRC:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
         """
         crc_a: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            0,
-            64,
+            (0, 64),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         crc_b: str = sample_doc_from_bytes.compute_hash_custom_crc(
-            64,
-            128,
+            (64, 128),
             0x04C11DB7,
             0xFFFFFFFF,
             32,
-            refin=True,
-            refout=True,
-            xorout=0xFFFFFFFF,
+            (True, True),
+            0xFFFFFFFF,
         )
         assert crc_a != crc_b

@@ -212,10 +212,15 @@ class TestBitwiseTransforms:
 
 
 class TestXorTransform:
-    """Tests covering xor_key single-byte and multi-byte key transforms."""
+    """Tests covering the mask_xor transform with single- and multi-byte patterns.
+
+    The native registry exposes XOR masking as ``mask_xor``, which XORs each
+    byte with a repeating ``pattern`` parameter. A single-byte pattern is the
+    classic single-key XOR.
+    """
 
     def test_xor_single_byte_key_matches_manual(self, hexcore: types.ModuleType) -> None:
-        """Verify that xor_key with a single-byte key matches a manual XOR.
+        """Verify that mask_xor with a single-byte pattern matches a manual XOR.
 
         Args:
             hexcore: The native module fixture.
@@ -223,23 +228,23 @@ class TestXorTransform:
         key_byte = 0xAA
         input_data = bytes(range(16))
         doc = hexcore.HexDocument.open_bytes(input_data)
-        result = doc.transform_data("xor_key", 0, len(input_data), {"key": bytes([key_byte])})
+        result = doc.transform_data("mask_xor", 0, len(input_data), {"pattern": bytes([key_byte])})
         expected = bytes(b ^ key_byte for b in input_data)
         assert result == expected
 
     def test_xor_with_zero_key_is_identity(self, hexcore: types.ModuleType) -> None:
-        """Verify that XOR with a zero key leaves the data unchanged.
+        """Verify that mask_xor with a zero pattern leaves the data unchanged.
 
         Args:
             hexcore: The native module fixture.
         """
         input_data = bytes(range(32))
         doc = hexcore.HexDocument.open_bytes(input_data)
-        result = doc.transform_data("xor_key", 0, len(input_data), {"key": b"\x00"})
+        result = doc.transform_data("mask_xor", 0, len(input_data), {"pattern": b"\x00"})
         assert result == input_data
 
     def test_xor_is_its_own_inverse(self, hexcore: types.ModuleType) -> None:
-        """Verify that XORing twice with the same key restores the original data.
+        """Verify that mask_xor applied twice with the same pattern restores the original data.
 
         Args:
             hexcore: The native module fixture.
@@ -247,13 +252,13 @@ class TestXorTransform:
         key_byte = 0x5A
         input_data = bytes(range(16))
         doc_src = hexcore.HexDocument.open_bytes(input_data)
-        once = doc_src.transform_data("xor_key", 0, len(input_data), {"key": bytes([key_byte])})
+        once = doc_src.transform_data("mask_xor", 0, len(input_data), {"pattern": bytes([key_byte])})
         doc_xored = hexcore.HexDocument.open_bytes(once)
-        twice = doc_xored.transform_data("xor_key", 0, len(once), {"key": bytes([key_byte])})
+        twice = doc_xored.transform_data("mask_xor", 0, len(once), {"pattern": bytes([key_byte])})
         assert twice == input_data
 
     def test_xor_at_nonzero_offset(self, hexcore: types.ModuleType) -> None:
-        """Verify that xor_key only processes the specified offset range.
+        """Verify that mask_xor only processes the specified offset range.
 
         Args:
             hexcore: The native module fixture.
@@ -261,7 +266,7 @@ class TestXorTransform:
         key_byte = 0xFF
         input_data = bytes(range(16))
         doc = hexcore.HexDocument.open_bytes(input_data)
-        result = doc.transform_data("xor_key", 4, 4, {"key": bytes([key_byte])})
+        result = doc.transform_data("mask_xor", 4, 4, {"pattern": bytes([key_byte])})
         expected = bytes(b ^ key_byte for b in input_data[4:8])
         assert result == expected
 

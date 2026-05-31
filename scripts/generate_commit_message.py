@@ -582,14 +582,20 @@ def _subsplit_large_file_diff(file_diff: str) -> list[str]:
     is under ``_max_chars_per_piece()`` characters, which at 2 chars/token
     worst case guarantees tokens under ``CHUNK_TOKEN_TARGET``.
 
-    Prefers hunk boundaries, falls back to line boundaries within oversized
-    hunks, and hard-splits lines that individually exceed the limit.
+    Splits on ``@@`` hunk boundaries, grouping one or more whole hunks per
+    sub-chunk and re-prepending the original ``diff --git`` file header to
+    every emitted sub-chunk so each remains a self-describing, applicable
+    diff. A single hunk that on its own exceeds the limit is kept intact in
+    its own sub-chunk rather than being broken mid-hunk. When the file
+    contains no hunk boundaries (only one logical block), the body is split
+    on line boundaries and the header is re-prepended to each line piece so
+    every piece still identifies its file.
 
     Args:
         file_diff: The unified diff for a single file.
 
     Returns:
-        list[str]: Sub-chunks, each under the character target.
+        list[str]: Sub-chunks, each carrying the file header.
     """
     max_chars = _max_chars_per_piece()
     if len(file_diff) <= max_chars:
@@ -611,20 +617,18 @@ def _subsplit_large_file_diff(file_diff: str) -> list[str]:
         end = hunk_positions[idx + 1] if idx + 1 < len(hunk_positions) else len(file_diff)
         hunks.append(file_diff[pos:end])
 
+    if len(hunks) == 1:
+        body_budget = max(1, max_chars - header_size)
+        body_pieces = _split_text_by_lines(hunks[0], body_budget)
+        sub_chunks = [file_header + piece for piece in body_pieces]
+        _log(f"  Sub-split oversized single-hunk file into {len(sub_chunks)} line-based pieces")
+        return sub_chunks
+
     sub_chunks: list[str] = []
     current_hunks: list[str] = []
     current_size = header_size
 
     for hunk in hunks:
-        if header_size + len(hunk) > max_chars:
-            if current_hunks:
-                sub_chunks.append(file_header + "".join(current_hunks))
-                current_hunks = []
-                current_size = header_size
-            big_pieces = _split_text_by_lines(file_header + hunk, max_chars)
-            sub_chunks.extend(big_pieces)
-            continue
-
         if current_size + len(hunk) > max_chars and current_hunks:
             sub_chunks.append(file_header + "".join(current_hunks))
             current_hunks = []
@@ -1050,6 +1054,41 @@ def _single_generate(
     return _generate_content(client, prompt)
 
 
+def _route_generation(
+    client: genai.Client,
+    diff_input: str,
+    diff_body: str,
+    stat_section: str,
+    total_tokens: int,
+) -> str | None:
+    """Route to single-call or batch generation based on diff size.
+
+    Diffs under the single-call token limit use one API call. Larger diffs
+    are split into chunks, summarized individually, and combined via a
+    reduce step, falling back to a truncated single call if batching fails.
+
+    Args:
+        client: The genai client instance.
+        diff_input: The full diff input (stat + diff body).
+        diff_body: The diff portion of the input (without stat header).
+        stat_section: The ``git diff --stat`` output for full file listing.
+        total_tokens: Pre-counted token count of the diff body.
+
+    Returns:
+        str | None: Generated commit message, or ``None`` on failure.
+    """
+    if total_tokens <= SINGLE_CALL_TOKEN_LIMIT:
+        _log("Using single-call mode")
+        return _single_generate(client, diff_input, total_tokens)
+
+    _log(f"Diff exceeds {SINGLE_CALL_TOKEN_LIMIT:,} token limit, using batch mode")
+    result = _batch_generate(client, diff_body, stat_section)
+    if not result:
+        _log("Batch mode failed, falling back to truncated single call")
+        result = _single_generate(client, diff_input, total_tokens)
+    return result
+
+
 def main() -> int:
     """Read diff from stdin, generate commit message, print to stdout.
 
@@ -1085,18 +1124,7 @@ def main() -> int:
     result: str | None = None
 
     try:
-        if total_tokens <= SINGLE_CALL_TOKEN_LIMIT:
-            _log("Using single-call mode")
-            result = _single_generate(client, diff_input, total_tokens)
-        else:
-            _log(
-                f"Diff exceeds {SINGLE_CALL_TOKEN_LIMIT:,} token limit, using batch mode",
-            )
-            result = _batch_generate(client, diff_body, stat_section)
-
-            if not result:
-                _log("Batch mode failed, falling back to truncated single call")
-                result = _single_generate(client, diff_input, total_tokens)
+        result = _route_generation(client, diff_input, diff_body, stat_section, total_tokens)
     except CommitMessageError as exc:
         return _fail(str(exc))
     except (ClientError, ConnectionError, OSError, ValueError):

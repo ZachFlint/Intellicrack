@@ -61,10 +61,13 @@ _EXIT_NO_DLL: Final[int] = 2
 _MANAGED_SESSION_NAME: Final[str] = "IntApiTrace"
 
 
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="api_trace.ps1 targets the Windows Kernel-Audit-API-Calls ETW provider",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        sys.platform != "win32",
+        reason="api_trace.ps1 targets the Windows Kernel-Audit-API-Calls ETW provider",
+    ),
+    pytest.mark.spawns_process,
+]
 
 
 def _resolve_pwsh() -> str:

@@ -834,7 +834,7 @@ class NamedPipeClient:
 
         total = len(data)
         offset = 0
-        _logger.info("pipe_write_started", total_bytes=total)
+        _logger.debug("pipe_write_started", total_bytes=total)
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
@@ -858,13 +858,13 @@ class NamedPipeClient:
                 error_message = f"Pipe write failed (error {error})"
                 raise ToolError(error_message)
             _logger.debug(
-                "pipe_chunk_progress",
+                "pipe_write_chunk",
                 chunk_bytes=bytes_written.value,
                 offset=offset + bytes_written.value,
             )
             offset += bytes_written.value
 
-        _logger.info("pipe_write_complete", total_bytes=total)
+        _logger.debug("pipe_write_complete", total_bytes=total)
 
     def _cancel_io(self) -> None:
         """Cancel any in-flight pipe I/O on supported Windows builds.

@@ -21,6 +21,44 @@ _WIN32_ONLY = pytest.mark.skipif(
     reason="Process memory API is Windows-only",
 )
 
+_MEM_COMMIT = 0x1000
+_PAGE_NOACCESS = 0x01
+_PAGE_GUARD = 0x100
+_READABLE_PROTECTIONS = frozenset({0x02, 0x04, 0x08, 0x20, 0x40, 0x80})
+
+
+def _find_readable_region(
+    regions: list[tuple[int, int, int, int]],
+    min_size: int,
+) -> tuple[int, int, int, int] | None:
+    """Return the first committed, readable memory region of sufficient size.
+
+    A region is readable only when its state is ``MEM_COMMIT`` and its page
+    protection is one of the read-capable constants without the ``PAGE_GUARD``
+    or ``PAGE_NOACCESS`` flags. Selecting on ``protection != 0`` alone is not
+    sufficient because ``PAGE_NOACCESS`` and guard pages are non-zero yet are
+    rejected by ``ReadProcessMemory``.
+
+    Args:
+        regions: Region tuples ``(base_address, size, protection, state)`` as
+            returned by ``list_process_memory_regions``.
+        min_size: Minimum region size in bytes required.
+
+    Returns:
+        tuple[int, int, int, int] | None: The first matching region tuple, or
+        ``None`` when no readable region of the requested size exists.
+    """
+    for region in regions:
+        _address, size, protection, state = region
+        if size < min_size or state != _MEM_COMMIT:
+            continue
+        if protection & (_PAGE_GUARD | _PAGE_NOACCESS):
+            continue
+        base_protection = protection & 0xFF
+        if base_protection in _READABLE_PROTECTIONS:
+            return region
+    return None
+
 
 @_WIN32_ONLY
 class TestListProcessMemoryRegions:
@@ -94,7 +132,7 @@ class TestFromProcessMemory:
     """Tests covering from_process_memory() read operations on the current process."""
 
     def test_read_from_current_process_first_region(self, hexcore: types.ModuleType) -> None:
-        """Verify that from_process_memory can read bytes from an accessible region.
+        """Verify that from_process_memory can read bytes from a readable region.
 
         Args:
             hexcore: The native module fixture.
@@ -103,17 +141,11 @@ class TestFromProcessMemory:
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
         assert regions
 
-        readable_region: tuple[int, int, int, int] | None = None
-        for region in regions:
-            _address, size, protection, _region_type = region
-            if size >= 16 and protection != 0:
-                readable_region = region
-                break
-
+        readable_region = _find_readable_region(regions, 16)
         if readable_region is None:
             pytest.skip("No suitable readable memory region found in current process")
 
-        addr, _size, _prot, _rtype = readable_region
+        addr, _size, _prot, _state = readable_region
         doc = hexcore.HexDocument.from_process_memory(pid, addr, 16)
         assert doc is not None
         assert doc.length() == 16
@@ -127,17 +159,11 @@ class TestFromProcessMemory:
         pid = os.getpid()
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
 
-        accessible: tuple[int, int, int, int] | None = None
-        for region in regions:
-            _address, size, protection, _region_type = region
-            if size >= 8 and protection != 0:
-                accessible = region
-                break
-
+        accessible = _find_readable_region(regions, 8)
         if accessible is None:
             pytest.skip("No accessible memory region found for read test")
 
-        addr, _sz, _pr, _rt = accessible
+        addr, _sz, _pr, _state = accessible
         doc = hexcore.HexDocument.from_process_memory(pid, addr, 8)
         assert hasattr(doc, "length")
         assert hasattr(doc, "read")

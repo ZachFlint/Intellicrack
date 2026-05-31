@@ -41,16 +41,25 @@ def _field(results: list[dict[str, Any]], name: str) -> dict[str, Any]:
 class TestPointers:
     """Tests for pointer type declarations and field placement."""
 
-    def test_pointer_field_has_pointer_display(self, interp: HexPatInterpreter) -> None:
-        """A pointer field's display_value starts with '*'.
+    def test_pointer_field_dereferences_to_pointee_value(self, interp: HexPatInterpreter) -> None:
+        """A pointer reads its address from data and dereferences the pointee at that address.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = struct.pack("<Q", 0x100) + bytes(256)
+        data = bytearray(512)
+        struct.pack_into("<Q", data, 0, 0x100)
+        data[0x100] = 0x7B
         source = "u8 *ptr @ 0;"
-        results = interp.execute_bytes(source, data)
-        assert results[0]["display_value"].startswith("*")
+        results = interp.execute_bytes(source, bytes(data))
+        ptr_field = results[0]
+        assert ptr_field["display_value"].startswith("*")
+        assert ptr_field["size"] == 8
+        assert ptr_field["children"], "pointer must produce a dereferenced child"
+        pointee = ptr_field["children"][0]
+        assert pointee["offset"] == 0x100
+        assert pointee["display_value"] == "0x7B"
+        assert pointee["raw_bytes"] == [0x7B]
 
     def test_pointer_field_size_is_eight(self, interp: HexPatInterpreter) -> None:
         """A pointer field consumes exactly 8 bytes.
@@ -91,7 +100,10 @@ class TestUnions:
         results = interp.execute_bytes(source, data)
         union_field = _field(results, "u")
         children = union_field["children"]
+        assert len(children) == 2
         assert all(c["offset"] == 0 for c in children)
+        child_names = [c["name"] for c in children]
+        assert child_names == ["as_u32", "bytes"]
 
     def test_union_size_is_max_member_size(self, interp: HexPatInterpreter) -> None:
         """A union's total size equals the size of its largest member.
@@ -116,6 +128,12 @@ class TestUnions:
         results = interp.execute_bytes(source, data)
         tv = _field(results, "tv")
         assert tv["raw_bytes"][0] == 0x78
+        word_child = next(c for c in tv["children"] if c["name"] == "word")
+        byte0_child = next(c for c in tv["children"] if c["name"] == "byte0")
+        assert word_child["offset"] == 0
+        assert byte0_child["offset"] == 0
+        assert word_child["display_value"] == "0x12345678"
+        assert byte0_child["display_value"] == "0x78"
 
 
 class TestComputedFields:

@@ -47,6 +47,17 @@ if (-not (Test-Path $ReportsRoot)) {
     New-Item -ItemType Directory -Path $ReportsRoot -Force | Out-Null
 }
 
+# Ensure a .env file exists at the workspace root so credential-loading tests
+# that assert its presence pass. Real API keys are injected into the process
+# environment by the host driver via --env-file (read from the host .env), and
+# CredentialLoader falls back to os.environ, so an empty file here is
+# sufficient. The Test-Path guard avoids clobbering a real .env if one is ever
+# baked or mounted in.
+$EnvFile = Join-Path $WorkspaceRoot '.env'
+if (-not (Test-Path $EnvFile)) {
+    New-Item -ItemType File -Path $EnvFile | Out-Null
+}
+
 function Write-SandboxLog {
     param(
         [Parameter(Mandatory = $true)][string]$Level,

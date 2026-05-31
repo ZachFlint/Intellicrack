@@ -141,10 +141,16 @@ class TestBridgeDisassembly:
         bytes.fromhex(result[0]["bytes"])
 
     def test_disassemble_pe_section_code_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that auto arch detection works on the PE text section code bytes.
+        """Verify that auto arch detection works from the PE header bytes.
+
+        ``disassemble`` runs architecture auto-detection on the same byte
+        window it disassembles, and that detection relies on the file's magic
+        and machine fields. Those fields live at offset 0, so ``arch='auto'``
+        is exercised by disassembling from offset 0 where the ``MZ``/PE header
+        is present; the AMD64 machine field resolves to x86-64.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        result: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0x200, count=4, arch="auto"))
+        result: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
         assert isinstance(result, list)

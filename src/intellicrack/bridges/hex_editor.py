@@ -264,6 +264,7 @@ _ELF_CLASS_64 = 2
 _ELF_DATA_LE = 1
 _PE_LFANEW_OFFSET = 0x3C
 _PE_CHECKSUM_RELATIVE = 64
+_AUTO_ARCH_DETECT_BYTES = 4096
 _PE_COFF_HEADER_SIZE = 20
 _DOS_HEADER_SIZE = 64
 _PE_SECTION_ENTRY_SIZE = 40
@@ -1718,23 +1719,6 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         _logger.debug("is_available_checked", hexcore_available=self._hexcore_available)
         return self._hexcore_available
-
-    async def shutdown(self) -> None:
-        """Shutdown the hex editor bridge.
-
-        Mirrors :meth:`close_file`: notify the shared ``HexDocumentState`` that the document is going away (``set_document(None, None)``)
-        before dropping the local reference so downstream observers see a consistent transition, then resets cursor and selection and clears
-        cached highlight rules.
-        """
-        if self.state_holder is not None:
-            self.state_holder.set_document(None, None, source="bridge")
-        with self._state_lock:
-            self.document = None
-            self._cursor_offset = 0
-            self._selection = None
-            self._highlight_rules.clear()
-        _logger.info("hex_editor_shutdown")
-        await super().shutdown()
 
     def _get_interpreter(
         self,
@@ -5557,7 +5541,7 @@ class HexEditorEditMixin(HexEditorFileMixin):
             raise ValueError(msg)
 
         if hasattr(self.document, "fill_block"):
-            self.document.fill_block(offset, length, list(pattern))
+            self.document.fill_block(offset, length, pattern)
         else:
             fill_data = bytes(islice(cycle(pattern), length))
             _logger.info("file_written", path="document", offset=hex(offset), size=len(fill_data), op="fill_block")
@@ -6744,7 +6728,10 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             data = bytes(cast("list[int]", raw))
         disassembler = _get_disassembler()
         if arch == "auto":
-            arch, mode = disassembler.auto_detect_arch(data)
+            detect_len = min(doc_len, _AUTO_ARCH_DETECT_BYTES)
+            header_raw = self.document.read(0, detect_len)
+            header = header_raw if isinstance(header_raw, bytes) else bytes(header_raw)
+            arch, mode = disassembler.auto_detect_arch(header)
 
         binary_path = str(self._state.target_path) if self._state.target_path is not None else ""
         _logger.info("disassemble_started", binary_path=binary_path, offset=hex(offset), arch=arch, mode=mode, count=count)
@@ -9255,3 +9242,20 @@ class HexEditorBridge(HexEditorScriptMixin):
     Composed from the ``_HexEditorBridgeBase`` core class together with topical mixin classes that inherit linearly so cross-references
     resolve through normal MRO. Each mixin groups one surface area so no single class definition exceeds the public method limit.
     """
+
+    async def shutdown(self) -> None:
+        """Shutdown the hex editor bridge.
+
+        Mirrors :meth:`close_file`: notify the shared ``HexDocumentState`` that the document is going away (``set_document(None, None)``)
+        before dropping the local reference so downstream observers see a consistent transition, then resets cursor and selection and clears
+        cached highlight rules.
+        """
+        if self.state_holder is not None:
+            self.state_holder.set_document(None, None, source="bridge")
+        with self._state_lock:
+            self.document = None
+            self._cursor_offset = 0
+            self._selection = None
+            self._highlight_rules.clear()
+        _logger.info("hex_editor_shutdown")
+        await super().shutdown()

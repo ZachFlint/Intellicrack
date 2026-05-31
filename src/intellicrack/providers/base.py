@@ -1093,7 +1093,7 @@ class LLMProviderBase(ABC):
         try:
             decoded: object = json.loads(line)
         except json.JSONDecodeError as exc:
-            logger.warning("stream_json_parse_skipped", caller_event=event, error=str(exc))
+            logger.warning(event, error=str(exc))
             return None
         return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else None
 

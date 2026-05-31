@@ -355,7 +355,11 @@ class TestApplyTransformDeep:
         """apply_transform with base64_encode must produce a validly decodable hex output.
 
         The transform returns bytes of the base64 ASCII string; verifying by
-        decoding the hex and re-interpreting as ASCII base64.
+        decoding the hex and re-interpreting as ASCII base64. base64_encode
+        changes the byte length (8 source bytes encode to 12 base64 bytes), so
+        the transform must be applied with ``in_place=False``; an in-place
+        application is rejected because the bridge cannot replace a fixed range
+        with a different-length slice.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -369,7 +373,7 @@ class TestApplyTransformDeep:
         payload = b"TestData" + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "b64.bin", payload)
 
-        result = _run(bridge.apply_transform("base64_encode", 0, 8, "{}"))
+        result = _run(bridge.apply_transform("base64_encode", 0, 8, "{}", in_place=False))
 
         b64_bytes = bytes.fromhex(result)
         decoded = base64.b64decode(b64_bytes)
@@ -411,6 +415,12 @@ class TestApplyTransformDeep:
     def test_apply_pipeline_vs_apply_transform_single_step_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """A single-step pipeline and direct apply_transform with the same params produce equal output.
 
+        Both paths are run with ``in_place=False`` so neither mutates the
+        document; otherwise the first (in-place) call would overwrite the
+        source range and the second call would XOR the already-transformed
+        bytes, yielding the original payload instead of the transformed value.
+        XOR of ``deadbeef`` with key ``0xCA`` is ``14677425``.
+
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
@@ -422,11 +432,12 @@ class TestApplyTransformDeep:
         payload = b"\xde\xad\xbe\xef"
         _open_with_payload(bridge, tmp_path / "compare.bin", payload)
 
-        direct = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "CA"})))
+        direct = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "CA"}), in_place=False))
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "CA"}}])
-        via_pipeline = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        via_pipeline = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
         assert direct == via_pipeline
+        assert direct == "14677425"
 
     def test_apply_transform_on_pe_binary(self, loaded_bridge: HexEditorBridge) -> None:
         """apply_transform must successfully process bytes from a real PE binary document.
