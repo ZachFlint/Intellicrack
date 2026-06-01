@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
 
 
-_BRIDGE_MODULE_PATH: str = "intellicrack.ui.panels.process_panel.system_tab.run_bridge_coroutine_async"
+_BRIDGE_MODULE_PATH: str = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
 
 
 class _AsyncSuccess:

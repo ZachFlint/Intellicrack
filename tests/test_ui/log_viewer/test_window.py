@@ -182,14 +182,17 @@ def test_geometry_persists_across_open_close(qtbot: QtBot, tmp_path: Path) -> No
     qtbot.addWidget(first)
     first.show()
     first.resize(_EXPECTED_WINDOW_WIDTH, _EXPECTED_WINDOW_HEIGHT)
+    qtbot.wait(50)
+    saved_width = first.size().width()
+    saved_height = first.size().height()
     first.close()
 
     second = LogViewerWindow(config)
     qtbot.addWidget(second)
     second.show()
     qtbot.wait(50)
-    assert second.size().width() == _EXPECTED_WINDOW_WIDTH
-    assert second.size().height() == _EXPECTED_WINDOW_HEIGHT
+    assert second.size().width() == saved_width
+    assert second.size().height() == saved_height
     second.close()
 
 

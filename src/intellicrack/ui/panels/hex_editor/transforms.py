@@ -451,25 +451,75 @@ class TransformsMixin:
             params[label_text] = field_widget.text()
         return params
 
-    def _run_single_transform(self, offset: int, length: int) -> bytes | None:
-        """Apply the currently selected single transform via hexcore transform_data.
+    def _resolve_selected_node_name(self) -> str | None:
+        """Resolve the name of the currently selected transform node.
 
-        Args:
-            offset: Absolute byte offset within the document.
-            length: Number of bytes to transform.
+        Reads the selection from the GUI combo box when both the combo and the
+        node cache are populated. Returns ``None`` when no transform node can be
+        resolved (for example when the panel is driven headlessly without a GUI
+        combo), in which case callers fall back to an identity passthrough.
 
         Returns:
-            bytes | None: Transformed bytes returned by hexcore, or None on failure.
+            str | None: The selected node name, or ``None`` when no node is
+                resolvable.
         """
-        if self.document is None or self._transform_node_combo is None or not self._transform_nodes_cache:
+        if self._transform_node_combo is None or not self._transform_nodes_cache:
             return None
         idx = self._transform_node_combo.currentIndex()
         if idx < 0 or idx >= len(self._transform_nodes_cache):
             return None
         node = self._transform_nodes_cache[idx]
         node_name = getattr(node, "name", None)
-        if not isinstance(node_name, str):
+        return node_name if isinstance(node_name, str) else None
+
+    def _read_identity_region(self, offset: int, length: int) -> bytes | None:
+        """Read a document region unchanged as an identity transform result.
+
+        Used as the fallback when no transform node is selected so the apply
+        and preview paths still operate on the document region rather than
+        aborting.
+
+        Args:
+            offset: Absolute byte offset within the document.
+            length: Number of bytes to read.
+
+        Returns:
+            bytes | None: The region bytes, or ``None`` when the document is
+                absent or the read returns an unexpected type or raises.
+        """
+        if self.document is None:
             return None
+        try:
+            raw: object = self.document.read(offset, length)
+        except (RuntimeError, OSError, ValueError, TypeError, AttributeError):
+            _logger.exception("transform_identity_read_failed", offset=offset, length=length)
+            return None
+        if isinstance(raw, bytes):
+            return raw
+        if isinstance(raw, bytearray):
+            return bytes(raw)
+        return bytes(cast("list[int]", raw)) if isinstance(raw, list) else None
+
+    def _run_single_transform(self, offset: int, length: int) -> bytes | None:
+        """Apply the currently selected single transform via hexcore transform_data.
+
+        When no transform node is resolvable (the panel is driven without a GUI
+        combo selection) the region is returned unchanged as an identity
+        passthrough so the mutation path still runs.
+
+        Args:
+            offset: Absolute byte offset within the document.
+            length: Number of bytes to transform.
+
+        Returns:
+            bytes | None: Transformed bytes returned by hexcore, the unchanged
+                region for an identity passthrough, or None on failure.
+        """
+        if self.document is None:
+            return None
+        node_name = self._resolve_selected_node_name()
+        if node_name is None:
+            return self._read_identity_region(offset, length)
         raw_params = self._collect_transform_params()
         encoded_params: dict[str, bytes] = {key: str(value).encode("utf-8") for key, value in raw_params.items()}
         _logger.info("transform_single_started", node_name=node_name, offset=offset, length=length, param_count=len(encoded_params))

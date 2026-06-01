@@ -36,6 +36,7 @@ Re-entrant emissions triggered from inside a callback are queued and dispatched 
 ordering across observers).  The cap aborts genuinely runaway callback chains while still allowing legitimate downstream events to flow.
 """
 
+
 class HexDocumentEvent(enum.Enum):
     """Event types emitted by HexDocumentState.
 
@@ -418,6 +419,10 @@ class HexDocumentState:
     ) -> None:
         """Notify observers that document data was modified.
 
+        The ``source`` identifier is recorded both as the loop-guard filter
+        argument and inside the delivered payload under the ``"source"`` key so
+        observers can attribute the mutation to its originating caller.
+
         Args:
             offset: Start offset of the modification.
             length: Number of bytes affected.
@@ -425,7 +430,7 @@ class HexDocumentState:
         """
         self._notify(
             HexDocumentEvent.DATA_MODIFIED,
-            {"offset": offset, "length": length},
+            {"offset": offset, "length": length, "source": source},
             source=source,
         )
 

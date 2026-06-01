@@ -114,7 +114,7 @@ class TestEmbeddedToolsMenuIntegration:
         expected_actions = [
             "Open x64dbg Debugger",
             "Open Cutter Analysis",
-            "Open HxD Hex Editor",
+            "Open Hex Editor",
             "Debug Current Binary...",
             "Analyze Current Binary...",
             "Hex Edit Current Binary...",
@@ -137,9 +137,9 @@ class TestToolbarButtonsIntegration:
             patched_window: MainWindow fixture with SandboxManager patched out.
         """
         window = patched_window
-        assert hasattr(window, "_x64dbg_btn"), "x64dbg button not found"
-        assert hasattr(window, "_cutter_btn"), "Cutter button not found"
-        assert hasattr(window, "_hxd_btn"), "HxD button not found"
+        assert hasattr(window, "x64dbg_btn"), "x64dbg button not found"
+        assert hasattr(window, "cutter_btn"), "Cutter button not found"
+        assert hasattr(window, "hxd_btn"), "HxD button not found"
 
         x64dbg_btn: object = window.x64dbg_btn
         cutter_btn: object = window.cutter_btn
@@ -243,11 +243,11 @@ class TestEmbeddedToolHandlers:
         assert recorder.times_called >= 1
 
     @staticmethod
-    def test_on_open_hxd_calls_add_tab(
+    def test_on_open_hex_editor_calls_add_tab(
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify _on_open_hxd calls add_hxd_tab.
+        """Verify _on_open_hex_editor calls add_hex_editor_tab.
 
         Args:
             patched_window: MainWindow fixture with SandboxManager patched out.
@@ -255,10 +255,10 @@ class TestEmbeddedToolHandlers:
         """
         window = patched_window
         recorder = CallRecorder(result=None)
-        monkeypatch.setattr(window.tool_panel, "add_hxd_tab", recorder)
+        monkeypatch.setattr(window.tool_panel, "add_hex_editor_tab", recorder)
         monkeypatch.setattr(window, "_show_tool_error", CallRecorder())
 
-        window.on_open_hxd()
+        window._on_open_hex_editor()
 
         assert recorder.times_called >= 1
 
@@ -282,7 +282,7 @@ class TestCurrentBinaryHandlers:
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window.on_debug_current_binary()
+        window._on_debug_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("debug",)
 
@@ -302,7 +302,7 @@ class TestCurrentBinaryHandlers:
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window.on_analyze_current_binary()
+        window._on_analyze_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("analyze",)
 
@@ -322,7 +322,7 @@ class TestCurrentBinaryHandlers:
         recorder = CallRecorder()
         monkeypatch.setattr(window, "_show_no_binary_warning", recorder)
 
-        window.on_hex_edit_current_binary()
+        window._on_hex_edit_current_binary()
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == ("hex edit",)
 
@@ -343,7 +343,7 @@ class TestCurrentBinaryHandlers:
         recorder = CallRecorder(result=True)
         monkeypatch.setattr(window.tool_panel, "open_in_x64dbg", recorder)
 
-        window.on_debug_current_binary()
+        window._on_debug_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
@@ -365,17 +365,17 @@ class TestCurrentBinaryHandlers:
         recorder = CallRecorder(result=True)
         monkeypatch.setattr(window.tool_panel, "open_in_cutter", recorder)
 
-        window.on_analyze_current_binary()
+        window._on_analyze_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
 
     @staticmethod
-    def test_hex_edit_current_binary_with_binary_calls_open_in_hxd(
+    def test_hex_edit_current_binary_with_binary_calls_open_in_hex_editor(
         patched_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Verify binary is passed to HxD when loaded.
+        """Verify binary is passed to the hex editor when loaded.
 
         Args:
             patched_window: MainWindow fixture with SandboxManager patched out.
@@ -385,9 +385,9 @@ class TestCurrentBinaryHandlers:
         test_path = Path("/test/binary.exe")
         window.current_binary = test_path
         recorder = CallRecorder(result=True)
-        monkeypatch.setattr(window.tool_panel, "open_in_hxd", recorder)
+        monkeypatch.setattr(window.tool_panel, "open_in_hex_editor", recorder)
 
-        window.on_hex_edit_current_binary()
+        window._on_hex_edit_current_binary()
 
         assert recorder.times_called == 1
         assert recorder.calls[0][0] == (test_path,)
@@ -423,8 +423,9 @@ class TestCurrentBinaryTracking:
         test_path = Path("/test/sample.exe")
         run_async_recorder = CallRecorder()
         monkeypatch.setattr(window, "_run_async", run_async_recorder)
+        monkeypatch.setattr(window.tool_panel, "open_in_hex_editor", CallRecorder(result=True))
 
-        window.load_binary(test_path)
+        window._load_binary(test_path)
 
         current_binary: object = window.current_binary
         assert current_binary == test_path
@@ -448,7 +449,7 @@ class TestErrorDialogs:
         monkeypatch.setattr(QMessageBox, "warning", staticmethod(recorder))
 
         window = patched_window
-        window.show_tool_error("TestTool", "Test error message")
+        window._show_tool_error("TestTool", "Test error message")
 
         assert len(recorder.calls) >= 1
         assert "TestTool" in str(recorder.calls[0])
@@ -469,7 +470,7 @@ class TestErrorDialogs:
         monkeypatch.setattr(QMessageBox, "information", staticmethod(recorder))
 
         window = patched_window
-        window.show_no_binary_warning("test action")
+        window._show_no_binary_warning("test action")
 
         assert len(recorder.calls) >= 1
         assert "test action" in str(recorder.calls[0])

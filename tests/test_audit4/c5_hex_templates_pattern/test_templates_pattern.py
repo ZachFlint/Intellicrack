@@ -327,6 +327,7 @@ class PatternHarness(QWidget, PatternEditorMixin):
         self._file_path = None
         self._pattern_frame = None
         self._pattern_dsl_editor = None
+        self._pattern_completer = None
         self._pattern_json_preview = None
         self._pattern_library_tree = None
         self._pattern_error_display = None
@@ -1087,13 +1088,20 @@ class TestAudit7TemplateRegisteredOnApply:
         class _ConstructibleStub:
             """Callable wrapper that returns the prepared interpreter stub."""
 
-            def __call__(self) -> _StubInterpreter:
+            def __call__(self, **kwargs: object) -> _StubInterpreter:
                 """Return the prepared interpreter stub.
+
+                Args:
+                    **kwargs: Constructor keyword arguments forwarded by
+                        the mixin (e.g. ``print_sink``). Ignored by the
+                        stub since the regression tests only assert on
+                        ``execute`` interactions.
 
                 Returns:
                     _StubInterpreter: Pre-prepared interpreter the
                         mixin should drive.
                 """
+                _ = kwargs
                 return stub
 
         monkeypatch.setattr(
@@ -1136,13 +1144,20 @@ class TestAudit7TemplateRegisteredOnApply:
         class _ConstructibleStub:
             """Callable wrapper that returns the prepared interpreter stub."""
 
-            def __call__(self) -> _StubInterpreter:
+            def __call__(self, **kwargs: object) -> _StubInterpreter:
                 """Return the prepared interpreter stub.
+
+                Args:
+                    **kwargs: Constructor keyword arguments forwarded by
+                        the mixin (e.g. ``print_sink``). Ignored by the
+                        stub since the regression tests only assert on
+                        ``execute`` interactions.
 
                 Returns:
                     _StubInterpreter: Pre-prepared interpreter the
                         mixin should drive.
                 """
+                _ = kwargs
                 return stub
 
         monkeypatch.setattr(

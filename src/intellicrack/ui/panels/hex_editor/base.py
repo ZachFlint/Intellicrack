@@ -218,13 +218,14 @@ def compute_custom_crc(
     """
     mask = (1 << width) - 1
     msb_mask = 1 << (width - 1)
+    top_bit_shift = width - 1
     crc = init & mask
     for byte in data:
         b = _reflect_bits(byte, 8) if ref_in else byte
         for i in range(7, -1, -1):
             bit = (b >> i) & 1
-            crc = ((crc << 1) | bit) ^ poly if crc & msb_mask else (crc << 1) | bit
-            crc &= mask
+            crc ^= bit << top_bit_shift
+            crc = ((crc << 1) ^ poly) & mask if crc & msb_mask else (crc << 1) & mask
     if ref_out:
         crc = _reflect_bits(crc, width)
     return (crc ^ xor_out) & mask

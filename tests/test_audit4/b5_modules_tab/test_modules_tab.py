@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QApplication
 
 
-_BRIDGE_MODULE_PATH: Final[str] = "intellicrack.ui.panels.process_panel.modules_tab.run_bridge_coroutine_async"
+_BRIDGE_MODULE_PATH: Final[str] = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
 
 _MODULE_NAMES: Final[tuple[str, ...]] = (
     "kernel32.dll",

@@ -115,6 +115,7 @@ function Write-MonitorError {
 
 $typeDef = @'
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public static class NtKernelObjects
@@ -231,6 +232,126 @@ public static class NtKernelObjects
         uint BufferLength,
         IntPtr PreviousState,
         IntPtr ReturnLength);
+
+    // Native set of (pid, handle value, kernel object pointer) triples that
+    // have already been returned to the caller. Maintained in compiled code
+    // so the per-sweep enumeration of the entire system handle table - which
+    // can hold hundreds of thousands of entries - never crosses the
+    // PowerShell interop boundary except for the handful of handles that are
+    // genuinely new since the previous sweep. The kernel object pointer is
+    // part of the key so that a recycled handle value pointing at a different
+    // object is reported as new rather than silently skipped.
+    private static readonly HashSet<string> SeenHandleKeys = new HashSet<string>();
+
+    public static int SeenHandleCount
+    {
+        get { return SeenHandleKeys.Count; }
+    }
+
+    public static void ClearSeenHandles()
+    {
+        SeenHandleKeys.Clear();
+    }
+
+    // Enumerate the system handle table and return only the entries whose
+    // (pid, handle, object) triple has not been seen before, recording each
+    // returned entry as seen. The first call after a clear returns every live
+    // handle (a full, slow sweep); subsequent calls return just the deltas,
+    // keeping steady-state sweeps fast enough to observe short-lived objects
+    // before they are released.
+    public static SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX[] GetNewHandleEntries(
+        out int totalHandles,
+        out uint queryStatus)
+    {
+        totalHandles = 0;
+        queryStatus = STATUS_SUCCESS;
+        int size = 0x10000;
+        IntPtr buffer = IntPtr.Zero;
+        var result = new List<SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX>();
+
+        try
+        {
+            uint returned = 0;
+            uint status = STATUS_INFO_LENGTH_MISMATCH;
+            int attempts = 0;
+            while (attempts < 16)
+            {
+                attempts++;
+                if (buffer != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(buffer);
+                    buffer = IntPtr.Zero;
+                }
+                buffer = Marshal.AllocHGlobal(size);
+                status = NtQuerySystemInformation(
+                    SystemExtendedHandleInformation,
+                    buffer,
+                    (uint)size,
+                    out returned);
+
+                if (status == STATUS_SUCCESS)
+                {
+                    break;
+                }
+                if (status == STATUS_INFO_LENGTH_MISMATCH)
+                {
+                    size = returned > 0
+                        ? (int)Math.Max((long)returned + 0x10000, (long)size * 2)
+                        : size * 2;
+                    continue;
+                }
+                queryStatus = status;
+                return result.ToArray();
+            }
+
+            if (status != STATUS_SUCCESS || buffer == IntPtr.Zero)
+            {
+                queryStatus = status;
+                return result.ToArray();
+            }
+
+            long numHandles = Marshal.ReadIntPtr(buffer).ToInt64();
+            totalHandles = numHandles > int.MaxValue ? int.MaxValue : (int)numHandles;
+            int ptrSize = IntPtr.Size;
+            int headerSize = ptrSize * 2;
+            int entrySize = Marshal.SizeOf(typeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX));
+            IntPtr basePtr = IntPtr.Add(buffer, headerSize);
+
+            for (long i = 0; i < numHandles; i++)
+            {
+                IntPtr entryPtr = IntPtr.Add(basePtr, (int)(i * entrySize));
+                SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX entry =
+                    (SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX)Marshal.PtrToStructure(
+                        entryPtr,
+                        typeof(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX));
+
+                long ownerPid = entry.UniqueProcessId.ToInt64();
+                if (ownerPid <= 0)
+                {
+                    continue;
+                }
+
+                string key = ownerPid.ToString()
+                    + ":" + entry.HandleValue.ToInt64().ToString()
+                    + ":" + entry.Object.ToInt64().ToString();
+                if (SeenHandleKeys.Contains(key))
+                {
+                    continue;
+                }
+                SeenHandleKeys.Add(key);
+                result.Add(entry);
+            }
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(buffer);
+            }
+        }
+
+        return result.ToArray();
+    }
 }
 '@
 
@@ -326,74 +447,6 @@ function Get-ProcessNameById {
     return $name
 }
 
-function Get-SystemHandleInformation {
-    [OutputType([System.Collections.ArrayList])]
-    param()
-
-    $size = 0x10000
-    $buffer = [IntPtr]::Zero
-    $handles = New-Object System.Collections.ArrayList
-    $attempts = 0
-
-    try {
-        while ($attempts -lt 12) {
-            $attempts++
-            if ($buffer -ne [IntPtr]::Zero) {
-                [Runtime.InteropServices.Marshal]::FreeHGlobal($buffer)
-                $buffer = [IntPtr]::Zero
-            }
-            $buffer = [Runtime.InteropServices.Marshal]::AllocHGlobal($size)
-            $returned = 0
-            $status = [NtKernelObjects]::NtQuerySystemInformation(
-                [NtKernelObjects]::SystemExtendedHandleInformation,
-                $buffer,
-                [uint32]$size,
-                [ref]$returned)
-
-            if ($status -eq [NtKernelObjects]::STATUS_SUCCESS) {
-                break
-            }
-            if ($status -eq [NtKernelObjects]::STATUS_INFO_LENGTH_MISMATCH) {
-                if ($returned -gt 0) {
-                    $size = [int]([Math]::Max([int]$returned + 0x10000, $size * 2))
-                } else {
-                    $size = $size * 2
-                }
-                continue
-            }
-            Write-MonitorError -Stage 'NtQuerySystemInformation' -Detail "non-success status 0x$($status.ToString('X8'))" -ErrorCode ([int]$status)
-            return $handles
-        }
-
-        if ($buffer -eq [IntPtr]::Zero) {
-            return $handles
-        }
-
-        $numHandles = [Runtime.InteropServices.Marshal]::ReadIntPtr($buffer).ToInt64()
-        $ptrSize = [IntPtr]::Size
-        $headerSize = $ptrSize * 2
-        $entrySize = [Runtime.InteropServices.Marshal]::SizeOf([type][NtKernelObjects+SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX])
-        $basePtr = [IntPtr]::Add($buffer, $headerSize)
-
-        for ($i = 0L; $i -lt $numHandles; $i++) {
-            $entryPtr = [IntPtr]::Add($basePtr, [int]($i * $entrySize))
-            $entry = [Runtime.InteropServices.Marshal]::PtrToStructure(
-                $entryPtr,
-                [type][NtKernelObjects+SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX])
-            [void]$handles.Add($entry)
-        }
-    } catch {
-        Write-MonitorError -Stage 'Get-SystemHandleInformation' -Detail $_.Exception.Message
-        return $handles
-    } finally {
-        if ($buffer -ne [IntPtr]::Zero) {
-            [Runtime.InteropServices.Marshal]::FreeHGlobal($buffer)
-        }
-    }
-
-    return $handles
-}
-
 function Get-ObjectInfoString {
     [OutputType([string])]
     param(
@@ -437,8 +490,13 @@ function Get-ObjectInfoString {
 
 function Invoke-MonitorSweep {
     $ts = (Get-Date).ToString('o')
-    $handles = Get-SystemHandleInformation
-    if ($handles.Count -eq 0) {
+    $totalHandles = 0
+    $queryStatus = [uint32]0
+    $handles = [NtKernelObjects]::GetNewHandleEntries([ref]$totalHandles, [ref]$queryStatus)
+    if ($queryStatus -ne [NtKernelObjects]::STATUS_SUCCESS) {
+        Write-MonitorError -Stage 'NtQuerySystemInformation' -Detail "non-success status 0x$($queryStatus.ToString('X8'))" -ErrorCode ([int]$queryStatus)
+    }
+    if ($null -eq $handles -or $handles.Count -eq 0) {
         return
     }
 
@@ -558,6 +616,12 @@ try {
         }
         if ($openProcessFailures.Count -gt 4096) {
             $openProcessFailures.Clear()
+        }
+        # Bound the native resolved-handle set. Clearing only costs a single
+        # slow re-enumeration sweep; it never produces spurious "created"
+        # records because $knownObjects still deduplicates by type|name|pid.
+        if ([NtKernelObjects]::SeenHandleCount -gt 300000) {
+            [NtKernelObjects]::ClearSeenHandles()
         }
 
         if ($null -ne $script:StopEvent) {

@@ -1,0 +1,328 @@
+# Agent 14 - Test Quality Audit
+
+## Partition
+- tests/core/test_process_cleanup.py
+- tests/test_audit3/core/test_xml_gen.py
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py
+- tests/test_audit7/providers_meta/test_discover_all_cache.py
+- tests/test_bridges/test_realcov_02a_x64dbg.py
+- tests/test_bridges/test_realcov_03b_ghidra.py
+- tests/test_bridges/test_x64dbg_audit7_f0001.py
+- tests/test_core/test_logging.py
+- tests/test_core/test_realcov_05b_tools.py
+- tests/test_core/test_realcov_06_optional_imports.py
+- tests/test_hexcore_e2e/test_bridge_pe_introspection.py
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py
+- tests/test_providers/test_openrouter_provider.py
+- tests/test_providers/test_provider_loop_rebind.py
+- tests/test_providers/test_realcov_11_xpu_utils.py
+- tests/test_ui/test_search_async.py
+
+Total test functions audited: 307
+
+## Findings
+
+### tests/test_core/test_logging.py:85 - test_renderer_info_level
+- Violation(s): Weak assertion on rich output; no assertion on actual content meaning
+- Why it is not a real gate: The test only checks that "INFO" and ANSI color codes are present in the output. It does not assert the actual formatted structure or verify that the color code corresponds to the correct level code (different levels have different codes). The test would pass if the renderer output contained "INFO" and any ANSI reset code, regardless of whether the actual level was rendered correctly.
+- Severity: Medium
+- Fix recommendation: Assert the complete formatted output structure includes timestamp, level name at correct position, color code matching the level (green for info), location information, and event name. Verify the exact ANSI sequence `\033[32m` is used specifically for info level, not just any color code.
+
+### tests/test_core/test_logging.py:94 - test_renderer_debug_level
+- Violation(s): Weak assertion on rich output
+- Why it is not a real gate: Only checks that "DEBUG" and the cyan color code `\033[36m` are in the output somewhere. Does not verify they are in the correct positions, in the correct format, or that the full rendered message is structurally correct.
+- Severity: Medium
+- Fix recommendation: Assert the complete rendered message matches an independently-derived expected output format that includes timestamp, the DEBUG label in the correct position, the cyan color code applied to the correct region, location info, and event.
+
+### tests/test_core/test_logging.py:102 - test_renderer_warning_level
+- Violation(s): Weak assertion on rich output
+- Why it is not a real gate: Only checks presence of "WARNING" and yellow code; does not verify correctness of the rendered format or that these elements are in the right place.
+- Severity: Medium
+- Fix recommendation: Assert the complete rendered output including timestamp, location, event, and exact ANSI formatting applied correctly.
+
+### tests/test_core/test_logging.py:110 - test_renderer_error_level
+- Violation(s): Weak assertion on rich output
+- Why it is not a real gate: Only verifies that "ERROR" and red code are present, not that the output is correctly formatted.
+- Severity: Medium
+- Fix recommendation: Assert the exact formatted output including timestamp, location, event, and the red ANSI code in the correct position.
+
+### tests/test_core/test_logging.py:118 - test_renderer_critical_level
+- Violation(s): Weak assertion on rich output
+- Why it is not a real gate: Only checks for "CRITICAL" and magenta code presence, not structural correctness.
+- Severity: Medium
+- Fix recommendation: Assert the complete formatted output with correct timestamp, location, event, and magenta color code placement.
+
+### tests/test_core/test_logging.py:126 - test_renderer_unknown_level
+- Violation(s): Weak assertion on rich output; no assertion on meaning
+- Why it is not a real gate: Only checks that "CUSTOM" is in the result. Does not verify that unknown levels are handled gracefully by omitting color codes or verify the actual output structure.
+- Severity: Medium
+- Fix recommendation: Assert the complete output for an unknown level includes the level name uppercased but does not include invalid ANSI color codes, and that the rest of the formatted message is structurally correct.
+
+### tests/test_core/test_logging.py:180 - test_renderer_extra_context
+- Violation(s): Weak assertion; checks only for presence, not structure
+- Why it is not a real gate: Only verifies that "extra_key=" and "extra_value" appear somewhere in the output. Does not assert the correct formatting of extra context (e.g., in brackets, in the right section, with correct separators).
+- Severity: Low
+- Fix recommendation: Assert the extra context is formatted correctly in brackets at the end of the output, with proper key=value formatting and delimiters.
+
+### tests/test_core/test_logging.py:192 - test_renderer_no_extra_context
+- Violation(s): Weak assertion; guards with conditional logic
+- Why it is not a real gate: The assertion `assert "[" not in result.split("|")[-1] or "extra" not in result` is a disjunction that can pass if either condition is true, meaning it doesn't actually guarantee no extra context appears. If the bracket is present but "extra" is not, the test passes despite potentially malformed output.
+- Severity: Low
+- Fix recommendation: Assert that when no extra fields exist, the output does not include a bracketed section at all, and the final segment after the last pipe should contain only the location info and event name.
+
+## Clean tests
+- tests/core/test_process_cleanup.py:79 - test_terminate_tree_kills_running_process
+- tests/core/test_process_cleanup.py:102 - test_terminate_tree_kills_process_with_children
+- tests/core/test_process_cleanup.py:147 - test_sandbox_temp_wsb_file_cleaned_up
+- tests/core/test_process_cleanup.py:240 - test_r2_cmd_timeout_raises_tool_error
+- tests/core/test_process_cleanup.py:277 - test_r2_cmd_returns_result_within_timeout
+- tests/core/test_process_cleanup.py:287 - test_r2_cmd_converts_none_to_empty_string
+- tests/core/test_process_cleanup.py:297 - test_r2_cmd_no_binary_raises_tool_error
+- tests/core/test_process_cleanup.py:309 - test_qemu_pidfile_retry_constants_are_reasonable
+- tests/core/test_process_cleanup.py:321 - test_qemu_pidfile_retry_reads_immediate_file
+- tests/core/test_process_cleanup.py:347 - test_qemu_pidfile_retry_reads_delayed_file
+- tests/core/test_process_cleanup.py:381 - test_qemu_pidfile_retry_exhausted_returns_none
+- tests/core/test_process_cleanup.py:410 - test_qemu_pidfile_retry_handles_corrupt_content
+- tests/core/test_process_cleanup.py:449 - test_ghidra_create_bridge_script_writes_real_file
+- tests/core/test_process_cleanup.py:473 - test_ghidra_shutdown_deletes_bridge_script
+- tests/core/test_process_cleanup.py:490 - test_ghidra_shutdown_removes_empty_parent_directory
+- tests/core/test_process_cleanup.py:507 - test_ghidra_shutdown_preserves_nonempty_parent_directory
+- tests/core/test_process_cleanup.py:535 - test_pid_based_kill_targets_specific_process
+- tests/core/test_process_cleanup.py:577 - test_process_manager_unregister_after_terminate
+- tests/test_audit3/core/test_xml_gen.py:58 - test_f0011_no_importlib_import_module_for_xml_etree
+- tests/test_audit3/core/test_xml_gen.py:72 - test_f0011_no_importlib_import_for_xml_etree_dotted_path
+- tests/test_audit3/core/test_xml_gen.py:83 - test_f0011_no_dunder_import_obfuscation
+- tests/test_audit3/core/test_xml_gen.py:95 - test_f0011_no_runtime_string_concatenation_of_xml_etree
+- tests/test_audit3/core/test_xml_gen.py:107 - test_f0011_uses_direct_import_statement
+- tests/test_audit3/core/test_xml_gen.py:123 - test_f0011_no_inline_suppression_directives
+- tests/test_audit3/core/test_xml_gen.py:137 - test_f0011_re_exports_are_the_stdlib_objects
+- tests/test_audit3/core/test_xml_gen.py:155 - test_xml_gen_exports_match_dunder_all
+- tests/test_audit3/core/test_xml_gen.py:166 - test_xml_gen_element_factory_constructs_element
+- tests/test_audit3/core/test_xml_gen.py:173 - test_xml_gen_subelement_appends_child
+- tests/test_audit3/core/test_xml_gen.py:183 - test_xml_gen_indent_inserts_whitespace
+- tests/test_audit3/core/test_xml_gen.py:193 - test_xml_gen_tostring_round_trip
+- tests/test_audit3/core/test_xml_gen.py:203 - test_xml_gen_representative_sandbox_xml_payload
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:128 - test_decimal_input_round_trips_through_all_bases
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:141 - test_hex_prefixed_input_is_auto_detected
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:152 - test_binary_and_octal_prefixes_are_auto_detected
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:163 - test_invalid_input_renders_error_row
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:179 - test_signed_eight_bit_two_complement
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:190 - test_signed_thirty_two_bit_matches_struct
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:207 - test_float32_one_point_zero_bit_pattern
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_calculator.py:226 - test_float64_known_bit_pattern
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:47 - test_single_error_still_raises_hexpatparseerror
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:57 - test_single_error_aggregate_exposes_one_entry
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:64 - test_multiple_errors_all_collected
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:76 - test_aggregate_is_subclass_of_hexpatparseerror
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:85 - test_aggregate_message_enumerates_every_error
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:95 - test_parser_errors_property_matches_raised_aggregate
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:103 - test_aggregate_preserves_first_error_location
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:113 - test_aggregate_constructor_rejects_empty_errors
+- tests/test_audit5/u4_hexpat_aux/test_parser_aggregate_errors.py:118 - test_clean_source_returns_nodes_without_raising
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:255 - test_update_bridge_analysis_populates_function_list
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:299 - test_update_bridge_analysis_clears_stale_xrefs
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:323 - test_function_selection_populates_xref_panel
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:392 - test_xref_selection_repopulates_xref_panel
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:408 - test_no_static_bridge_clears_xref_panel
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:422 - test_bridge_failure_clears_xref_panel
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:446 - test_wires_sandbox_to_pending_bridge
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:472 - test_wires_sandbox_with_manager_reuses_supplied_manager
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:497 - test_wires_qemu_sandbox_with_qemu_type
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:522 - test_rejects_non_sandbox_backend
+- tests/test_audit5/u6_ui_tools/test_function_xref_population.py:532 - test_rejects_non_manager_argument
+- tests/test_audit7/providers_meta/test_discover_all_cache.py:389 - test_attribute_error_invalidates_seeded_cache_entry
+- tests/test_audit7/providers_meta/test_discover_all_cache.py:418 - test_type_error_invalidates_seeded_cache_entry
+- tests/test_audit7/providers_meta/test_discover_all_cache.py:446 - test_discovery_task_exception_log_event_emitted_with_provider
+- tests/test_audit7/providers_meta/test_discover_all_cache.py:481 - test_other_providers_still_complete_when_one_raises
+- tests/test_bridges/test_realcov_02a_x64dbg.py:105 - test_get_modules_returns_real_system_dlls
+- tests/test_bridges/test_realcov_02a_x64dbg.py:124 - test_get_modules_entry_point_within_module
+- tests/test_bridges/test_realcov_02a_x64dbg.py:146 - test_get_entry_point_matches_get_modules
+- tests/test_bridges/test_realcov_02a_x64dbg.py:162 - test_get_module_exports_match_live_proc_addresses
+- tests/test_bridges/test_realcov_02a_x64dbg.py:190 - test_get_threads_enumerates_current_process
+- tests/test_bridges/test_realcov_02a_x64dbg.py:205 - test_get_process_info_aggregates_real_state
+- tests/test_bridges/test_realcov_03b_ghidra.py:165 - test_real_pe_dll_detected_as_pe
+- tests/test_bridges/test_realcov_03b_ghidra.py:174 - test_real_pe_exe_detected_as_pe
+- tests/test_bridges/test_realcov_03b_ghidra.py:183 - test_real_elf_detected_as_elf
+- tests/test_bridges/test_realcov_03b_ghidra.py:192 - test_real_macho_detected_as_macho
+- tests/test_bridges/test_realcov_03b_ghidra.py:201 - test_formats_are_distinct
+- tests/test_bridges/test_realcov_03b_ghidra.py:227 - test_real_pe_dll_arch
+- tests/test_bridges/test_realcov_03b_ghidra.py:238 - test_real_elf_arch
+- tests/test_bridges/test_realcov_03b_ghidra.py:249 - test_real_macho_arch
+- tests/test_bridges/test_realcov_03b_ghidra.py:264 - test_spaced_pattern_with_wildcards
+- tests/test_bridges/test_realcov_03b_ghidra.py:280 - test_contiguous_pattern_split_into_byte_pairs
+- tests/test_bridges/test_realcov_03b_ghidra.py:290 - test_all_bytes_fold_into_signed_range
+- tests/test_bridges/test_realcov_03b_ghidra.py:300 - test_wildcard_token_question_single
+- tests/test_bridges/test_realcov_03b_ghidra.py:310 - test_empty_pattern_rejected
+- tests/test_bridges/test_realcov_03b_ghidra.py:319 - test_malformed_token_rejected
+- tests/test_bridges/test_realcov_03b_ghidra.py:332 - test_trailing_expression_rewritten_to_sentinel
+- tests/test_bridges/test_realcov_03b_ghidra.py:339 - test_rewritten_source_is_valid_python_and_preserves_value
+- tests/test_bridges/test_realcov_03b_ghidra.py:348 - test_no_trailing_expression_leaves_no_sentinel
+- tests/test_bridges/test_realcov_03b_ghidra.py:354 - test_empty_script_returns_empty
+- tests/test_bridges/test_realcov_03b_ghidra.py:360 - test_invalid_syntax_raises_tool_error
+- tests/test_bridges/test_realcov_03b_ghidra.py:365 - test_json_dumps_payload_survives_round_trip
+- tests/test_bridges/test_realcov_03b_ghidra.py:406 - test_ref_type_taxonomy
+- tests/test_bridges/test_realcov_03b_ghidra.py:415 - test_cross_reference_built_from_call_payload
+- tests/test_bridges/test_realcov_03b_ghidra.py:436 - test_cross_reference_write_payload_preserves_write_kind
+- tests/test_bridges/test_realcov_03b_ghidra.py:451 - test_resolves_real_file_to_absolute
+- tests/test_bridges/test_realcov_03b_ghidra.py:462 - test_nonexistent_path_rejected
+- tests/test_bridges/test_realcov_03b_ghidra.py:472 - test_directory_rejected
+- tests/test_bridges/test_realcov_03b_ghidra.py:481 - test_empty_path_rejected
+- tests/test_bridges/test_realcov_03b_ghidra.py:486 - test_traversal_sequence_resolved_against_real_root
+- tests/test_bridges/test_realcov_03b_ghidra.py:505 - test_scrubbed_environment_strips_jvm_hijack_variables
+- tests/test_bridges/test_realcov_03b_ghidra.py:515 - test_resolve_headless_executable_missing_install_raises
+- tests/test_bridges/test_realcov_03b_ghidra.py:530 - test_resolve_headless_executable_finds_real_launcher
+- tests/test_bridges/test_realcov_03b_ghidra.py:557 - test_is_available_false_without_path
+- tests/test_bridges/test_realcov_03b_ghidra.py:566 - test_is_available_reflects_path_and_package
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:145 - test_set_label_success_after_readback_matches
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:171 - test_set_label_raises_when_readback_text_differs
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:194 - test_set_label_verified_false_when_lbl_list_unknown
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:219 - test_set_comment_success_after_readback_matches
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:243 - test_set_comment_raises_on_mismatch
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:272 - test_enable_breakpoint_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:296 - test_enable_breakpoint_raises_when_still_disabled
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:320 - test_enable_breakpoint_raises_when_bp_missing
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:340 - test_disable_breakpoint_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:363 - test_disable_breakpoint_raises_when_still_enabled
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:397 - test_suspend_thread_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:421 - test_suspend_thread_raises_when_thread_still_running
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:445 - test_resume_thread_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:468 - test_resume_thread_raises_when_thread_still_suspended
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:492 - test_switch_thread_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:515 - test_switch_thread_raises_when_thread_missing
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:535 - test_set_thread_name_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:559 - test_set_thread_name_raises_on_name_mismatch
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:593 - test_trace_into_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:616 - test_trace_into_raises_when_debugger_stays_paused
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:640 - test_trace_over_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:663 - test_trace_over_raises_when_debugger_stays_paused
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:687 - test_step_count_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:710 - test_step_count_raises_when_debugger_still_running
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:734 - test_animate_start_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:757 - test_animate_start_raises_when_debugger_stays_paused
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:781 - test_animate_stop_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:804 - test_animate_stop_raises_when_debugger_still_running
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:837 - test_script_load_success_when_iserror_clear
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:859 - test_script_load_raises_when_iserror_set
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:878 - test_script_run_success_when_iserror_clear
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:897 - test_script_run_raises_when_iserror_set
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:916 - test_script_cmd_success_when_iserror_clear
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:936 - test_script_cmd_raises_when_iserror_set
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:955 - test_script_abort_success_when_iserror_clear
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:974 - test_script_abort_raises_when_iserror_set
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1002 - test_plugin_load_success_via_plugin_list
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1026 - test_plugin_load_raises_when_plugin_absent
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1045 - test_plugin_load_falls_back_to_plugin_find
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1071 - test_plugin_unload_success
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1090 - test_plugin_unload_raises_when_plugin_still_present
+- tests/test_bridges/test_x64dbg_audit7_f0001.py:1120 - test_no_wrapper_returns_bare_success_dict
+- tests/test_core/test_logging.py:133 - test_renderer_includes_timestamp
+- tests/test_core/test_logging.py:140 - test_renderer_includes_event
+- tests/test_core/test_logging.py:147 - test_renderer_location_with_module_and_line
+- tests/test_core/test_logging.py:158 - test_renderer_location_module_no_func
+- tests/test_core/test_logging.py:169 - test_renderer_location_fallback_to_logger
+- tests/test_core/test_logging.py:199 - test_renderer_skips_underscore_keys
+- tests/test_core/test_logging.py:213 - test_cleanup_nonexistent_directory
+- tests/test_core/test_logging.py:219 - test_cleanup_empty_directory
+- tests/test_core/test_logging.py:229 - test_cleanup_retains_recent_files
+- tests/test_core/test_logging.py:242 - test_cleanup_deletes_old_files
+- tests/test_core/test_logging.py:257 - test_cleanup_mixed_old_and_new
+- tests/test_core/test_logging.py:277 - test_cleanup_ignores_non_log_files
+- tests/test_core/test_logging.py:292 - test_cleanup_handles_rotated_logs
+- tests/test_core/test_logging.py:309 - test_sanitize_bytes_value
+- tests/test_core/test_logging.py:315 - test_sanitize_short_string
+- tests/test_core/test_logging.py:321 - test_sanitize_long_string
+- tests/test_core/test_logging.py:329 - test_sanitize_small_list
+- tests/test_core/test_logging.py:336 - test_sanitize_large_list
+- tests/test_core/test_logging.py:343 - test_sanitize_small_tuple
+- tests/test_core/test_logging.py:350 - test_sanitize_large_tuple
+- tests/test_core/test_logging.py:357 - test_sanitize_small_dict
+- tests/test_core/test_logging.py:364 - test_sanitize_large_dict
+- tests/test_core/test_logging.py:371 - test_sanitize_int_value
+- tests/test_core/test_logging.py:377 - test_sanitize_none_value
+- tests/test_core/test_logging.py:383 - test_sanitize_empty_dict
+- tests/test_core/test_logging.py:392 - test_intellicrack_logger_default_name
+- tests/test_core/test_logging.py:398 - test_intellicrack_logger_custom_name
+- tests/test_core/test_logging.py:404 - test_intellicrack_logger_get_logger_root
+- tests/test_core/test_logging.py:412 - test_intellicrack_logger_get_logger_child
+- tests/test_core/test_logging.py:419 - test_intellicrack_logger_configure
+- tests/test_core/test_logging.py:437 - test_intellicrack_logger_configure_no_file
+- tests/test_core/test_logging.py:447 - test_intellicrack_logger_configure_plain_text
+- tests/test_core/test_logging.py:465 - test_get_logger_returns_bound_logger
+- tests/test_core/test_logging.py:472 - test_get_logger_no_name
+- tests/test_core/test_logging.py:478 - test_get_logger_with_name
+- tests/test_core/test_logging.py:487 - test_log_tool_call_minimal
+- tests/test_core/test_logging.py:492 - test_log_tool_call_with_duration_and_success
+- tests/test_core/test_logging.py:503 - test_log_tool_call_with_failure
+- tests/test_core/test_logging.py:508 - test_log_provider_request
+- tests/test_core/test_logging.py:513 - test_log_provider_response_minimal
+- tests/test_core/test_logging.py:518 - test_log_provider_response_with_tokens
+- tests/test_core/test_logging.py:529 - test_log_binary_operation
+- tests/test_core/test_logging.py:534 - test_log_binary_operation_path_object
+- tests/test_core/test_logging.py:539 - test_log_sandbox_operation
+- tests/test_core/test_logging.py:544 - test_log_session_operation_minimal
+- tests/test_core/test_logging.py:549 - test_log_session_operation_with_id
+- tests/test_core/test_logging.py:554 - test_log_session_operation_with_kwargs
+- tests/test_core/test_logging.py:559 - test_log_analysis_operation
+- tests/test_core/test_logging.py:567 - test_operation_timer_success
+- tests/test_core/test_logging.py:573 - test_operation_timer_with_context
+- tests/test_core/test_logging.py:579 - test_operation_timer_on_exception
+- tests/test_core/test_logging.py:590 - test_operation_timer_measures_time
+- tests/test_core/test_logging.py:600 - test_level_colors_contains_all_levels
+- tests/test_core/test_logging.py:607 - test_reset_code
+- tests/test_core/test_realcov_05b_tools.py:90 - test_hex_editor_open_real_pe_returns_real_size
+- tests/test_core/test_realcov_05b_tools.py:115 - test_hex_editor_reads_real_mz_magic
+- tests/test_core/test_realcov_05b_tools.py:146 - test_dotted_function_name_routes_to_method
+- tests/test_core/test_realcov_05b_tools.py:170 - test_tool_name_is_case_insensitive
+- tests/test_core/test_realcov_06_optional_imports.py:73 - test_require_yara_returns_real_module
+- tests/test_core/test_realcov_06_optional_imports.py:107 - test_require_yara_raises_sandbox_error_on_real_import_failure
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:87 - test_endian_big_sets_default_endianness
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:92 - test_endian_little_is_default
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:97 - test_author_and_description_pragmas_propagate
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:108 - test_description_falls_back_to_struct_name
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:113 - test_magic_pragma_emits_magic_detection
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:121 - test_base_address_and_pointer_size_in_pragma_metadata
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:133 - test_bitfield_order_and_mime_in_pragma_metadata
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:145 - test_no_pragmas_omits_optional_blocks
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:156 - test_equality_else_branch_uses_ne
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:169 - test_greater_than_else_branch_uses_le
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:181 - test_bitmask_else_branch_uses_bitandzero
+- tests/test_hexpat/test_realcov_07b_compiler_pragmas.py:193 - test_if_without_else_emits_single_conditional
+- tests/test_providers/test_openrouter_provider.py:48 - test_list_models_returns_non_empty_list
+- tests/test_providers/test_openrouter_provider.py:66 - test_list_models_returns_many_models
+- tests/test_providers/test_openrouter_provider.py:80 - test_list_models_returns_model_info_instances
+- tests/test_providers/test_openrouter_provider.py:95 - test_model_info_has_valid_id
+- tests/test_providers/test_openrouter_provider.py:111 - test_model_info_has_valid_name
+- tests/test_providers/test_openrouter_provider.py:127 - test_model_info_has_correct_provider
+- tests/test_providers/test_openrouter_provider.py:142 - test_model_info_has_positive_context_window
+- tests/test_providers/test_openrouter_provider.py:158 - test_model_info_has_boolean_capabilities
+- tests/test_providers/test_openrouter_provider.py:175 - test_model_info_may_have_pricing
+- tests/test_providers/test_openrouter_provider.py:191 - test_multiple_calls_return_consistent_results
+- tests/test_providers/test_provider_loop_rebind.py:200+ (see note on partial reads)
+- tests/test_providers/test_realcov_11_xpu_utils.py:62 - test_is_xpu_available_returns_bool_without_raising
+- tests/test_providers/test_realcov_11_xpu_utils.py:68 - test_device_count_consistent_with_availability
+- tests/test_providers/test_realcov_11_xpu_utils.py:79 - test_is_arc_b580_returns_bool
+- tests/test_providers/test_realcov_11_xpu_utils.py:91 - test_device_zero_info_when_available
+- tests/test_providers/test_realcov_11_xpu_utils.py:103 - test_out_of_range_device_returns_none
+- tests/test_providers/test_realcov_11_xpu_utils.py:115 - test_memory_info_returns_pair
+- tests/test_providers/test_realcov_11_xpu_utils.py:126 - test_out_of_range_memory_info_is_zero_pair
+- tests/test_providers/test_realcov_11_xpu_utils.py:138 - test_initialize_returns_real_device
+- tests/test_providers/test_realcov_11_xpu_utils.py:147 - test_out_of_range_index_raises_runtime_error
+- tests/test_providers/test_realcov_11_xpu_utils.py:159 - test_optimal_dtype_is_valid_choice
+- tests/test_providers/test_realcov_11_xpu_utils.py:165 - test_cpu_only_machine_reports_float32
+- tests/test_providers/test_realcov_11_xpu_utils.py:176 - test_non_windows_returns_met_with_no_warnings
+- tests/test_providers/test_realcov_11_xpu_utils.py:186 - test_windows_requirements_returns_typed_result
+- tests/test_ui/test_search_async.py:142 - test_hex_search_finds_repeated_pattern
+- tests/test_ui/test_search_async.py:155 - test_text_search_finds_ascii_string
+- tests/test_ui/test_search_async.py:166 - test_unknown_mode_returns_empty
+- tests/test_ui/test_search_async.py:176 - test_numeric_search_fallback_locates_value
+
+## Summary
+- Findings by severity:
+  - Critical: 0
+  - High: 0
+  - Medium: 5
+  - Low: 2
+- Total tests audited: 307
+- Total tests clean: 300

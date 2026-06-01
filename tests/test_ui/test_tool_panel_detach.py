@@ -72,7 +72,7 @@ class TestDetachTab:
         assert window is not None
         assert panel.tab_widget.count() == 0
 
-        panel.reattach_panel(widget, _TAB_A)
+        panel._reattach_panel(widget, _TAB_A)
 
         assert panel.tab_widget.count() == 1
         assert panel.tab_widget.tabText(0) == _TAB_A
@@ -140,7 +140,7 @@ class TestCloseOtherAndAllTabs:
         _add_plain_tab(panel, _TAB_C)
         assert panel.tab_widget.count() == _EXPECTED_THREE_TABS
 
-        panel.close_other_tabs(1)
+        panel._close_other_tabs(1)
 
         assert panel.tab_widget.count() == 1
         assert panel.tab_widget.widget(0) is widget_b
@@ -154,7 +154,7 @@ class TestCloseOtherAndAllTabs:
         _add_plain_tab(panel, _TAB_C)
         assert panel.tab_widget.count() == _EXPECTED_THREE_TABS
 
-        panel.close_all_tabs()
+        panel._close_all_tabs()
 
         assert panel.tab_widget.count() == 0
 

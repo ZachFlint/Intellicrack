@@ -19,7 +19,6 @@ The tests cover:
 from __future__ import annotations
 
 import importlib
-import tempfile
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -27,9 +26,6 @@ import pytest
 from intellicrack.sandbox.analysis import extract_iocs
 from intellicrack.sandbox.base import ExecutionReport
 from intellicrack.sandbox.tld_data import FILE_EXTENSION_TLDS, KNOWN_TLDS
-
-
-_TEST_BINARY_PATH = f"{tempfile.gettempdir()}/sample.bin"
 
 
 if TYPE_CHECKING:
@@ -52,10 +48,10 @@ def _empty_report(**kwargs: object) -> ExecutionReport:
             those supplied via kwargs.
     """
     defaults: dict[str, Any] = {
-        "sandbox_id": "test-sandbox",
-        "binary_path": _TEST_BINARY_PATH,
-        "result": "completed",
+        "result": "success",
         "exit_code": 0,
+        "stdout": "",
+        "stderr": "",
         "duration_seconds": 1.0,
         "network_activity": [],
         "file_changes": [],

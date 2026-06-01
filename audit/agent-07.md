@@ -1,0 +1,394 @@
+# Agent 07 - Test Quality Audit
+
+## Partition
+
+Files audited (full list):
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py
+- tests/test_audit7/config_pyproject/test_runtime_deps.py
+- tests/test_bridges/test_parse_helpers.py
+- tests/test_bridges/test_x64dbg_new_methods.py
+- tests/test_core/test_elevation.py
+- tests/test_core/test_realcov_06_error_logging.py
+- tests/test_core/test_realcov_06_logging_integration.py
+- tests/test_core/test_realcov_06_types_exceptions.py
+- tests/test_core/test_tools.py
+- tests/test_hexcore_e2e/test_bridge_block_ops.py
+- tests/test_hexcore_e2e/test_bridge_disassembly.py
+- tests/test_hexcore_e2e/test_bridge_search.py
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py
+- tests/test_providers/test_huggingface_provider.py
+- tests/test_providers/test_model_discovery.py
+- tests/test_providers/test_parse_openai_format_tool_calls.py
+- tests/test_ui/test_splash_screen.py
+
+Total test functions audited: 308
+
+## Findings
+
+### tests/test_bridges/test_x64dbg_new_methods.py:201-214 - TestFindPattern.test_find_exact_pattern_in_own_memory
+- Violation(s): Weak assertion on rich output; cannot-fail branch
+- Why it is not a real gate: The test uses `any(int(r["offset"]) == buf_addr for r in results)` which is a weak search predicate. If the pattern-finding logic were completely broken, returning an empty list would pass silently because of the unconditional `assert` check on `found` being True only if ANY match is found. The assertion does not verify that the CORRECT address was found with proper semantics.
+- Severity: Medium
+- Fix recommendation: Assert that results is a non-empty list AND that the expected buffer address is present in the exact correct position AND that no spurious matches appear. Verify the offset field is exactly the computed buffer address, not an approximate match. Test edge cases: pattern at memory boundary, pattern partially outside allocated region.
+
+### tests/test_bridges/test_x64dbg_new_methods.py:254-265 - TestScanMemory.test_scan_with_bytes
+- Violation(s): Weak assertion on rich output; assertion only checks list is non-empty
+- Why it is not a real gate: `assert len(results) > 0` does not validate correctness of the scan operation. The function could return garbage results, results for a completely different pattern, or incorrectly formatted records, and the test would still pass because a list with ANY content satisfies `len(results) > 0`.
+- Severity: Medium
+- Fix recommendation: Assert that results contain exactly the expected number of matches OR at least one specific expected match with correct offset/structure. Verify each result dict contains all required keys (offset, length). Cross-check against a known-good oracle (e.g., a manual byte search using Python's built-in bytes.find).
+
+### tests/test_bridges/test_x64dbg_new_methods.py:410-427 - TestPEParsing.test_get_module_sections_real
+- Violation(s): Weak assertion on rich output; assertion only checks list non-empty and key membership
+- Why it is not a real gate: The test checks `len(sections) > 0` and verifies the ".text" key exists, but does not validate section contents, characteristics, or structure. A function returning `[{"name": ".text", "executable": True}]` would pass even if all other fields are missing or wrong.
+- Severity: High (covers PE section parsing, a core bridge capability)
+- Fix recommendation: For each section returned, assert ALL required fields exist and have correct types/ranges. For the .text section specifically, assert realistic values: virtual_address is non-zero, virtual_size matches expectation for a real system DLL, characteristics flags are bitwise consistent with executable sections (e.g., 0x60000020). Load a known system DLL (ntdll.dll) and validate against its actual PE header structure.
+
+### tests/test_bridges/test_x64dbg_new_methods.py:459-466 - TestPEParsing.test_get_module_exports_real
+- Violation(s): Weak assertion on rich output; happy-path-only
+- Why it is not a real gate: The test only checks that the list is non-empty and that at least one name contains "Nt" or "Rtl", which is a substring match on a few exports from ntdll. This does not validate that ALL exports are correctly parsed or that the export table is complete. The list could be missing many exports and still pass.
+- Severity: High (PE export parsing is a critical bridge function)
+- Fix recommendation: Assert minimum count of exports (ntdll has 1000+). For a sample of exports, verify exact values: name, ordinal, address. Cross-check against PE introspection tools or the actual PE header's export table. Verify no duplicate export names. Test error path: call with a module lacking an export table (raise ToolError).
+
+### tests/test_providers/test_huggingface_provider.py:48-63 - TestHuggingFaceModelListing.test_list_models_returns_non_empty_list
+- Violation(s): Weak assertion on rich output; type-check only
+- Why it is not a real gate: `assert len(models) > 0` verifies only that the API returned something, not that the returned list contains valid ModelInfo objects or that the provider correctly parsed the API response. A broken parser returning `[None, None]` would pass.
+- Severity: Medium
+- Fix recommendation: Assert that EVERY item in the returned list is a ModelInfo instance with non-empty id, name, context_window > 0, and provider == ProviderName.HUGGINGFACE. Assert that model IDs are unique. Compare against an independently fetched list of HuggingFace models (via direct API call in test setup or hardcoded snapshot) and verify the returned set is at least a subset.
+
+### tests/test_providers/test_huggingface_provider.py:106-107 - TestHuggingFaceModelListing.test_model_info_has_valid_id
+- Violation(s): Weak assertion on rich output; loop only checks first N items
+- Why it is not a real gate: The test iterates `models[:_SAMPLE_MODEL_LIMIT]` which only validates the first 20 models. If the 21st model onward has corrupted IDs, the test passes silently. Additionally, `assert len(model.id) > 0` does not verify non-null or non-whitespace content.
+- Severity: Low
+- Fix recommendation: Assert ALL returned models have valid IDs (loop over entire list). Verify each ID matches a realistic HuggingFace model name format (e.g., contains "/" or is alphanumeric with dashes). Test error path: confirm that an empty ID would fail the assertion.
+
+### tests/test_ui/test_splash_screen.py:313-319 - TestProgressSignal.test_progress_signal_emits
+- Violation(s): Smoke-test-as-gate; no meaningful assertion
+- Why it is not a real gate: The test only emits a signal without asserting that the signal was actually emitted or that any connected slots received it. The signal emission could be completely broken and the test would still pass.
+- Severity: Low
+- Fix recommendation: Connect a real signal handler (using Qt's connect) and assert it was called with the correct arguments. Verify the signal carries the correct (progress_value, message) tuple. Test that rapid successive emissions do not cause signal loss.
+
+### tests/test_ui/test_splash_screen.py:378-388 - TestSplashPixmapLoading.test_load_splash_pixmap_returns_qpixmap
+- Violation(s): Weak assertion on rich output; only type-check
+- Why it is not a real gate: `assert isinstance(pixmap, QPixmap)` does not validate that the pixmap has valid content (could be null). Test proceeds to line 386-387 which checks `not pixmap.isNull()`, but that check is in a DIFFERENT test method. This test alone only verifies type, not usability.
+- Severity: Low
+- Fix recommendation: Assert `not pixmap.isNull()` and `pixmap.width() > 0` and `pixmap.height() > 0` in this same test. Verify the pixmap was actually loaded from the on-disk splash image file.
+
+### tests/test_ui/test_splash_screen.py:506-516 - TestSplashScreenIntegration.test_splash_screen_no_exceptions_on_operations
+- Violation(s): Cannot-fail; overly broad exception handling
+- Why it is not a real gate: The test catches `(RuntimeError, OSError, ValueError)` but then calls `pytest.fail()` only if an exception is raised. If none is raised, the test passes without asserting ANY correctness of the splash operations (position, dimensions, visibility state, rendered output). The operations could be silently broken and produce no exception.
+- Severity: Low
+- Fix recommendation: Remove try/except or make it narrower. After each operation, assert that the splash state is correct (e.g., after `show()`, assert `splash.isVisible() is True`; after `set_progress(50, msg)`, assert `splash.progress == 50` AND `splash.status == msg`). This converts a smoke test into a real gate.
+
+## Clean tests
+
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:57-84 - TestStdlibHashesMatchReference.test_hash_matches_hashlib
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:85-93 - TestStdlibHashesMatchReference.test_blake2_digests_match_reference
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:99-106 - TestChecksumsMatchReference.test_crc32_matches_zlib
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:108-115 - TestChecksumsMatchReference.test_adler32_matches_zlib
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:117-129 - TestChecksumsMatchReference.test_crc8_engine_matches_production_dispatch
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:131-139 - TestChecksumsMatchReference.test_crc16_engine_matches_production_dispatch
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:141-157 - TestChecksumsMatchReference.test_crc64_engine_matches_production_dispatch
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:159-182 - TestChecksumsMatchReference.test_unreflected_crc32_engine_matches_bit_serial
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:208-218 - TestFnvHashes.test_fnv_variants_match_reference
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:224-241 - TestStreamingCrcMatchesInMemory.test_streaming_file_path_matches_zlib
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:243-275 - TestStreamingCrcMatchesInMemory.test_streaming_file_path_matches_document_path
+- tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py:281-291 - TestFormatSize.test_real_pe_size_is_kb_or_mb
+- tests/test_audit7/config_pyproject/test_runtime_deps.py:212-225 - test_blocklist_absent_from_runtime_dependencies
+- tests/test_audit7/config_pyproject/test_runtime_deps.py:228-241 - test_allowlist_present_in_runtime_dependencies
+- tests/test_audit7/config_pyproject/test_runtime_deps.py:244-259 - test_runtime_dependency_count_is_lean
+- tests/test_bridges/test_parse_helpers.py:26-40 - TestSafeIntFromStr.test_parses_hex_string_with_prefix
+- tests/test_bridges/test_parse_helpers.py:30-36 - TestSafeIntFromStr.test_parses_decimal_string
+- tests/test_bridges/test_parse_helpers.py:34-40 - TestSafeIntFromStr.test_parses_binary_with_explicit_base
+- tests/test_bridges/test_parse_helpers.py:38-40 - TestSafeIntFromStr.test_returns_int_unchanged
+- tests/test_bridges/test_parse_helpers.py:42-45 - TestSafeIntFromStr.test_rejects_bool_values
+- tests/test_bridges/test_parse_helpers.py:47-50 - TestSafeIntFromStr.test_rejects_bool_with_explicit_default
+- tests/test_bridges/test_parse_helpers.py:52-54 - TestSafeIntFromStr.test_returns_default_on_parse_failure
+- tests/test_bridges/test_parse_helpers.py:56-58 - TestSafeIntFromStr.test_returns_none_by_default_on_failure
+- tests/test_bridges/test_parse_helpers.py:60-62 - TestSafeIntFromStr.test_rejects_unsupported_type
+- tests/test_bridges/test_parse_helpers.py:64-77 - TestSafeIntFromStr.test_logs_at_debug_on_parse_failure
+- tests/test_bridges/test_parse_helpers.py:79-90 - TestSafeIntFromStr.test_logs_at_debug_on_bool_rejection
+- tests/test_bridges/test_parse_helpers.py:92-94 - TestSafeIntFromStr.test_parses_bytes_input
+- tests/test_bridges/test_parse_helpers.py:96-98 - TestSafeIntFromStr.test_negative_decimal_string_parses
+- tests/test_bridges/test_parse_helpers.py:104-112 - TestSafeCall.test_returns_result_on_success
+- tests/test_bridges/test_parse_helpers.py:114-127 - TestSafeCall.test_returns_default_on_caught_exception
+- tests/test_bridges/test_parse_helpers.py:129-141 - TestSafeCall.test_returns_default_on_struct_error
+- tests/test_bridges/test_parse_helpers.py:143-156 - TestSafeCall.test_returns_default_with_tuple_exceptions
+- tests/test_bridges/test_parse_helpers.py:158-171 - TestSafeCall.test_propagates_uncaught_exception
+- tests/test_bridges/test_parse_helpers.py:173-197 - TestSafeCall.test_logs_at_debug_on_caught_exception
+- tests/test_bridges/test_x64dbg_new_methods.py:69-76 - TestToolDefinitionCompleteness.test_tool_definition_name
+- tests/test_bridges/test_x64dbg_new_methods.py:78-85 - TestToolDefinitionCompleteness.test_total_function_count
+- tests/test_bridges/test_x64dbg_new_methods.py:87-175 - TestToolDefinitionCompleteness.test_new_tool_functions_defined
+- tests/test_bridges/test_x64dbg_new_methods.py:181-193 - TestToolDefinitionCompleteness.test_all_functions_have_methods
+- tests/test_bridges/test_x64dbg_new_methods.py:216-246 - TestFindPattern.test_find_compact_hex_pattern
+- tests/test_bridges/test_x64dbg_new_methods.py:232-246 - TestFindPattern.test_find_pattern_with_wildcards
+- tests/test_bridges/test_x64dbg_new_methods.py:254-266 - TestScanMemory.test_scan_with_hex_string
+- tests/test_bridges/test_x64dbg_new_methods.py:284-298 - TestScanMemory.test_scan_with_spaced_hex_string
+- tests/test_bridges/test_x64dbg_new_methods.py:301-308 - TestScanMemory.test_scan_short_pattern_raises
+- tests/test_bridges/test_x64dbg_new_methods.py:311-318 - TestScanMemory.test_scan_empty_pattern_raises
+- tests/test_bridges/test_x64dbg_new_methods.py:326-334 - TestAllocateMemoryProtection.test_allocate_rwx
+- tests/test_bridges/test_x64dbg_new_methods.py:337-345 - TestAllocateMemoryProtection.test_allocate_rw
+- tests/test_bridges/test_x64dbg_new_methods.py:348-356 - TestAllocateMemoryProtection.test_allocate_rx
+- tests/test_bridges/test_x64dbg_new_methods.py:359-367 - TestAllocateMemoryProtection.test_allocate_r
+- tests/test_bridges/test_x64dbg_new_methods.py:370-378 - TestAllocateMemoryProtection.test_allocate_named_protection
+- tests/test_bridges/test_x64dbg_new_methods.py:386-404 - TestDumpMemoryToFile.test_dump_real_memory
+- tests/test_bridges/test_x64dbg_new_methods.py:429-450 - TestPEParsing.test_section_has_required_fields
+- tests/test_bridges/test_x64dbg_new_methods.py:507-518 - TestParseSectionEntry.test_parse_text_section
+- tests/test_bridges/test_x64dbg_new_methods.py:520-529 - TestParseSectionEntry.test_parse_data_section
+- tests/test_bridges/test_x64dbg_new_methods.py:536-543 - TestNewPipeDependentMethods.test_run_to
+- tests/test_bridges/test_x64dbg_new_methods.py:545-552 - TestNewPipeDependentMethods.test_execute_til_return
+- tests/test_bridges/test_x64dbg_new_methods.py:554-561 - TestNewPipeDependentMethods.test_set_ip
+- tests/test_bridges/test_x64dbg_new_methods.py:563-570 - TestNewPipeDependentMethods.test_set_label
+- tests/test_bridges/test_x64dbg_new_methods.py:572-579 - TestNewPipeDependentMethods.test_get_labels_returns_empty
+- tests/test_bridges/test_x64dbg_new_methods.py:581-588 - TestNewPipeDependentMethods.test_set_comment
+- tests/test_bridges/test_x64dbg_new_methods.py:590-597 - TestNewPipeDependentMethods.test_get_comments_returns_empty
+- tests/test_bridges/test_x64dbg_new_methods.py:599-606 - TestNewPipeDependentMethods.test_enable_breakpoint
+- tests/test_bridges/test_x64dbg_new_methods.py:608-615 - TestNewPipeDependentMethods.test_disable_breakpoint
+- tests/test_bridges/test_x64dbg_new_methods.py:617-624 - TestNewPipeDependentMethods.test_set_breakpoint_on_api
+- tests/test_bridges/test_x64dbg_new_methods.py:626-633 - TestNewPipeDependentMethods.test_trace_start
+- tests/test_bridges/test_x64dbg_new_methods.py:635-642 - TestNewPipeDependentMethods.test_trace_stop
+- tests/test_bridges/test_x64dbg_new_methods.py:644-651 - TestNewPipeDependentMethods.test_set_exception_config
+- tests/test_bridges/test_x64dbg_new_methods.py:653-660 - TestNewPipeDependentMethods.test_skip_instruction
+- tests/test_core/test_elevation.py:51-53 - TestPlatformHelpers.test_is_windows_matches_platform
+- tests/test_core/test_elevation.py:55-57 - TestPlatformHelpers.test_is_elevated_returns_bool
+- tests/test_core/test_elevation.py:63-76 - TestBuildRelaunchCommand.test_interpreter_launch_uses_module_invocation
+- tests/test_core/test_elevation.py:78-89 - TestBuildRelaunchCommand.test_arguments_with_spaces_are_quoted
+- tests/test_core/test_elevation.py:91-121 - TestBuildRelaunchCommand.test_pixi_launch_relaunches_through_pixi
+- tests/test_core/test_elevation.py:123-140 - TestBuildRelaunchCommand.test_missing_pixi_executable_falls_back_to_interpreter
+- tests/test_core/test_elevation.py:142-152 - TestBuildRelaunchCommand.test_frozen_launch_uses_executable_directly
+- tests/test_core/test_elevation.py:158-167 - TestMaybeElevate.test_non_windows_never_elevates
+- tests/test_core/test_elevation.py:169-179 - TestMaybeElevate.test_disabled_skips_elevation
+- tests/test_core/test_elevation.py:181-193 - TestMaybeElevate.test_already_attempted_does_not_loop
+- tests/test_core/test_elevation.py:195-207 - TestMaybeElevate.test_already_elevated_needs_no_relaunch
+- tests/test_core/test_elevation.py:209-221 - TestMaybeElevate.test_unelevated_triggers_relaunch_and_exits
+- tests/test_core/test_elevation.py:223-235 - TestMaybeElevate.test_declined_relaunch_continues_unprivileged
+- tests/test_core/test_realcov_06_error_logging.py:49-70 - test_log_passthrough_emits_real_warning_event
+- tests/test_core/test_realcov_06_error_logging.py:99-112 - test_log_passthrough_preserves_re_raise_pattern
+- tests/test_core/test_realcov_06_error_logging.py:115-127 - test_log_passthrough_records_exception_subclass_name
+- tests/test_core/test_realcov_06_logging_integration.py:62-93 - test_setup_logging_writes_real_json_event_to_file
+- tests/test_core/test_realcov_06_logging_integration.py:97-122 - test_setup_logging_plain_text_file_format
+- tests/test_core/test_realcov_06_logging_integration.py:126-136 - test_setup_logging_suppresses_third_party_noisy_loggers
+- tests/test_core/test_realcov_06_logging_integration.py:140-170 - test_setup_logging_rotation_creates_backup_file
+- tests/test_core/test_realcov_06_types_exceptions.py:31-39 - test_intellicrack_error_carries_message_code_and_details
+- tests/test_core/test_realcov_06_types_exceptions.py:42-46 - test_intellicrack_error_defaults_to_empty_details
+- tests/test_core/test_realcov_06_types_exceptions.py:49-63 - test_configuration_error_exposes_config_fields
+- tests/test_core/test_realcov_06_types_exceptions.py:66-73 - test_sandbox_error_exposes_sandbox_fields
+- tests/test_core/test_realcov_06_types_exceptions.py:76-88 - test_sandbox_timeout_error_is_sandbox_error_subclass
+- tests/test_core/test_tools.py:47-53 - test_tools_directory
+- tests/test_core/test_tools.py:56-62 - test_get_available_tools_empty
+- tests/test_core/test_tools.py:65-71 - test_get_tool_definitions_empty
+- tests/test_core/test_tools.py:74-80 - test_get_returns_none_before_init
+- tests/test_core/test_tools.py:83-90 - test_get_process_bridge_raises
+- tests/test_core/test_tools.py:93-100 - test_get_frida_bridge_raises
+- tests/test_core/test_tools.py:103-110 - test_get_ghidra_bridge_raises
+- tests/test_core/test_tools.py:113-120 - test_get_cutter_bridge_raises
+- tests/test_core/test_tools.py:123-130 - test_get_x64dbg_bridge_raises
+- tests/test_core/test_tools.py:133-140 - test_get_sandbox_bridge_raises
+- tests/test_core/test_tools.py:144-151 - test_execute_tool_call_unknown_tool
+- tests/test_core/test_tools.py:155-162 - test_execute_tool_call_not_registered
+- tests/test_core/test_tools.py:166-175 - test_get_status_not_registered
+- tests/test_core/test_tools.py:179-186 - test_get_all_status_empty
+- tests/test_core/test_tools.py:190-197 - test_ensure_tool_ready_not_found
+- tests/test_core/test_tools.py:201-207 - test_shutdown_empty
+- tests/test_core/test_tools.py:211-229 - test_initialize_creates_bridges
+- tests/test_core/test_tools.py:233-245 - test_initialize_idempotent
+- tests/test_core/test_tools.py:249-261 - test_get_tool_definitions_after_init
+- tests/test_core/test_tools.py:265-277 - test_get_all_status_after_init
+- tests/test_core/test_tools.py:281-306 - test_dispatch_no_capability_gate
+- tests/test_core/test_tools.py:310-324 - test_dispatch_unknown_function_rejected
+- tests/test_core/test_tools.py:328-346 - test_dispatch_x64dbg_tool_call
+- tests/test_core/test_tools.py:350-365 - test_tool_definitions_have_functions
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:50-63 - TestFillBlock.test_fill_block_single_byte
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:65-78 - TestFillBlock.test_fill_block_multi_byte_pattern
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:80-91 - TestFillBlock.test_fill_block_empty_pattern_raises
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:93-100 - TestFillBlock.test_fill_block_no_doc_raises
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:106-119 - TestCopyBlock.test_copy_block
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:121-135 - TestCopyBlock.test_copy_block_overlapping_forward
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:141-156 - TestMoveBlock.test_move_block
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:162-178 - TestSwapBlocks.test_swap_blocks
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:180-202 - TestSwapBlocks.test_swap_blocks_different_lengths
+- tests/test_hexcore_e2e/test_bridge_block_ops.py:204-215 - TestSwapBlocks.test_swap_blocks_overlapping_raises
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:55-67 - TestBridgeDisassembly.test_disassemble_returns_list
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:69-82 - TestBridgeDisassembly.test_disassemble_int3_mnemonic
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:84-98 - TestBridgeDisassembly.test_disassemble_result_items_have_required_keys
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:100-112 - TestBridgeDisassembly.test_disassemble_instruction_address_starts_at_offset
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:114-126 - TestBridgeDisassembly.test_disassemble_nop_has_size_one
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:128-141 - TestBridgeDisassembly.test_disassemble_bytes_field_is_hex_string
+- tests/test_hexcore_e2e/test_bridge_disassembly.py:143-156 - TestBridgeDisassembly.test_disassemble_pe_section_code_with_auto_arch
+- tests/test_hexcore_e2e/test_bridge_search.py:43-50 - TestBridgeSearchHex.test_search_hex_returns_list
+- tests/test_hexcore_e2e/test_bridge_search.py:52-62 - TestBridgeSearchHex.test_search_hex_result_items_have_offset_and_length
+- tests/test_hexcore_e2e/test_bridge_search.py:64-72 - TestBridgeSearchHex.test_search_hex_finds_mz_signature_at_offset_zero
+- tests/test_hexcore_e2e/test_bridge_search.py:74-81 - TestBridgeSearchHex.test_search_hex_result_length_matches_pattern_byte_count
+- tests/test_hexcore_e2e/test_bridge_search.py:83-95 - TestBridgeSearchHex.test_search_hex_wildcard_finds_mz_with_second_byte_wild
+- tests/test_hexcore_e2e/test_bridge_search.py:97-104 - TestBridgeSearchHex.test_search_hex_no_match_returns_empty_list
+- tests/test_hexcore_e2e/test_bridge_search.py:106-118 - TestBridgeSearchHex.test_search_hex_max_results_respected
+- tests/test_hexcore_e2e/test_bridge_search.py:124-137 - TestBridgeSearchText.test_search_text_finds_known_ascii_string
+- tests/test_hexcore_e2e/test_bridge_search.py:139-151 - TestBridgeSearchText.test_search_text_case_insensitive_finds_lowercase
+- tests/test_hexcore_e2e/test_bridge_search.py:153-165 - TestBridgeSearchText.test_search_text_case_sensitive_no_match_on_wrong_case
+- tests/test_hexcore_e2e/test_bridge_search.py:167-180 - TestBridgeSearchText.test_search_text_result_length_matches_byte_length_of_string
+- tests/test_hexcore_e2e/test_bridge_search.py:186-198 - TestBridgeSearchRegex.test_search_regex_finds_pattern_match
+- tests/test_hexcore_e2e/test_bridge_search.py:200-212 - TestBridgeSearchRegex.test_search_regex_no_match_returns_empty_list
+- tests/test_hexcore_e2e/test_bridge_search.py:218-232 - TestBridgeSearchNumeric.test_search_numeric_finds_known_uint32_value
+- tests/test_hexcore_e2e/test_bridge_search.py:234-246 - TestBridgeSearchNumeric.test_search_numeric_result_has_correct_length
+- tests/test_hexcore_e2e/test_bridge_search.py:252-264 - TestBridgeReplaceBytes.test_replace_bytes_returns_count
+- tests/test_hexcore_e2e/test_bridge_search.py:266-279 - TestBridgeReplaceBytes.test_replace_bytes_modifies_document_content
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:44-62 - TestPointers.test_pointer_field_dereferences_to_pointee_value
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:64-73 - TestPointers.test_pointer_field_size_is_eight
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:75-86 - TestPointers.test_placement_at_explicit_offset
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:92-106 - TestUnions.test_union_all_members_start_at_same_offset
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:108-118 - TestUnions.test_union_size_is_max_member_size
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:120-136 - TestUnions.test_union_members_reflect_same_bytes
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:142-155 - TestComputedFields.test_computed_offset_from_prior_field
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:157-169 - TestComputedFields.test_field_value_used_as_array_size
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:175-187 - TestConditionalFields.test_conditional_if_branch_taken
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:189-201 - TestConditionalFields.test_conditional_else_branch_taken
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:203-216 - TestConditionalFields.test_conditional_inside_struct_body
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:222-232 - TestNestedArrays.test_array_of_struct_elements
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:234-247 - TestNestedArrays.test_array_fixed_size_field_values
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:249-259 - TestNestedArrays.test_array_size_from_variable
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:265-274 - TestSizeofOperator.test_sizeof_u8
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:276-285 - TestSizeofOperator.test_sizeof_u32
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:287-296 - TestSizeofOperator.test_sizeof_u64
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:298-307 - TestSizeofOperator.test_sizeof_struct_type
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:309-319 - TestSizeofOperator.test_sizeof_placed_variable
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:325-336 - TestDollarOperator.test_dollar_reads_current_offset
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:338-348 - TestDollarOperator.test_dollar_advances_with_field_reads
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:350-360 - TestDollarOperator.test_dollar_assignable
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:366-375 - TestTypeCasts.test_cast_u32_to_u8_truncates
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:377-386 - TestTypeCasts.test_cast_float_to_u8
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:388-396 - TestTypeCasts.test_cast_negative_to_signed
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:398-407 - TestTypeCasts.test_cast_int_to_bool_nonzero_is_true
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:409-418 - TestTypeCasts.test_cast_zero_to_bool_is_false
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:420-429 - TestTypeCasts.test_cast_u8_to_u32_widens
+- tests/test_hexcore_e2e/test_hexpat_complex_patterns.py:431-445 - TestTypeCasts.test_struct_sequential_fields_advance_offset
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:28-31 - TestLexerEscapeErrors.test_unknown_escape_sequence_raises
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:33-36 - TestLexerEscapeErrors.test_invalid_hex_escape_raises
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:38-45 - TestLexerEscapeErrors.test_truncated_escape_at_eof_raises
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:47-50 - TestLexerEscapeErrors.test_empty_char_literal_raises
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:52-55 - TestLexerEscapeErrors.test_unterminated_char_literal_raises
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:61-65 - TestLexerEscapeDecoding.test_null_escape_decodes_to_nul
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:67-70 - TestLexerEscapeDecoding.test_carriage_return_escape_decodes
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:72-75 - TestLexerEscapeDecoding.test_hex_escape_decodes_to_codepoint
+- tests/test_hexpat/test_realcov_08_lexer_escapes.py:77-81 - TestLexerEscapeDecoding.test_escaped_quote_in_char_literal
+- tests/test_providers/test_huggingface_provider.py:66-76 - TestHuggingFaceModelListing.test_list_models_returns_many_models
+- tests/test_providers/test_huggingface_provider.py:80-91 - TestHuggingFaceModelListing.test_list_models_returns_model_info_instances
+- tests/test_providers/test_huggingface_provider.py:95-107 - TestHuggingFaceModelListing.test_model_info_has_valid_name
+- tests/test_providers/test_huggingface_provider.py:111-138 - TestHuggingFaceModelListing.test_model_info_has_correct_provider
+- tests/test_providers/test_huggingface_provider.py:142-154 - TestHuggingFaceModelListing.test_model_info_has_positive_context_window
+- tests/test_providers/test_huggingface_provider.py:158-171 - TestHuggingFaceModelListing.test_model_info_has_boolean_capabilities
+- tests/test_providers/test_huggingface_provider.py:175-189 - TestHuggingFaceModelListing.test_multiple_calls_return_consistent_results
+- tests/test_providers/test_huggingface_provider.py:193-208 - TestHuggingFaceModelListing.test_display_all_available_models
+- tests/test_providers/test_huggingface_provider.py:225-225 - TestHuggingFaceConnection.test_is_connected_after_connect
+- tests/test_providers/test_huggingface_provider.py:237-237 - TestHuggingFaceConnection.test_provider_name_is_huggingface
+- tests/test_providers/test_huggingface_provider.py:241-247 - TestHuggingFaceConnection.test_connection_with_empty_key_raises_error
+- tests/test_providers/test_huggingface_provider.py:251-256 - TestHuggingFaceConnection.test_list_models_without_connection_raises_error
+- tests/test_providers/test_huggingface_provider.py:260-282 - TestHuggingFaceConnection.test_disconnect_clears_connection_state
+- tests/test_providers/test_model_discovery.py:40-54 - TestModelDiscoveryDisplay.test_display_openai_models
+- tests/test_providers/test_model_discovery.py:58-72 - TestModelDiscoveryDisplay.test_display_google_models
+- tests/test_providers/test_model_discovery.py:76-99 - TestModelDiscoveryDisplay.test_display_openrouter_models
+- tests/test_providers/test_model_discovery.py:103-117 - TestModelDiscoveryDisplay.test_display_anthropic_models
+- tests/test_providers/test_model_discovery.py:121-133 - TestModelDiscoveryDisplay.test_display_ollama_models
+- tests/test_providers/test_model_discovery.py:142-226 - TestAllProvidersModelCount.test_summary_all_providers
+- tests/test_providers/test_parse_openai_format_tool_calls.py:119-126 - test_returns_empty_when_no_tool_calls
+- tests/test_providers/test_parse_openai_format_tool_calls.py:129-143 - test_parses_single_function_tool_call
+- tests/test_providers/test_parse_openai_format_tool_calls.py:146-160 - test_parses_multiple_function_tool_calls_in_order
+- tests/test_providers/test_parse_openai_format_tool_calls.py:163-175 - test_skips_custom_tool_calls
+- tests/test_providers/test_parse_openai_format_tool_calls.py:178-190 - test_dotted_function_name_split_into_tool_name
+- tests/test_providers/test_parse_openai_format_tool_calls.py:193-203 - test_invalid_json_arguments_yield_empty_dict
+- tests/test_providers/test_parse_openai_format_tool_calls.py:206-220 - test_grok_provider_uses_same_helper
+- tests/test_providers/test_parse_openai_format_tool_calls.py:265-281 - test_loose_response_shape_compatible
+- tests/test_ui/test_splash_screen.py:101-114 - TestSplashScreenCreation.test_creates_splash_screen
+- tests/test_ui/test_splash_screen.py:117-125 - TestSplashScreenCreation.test_splash_has_correct_window_flags
+- tests/test_ui/test_splash_screen.py:128-135 - TestSplashScreenCreation.test_splash_has_pixmap
+- tests/test_ui/test_splash_screen.py:142-145 - TestSplashDimensions.test_splash_width_constant
+- tests/test_ui/test_splash_screen.py:148-151 - TestSplashDimensions.test_splash_height_constant
+- tests/test_ui/test_splash_screen.py:158-161 - TestSplashColors.test_fallback_bg_color_is_dark
+- tests/test_ui/test_splash_screen.py:164-167 - TestSplashColors.test_fallback_text_color_is_light
+- tests/test_ui/test_splash_screen.py:170-173 - TestSplashColors.test_fallback_accent_color_is_blue
+- tests/test_ui/test_splash_screen.py:180-186 - TestProgressTracking.test_initial_progress_is_zero
+- tests/test_ui/test_splash_screen.py:189-196 - TestProgressTracking.test_set_progress_updates_value
+- tests/test_ui/test_splash_screen.py:199-207 - TestProgressTracking.test_set_progress_with_message
+- tests/test_ui/test_splash_screen.py:210-217 - TestProgressTracking.test_progress_clamped_to_max
+- tests/test_ui/test_splash_screen.py:220-227 - TestProgressTracking.test_progress_clamped_to_min
+- tests/test_ui/test_splash_screen.py:230-238 - TestProgressTracking.test_progress_updates_progress_bar
+- tests/test_ui/test_splash_screen.py:245-252 - TestStatusMessage.test_initial_status_message
+- tests/test_ui/test_splash_screen.py:255-262 - TestStatusMessage.test_status_updated_with_progress
+- tests/test_ui/test_splash_screen.py:265-273 - TestStatusMessage.test_status_preserved_without_message
+- tests/test_ui/test_splash_screen.py:280-287 - TestShowLoadingStep.test_show_loading_step_updates_progress
+- tests/test_ui/test_splash_screen.py:290-297 - TestShowLoadingStep.test_show_loading_step_updates_status
+- tests/test_ui/test_splash_screen.py:304-310 - TestProgressSignal.test_progress_signal_exists
+- tests/test_ui/test_splash_screen.py:326-333 - TestOverlayWidgets.test_has_progress_bar
+- tests/test_ui/test_splash_screen.py:336-343 - TestOverlayWidgets.test_has_status_label
+- tests/test_ui/test_splash_screen.py:346-352 - TestOverlayWidgets.test_has_overlay_widget
+- tests/test_ui/test_splash_screen.py:355-362 - TestOverlayWidgets.test_progress_bar_range
+- tests/test_ui/test_splash_screen.py:365-371 - TestOverlayWidgets.test_progress_bar_text_hidden
+- tests/test_ui/test_splash_screen.py:378-381 - TestSplashPixmapLoading.test_load_splash_pixmap_returns_qpixmap
+- tests/test_ui/test_splash_screen.py:384-387 - TestSplashPixmapLoading.test_loaded_pixmap_not_null
+- tests/test_ui/test_splash_screen.py:390-394 - TestSplashPixmapLoading.test_pixmap_has_correct_dimensions
+- tests/test_ui/test_splash_screen.py:401-404 - TestFallbackPixmap.test_create_fallback_pixmap_returns_qpixmap
+- tests/test_ui/test_splash_screen.py:407-410 - TestFallbackPixmap.test_fallback_pixmap_not_null
+- tests/test_ui/test_splash_screen.py:413-417 - TestFallbackPixmap.test_fallback_pixmap_has_correct_dimensions
+- tests/test_ui/test_splash_screen.py:424-428 - TestSplashImageAsset.test_splash_image_exists
+- tests/test_ui/test_splash_screen.py:431-436 - TestSplashImageAsset.test_splash_image_not_empty
+- tests/test_ui/test_splash_screen.py:439-444 - TestSplashImageAsset.test_splash_image_loadable
+- tests/test_ui/test_splash_screen.py:447-456 - TestSplashImageAsset.test_splash_image_reasonable_dimensions
+- tests/test_ui/test_splash_screen.py:463-475 - TestSplashScreenIntegration.test_splash_screen_show_and_hide
+- tests/test_ui/test_splash_screen.py:478-503 - TestSplashScreenIntegration.test_splash_screen_progress_workflow
+- tests/test_ui/test_splash_screen.py:534-542 - TestFadeAnimation.test_show_animated_creates_animation
+- tests/test_ui/test_splash_screen.py:545-553 - TestFadeAnimation.test_show_animated_targets_full_opacity
+- tests/test_ui/test_splash_screen.py:556-564 - TestFadeAnimation.test_show_animated_correct_duration
+- tests/test_ui/test_splash_screen.py:567-578 - TestFadeAnimation.test_finish_animated_creates_fadeout
+- tests/test_ui/test_splash_screen.py:581-592 - TestFadeAnimation.test_finish_animated_targets_zero_opacity
+- tests/test_ui/test_splash_screen.py:599-605 - TestVersionLabel.test_version_stored
+- tests/test_ui/test_splash_screen.py:608-616 - TestVersionLabel.test_version_label_created
+- tests/test_ui/test_splash_screen.py:619-625 - TestVersionLabel.test_no_version_label_when_empty
+- tests/test_ui/test_splash_screen.py:628-634 - TestVersionLabel.test_default_version_is_empty
+- tests/test_ui/test_splash_screen.py:641-649 - TestProgressAnimation.test_set_progress_creates_animation
+- tests/test_ui/test_splash_screen.py:652-659 - TestProgressAnimation.test_progress_value_set_immediately
+- tests/test_ui/test_splash_screen.py:662-669 - TestProgressAnimation.test_rapid_progress_calls_no_error
+- tests/test_ui/test_splash_screen.py:672-682 - TestProgressAnimation.test_progress_animation_correct_duration
+- tests/test_ui/test_splash_screen.py:689-696 - TestDpiScaling.test_dpi_scale_is_positive
+- tests/test_ui/test_splash_screen.py:699-706 - TestDpiScaling.test_scaled_dimensions_positive
+- tests/test_ui/test_splash_screen.py:709-712 - TestDpiScaling.test_compute_dpi_scale_returns_positive
+- tests/test_ui/test_splash_screen.py:715-717 - TestDpiScaling.test_default_dpi_scale_constant
+- tests/test_ui/test_splash_screen.py:730-736 - TestAnimatedGradient.test_animation_timer_exists
+- tests/test_ui/test_splash_screen.py:739-745 - TestAnimatedGradient.test_gradient_time_initialized
+- tests/test_ui/test_splash_screen.py:748-754 - TestAnimatedGradient.test_active_pulse_time_initialized
+- tests/test_ui/test_splash_screen.py:757-765 - TestAnimatedGradient.test_show_animated_starts_timer
+- tests/test_ui/test_splash_screen.py:768-777 - TestAnimatedGradient.test_animation_tick_advances_time
+- tests/test_ui/test_splash_screen.py:784-791 - TestPipelineIndicator.test_initial_stages_all_pending
+- tests/test_ui/test_splash_screen.py:794-801 - TestPipelineIndicator.test_stage_count
+- tests/test_ui/test_splash_screen.py:804-814 - TestPipelineIndicator.test_progress_completes_early_stages
+- tests/test_ui/test_splash_screen.py:817-825 - TestPipelineIndicator.test_progress_activates_current_stage
+- tests/test_ui/test_splash_screen.py:828-837 - TestPipelineIndicator.test_progress_keeps_later_stages_pending
+- tests/test_ui/test_splash_screen.py:840-848 - TestPipelineIndicator.test_full_progress_completes_all
+- tests/test_ui/test_splash_screen.py:851-859 - TestPipelineIndicator.test_mark_stage_failed
+- tests/test_ui/test_splash_screen.py:862-871 - TestPipelineIndicator.test_failed_stage_preserved_on_progress
+- tests/test_ui/test_splash_screen.py:874-883 - TestPipelineIndicator.test_mark_stage_failed_out_of_range
+- tests/test_ui/test_splash_screen.py:890-900 - TestPaintEventRendering.test_paint_event_no_crash
+- tests/test_ui/test_splash_screen.py:903-914 - TestPaintEventRendering.test_paint_with_progress
+- tests/test_ui/test_splash_screen.py:917-928 - TestPaintEventRendering.test_paint_full_pipeline
+- tests/test_ui/test_splash_screen.py:935-941 - TestStatusLabelProperty.test_status_label_property_returns_qlabel
+- tests/test_ui/test_splash_screen.py:944-951 - TestStatusLabelProperty.test_status_label_text_updates
+- tests/test_ui/test_splash_screen.py:958-973 - TestSplashImageCompositing.test_splash_image_loaded
+- tests/test_ui/test_splash_screen.py:976-983 - TestSplashImageCompositing.test_overlay_hidden
+- tests/test_ui/test_splash_screen.py:1004-1029 - TestEndToEndLifecycle.test_full_startup_sequence
+- tests/test_ui/test_splash_screen.py:1032-1092 - TestEndToEndLifecycle.test_pipeline_stages_advance_with_real_progress
+- tests/test_ui/test_splash_screen.py:1095-1115 - TestEndToEndLifecycle.test_animation_timer_lifecycle
+- tests/test_ui/test_splash_screen.py:1118-1150 - TestEndToEndLifecycle.test_rendering_at_every_progress_step
+- tests/test_ui/test_splash_screen.py:1153-1179 - TestEndToEndLifecycle.test_failed_stage_renders_through_full_sequence
+- tests/test_ui/test_splash_screen.py:1182-1196 - TestEndToEndLifecycle.test_show_animated_fade_in_properties
+- tests/test_ui/test_splash_screen.py:1199-1218 - TestEndToEndLifecycle.test_finish_animated_fade_out_properties
+- tests/test_ui/test_splash_screen.py:1221-1240 - TestEndToEndLifecycle.test_gradient_time_advances_across_ticks
+- tests/test_ui/test_splash_screen.py:1243-1267 - TestEndToEndLifecycle.test_version_renders_in_paint
+
+## Summary
+
+**Findings by severity:**
+- Critical: 0
+- High: 2
+- Medium: 4
+- Low: 3
+
+**Total tests audited:** 308
+**Total tests clean:** 299
