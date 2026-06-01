@@ -47,7 +47,7 @@ _FIRST_SWEEP_TIMEOUT_SEC: Final[float] = 60.0
 _KILL_GRACE_SEC: Final[float] = 10.0
 _LOG_NAME: Final[str] = "kernel_object_monitor.log"
 _ERR_LOG_NAME: Final[str] = "kernel_object_monitor.errors.log"
-_TRANSIENT_MUTEX_LIFETIME_MS: Final[int] = 50
+_TRANSIENT_MUTEX_LIFETIME_MS: Final[int] = 2000
 _FAST_POLL_INTERVAL_MS: Final[int] = 100
 _SYSTEM_PID: Final[int] = 4
 
@@ -309,11 +309,13 @@ def test_script_logs_openprocess_failure_for_system_pid(tmp_path: Path) -> None:
 def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[str]:
     """Spawn a helper that creates and closes a named mutex repeatedly.
 
-    The helper deliberately holds each mutex for less than the legacy
-    3 second poll cadence so the original implementation would have
-    missed every event. The helper iterates ``20000`` times so it stays
-    alive long enough for the monitor to observe at least one mutex
-    even when the monitor's full-system handle sweep is slow.
+    The helper holds each mutex for well under the legacy 3 second poll
+    cadence (so the original implementation would still have missed every
+    event) yet long enough that the millisecond-cadence monitor can
+    enumerate the handle, duplicate it, and resolve its name before the
+    mutex is released. The helper iterates ``20000`` times so a named
+    mutex is continuously present for the monitor to observe even when its
+    full-system handle sweep is slow.
 
     Args:
         pwsh: Absolute path to the ``pwsh`` executable.
@@ -325,7 +327,7 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[s
     script = (
         "$ErrorActionPreference='Stop';"
         "for ($i=0; $i -lt 20000; $i++) {"
-        f"  $m = New-Object System.Threading.Mutex($true, '{mutex_name}-' + $i);"
+        f"  $m = [System.Threading.Mutex]::new($true, ('{mutex_name}-' + $i));"
         f"  Start-Sleep -Milliseconds {_TRANSIENT_MUTEX_LIFETIME_MS};"
         "  $m.ReleaseMutex();"
         "  $m.Dispose();"
@@ -350,6 +352,45 @@ def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[s
     )
 
 
+def _capture_transient_diag(
+    helper_proc: Popen[str] | None,
+    helper_out: str,
+    helper_err: str,
+    err_log: Path,
+    log_path: Path,
+) -> str:
+    """Build a failure diagnostic for the transient-mutex capture test.
+
+    The diagnostic distinguishes a helper-side failure (the mutex was
+    never created, surfaced via the helper return code and stderr) from a
+    monitor-side one (the owning process could not be opened, surfaced via
+    the monitor error log).
+
+    Args:
+        helper_proc: The mutex-creating helper process, or ``None`` if it
+            never started.
+        helper_out: Captured helper stdout.
+        helper_err: Captured helper stderr.
+        err_log: Path to the monitor error log.
+        log_path: Path to the monitor object log.
+
+    Returns:
+        str: A multi-line diagnostic summary suitable for a failure message.
+    """
+    helper_pid = helper_proc.pid if helper_proc is not None else 0
+    helper_rc = helper_proc.returncode if helper_proc is not None else None
+    err_contents = err_log.read_text(encoding="utf-8", errors="replace") if err_log.is_file() else ""
+    helper_err_lines = [ln for ln in err_contents.splitlines() if f"pid={helper_pid}" in ln]
+    log_contents = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
+    return (
+        f"\n--- helper_pid={helper_pid} helper_rc={helper_rc}"
+        f"\n--- helper stdout: {helper_out[:500]!r}"
+        f"\n--- helper stderr: {helper_err[:1000]!r}"
+        f"\n--- err_log lines for helper pid: {helper_err_lines!r}"
+        f"\n--- main log lines={len(log_contents.splitlines())} tail={log_contents[-300:]!r}"
+    )
+
+
 def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     """F-0021 runtime check: transient kernel objects must be captured.
 
@@ -371,51 +412,42 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
 
     monitor_proc = _start_monitor(log_dir, pwsh, poll_ms=_FAST_POLL_INTERVAL_MS)
     helper_proc: Popen[str] | None = None
+    helper_out = ""
+    helper_err = ""
+    observed = False
     try:
         # Wait for the first full sweep to finish - the SeDebug error or
         # the first OpenProcess error in the error log signals the loop
         # has reached steady state and is ready to observe new objects.
-        first_sweep_done = _wait_for_log_marker(
-            err_log,
-            "|OpenProcess|",
-            _FIRST_SWEEP_TIMEOUT_SEC,
-        )
-        if not first_sweep_done:
+        if not _wait_for_log_marker(err_log, "|OpenProcess|", _FIRST_SWEEP_TIMEOUT_SEC):
             pytest.fail(
                 f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; cannot test transient capture",
             )
-
         helper_proc = _create_transient_mutex_in_background(pwsh, mutex_name)
         # Wait for the next sweep to record the helper's mutex; the
         # window can take an additional first-sweep duration because
         # NtQuerySystemInformation iterates the entire handle table.
-        observed = _wait_for_log_marker(
-            log_path,
-            "IntellicrackAudit3U7",
-            _FIRST_SWEEP_TIMEOUT_SEC,
-        )
+        observed = _wait_for_log_marker(log_path, "IntellicrackAudit3U7", _FIRST_SWEEP_TIMEOUT_SEC)
     finally:
-        if helper_proc is not None and helper_proc.poll() is None:
-            helper_proc.terminate()
-            try:
-                helper_proc.communicate(timeout=_KILL_GRACE_SEC)
-            except TimeoutExpired:
-                helper_proc.kill()
-                helper_proc.communicate(timeout=_KILL_GRACE_SEC)
+        if helper_proc is not None:
+            helper_out, helper_err, _ = _terminate(helper_proc)
         _terminate(monitor_proc)
 
-    if not observed and not _is_admin():
+    if observed:
+        return
+
+    diag = _capture_transient_diag(helper_proc, helper_out, helper_err, err_log, log_path)
+    if not _is_admin():
         # On non-admin runs the monitor still observes objects owned by
         # peer processes in the same logon session, but Windows can
         # deny DuplicateHandle on arbitrary named-object handles. Allow
         # a soft skip so CI without admin stays green; rerunning
         # elevated converts the skip into a hard pass.
         pytest.skip(
-            f"non-admin run did not observe the transient mutex within {_FIRST_SWEEP_TIMEOUT_SEC} s - rerun elevated to assert capture",
+            f"non-admin run did not observe the transient mutex within {_FIRST_SWEEP_TIMEOUT_SEC} s - rerun elevated to assert capture{diag}",
         )
-    contents = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
-    assert observed, (
-        f"monitor did not record the transient mutex named {mutex_name!r} within {_FIRST_SWEEP_TIMEOUT_SEC} s; contents={contents!r}"
+    pytest.fail(
+        f"monitor did not record the transient mutex named {mutex_name!r} within {_FIRST_SWEEP_TIMEOUT_SEC} s{diag}",
     )
 
 

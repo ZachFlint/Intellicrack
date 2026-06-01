@@ -88,7 +88,7 @@ class TestDetachedPanelWindowSignals:
         recorder = SignalRecorder()
         window.reattach_requested.connect(recorder)
 
-        window.on_redock()
+        window._on_redock()
 
         recorder.verify_single_call(panel, _TITLE)
 

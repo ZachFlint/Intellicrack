@@ -39,7 +39,7 @@ class TestFunctionListPanel:
 
         item = panel.list_widget.item(0)
         assert item is not None
-        panel.on_item_double_clicked(item)
+        panel._on_item_double_clicked(item)
 
         recorder.verify_single_call("main", _ADDR_MAIN)
 
@@ -65,7 +65,7 @@ class TestXRefPanel:
 
         child = root.child(0)
         assert child is not None
-        panel.on_item_clicked(child, 0)
+        panel._on_item_clicked(child, 0)
 
         recorder.verify_single_call(_ADDR_MAIN)
 
@@ -167,7 +167,7 @@ class TestTabCloseRequested:
         tab_index = panel.tab_widget.indexOf(analysis_w)
         assert tab_index >= 0
 
-        panel.on_tab_close_requested(tab_index)
+        panel._on_tab_close_requested(tab_index)
 
         assert panel.analysis_panel is None
         assert "analysis" not in panel.panels
@@ -179,7 +179,7 @@ class TestTabCloseRequested:
         panel = ToolOutputPanel()
         first = panel.add_analysis_panel()
         tab_index = panel.tab_widget.indexOf(first)
-        panel.on_tab_close_requested(tab_index)
+        panel._on_tab_close_requested(tab_index)
 
         assert panel.analysis_panel is None
 
@@ -196,7 +196,7 @@ class TestTabCloseRequested:
         assert panel.script_panel is not None
 
         tab_index = panel.tab_widget.indexOf(scripts)
-        panel.on_tab_close_requested(tab_index)
+        panel._on_tab_close_requested(tab_index)
 
         assert panel.script_panel is None
         assert "scripts" not in panel.panels
@@ -209,7 +209,7 @@ class TestTabCloseRequested:
         assert panel.stack_panel is not None
 
         tab_index = panel.tab_widget.indexOf(stack)
-        panel.on_tab_close_requested(tab_index)
+        panel._on_tab_close_requested(tab_index)
 
         assert panel.stack_panel is None
         assert "stack" not in panel.panels
@@ -218,7 +218,7 @@ class TestTabCloseRequested:
     def test_close_invalid_index_is_noop() -> None:
         """Verify closing an out-of-range index does not crash."""
         panel = ToolOutputPanel()
-        panel.on_tab_close_requested(99)
+        panel._on_tab_close_requested(99)
         assert panel.tab_widget.count() == 0
 
     @staticmethod
@@ -230,13 +230,13 @@ class TestTabCloseRequested:
         panel.add_stack_panel()
         assert panel.tab_widget.count() == _EXPECTED_TABS_AFTER_THREE_ADDS
 
-        panel.on_tab_close_requested(0)
+        panel._on_tab_close_requested(0)
         assert panel.tab_widget.count() == _EXPECTED_TABS_AFTER_THREE_ADDS - 1
 
-        panel.on_tab_close_requested(0)
+        panel._on_tab_close_requested(0)
         assert panel.tab_widget.count() == _EXPECTED_TABS_AFTER_THREE_ADDS - 2
 
-        panel.on_tab_close_requested(0)
+        panel._on_tab_close_requested(0)
         assert panel.tab_widget.count() == 0
 
 

@@ -41,7 +41,8 @@ if TYPE_CHECKING:
 
 
 _FRAMELESS_HINT: int = 2048
-_STAYS_ON_TOP_HINT: int = 262144
+_SPLASH_WINDOW_TYPE: int = 15
+_WINDOW_TYPE_MASK: int = 0xFF
 _EXPECTED_SPLASH_WIDTH: int = 600
 _EXPECTED_SPLASH_HEIGHT: int = 400
 _PROGRESS_25: int = 25
@@ -121,7 +122,7 @@ class TestSplashScreenCreation:
         """
         flags = int(splash_screen.windowFlags())
         assert flags & _FRAMELESS_HINT
-        assert flags & _STAYS_ON_TOP_HINT
+        assert flags & _WINDOW_TYPE_MASK == _SPLASH_WINDOW_TYPE
 
     @staticmethod
     def test_splash_has_pixmap(splash_screen: SplashScreen) -> None:

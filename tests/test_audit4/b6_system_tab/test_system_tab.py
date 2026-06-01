@@ -486,7 +486,7 @@ def _attached_pid(tab: SystemTab) -> int | None:
     return cast("int | None", getattr(tab, "_attached_pid"))
 
 
-_MOD = "intellicrack.ui.panels.process_panel.system_tab.run_bridge_coroutine_async"
+_MOD = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
 
 
 @pytest.mark.usefixtures("qapp")

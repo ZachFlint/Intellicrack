@@ -345,8 +345,9 @@ class TestFallbackIcons:
         manager = IconManager()
         manager.icons_available = False
 
-        icon = manager.load_icon("status_success", _ICON_SIZE_24)
+        icon = manager.get_icon("status_success", _ICON_SIZE_24)
         assert isinstance(icon, QIcon)
+        assert not icon.isNull()
 
 
 class TestIconExists:

@@ -412,7 +412,9 @@ def test_get_source_returns_keyring_for_stored_credential(ollama_clean: Provider
         await store.set(ollama_clean, creds)
         return await store.get_source(ollama_clean)
 
-    assert asyncio.run(_run()) is CredentialSource.KEYRING
+    source = asyncio.run(_run())
+    assert source is not None
+    assert source.value == CredentialSource.KEYRING.value
 
 
 def test_get_source_returns_env_file_for_env_only_credential(
@@ -443,4 +445,5 @@ def test_get_source_returns_env_file_for_env_only_credential(
         return await store.get_source(ollama_clean)
 
     source = asyncio.run(_run())
-    assert source in {CredentialSource.ENV_FILE, CredentialSource.ENV_VAR}
+    assert source is not None
+    assert source.value in {CredentialSource.ENV_FILE.value, CredentialSource.ENV_VAR.value}

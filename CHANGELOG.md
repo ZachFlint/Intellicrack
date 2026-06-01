@@ -322,6 +322,14 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Resolve audit findings and add real-data test coverage (`a039360`)
+This change removes the static audit reports and addresses their findings by replacing mock-heavy unit tests with a comprehensive suite of real-data integration tests. The new tests execute genuine PE, ELF, and Mach-O binaries against the Rust hexcore, live Win32 process APIs, and local sandbox environments to guarantee operational correctness.
+- Audit: Removed all static audit criteria, master reports, and shard files.
+- Rust Core: Updated `blake2` dependency, refactored AES-ECB block transforms to use safe array conversions, and updated PyO3 bindings to use detached threads.
+- Bridges: Hardened process heap enumeration with strict time and count budgets, disabled the insecure in-process Python scripting bridge, and fixed x64dbg/Cutter resource cleanup paths.
+- Sandbox: Added a passive loopback TCP listener that generates genuine localhost traffic on a known C2 port (4444) so the detection-side `detect_c2_patterns` analysis is validated against real captured network state rather than fixtures, and integrated real process/network monitors under PowerShell. The listener only accepts and holds connections; nothing leaves the host and no command-and-control behaviour is performed.
+- Testing: Introduced a massive suite of `realcov` integration tests validating PE/ELF/Mach-O parsing, named pipe communication, and UI panel rendering.
+
 - Simplify hexpat builtins and improve cutter operations (`76eb871`)
 Simplify the HexPat evaluator and standard library by returning native Python types from builtins and boxing them centrally in the evaluator. This change also enables top-level control-flow statements and initialized local variables in the parser, and relaxes preprocessor include failures to warnings. Additionally, the Cutter bridge is updated to resolve local backend binaries more robustly and use more reliable command sequences (`wx` and `wcf`) for assembly and saving.
 - **HexPat Evaluator & Stdlib**: Centralized `PatternValue` boxing for builtins, added `std::string::to_int`, and fixed `sizeof` resolution for scoped types.
@@ -768,13 +776,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Resolve audit findings and add real-data test coverage (``)
-This change removes the static audit reports and addresses their findings by replacing mock-heavy unit tests with a comprehensive suite of real-data integration tests. The new tests execute genuine PE, ELF, and Mach-O binaries against the Rust hexcore, live Win32 process APIs, and local sandbox environments to guarantee operational correctness.
-- Audit: Removed all static audit criteria, master reports, and shard files.
-- Rust Core: Updated `blake2` dependency, refactored AES-ECB block transforms to use safe array conversions, and updated PyO3 bindings to use detached threads.
-- Bridges: Hardened process heap enumeration with strict time and count budgets, disabled the insecure in-process Python scripting bridge, and fixed x64dbg/Cutter resource cleanup paths.
-- Sandbox: Added a real loopback TCP listener to simulate C2 traffic and integrated real-process/network monitors under PowerShell.
-- Testing: Introduced a massive suite of `realcov` integration tests validating PE/ELF/Mach-O parsing, named pipe communication, and UI panel rendering.
+- Optimize kernel monitor sweeps and stabilize async bridge workers (``)
+Optimize the PowerShell kernel object monitor by shifting handle-table deduplication to compiled C# code, preventing interop overhead on steady-state sweeps. Stabilize the UI async bridge by retaining strong references to in-flight worker threads to prevent premature garbage collection crashes in unparented contexts. Additionally, resolve launcher blocking by passing child PIDs through temporary files instead of inherited pipes.
+- **Sandbox**: Shifted handle table delta tracking to native C# in `kernel_object_monitor.ps1` and decoupled launcher pipes in `start_monitors.cmd`.
+- **UI**: Implemented `_WorkerRegistry` in `async_bridge.py` to prevent premature `QThread` destruction.
+- **Hex Editor**: Added fallback identity region reads and corrected CRC calculation bit shifts.
+- **Audit**: Added comprehensive agent audit logs and test-writer documentation.
 
 
 ### Documentation

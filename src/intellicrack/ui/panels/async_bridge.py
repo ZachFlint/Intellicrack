@@ -89,6 +89,68 @@ class _LoopState:
 
 _state = _LoopState()
 
+
+class _WorkerRegistry:
+    """Strong references to in-flight worker threads.
+
+    A fire-and-forget ``QThread`` whose only Python reference is a local in
+    the launching function is garbage-collected the moment that function
+    returns. If the underlying OS thread is still running, Qt aborts the
+    whole process with ``QThread: Destroyed while thread is still running``.
+    Retaining each started worker here until it has fully finished lets a
+    caller start a worker without a Qt parent (``parent=None``) and without a
+    running Qt event loop, which is exactly the case in unit tests and in any
+    bridge dispatch whose owner is not a ``QWidget``.
+    """
+
+    workers: ClassVar[set[QThread]] = set()
+    lock: ClassVar[threading.Lock] = threading.Lock()
+
+
+def _retain_worker(worker: QThread) -> None:
+    """Pin ``worker`` against premature garbage collection until it finishes.
+
+    Fully finished workers already in the registry are pruned first so the
+    set stays bounded. ``isFinished`` is queried defensively: if a worker's
+    ``deleteLater`` has already destroyed the underlying C++ object the sip
+    wrapper raises ``RuntimeError``, which simply means the worker is done
+    and can be dropped.
+
+    Args:
+        worker: The worker thread being started.
+    """
+    with _WorkerRegistry.lock:
+        stale: set[QThread] = set()
+        for existing in _WorkerRegistry.workers:
+            try:
+                if existing.isFinished():
+                    stale.add(existing)
+            except RuntimeError:
+                stale.add(existing)
+        _WorkerRegistry.workers.difference_update(stale)
+        _WorkerRegistry.workers.add(worker)
+
+
+class _RetainedWorker(QThread):
+    """``QThread`` base that pins itself against premature GC on ``start``.
+
+    Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of
+    their OS thread, preventing the ``QThread: Destroyed while thread is
+    still running`` abort that occurs when an unparented worker's only Python
+    reference goes out of scope while the thread is still executing.
+    """
+
+    @override
+    def start(self, priority: QThread.Priority = QThread.Priority.InheritPriority) -> None:
+        """Retain this worker, then start its OS thread.
+
+        Args:
+            priority: Scheduling priority forwarded to ``QThread.start``.
+        """
+        _retain_worker(self)
+        super().start(priority)
+
+
 _LOOP_READY_TIMEOUT: float = 2.0
 
 
@@ -173,7 +235,7 @@ def ensure_loop() -> asyncio.AbstractEventLoop:
     return _ensure_loop()
 
 
-class BridgeCallWorker(QThread):
+class BridgeCallWorker(_RetainedWorker):
     """Worker thread for non-blocking bridge coroutine execution.
 
     Submits a coroutine to the persistent bridge event loop and
@@ -217,7 +279,7 @@ class BridgeCallWorker(QThread):
             self.call_error.emit(exc)
 
 
-class GenericCallableWorker(QThread):
+class GenericCallableWorker(_RetainedWorker):
     """Worker thread for non-blocking execution of synchronous callables.
 
     Runs an arbitrary synchronous ``func(*args, **kwargs)`` on a background

@@ -20,12 +20,16 @@ Covers:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import intellicrack.ui.panels.hex_editor.scripting as _scripting_module
 from intellicrack.ui.panels.hex_editor.scripting import execute_script
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 _DocAPI = getattr(_scripting_module, "_DocAPI")
@@ -145,6 +149,31 @@ class _RecordingDoc:
         return 0
 
 
+def _encoding_provider(name: str) -> Callable[[], str | None]:
+    """Build a panel-encoding provider callable returning a fixed codec name.
+
+    Mirrors how :class:`ScriptingMixin` supplies the panel's selected encoding
+    to ``_DocAPI`` via the ``encoding_provider`` callback rather than a static
+    string, so the test exercises the real production resolution path.
+
+    Args:
+        name: Codec name the provider should report on each call.
+
+    Returns:
+        Callable[[], str | None]: Zero-argument callable returning ``name``.
+    """
+
+    def _provider() -> str | None:
+        """Return the fixed codec name.
+
+        Returns:
+            str | None: The configured codec name.
+        """
+        return name
+
+    return _provider
+
+
 class TestF0020SearchTextEncoding:
     """F-0020: ``_DocAPI.search_text`` must honour the encoding from the panel combo."""
 
@@ -161,7 +190,7 @@ class TestF0020SearchTextEncoding:
     def test_latin1_encoding_is_forwarded() -> None:
         """When ``encoding='latin1'`` is set, ``search_text`` must pass it through."""
         doc = _RecordingDoc()
-        api = _DocAPI(doc, None, None, encoding="latin1")
+        api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
         api.search_text("café")
         assert len(doc.search_text_calls) == 1
         assert doc.search_text_calls[0]["encoding"] == "latin1"
@@ -170,7 +199,7 @@ class TestF0020SearchTextEncoding:
     def test_latin1_encoding_not_utf8() -> None:
         """With latin-1 encoding, the forwarded encoding must not be ``'utf-8'``."""
         doc = _RecordingDoc()
-        api = _DocAPI(doc, None, None, encoding="latin1")
+        api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
         api.search_text("café")
         assert doc.search_text_calls[0]["encoding"] != "utf-8"
 
@@ -178,7 +207,7 @@ class TestF0020SearchTextEncoding:
     def test_custom_encoding_cp1252_forwarded() -> None:
         """Any encoding name passed to ``_DocAPI`` must reach ``search_text``."""
         doc = _RecordingDoc()
-        api = _DocAPI(doc, None, None, encoding="cp1252")
+        api = _DocAPI(doc, None, None, _encoding_provider("cp1252"))
         api.search_text("test")
         assert doc.search_text_calls[0]["encoding"] == "cp1252"
 
@@ -186,7 +215,7 @@ class TestF0020SearchTextEncoding:
     def test_readonly_proxy_delegates_search_text() -> None:
         """``_ReadOnlyDocAPI.search_text`` must delegate to the inner API preserving encoding."""
         doc = _RecordingDoc()
-        base = _DocAPI(doc, None, None, encoding="latin1")
+        base = _DocAPI(doc, None, None, _encoding_provider("latin1"))
         ro = _ReadOnlyDocAPI(base)
         ro.search_text("café")
         assert len(doc.search_text_calls) == 1
@@ -196,7 +225,7 @@ class TestF0020SearchTextEncoding:
     def test_max_results_forwarded() -> None:
         """``max_results`` supplied to the public API must reach the document."""
         doc = _RecordingDoc()
-        api = _DocAPI(doc, None, None, encoding="utf-8")
+        api = _DocAPI(doc, None, None, _encoding_provider("utf-8"))
         api.search_text("x", max_results=42)
         assert doc.search_text_calls[0]["max_results"] == 42
 

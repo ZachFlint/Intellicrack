@@ -355,7 +355,7 @@ class TestF0015AttachSurfacesFailure:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -384,7 +384,7 @@ class TestF0015AttachSurfacesFailure:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "information", return_value=None),
@@ -426,7 +426,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -459,7 +459,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", side_effect=_capture_warning),
@@ -508,7 +508,7 @@ class TestF0017TerminateRefreshesBothTabs:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
@@ -559,7 +559,7 @@ class TestF0018TerminateDetachesIfAttached:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),
@@ -600,7 +600,7 @@ class TestF0018TerminateDetachesIfAttached:
 
         with (
             patch(
-                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_async",
+                "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async",
                 side_effect=_fake_run_bridge_coroutine_async,
             ),
             patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Yes),

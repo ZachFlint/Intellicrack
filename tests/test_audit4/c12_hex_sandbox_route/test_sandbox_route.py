@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
-from intellicrack.ui.panels.hex_editor import sandbox as sandbox_module
+from intellicrack.ui.panels import async_bridge as async_bridge_module
 from intellicrack.ui.panels.hex_editor.sandbox import SandboxMixin
 
 
@@ -260,10 +260,12 @@ def _patch_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[Any, Any,
     """Replace ``run_bridge_coroutine_async`` with a synchronous capture.
 
     The mixin schedules its bridge calls via
-    ``run_bridge_coroutine_async``. For tests we capture and immediately
-    drain the coroutine on a private event loop instead of spawning a
-    QThread, which keeps the assertions deterministic and avoids
-    cross-test event-loop leakage.
+    ``run_bridge_coroutine_logged``, which in turn dispatches every
+    coroutine through ``run_bridge_coroutine_async`` in
+    :mod:`intellicrack.ui.panels.async_bridge`. Patching that low-level
+    primitive captures and immediately drains the coroutine on a private
+    event loop instead of spawning a QThread, which keeps the assertions
+    deterministic and avoids cross-test event-loop leakage.
 
     Args:
         monkeypatch: Pytest monkeypatch fixture.
@@ -292,7 +294,7 @@ def _patch_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[Any, Any,
         if on_success is not None:
             on_success(result)
 
-    monkeypatch.setattr(sandbox_module, "run_bridge_coroutine_async", fake_dispatch)
+    monkeypatch.setattr(async_bridge_module, "run_bridge_coroutine_async", fake_dispatch)
     return captured
 
 

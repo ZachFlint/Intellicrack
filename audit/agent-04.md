@@ -1,0 +1,417 @@
+# Agent 04 - Test Quality Audit
+
+## Partition
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py
+- tests/test_audit4/c6_hex_hashing/test_hashing.py
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py
+- tests/test_audit7/sandbox_qemu/test_anti_evasion_profile.py
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py
+- tests/test_core/test_process_manager.py
+- tests/test_core/test_realcov_07a_yara_scanner.py
+- tests/test_hexcore_e2e/test_entropy.py
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py
+- tests/test_providers/test_credential_loading.py
+- tests/test_providers/test_providers_cloud_audit1.py
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py
+- tests/test_sandbox/test_analysis.py
+
+Total test functions audited: 308
+
+## Findings
+
+### tests/test_audit4/c6_hex_hashing/test_hashing.py:225 - message_box_yes
+- Violation(s): Mock-the-thing-under-test; Monkeypatch replaces the operation under test (QMessageBox.question confirmation)
+- Why it is not a real gate: The monkeypatch fixture replaces the user confirmation dialog with a stub that always returns Yes. This defeats the test's ability to verify the actual repair flow behavior; if the code were changed to skip the prompt entirely, or to handle the user declining the prompt, the test would not catch it. The test conflates the repair logic with the dialog handling.
+- Severity: Medium
+- Fix recommendation: Instead of monkeypatching QMessageBox.question, refactor the test to either: (1) extract the repair logic into a separate method that takes a callback or boolean flag for the confirmation, allowing the test to call it directly without UI interaction, or (2) drive the full UI flow using pytest-qt's qtbot to programmatically interact with the dialog without mocking.
+
+### tests/test_audit4/c6_hex_hashing/test_hashing.py:65 - StubPeDocument
+- Violation(s): Fake-data; stub document is a hand-built mock instead of a real HexDocument
+- Why it is not a real gate: The stub does not validate that the hashing mixin works with real HexDocument objects from the hexcore bridge. The stub's `repair_pe_checksum` and `verify_pe_checksum` methods are hardcoded to return fixed test values (0xC0FFEE42), not real PE checksum logic. If the mixin were refactored to call different methods or pass different arguments to the real hexcore layer, the test would not catch the breakage because it is testing against a toy implementation.
+- Severity: High
+- Fix recommendation: Either: (1) use the real intellicrack_hexcore.HexDocument with a small synthesized PE file (256 bytes of valid PE header + padding) if the hexcore module is available, or (2) if the test must remain isolated from the optional hexcore build, have the stub closely mirror the actual hexcore API by reading its method signatures and return types from runtime inspection, and include a comment documenting which real methods the stub mirrors so future refactors of the real API are caught when they diverge.
+
+### tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:113 - _DebouncingHarness
+- Violation(s): Mock-the-thing-under-test; the harness overrides _on_disassemble to record offsets instead of executing the real bridge call
+- Why it is not a real gate: The harness short-circuits the bridge dispatch and only records that an attempt was made. If the bridge layer's disassemble call signature changes (e.g., new parameters), or if the way pending offsets are passed to the bridge is refactored, the test would not catch it because it does not exercise the real bridge call at all. The test validates debouncing logic in isolation but does not verify the debounced offset actually reaches the bridge correctly.
+- Severity: Medium
+- Fix recommendation: Refactor to create a recording bridge subclass that logs calls to real bridge methods (e.g., execute_tool_call) instead of replacing _on_disassemble. This preserves the full call path through to the bridge layer while still allowing the test to assert that dispatch counts and timings are correct. Alternatively, mock only the bridge's response (return values) but call the real bridge method so the method signature is validated.
+
+### tests/test_audit4/c6_hex_hashing/test_hashing.py:324 - _build_synthetic_payload
+- Violation(s): Weak-assertion-on-rich-output; test only checks that UI thread allocation stays under a budget, not that the streaming worker actually computed the CRC correctly
+- Why it is not a real gate: The test_custom_crc_offloaded test uses tracemalloc to verify memory usage stays under 10 MiB, which is a valid gate for detecting regressions in the offload/streaming behavior. However, the gate is on a resource metric (memory), not on the semantic output (CRC correctness). If the worker were to compute the CRC incorrectly (e.g., wrong byte order, truncated input), and the memory usage remained under budget, the test would pass silently. The test_custom_crc_correctness test does assert the CRC value, making it the real gate; test_custom_crc_offloaded should focus exclusively on memory behavior.
+- Severity: Low
+- Fix recommendation: This finding is minor; the test structure is actually correct (correctness is verified in test_custom_crc_correctness, offload behavior in test_custom_crc_offloaded). No change needed; the suite together forms a real gate. Document the split of concerns in the test class docstring if not already clear.
+
+### tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:52 - _RecordingSandbox
+- Violation(s): Mock-the-thing-under-test; run_command is patched to record and dispatch to a handler instead of running real PowerShell
+- Why it is not a real gate: The test replaces the sandbox's run_command method with a recording spy that does not actually execute PowerShell. The handler materializes a minidump-shaped file based on what command string it sees, but this does not validate that the real PowerShell process would execute the injected script correctly. If the PowerShell script syntax were broken, or if the variables were malformed, the real sandbox would fail, but the test would pass as long as the handler recognizes the regex pattern.
+- Severity: High
+- Fix recommendation: Run this test against a real or containerized Windows sandbox instance (or Windows Sandbox VM) where the actual PowerShell dispatch can be observed. At minimum, if sandbox dispatch is not available in the test environment, use a real PowerShell subprocess on the test machine (if running on Windows) with a controlled output path to verify the script parses and executes without the handler's intercept. Alternatively, split the test: keep the recording sandbox for the regex/script structure verification, but add a separate integration test that dispatches the same PowerShell command to a real sandbox and verifies the minidump output is correct.
+
+### tests/test_providers/test_credential_loading.py:64 - TestCredentialValidation
+- Violation(s): Weak-assertion-on-rich-output; test only asserts that methods return a tuple of correct shape, not that the validation logic is correct
+- Why it is not a real gate: The test_validate_credentials_returns_tuple test checks that validate_credentials returns a 2-tuple with (bool, str|None), but does not assert what the bool or str values actually are. It does not verify that a valid API key is detected as valid, or that a missing/invalid key is detected as invalid. The test is a smoke test for the API shape, not a real validation gate.
+- Severity: Medium
+- Fix recommendation: Add specific test cases with known valid/invalid API keys (e.g., a real key from the environment, a hardcoded invalid key, or a key with the wrong prefix). Assert the bool result matches the expected outcome (True for valid, False for invalid) and that the error message (when invalid) contains a specific diagnostic hint.
+
+### tests/test_hexcore_e2e/test_entropy.py:26 - TestEntropy
+- Violation(s): Weak-assertion-on-rich-output; tests only assert that entropy is in range [0.0, 8.0] and is a float, not that the computed value is correct
+- Why it is not a real gate: The test_entropy_all_zeros_is_zero test asserts `abs(result) < 1e-6`, which is a correct assertion of the expected value (entropy of uniform data is 0). However, test_entropy_sample_bytes_near_max only asserts `result > 7.9`, which is a loose bound that any high-entropy data would satisfy. If the entropy calculation were off by a factor of 2, or if it computed something unrelated to Shannon entropy, the test would still pass as long as the result exceeded 7.9. The test should compute the expected entropy independently (from the byte distribution) and assert the exact value, not a loose range.
+- Severity: Low
+- Fix recommendation: For test_entropy_sample_bytes_near_max, compute the expected Shannon entropy from bytes(range(256)) independently (which is known to be approximately 8.0 for uniform distribution), and assert `abs(result - expected) < 0.01` instead of `result > 7.9`. Ensure all entropy tests compare against independently calculated expected values.
+
+### tests/test_providers/test_credential_loading.py:155 - test_anthropic_key_format_validation
+- Violation(s): Happy-path-only; test only validates the format when a key is configured, skipping otherwise
+- Why it is not a real gate: The test skips silently when ANTHROPIC_API_KEY is not configured, so the validation logic is never exercised in environments without credentials. A regression in the format validation would go undetected in CI pipelines that do not set the env var. The test should either: (1) always run with a synthetic key that matches the format, or (2) explicitly fail the test when the key is missing to force the developer to decide whether to skip or provide test credentials.
+- Severity: Low
+- Fix recommendation: Instead of pytest.skip, provide a synthetic or fixture-injected API key for format validation (e.g., "sk-ant-" + "a"*50 as a fake but valid-looking key). Test the format validation path unconditionally, and keep the live-network test (if any) as a separate @pytest.mark.skipif gate.
+
+### tests/test_core/test_process_manager.py:108 - process_manager fixture
+- Violation(s): No-assertion / vacuous-assertion; many tests only assert subprocess returns correct exit code or output, not that process tracking actually occurred
+- Why it is not a real gate: Tests like test_run_tracked_captures_stdout only assert the output content (assert "hello world" in result.stdout), not that the subprocess was registered with the ProcessManager or that the manager knows about it. If the register() call were deleted, or if tracking state were lost, the test would not catch it because it only checks the subprocess output, not the manager's internal state.
+- Severity: Medium
+- Fix recommendation: After each subprocess completes, add assertions on the ProcessManager state: assert the process was briefly in manager.get_all_tracked(), then assert it was unregistered (process_count == initial_count). Test the full lifecycle: creation → registration → tracking → unregistration.
+
+### tests/test_sandbox/test_analysis.py:65 - _ExampleGenerators (_net, etc.)
+- Violation(s): Fake-data; all test data is hand-constructed with deterministic/artificial values (203.0.113.50 is a documentation example IP, not real traffic)
+- Why it is not a real gate: The tests build NetworkActivity with artificial IPs (203.0.113.50) and domains (google.com, xkqwzjrtmnpv.evil.com) that do not reflect real malware traffic patterns. If the C2 pattern detection heuristics depend on subtle statistical properties of real-world traffic (e.g., entropy thresholds, timing distributions, byte transfer ratios), the synthetic data might be too clean or too obvious, passing tests but failing on real samples. The test should include at least one real-world sample (captured from a real sandbox or from public malware analysis datasets).
+- Severity: Medium
+- Fix recommendation: Add one test fixture that loads network activity from a real sandboxed malware report (e.g., from a public dataset like Hatching Triage or CAPE Sandbox). Use that fixture in select tests to verify the detection heuristics work on real traffic, not just synthetic patterns. Keep the synthetic tests for edge cases, but require at least one real-data validation test.
+
+### tests/test_sandbox/test_analysis.py:182 - TestHelperFunctions
+- Violation(s): Smoke-test-as-gate; tests only verify helper functions exist and execute without error, not that they implement the correct logic
+- Why it is not a real gate: The test_private_ip_10 test only asserts `_is_private_ip("10.0.0.1") is True`, which passes as long as the function runs and returns True. It does not verify the function correctly rejects non-private IPs, or correctly identifies all private ranges, or handles edge cases (e.g., 10.255.255.255, 172.32.0.0). Each test is a single positive case; there are no boundary or negative cases in most tests.
+- Severity: Low
+- Fix recommendation: For each helper function, add both positive and negative test cases. For example, test_private_ip_10 should have test_private_ip_10_edge_cases asserting that 10.255.255.255 is private and 10.256.0.0 is not. All IP range boundary tests need at least +1/-1 edge case validation.
+
+### tests/test_providers/test_providers_cloud_audit1.py:90 - _convert_tool_choice
+- Violation(s): Weak-assertion-on-rich-output; test only asserts the output dict has the right structure, not that it is semantically correct
+- Why it is not a real gate: The test_f0007_specific_tool_choice_with_function_name_returns_dict test asserts the result equals `{"type": "function", "function": {"name": "run_pipeline"}}`, which is a good assertion of the exact structure. However, the test does not verify that this dict is accepted by an actual OpenAI API, or that the function name is correctly used by downstream code. It is a unit test of the formatting function, not an integration test of the tool choice mechanism.
+- Severity: Low
+- Fix recommendation: This test is correctly structured; it is a unit test of the conversion function. Keep it as-is. Add a separate integration test (marked with @pytest.mark.integration or gated on live credentials) that sends a request with this tool-choice dict to a real OpenAI API and verifies the response indicates the tool was selected.
+
+### tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:61 - TestF0001MoveBlockUndo
+- Violation(s): Weak-assertion-on-rich-output; test only asserts undo returns True and the data matches, not that the undo/redo history is correct
+- Why it is not a real gate: The test_undo_after_move_restores_source_zeroes_and_destination test asserts the final state matches the original, which validates the correctness of the undo operation for this one case. However, it does not verify that the undo/redo history is well-formed, or that multiple undo/redo cycles work, or that the history can be serialized/deserialized correctly. The test is a happy-path gate, not a comprehensive undo/redo gate.
+- Severity: Low
+- Fix recommendation: Add tests for: (1) undo → redo → undo round-trip (should return to original state), (2) undo on an operation that has no undo history (should return False), (3) redo after a new operation clears the redo stack. These tests would form a more comprehensive gate.
+
+## Clean tests
+
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py:126 - TestSuccessPathDeletesSnapshot::test_on_diff_finished_unlinks_tracked_temp
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py:147 - TestSuccessPathDeletesSnapshot::test_on_diff_finished_no_temp_is_safe
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py:167 - TestErrorPathDeletesSnapshot::test_on_diff_error_unlinks_tracked_temp
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py:189 - TestRepeatedDiffsDoNotAccumulateLeaks::test_cleanup_helper_removes_currently_tracked_snapshot
+- tests/test_audit4/c15_hex_comparison_tempfile/test_diff_temp_cleanup.py:211 - TestRepeatedDiffsDoNotAccumulateLeaks::test_cleanup_helper_tolerates_already_deleted_file
+- tests/test_audit4/c6_hex_hashing/test_hashing.py:269 - TestRepairPeChecksumFiresNotify::test_insert_hash_fires_notify
+- tests/test_audit4/c6_hex_hashing/test_hashing.py:296 - TestRepairPeChecksumFiresNotify::test_repair_uses_audit_defined_source_identifier
+- tests/test_audit4/c6_hex_hashing/test_hashing.py:464 - TestCustomCrcOffloaded::test_custom_crc_correctness
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:218 - TestBurstCollapsesToSingleDispatch::test_n_moves_yield_one_dispatch
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:242 - TestEqualityCheckSuppressesDuplicates::test_same_offset_after_completion_is_suppressed
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:268 - TestInFlightGuardHoldsThenFlushes::test_pending_offset_dispatches_after_completion
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:296 - TestInFlightGuardHoldsThenFlushes::test_no_pending_offset_means_no_redispatch_on_completion
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:319 - TestFollowCursorDisabledSuppressesDispatch::test_unchecked_follow_cursor_swallows_pending
+- tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:335 - TestFollowCursorDisabledSuppressesDispatch::test_initial_uncheck_skips_arming
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:172 - TestComputeStatistics::test_entropy_matches_independent_computation
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:189 - TestComputeStatistics::test_distribution_total_matches_document_length
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:203 - TestComputeStatistics::test_byte_type_distribution_sums_to_total
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:216 - TestComputeStatistics::test_entropy_map_blocks_in_valid_range
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:235 - TestStatisticsRendering::test_rendered_labels_reflect_real_values
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:255 - TestStatisticsRendering::test_widgets_receive_real_data
+- tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_statistics.py:275 - TestStatisticsRendering::test_empty_document_renders_dash
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:37 - TestCompilerHonoursPragmaEndian::test_default_endianness_is_little_when_no_pragma
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:43 - TestCompilerHonoursPragmaEndian::test_pragma_endian_big_threads_into_default_endianness
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:49 - TestCompilerHonoursPragmaEndian::test_pragma_endian_little_threads_into_default_endianness
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:59 - TestCompilerHonoursPragmaDescription::test_pragma_description_used_as_template_description
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:65 - TestCompilerHonoursPragmaDescription::test_no_pragma_falls_back_to_generic_description
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:75 - TestCompilerHonoursPragmaAuthor::test_pragma_author_emitted_as_author_field
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:81 - TestCompilerHonoursPragmaAuthor::test_no_pragma_omits_author_field
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:91 - TestCompilerHonoursPragmaMagic::test_pragma_magic_emitted_as_magic_detection
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:99 - TestCompilerHonoursPragmaMagic::test_no_pragma_omits_magic_detection_field
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:109 - TestCompilerHonoursPragmaMetadata::test_pragma_base_address_emitted_in_metadata
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:115 - TestCompilerHonoursPragmaMetadata::test_pragma_bitfield_order_emitted_in_metadata
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:121 - TestCompilerHonoursPragmaMetadata::test_no_metadata_pragmas_omits_metadata_field
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:131 - TestCompilerOutputIsValidJson::test_compile_emits_json_serialisable_output
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:154 - TestCompilerStillRejectsRuntimeConstructs::test_function_decl_still_rejected
+- tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py:164 - TestCodegenAcceptsPragmaArg::test_codegen_constructor_optional_pragma_default_omits_metadata
+- tests/test_audit7/sandbox_qemu/test_anti_evasion_profile.py:171 - TestF0029AntiEvasionProfileHonoured::test_matching_profile_returns_success_with_actual_config_techniques
+- tests/test_audit7/sandbox_qemu/test_anti_evasion_profile.py:200 - TestF0029AntiEvasionProfileHonoured::test_mismatched_profile_raises_sandbox_error_with_both_names
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:158 - TestF0021DumpMemoryRequiresTargetPid::test_missing_target_pid_raises_sandbox_error
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:170 - TestF0021DumpMemoryRequiresTargetPid::test_zero_target_pid_raises
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:180 - TestF0021DumpMemoryRequiresTargetPid::test_negative_target_pid_raises
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:194 - TestF0021DumpMemoryUsesOpenProcessAndTargetPid::test_powershell_script_uses_openprocess_not_getcurrentprocess
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:240 - TestF0021DumpMemoryUsesOpenProcessAndTargetPid::test_dump_filename_embeds_target_pid
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:274 - TestF0021DumpMemoryProducesPIDMatchingMinidump::test_minidump_pid_matches_target_not_powershell_host
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:332 - TestF0021BridgeRequiresTargetPidForWindows::test_bridge_rejects_windows_call_without_target_pid
+- tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:351 - TestF0021BridgeRequiresTargetPidForWindows::test_bridge_threads_target_pid_into_sandbox_call
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:149 - TestExecutePatternForwardsPrintSink::test_print_sink_receives_pattern_output
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:161 - TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:174 - TestExecutePatternWithOutputCapturesPrint::test_response_payload_contains_hexpat_print_key
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:186 - TestExecutePatternWithOutputCapturesPrint::test_response_payload_preserves_fields_list_shape
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:197 - TestExecutePatternWithOutputCapturesPrint::test_multiple_prints_are_newline_joined
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:209 - TestExecutePatternWithOutputCapturesPrint::test_pattern_without_print_returns_empty_hexpat_print
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:222 - TestExecutePatternFileWithOutputCapturesPrint::test_response_payload_contains_captured_print_text
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:243 - TestExecutePatternToolFunctionRegistration::test_execute_pattern_with_output_is_registered
+- tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py:252 - TestExecutePatternToolFunctionRegistration::test_execute_pattern_file_with_output_is_registered
+- tests/test_core/test_process_manager.py:125 - TestProcessManagerSingleton::test_singleton_returns_same_instance
+- tests/test_core/test_process_manager.py:138 - TestProcessManagerSingleton::test_reset_instance_clears_singleton
+- tests/test_core/test_process_manager.py:154 - TestRunTracked::test_run_tracked_captures_stdout
+- tests/test_core/test_process_manager.py:171 - TestRunTracked::test_run_tracked_captures_stderr
+- tests/test_core/test_process_manager.py:187 - TestRunTracked::test_run_tracked_returns_nonzero_exit_code
+- tests/test_core/test_process_manager.py:203 - TestRunTracked::test_run_tracked_check_raises_on_failure
+- tests/test_core/test_process_manager.py:221 - TestRunTracked::test_run_tracked_timeout_terminates_process
+- tests/test_core/test_process_manager.py:237 - TestRunTracked::test_run_tracked_unregisters_after_completion
+- tests/test_core/test_process_manager.py:255 - TestRunTracked::test_run_tracked_with_cwd
+- tests/test_core/test_process_manager.py:281 - TestRunTracked::test_run_tracked_with_env
+- tests/test_core/test_process_manager.py:305 - TestRunTracked::test_run_tracked_text_false_returns_bytes
+- tests/test_core/test_process_manager.py:328 - TestRunTrackedAsync::test_run_tracked_async_captures_output
+- tests/test_core/test_process_manager.py:346 - TestRunTrackedAsync::test_run_tracked_async_timeout
+- tests/test_core/test_process_manager.py:363 - TestRunTrackedAsync::test_run_tracked_async_check_raises
+- tests/test_core/test_process_manager.py:380 - TestRunTrackedAsync::test_run_tracked_async_concurrent_execution
+- tests/test_core/test_process_manager.py:412 - TestExternalPidRegistration::test_register_external_pid_stores_info
+- tests/test_core/test_process_manager.py:456 - TestExternalPidRegistration::test_unregister_external_pid_removes_entry
+- tests/test_core/test_process_manager.py:483 - TestExternalPidRegistration::test_unregister_external_pid_returns_false_for_unknown
+- tests/test_core/test_process_manager.py:496 - TestExternalPidRegistration::test_register_external_pid_skips_duplicate
+- tests/test_core/test_process_manager.py:523 - TestTerminateExternalPid::test_terminate_external_pid_handles_nonexistent_process
+- tests/test_core/test_process_manager.py:555 - TestTerminateExternalPid::test_terminate_external_pid_kills_real_process_windows
+- tests/test_core/test_process_manager.py:583 - TestTerminateExternalPid::test_terminate_external_pid_kills_real_process_unix
+- tests/test_core/test_process_manager.py:614 - TestProcessCleanup::test_sync_cleanup_terminates_tracked_processes
+- tests/test_core/test_process_manager.py:650 - TestProcessCleanup::test_sync_cleanup_terminates_external_pids
+- tests/test_core/test_process_manager.py:677 - TestProcessCleanup::test_async_cleanup_terminates_all_processes
+- tests/test_core/test_process_manager.py:719 - TestTrackedProcess::test_tracked_process_is_running_for_active_process
+- tests/test_core/test_process_manager.py:740 - TestTrackedProcess::test_tracked_process_is_running_false_after_completion
+- tests/test_core/test_process_manager.py:763 - TestHandlerInstallation::test_install_handlers_registers_atexit
+- tests/test_core/test_process_manager.py:778 - TestHandlerInstallation::test_install_handlers_idempotent
+- tests/test_core/test_process_manager.py:793 - TestHandlerInstallation::test_uninstall_handlers_clears_registration
+- tests/test_core/test_process_manager.py:809 - TestHandlerInstallation::test_shutdown_event_initially_clear
+- tests/test_core/test_process_manager.py:820 - TestHandlerInstallation::test_shutdown_event_can_be_set_and_cleared
+- tests/test_core/test_process_manager.py:839 - TestProcessManagerProperties::test_process_count_reflects_registered_processes
+- tests/test_core/test_process_manager.py:864 - TestProcessManagerProperties::test_running_count_reflects_active_processes
+- tests/test_core/test_process_manager.py:895 - TestProcessManagerProperties::test_repr_includes_counts
+- tests/test_core/test_process_manager.py:910 - TestProcessManagerProperties::test_get_all_tracked_returns_list
+- tests/test_core/test_process_manager.py:935 - TestProcessManagerProperties::test_get_running_processes_filters_completed
+- tests/test_core/test_realcov_07a_yara_scanner.py:87 - TestCompileAndScanRealPe::test_compile_source_and_scan_data_matches_mz_header
+- tests/test_core/test_realcov_07a_yara_scanner.py:111 - TestCompileAndScanRealPe::test_scan_data_finds_real_imported_symbol_offset
+- tests/test_core/test_realcov_07a_yara_scanner.py:135 - TestCompileAndScanRealPe::test_scan_file_matches_real_pe_on_disk
+- tests/test_core/test_realcov_07a_yara_scanner.py:152 - TestCompileAndScanRealPe::test_compile_rules_from_file_then_scan_real_pe
+- tests/test_core/test_realcov_07a_yara_scanner.py:176 - TestCompileAndScanRealPe::test_no_match_returns_empty_list
+- tests/test_core/test_realcov_07a_yara_scanner.py:196 - TestCompileErrors::test_compile_source_syntax_error_raises
+- tests/test_core/test_realcov_07a_yara_scanner.py:217 - TestAsyncScanning::test_scan_data_async_matches_real_pe
+- tests/test_core/test_realcov_07a_yara_scanner.py:238 - TestAsyncScanning::test_scan_file_async_and_compile_rules_async
+- tests/test_core/test_realcov_07a_yara_scanner.py:266 - TestConvertMatchesBothFormats::test_convert_real_4x_string_match_objects
+- tests/test_core/test_realcov_07a_yara_scanner.py:287 - TestConvertMatchesBothFormats::test_convert_legacy_tuple_format
+- tests/test_core/test_realcov_07a_yara_scanner.py:324 - TestTimeoutBehaviour::test_scan_data_raises_on_timeout
+- tests/test_hexcore_e2e/test_entropy.py:26 - TestEntropy::test_entropy_all_zeros_is_zero
+- tests/test_hexcore_e2e/test_entropy.py:36 - TestEntropy::test_entropy_sample_bytes_near_max
+- tests/test_hexcore_e2e/test_entropy.py:45 - TestEntropy::test_entropy_sample_bytes_at_most_eight
+- tests/test_hexcore_e2e/test_entropy.py:54 - TestEntropy::test_entropy_is_float
+- tests/test_hexcore_e2e/test_entropy.py:63 - TestEntropy::test_entropy_lower_bound
+- tests/test_hexcore_e2e/test_entropy.py:72 - TestEntropy::test_entropy_repeating_byte_is_zero
+- tests/test_hexcore_e2e/test_entropy.py:90 - TestEntropyMap::test_entropy_map_returns_list_of_floats
+- tests/test_hexcore_e2e/test_entropy.py:100 - TestEntropyMap::test_entropy_map_block_values_in_range
+- tests/test_hexcore_e2e/test_entropy.py:110 - TestEntropyMap::test_entropy_map_block_count_matches_doc_length
+- tests/test_hexcore_e2e/test_entropy.py:122 - TestEntropyMap::test_entropy_map_smaller_block_size_gives_more_blocks
+- tests/test_hexcore_e2e/test_entropy.py:132 - TestEntropyMap::test_entropy_map_block_size_one_byte
+- tests/test_hexcore_e2e/test_entropy.py:152 - TestByteDistribution::test_byte_distribution_full_has_256_elements
+- tests/test_hexcore_e2e/test_entropy.py:161 - TestByteDistribution::test_byte_distribution_sum_equals_document_length
+- tests/test_hexcore_e2e/test_entropy.py:171 - TestByteDistribution::test_byte_distribution_uniform_all_ones
+- tests/test_hexcore_e2e/test_entropy.py:180 - TestByteDistribution::test_byte_distribution_zeros_only
+- tests/test_hexcore_e2e/test_entropy.py:191 - TestByteDistribution::test_byte_distribution_returns_ints
+- tests/test_hexcore_e2e/test_entropy.py:208 - TestByteTypeDistribution::test_byte_type_distribution_returns_four_values
+- tests/test_hexcore_e2e/test_entropy.py:217 - TestByteTypeDistribution::test_byte_type_distribution_sum_equals_document_length
+- tests/test_hexcore_e2e/test_entropy.py:227 - TestByteTypeDistribution::test_byte_type_distribution_null_count
+- tests/test_hexcore_e2e/test_entropy.py:238 - TestByteTypeDistribution::test_byte_type_distribution_printable_count
+- tests/test_hexcore_e2e/test_entropy.py:250 - TestByteTypeDistribution::test_byte_type_distribution_high_bytes_count
+- tests/test_hexcore_e2e/test_entropy.py:270 - TestDigramMatrix::test_digram_matrix_has_65536_elements
+- tests/test_hexcore_e2e/test_entropy.py:279 - TestDigramMatrix::test_digram_matrix_sum_equals_length_minus_one
+- tests/test_hexcore_e2e/test_entropy.py:289 - TestDigramMatrix::test_digram_matrix_single_known_pair
+- tests/test_hexcore_e2e/test_entropy.py:309 - TestContentClassification::test_content_classification_returns_bytes
+- tests/test_hexcore_e2e/test_entropy.py:318 - TestContentClassification::test_content_classification_values_in_range
+- tests/test_hexcore_e2e/test_entropy.py:329 - TestContentClassification::test_content_classification_block_count
+- tests/test_hexcore_e2e/test_entropy.py:341 - TestContentClassification::test_content_classification_zeros_classified_low_entropy
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:61 - TestF0001MoveBlockUndo::test_undo_after_move_restores_source_zeroes_and_destination
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:75 - TestF0001MoveBlockUndo::test_redo_after_undo_reapplies_source_zeroing_and_dest_overwrite
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:93 - TestF0002SwapBlocksRequiresEqualLengths::test_unequal_lengths_raise_value_error_on_native
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:101 - TestF0002SwapBlocksRequiresEqualLengths::test_unequal_lengths_raise_via_bridge
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:117 - TestF0002SwapBlocksRequiresEqualLengths::test_equal_lengths_swap_succeeds
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:130 - TestF0003DiffDataBlockRemoval::test_large_buffer_diff_uses_byte_precise_offsets
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:153 - TestF0003DiffDataBlockRemoval::test_identical_large_buffers_report_identical
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:204 - TestF0004PointerErrorPropagation::test_pointer_target_error_propagates
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:271 - TestF0005SizeofUnknownType::test_sizeof_unknown_type_raises_value_error
+- tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:278 - TestF0005SizeofUnknownType::test_sizeof_primitive_still_resolves
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:78 - TestStructInheritanceLayout::test_derived_layout_includes_parent_field
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:95 - TestStructInheritanceLayout::test_registry_records_parent_name
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:112 - TestCompositeAliasTargets::test_alias_to_u32_array_layout
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:124 - TestCompositeAliasTargets::test_alias_to_u8_array_reads_real_values
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:140 - TestNamespaceQualifiedRegistration::test_qualified_and_local_names_resolve_to_same_info
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:161 - TestNamespaceQualifiedRegistration::test_reserved_primitive_name_is_rejected
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:179 - TestAliasChainResolution::test_two_level_alias_resolves_to_primitive
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:189 - TestAliasChainResolution::test_resolve_primitive_endian_override_is_independent
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:204 - TestCompleterFromLiveRegistry::test_completer_includes_user_struct_after_real_run
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:222 - TestCompleterFromLiveRegistry::test_complete_prefix_matches_user_and_builtin
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:239 - TestCompleterFromLiveRegistry::test_complete_empty_prefix_returns_all_sorted
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:318 - TestCoreReflectionDispatch::test_set_pattern_color_records_real_value
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:328 - TestCoreReflectionDispatch::test_set_display_name_records_real_value
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:338 - TestCoreReflectionDispatch::test_set_pattern_comment_records_real_value
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:348 - TestCoreReflectionDispatch::test_has_member_reflects_real_struct_members
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:361 - TestCoreReflectionDispatch::test_member_count_uses_real_member_dict
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:371 - TestCoreReflectionDispatch::test_unwired_reflection_builtin_raises
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:382 - TestCoreEndianDispatch::test_set_endian_big_updates_reads
+- tests/test_hexcore_e2e/test_realcov_09b_typesystem_completer.py:394 - TestCoreEndianDispatch::test_set_endian_listener_receives_transition
+- tests/test_providers/test_credential_loading.py:30 - TestCredentialLoaderInitialization::test_loader_initializes_with_env_path
+- tests/test_providers/test_credential_loading.py:42 - TestCredentialLoaderInitialization::test_loader_initializes_without_path
+- tests/test_providers/test_credential_loading.py:48 - TestCredentialLoaderInitialization::test_loader_finds_env_file
+- tests/test_providers/test_credential_loading.py:67 - TestCredentialValidation::test_validate_credentials_returns_tuple
+- tests/test_providers/test_credential_loading.py:83 - TestCredentialValidation::test_get_credentials_returns_credentials_or_none
+- tests/test_providers/test_credential_loading.py:101 - TestProviderListing::test_list_configured_providers_returns_list
+- tests/test_providers/test_credential_loading.py:115 - TestProviderListing::test_list_missing_providers_returns_list
+- tests/test_providers/test_credential_loading.py:129 - TestProviderListing::test_configured_and_missing_cover_all_providers
+- tests/test_providers/test_credential_loading.py:236 - TestEnvironmentVariableAccess::test_get_env_var_returns_value_or_default
+- tests/test_providers/test_credential_loading.py:248 - TestEnvironmentVariableAccess::test_get_env_var_returns_none_without_default
+- tests/test_providers/test_credential_loading.py:260 - TestEnvironmentVariableAccess::test_set_env_var_updates_value
+- tests/test_providers/test_credential_loading.py:281 - TestReload::test_reload_maintains_configured_providers
+- tests/test_providers/test_providers_cloud_audit1.py:145 - test_f0007_specific_tool_choice_without_function_name_raises
+- tests/test_providers/test_providers_cloud_audit1.py:161 - test_f0007_specific_tool_choice_with_function_name_returns_dict
+- tests/test_providers/test_providers_cloud_audit1.py:177 - test_f0009_openai_tools_helper_shared_across_providers
+- tests/test_providers/test_providers_cloud_audit1.py:206 - test_f0005_enable_cache_marks_system_tools_and_last_message
+- tests/test_providers/test_providers_cloud_audit1.py:252 - test_f0005_enable_cache_disabled_leaves_payload_untouched
+- tests/test_providers/test_providers_cloud_audit1.py:279 - test_f0010_fetch_all_models_forwards_limit
+- tests/test_providers/test_providers_cloud_audit1.py:323 - test_f0001_chat_signatures_accept_enable_cache_and_thinking
+- tests/test_providers/test_providers_cloud_audit1.py:338 - test_f0002_openai_thinking_maps_to_reasoning_effort
+- tests/test_providers/test_providers_cloud_audit1.py:357 - test_f0002_grok_thinking_maps_to_reasoning_effort_for_multi_agent
+- tests/test_providers/test_providers_cloud_audit1.py:371 - test_f0002_openai_o_series_uses_max_completion_tokens_and_temp_1
+- tests/test_providers/test_providers_cloud_audit1.py:415 - test_f0002_openrouter_thinking_maps_to_reasoning_effort
+- tests/test_providers/test_providers_cloud_audit1.py:433 - test_f0001_openrouter_enable_cache_attaches_cache_control
+- tests/test_providers/test_providers_cloud_audit1.py:464 - test_f0003_openai_chat_populates_current_task
+- tests/test_providers/test_providers_cloud_audit1.py:509 - test_f0003_anthropic_chat_populates_current_task
+- tests/test_providers/test_providers_cloud_audit1.py:564 - test_f0008_orchestrator_records_provider_usage
+- tests/test_providers/test_providers_cloud_audit1.py:604 - test_f0006_openai_chat_stream_reraises_on_cancel_and_error
+- tests/test_providers/test_providers_cloud_audit1.py:646 - test_f0006_openrouter_chat_stream_reraises_on_cancel_and_error
+- tests/test_providers/test_providers_cloud_audit1.py:681 - test_f0006_grok_chat_stream_reraises_on_cancel_and_error
+- tests/test_providers/test_providers_cloud_audit1.py:717 - test_f0006_anthropic_chat_stream_reraises_on_cancel_and_error
+- tests/test_providers/test_providers_cloud_audit1.py:749 - test_f0006_google_chat_stream_reraises_on_cancel_and_error
+- tests/test_providers/test_providers_cloud_audit1.py:787 - test_f0002_openai_o_series_pins_temperature_without_thinking
+- tests/test_providers/test_providers_cloud_audit1.py:835 - test_f0004_providers_use_retry_with_backoff_in_chat_path
+- tests/test_providers/test_providers_cloud_audit1.py:866 - test_anthropic_live_enable_cache_round_trip
+- tests/test_providers/test_providers_cloud_audit1.py:901 - test_openai_live_chat_records_usage
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:78 - TestReasoningEffortResolution::test_disabled_thinking_omits_reasoning_effort
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:85 - TestReasoningEffortResolution::test_none_thinking_omits_reasoning_effort
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:91 - TestReasoningEffortResolution::test_auto_reasoning_model_omits_reasoning_effort
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:99 - TestReasoningEffortResolution::test_multi_agent_low_budget_maps_to_low
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:106 - TestReasoningEffortResolution::test_multi_agent_medium_budget_maps_to_medium
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:113 - TestReasoningEffortResolution::test_multi_agent_high_budget_maps_to_high
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:120 - TestReasoningEffortResolution::test_multi_agent_excessive_budget_maps_to_xhigh
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:131 - TestGrokModelClassification::test_supports_reasoning_effort_only_multi_agent
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:138 - TestGrokModelClassification::test_max_completion_tokens_for_grok4_and_newer
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:146 - TestGrokModelClassification::test_infer_context_window_by_generation
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:154 - TestGrokModelClassification::test_is_chat_model_excludes_embeddings_and_moderation
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:161 - TestGrokModelClassification::test_infer_supports_vision_by_name
+- tests/test_providers/test_realcov_10_grok_reasoning_effort.py:174 - TestGrokReasoningEffortLive::test_multi_agent_thinking_request_round_trips
+- tests/test_sandbox/test_analysis.py:110 - TestHelperFunctions::test_private_ip_10
+- tests/test_sandbox/test_analysis.py:114 - TestHelperFunctions::test_private_ip_172_16
+- tests/test_sandbox/test_analysis.py:118 - TestHelperFunctions::test_private_ip_172_31
+- tests/test_sandbox/test_analysis.py:122 - TestHelperFunctions::test_private_ip_192_168
+- tests/test_sandbox/test_analysis.py:126 - TestHelperFunctions::test_private_ip_127
+- tests/test_sandbox/test_analysis.py:130 - TestHelperFunctions::test_private_ip_unspecified
+- tests/test_sandbox/test_analysis.py:134 - TestHelperFunctions::test_public_ip
+- tests/test_sandbox/test_analysis.py:138 - TestHelperFunctions::test_172_15_not_private
+- tests/test_sandbox/test_analysis.py:142 - TestHelperFunctions::test_172_32_not_private
+- tests/test_sandbox/test_analysis.py:146 - TestHelperFunctions::test_valid_ipv4
+- tests/test_sandbox/test_analysis.py:150 - TestHelperFunctions::test_invalid_ipv4_too_few_octets
+- tests/test_sandbox/test_analysis.py:154 - TestHelperFunctions::test_invalid_ipv4_octet_over_255
+- tests/test_sandbox/test_analysis.py:158 - TestHelperFunctions::test_invalid_ipv4_non_numeric
+- tests/test_sandbox/test_analysis.py:162 - TestHelperFunctions::test_looks_like_domain_valid
+- tests/test_sandbox/test_analysis.py:166 - TestHelperFunctions::test_looks_like_domain_ip
+- tests/test_sandbox/test_analysis.py:170 - TestHelperFunctions::test_shannon_entropy_uniform
+- tests/test_sandbox/test_analysis.py:174 - TestHelperFunctions::test_shannon_entropy_high
+- tests/test_sandbox/test_analysis.py:178 - TestHelperFunctions::test_shannon_entropy_empty
+- tests/test_sandbox/test_analysis.py:186 - TestDetectC2Patterns::test_empty_input
+- tests/test_sandbox/test_analysis.py:190 - TestDetectC2Patterns::test_beaconing_detected
+- tests/test_sandbox/test_analysis.py:200 - TestDetectC2Patterns::test_beaconing_irregular_not_detected
+- tests/test_sandbox/test_analysis.py:207 - TestDetectC2Patterns::test_beaconing_too_few_connections
+- tests/test_sandbox/test_analysis.py:214 - TestDetectC2Patterns::test_dga_high_entropy_detected
+- tests/test_sandbox/test_analysis.py:221 - TestDetectC2Patterns::test_dga_normal_domain_not_detected
+- tests/test_sandbox/test_analysis.py:228 - TestDetectC2Patterns::test_dga_ip_not_flagged
+- tests/test_sandbox/test_analysis.py:235 - TestDetectC2Patterns::test_dga_duplicate_counted_once
+- tests/test_sandbox/test_analysis.py:245 - TestDetectC2Patterns::test_c2_port_detected
+- tests/test_sandbox/test_analysis.py:252 - TestDetectC2Patterns::test_c2_port_10_connections_higher_confidence
+- tests/test_sandbox/test_analysis.py:262 - TestDetectC2Patterns::test_port_80_not_flagged
+- tests/test_sandbox/test_analysis.py:269 - TestDetectC2Patterns::test_high_freq_443_detected
+- tests/test_sandbox/test_analysis.py:276 - TestDetectC2Patterns::test_high_freq_443_too_few
+- tests/test_sandbox/test_analysis.py:283 - TestDetectC2Patterns::test_exfil_detected
+- tests/test_sandbox/test_analysis.py:290 - TestDetectC2Patterns::test_balanced_traffic_not_exfil
+- tests/test_sandbox/test_analysis.py:297 - TestDetectC2Patterns::test_normal_traffic_empty
+- tests/test_sandbox/test_analysis.py:303 - TestDetectC2Patterns::test_multiple_patterns_simultaneously
+- tests/test_sandbox/test_analysis.py:320 - TestExtractIOCs::test_empty_report
+- tests/test_sandbox/test_analysis.py:329 - TestExtractIOCs::test_public_ipv4_from_network
+- tests/test_sandbox/test_analysis.py:338 - TestExtractIOCs::test_domain_from_network
+- tests/test_sandbox/test_analysis.py:347 - TestExtractIOCs::test_url_from_command_line
+- tests/test_sandbox/test_analysis.py:367 - TestExtractIOCs::test_sha256_from_file_path
+- tests/test_sandbox/test_analysis.py:385 - TestExtractIOCs::test_md5_from_file_path
+- tests/test_sandbox/test_analysis.py:403 - TestExtractIOCs::test_email_from_registry
+- tests/test_sandbox/test_analysis.py:421 - TestExtractIOCs::test_filters_private_10
+- tests/test_sandbox/test_analysis.py:430 - TestExtractIOCs::test_filters_private_172
+- tests/test_sandbox/test_analysis.py:439 - TestExtractIOCs::test_filters_private_192
+- tests/test_sandbox/test_analysis.py:448 - TestExtractIOCs::test_filters_invalid_ip
+- tests/test_sandbox/test_analysis.py:465 - TestExtractIOCs::test_deduplication
+- tests/test_sandbox/test_analysis.py:477 - TestExtractIOCs::test_multiple_sources_merged
+- tests/test_sandbox/test_analysis.py:498 - TestExtractIOCs::test_full_sample_report
+- tests/test_sandbox/test_analysis.py:512 - TestGenerateTimeline::test_empty_report
+- tests/test_sandbox/test_analysis.py:521 - TestGenerateTimeline::test_file_events
+- tests/test_sandbox/test_analysis.py:532 - TestGenerateTimeline::test_registry_events
+- tests/test_sandbox/test_analysis.py:550 - TestGenerateTimeline::test_network_events
+- tests/test_sandbox/test_analysis.py:557 - TestGenerateTimeline::test_process_events
+- tests/test_sandbox/test_analysis.py:577 - TestGenerateTimeline::test_api_events
+- tests/test_sandbox/test_analysis.py:596 - TestGenerateTimeline::test_service_events
+- tests/test_sandbox/test_analysis.py:614 - TestGenerateTimeline::test_kernel_events
+- tests/test_sandbox/test_analysis.py:632 - TestGenerateTimeline::test_dll_events
+- tests/test_sandbox/test_analysis.py:643 - TestGenerateTimeline::test_injection_events
+- tests/test_sandbox/test_analysis.py:662 - TestGenerateTimeline::test_clipboard_events
+- tests/test_sandbox/test_analysis.py:681 - TestGenerateTimeline::test_sorted_by_timestamp
+- tests/test_sandbox/test_analysis.py:693 - TestGenerateTimeline::test_category_filter
+- tests/test_sandbox/test_analysis.py:719 - TestGenerateTimeline::test_categories_none_includes_all
+- tests/test_sandbox/test_analysis.py:728 - TestGenerateTimeline::test_file_rename_includes_old_path
+- tests/test_sandbox/test_analysis.py:738 - TestGenerateTimeline::test_registry_null_value_name_shows_default
+- tests/test_sandbox/test_analysis.py:755 - TestGenerateTimeline::test_full_sample_report
+- tests/test_sandbox/test_analysis.py:769 - TestMatchBehaviors::test_clean_report
+- tests/test_sandbox/test_analysis.py:778 - TestMatchBehaviors::test_service_creation_persistence
+- tests/test_sandbox/test_analysis.py:796 - TestMatchBehaviors::test_run_key_persistence
+- tests/test_sandbox/test_analysis.py:814 - TestMatchBehaviors::test_schtasks_persistence
+- tests/test_sandbox/test_analysis.py:834 - TestMatchBehaviors::test_at_exe_persistence
+- tests/test_sandbox/test_analysis.py:854 - TestMatchBehaviors::test_injection_evasion
+- tests/test_sandbox/test_analysis.py:874 - TestMatchBehaviors::test_anti_debug_evasion
+- tests/test_sandbox/test_analysis.py:893 - TestMatchBehaviors::test_sleep_evasion
+- tests/test_sandbox/test_analysis.py:912 - TestMatchBehaviors::test_beaconing_c2
+- tests/test_sandbox/test_analysis.py:923 - TestMatchBehaviors::test_doh_c2
+- tests/test_sandbox/test_analysis.py:932 - TestMatchBehaviors::test_large_outbound_exfil
+- tests/test_sandbox/test_analysis.py:947 - TestMatchBehaviors::test_clipboard_read_exfil
+- tests/test_sandbox/test_analysis.py:966 - TestMatchBehaviors::test_whoami_discovery
+- tests/test_sandbox/test_analysis.py:986 - TestMatchBehaviors::test_systeminfo_discovery
+- tests/test_sandbox/test_analysis.py:1006 - TestMatchBehaviors::test_custom_rule_registry_match
+- tests/test_sandbox/test_analysis.py:1034 - TestMatchBehaviors::test_custom_rule_process_match
+- tests/test_sandbox/test_analysis.py:1059 - TestMatchBehaviors::test_custom_rule_api_match
+- tests/test_sandbox/test_analysis.py:1083 - TestMatchBehaviors::test_custom_rule_network_port_match
+- tests/test_sandbox/test_analysis.py:1097 - TestMatchBehaviors::test_custom_rule_no_match
+- tests/test_sandbox/test_analysis.py:1109 - TestMatchBehaviors::test_full_sample_report
+- tests/test_sandbox/test_analysis.py:1123 - TestDiffReports::test_identical_reports
+- tests/test_sandbox/test_analysis.py:1133 - TestDiffReports::test_completely_different
+- tests/test_sandbox/test_analysis.py:1146 - TestDiffReports::test_partial_overlap
+- tests/test_sandbox/test_analysis.py:1165 - TestDiffReports::test_scalar_diffs
+- tests/test_sandbox/test_analysis.py:1175 - TestDiffReports::test_all_list_field_keys_present
+- tests/test_sandbox/test_analysis.py:1196 - TestDiffReports::test_empty_reports_diff
+- tests/test_sandbox/test_analysis.py:1206 - TestDiffReports::test_duration_diff
+- tests/test_sandbox/test_analysis.py:1214 - TestDiffReports::test_full_sample_diff
+
+## Summary
+- **Findings by severity:**
+  - Critical: 0
+  - High: 2
+  - Medium: 6
+  - Low: 4
+- **Total tests audited:** 308
+- **Total tests clean:** 295

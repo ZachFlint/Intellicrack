@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem
 
-import intellicrack.ui.panels.process_panel.memory_tab as _mem_mod
+from intellicrack.ui.panels import async_bridge as _async_bridge_mod
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 
 
@@ -221,7 +221,7 @@ class TestActionsDisabledHandlerNoDispatch:
         tab._attached_pid = None
 
         dispatch_mock = MagicMock()
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", dispatch_mock)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
         tab._read_addr.setText("0x1000")
@@ -240,7 +240,7 @@ class TestActionsDisabledHandlerNoDispatch:
         tab._attached_pid = None
 
         dispatch_mock = MagicMock()
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", dispatch_mock)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
         tab._write_addr.setText("0x1000")
@@ -260,7 +260,7 @@ class TestActionsDisabledHandlerNoDispatch:
         tab._attached_pid = None
 
         dispatch_mock = MagicMock()
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", dispatch_mock)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
         tab._search_pattern.setText("90 90")
@@ -294,7 +294,7 @@ class TestSearchStatusResetsOnFailure:
         ) -> None:
             captured_on_error.append(on_error)
 
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", fake_dispatch)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "critical", _noop_warning)
 
         tab._search_pattern.setText("48 8B")
@@ -344,7 +344,7 @@ class TestFreeRemovesAllocationRow:
         ) -> None:
             captured_on_success.append(on_success)
 
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", fake_dispatch)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
         tab._free_addr.setText("0x7FF600000000")
@@ -391,7 +391,7 @@ class TestFreeRemovesAllocationRow:
         ) -> None:
             captured_on_success.append(on_success)
 
-        monkeypatch.setattr(_mem_mod, "run_bridge_coroutine_async", fake_dispatch)
+        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
         tab._free_addr.setText("0x1000")

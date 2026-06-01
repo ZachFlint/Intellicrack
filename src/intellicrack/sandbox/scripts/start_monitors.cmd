@@ -65,11 +65,21 @@ if "%SCRIPT_NAME:~0,1%"=="_" goto :eof
 set "CHILD_PID="
 set /a LAUNCH_COUNT+=1
 
-rem Spawn the monitor as a hidden child process and emit its PID. The
-rem child's stdout/stderr are redirected to per-monitor files under
-rem MON_LOGDIR so launch failures surface in the matching .err.log.
-for /f "usebackq tokens=*" %%P in (`powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $stem=[IO.Path]::GetFileNameWithoutExtension('%SCRIPT_NAME%'); $log=Join-Path -Path '%MON_LOGDIR%' -ChildPath ('start_' + $stem + '.out.log'); $err=Join-Path -Path '%MON_LOGDIR%' -ChildPath ('start_' + $stem + '.err.log'); try { $p = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','%SCRIPT_PATH%','-LogDir','%MON_LOGDIR%') -WindowStyle Hidden -PassThru -RedirectStandardOutput $log -RedirectStandardError $err; [void]([Diagnostics.Process]$p).GetType(); Write-Output $p.Id; exit 0 } catch { Write-Error $_.Exception.Message; exit 12 }"`) do set "CHILD_PID=%%P"
+rem Spawn the monitor as a hidden child process and capture its PID via a
+rem temp file. The child's stdout/stderr are redirected to per-monitor files
+rem under MON_LOGDIR so launch failures surface in the matching .err.log.
+rem The PID is handed back through a file rather than a FOR /F pipe because
+rem Start-Process launches the child with inheritable handles: a captured
+rem pipe would be inherited by the long-running monitor and keep this
+rem launcher blocked until that monitor exits. The PID-emitting PowerShell
+rem itself redirects to NUL so no console pipe is inherited either.
+set "PID_TMP=%MON_LOGDIR%\.start_%SCRIPT_NAME%.pid"
+del "%PID_TMP%" 2>nul
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $stem=[IO.Path]::GetFileNameWithoutExtension('%SCRIPT_NAME%'); $log=Join-Path -Path '%MON_LOGDIR%' -ChildPath ('start_' + $stem + '.out.log'); $err=Join-Path -Path '%MON_LOGDIR%' -ChildPath ('start_' + $stem + '.err.log'); try { $p = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','%SCRIPT_PATH%','-LogDir','%MON_LOGDIR%') -WindowStyle Hidden -PassThru -RedirectStandardOutput $log -RedirectStandardError $err; Set-Content -LiteralPath '%PID_TMP%' -Value ([string]$p.Id) -Encoding ascii; exit 0 } catch { Write-Error $_.Exception.Message; exit 12 }" >nul 2>&1
 
+if not exist "%PID_TMP%" goto :launch_failed
+set /p CHILD_PID=<"%PID_TMP%"
+del "%PID_TMP%" 2>nul
 if not defined CHILD_PID goto :launch_failed
 
 rem Validate that the launched PID is still alive a moment later;

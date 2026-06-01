@@ -189,6 +189,13 @@ ENV PYTHONUNBUFFERED=1 \
     CI=1 \
     GIT_PYTHON_REFRESH=quiet
 
+# Force transformers to materialize model tensors sequentially. The default
+# parallel loader spawns one worker thread per CPU, each copying full-precision
+# tensors concurrently, which spikes peak RSS past the container memory cap and
+# crashes the CPU-inference provider tests. Sequential loading stays within the
+# quota; production hosts keep the parallel default.
+ENV HF_DEACTIVATE_ASYNC_LOAD=1
+
 LABEL intellicrack-sandbox=1 \
       org.opencontainers.image.title="Intellicrack Test Sandbox" \
       org.opencontainers.image.description="Windows process-isolated test runner for Intellicrack"

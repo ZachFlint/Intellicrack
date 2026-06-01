@@ -36,6 +36,7 @@ from typing import Final
 import pytest
 
 from intellicrack.core.subprocess_compat import (
+    DEVNULL,
     CompletedProcess,
     SubprocessError,
     run,
@@ -208,7 +209,29 @@ _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\
     }
     $log = Join-Path -Path $LogDir -ChildPath ($MyInvocation.MyCommand.Name + '.log')
     Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|started') -Encoding utf8
-    while ($true) { Start-Sleep -Seconds 1 }
+    $created = $false
+    $stop = $null
+    try {
+        $stop = New-Object System.Threading.EventWaitHandle(
+            $false,
+            [System.Threading.EventResetMode]::ManualReset,
+            'IntellicrackMonitorStop',
+            [ref]$created)
+    } catch {
+        $stop = $null
+    }
+    try {
+        while ($true) {
+            if ($null -ne $stop) {
+                if ($stop.WaitOne(1000)) { break }
+            } else {
+                Start-Sleep -Milliseconds 1000
+            }
+        }
+    } finally {
+        if ($null -ne $stop) { $stop.Dispose() }
+        Add-Content -LiteralPath $log -Value ((Get-Date).ToString('o') + '|stopped') -Encoding utf8
+    }
     """)
 
 
@@ -252,6 +275,50 @@ def _build_scratch_scripts_dir(scratch_root: Path, monitor_count: int) -> Path:
     return scripts_dir
 
 
+def _run_capturing_to_files(
+    args: list[str],
+    workspace: Path,
+    label: str,
+    timeout_sec: float,
+) -> CompletedProcess[str]:
+    """Run a launcher capturing output through files instead of OS pipes.
+
+    The monitor launchers spawn detached background children. Capturing the
+    launcher's output through OS pipes (``capture_output=True``) lets those
+    children inherit the pipe write end and hold it open after the launcher
+    itself exits. :func:`subprocess.run` then waits the full ``timeout`` for
+    the pipe to reach EOF and, on Windows, its post-timeout cleanup calls
+    ``communicate()`` with no timeout, which blocks indefinitely on the still
+    open pipe. Redirecting to real files removes the pipes entirely: ``run``
+    only waits on the launcher process (bounded by ``timeout_sec``) and the
+    captured text is read back from disk afterwards.
+
+    Args:
+        args: Command argument vector to execute.
+        workspace: Directory in which to place the capture files.
+        label: Filename stem distinguishing concurrent captures.
+        timeout_sec: Maximum number of seconds to allow the command to run.
+
+    Returns:
+        CompletedProcess[str]: The completed process with ``stdout`` and
+        ``stderr`` populated from the capture files.
+    """
+    out_path = workspace / f"_{label}.stdout.txt"
+    err_path = workspace / f"_{label}.stderr.txt"
+    with out_path.open("wb") as out_handle, err_path.open("wb") as err_handle:
+        completed = run(
+            args,
+            stdout=out_handle,
+            stderr=err_handle,
+            stdin=DEVNULL,
+            check=False,
+            timeout=timeout_sec,
+        )
+    stdout = out_path.read_text(encoding="utf-8", errors="replace")
+    stderr = err_path.read_text(encoding="utf-8", errors="replace")
+    return CompletedProcess(completed.args, completed.returncode, stdout, stderr)
+
+
 def _run_scratch_start(
     scripts_dir: Path,
     log_dir: Path,
@@ -266,14 +333,11 @@ def _run_scratch_start(
         CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return run(
+    return _run_capturing_to_files(
         [cmd, "/c", str(scripts_dir / "start_monitors.cmd"), str(log_dir)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        timeout=_START_TIMEOUT_SEC,
+        log_dir,
+        "start_monitors",
+        _START_TIMEOUT_SEC,
     )
 
 
@@ -291,14 +355,11 @@ def _run_scratch_stop(
         CompletedProcess[str]: The completed process.
     """
     cmd = _resolve_cmd()
-    return run(
+    return _run_capturing_to_files(
         [cmd, "/c", str(scripts_dir / "stop_monitors.cmd"), str(log_dir)],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-        timeout=_STOP_TIMEOUT_SEC,
+        log_dir,
+        "stop_monitors",
+        _STOP_TIMEOUT_SEC,
     )
 
 

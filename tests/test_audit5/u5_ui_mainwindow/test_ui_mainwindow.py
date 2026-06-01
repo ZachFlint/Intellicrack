@@ -43,10 +43,11 @@ from __future__ import annotations
 import inspect
 import os
 import weakref
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox, QTabWidget, QWidget
+from PyQt6.QtWidgets import QApplication, QComboBox, QDialog, QMainWindow, QMessageBox, QTabWidget, QWidget
 
 from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
@@ -54,16 +55,12 @@ from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ProviderError, ProviderName
 from intellicrack.providers.registry import ProviderRegistry
-from intellicrack.ui import (
-    app as app_module,
-    xpu_status as xpu_module,
-)
+from intellicrack.ui import app as app_module
 from intellicrack.ui.app import MainWindow
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
     from PyQt6.QtCore import QCoreApplication
     from PyQt6.QtGui import QAction
@@ -161,7 +158,15 @@ class _DummyHolder:
     attributes (``tool_panel``, ``status_update``, ``_orchestrator`` and so
     on). Tests construct one of these with the minimum surface needed for
     the slot under test.
+
+    ``current_binary`` is provided with a realistic path because
+    :meth:`MainWindow._on_save_patched_binary` logs ``self.current_binary``
+    before resolving the hex editor.
     """
+
+    def __init__(self) -> None:
+        """Initialise the default attributes the slots-under-test read."""
+        self.current_binary: Path | None = Path("C:/targets/sample.exe")
 
 
 class _RecordingMessageBoxInfo:
@@ -352,7 +357,7 @@ class TestXPUStatusMenuWiring:
                 exec_count.append(len(exec_count))
                 return 0
 
-        monkeypatch.setattr(xpu_module, "XPUStatusDialog", _RecordingXPUDialog)
+        monkeypatch.setattr(app_module, "XPUStatusDialog", _RecordingXPUDialog)
 
         holder = QMainWindow()
         try:
@@ -562,12 +567,58 @@ class TestOrphanSignalWiringSourceLevel:
         assert "embedded_tool_closed.connect" in source
 
 
+class _UIConfigDouble:
+    """Minimal UI-config double exposing the ``theme`` attribute read by the slot."""
+
+    def __init__(self, theme: str) -> None:
+        """Store the theme name.
+
+        Args:
+            theme: UI theme name the slot compares for change detection.
+        """
+        self.theme = theme
+
+
+class _ConfigDouble:
+    """Config double exposing the ``ui.theme`` access the slot performs."""
+
+    def __init__(self, theme: str) -> None:
+        """Build a config double whose ``ui.theme`` returns ``theme``.
+
+        Args:
+            theme: UI theme name surfaced through :attr:`ui`.
+        """
+        self.ui = _UIConfigDouble(theme)
+
+
+class _ThemeManagerRecorder:
+    """Theme-manager double recording :meth:`apply_theme` invocations."""
+
+    def __init__(self) -> None:
+        """Initialise the applied-theme list."""
+        self.applied: list[str] = []
+
+    def apply_theme(self, theme: str) -> None:
+        """Record the theme the slot requested.
+
+        Args:
+            theme: Theme name passed by the slot.
+        """
+        self.applied.append(theme)
+
+
 class _PreferencesHolder:
-    """Holder driving :meth:`MainWindow._on_preferences_changed` against a stub."""
+    """Holder driving :meth:`MainWindow._on_preferences_changed` against a stub.
+
+    The slot reads ``self._config.ui.theme`` and ``new_config.ui.theme`` to
+    detect a theme change, so the held config is a :class:`_ConfigDouble`
+    rather than a bare object.
+    """
 
     def __init__(self) -> None:
         """Initialise tracking attributes."""
-        self._config: object = None
+        self._config: object = _ConfigDouble("dark")
+        self._theme_manager = _ThemeManagerRecorder()
         self.status_update = _StatusEmissionRecorder()
         self.cache_called: bool = False
 
@@ -587,7 +638,7 @@ class TestPreferencesAppliedSlotUpdatesConfig:
             qapp: Qt application fixture.
         """
         del qapp
-        sentinel = object()
+        sentinel = _ConfigDouble("dark")
         holder = _PreferencesHolder()
         MainWindow._on_preferences_changed(holder, sentinel)
         assert holder._config is sentinel
@@ -673,89 +724,27 @@ class _RegistryDouble:
             raise ProviderError(msg, provider_name=name.value)
 
 
-class _ProviderComboDouble:
-    """Combo box double exposing the subset of Qt API the production code uses.
+class _ProviderComboDouble(QComboBox):
+    """Real :class:`QComboBox` seeded with a single provider entry.
 
-    Qt's combo box API is camelCase; the production code calls
-    ``currentData``, ``findData``, ``setCurrentIndex`` and ``blockSignals``
-    by their Qt names. To keep the double Python-idiomatic (snake_case)
-    while still responding to those calls, the camelCase names are routed
-    through :meth:`__getattr__` to internal snake_case implementations.
+    The production :meth:`MainWindow._on_provider_changed` wraps the combo in a
+    ``QSignalBlocker`` on the disconnected-provider path, which requires a real
+    :class:`QObject`. Subclassing :class:`QComboBox` keeps the native
+    ``currentData`` / ``findData`` / ``setCurrentIndex`` / ``blockSignals``
+    behaviour while letting the test seed the data the slot reads.
     """
 
-    _qt_alias_map: ClassVar[dict[str, str]] = {
-        "currentData": "_current_data",
-        "findData": "_find_data",
-        "setCurrentIndex": "_set_current_index",
-        "blockSignals": "_block_signals",
-    }
-
     def __init__(self, value: object) -> None:
-        """Initialise with the value to return.
+        """Seed the combo with a single item carrying ``value`` as item data.
 
         Args:
             value: Value the combo's ``currentData`` should return.
         """
-        self._value = value
-        self._current_index: int = 0
-        self._signals_blocked: bool = False
-
-    def _current_data(self) -> object:
-        """Return the configured value.
-
-        Returns:
-            object: The configured value.
-        """
-        return self._value
-
-    def _find_data(self, value: object) -> int:
-        """Return a synthetic index for ``value``.
-
-        Args:
-            value: Sentinel data to look up.
-
-        Returns:
-            int: ``0`` when ``value`` equals the configured value, ``-1`` otherwise.
-        """
-        return 0 if value == self._value else -1
-
-    def _set_current_index(self, index: int) -> None:
-        """Record the index passed by the production code.
-
-        Args:
-            index: Index value the production code restored.
-        """
-        self._current_index = index
-
-    def _block_signals(self, *, b: bool) -> bool:
-        """Record signal-blocking state changes.
-
-        Args:
-            b: New signal-blocking state.
-
-        Returns:
-            bool: Previous signal-blocking state.
-        """
-        prev = self._signals_blocked
-        self._signals_blocked = b
-        return prev
-
-    def __getattr__(self, name: str) -> object:
-        """Route Qt-style camelCase attribute lookups to snake_case methods.
-
-        Args:
-            name: Attribute name requested by the production code.
-
-        Returns:
-            object: The bound method matching the Qt API call site.
-
-        Raises:
-            AttributeError: When the requested name has no mapping.
-        """
-        alias = self._qt_alias_map.get(name)
-        if alias is None:
-            raise AttributeError(name)
-        return getattr(self, alias)
+        if QApplication.instance() is None:
+            QApplication([])
+        super().__init__()
+        self.addItem(str(value), value)
+        self.setCurrentIndex(0)
 
 
 class _OrchestratorDouble:
@@ -977,10 +966,7 @@ class TestRefreshSystemStatusFailureThreshold:
             msg = "forced"
             raise RuntimeError(msg)
 
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.async_bridge.run_bridge_coroutine",
-            _raise,
-        )
+        monkeypatch.setattr(app_module, "run_bridge_coroutine", _raise)
 
         holder = _build_refresh_holder(failure_count=0)
         threshold = app_module._STATUS_REFRESH_FAILURE_THRESHOLD
@@ -1001,7 +987,8 @@ class TestRefreshSystemStatusFailureThreshold:
             monkeypatch: Pytest monkeypatch fixture.
         """
         monkeypatch.setattr(
-            "intellicrack.ui.panels.async_bridge.run_bridge_coroutine",
+            app_module,
+            "run_bridge_coroutine",
             lambda _coro: {"state": "running", "session_id": "sess-1"},
         )
 

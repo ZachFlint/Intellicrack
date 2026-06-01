@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 
+from intellicrack.sandbox.manager import SandboxManager
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 
@@ -53,7 +54,7 @@ class TestSandboxComboWiring:
         """Verify Windows Sandbox selection returns 'windows' type."""
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("Windows Sandbox")
-        result = panel.selected_sandbox_type()
+        result = panel._selected_sandbox_type()
         assert result == "windows"
 
     @staticmethod
@@ -61,7 +62,7 @@ class TestSandboxComboWiring:
         """Verify QEMU selection returns 'qemu' type."""
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("QEMU")
-        result = panel.selected_sandbox_type()
+        result = panel._selected_sandbox_type()
         assert result == "qemu"
 
 
@@ -73,24 +74,24 @@ class TestSandboxManagerWiring:
     def test_set_sandbox_manager_stores_reference() -> None:
         """Verify set_sandbox_manager stores the manager instance."""
         panel = SandboxPanel()
-        assert panel.sandbox_manager is None
+        assert panel._sandbox_manager is None
 
-        sentinel = object()
-        if hasattr(panel, "set_sandbox_manager"):
-            panel.set_sandbox_manager(sentinel)
-        assert panel.sandbox_manager is sentinel
+        manager = SandboxManager()
+        panel.set_sandbox_manager(manager)
+        assert panel._sandbox_manager is manager
 
     @staticmethod
     def test_no_backend_shows_warning() -> None:
-        """Verify create with no backend or manager logs warning."""
+        """Verify create with no bridge configured logs a warning."""
         panel = SandboxPanel()
-        panel.sandbox = None
-        panel.sandbox_manager = None
+        panel._sandbox = None
+        panel._sandbox_manager = None
+        panel._bridge = None
 
-        panel.on_create()
+        panel._on_create()
 
-        output_text = panel.console_output.toPlainText()
-        assert "No sandbox backend configured" in output_text
+        output_text = panel._console_output.toPlainText()
+        assert "No sandbox bridge configured" in output_text
 
 
 @pytest.mark.usefixtures("qapp")
@@ -105,29 +106,29 @@ class TestSandboxControlState:
         assert panel.create_btn.isEnabled()
         assert not panel.destroy_btn.isEnabled()
         assert not panel.restart_btn.isEnabled()
-        assert not panel.run_btn.isEnabled()
+        assert not panel._run_btn.isEnabled()
         assert not panel.snapshot_btn.isEnabled()
         assert not panel.restore_btn.isEnabled()
 
     @staticmethod
     def test_set_controls_active_enables_buttons() -> None:
-        """Verify _set_sandbox_controls_active(True) enables sandbox buttons."""
+        """Verify _set_sandbox_controls_active(active=True) enables sandbox buttons."""
         panel = SandboxPanel()
-        panel.set_sandbox_controls_active(True)
+        panel._set_sandbox_controls_active(active=True)
 
         assert not panel.create_btn.isEnabled()
         assert panel.destroy_btn.isEnabled()
         assert panel.restart_btn.isEnabled()
-        assert panel.run_btn.isEnabled()
+        assert panel._run_btn.isEnabled()
         assert panel.snapshot_btn.isEnabled()
         assert panel.restore_btn.isEnabled()
 
     @staticmethod
     def test_set_controls_inactive_disables_buttons() -> None:
-        """Verify _set_sandbox_controls_active(False) disables sandbox buttons."""
+        """Verify _set_sandbox_controls_active(active=False) disables sandbox buttons."""
         panel = SandboxPanel()
-        panel.set_sandbox_controls_active(True)
-        panel.set_sandbox_controls_active(False)
+        panel._set_sandbox_controls_active(active=True)
+        panel._set_sandbox_controls_active(active=False)
 
         assert panel.create_btn.isEnabled()
         assert not panel.destroy_btn.isEnabled()
@@ -155,20 +156,20 @@ class TestSandboxPanelLifecycle:
         """Verify _on_create_success properly updates the UI state."""
         panel = SandboxPanel()
 
-        panel.on_create_success(None)
+        panel._on_create_success(None)
 
-        assert panel.status_indicator.text() == "Active"
+        assert panel._status_indicator.text() == "Active"
         assert panel.destroy_btn.isEnabled()
-        assert panel.run_btn.isEnabled()
+        assert panel._run_btn.isEnabled()
 
     @staticmethod
     def test_destroy_success_handler_updates_ui() -> None:
         """Verify _on_destroy_success properly resets the UI state."""
         panel = SandboxPanel()
-        panel.set_sandbox_controls_active(True)
+        panel._set_sandbox_controls_active(active=True)
 
-        panel.on_destroy_success(None)
+        panel._on_destroy_success(None)
 
-        assert panel.status_indicator.text() == "Inactive"
+        assert panel._status_indicator.text() == "Inactive"
         assert panel.sandbox_id is None
         assert not panel.destroy_btn.isEnabled()
