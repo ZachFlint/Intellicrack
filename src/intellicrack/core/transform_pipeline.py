@@ -77,8 +77,9 @@ _hexcore_mod: Any = None
 _hexcore_available: bool = False
 try:
     import intellicrack_hexcore
+    import intellicrack_hexcore.intellicrack_hexcore as _hexcore_ext
 
-    _hexcore_mod = intellicrack_hexcore
+    _hexcore_mod = intellicrack_hexcore if hasattr(intellicrack_hexcore, "HexDocument") else _hexcore_ext
     _hexcore_available = True
 except ImportError:
     _logger.debug("hexcore_module_import_failed")

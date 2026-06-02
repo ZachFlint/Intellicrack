@@ -394,33 +394,85 @@ class TestTransformPipeline:
 class TestRustTransformNode:
     """Rust hexcore transform coverage with parameter coercion."""
 
-    def test_base64_encode_matches_stdlib(self, real_pe_bytes: bytes) -> None:
-        """The Rust base64 transform matches ``base64.b64encode`` of real data.
+    def test_base64_encode_matches_stdlib(self, real_pe_dll: Path) -> None:
+        """The Rust base64 transform matches ``base64.b64encode`` byte for byte.
+
+        Drives the real hexcore base64 encoder over a real ``kernel32.dll``
+        and over adversarial boundary inputs (empty, every padding remainder,
+        the full 0-255 byte range), comparing the exact output against the
+        Python standard library, which is an independent trusted oracle for
+        RFC 4648 base64.
 
         Args:
-            real_pe_bytes: Real PE leading bytes.
+            real_pe_dll: Real ``kernel32.dll`` resolved from System32.
         """
+        assert _hexcore_present(), "hexcore must be built for the Rust transform suite"
         node = RustTransformNode("base64_encode", "encoding", "Base64 encode")
-        if not _hexcore_present():
-            pytest.skip("intellicrack_hexcore is not available in this environment")
-        result = node.process(real_pe_bytes, {})
-        assert result == base64.b64encode(real_pe_bytes)
         assert node.name == "base64_encode"
         assert node.category == "encoding"
         assert node.description == "Base64 encode"
 
-    def test_base64_roundtrip_via_pipeline(self, real_pe_bytes: bytes) -> None:
+        full_pe = real_pe_dll.read_bytes()
+        assert node.process(full_pe, {}) == base64.b64encode(full_pe)
+
+        # Empty input is the lower boundary; the encoder must emit nothing.
+        assert node.process(b"", {}) == b""
+
+        # Every length-mod-3 remainder exercises a distinct padding path:
+        # 1 byte -> "XX==", 2 bytes -> "XXX=", 3 bytes -> no padding.
+        one_byte = full_pe[:1]
+        two_bytes = full_pe[:2]
+        three_bytes = full_pe[:3]
+        assert node.process(one_byte, {}) == base64.b64encode(one_byte)
+        assert node.process(one_byte, {}).endswith(b"==")
+        assert node.process(two_bytes, {}) == base64.b64encode(two_bytes)
+        assert node.process(two_bytes, {}).endswith(b"=")
+        assert node.process(three_bytes, {}) == base64.b64encode(three_bytes)
+        assert not node.process(three_bytes, {}).endswith(b"=")
+
+        # The full 0-255 byte range is non-ASCII and adversarial for any
+        # text-oriented encoder; the result must still match the oracle.
+        all_bytes = bytes(range(256))
+        encoded_all = node.process(all_bytes, {})
+        assert encoded_all == base64.b64encode(all_bytes)
+        assert len(encoded_all) == 344
+
+    def test_base64_roundtrip_via_pipeline(self, real_pe_dll: Path) -> None:
         """Encode-then-decode through the Rust transforms recovers the input.
 
+        Verifies the intermediate base64 produced by the first pipeline stage
+        is a valid base64 document (decodable UTF-8 over the RFC 4648
+        alphabet) before the decode stage runs, then asserts the full
+        round-trip restores a real ``kernel32.dll`` exactly. Also exercises a
+        partial decode: decoding only the leading quanta of the encoded blob
+        yields the matching prefix of the original bytes.
+
         Args:
-            real_pe_bytes: Real PE leading bytes.
+            real_pe_dll: Real ``kernel32.dll`` resolved from System32.
         """
-        if not _hexcore_present():
-            pytest.skip("intellicrack_hexcore is not available in this environment")
+        assert _hexcore_present(), "hexcore must be built for the Rust transform suite"
+        full_pe = real_pe_dll.read_bytes()
+        encoder = RustTransformNode("base64_encode")
+        decoder = RustTransformNode("base64_decode")
+
+        intermediate = encoder.process(full_pe, {})
+        # The intermediate must be valid base64: pure-ASCII, decodable as
+        # UTF-8, and over the canonical alphabet. base64.b64decode with
+        # validate=True is an independent checker of well-formedness.
+        decoded_text = intermediate.decode("ascii")
+        alphabet = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+        assert set(decoded_text) <= alphabet
+        assert base64.b64decode(intermediate, validate=True) == full_pe
+
         pipeline = TransformPipeline()
-        pipeline.add_step(RustTransformNode("base64_encode"))
-        pipeline.add_step(RustTransformNode("base64_decode"))
-        assert pipeline.execute(real_pe_bytes) == real_pe_bytes
+        pipeline.add_step(encoder)
+        pipeline.add_step(decoder)
+        assert pipeline.execute(full_pe) == full_pe
+
+        # Partial decode: the first 4 base64 chars encode exactly the first 3
+        # source bytes, so decoding that quantum must yield that prefix.
+        first_quantum = intermediate[:4]
+        assert decoder.process(first_quantum, {}) == full_pe[:3]
 
     def test_hex_string_param_coercion_for_xor(self) -> None:
         """A hex-string key param is coerced to bytes for the Rust xor.

@@ -22,19 +22,30 @@ other:
   ``workstation`` profile the SMBIOS reported Dell while the registry (once
   F-0022 is fixed) wrote HP, a trivially detectable inconsistency.
 
-The fixes consume a single :func:`QEMUSandbox._anti_evasion_identity` helper
-in both code paths and pass the absolute ``C:\Windows\System32\reg.exe``
-path to every ``reg.exe`` invocation. These tests pin both behaviours.
+The oracle for these tests is :data:`_EXPECTED_IDENTITY`, an independent,
+hand-maintained specification of the per-profile manufacturer/product strings
+the audit requires. It is **not** derived from the production helper; it is the
+contract the production code must satisfy. Every assertion threads a single,
+independently-known identity through the whole production chain and checks the
+two consumers agree with the spec and with each other:
+
+* the actual ``-smbios`` launch argument string emitted by the real
+  :meth:`QEMUSandbox._build_qemu_command` (the command the VM boots with), and
+* the actual ``reg.exe /d`` registry value dispatched through the guest agent
+  by :meth:`QEMUSandbox.apply_anti_evasion`.
+
+If either consumer drifts from the spec, or from the other, the chain breaks
+and the corresponding test fails.
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, cast
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 import pytest
 
+from intellicrack.core.types import SandboxError
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import (
     WINDOWS_REG_EXE_PATH,
@@ -43,12 +54,39 @@ from intellicrack.sandbox.qemu import (
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
+    QMPClient,
 )
 from tests._helpers.guest_allowlist import is_windows_allowlisted
 
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from pathlib import Path
+
+
+ProfileName = Literal["default", "workstation", "laptop"]
+
+_EXPECTED_IDENTITY: Final[dict[ProfileName, tuple[str, str]]] = {
+    "default": ("HP", "HP EliteDesk 800 G6"),
+    "workstation": ("Dell Inc.", "OptiPlex 7090"),
+    "laptop": ("Lenovo", "ThinkPad T14 Gen 3"),
+}
+"""Independent F-0029 oracle: required ``(manufacturer, product)`` per profile.
+
+Hand-maintained to mirror the audit requirement, deliberately kept separate
+from the production ``_anti_evasion_identity`` mapping so a regression in the
+implementation cannot regress the expected value in lockstep.
+"""
+
+_ALL_PROFILES: Final[tuple[ProfileName, ...]] = ("default", "workstation", "laptop")
+
+_EXPECTED_LAUNCH_TECHNIQUES: Final[list[str]] = [
+    "smbios_type_1_launch_arg",
+    "smbios_type_2_launch_arg",
+    "smbios_type_3_launch_arg",
+    "cpuid_hypervisor_mask_launch_arg",
+]
+"""Launch-time techniques every profile reports independent of the guest agent."""
 
 
 class _AntiEvasionTestSandbox(QEMUSandbox):
@@ -67,14 +105,19 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         self._accelerator = accel
         self._accelerator_cached = True
 
-    def set_qmp(self, qmp: object) -> None:
-        """Override the QMP client for tests.
+    def set_unconnected_qmp(self) -> None:
+        """Install a real, unconnected :class:`QMPClient`.
 
-        Args:
-            qmp: Duck-typed QMP client. ``MagicMock`` is sufficient because
-                ``apply_anti_evasion`` only checks ``self._qmp is not None``.
+        ``apply_anti_evasion`` only checks ``self._qmp is not None``; a freshly
+        constructed client opens no socket (``connected`` is ``False`` and no
+        reader/writer exist), so this is a real production object rather than a
+        fake double.
         """
-        setattr(self, "_qmp", qmp)
+        self._qmp = QMPClient(port=self._qemu_config.monitor_port)
+
+    def clear_qmp(self) -> None:
+        """Force the QMP client to ``None`` to exercise the error path."""
+        self._qmp = None
 
     def set_agent(self, agent: GuestAgentClient | None) -> None:
         """Override the guest agent client.
@@ -84,48 +127,22 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         """
         self._agent = agent
 
-    def set_qemu_config(self, cfg: QEMUConfig) -> None:
-        """Override the QEMU config for tests.
+    def set_qemu_path(self, qemu_path: Path) -> None:
+        """Install the resolved QEMU binary path for command building.
 
         Args:
-            cfg: ``QEMUConfig`` instance to install.
+            qemu_path: Path recorded as the resolved QEMU executable.
         """
-        self._qemu_config = cfg
+        self._qemu_path = qemu_path
 
-    @staticmethod
-    def identity_for_test(profile: str) -> tuple[str, str]:
-        """Expose ``_anti_evasion_identity`` for cross-class assertion.
-
-        Args:
-            profile: Anti-evasion profile name.
+    def build_command_for_test(self) -> list[str]:
+        """Build the full QEMU launch command line.
 
         Returns:
-            tuple[str, str]: ``(manufacturer, product)`` pair produced for
-            ``profile``.
+            list[str]: The argv :meth:`_build_qemu_command` would launch QEMU
+            with, including every ``-smbios`` anti-evasion entry.
         """
-        return QEMUSandbox._anti_evasion_identity(profile)
-
-    @staticmethod
-    def smbios_entries_for_test(profile: str) -> list[dict[str, str]]:
-        """Expose ``_anti_evasion_smbios_entries`` for cross-class assertion.
-
-        Args:
-            profile: Anti-evasion profile name.
-
-        Returns:
-            list[dict[str, str]]: SMBIOS entry dicts produced for ``profile``.
-        """
-        return QEMUSandbox._anti_evasion_smbios_entries(profile)
-
-    @staticmethod
-    def windows_reg_exe_path_for_test() -> str:
-        """Expose the ``WINDOWS_REG_EXE_PATH`` module constant.
-
-        Returns:
-            str: Absolute Windows path that ``apply_anti_evasion`` dispatches as
-            the executable for every registry patch.
-        """
-        return WINDOWS_REG_EXE_PATH
+        return asyncio.run(self._build_qemu_command())
 
 
 class _RecordingAgent(GuestAgentClient):
@@ -134,7 +151,8 @@ class _RecordingAgent(GuestAgentClient):
     The agent reports as connected, replicates the in-guest allowlist
     decision, and returns ``exit_code=0`` only for accepted commands. The
     recorded ``(command, args)`` list lets tests assert that every dispatched
-    executable uses an allowlist-safe absolute path.
+    executable uses an allowlist-safe absolute path and carries the correct
+    profile identity.
 
     Attributes:
         sent_commands: Ordered list of ``(command, args)`` tuples observed.
@@ -193,89 +211,174 @@ class _RecordingAgent(GuestAgentClient):
 
 def _make_sandbox(
     *,
-    anti_evasion_profile: Literal["default", "workstation", "laptop"],
+    anti_evasion_profile: ProfileName,
     agent: GuestAgentClient | None,
+    image_path: Path | None = None,
 ) -> _AntiEvasionTestSandbox:
-    """Construct a running sandbox with a stubbed QMP and the supplied agent.
+    """Construct a running sandbox with a real unconnected QMP and the agent.
 
     Args:
         anti_evasion_profile: Profile to set on :class:`QEMUConfig`.
         agent: Guest agent to install, or ``None`` to skip the agent path.
+        image_path: Optional disk-image path recorded on the config so the
+            real :meth:`_build_qemu_command` can run.
 
     Returns:
         _AntiEvasionTestSandbox: Sandbox ready for ``apply_anti_evasion``.
     """
-    cfg = QEMUConfig(guest_os=GuestOS.WINDOWS, anti_evasion_profile=anti_evasion_profile)
+    cfg = QEMUConfig(guest_os=GuestOS.WINDOWS, anti_evasion_profile=anti_evasion_profile, image_path=image_path)
     sb = _AntiEvasionTestSandbox(config=SandboxConfig(), qemu_config=cfg)
     sb.set_accelerator(AcceleratorType.TCG)
     sb.state.status = "running"
-    sb.set_qmp(MagicMock())
+    sb.set_unconnected_qmp()
     sb.set_agent(agent)
     return sb
+
+
+def _reg_value_for(argv: list[str]) -> str:
+    """Return the ``/d`` data value from a ``reg.exe add`` argument list.
+
+    Args:
+        argv: Argument list passed to ``reg.exe``.
+
+    Returns:
+        str: The value following the ``/d`` flag. The lookup asserts the flag
+        and a following value are present so a malformed argv fails loudly.
+    """
+    assert "/d" in argv, f"reg.exe argv {argv!r} has no /d data flag"
+    idx = argv.index("/d")
+    assert idx + 1 < len(argv), f"reg.exe argv {argv!r} has /d with no following value"
+    return argv[idx + 1]
+
+
+def _smbios_type1_identity_from_launch_cmd(cmd: list[str]) -> tuple[str, str]:
+    """Extract ``(manufacturer, product)`` from the ``-smbios`` type-1 launch arg.
+
+    Parses the real QEMU command line produced by ``_build_qemu_command``,
+    finds the single ``type=1`` ``-smbios`` value, and decodes its
+    comma-separated ``key=value`` pairs. This is an oracle independent of the
+    identity helper: it inspects the literal string the VM would boot with.
+
+    Args:
+        cmd: Full QEMU argv as built by ``_build_qemu_command``.
+
+    Returns:
+        tuple[str, str]: ``(manufacturer, product)`` carried by the type-1
+        SMBIOS entry. The parse asserts exactly one type-1 entry exists and it
+        carries both fields, so a malformed launch command fails loudly.
+    """
+    type1_values: list[str] = []
+    for i, arg in enumerate(cmd):
+        if arg == "-smbios" and i + 1 < len(cmd):
+            value = cmd[i + 1]
+            fields = dict(pair.split("=", 1) for pair in value.split(",") if "=" in pair)
+            if fields.get("type") == "1":
+                type1_values.append(value)
+    assert len(type1_values) == 1, f"expected exactly one -smbios type=1 entry in launch cmd, got {type1_values!r}"
+    fields = dict(pair.split("=", 1) for pair in type1_values[0].split(",") if "=" in pair)
+    assert "manufacturer" in fields, f"type-1 SMBIOS entry {type1_values[0]!r} has no manufacturer"
+    assert "product" in fields, f"type-1 SMBIOS entry {type1_values[0]!r} has no product"
+    return fields["manufacturer"], fields["product"]
+
+
+def _make_disk_image(tmp_path: Path) -> Path:
+    """Create a real, minimal qcow2 file so ``_build_qemu_command`` accepts it.
+
+    ``_build_qemu_command`` only requires the configured image path to exist on
+    disk; it does not parse the image. A valid qcow2 v3 header is written so the
+    fixture is a genuine (if empty) qcow2 file rather than arbitrary bytes.
+
+    Args:
+        tmp_path: Per-test temporary directory.
+
+    Returns:
+        Path: Path to the created qcow2 image file.
+    """
+    qcow2_magic = b"QFI\xfb"
+    version = (3).to_bytes(4, "big")
+    header = qcow2_magic + version + bytes(64)
+    image = tmp_path / "disk.qcow2"
+    image.write_bytes(header)
+    return image
+
+
+def _make_qemu_binary(tmp_path: Path) -> Path:
+    """Create a placeholder QEMU binary path on disk for command building.
+
+    Args:
+        tmp_path: Per-test temporary directory.
+
+    Returns:
+        Path: Path recorded as the resolved QEMU executable.
+    """
+    binary = tmp_path / "qemu-system-x86_64.exe"
+    binary.write_bytes(b"MZ")
+    return binary
 
 
 class TestF0022RegExeAllowlistSafe:
     """F-0022: every ``reg.exe`` invocation must satisfy ``Test-AllowedCommand``."""
 
-    def test_resolved_reg_exe_path_is_allowlist_safe(self) -> None:
-        """The path constant baked into ``apply_anti_evasion`` is itself accepted.
+    def test_allowlist_oracle_rejects_bare_reg_exe_accepts_system32(self) -> None:
+        """Guard the allowlist oracle: bare ``reg.exe`` out, System32 path in.
 
-        This guards the constant against a refactor that drops the absolute
-        prefix; ``Test-AllowedCommand`` must return ``True`` for the resolved
-        value.
+        Pins the boundary of the host-side ``Test-AllowedCommand`` emulation so
+        the end-to-end dispatch tests below have a trustworthy gate. The bare
+        pre-fix value must be rejected and the absolute System32 path (the
+        post-fix value) must be accepted; if either flips, the emulation would
+        no longer detect the F-0022 regression.
         """
-        reg_exe_path = _AntiEvasionTestSandbox.windows_reg_exe_path_for_test()
-        assert is_windows_allowlisted(reg_exe_path), (
-            f"reg.exe path constant {reg_exe_path!r} is rejected by Test-AllowedCommand "
-            "emulation; the audit's allowlist regression would still trigger"
+        assert is_windows_allowlisted("reg.exe") is False, "bare 'reg.exe' must be rejected by the allowlist emulation"
+        assert is_windows_allowlisted(r"C:\Windows\System32\reg.exe") is True, (
+            "absolute System32 reg.exe path must be accepted by the allowlist emulation"
         )
-
-    def test_bare_reg_exe_would_be_rejected(self) -> None:
-        """Sanity-check: a bare ``reg.exe`` is rejected by the allowlist emulation.
-
-        This is the pre-fix dispatch value. If this test ever passed for the
-        bare string, the allowlist emulation would be wrong and downstream
-        tests could not detect the original defect.
-        """
-        assert not is_windows_allowlisted("reg.exe"), (
-            "bare 'reg.exe' must be rejected by Test-AllowedCommand emulation; otherwise the "
-            "regression assertion below provides no protection"
+        assert is_windows_allowlisted(WINDOWS_REG_EXE_PATH) is True, (
+            f"the production WINDOWS_REG_EXE_PATH constant {WINDOWS_REG_EXE_PATH!r} must be allowlist-safe"
         )
 
     def test_apply_anti_evasion_dispatches_only_allowlisted_commands(self) -> None:
         """Every dispatched executable must pass the allowlist emulation.
 
-        Drives ``apply_anti_evasion`` against a connected recording agent and
-        asserts that none of the recorded ``(command, args)`` dispatches use
-        a bare ``reg.exe`` and that every command satisfies the in-guest
-        ``Test-AllowedCommand`` rule.
+        Drives the real ``apply_anti_evasion`` against a connected recording
+        agent and asserts at least four ``reg.exe`` dispatches occurred, none
+        used the bare ``reg.exe`` name, and every dispatched command satisfies
+        the in-guest ``Test-AllowedCommand`` rule.
         """
         agent = _RecordingAgent()
         sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
 
         asyncio.run(sb.apply_anti_evasion(profile="default"))
 
-        assert agent.sent_commands, "apply_anti_evasion did not dispatch any agent commands"
+        assert len(agent.sent_commands) >= 5, (
+            f"expected at least 4 reg.exe dispatches plus the MAC powershell call, got {agent.sent_commands!r}"
+        )
+        reg_dispatches = [(cmd, args) for cmd, args in agent.sent_commands if args and args[0] == "add"]
+        assert len(reg_dispatches) == 4, f"expected exactly 4 reg.exe add dispatches, got {reg_dispatches!r}"
         for command, _args in agent.sent_commands:
-            assert command != "reg.exe", (
-                "apply_anti_evasion dispatched bare 'reg.exe'; the allowlist will reject it and the "
-                "registry patch silently fails (F-0022 regression)"
-            )
+            assert command != "reg.exe", "apply_anti_evasion dispatched bare 'reg.exe' (F-0022 regression)"
             assert is_windows_allowlisted(command), f"command {command!r} would be rejected by the in-guest allowlist"
+        for command, _args in reg_dispatches:
+            assert command == WINDOWS_REG_EXE_PATH, (
+                f"reg.exe dispatch used {command!r}; F-0022 requires the absolute {WINDOWS_REG_EXE_PATH!r}"
+            )
 
-    def test_apply_anti_evasion_records_registry_patch_techniques(self) -> None:
-        """All four registry patches must succeed when the agent accepts them.
+    def test_apply_anti_evasion_records_full_technique_set(self) -> None:
+        """The result dict is well-formed and reports every applied technique.
 
-        With the F-0022 fix the agent returns ``exit_code=0`` for each
-        ``reg.exe`` dispatch, so the returned ``techniques`` list must
-        contain four ``registry_patch`` entries (one per registry command).
-        Pre-fix every dispatch returned ``-1`` and no ``registry_patch``
-        entries were recorded.
+        With the F-0022 fix the agent accepts all four ``reg.exe`` dispatches
+        and the MAC powershell call, so the result must carry the launch-time
+        techniques, exactly four ``registry_patch`` entries, one
+        ``mac_address_randomize`` entry, a matching ``count`` and the active
+        profile. Pre-fix every ``reg.exe`` dispatch returned ``-1`` and no
+        ``registry_patch`` entries were recorded.
         """
         agent = _RecordingAgent()
         sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
 
         result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
+
+        assert set(result) == {"profile", "techniques", "count"}, f"unexpected result keys: {sorted(result)!r}"
+        assert result["profile"] == "default"
 
         raw_techniques: object = result["techniques"]
         assert isinstance(raw_techniques, list)
@@ -283,147 +386,194 @@ class TestF0022RegExeAllowlistSafe:
         for raw in cast("list[object]", raw_techniques):
             assert isinstance(raw, str)
             techniques.append(raw)
-        registry_patch_count = sum(1 for t in techniques if t == "registry_patch")
-        assert registry_patch_count == 4, (
-            f"expected 4 registry_patch techniques (one per reg.exe dispatch); got {registry_patch_count} from techniques={techniques!r}"
+
+        assert result["count"] == len(techniques), f"count {result['count']!r} disagrees with techniques length {len(techniques)}"
+
+        for launch_technique in _EXPECTED_LAUNCH_TECHNIQUES:
+            assert launch_technique in techniques, f"missing launch technique {launch_technique!r} in {techniques!r}"
+        assert techniques.count("registry_patch") == 4, f"expected 4 registry_patch entries (one per reg.exe dispatch); got {techniques!r}"
+        assert techniques.count("mac_address_randomize") == 1, f"expected one mac_address_randomize entry; got {techniques!r}"
+        assert len(techniques) == len(_EXPECTED_LAUNCH_TECHNIQUES) + 4 + 1, (
+            f"unexpected total technique count for the fully-accepted path: {techniques!r}"
         )
+
+    def test_registry_patch_omitted_when_agent_rejects_commands(self) -> None:
+        """A rejecting agent yields zero ``registry_patch`` techniques.
+
+        Confirms the count is not hardcoded: an agent whose allowlist rejects
+        every command (the pre-fix world) returns ``-1`` for each dispatch, so
+        no ``registry_patch`` technique may be recorded while launch-time
+        techniques remain. This proves the success test above is falsifiable.
+        """
+
+        class _RejectingAgent(_RecordingAgent):
+            """Recording agent that rejects every dispatched command."""
+
+            async def send_command(
+                self,
+                command: str,
+                args: Sequence[str] | None = None,
+                time_limit: float = 30.0,
+            ) -> tuple[int, str, str]:
+                """Record the dispatch and reject it unconditionally.
+
+                Args:
+                    command: Command name or path dispatched.
+                    args: Argument list (recorded verbatim).
+                    time_limit: Ignored.
+
+                Returns:
+                    tuple[int, str, str]: ``(-1, "", error)`` for every call.
+                """
+                del time_limit
+                self.sent_commands.append((command, list(args) if args else []))
+                return (-1, "", "rejected")
+
+        agent = _RejectingAgent()
+        sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
+
+        result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
+
+        raw_techniques: object = result["techniques"]
+        assert isinstance(raw_techniques, list)
+        techniques = [cast("str", t) for t in cast("list[object]", raw_techniques)]
+        assert "registry_patch" not in techniques, f"rejected dispatches must record no registry_patch: {techniques!r}"
+        assert "mac_address_randomize" not in techniques, f"rejected MAC dispatch must record no technique: {techniques!r}"
+        assert techniques == _EXPECTED_LAUNCH_TECHNIQUES, f"only launch-time techniques should survive rejection: {techniques!r}"
 
 
 class TestF0029IdentityProfileConsistency:
     """F-0029: SMBIOS and registry identity strings must agree per profile."""
 
-    @pytest.mark.parametrize(
-        ("profile", "expected_manufacturer", "expected_product"),
-        [
-            ("default", "HP", "HP EliteDesk 800 G6"),
-            ("workstation", "Dell Inc.", "OptiPlex 7090"),
-            ("laptop", "Lenovo", "ThinkPad T14 Gen 3"),
-        ],
-    )
-    def test_identity_helper_returns_expected_tuple(
-        self,
-        profile: str,
-        expected_manufacturer: str,
-        expected_product: str,
-    ) -> None:
-        """``_anti_evasion_identity`` returns the documented per-profile pair.
+    @pytest.mark.parametrize("profile", _ALL_PROFILES)
+    def test_launch_smbios_type1_matches_required_identity(self, profile: ProfileName, tmp_path: Path) -> None:
+        """The real launch ``-smbios`` type-1 entry carries the required identity.
+
+        Builds the genuine QEMU command line via ``_build_qemu_command`` and
+        decodes the ``-smbios type=1`` value, asserting its manufacturer and
+        product equal the independent :data:`_EXPECTED_IDENTITY` spec.
 
         Args:
             profile: Anti-evasion profile name.
-            expected_manufacturer: Manufacturer string the helper must return.
-            expected_product: Product string the helper must return.
+            tmp_path: Per-test temporary directory for the disk/binary fixtures.
         """
-        manufacturer, product = _AntiEvasionTestSandbox.identity_for_test(profile)
-        assert manufacturer == expected_manufacturer
-        assert product == expected_product
+        expected_manufacturer, expected_product = _EXPECTED_IDENTITY[profile]
+        image = _make_disk_image(tmp_path)
+        sb = _make_sandbox(anti_evasion_profile=profile, agent=None, image_path=image)
+        sb.set_qemu_path(_make_qemu_binary(tmp_path))
 
-    @pytest.mark.parametrize("profile", ["default", "workstation", "laptop"])
-    def test_smbios_type1_matches_identity_helper(self, profile: str) -> None:
-        """SMBIOS type-1 entry mirrors :func:`_anti_evasion_identity`.
+        cmd = sb.build_command_for_test()
+        manufacturer, product = _smbios_type1_identity_from_launch_cmd(cmd)
 
-        Type-1 carries the system manufacturer and product strings reported
-        by ``Win32_ComputerSystem`` / ``Win32_ComputerSystemProduct``. They
-        must match the registry writes performed later in
-        ``apply_anti_evasion`` for the same profile.
+        assert manufacturer == expected_manufacturer, (
+            f"profile={profile!r}: launch -smbios manufacturer {manufacturer!r} != required {expected_manufacturer!r}"
+        )
+        assert product == expected_product, f"profile={profile!r}: launch -smbios product {product!r} != required {expected_product!r}"
 
-        Args:
-            profile: Anti-evasion profile name.
-        """
-        manufacturer, product = _AntiEvasionTestSandbox.identity_for_test(profile)
-        entries = _AntiEvasionTestSandbox.smbios_entries_for_test(profile)
-        type1_entries = [e for e in entries if e.get("type") == "1"]
-        assert len(type1_entries) == 1, f"expected exactly one SMBIOS type-1 entry, got {type1_entries!r}"
-        type1 = type1_entries[0]
-        assert type1["manufacturer"] == manufacturer
-        assert type1["product"] == product
+    @pytest.mark.parametrize("profile", _ALL_PROFILES)
+    def test_registry_writes_use_required_identity(self, profile: ProfileName) -> None:
+        """Registry ``SystemManufacturer`` / ``SystemProductName`` match the spec.
 
-    @pytest.mark.parametrize(
-        "profile",
-        ["default", "workstation", "laptop"],
-    )
-    def test_registry_writes_use_profile_identity(self, profile: Literal["default", "workstation", "laptop"]) -> None:
-        """Registry ``SystemManufacturer`` / ``SystemProductName`` track the profile.
-
-        Drives ``apply_anti_evasion`` with a connected recording agent for
-        each supported profile and asserts that the ``reg.exe`` arguments
-        contain the manufacturer and product strings returned by
-        ``_anti_evasion_identity`` -- never the hardcoded ``"HP"`` pair the
+        Drives the real ``apply_anti_evasion`` with a connected recording agent
+        and asserts the dispatched ``reg.exe /d`` values equal the independent
+        :data:`_EXPECTED_IDENTITY` spec -- never the hardcoded ``"HP"`` pair the
         pre-fix code emitted for non-default profiles.
 
         Args:
             profile: Anti-evasion profile to launch the sandbox with.
         """
+        expected_manufacturer, expected_product = _EXPECTED_IDENTITY[profile]
         agent = _RecordingAgent()
         sb = _make_sandbox(anti_evasion_profile=profile, agent=agent)
 
         asyncio.run(sb.apply_anti_evasion(profile=profile))
 
-        expected_manufacturer, expected_product = _AntiEvasionTestSandbox.identity_for_test(profile)
-        manufacturer_args: list[list[str]] = []
-        product_args: list[list[str]] = []
-        for _cmd, args in agent.sent_commands:
-            if "SystemManufacturer" in args:
-                manufacturer_args.append(args)
-            elif "SystemProductName" in args:
-                product_args.append(args)
-
+        manufacturer_args = [args for _cmd, args in agent.sent_commands if "SystemManufacturer" in args]
+        product_args = [args for _cmd, args in agent.sent_commands if "SystemProductName" in args]
         assert len(manufacturer_args) == 1, f"expected one SystemManufacturer write, got {manufacturer_args!r}"
         assert len(product_args) == 1, f"expected one SystemProductName write, got {product_args!r}"
 
-        # The /d value is the argument immediately after "/d" in reg.exe argv.
-        def _value_for(argv: list[str]) -> str:
-            """Extract the ``/d`` value from a ``reg.exe add`` argument list.
-
-            Args:
-                argv: Argument list passed to ``reg.exe``.
-
-            Returns:
-                str: The value following the ``/d`` flag.
-            """
-            return argv[argv.index("/d") + 1]
-
-        manufacturer_value = _value_for(manufacturer_args[0])
-        product_value = _value_for(product_args[0])
+        manufacturer_value = _reg_value_for(manufacturer_args[0])
+        product_value = _reg_value_for(product_args[0])
 
         assert manufacturer_value == expected_manufacturer, (
-            f"profile={profile!r}: registry SystemManufacturer is {manufacturer_value!r} but SMBIOS-driven "
-            f"identity is {expected_manufacturer!r}; sandbox would advertise inconsistent vendors (F-0029)"
+            f"profile={profile!r}: registry SystemManufacturer {manufacturer_value!r} != required {expected_manufacturer!r} (F-0029)"
         )
         assert product_value == expected_product, (
-            f"profile={profile!r}: registry SystemProductName is {product_value!r} but SMBIOS-driven "
-            f"identity is {expected_product!r}; sandbox would advertise inconsistent products (F-0029)"
+            f"profile={profile!r}: registry SystemProductName {product_value!r} != required {expected_product!r} (F-0029)"
         )
 
-    def test_switching_profiles_yields_consistent_strings_everywhere(self) -> None:
-        """Independently switching profiles keeps SMBIOS and registry in sync.
+    @pytest.mark.parametrize("profile", _ALL_PROFILES)
+    def test_launch_smbios_and_registry_agree_with_each_other(self, profile: ProfileName, tmp_path: Path) -> None:
+        """SMBIOS launch identity and registry identity agree end to end.
 
-        Iterates over all supported profiles, captures both the SMBIOS
-        identity and the registry-dispatch identity, and asserts they agree
-        with each other and with the helper for every profile. The pre-fix
-        code passed this assertion only for ``default``.
+        Threads one profile through both production consumers -- the real
+        ``-smbios`` launch argument and the real ``reg.exe`` dispatch -- and
+        asserts all three of (launch SMBIOS, registry write, independent spec)
+        coincide. Pre-fix this held only for ``default``; for ``workstation``
+        and ``laptop`` the registry advertised HP while SMBIOS advertised the
+        profile vendor.
+
+        Args:
+            profile: Anti-evasion profile to drive through both paths.
+            tmp_path: Per-test temporary directory for the disk/binary fixtures.
         """
-        profiles: tuple[Literal["default", "workstation", "laptop"], ...] = ("default", "workstation", "laptop")
-        for profile in profiles:
-            agent = _RecordingAgent()
-            sb = _make_sandbox(anti_evasion_profile=profile, agent=agent)
+        spec_manufacturer, spec_product = _EXPECTED_IDENTITY[profile]
 
-            asyncio.run(sb.apply_anti_evasion(profile=profile))
+        image = _make_disk_image(tmp_path)
+        smbios_sb = _make_sandbox(anti_evasion_profile=profile, agent=None, image_path=image)
+        smbios_sb.set_qemu_path(_make_qemu_binary(tmp_path))
+        smbios_manufacturer, smbios_product = _smbios_type1_identity_from_launch_cmd(smbios_sb.build_command_for_test())
 
-            smbios_entries = _AntiEvasionTestSandbox.smbios_entries_for_test(profile)
-            type1 = next(e for e in smbios_entries if e.get("type") == "1")
-            smbios_manufacturer = type1["manufacturer"]
-            smbios_product = type1["product"]
+        agent = _RecordingAgent()
+        reg_sb = _make_sandbox(anti_evasion_profile=profile, agent=agent)
+        asyncio.run(reg_sb.apply_anti_evasion(profile=profile))
+        registry_manufacturer = _reg_value_for(next(args for _cmd, args in agent.sent_commands if "SystemManufacturer" in args))
+        registry_product = _reg_value_for(next(args for _cmd, args in agent.sent_commands if "SystemProductName" in args))
 
-            manufacturer_args = next(args for _cmd, args in agent.sent_commands if "SystemManufacturer" in args)
-            product_args = next(args for _cmd, args in agent.sent_commands if "SystemProductName" in args)
-            registry_manufacturer = manufacturer_args[manufacturer_args.index("/d") + 1]
-            registry_product = product_args[product_args.index("/d") + 1]
+        assert smbios_manufacturer == spec_manufacturer == registry_manufacturer, (
+            f"profile={profile!r}: manufacturer mismatch across spec/SMBIOS/registry: "
+            f"spec={spec_manufacturer!r} smbios={smbios_manufacturer!r} registry={registry_manufacturer!r}"
+        )
+        assert smbios_product == spec_product == registry_product, (
+            f"profile={profile!r}: product mismatch across spec/SMBIOS/registry: "
+            f"spec={spec_product!r} smbios={smbios_product!r} registry={registry_product!r}"
+        )
 
-            assert smbios_manufacturer == registry_manufacturer, (
-                f"profile={profile!r}: SMBIOS manufacturer {smbios_manufacturer!r} differs from registry "
-                f"manufacturer {registry_manufacturer!r}; trivially detectable inconsistency"
-            )
-            assert smbios_product == registry_product, (
-                f"profile={profile!r}: SMBIOS product {smbios_product!r} differs from registry product "
-                f"{registry_product!r}; trivially detectable inconsistency"
-            )
+
+class TestApplyAntiEvasionErrorPaths:
+    """``apply_anti_evasion`` surfaces misconfiguration as ``SandboxError``."""
+
+    def test_profile_mismatch_raises_sandbox_error(self) -> None:
+        """Requesting a profile other than the launch profile raises.
+
+        The result's launch-time techniques are fixed at ``start`` time, so a
+        mismatched ``profile`` argument must surface as :class:`SandboxError`
+        rather than silently returning techniques for the wrong profile.
+        """
+        agent = _RecordingAgent()
+        sb = _make_sandbox(anti_evasion_profile="workstation", agent=agent)
+
+        with pytest.raises(SandboxError, match="workstation"):
+            asyncio.run(sb.apply_anti_evasion(profile="laptop"))
+        assert agent.sent_commands == [], "no agent commands may be dispatched on profile mismatch"
+
+    def test_not_running_raises_sandbox_error(self) -> None:
+        """A non-running sandbox raises before dispatching any command."""
+        agent = _RecordingAgent()
+        sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
+        sb.state.status = "stopped"
+
+        with pytest.raises(SandboxError):
+            asyncio.run(sb.apply_anti_evasion(profile="default"))
+        assert agent.sent_commands == [], "no agent commands may be dispatched when the sandbox is not running"
+
+    def test_disconnected_qmp_raises_sandbox_error(self) -> None:
+        """A disconnected QMP client raises before dispatching any command."""
+        agent = _RecordingAgent()
+        sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
+        sb.clear_qmp()
+
+        with pytest.raises(SandboxError, match="QMP"):
+            asyncio.run(sb.apply_anti_evasion(profile="default"))
+        assert agent.sent_commands == [], "no agent commands may be dispatched when QMP is disconnected"

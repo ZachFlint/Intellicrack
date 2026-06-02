@@ -1,11 +1,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Zachary Flint
 
-"""E2E tests for HexEditorBridge compare_files operation."""
+"""E2E tests for HexEditorBridge compare_files operation.
+
+``HexEditorBridge.compare_files`` wraps the native ``diff_files`` engine and
+returns a dict with exactly four keys: ``files_identical`` (bool),
+``total_differences`` (int), ``regions`` (list of ``offset_a``/``offset_b``/
+``length``/``diff_type`` dicts) and ``similarity`` (float). Expected region
+layouts and difference counts are cross-checked against Python's
+``difflib.SequenceMatcher`` (an independent reference for the same Myers
+edit-script family) so the oracle is never the engine's own output.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import difflib
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -20,6 +30,9 @@ if TYPE_CHECKING:
 
 pytest.importorskip("intellicrack_hexcore")
 
+_DIFF_TYPES: frozenset[str] = frozenset({"match", "modified", "inserted_a", "inserted_b"})
+_SIMILARITY_TOLERANCE = 1e-5
+
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
@@ -30,6 +43,7 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
     Returns:
         T: The result of the coroutine.
     """
+    loop: asyncio.AbstractEventLoop
     try:
         loop = asyncio.get_event_loop()
         if loop.is_closed():
@@ -57,11 +71,92 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
     return p
 
 
+def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
+    """Validate the compare_files result schema and return its regions list.
+
+    Asserts the result has exactly the four documented keys with correctly typed
+    values, a similarity in ``[0, 1]``, and well-formed regions bounded by the
+    input lengths.
+
+    Args:
+        result: The dict returned by ``compare_files``.
+        len_a: Length of the first input file.
+        len_b: Length of the second input file.
+
+    Returns:
+        list[dict[str, Any]]: The validated ``regions`` list.
+    """
+    assert set(result.keys()) == {"files_identical", "total_differences", "regions", "similarity"}
+    assert isinstance(result["files_identical"], bool)
+    assert isinstance(result["total_differences"], int)
+    assert isinstance(result["similarity"], float)
+    assert 0.0 <= result["similarity"] <= 1.0
+    regions: list[dict[str, Any]] = result["regions"]
+    assert isinstance(regions, list)
+    for region in regions:
+        assert set(region.keys()) == {"offset_a", "offset_b", "length", "diff_type"}
+        assert region["diff_type"] in _DIFF_TYPES
+        assert isinstance(region["offset_a"], int)
+        assert isinstance(region["offset_b"], int)
+        assert isinstance(region["length"], int)
+        assert 0 <= region["offset_a"] <= len_a
+        assert 0 <= region["offset_b"] <= len_b
+        assert region["length"] >= 0
+    return regions
+
+
+def _expected_similarity(match_bytes: int, len_a: int, len_b: int) -> float:
+    """Compute the engine's similarity ratio via an independent formula.
+
+    The engine reports matched bytes divided by the larger buffer length,
+    defaulting to ``1.0`` when both buffers are empty.
+
+    Args:
+        match_bytes: Number of bytes reported as identical.
+        len_a: Length of the first buffer.
+        len_b: Length of the second buffer.
+
+    Returns:
+        float: The expected similarity ratio in ``[0, 1]``.
+    """
+    longest = max(len_a, len_b)
+    if longest == 0:
+        return 1.0
+    return match_bytes / longest
+
+
+def _oracle_match_bytes(data_a: bytes, data_b: bytes) -> int:
+    """Compute the total matched byte count via difflib as an independent oracle.
+
+    Args:
+        data_a: First buffer.
+        data_b: Second buffer.
+
+    Returns:
+        int: Sum of equal-block lengths from ``difflib.SequenceMatcher``.
+    """
+    matcher = difflib.SequenceMatcher(a=data_a, b=data_b, autojunk=False)
+    return sum(size for _i, _j, size in matcher.get_matching_blocks())
+
+
+def _similar(actual: float, expected: float) -> bool:
+    """Compare two similarity ratios within a fixed absolute tolerance.
+
+    Args:
+        actual: The similarity reported by the engine.
+        expected: The independently computed similarity.
+
+    Returns:
+        bool: ``True`` when the values agree within tolerance.
+    """
+    return abs(actual - expected) <= _SIMILARITY_TOLERANCE
+
+
 class TestBridgeCompareFiles:
     """Tests covering HexEditorBridge.compare_files() byte-comparison logic."""
 
     def test_identical_files_reports_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that identical files are reported as equal.
+        """Verify identical files report exact equality with similarity 1.0.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -71,13 +166,14 @@ class TestBridgeCompareFiles:
         f_a = _write_bin(tmp_path, "a.bin", data)
         f_b = _write_bin(tmp_path, "b.bin", data)
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        assert isinstance(result, dict)
-        files_identical: bool | None = result.get("files_identical")
-        similarity: float | None = result.get("similarity")
-        assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
+        regions = _assert_schema(result, len(data), len(data))
+        assert result["files_identical"] is True
+        assert result["total_differences"] == 0
+        assert _similar(result["similarity"], 1.0)
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"}]
 
     def test_identical_files_have_zero_differences(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that identical files report zero total differences.
+        """Verify identical files report exactly zero total_differences.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -87,92 +183,101 @@ class TestBridgeCompareFiles:
         f_a = _write_bin(tmp_path, "a.bin", data)
         f_b = _write_bin(tmp_path, "b.bin", data)
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        total_diff: int | None = result.get("total_differences")
-        changed: int | None = result.get("changed_bytes")
-        mods: int | None = result.get("modifications")
-        if total_diff is not None:
-            assert total_diff == 0
-        elif changed is not None:
-            assert changed == 0
-        elif mods is not None:
-            assert mods == 0
+        regions = _assert_schema(result, len(data), len(data))
+        assert result["total_differences"] == 0
+        assert result["files_identical"] is True
+        diff_bytes = sum(r["length"] for r in regions if r["diff_type"] != "match")
+        assert diff_bytes == 0
 
     def test_single_byte_difference_detected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that a single changed byte causes files to differ.
+        """Verify a single changed byte at offset 32 yields one modified region.
+
+        The difflib oracle establishes a 63-byte match total and a single
+        differing byte; the bridge must report ``total_differences == 1`` with a
+        one-byte ``modified`` region at offset 32 flanked by matches.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        data_a = bytearray(64)
+        data_a = bytes(64)
         data_b = bytearray(64)
         data_b[32] = 0xFF
-        f_a = _write_bin(tmp_path, "a.bin", bytes(data_a))
+        oracle_match = _oracle_match_bytes(data_a, bytes(data_b))
+        assert oracle_match == 63
+
+        f_a = _write_bin(tmp_path, "a.bin", data_a)
         f_b = _write_bin(tmp_path, "b.bin", bytes(data_b))
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        assert isinstance(result, dict)
-        assert not result.get("files_identical")
+        regions = _assert_schema(result, 64, 64)
+        assert result["files_identical"] is False
+        assert result["total_differences"] == 1
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"},
+            {"offset_a": 32, "offset_b": 32, "length": 1, "diff_type": "modified"},
+            {"offset_a": 33, "offset_b": 33, "length": 31, "diff_type": "match"},
+        ]
+        assert _similar(result["similarity"], _expected_similarity(oracle_match, 64, 64))
 
-    def test_single_byte_difference_has_nonempty_regions(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that a single-byte diff produces at least one difference region.
+    def test_modified_tail_region_pinpointed(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify the exact modified tail region for partially differing files.
+
+        ``0x00*50 + 0xff*50`` versus ``0x00*100`` must produce a 50-byte match
+        prefix and a 50-byte ``modified`` region at offset 50, with
+        ``total_differences == 50``. The difflib oracle confirms 50 matched
+        bytes.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        data_a = bytearray(64)
-        data_b = bytearray(64)
-        data_b[10] = 0xAB
-        f_a = _write_bin(tmp_path, "a.bin", bytes(data_a))
-        f_b = _write_bin(tmp_path, "b.bin", bytes(data_b))
-        result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        regions: list[Any] | None = result.get("regions")
-        match_blocks: list[Any] | None = result.get("match_blocks")
-        if regions is not None:
-            assert isinstance(regions, list)
-        if not result.get("files_identical", True):
-            has_diff_info = (
-                (regions is not None and len(regions) > 0)
-                or result.get("total_differences", 0) > 0
-                or result.get("changed_bytes", 0) > 0
-                or result.get("modifications", 0) > 0
-                or (match_blocks is not None)
-            )
-            assert has_diff_info
+        data_a = b"\x00" * 50 + b"\xff" * 50
+        data_b = b"\x00" * 100
+        oracle_match = _oracle_match_bytes(data_a, data_b)
+        assert oracle_match == 50
 
-    def test_multiple_region_differences_detected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that multiple distinct changed regions are reported.
+        f_a = _write_bin(tmp_path, "a.bin", data_a)
+        f_b = _write_bin(tmp_path, "b.bin", data_b)
+        result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
+        regions = _assert_schema(result, 100, 100)
+        assert result["files_identical"] is False
+        assert result["total_differences"] == 50
+        modified = [r for r in regions if r["diff_type"] == "modified"]
+        assert modified == [{"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"}]
+        match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
+        assert match_total == 50
+        assert _similar(result["similarity"], _expected_similarity(oracle_match, 100, 100))
+
+    def test_different_size_truncation_is_inserted_region(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify a truncated file's lost tail is reported as an inserted region.
+
+        ``0xaa*256`` versus ``0xaa*128`` shares a 128-byte prefix; the extra 128
+        bytes present only in the larger file must form a single 128-byte
+        ``inserted_a`` region at offset 128 with ``total_differences == 128``.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        data_a = bytearray(200)
-        data_b = bytearray(200)
-        data_b[10] = 0xAA
-        data_b[100] = 0xBB
-        data_b[190] = 0xCC
-        f_a = _write_bin(tmp_path, "a.bin", bytes(data_a))
-        f_b = _write_bin(tmp_path, "b.bin", bytes(data_b))
-        result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        assert isinstance(result, dict)
-        assert not result.get("files_identical")
+        data_a = b"\xaa" * 256
+        data_b = b"\xaa" * 128
+        oracle_match = _oracle_match_bytes(data_a, data_b)
+        assert oracle_match == 128
 
-    def test_different_size_files_not_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that files with different sizes are not reported as identical.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        f_a = _write_bin(tmp_path, "big.bin", b"\xaa" * 256)
-        f_b = _write_bin(tmp_path, "small.bin", b"\xaa" * 128)
+        f_a = _write_bin(tmp_path, "big.bin", data_a)
+        f_b = _write_bin(tmp_path, "small.bin", data_b)
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        assert isinstance(result, dict)
-        assert not result.get("files_identical")
+        regions = _assert_schema(result, 256, 128)
+        assert result["files_identical"] is False
+        assert result["total_differences"] == 128
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"},
+            {"offset_a": 128, "offset_b": 128, "length": 128, "diff_type": "inserted_a"},
+        ]
+        assert _similar(result["similarity"], _expected_similarity(oracle_match, 256, 128))
 
     def test_empty_files_are_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that two empty files are reported as identical.
+        """Verify two empty files report exact equality with no regions.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -181,39 +286,98 @@ class TestBridgeCompareFiles:
         f_a = _write_bin(tmp_path, "ea.bin", b"")
         f_b = _write_bin(tmp_path, "eb.bin", b"")
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        assert isinstance(result, dict)
-        files_identical: bool | None = result.get("files_identical")
-        similarity: float | None = result.get("similarity")
-        assert files_identical is True or (similarity is not None and similarity >= 0.99)
+        regions = _assert_schema(result, 0, 0)
+        assert result["files_identical"] is True
+        assert result["total_differences"] == 0
+        assert _similar(result["similarity"], 1.0)
+        assert regions == []
 
     def test_same_path_twice_is_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that comparing a file to itself reports identity.
+        """Verify comparing a file against itself reports exact identity.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        f = _write_bin(tmp_path, "self.bin", bytes(range(32)))
+        data = bytes(range(32))
+        f = _write_bin(tmp_path, "self.bin", data)
         result: dict[str, Any] = _run(bridge.compare_files(str(f), str(f)))
-        assert isinstance(result, dict)
-        files_identical: bool | None = result.get("files_identical")
-        similarity: float | None = result.get("similarity")
-        assert files_identical is True or (isinstance(similarity, float) and similarity >= 0.99)
+        regions = _assert_schema(result, len(data), len(data))
+        assert result["files_identical"] is True
+        assert result["total_differences"] == 0
+        assert _similar(result["similarity"], 1.0)
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"}]
 
     def test_pe_vs_elf_not_identical(self, bridge: HexEditorBridge, pe_binary: Path, elf_binary: Path) -> None:
-        """Verify that comparing a PE file to an ELF file reports differences.
+        """Verify comparing a real PE binary to a real ELF binary reports a real difference.
+
+        The two distinct executable formats differ at offset 0 (``MZ`` versus
+        the ELF magic), so the bridge must report ``files_identical is False``,
+        a non-empty modified/inserted region set whose byte total equals
+        ``total_differences``, and a similarity below 1.0 consistent with the
+        engine's own match accounting.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             pe_binary: Path to the PE binary fixture.
             elf_binary: Path to the ELF binary fixture.
         """
-        result: dict[str, Any] = _run(bridge.compare_files(str(pe_binary), str(elf_binary)))
-        assert isinstance(result, dict)
-        assert not result.get("files_identical")
+        data_a = pe_binary.read_bytes()
+        data_b = elf_binary.read_bytes()
+        assert data_a[:2] == b"MZ"
+        assert data_b[:4] == b"\x7fELF"
 
-    def test_return_type_is_dict_with_recognized_keys(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that compare_files returns a dict containing at least one recognized key.
+        result: dict[str, Any] = _run(bridge.compare_files(str(pe_binary), str(elf_binary)))
+        regions = _assert_schema(result, len(data_a), len(data_b))
+        assert result["files_identical"] is False
+        diff_total = sum(r["length"] for r in regions if r["diff_type"] in {"modified", "inserted_a", "inserted_b"})
+        assert diff_total == result["total_differences"]
+        assert diff_total > 0
+        match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
+        assert _similar(result["similarity"], _expected_similarity(match_total, len(data_a), len(data_b)))
+        assert result["similarity"] < 1.0
+        first_region = regions[0]
+        assert first_region["offset_a"] == 0
+        assert first_region["offset_b"] == 0
+        assert first_region["diff_type"] in {"modified", "inserted_a", "inserted_b"}
+
+    def test_real_pe_single_byte_patch_pinpointed(self, bridge: HexEditorBridge, pe_binary: Path, tmp_path: Path) -> None:
+        """Verify a one-byte patch to a real PE binary is pinpointed exactly.
+
+        A genuine PE fixture is copied and its entry-point opcode at the .text
+        raw offset (0x200) is flipped from ``0xCC`` to ``0x90``. The difflib
+        oracle confirms a single replaced byte; the bridge must report
+        ``total_differences == 1`` with a one-byte ``modified`` region at offset
+        0x200 surrounded by matches.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            pe_binary: Path to the PE binary fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        original = pe_binary.read_bytes()
+        patch_offset = 0x200
+        assert original[patch_offset] == 0xCC
+        patched = bytearray(original)
+        patched[patch_offset] = 0x90
+        oracle_match = _oracle_match_bytes(original, bytes(patched))
+        assert oracle_match == len(original) - 1
+
+        f_patched = _write_bin(tmp_path, "patched.exe", bytes(patched))
+        result: dict[str, Any] = _run(bridge.compare_files(str(pe_binary), str(f_patched)))
+        regions = _assert_schema(result, len(original), len(patched))
+        assert result["files_identical"] is False
+        assert result["total_differences"] == 1
+        modified = [r for r in regions if r["diff_type"] == "modified"]
+        assert modified == [{"offset_a": patch_offset, "offset_b": patch_offset, "length": 1, "diff_type": "modified"}]
+        assert _similar(result["similarity"], _expected_similarity(oracle_match, len(original), len(patched)))
+
+    def test_completely_different_files_single_modified_region(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify two fully disjoint same-length files yield one modified region.
+
+        ``0x00*64`` versus ``0xff*64`` share no bytes; the difflib oracle
+        confirms zero matched bytes, and the bridge must report a single 64-byte
+        ``modified`` region with similarity 0.0.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -221,19 +385,50 @@ class TestBridgeCompareFiles:
         """
         data_a = b"\x00" * 64
         data_b = b"\xff" * 64
+        oracle_match = _oracle_match_bytes(data_a, data_b)
+        assert oracle_match == 0
+
         f_a = _write_bin(tmp_path, "ka.bin", data_a)
         f_b = _write_bin(tmp_path, "kb.bin", data_b)
         result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
-        recognized = {
-            "files_identical",
-            "total_differences",
-            "regions",
-            "similarity",
-            "changed_bytes",
-            "modifications",
-            "additions",
-            "deletions",
-            "match_blocks",
-        }
-        assert isinstance(result, dict)
-        assert len(recognized & set(result.keys())) > 0
+        regions = _assert_schema(result, 64, 64)
+        assert result["files_identical"] is False
+        assert result["total_differences"] == 64
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "modified"}]
+        assert _similar(result["similarity"], 0.0)
+
+    def test_missing_file_raises_oserror(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify compare_files surfaces an OSError when an input file is missing.
+
+        The failure must propagate rather than be swallowed into a result dict.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        existing = _write_bin(tmp_path, "present.bin", bytes(range(16)))
+        missing = tmp_path / "does_not_exist.bin"
+        assert not missing.exists()
+        with pytest.raises(OSError, match="read"):
+            _run(bridge.compare_files(str(existing), str(missing)))
+
+    def test_unavailable_hexcore_raises_runtime_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify compare_files raises RuntimeError when the native core is unavailable.
+
+        The bridge guards on ``_hexcore_available``; with the flag cleared the
+        operation must raise rather than silently returning an empty diff.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        f_a = _write_bin(tmp_path, "ua.bin", b"\x00" * 8)
+        f_b = _write_bin(tmp_path, "ub.bin", b"\x00" * 8)
+        flag = "_hexcore_available"
+        original: bool = getattr(bridge, flag)
+        setattr(bridge, flag, False)
+        try:
+            with pytest.raises(RuntimeError, match="hexcore"):
+                _run(bridge.compare_files(str(f_a), str(f_b)))
+        finally:
+            setattr(bridge, flag, original)

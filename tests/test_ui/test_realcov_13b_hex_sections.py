@@ -43,17 +43,18 @@ _MIN_STRING_LEN: int = 6
 _MAX_RESULTS: int = 4000
 
 
-def _extract(path: Path) -> list[dict[str, Any]]:
+def _extract(path: Path, min_length: int = _MIN_STRING_LEN) -> list[dict[str, Any]]:
     """Run the real string extraction helper against a real binary.
 
     Args:
         path: Path to a real binary file.
+        min_length: Minimum string length to forward to the backend.
 
     Returns:
         list[dict[str, Any]]: Extracted string records.
     """
     document = hexcore.HexDocument.open(str(path))
-    raw = execute_strings_extraction(document, _MIN_STRING_LEN, _MAX_RESULTS)
+    raw = execute_strings_extraction(document, min_length, _MAX_RESULTS)
     assert isinstance(raw, list)
     return cast("list[dict[str, Any]]", raw)
 
@@ -71,6 +72,26 @@ def _text_of(record: dict[str, Any]) -> str:
         if key in record:
             return str(record[key])
     return ""
+
+
+def _length_of(record: dict[str, Any]) -> int:
+    r"""Return the backend-reported codepoint length of an extract_strings record.
+
+    The hexcore backend reports the matched run length in codepoints in the
+    ``length`` field. This is the authoritative measure the minimum-length
+    filter is applied against (the ``content`` field may carry trailing
+    delimiter bytes such as ``$`` or ``\r\n``), so the test uses it as the
+    independent oracle for enforcement.
+
+    Args:
+        record: A single extract_strings result dict.
+
+    Returns:
+        int: The reported codepoint length for the record.
+    """
+    raw = record.get("length")
+    assert isinstance(raw, int), f"extract_strings record is missing an integer 'length': {record!r}"
+    return raw
 
 
 class TestStringExtractionRealPe:
@@ -111,15 +132,38 @@ class TestStringExtractionRealPe:
         assert checked > 0
 
     def test_min_length_is_enforced(self, real_pe_dll: Path) -> None:
-        """Verify all returned ASCII strings honour the minimum length.
+        """Verify every returned string honours the configured minimum length.
+
+        Drives the real extractor at two distinct floors (6 and 12) and uses
+        the backend-reported ``length`` field as the independent oracle. Every
+        record at each floor must report ``length >= floor`` (the actual
+        enforcement, not a degenerate ``>= 1``), at least one record must sit
+        exactly on the boundary to prove the floor is the binding constraint,
+        and raising the floor must strictly drop the short matches that the
+        lower floor admitted.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.
         """
-        records = _extract(real_pe_dll)
-        ascii_records = [r for r in records if "ascii" in str(r.get("encoding", "")).lower()]
-        assert ascii_records
-        assert all(len(_text_of(rec).rstrip("\x00")) >= 1 for rec in ascii_records)
+        low_floor = 6
+        high_floor = 12
+
+        low_records = _extract(real_pe_dll, low_floor)
+        high_records = _extract(real_pe_dll, high_floor)
+        assert low_records
+        assert high_records
+
+        low_lengths = [_length_of(rec) for rec in low_records]
+        high_lengths = [_length_of(rec) for rec in high_records]
+
+        assert min(low_lengths) >= low_floor
+        assert min(high_lengths) >= high_floor
+
+        assert min(low_lengths) == low_floor, "no record sits on the low floor, so enforcement is unproven"
+
+        short_at_low = sum(1 for length in low_lengths if low_floor <= length < high_floor)
+        assert short_at_low > 0, "the low floor admitted no sub-12 strings, so the boundary test is vacuous"
+        assert all(length >= high_floor for length in high_lengths)
 
 
 class TestFormatDetectionDrivesTemplates:

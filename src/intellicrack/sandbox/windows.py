@@ -2326,7 +2326,8 @@ class WindowsSandbox(SandboxBase):
             '    [DllImport("kernel32.dll", SetLastError=true)] public static extern IntPtr OpenProcess(\n'
             "        uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);\n"
             '    [DllImport("kernel32.dll", SetLastError=true)] public static extern bool CloseHandle(IntPtr hObject);\n'
-            '}"@ -ErrorAction Stop;\n'
+            "}\n"
+            '"@ -ErrorAction Stop;\n'
             f"$access = {_PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ};\n"
             "$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);\n"
             "if ($handle -eq [IntPtr]::Zero) {\n"

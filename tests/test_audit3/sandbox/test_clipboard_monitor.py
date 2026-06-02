@@ -28,6 +28,7 @@ import os
 import shutil
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Final
 
@@ -198,6 +199,43 @@ def _scan_fallback_log(contents: str) -> tuple[bool, bool]:
             if len(fields) >= 7 and fields[1] == "changed":
                 saw_fallback_line = True
     return saw_add_type_error, saw_fallback_line
+
+
+def _parse_changed_records(contents: str) -> list[dict[str, str]]:
+    """Parse the pipe-delimited ``changed`` records emitted by the monitor.
+
+    The monitor writes one line per observed clipboard change in the form
+    ``timestamp|changed|format|preview|size_bytes|owner_pid|process_name``
+    (identical between the event-driven and polling-fallback code paths).
+    This extracts every such record into a structured dictionary so callers
+    can assert on individual fields rather than on raw text.
+
+    Args:
+        contents: Full text of the ``clipboard_monitor.log`` file.
+
+    Returns:
+        list[dict[str, str]]: One dictionary per ``changed`` record, with
+        ``timestamp``, ``format``, ``preview``, ``size_bytes``, ``owner_pid``,
+        and ``process_name`` string fields. JSON structured-error lines and
+        malformed lines are skipped.
+    """
+    records: list[dict[str, str]] = []
+    for raw_line in contents.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("{"):
+            continue
+        fields = line.split("|")
+        if len(fields) != 7 or fields[1] != "changed":
+            continue
+        records.append({
+            "timestamp": fields[0],
+            "format": fields[2],
+            "preview": fields[3],
+            "size_bytes": fields[4],
+            "owner_pid": fields[5],
+            "process_name": fields[6],
+        })
+    return records
 
 
 def test_script_file_exists() -> None:
@@ -382,11 +420,24 @@ def test_script_logs_structured_json_when_add_type_fails(tmp_path: Path) -> None
     assert saw_fallback_line, f"expected at least one polling-fallback log line; contents={contents!r}"
 
 
-def test_smoke_script_logs_clipboard_change(tmp_path: Path) -> None:
-    """Verify a real ``Set-Clipboard`` write produces a log line.
+def test_script_logs_exact_structure_of_real_clipboard_write(tmp_path: Path) -> None:
+    """A real ``Set-Clipboard`` write is logged with the exact, correct record.
 
-    End-to-end smoke: copying text to the live Windows clipboard must
-    produce a log entry in the supplied ``-LogDir``.
+    End-to-end gate: copying a known sentinel string to the live Windows
+    clipboard must produce a ``changed`` record whose fields faithfully
+    reflect that write. The assertions pin every field independently of the
+    monitor's own implementation:
+
+    * the record format marker is ``Text`` (the captured content is text);
+    * the preview equals the exact sentinel text we copied (no truncation or
+      mangling, since the sentinel is short clean ASCII);
+    * the byte size equals the UTF-8 byte length we compute ourselves as an
+      independent oracle;
+    * the timestamp round-trips through ISO-8601 parsing.
+
+    A regression that logged the wrong content, the wrong size, a wrong
+    format marker, or a malformed timestamp would fail these checks, unlike
+    the prior existence-only smoke assertion.
 
     Args:
         tmp_path: Pytest-provided temp directory.
@@ -396,17 +447,35 @@ def test_smoke_script_logs_clipboard_change(tmp_path: Path) -> None:
     log_dir.mkdir()
     log_path = log_dir / _LOG_NAME
 
+    sentinel = "audit3-smoke-7f3a2b9c"
+    expected_size_bytes = len(sentinel.encode("utf-8"))
+
     proc = _start_script(log_dir, pwsh)
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
-        _set_clipboard("audit3-smoke", pwsh)
+        _set_clipboard(sentinel, pwsh)
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
     finally:
         _terminate(proc)
 
     assert log_path.exists(), f"smoke log not created at {log_path}"
     contents = log_path.read_text(encoding="utf-8", errors="replace")
-    assert contents.strip(), f"smoke log at {log_path} is empty"
+
+    records = _parse_changed_records(contents)
+    matching = [rec for rec in records if rec["preview"] == sentinel]
+    assert len(matching) >= 1, (
+        f"no 'changed' record captured the sentinel clipboard write {sentinel!r}; parsed records={records!r} raw contents={contents!r}"
+    )
+
+    record = matching[0]
+    assert record["format"] == "Text", f"clipboard text was logged with wrong format marker: {record!r}"
+    assert record["size_bytes"] == str(expected_size_bytes), (
+        f"logged byte size {record['size_bytes']!r} does not match independently computed "
+        f"UTF-8 length {expected_size_bytes} for {sentinel!r}: {record!r}"
+    )
+
+    parsed_ts = datetime.fromisoformat(record["timestamp"])
+    assert parsed_ts.tzinfo is not None, f"logged timestamp {record['timestamp']!r} is not a tz-aware ISO-8601 value"
 
 
 def test_script_default_logdir_when_omitted(tmp_path: Path) -> None:

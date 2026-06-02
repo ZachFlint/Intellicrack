@@ -56,6 +56,7 @@ Capstone's mode field is overloaded: ``"32"`` / ``"64"`` for x86 and MIPS, the l
 squashed to ``"64"`` because capstone has no separate 128-bit mode.
 """
 
+
 class UnsupportedArchitectureError(ValueError):
     """Raised when an architecture string cannot be mapped to capstone constants.
 
@@ -298,15 +299,16 @@ class HexDisassembler:
         Returns:
             list[DisassemblyLine]: Decoded instructions as bridge lines.
         """
-        _logger.debug(
-            "disassemble_to_lines_invoked",
-            binary_path=str(binary_path) if binary_path is not None else None,
-            data_size=len(data),
-            offset=base_addr,
-            arch=arch,
-            mode=mode,
-            count=count,
-        )
+        log_payload: dict[str, object] = {
+            "data_size": len(data),
+            "offset": base_addr,
+            "arch": arch,
+            "mode": mode,
+            "count": count,
+        }
+        if binary_path is not None:
+            log_payload["binary_path"] = str(binary_path)
+        _logger.debug("disassemble_to_lines_invoked", **log_payload)
         raw = self.disassemble(data, base_addr, arch, mode, count)
         return [_to_disassembly_line(insn) for insn in raw]
 

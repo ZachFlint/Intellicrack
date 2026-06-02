@@ -192,64 +192,141 @@ def test_format_memory_hex_matches_real_bytes(real_bridge: RealProcessBridgeProb
     assert expected_hex in rendered
 
 
-def test_region_map_populated_from_real_memory_map(qapp: QApplication, tab: _MemoryTabProbe) -> None:
-    """Refresh must fill the region table from the real ``get_memory_map``.
+def _module_base(bridge: RealProcessBridgeProbe, module_name: str) -> tuple[int, int]:
+    """Resolve a real loaded module's base address and image size.
 
-    The current process's address space always contains committed image
-    regions; the rendered region table must hold rows whose base/size columns
-    parse as valid hex, and the count label must match the rendered rows.
+    Args:
+        bridge: Real bridge attached to this process.
+        module_name: Lower-case module file name (e.g. ``"kernel32.dll"``).
+
+    Returns:
+        tuple[int, int]: ``(base_address, image_size)`` from the real
+        ``get_modules`` enumeration.
+    """
+    modules = run_bridge_sync(bridge.get_modules(os.getpid()))
+    for mod in modules:
+        if mod.name.lower() == module_name:
+            return mod.base_address, mod.size
+    pytest.fail(f"{module_name} not present in real module enumeration")
+
+
+def _rendered_region_bases(tab: _MemoryTabProbe) -> dict[int, tuple[int, str, str, str | None]]:
+    """Index the rendered region table by base address.
+
+    Args:
+        tab: MemoryTab probe whose region table has been populated.
+
+    Returns:
+        dict[int, tuple[int, str, str, str | None]]: Map from region base
+        address to ``(size, protection, type, module_name)`` as rendered.
+    """
+    rendered: dict[int, tuple[int, str, str, str | None]] = {}
+    for row in range(tab.region_count()):
+        base_text = tab.region_cell(row, 0)
+        size_text = tab.region_cell(row, 1)
+        if base_text is None or size_text is None:
+            continue
+        rendered[int(base_text, 16)] = (
+            int(size_text, 16),
+            tab.region_cell(row, 2) or "",
+            tab.region_cell(row, 4) or "",
+            tab.region_cell(row, 5),
+        )
+    return rendered
+
+
+def test_region_map_rows_round_trip_real_image_regions(
+    qapp: QApplication,
+    real_bridge: RealProcessBridgeProbe,
+    tab: _MemoryTabProbe,
+) -> None:
+    """Rendered image rows must exactly reproduce the real ``MemoryRegion`` records.
+
+    An independent ``get_memory_map`` enumeration is the oracle. The comparison
+    is scoped to ``MEM_IMAGE`` regions (loaded DLL sections), which are mapped
+    copy-on-write and therefore stable across two near-instant reads, unlike
+    dynamic stack/heap regions that can resize between calls. Every rendered
+    image row's base, size, protection, state, type, and module name must match
+    the corresponding real field exactly, catching any swap, truncation, or
+    hex-formatting regression that a bare ``rows >= 1`` check would miss.
 
     Args:
         qapp: Qt application driving the event loop.
+        real_bridge: Real bridge supplying the independent oracle enumeration.
+        tab: MemoryTab probe bound to the real bridge.
+    """
+    oracle = run_bridge_sync(real_bridge.get_memory_map(resolve_names=True))
+    image_oracle = {region.base_address: region for region in oracle if region.type == "image"}
+    assert len(image_oracle) > 100, f"expected many real image regions in this process, got {len(image_oracle)}"
+
+    tab.refresh_regions()
+    populated = pump_until(qapp, lambda: tab.region_count() > 0)
+    assert populated, "region table never populated from real get_memory_map()"
+
+    rows = tab.region_count()
+    assert tab.region_count_label() == f"{rows} regions"
+
+    matched = 0
+    for row in range(rows):
+        base_text = tab.region_cell(row, 0)
+        assert base_text is not None
+        region = image_oracle.get(int(base_text, 16))
+        if region is None:
+            continue
+        matched += 1
+        base = region.base_address
+        assert tab.region_cell(row, 1) == f"0x{region.size:X}", f"size mismatch at base 0x{base:X}"
+        assert tab.region_cell(row, 2) == region.protection, f"protection mismatch at base 0x{base:X}"
+        assert tab.region_cell(row, 3) == region.state, f"state mismatch at base 0x{base:X}"
+        assert tab.region_cell(row, 4) == region.type, f"type mismatch at base 0x{base:X}"
+        assert tab.region_cell(row, 5) == (region.module_name or ""), f"module mismatch at base 0x{base:X}"
+
+    assert matched >= len(image_oracle) - 8, f"only {matched}/{len(image_oracle)} real image regions matched in the rendered table"
+
+
+def test_region_map_pins_real_module_header_region(
+    qapp: QApplication,
+    real_bridge: RealProcessBridgeProbe,
+    tab: _MemoryTabProbe,
+) -> None:
+    """Each real module's image base must render as an exact image region.
+
+    For both ntdll.dll and kernel32.dll, the base reported by the independent
+    ``get_modules`` enumeration must appear verbatim as a region base in the
+    table; that region must be typed ``image``, name the real module, be
+    readable, and the module's full ``[base, base + size)`` image span must be
+    covered by contiguous rendered image regions. A base off by a page, a
+    halved size, or a dropped image flag fails this gate.
+
+    Args:
+        qapp: Qt application driving the event loop.
+        real_bridge: Real bridge supplying the independent module oracle.
         tab: MemoryTab probe bound to the real bridge.
     """
     tab.refresh_regions()
     populated = pump_until(qapp, lambda: tab.region_count() > 0)
     assert populated, "region table never populated from real get_memory_map()"
 
-    rows = tab.region_count()
-    assert rows >= 1
+    rendered = _rendered_region_bases(tab)
 
-    first_base = tab.region_cell(0, 0)
-    first_size = tab.region_cell(0, 1)
-    assert first_base is not None
-    assert first_size is not None
-    assert int(first_base, 16) >= 0
-    assert int(first_size, 16) > 0
-    assert tab.region_count_label() == f"{rows} regions"
+    for module_name in ("ntdll.dll", "kernel32.dll"):
+        base, image_size = _module_base(real_bridge, module_name)
+        assert base in rendered, f"{module_name} image base 0x{base:X} absent from rendered region bases"
 
+        size, protection, region_type, region_module = rendered[base]
+        assert region_type == "image", f"{module_name} base region must be MEM_IMAGE, got {region_type!r}"
+        assert "r" in protection, f"{module_name} header region must be readable, got {protection!r}"
+        assert region_module is not None, f"{module_name} region must carry a resolved module name, got None"
+        assert module_name in region_module.lower(), f"{module_name} region must name the real module, got {region_module!r}"
+        assert size > 0, f"{module_name} header region size must be positive, got 0x{size:X}"
+        assert size <= image_size, f"{module_name} header region size 0x{size:X} exceeds image span 0x{image_size:X}"
 
-def test_region_map_contains_real_module_region(
-    qapp: QApplication,
-    real_bridge: RealProcessBridgeProbe,
-    tab: _MemoryTabProbe,
-) -> None:
-    """A real loaded module's base must fall inside an enumerated region.
-
-    The ntdll image base reported by ``get_modules`` must be covered by one of
-    the real memory regions returned by ``get_memory_map``, cross-validating
-    that two independent real Win32 enumerations agree.
-
-    Args:
-        qapp: Qt application driving the event loop.
-        real_bridge: Real bridge attached to this process.
-        tab: MemoryTab probe bound to the real bridge.
-    """
-    ntdll_base = _ntdll_base(real_bridge)
-
-    tab.refresh_regions()
-    populated = pump_until(qapp, lambda: tab.region_count() > 0)
-    assert populated
-
-    covered = False
-    for row in range(tab.region_count()):
-        base_text = tab.region_cell(row, 0)
-        size_text = tab.region_cell(row, 1)
-        if base_text is None or size_text is None:
-            continue
-        base = int(base_text, 16)
-        size = int(size_text, 16)
-        if base <= ntdll_base < base + size:
-            covered = True
-            break
-    assert covered, "real ntdll base not covered by any enumerated memory region"
+        covered = base + size
+        module_end = base + image_size
+        while covered < module_end and covered in rendered:
+            next_size, _, _, _ = rendered[covered]
+            covered += next_size
+        assert covered >= module_end, (
+            f"{module_name} image span [0x{base:X}, 0x{module_end:X}) not fully covered by contiguous regions; "
+            f"coverage stopped at 0x{covered:X}"
+        )

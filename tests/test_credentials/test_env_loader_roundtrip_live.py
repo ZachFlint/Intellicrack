@@ -66,19 +66,69 @@ _ROUND_TRIP_VALUES: list[tuple[str, str]] = [
 ]
 
 
+# Independently-derived expected serializations for each round-trip value.
+#
+# These are NOT captured from the production quoter. Each was hand-computed
+# from the documented .env serialization contract (empty -> bare ``=``; values
+# made only of ASCII alphanumerics plus ``. _ / -`` stay unquoted; everything
+# else is double-quoted with ``\`` -> ``\\``, ``"`` -> ``\"``, ``$`` -> ``\$``,
+# LF -> ``\n``, CR -> ``\r``, TAB -> ``\t``). Asserting the exact emitted text
+# breaks the round-trip symmetry: a quoter that double-escaped backslashes (and
+# a parser that compensated by un-double-escaping) would round-trip yet still
+# fail these literal expectations.
+_EXPECTED_QUOTED: dict[str, str] = {
+    "empty": "",
+    "plain_ascii": "hello",
+    "safe_token": "sk-ant-api03-AbC_123.xyz/def-ghi",
+    "spaces": '"value with spaces"',
+    "leading_trailing_ws": '"   padded value   "',
+    "tab_only": '"\\t"',
+    "hash_char": '"value#with#hash"',
+    "inline_hash_space": '"value # looks like comment"',
+    "single_quotes": "\"it's a 'quoted' thing\"",
+    "double_quotes": '"she said \\"hi\\" loudly"',
+    "both_quotes": '"mix of \'single\' and \\"double\\" quotes"',
+    "backslash": '"C:\\\\Users\\\\zach\\\\project"',
+    "double_backslash": '"a\\\\\\\\b\\\\\\\\c"',
+    "dollar_sign": '"price=\\$100 for \\$product"',
+    "newline_n": '"line1\\nline2\\nline3"',
+    "carriage_return": '"line1\\rline2"',
+    "crlf": '"line1\\r\\nline2"',
+    "tab_embedded": '"col1\\tcol2\\tcol3"',
+    "mixed_escapes": '"tabs\\tand\\nnewlines\\rand\\\\backslashes and \\$dollars and \\"quotes\\""',
+    "unicode_basic": '"héllo wörld"',
+    "unicode_emoji_text": '"name: 日本語"',
+    "url_with_query": '"https://example.com/path?key=value&other=1"',
+    "json_like": '"{\\"key\\": \\"value\\", \\"n\\": 42}"',
+    "all_specials": '"\\\\\\"\\$\\n\\r\\t end"',
+}
+
+
 @pytest.mark.parametrize(("label", "value"), _ROUND_TRIP_VALUES, ids=[row[0] for row in _ROUND_TRIP_VALUES])
 def test_quote_then_parse_round_trip(label: str, value: str) -> None:
-    """Assert the quoter output parses back to the original value.
+    """Assert exact quoted form against an independent oracle, then round-trip.
+
+    Two distinct gates run per case. First the emitted serialization is matched
+    byte-for-byte against ``_EXPECTED_QUOTED`` - a hand-derived oracle of the
+    documented .env quoting format that is independent of the production
+    quoter's own output. This catches symmetric quoter/parser defects (e.g. a
+    double-escaping quoter paired with a compensating parser) that a pure
+    round-trip would silently pass. Second the quoted text is parsed back and
+    must reconstruct the original value exactly.
 
     Args:
         label: Human-readable label for the test case (used as pytest id).
         value: The value to round-trip through quoter and parser.
     """
-    del label
     quoted = _quote_env_value(value)
+    expected_quoted = _EXPECTED_QUOTED[label]
+    assert quoted == expected_quoted, (
+        f"quoter must emit the documented .env form for {label!r}; expected {expected_quoted!r}, got {quoted!r}"
+    )
+
     text = f"KEY={quoted}\n"
     parsed = _parse_env_text(text)
-    assert parsed == {"KEY": value}
+    assert parsed == {"KEY": value}, f"parse(quote(x)) must reconstruct x for {label!r}; got {parsed!r}"
 
 
 @pytest.mark.parametrize(("label", "value"), _ROUND_TRIP_VALUES, ids=[row[0] for row in _ROUND_TRIP_VALUES])

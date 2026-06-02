@@ -3,10 +3,14 @@
 
 """E2E tests for HexEditorBridge apply_pipeline and deep apply_transform coverage.
 
-Verifies that multi-step transform pipelines produce correct results against
-real HexDocument data, that ordering matters between steps, and that individual
-transform operations work on various byte ranges. Tests fail if the underlying
-hexcore module or pipeline module cannot perform the requested operations.
+Every test drives a real :class:`HexEditorBridge` over the real Rust
+``intellicrack_hexcore`` transform backend against a real on-disk binary, then
+asserts the exact transformed bytes. Expected values are computed independently
+(closed-form XOR/ROT/byte-order arithmetic or a different trusted oracle such as
+the stdlib ``base64``/``binascii`` modules), never frozen from the bridge's own
+output. Error and edge paths assert the specific exception type rather than
+swallowing failures, and the transform names used are the ones the native
+backend actually exports, so no test is gated behind a capability skip.
 """
 
 from __future__ import annotations
@@ -15,10 +19,11 @@ import asyncio
 import base64
 import binascii
 import json
-from importlib.util import find_spec
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import pytest
+
+from intellicrack.core.transform_pipeline import get_all_transform_nodes
 
 
 if TYPE_CHECKING:
@@ -30,19 +35,35 @@ if TYPE_CHECKING:
 
 pytest.importorskip("intellicrack_hexcore")
 
-_pipeline_available: bool = find_spec("intellicrack.core.transform_pipeline") is not None
 
-_T = TypeVar("_T")
+_REQUIRED_TRANSFORMS: frozenset[str] = frozenset(
+    {"xor_single", "xor_repeating", "bit_invert", "byte_reverse", "rot_n", "base64_encode"},
+)
 
 
-def _run[T](coro: Coroutine[object, object, _T]) -> _T:
+def _assert_backend_capabilities() -> None:
+    """Fail loudly if the native backend lacks a transform these tests rely on.
+
+    The transforms exercised here are core capabilities of the bundled
+    ``intellicrack_hexcore`` build. If one is missing the bridge surface has
+    regressed and the suite must fail rather than silently skip.
+    """
+    available = {node.name for node in get_all_transform_nodes()}
+    missing = _REQUIRED_TRANSFORMS - available
+    assert not missing, f"native backend is missing required transforms: {sorted(missing)}"
+
+
+_assert_backend_capabilities()
+
+
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        _T: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -67,93 +88,93 @@ def _open_with_payload(bridge: HexEditorBridge, path: Path, data: bytes) -> None
     _run(bridge.open_file(str(path)))
 
 
-def _require_transform(bridge: HexEditorBridge, name: str) -> None:
-    """Skip the test if the named transform is not available.
+def _xor(data: bytes, key: int) -> bytes:
+    """Compute the XOR of every byte with a single-byte key (independent oracle).
 
     Args:
-        bridge: An initialized HexEditorBridge.
-        name: Transform name to check.
+        data: Source bytes.
+        key: Single-byte XOR key in range 0-255.
+
+    Returns:
+        bytes: The XOR-transformed bytes.
     """
-    transforms = _run(bridge.list_transforms())
-    names = [t["name"] for t in transforms]
-    if name not in names:
-        pytest.skip(f"transform '{name}' not available")
+    return bytes(b ^ key for b in data)
 
 
 class TestApplyPipelineSingleStep:
     """Tests for apply_pipeline with exactly one transform step."""
 
-    def test_single_xor_step_returns_hex_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A single-step XOR pipeline must return a valid hex string of the correct length.
+    def test_single_xor_step_produces_exact_known_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """A single-step XOR pipeline yields the closed-form XOR of every byte.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
-        payload = b"\xff\xff\xff\xff"
+        payload = bytes([0x10, 0x20, 0x30, 0x40])
         _open_with_payload(bridge, tmp_path / "p.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "AA"}}])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
-        assert len(result) == 8
+        assert result == _xor(payload, 0xAA).hex()
+        assert result == "ba8a9aea"
 
-    def test_single_xor_step_known_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """XOR-ing 0xFF bytes with 0xFF must yield all-zero output.
+    def test_single_xor_with_ff_inverts_all_ones(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """XOR-ing 0xFF bytes with 0xFF yields all-zero output.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
         payload = b"\xff\xff\xff\xff"
         _open_with_payload(bridge, tmp_path / "xorknown.bin", payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "FF"}}])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
         assert result == "00000000"
 
     def test_empty_pipeline_returns_original_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """An empty pipeline must return the original bytes unchanged.
+        """An empty pipeline returns the original bytes unchanged.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-
         payload = b"\x01\x02\x03\x04"
         _open_with_payload(bridge, tmp_path / "empty.bin", payload)
 
-        pipeline = json.dumps([])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(json.dumps([]), 0, 4, in_place=False))
 
         assert result == binascii.hexlify(payload).decode("ascii")
+
+    def test_zero_length_pipeline_returns_empty_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Applying a pipeline over a zero-length range returns an empty hex string.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        _open_with_payload(bridge, tmp_path / "zero.bin", b"\x01\x02\x03\x04")
+
+        pipeline = json.dumps([{"name": "xor_single", "params": {"key": "FF"}}])
+        result = _run(bridge.apply_pipeline(pipeline, 0, 0, in_place=False))
+
+        assert result == b"".hex()
+        assert len(result) == 0
 
 
 class TestApplyPipelineMultiStep:
     """Tests for apply_pipeline with two or more transform steps."""
 
-    def test_two_step_pipeline_xor_then_xor_identity(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """XOR-ing the same key twice must restore the original bytes (identity).
+    def test_double_xor_same_key_is_identity(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """XOR-ing the same key twice restores the original bytes.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
         payload = b"\xaa\xbb\xcc\xdd"
         _open_with_payload(bridge, tmp_path / "double_xor.bin", payload)
 
@@ -161,274 +182,275 @@ class TestApplyPipelineMultiStep:
             {"name": "xor_single", "params": {"key": "3C"}},
             {"name": "xor_single", "params": {"key": "3C"}},
         ])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
         assert result == binascii.hexlify(payload).decode("ascii")
 
-    def test_pipeline_ordering_matters(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Reversing step order in a non-symmetric pipeline must produce different output.
+    def test_step_order_changes_result_for_non_commuting_steps(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """A position-dependent xor_repeating before vs after byte_reverse gives distinct, known outputs.
+
+        With payload ``10 20 30 40`` and repeating key ``AA BB``:
+        xor_repeating then byte_reverse is ``fb9a9bba``; byte_reverse then
+        xor_repeating is ``ea8b8aab``. Both are computed by hand below.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
-        transforms = _run(bridge.list_transforms())
-        names = [t["name"] for t in transforms]
-        if "bitwise_not" not in names:
-            pytest.skip("bitwise_not transform not available")
-
-        payload = b"\x0f\x0f\x0f\x0f"
+        payload = bytes([0x10, 0x20, 0x30, 0x40])
         _open_with_payload(bridge, tmp_path / "order.bin", payload)
 
-        pipeline_ab = json.dumps([
-            {"name": "xor_single", "params": {"key": "AA"}},
-            {"name": "bitwise_not", "params": {}},
+        xor_then_reverse = json.dumps([
+            {"name": "xor_repeating", "params": {"key": "AABB"}},
+            {"name": "byte_reverse", "params": {}},
         ])
-        pipeline_ba = json.dumps([
-            {"name": "bitwise_not", "params": {}},
-            {"name": "xor_single", "params": {"key": "AA"}},
+        reverse_then_xor = json.dumps([
+            {"name": "byte_reverse", "params": {}},
+            {"name": "xor_repeating", "params": {"key": "AABB"}},
         ])
 
-        result_ab = _run(bridge.apply_pipeline(pipeline_ab, 0, 4))
-        result_ba = _run(bridge.apply_pipeline(pipeline_ba, 0, 4))
+        result_xr = _run(bridge.apply_pipeline(xor_then_reverse, 0, 4, in_place=False))
+        result_rx = _run(bridge.apply_pipeline(reverse_then_xor, 0, 4, in_place=False))
 
-        assert result_ab != result_ba
+        key = bytes.fromhex("AABB")
+        xored = bytes(payload[i] ^ key[i % len(key)] for i in range(len(payload)))
+        expected_xr = xored[::-1].hex()
+        reversed_payload = payload[::-1]
+        expected_rx = bytes(reversed_payload[i] ^ key[i % len(key)] for i in range(len(reversed_payload))).hex()
 
-    def test_three_step_pipeline_produces_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A three-step pipeline must return a non-empty hex string of the correct length.
+        assert result_xr == expected_xr == "fb9a9bba"
+        assert result_rx == expected_rx == "ea8b8aab"
+        assert result_xr != result_rx
+
+    def test_three_xor_steps_collapse_to_single_xor(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """XOR(k1) then XOR(k2) then XOR(k3) equals XOR(k1 ^ k2 ^ k3) on every byte.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
-        payload = b"\x00\x11\x22\x33"
+        payload = bytes([0x00, 0x11, 0x22, 0x33])
         _open_with_payload(bridge, tmp_path / "three_step.bin", payload)
 
+        k1, k2, k3 = 0xFF, 0x0F, 0xF0
         pipeline = json.dumps([
-            {"name": "xor_single", "params": {"key": "FF"}},
-            {"name": "xor_single", "params": {"key": "0F"}},
-            {"name": "xor_single", "params": {"key": "F0"}},
+            {"name": "xor_single", "params": {"key": f"{k1:02X}"}},
+            {"name": "xor_single", "params": {"key": f"{k2:02X}"}},
+            {"name": "xor_single", "params": {"key": f"{k3:02X}"}},
         ])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
-        assert len(result) == 8
+        assert result == _xor(payload, k1 ^ k2 ^ k3).hex()
 
-    def test_pipeline_result_length_matches_input_length(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Pipeline output length in hex characters must equal 2 * input byte count.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
-        byte_count = 16
-        payload = bytes(range(byte_count))
-        _open_with_payload(bridge, tmp_path / "len_check.bin", payload)
-
-        pipeline = json.dumps([{"name": "xor_single", "params": {"key": "55"}}])
-        result = _run(bridge.apply_pipeline(pipeline, 0, byte_count))
-
-        assert len(result) == byte_count * 2
-
-    def test_pipeline_on_subrange(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Pipeline applied to a subrange must only transform the specified bytes.
+    def test_pipeline_on_subrange_leaves_other_bytes_untouched(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """An in-place pipeline over a subrange transforms only that range.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
         payload = b"\x00" * 8 + b"\xff" * 4 + b"\x00" * 8
-        _open_with_payload(bridge, tmp_path / "subrange.bin", payload)
+        path = tmp_path / "subrange.bin"
+        _open_with_payload(bridge, path, payload)
 
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "FF"}}])
-        result = _run(bridge.apply_pipeline(pipeline, 8, 4))
+        result = _run(bridge.apply_pipeline(pipeline, 8, 4, in_place=True))
 
-        transformed = bytes.fromhex(result)
-        assert all(b == 0x00 for b in transformed)
+        assert result == "00000000"
+        full_hex = _run(bridge.read_bytes(0, len(payload)))
+        assert bytes.fromhex(full_hex) == b"\x00" * 20
 
 
-class TestApplyPipelineInvalidStep:
-    """Tests for apply_pipeline graceful handling of unknown step names."""
+class TestApplyPipelineErrorPaths:
+    """Tests for apply_pipeline failure and adversarial-input handling."""
 
-    def test_pipeline_with_invalid_step_name_completes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A pipeline containing an unknown step name must not crash the bridge.
-
-        Unknown steps are silently skipped; the result is the remaining output.
+    def test_unknown_step_is_skipped_yielding_original_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """An unknown step name is dropped, so the output equals the untouched input.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-
         payload = b"\xab\xcd\xef\x01"
         _open_with_payload(bridge, tmp_path / "invalid_step.bin", payload)
 
+        pipeline = json.dumps([{"name": "nonexistent_transform_xyzzy", "params": {}}])
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
+
+        assert result == binascii.hexlify(payload).decode("ascii")
+
+    def test_known_step_after_unknown_step_still_applies(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """An unknown step is skipped while a following real XOR step still runs.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        payload = bytes([0x01, 0x02, 0x03, 0x04])
+        _open_with_payload(bridge, tmp_path / "mixed_steps.bin", payload)
+
         pipeline = json.dumps([
             {"name": "nonexistent_transform_xyzzy", "params": {}},
+            {"name": "xor_single", "params": {"key": "0F"}},
         ])
-        raised: Exception | None = None
-        result: str | None = None
-        try:
-            result = _run(bridge.apply_pipeline(pipeline, 0, 4))
-        except (RuntimeError, ValueError, KeyError) as exc:
-            raised = exc
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
-        if raised is None:
-            assert result is not None
+        assert result == _xor(payload, 0x0F).hex()
+
+    def test_malformed_pipeline_json_raises_json_decode_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Invalid pipeline JSON surfaces a JSONDecodeError rather than being swallowed.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        _open_with_payload(bridge, tmp_path / "badjson.bin", b"\x01\x02\x03\x04")
+
+        with pytest.raises(json.JSONDecodeError):
+            _run(bridge.apply_pipeline("{not valid json", 0, 4, in_place=False))
 
 
 class TestApplyTransformDeep:
-    """Deeper tests for bridge.apply_transform across different transforms and ranges."""
+    """Deeper tests for bridge.apply_transform across transforms and ranges."""
 
-    def test_apply_transform_xor_with_key_parameter(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform with xor_single and a known key must produce the correct output.
+    def test_xor_with_key_produces_exact_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """apply_transform xor_single with a known key produces the closed-form result.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        _require_transform(bridge, "xor_single")
-
         payload = b"\x41\x41\x41\x41"
         _open_with_payload(bridge, tmp_path / "xorkey.bin", payload)
 
-        result = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "41"})))
+        result = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "41"}), in_place=False))
 
+        assert result == _xor(payload, 0x41).hex()
         assert result == "00000000"
 
-    def test_apply_transform_on_second_subrange(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform on a non-zero offset must only transform bytes in that range.
+    def test_xor_identity_key_zero_leaves_bytes_unchanged(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """XOR-ing with key 0x00 leaves bytes unchanged.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        _require_transform(bridge, "xor_single")
+        payload = b"\x11\x22\x33\x44\x55\x66\x77\x88"
+        _open_with_payload(bridge, tmp_path / "xor_id.bin", payload)
 
-        payload = b"\x00" * 4 + b"\xff\xff\xff\xff" + b"\x00" * 4
+        result = _run(bridge.apply_transform("xor_single", 0, 8, json.dumps({"key": "00"}), in_place=False))
+
+        assert result == binascii.hexlify(payload).decode("ascii")
+
+    def test_transform_on_offset_range_yields_range_only_result(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """apply_transform at a non-zero offset transforms exactly the bytes in that range.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        payload = b"\x00" * 4 + b"\x12\x34\x56\x78" + b"\x00" * 4
         _open_with_payload(bridge, tmp_path / "subrange_transform.bin", payload)
 
-        result = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "FF"})))
+        result = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "FF"}), in_place=False))
 
-        transformed = bytes.fromhex(result)
-        assert all(b == 0x00 for b in transformed)
+        assert result == _xor(b"\x12\x34\x56\x78", 0xFF).hex()
+        assert result == "edcba987"
 
-    def test_apply_transform_rot13_on_text_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform with rot13 must rotate alphabetic ASCII bytes by 13 positions.
+    def test_bit_invert_matches_byte_complement(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """bit_invert produces the bitwise complement of each byte (equivalent to XOR 0xFF).
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        transforms = _run(bridge.list_transforms())
-        names = [t["name"] for t in transforms]
-        if "rot13" not in names:
-            pytest.skip("rot13 transform not available")
+        payload = bytes([0x0F, 0xF0, 0x00, 0xFF, 0xA5])
+        _open_with_payload(bridge, tmp_path / "invert.bin", payload)
 
+        result = _run(bridge.apply_transform("bit_invert", 0, len(payload), "{}", in_place=False))
+
+        assert result == bytes((~b) & 0xFF for b in payload).hex()
+        assert result == "f00fff005a"
+
+    def test_byte_reverse_reverses_range_order(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """byte_reverse emits the source bytes in reverse order.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        payload = bytes([0x01, 0x02, 0x03, 0x04, 0x05])
+        _open_with_payload(bridge, tmp_path / "reverse.bin", payload)
+
+        result = _run(bridge.apply_transform("byte_reverse", 0, len(payload), "{}", in_place=False))
+
+        assert result == payload[::-1].hex()
+        assert result == "0504030201"
+
+    def test_rot_n_rotates_alphabetic_ascii(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """rot_n with shift 13 rotates ASCII letters by 13 (HELLO -> URYYB).
+
+        The shift parameter is passed as the hex byte string ``"0D"`` (decimal
+        13); the bridge converts hex-string params to bytes for the backend.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
         text = "HELLO"
         payload = text.encode("ascii") + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "rot13.bin", payload)
 
-        result = _run(bridge.apply_transform("rot13", 0, len(text), "{}"))
+        result = _run(bridge.apply_transform("rot_n", 0, len(text), json.dumps({"shift": "0D"}), in_place=False))
 
-        transformed = bytes.fromhex(result).decode("ascii")
-        assert transformed == "URYYB"
+        assert bytes.fromhex(result).decode("ascii") == "URYYB"
 
-    def test_apply_transform_base64_encode_produces_valid_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform with base64_encode must produce a validly decodable hex output.
-
-        The transform returns bytes of the base64 ASCII string; verifying by
-        decoding the hex and re-interpreting as ASCII base64. base64_encode
-        changes the byte length (8 source bytes encode to 12 base64 bytes), so
-        the transform must be applied with ``in_place=False``; an in-place
-        application is rejected because the bridge cannot replace a fixed range
-        with a different-length slice.
+    def test_base64_encode_matches_stdlib_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """base64_encode output decodes back to the source bytes and equals stdlib base64.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        transforms = _run(bridge.list_transforms())
-        names = [t["name"] for t in transforms]
-        if "base64_encode" not in names:
-            pytest.skip("base64_encode transform not available")
-
-        payload = b"TestData" + b"\x00" * 8
+        source = b"TestData"
+        payload = source + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "b64.bin", payload)
 
-        result = _run(bridge.apply_transform("base64_encode", 0, 8, "{}", in_place=False))
+        result = _run(bridge.apply_transform("base64_encode", 0, len(source), "{}", in_place=False))
 
         b64_bytes = bytes.fromhex(result)
-        decoded = base64.b64decode(b64_bytes)
-        assert decoded == b"TestData"
+        assert b64_bytes == base64.b64encode(source)
+        assert base64.b64decode(b64_bytes) == source
 
-    def test_apply_transform_xor_identity_key_zero(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """XOR-ing with key 0x00 must leave bytes unchanged (identity operation).
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        _require_transform(bridge, "xor_single")
-
-        payload = b"\x11\x22\x33\x44\x55\x66\x77\x88"
-        _open_with_payload(bridge, tmp_path / "xor_id.bin", payload)
-
-        result = _run(bridge.apply_transform("xor_single", 0, 8, json.dumps({"key": "00"})))
-
-        assert result == binascii.hexlify(payload).decode("ascii")
-
-    def test_apply_transform_different_byte_ranges_give_different_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform on two non-overlapping ranges of distinct bytes gives distinct output.
+    def test_base64_encode_in_place_raises_value_error_on_length_change(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """In-place base64_encode is rejected because the output length differs from the range.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        _require_transform(bridge, "xor_single")
+        payload = b"TestData" + b"\x00" * 8
+        _open_with_payload(bridge, tmp_path / "b64_inplace.bin", payload)
 
-        payload = b"\x00\x00\x00\x00" + b"\xff\xff\xff\xff"
-        _open_with_payload(bridge, tmp_path / "twobranch.bin", payload)
+        with pytest.raises(ValueError, match="in-place application requires equal length"):
+            _run(bridge.apply_transform("base64_encode", 0, 8, "{}", in_place=True))
 
-        result_first = _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "AA"})))
-        result_second = _run(bridge.apply_transform("xor_single", 4, 4, json.dumps({"key": "AA"})))
+    def test_apply_transform_without_open_document_raises_runtime_error(self, bridge: HexEditorBridge) -> None:
+        """apply_transform with no document open raises RuntimeError, not a silent default.
 
-        assert result_first != result_second
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+        """
+        with pytest.raises(RuntimeError, match="no document open"):
+            _run(bridge.apply_transform("xor_single", 0, 4, json.dumps({"key": "FF"}), in_place=False))
 
-    def test_apply_pipeline_vs_apply_transform_single_step_match(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A single-step pipeline and direct apply_transform with the same params produce equal output.
-
-        Both paths are run with ``in_place=False`` so neither mutates the
-        document; otherwise the first (in-place) call would overwrite the
-        source range and the second call would XOR the already-transformed
-        bytes, yielding the original payload instead of the transformed value.
-        XOR of ``deadbeef`` with key ``0xCA`` is ``14677425``.
+    def test_pipeline_and_transform_single_step_agree(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """A single-step pipeline and a direct apply_transform with equal params match exactly.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
         payload = b"\xde\xad\xbe\xef"
         _open_with_payload(bridge, tmp_path / "compare.bin", payload)
 
@@ -436,46 +458,16 @@ class TestApplyTransformDeep:
         pipeline = json.dumps([{"name": "xor_single", "params": {"key": "CA"}}])
         via_pipeline = _run(bridge.apply_pipeline(pipeline, 0, 4, in_place=False))
 
-        assert direct == via_pipeline
+        assert direct == via_pipeline == _xor(payload, 0xCA).hex()
         assert direct == "14677425"
 
-    def test_apply_transform_on_pe_binary(self, loaded_bridge: HexEditorBridge) -> None:
-        """apply_transform must successfully process bytes from a real PE binary document.
+    def test_apply_transform_on_real_pe_header_bytes(self, loaded_bridge: HexEditorBridge) -> None:
+        """apply_transform reads and returns real PE header bytes (MZ magic) intact under XOR 0x00.
 
         Args:
             loaded_bridge: A bridge with the PE file already opened.
         """
-        _require_transform(loaded_bridge, "xor_single")
-
-        result = _run(loaded_bridge.apply_transform("xor_single", 0, 2, json.dumps({"key": "00"})))
+        result = _run(loaded_bridge.apply_transform("xor_single", 0, 2, json.dumps({"key": "00"}), in_place=False))
 
         assert result == "4d5a"
-
-    def test_apply_pipeline_three_steps_with_known_verification(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A three-step pipeline with XOR steps must produce the mathematically expected result.
-
-        XOR(k1) then XOR(k2) then XOR(k3) equals XOR(k1 ^ k2 ^ k3).
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        if not _pipeline_available:
-            pytest.skip("transform_pipeline not available")
-        _require_transform(bridge, "xor_single")
-
-        payload = b"\x00\x00\x00\x00"
-        _open_with_payload(bridge, tmp_path / "triple_xor.bin", payload)
-
-        k1, k2, k3 = 0x11, 0x22, 0x33
-        expected_byte = k1 ^ k2 ^ k3
-
-        pipeline = json.dumps([
-            {"name": "xor_single", "params": {"key": f"{k1:02X}"}},
-            {"name": "xor_single", "params": {"key": f"{k2:02X}"}},
-            {"name": "xor_single", "params": {"key": f"{k3:02X}"}},
-        ])
-        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
-
-        transformed = bytes.fromhex(result)
-        assert all(b == expected_byte for b in transformed)
+        assert bytes.fromhex(result) == b"MZ"

@@ -216,18 +216,50 @@ def _format_prompt(
 
 
 def test_f0001_b580_device_ids_constant_drives_detection() -> None:
-    """Every B580 PCI device-ID alias in ``_B580_DEVICE_IDS`` must match.
+    """``_is_b580_device`` must accept every ID alias and reject non-B580 IDs.
 
     Before the fix, ``_is_b580_device`` matched against a hard-coded literal
-    set ``{"e20b", "0xe20b"}`` and ignored the constant. The frozenset also
-    includes the upper-case spellings ``"E20B"`` and ``"0xE20B"``; lower-
-    casing the inputs and comparing against the frozenset must accept all
-    four representations.
+    set ``{"e20b", "0xe20b"}`` and ignored the constant. This is a falsifiable
+    gate over the device-ID code path: a deliberately non-B580 device name
+    (``"Generic GPU"``) forces the verdict to be driven solely by the
+    ``device_id`` comparison against ``_B580_DEVICE_IDS``.
+
+    The positive oracle is the independently-known set of four documented
+    Intel Arc B580 device-ID spellings (the PCI device ID ``0xE20B`` in
+    bare/prefixed and upper/lower case). The negative oracle is a set of
+    real, non-B580 PCI device IDs - the adjacent Intel Battlemage SKU
+    ``0xE20C``, NVIDIA's ``0x2684`` (RTX 4090), AMD's ``0x73DF`` (RX 6700 XT),
+    and the empty/garbage cases - none of which may be classified as a B580
+    when the device name carries no ``b580`` substring.
     """
-    assert "0xE20B" in _B580_DEVICE_IDS
-    assert "E20B" in _B580_DEVICE_IDS
-    for raw_id in _B580_DEVICE_IDS:
-        assert _is_b580_device("Generic GPU", raw_id), f"id {raw_id!r} should match"
+    expected_aliases: frozenset[str] = frozenset({"0xe20b", "e20b", "E20B", "0xE20B"})
+    assert expected_aliases == _B580_DEVICE_IDS
+
+    for raw_id in expected_aliases:
+        assert _is_b580_device("Generic GPU", raw_id), f"id {raw_id!r} should match by device ID"
+
+    non_b580_ids: list[str] = ["0xE20C", "e20c", "0x2684", "73DF", "73df", "", "not-an-id", "e20"]
+    for raw_id in non_b580_ids:
+        assert not _is_b580_device("Generic GPU", raw_id), f"id {raw_id!r} must not match as B580"
+
+
+def test_f0001_b580_device_name_path_is_independent_of_device_id() -> None:
+    """The name-based fallback must classify B580s even with a non-matching ID.
+
+    ``_is_b580_device`` returns ``True`` when *either* the device ID is a known
+    B580 alias *or* the device name contains ``b580``. This test pins the name
+    path so it cannot silently regress into a pure device-ID check (which would
+    miss real enumerations where Windows reports an unexpected device ID but the
+    friendly name still reads ``Intel(R) Arc(TM) B580 Graphics``).
+
+    Oracles are independent: a non-B580 device ID (``"0x2684"``) paired with a
+    B580 product name must match via the name path, while the same non-B580 ID
+    paired with a non-B580 name (``"NVIDIA GeForce RTX 4090"``) must not.
+    """
+    assert _is_b580_device("Intel(R) Arc(TM) B580 Graphics", "0x2684") is True
+    assert _is_b580_device("intel arc b580", "73DF") is True
+    assert _is_b580_device("NVIDIA GeForce RTX 4090", "0x2684") is False
+    assert _is_b580_device("Intel(R) Arc(TM) A770 Graphics", "0x56a0") is False
 
 
 def test_f0001_intel_vendor_id_filters_non_intel_pnp() -> None:

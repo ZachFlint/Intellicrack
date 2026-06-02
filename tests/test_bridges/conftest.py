@@ -23,6 +23,7 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 
 if TYPE_CHECKING:
     import types
+    from collections.abc import Iterator
     from pathlib import Path
 
 
@@ -145,38 +146,30 @@ def elf_binary(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def bridge() -> HexEditorBridge:
-    """Create and initialize a HexEditorBridge instance.
+def bridge() -> Iterator[HexEditorBridge]:
+    """Create, initialize, and tear down a real ``HexEditorBridge``.
 
-    Returns:
-        HexEditorBridge: An initialized HexEditorBridge.
+    Each test gets a dedicated, freshly created event loop that is set as the
+    current loop, used to drive ``initialize()``/``shutdown()``, and closed on
+    teardown. This guarantees no test inherits a closed or foreign loop and no
+    bridge state leaks across tests. The fixture asserts the bridge actually
+    connected to the real ``intellicrack_hexcore`` backend before yielding, so a
+    broken ``initialize()`` fails fast at setup rather than producing confusing
+    downstream failures.
+
+    Yields:
+        HexEditorBridge: A bridge whose ``state.connected`` is ``True``.
     """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     b = HexEditorBridge()
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    loop.run_until_complete(b.initialize())
-    return b
-
-
-@pytest.fixture
-def event_loop() -> asyncio.AbstractEventLoop:
-    """Provide a stable asyncio event loop across audit1 tests.
-
-    Returns:
-        asyncio.AbstractEventLoop: The event loop used by the test session.
-    """
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop
+        loop.run_until_complete(b.initialize())
+        assert b.state.connected is True, "HexEditorBridge.initialize() did not connect the hexcore backend"
+        assert b.state.tool_running is True, "HexEditorBridge.initialize() did not mark the backend as running"
+        assert b.document is None, "freshly initialized bridge must have no document attached"
+        yield b
+    finally:
+        loop.run_until_complete(b.shutdown())
+        asyncio.set_event_loop(None)
+        loop.close()

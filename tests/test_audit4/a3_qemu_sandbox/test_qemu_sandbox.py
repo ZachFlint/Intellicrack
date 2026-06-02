@@ -12,6 +12,10 @@ the fixed implementation.
 from __future__ import annotations
 
 import asyncio
+import os
+import shutil
+import socket
+import subprocess
 import time
 import zipfile
 from pathlib import Path
@@ -19,8 +23,9 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import yara
 
-from intellicrack.sandbox.base import SandboxConfig, SandboxTimeoutError
+from intellicrack.sandbox.base import SandboxConfig, SandboxError, SandboxTimeoutError
 
 
 if TYPE_CHECKING:
@@ -31,6 +36,7 @@ from intellicrack.sandbox.qemu import (
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
+    QMPClient,
 )
 
 
@@ -94,8 +100,6 @@ class _TestQEMUSandbox(QEMUSandbox):
         Args:
             qmp: QMP client instance.
         """
-        from intellicrack.sandbox.qemu import QMPClient  # noqa: PLC0415
-
         if isinstance(qmp, QMPClient) or qmp is None:
             self._qmp = qmp
         else:
@@ -241,6 +245,16 @@ class _TestQEMUSandbox(QEMUSandbox):
         return QEMUSandbox._windows_agent_script_content()
 
     @staticmethod
+    async def ensure_agent_connected_for_test(agent: GuestAgentClient, time_limit: float) -> None:
+        """Expose _ensure_agent_connected for test introspection.
+
+        Args:
+            agent: Guest agent client to drive through the production connect path.
+            time_limit: Total seconds to wait for the agent to become reachable.
+        """
+        await QEMUSandbox._ensure_agent_connected(agent, time_limit)
+
+    @staticmethod
     def probe_whpx_prerequisites_for_test() -> bool:
         """Expose _probe_whpx_host_prerequisites for test introspection.
 
@@ -267,6 +281,23 @@ class _TestQEMUSandbox(QEMUSandbox):
 # ---------------------------------------------------------------------------
 
 
+def _resolve_cmd_exe() -> str:
+    """Return the absolute path to the Windows command interpreter.
+
+    Resolves ``cmd.exe`` to a full path so the generated guest ``.cmd`` script
+    can be executed without relying on a partial executable name.
+
+    Returns:
+        str: Absolute path to ``cmd.exe``.
+    """
+    com_spec = os.environ.get("COMSPEC")
+    if com_spec and Path(com_spec).is_file():
+        return com_spec
+    resolved = shutil.which("cmd.exe") or shutil.which("cmd")
+    assert resolved is not None, "cmd.exe must be available to execute the generated Windows guest script"
+    return resolved
+
+
 def _make_sandbox(
     *,
     guest_os: GuestOS = GuestOS.WINDOWS,
@@ -289,45 +320,6 @@ def _make_sandbox(
     if shared_folder is not None:
         sb.set_shared_folder(shared_folder)
     return sb
-
-
-class _FakeAgent(GuestAgentClient):
-    """GuestAgentClient subclass that records connect calls and skips real I/O.
-
-    Attributes:
-        connect_called: Number of times connect() was called.
-    """
-
-    connect_called: int
-
-    def __init__(self, *, initially_connected: bool = False) -> None:
-        """Initialise _FakeAgent without calling super() network setup.
-
-        Args:
-            initially_connected: Whether to start in connected state.
-        """
-        super().__init__(host="127.0.0.1", port=4445)
-        self.connect_called = 0
-        self.connected = initially_connected
-
-    async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
-        """Record a connect call and return True.
-
-        Args:
-            time_limit: Ignored.
-            retry_interval: Ignored.
-
-        Returns:
-            bool: Always True.
-        """
-        del time_limit, retry_interval
-        self.connect_called += 1
-        self.connected = True
-        return True
-
-    async def disconnect(self) -> None:
-        """Record disconnect and clear connected state."""
-        self.connected = False
 
 
 class _ConnectableAgent(GuestAgentClient):
@@ -376,62 +368,112 @@ class _ConnectableAgent(GuestAgentClient):
 
 
 class TestF0002AgentConnectCalled:
-    """F-0002: start() must call GuestAgentClient.connect so is_connected becomes True."""
+    """F-0002: start() must drive GuestAgentClient.connect against a live agent socket.
 
-    def test_agent_connect_invoked_during_start(self, tmp_path: Path) -> None:
-        """GuestAgentClient.connect is awaited inside QEMUSandbox.start.
+    These tests exercise the real production method ``_ensure_agent_connected``
+    (the single code path that ``start`` -> ``_start_impl`` -> ``_attach_qemu_agents``
+    uses to await ``agent.connect``) against a *real* ``GuestAgentClient`` and a
+    *real* loopback TCP server. Nothing in the connect path is mocked: a genuine
+    socket is opened end to end. If production stopped awaiting ``agent.connect``
+    (the original bug) the agent would never reach ``is_connected == True`` and
+    the failure path would not raise, so both tests would go red.
+    """
 
-        A sandbox whose start() completes normally must have called
-        agent.connect() at least once; an agent that was merely
-        instantiated (the old bug) would show connect_called == 0.
+    def test_ensure_agent_connected_opens_real_socket(self) -> None:
+        """``_ensure_agent_connected`` connects a real agent to a live listener.
 
-        Args:
-            tmp_path: Pytest temp directory.
+        A loopback ``asyncio`` server is bound on an ephemeral port; a real
+        ``GuestAgentClient`` is pointed at it and driven through the production
+        ``QEMUSandbox._ensure_agent_connected`` helper. The server records the
+        accepted peer, proving an actual TCP connection was established by the
+        production connect path.
         """
-        fake_agent = _FakeAgent()
 
-        async def _run() -> None:
-            image = tmp_path / "disk.qcow2"
-            image.write_bytes(b"\x00" * 512)
+        async def _run() -> tuple[bool, int]:
+            accepted: list[bool] = []
+            ready = asyncio.Event()
 
-            cfg = QEMUConfig(guest_os=GuestOS.WINDOWS, image_path=image)
-            sb = _TestQEMUSandbox(config=SandboxConfig(), qemu_config=cfg)
-            sb.set_accelerator(AcceleratorType.TCG)
-            sb.set_agent(fake_agent)
-            sb.set_qemu_pid(1234)
+            async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                del reader
+                accepted.append(True)
+                ready.set()
+                writer.close()
+                await writer.wait_closed()
 
-            with (
-                patch.object(sb, "is_available", new=AsyncMock(return_value=True)),
-                patch.object(sb, "_build_qemu_command", new=AsyncMock(return_value=[])),
-                patch.object(sb, "_create_guest_agent_script", new=AsyncMock()),
-                patch.object(sb, "_connect_and_verify_qmp", new=AsyncMock()),
-                patch.object(sb, "_cleanup", new=AsyncMock()),
-                patch("asyncio.create_subprocess_exec") as mock_proc,
-            ):
-                proc_mock = AsyncMock()
-                proc_mock.returncode = None
-                proc_mock.communicate = AsyncMock(return_value=(b"", b""))
-                mock_proc.return_value = proc_mock
+            server = await asyncio.start_server(_handle, host="127.0.0.1", port=0)
+            sockets = server.sockets
+            assert sockets, "loopback server must expose a bound socket"
+            port = sockets[0].getsockname()[1]
 
-                sb.state.status = "running"
+            agent = GuestAgentClient(host="127.0.0.1", port=port)
+            try:
+                async with server:
+                    await _TestQEMUSandbox.ensure_agent_connected_for_test(agent, 5.0)
+                    await asyncio.wait_for(ready.wait(), timeout=5.0)
+                    connected = agent.is_connected
+                    accept_count = len(accepted)
+                return connected, accept_count
+            finally:
+                await agent.disconnect()
 
-            await fake_agent.connect()
+        connected, accept_count = asyncio.run(_run())
+        assert connected is True, "_ensure_agent_connected must leave the agent in the connected state"
+        assert accept_count == 1, f"the production connect path must open exactly one real socket; server accepted {accept_count}"
 
-        asyncio.run(_run())
-        assert fake_agent.connect_called >= 1, "connect() was never called on GuestAgentClient"
+    def test_ensure_agent_connected_raises_when_no_listener(self) -> None:
+        """``_ensure_agent_connected`` surfaces a ``SandboxError`` when nothing listens.
 
-    def test_agent_is_connected_after_explicit_connect(self) -> None:
-        """GuestAgentClient.is_connected is True after connect() succeeds.
-
-        Without the fix, is_connected was permanently False because connect()
-        was never awaited inside start().
+        A free loopback port is reserved and then released so no server is
+        listening. Driving the real connect path against it must fail loudly:
+        ``connect`` returns ``False`` and the production helper raises
+        ``SandboxError`` rather than silently leaving the agent disconnected.
         """
-        fake = _FakeAgent()
-        assert not fake.is_connected, "Precondition: agent starts disconnected"
 
-        asyncio.run(fake.connect())
+        async def _run() -> bool:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+                probe.bind(("127.0.0.1", 0))
+                dead_port = probe.getsockname()[1]
 
-        assert fake.is_connected, "is_connected must be True after connect() returns True"
+            agent = GuestAgentClient(host="127.0.0.1", port=dead_port)
+            with pytest.raises(SandboxError):
+                await _TestQEMUSandbox.ensure_agent_connected_for_test(agent, 1.0)
+            return agent.is_connected
+
+        connected = asyncio.run(_run())
+        assert connected is False, "agent must remain disconnected after a failed connect"
+
+    def test_real_agent_connect_returns_true_against_live_server(self) -> None:
+        """``GuestAgentClient.connect`` returns True only against a live listener.
+
+        Drives the real ``connect`` method (no override) against a real loopback
+        server and asserts both the boolean contract and ``is_connected``.
+        """
+
+        async def _run() -> tuple[bool, bool, bool]:
+            async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+                del reader
+                writer.close()
+                await writer.wait_closed()
+
+            server = await asyncio.start_server(_handle, host="127.0.0.1", port=0)
+            sockets = server.sockets
+            assert sockets, "loopback server must expose a bound socket"
+            port = sockets[0].getsockname()[1]
+
+            agent = GuestAgentClient(host="127.0.0.1", port=port)
+            before = agent.is_connected
+            try:
+                async with server:
+                    ok = await agent.connect(time_limit=5.0, retry_interval=1.0)
+                    after = agent.is_connected
+                return before, ok, after
+            finally:
+                await agent.disconnect()
+
+        before, ok, after = asyncio.run(_run())
+        assert before is False, "precondition: agent starts disconnected"
+        assert ok is True, "connect() must return True against a live server"
+        assert after is True, "is_connected must be True after a successful real connect()"
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +485,11 @@ class TestF0003PollForResult:
     """F-0003: _poll_for_result must parse the exit code from the result file."""
 
     def test_poll_reads_exit_code_from_result_file(self, tmp_path: Path) -> None:
-        """_poll_for_result returns the exit code written to the result file.
+        """_poll_for_result returns the full 3-tuple with the parsed exit code.
+
+        Drives the real ``_poll_for_result`` with a well-formed result file and
+        no sidecars, then asserts the exact tuple structure: the exit code is
+        parsed from the file and stdout/stderr default to empty strings.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -455,8 +501,92 @@ class TestF0003PollForResult:
             result_file.write_text("42\n", encoding="utf-8")
             return await sb.poll_for_result_for_test(result_file, 5)
 
+        outcome = asyncio.run(_run())
+        assert outcome == (42, "", ""), f"Expected exact tuple (42, '', ''); got {outcome!r}"
+
+    @pytest.mark.parametrize(
+        ("file_text", "expected_code"),
+        [
+            ("0\n", 0),
+            ("1\n", 1),
+            ("42\n", 42),
+            ("255\n", 255),
+            ("007\n", 7),
+            ("   13   \n", 13),
+        ],
+    )
+    def test_poll_parses_well_formed_integer_codes(self, tmp_path: Path, file_text: str, expected_code: int) -> None:
+        """_poll_for_result parses a stripped all-digit result file to its integer value.
+
+        Expected values are derived from the documented contract (the result
+        file holds the guest command's decimal exit code), not from the
+        implementation's own output.
+
+        Args:
+            tmp_path: Pytest temp directory.
+            file_text: Raw result-file contents written by the guest script.
+            expected_code: Independently-known exit code the file encodes.
+        """
+        result_file = tmp_path / "result_wellformed.txt"
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text(file_text, encoding="utf-8")
+            return await sb.poll_for_result_for_test(result_file, 5)
+
+        exit_code, stdout, stderr = asyncio.run(_run())
+        assert exit_code == expected_code, f"file {file_text!r} must parse to {expected_code}; got {exit_code}"
+        assert not stdout, f"stdout must be empty without a sidecar; got {stdout!r}"
+        assert not stderr, f"stderr must be empty without a sidecar; got {stderr!r}"
+
+    @pytest.mark.parametrize(
+        "file_text",
+        ["", "abc\n", "0x42\n", "-1\n", "1.5\n", "exit: 0\n", "42 43\n"],
+    )
+    def test_poll_returns_sentinel_for_malformed_result(self, tmp_path: Path, file_text: str) -> None:
+        """_poll_for_result yields the -1 sentinel for any non-decimal result file.
+
+        The contract is that only a stripped, all-digit body is a valid exit
+        code; everything else (empty, hex, signed, float, prose, multi-token)
+        maps to -1 so a malformed guest result is never silently reported as a
+        success (0). This guards against a regression that parsed hex, took the
+        last line, or defaulted to 0.
+
+        Args:
+            tmp_path: Pytest temp directory.
+            file_text: Malformed result-file contents.
+        """
+        result_file = tmp_path / "result_malformed.txt"
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text(file_text, encoding="utf-8")
+            return await sb.poll_for_result_for_test(result_file, 5)
+
+        exit_code, stdout, stderr = asyncio.run(_run())
+        assert exit_code == -1, f"malformed result {file_text!r} must map to -1; got {exit_code}"
+        assert not stdout, f"stdout must be empty; got {stdout!r}"
+        assert not stderr, f"stderr must be empty; got {stderr!r}"
+
+    def test_poll_does_not_take_last_line_as_exit_code(self, tmp_path: Path) -> None:
+        r"""A multi-line result whose last line is a digit must still be -1.
+
+        Pins the whole-file-strip semantics: ``"garbage\n7"`` is not an
+        all-digit body, so it is the -1 sentinel rather than 7. A regression
+        that read only the last line would return 7 and fail this gate.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        result_file = tmp_path / "result_multiline.txt"
+        sb = _make_sandbox()
+
+        async def _run() -> tuple[int, str, str]:
+            result_file.write_text("garbage\n7\n", encoding="utf-8")
+            return await sb.poll_for_result_for_test(result_file, 5)
+
         exit_code, _stdout, _stderr = asyncio.run(_run())
-        assert exit_code == 42, f"Expected exit code 42, got {exit_code}"
+        assert exit_code == -1, f"multi-line result must not be read as its last line; got {exit_code}"
 
     def test_poll_raises_on_timeout(self, tmp_path: Path) -> None:
         """_poll_for_result raises SandboxTimeoutError when file never appears.
@@ -588,45 +718,109 @@ class TestF0003PollForResult:
         assert not stderr_file.exists(), "stderr sidecar should be cleaned up"
         assert not script_file.exists(), "script file should be cleaned up"
 
-    def test_generated_windows_script_redirects_stdout_and_stderr(self) -> None:
-        """Windows script must redirect stdout/stderr to per-id sidecar files.
+    def test_generated_windows_script_executes_and_writes_exact_sidecars(self, tmp_path: Path) -> None:
+        r"""The generated Windows .cmd actually redirects to the sidecars when run.
 
-        Confirms that the generated guest script references both sidecar
-        files in its redirection. Without the fix, only the exit code would
-        be emitted.
+        The guest script is generated by production, its hard-coded guest path
+        prefix (``Z:\output\``) is rewritten onto a real host output folder,
+        and the script is executed by ``cmd.exe``. A command with a *known*
+        stdout token, a *known* stderr token, and a *known* non-zero exit code
+        is used as an independent oracle. The test asserts the exact captured
+        stdout, the exact captured stderr, and the exact exit code recorded in
+        the result file - proving the redirection syntax (``1>``/``2>`` and
+        ``echo %ERRORLEVEL%``) is correct, not merely textually present.
+
+        Args:
+            tmp_path: Pytest temp directory.
         """
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
         sb = _make_sandbox(guest_os=GuestOS.WINDOWS)
+        command = 'cmd /c "echo HELLO_OUT& echo HELLO_ERR 1>&2& exit /b 3"'
         script_name, script_content = sb.generate_execution_script_for_test(
-            command='powershell -Command "Write-Host out; Write-Error err"',
+            command=command,
             working_directory=None,
             script_id="deadbeef",
             result_name="result_deadbeef.txt",
             stdout_name="deadbeef.stdout",
             stderr_name="deadbeef.stderr",
         )
+        assert script_name.endswith(".cmd"), f"Windows script name must end in .cmd; got {script_name}"
 
-        assert script_name.endswith(".cmd")
-        assert "deadbeef.stdout" in script_content, "Windows script must redirect stdout to deadbeef.stdout"
-        assert "deadbeef.stderr" in script_content, "Windows script must redirect stderr to deadbeef.stderr"
-        assert "1>" in script_content or "1> " in script_content, "Script must redirect file descriptor 1 to stdout sidecar"
-        assert "2>" in script_content, "Script must redirect file descriptor 2 to stderr sidecar"
+        runnable = script_content.replace("Z:\\output\\", f"{out_dir}\\")
+        script_path = tmp_path / script_name
+        script_path.write_text(runnable, encoding="ascii")
 
-    def test_generated_linux_script_redirects_stdout_and_stderr(self) -> None:
-        """Linux script must redirect stdout/stderr to per-id sidecar files."""
+        cmd_exe = _resolve_cmd_exe()
+        completed = subprocess.run(
+            [cmd_exe, "/c", str(script_path)],
+            check=False,
+            capture_output=True,
+            timeout=30,
+        )
+        assert completed.returncode == 0, f"cmd wrapper itself must exit 0; stderr={completed.stderr!r}"
+
+        stdout_text = (out_dir / "deadbeef.stdout").read_text(encoding="ascii")
+        stderr_text = (out_dir / "deadbeef.stderr").read_text(encoding="ascii")
+        result_text = (out_dir / "result_deadbeef.txt").read_text(encoding="ascii").strip()
+
+        assert "HELLO_OUT" in stdout_text, f"stdout sidecar must capture the command's stdout; got {stdout_text!r}"
+        assert "HELLO_OUT" not in stderr_text, f"stdout token leaked into stderr sidecar: {stderr_text!r}"
+        assert "HELLO_ERR" in stderr_text, f"stderr sidecar must capture the command's stderr; got {stderr_text!r}"
+        assert "HELLO_ERR" not in stdout_text, f"stderr token leaked into stdout sidecar: {stdout_text!r}"
+        assert result_text == "3", f"result file must record the command exit code 3; got {result_text!r}"
+
+    def test_generated_linux_script_executes_and_writes_exact_sidecars(self, tmp_path: Path) -> None:
+        """The generated Linux .sh actually redirects to the sidecars when run.
+
+        The production-generated script's guest prefix (``/mnt/shared/output/``)
+        is rewritten onto a real host output folder and executed with ``bash``.
+        A command with known stdout, known stderr, and a known non-zero exit
+        code serves as the oracle; the test asserts the exact sidecar contents
+        and the exact exit code captured by ``echo $?``.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        bash_path = shutil.which("bash")
+        assert bash_path is not None, "bash must be available to execute the generated Linux guest script"
+
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
         sb = _make_sandbox(guest_os=GuestOS.LINUX)
+        command = "echo LINUX_OUT; echo LINUX_ERR 1>&2; exit 5"
         script_name, script_content = sb.generate_execution_script_for_test(
-            command="echo out; >&2 echo err",
+            command=command,
             working_directory=None,
             script_id="cafebabe",
             result_name="result_cafebabe.txt",
             stdout_name="cafebabe.stdout",
             stderr_name="cafebabe.stderr",
         )
+        assert script_name.endswith(".sh"), f"Linux script name must end in .sh; got {script_name}"
 
-        assert script_name.endswith(".sh")
-        assert "cafebabe.stdout" in script_content
-        assert "cafebabe.stderr" in script_content
-        assert "2>" in script_content, "Linux script must redirect fd 2 to stderr sidecar"
+        host_prefix = out_dir.as_posix() + "/"
+        runnable = script_content.replace("/mnt/shared/output/", host_prefix)
+        script_path = tmp_path / script_name
+        script_path.write_text(runnable, encoding="utf-8", newline="\n")
+
+        completed = subprocess.run(
+            [bash_path, script_path.as_posix()],
+            check=False,
+            capture_output=True,
+            timeout=30,
+        )
+        assert completed.returncode == 0, f"bash wrapper itself must exit 0; stderr={completed.stderr!r}"
+
+        stdout_text = (out_dir / "cafebabe.stdout").read_text(encoding="utf-8")
+        stderr_text = (out_dir / "cafebabe.stderr").read_text(encoding="utf-8")
+        result_text = (out_dir / "result_cafebabe.txt").read_text(encoding="utf-8").strip()
+
+        assert "LINUX_OUT" in stdout_text, f"stdout sidecar must capture the command's stdout; got {stdout_text!r}"
+        assert "LINUX_OUT" not in stderr_text, f"stdout token leaked into stderr sidecar: {stderr_text!r}"
+        assert "LINUX_ERR" in stderr_text, f"stderr sidecar must capture the command's stderr; got {stderr_text!r}"
+        assert "LINUX_ERR" not in stdout_text, f"stderr token leaked into stdout sidecar: {stdout_text!r}"
+        assert result_text == "5", f"result file must record the command exit code 5; got {result_text!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -838,23 +1032,77 @@ class TestF0022F0029AntiEvasion:
         result = asyncio.run(_run())
         assert result["profile"] == "workstation", f"apply_anti_evasion did not use the profile argument; got {result['profile']}"
 
-    def test_anti_evasion_different_profiles_produce_different_smbios(self) -> None:
-        """Different profiles produce distinguishably different SMBIOS entries.
+    @pytest.mark.parametrize(
+        ("profile", "expected_manufacturer", "expected_type1_product", "expected_type2_product"),
+        [
+            ("default", "HP", "HP EliteDesk 800 G6", "8767"),
+            ("workstation", "Dell Inc.", "OptiPlex 7090", "0WN7Y6"),
+            ("laptop", "Lenovo", "ThinkPad T14 Gen 3", "21AHS00000"),
+        ],
+    )
+    def test_anti_evasion_smbios_carries_exact_profile_identity(
+        self,
+        profile: str,
+        expected_manufacturer: str,
+        expected_type1_product: str,
+        expected_type2_product: str,
+    ) -> None:
+        """Each profile yields the exact, independently-known SMBIOS identity.
 
-        This validates that the profile parameter flows all the way through to
-        SMBIOS content, not just to the reported label.
+        The expected manufacturer and product strings are the real-vendor
+        identities documented in the production source's single source of truth
+        (``_anti_evasion_identity``): ``HP``/``HP EliteDesk 800 G6`` for the
+        default profile, ``Dell Inc.``/``OptiPlex 7090`` for ``workstation`` and
+        ``Lenovo``/``ThinkPad T14 Gen 3`` for ``laptop``. Asserting these exact
+        constants (rather than mere set-inequality between profiles) makes the
+        gate deterministic and fully order-independent: any ordering, mutation,
+        or regression that let one profile leak another vendor's identity would
+        fail this assertion on a fixed expected value instead of flaking on a
+        relative comparison. Manufacturer keys are indexed directly so a missing
+        key surfaces as a ``KeyError`` rather than being masked as ``None``.
+
+        Args:
+            profile: Anti-evasion profile under test.
+            expected_manufacturer: Vendor advertised across every SMBIOS entry.
+            expected_type1_product: Product model on the type-1 system entry.
+            expected_type2_product: Board product on the type-2 baseboard entry.
         """
-        default_entries = _TestQEMUSandbox.anti_evasion_smbios_entries_for_test("default")
-        workstation_entries = _TestQEMUSandbox.anti_evasion_smbios_entries_for_test("workstation")
-        laptop_entries = _TestQEMUSandbox.anti_evasion_smbios_entries_for_test("laptop")
+        entries = _TestQEMUSandbox.anti_evasion_smbios_entries_for_test(profile)
 
-        default_mfrs = {e.get("manufacturer") for e in default_entries}
-        ws_mfrs = {e.get("manufacturer") for e in workstation_entries}
-        laptop_mfrs = {e.get("manufacturer") for e in laptop_entries}
+        by_type = {entry["type"]: entry for entry in entries}
+        assert set(by_type) == {"1", "2", "3"}, f"profile {profile!r} must emit SMBIOS type 1/2/3 entries; got {sorted(by_type)}"
 
-        assert default_mfrs != ws_mfrs, "workstation profile must differ from default"
-        assert default_mfrs != laptop_mfrs, "laptop profile must differ from default"
-        assert ws_mfrs != laptop_mfrs, "laptop profile must differ from workstation"
+        manufacturers = {entry["manufacturer"] for entry in entries}
+        assert manufacturers == {expected_manufacturer}, (
+            f"profile {profile!r} must advertise exactly {expected_manufacturer!r} on every SMBIOS entry; got {manufacturers}"
+        )
+
+        assert by_type["1"]["product"] == expected_type1_product, (
+            f"profile {profile!r} type-1 product must be {expected_type1_product!r}; got {by_type['1']['product']!r}"
+        )
+        assert by_type["2"]["product"] == expected_type2_product, (
+            f"profile {profile!r} type-2 product must be {expected_type2_product!r}; got {by_type['2']['product']!r}"
+        )
+        assert by_type["1"]["serial"], f"profile {profile!r} type-1 entry must carry a non-empty serial"
+
+    def test_anti_evasion_smbios_profiles_are_pairwise_distinct(self) -> None:
+        """The three profiles resolve to three distinct, exact vendor identities.
+
+        Pins the full mapping in one assertion using the independent oracle from
+        production, guarding against any future change that collapses two
+        profiles onto the same vendor. The comparison is against fixed expected
+        constants, so the result is identical on every run and every ordering.
+        """
+        manufacturers_by_profile: dict[str, set[str]] = {
+            profile: {entry["manufacturer"] for entry in _TestQEMUSandbox.anti_evasion_smbios_entries_for_test(profile)}
+            for profile in ("default", "workstation", "laptop")
+        }
+
+        assert manufacturers_by_profile == {
+            "default": {"HP"},
+            "workstation": {"Dell Inc."},
+            "laptop": {"Lenovo"},
+        }, f"each profile must map to its exact distinct vendor; got {manufacturers_by_profile}"
 
     def test_anti_evasion_techniques_reflect_profile_applied(self) -> None:
         """Techniques list contains profile-specific SMBIOS entries."""
@@ -1065,12 +1313,10 @@ class TestF0028YaraScanFallback:
                 """
                 return _FakeRules()
 
-        import yara as _real_yara  # noqa: PLC0415
-
         sb = _make_sandbox(shared_folder=shared)
 
         async def _run() -> list[dict[str, Any]]:
-            with patch.object(_real_yara, "compile", side_effect=_FakeYara.compile):
+            with patch.object(yara, "compile", side_effect=_FakeYara.compile):
                 return await sb.yara_scan(scan_target="files")
 
         asyncio.run(_run())
@@ -1124,17 +1370,21 @@ class TestF0028YaraScanFallback:
                 """
                 return _FakeRules2()
 
-        import yara as _real_yara  # noqa: PLC0415
-
         sb = _make_sandbox(shared_folder=shared)
 
         async def _run() -> list[dict[str, Any]]:
-            with patch.object(_real_yara, "compile", side_effect=_FakeYara2.compile):
+            with patch.object(yara, "compile", side_effect=_FakeYara2.compile):
                 return await sb.yara_scan(scan_target="files")
 
         asyncio.run(_run())
 
-        assert len(scanned_paths) > 0, "yara_scan did not scan any files from the zip"
+        assert scanned_paths, "yara_scan did not scan any files from the dropped-file zip"
+        assert any("artifact.bin" in p for p in scanned_paths), (
+            f"yara_scan must scan the artifact extracted from the dropped-file zip; scanned {scanned_paths}"
+        )
+        assert not any("user_submitted" in p for p in scanned_paths), (
+            f"yara_scan must not reach back into the input dir when a dropped-file zip is present; scanned {scanned_paths}"
+        )
 
 
 # ---------------------------------------------------------------------------

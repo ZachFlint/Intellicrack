@@ -409,27 +409,65 @@ class TestF0016NoCommandInjection:
         assert any(cmd.startswith("/aj ") for cmd in recorder.commands)
 
 
-def testvalidate_r2_argument_rejects_control_chars() -> None:
-    """The injection-safe validator rejects every documented r2 control char."""
-    for sample in (
-        "name;quit",
-        "name@0x100",
-        "name|cat",
-        "name~grep",
-        "name`sub`",
-        "name>out",
-        "name<in",
-        "name$1",
-        "name#comment",
-        "!ls",
-    ):
-        with pytest.raises(ToolError):
-            validate_r2_argument(sample, field="test")
+def test_validate_r2_argument_rejects_control_chars() -> None:
+    r"""Every rizin command-control metacharacter must be rejected as ToolError.
+
+    The oracle is the rizin command grammar, not Intellicrack's own constant:
+    ``;`` separates commands, ``\n`` / ``\r`` start new command lines, ``@``
+    seeks, ``|`` pipes to a shell, ``~`` is the internal grep, backticks nest a
+    sub-command, ``>`` / ``<`` redirect, ``$`` is a variable, ``#`` a comment,
+    and a leading ``!`` escapes to the shell. Each sample embeds exactly one such
+    metacharacter inside an otherwise-safe identifier so the test fails if any
+    single character is dropped from the validator's reject set. The raised error
+    message is asserted to surface the field name so callers can attribute the
+    rejection.
+    """
+    embedded_control_chars: dict[str, str] = {
+        ";": "name;quit",
+        "\n": "name\nquit",
+        "\r": "name\rquit",
+        "@": "name@0x100",
+        "|": "name|cat",
+        "~": "name~grep",
+        "`": "name`sub`",
+        ">": "name>out",
+        "<": "name<in",
+        "$": "name$1",
+        "#": "name#comment",
+    }
+    for control_char, sample in embedded_control_chars.items():
+        with pytest.raises(ToolError) as exc_info:
+            validate_r2_argument(sample, field="symbol")
+        message = str(exc_info.value)
+        assert "symbol" in message, f"field name missing for {control_char!r}: {message}"
+
+    with pytest.raises(ToolError) as shell_exc:
+        validate_r2_argument("!ls", field="symbol")
+    assert "must not start with '!'" in str(shell_exc.value)
 
 
-def testvalidate_r2_argument_accepts_safe_strings() -> None:
-    """Safe identifiers pass through verbatim."""
-    assert validate_r2_argument("symbol_name42", field="test") == "symbol_name42"
+def test_validate_r2_argument_accepts_safe_strings() -> None:
+    """Safe identifiers pass through byte-for-byte with no mutation.
+
+    Covers ordinary symbol identifiers, hex-style addresses written without
+    metacharacters, dotted/dashed names, and the empty string (which contains no
+    control characters and therefore must be forwarded unchanged). Each input is
+    asserted to return the exact same string object value, guarding against any
+    silent stripping or rewriting on the safe path.
+    """
+    safe_inputs: list[str] = [
+        "symbol_name42",
+        "main",
+        "0x401000",
+        "sub.text-1",
+        "_GLOBAL__sub_I_main",
+        "",
+    ]
+    for value in safe_inputs:
+        assert validate_r2_argument(value, field="symbol") == value
+
+    embedded_bang_ok = validate_r2_argument("name!bang", field="symbol")
+    assert embedded_bang_ok == "name!bang"
 
 
 # ---------------------------------------------------------------------------

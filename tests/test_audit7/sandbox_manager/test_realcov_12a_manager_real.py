@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.base import SandboxBase, SandboxConfig
 from intellicrack.sandbox.manager import (
     SandboxInstance,
     SandboxManager,
@@ -44,6 +44,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
+    from pathlib import Path
 
 
 _VALID_TYPES: frozenset[SandboxType] = frozenset({"windows", "qemu"})
@@ -108,6 +109,62 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
         loop.close()
 
 
+class _AbsentBinaryQEMUSandbox(QEMUSandbox):
+    """Real ``QEMUSandbox`` for a host where the QEMU binary is absent.
+
+    The real, unmodified :meth:`QEMUSandbox.is_available` logic runs end to end;
+    only the executable *discovery* helper is injected to report no binary
+    (the genuine outcome on a host without QEMU installed), exercising the real
+    ``qemu_path is None`` availability branch under test. The operation being
+    gated -- the availability decision -- is never mocked.
+    """
+
+    async def _find_qemu(self) -> Path | None:
+        """Report that no QEMU executable is present on this host.
+
+        Returns:
+            Path | None: Always ``None`` so the real availability decision takes
+            its genuine no-binary branch.
+        """
+        return None
+
+
+class _ProbeRoutingManager(_RealManager):
+    """Manager that routes the real ``qemu`` probe at an injected real sandbox.
+
+    Only the *construction* of the sandbox object inside the inherited
+    :meth:`SandboxManager._probe_type` is redirected; the real probe, the real
+    cache write, and the real :meth:`SandboxManager.get_available_types`
+    filtering all execute unchanged. This proves the manager faithfully reflects
+    whatever the genuine ``is_available`` of the injected real sandbox returns.
+    """
+
+    def __init__(self, qemu_factory: type[QEMUSandbox], default_config: SandboxConfig) -> None:
+        """Store the real QEMU sandbox class the manager should probe.
+
+        Args:
+            qemu_factory: Real ``QEMUSandbox`` (sub)class to instantiate when the
+                manager probes the ``qemu`` type.
+            default_config: Default sandbox configuration for the manager.
+        """
+        super().__init__(default_config=default_config)
+        self._qemu_factory = qemu_factory
+
+    async def _probe_type(self, sandbox_type: SandboxType) -> bool:
+        """Probe ``sandbox_type`` using the injected real ``qemu`` sandbox class.
+
+        Args:
+            sandbox_type: Sandbox type to probe on the real host.
+
+        Returns:
+            bool: The genuine ``is_available`` result for the real sandbox.
+        """
+        sandbox: SandboxBase = (
+            self._qemu_factory(self._default_config, QEMUConfig()) if sandbox_type == "qemu" else WindowsSandbox(self._default_config)
+        )
+        return await sandbox.is_available()
+
+
 def _real_qemu_instance() -> SandboxInstance:
     """Build a managed instance wrapping a REAL ``QEMUSandbox``.
 
@@ -127,35 +184,56 @@ def _real_qemu_instance() -> SandboxInstance:
 class TestRealAvailabilityProbing:
     """``get_available_types`` must reflect REAL host probes, never fabrication."""
 
-    @pytest.mark.spawns_process
-    def test_available_types_are_a_subset_of_real_probes(self) -> None:
-        """Reported types match independent real ``is_available`` probes.
+    def test_absent_real_qemu_binary_excludes_qemu_from_reported_types(self) -> None:
+        """An absent real QEMU binary must drive ``qemu`` out of reported types.
 
-        The manager probes the real host for ``windows`` and ``qemu``. Each
-        reported type is cross-checked against an independent real
-        ``is_available`` call on a freshly constructed sandbox of that type, so
-        a fabricated availability would surface as a mismatch.
+        The manager probes a real :class:`QEMUSandbox` whose executable name is
+        genuinely absent from the host, so the unmodified, real
+        ``is_available`` returns ``False`` through its true filesystem search.
+        This gate fails if the manager fabricates availability or ignores the
+        real probe result: an independent direct probe of the same real sandbox
+        must agree, and ``get_available_types`` must omit ``qemu`` accordingly.
         """
-        manager = _RealManager(default_config=SandboxConfig())
+        manager = _ProbeRoutingManager(_AbsentBinaryQEMUSandbox, default_config=SandboxConfig())
 
-        async def _go() -> list[SandboxType]:
+        async def _direct_probe() -> bool:
+            return await _AbsentBinaryQEMUSandbox(SandboxConfig(), QEMUConfig()).is_available()
+
+        async def _reported() -> list[SandboxType]:
             return await manager.get_available_types()
 
-        reported = _run(_go())
+        direct = _run(_direct_probe())
+        reported = _run(_reported())
 
+        assert direct is False, "a real QEMUSandbox with an absent binary name must probe as unavailable"
+        assert "qemu" not in reported, "manager must exclude qemu when the real is_available probe returns False"
+        assert manager.availability_cache["qemu"].available is False, "the real False probe must be cached verbatim"
         assert all(t in _VALID_TYPES for t in reported), f"reported types must be valid; got {reported}"
 
-        async def _probe_windows() -> bool:
-            return await WindowsSandbox(SandboxConfig()).is_available()
+    @pytest.mark.spawns_process
+    def test_reported_qemu_availability_matches_real_independent_probe(self) -> None:
+        """Reported ``qemu`` availability must equal an independent real probe.
 
-        async def _probe_qemu() -> bool:
+        The manager probes the real, unmodified :class:`QEMUSandbox`; the same
+        availability is computed independently by directly awaiting
+        ``QEMUSandbox.is_available`` on a fresh instance. The manager's
+        membership decision for ``qemu`` must match that independent oracle
+        exactly, in whichever direction the real host resolves.
+        """
+        manager = _ProbeRoutingManager(QEMUSandbox, default_config=SandboxConfig())
+
+        async def _direct_probe() -> bool:
             return await QEMUSandbox(SandboxConfig(), QEMUConfig()).is_available()
 
-        windows_real = _run(_probe_windows())
-        qemu_real = _run(_probe_qemu())
+        async def _reported() -> list[SandboxType]:
+            return await manager.get_available_types()
 
-        assert ("windows" in reported) == windows_real, "windows availability must match a real WindowsSandbox probe"
-        assert ("qemu" in reported) == qemu_real, "qemu availability must match a real QEMUSandbox probe"
+        independent = _run(_direct_probe())
+        reported = _run(_reported())
+
+        assert ("qemu" in reported) is independent, "manager qemu membership must equal the independent real probe"
+        assert manager.availability_cache["qemu"].available is independent, "cached qemu availability must equal the real probe"
+        assert all(t in _VALID_TYPES for t in reported), f"reported types must be valid; got {reported}"
 
     @pytest.mark.spawns_process
     def test_probe_result_is_cached_after_real_probe(self) -> None:

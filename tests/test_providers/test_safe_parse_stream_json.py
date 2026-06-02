@@ -143,14 +143,46 @@ def test_parse_truncated_json_logs_and_returns_none() -> None:
 
 
 def test_parse_non_object_values_return_none() -> None:
-    """Valid JSON that decodes to a non-object is rejected silently."""
+    """Valid JSON that decodes to a non-object is rejected silently.
+
+    A streaming chunk that decodes to a number, array, bare string, ``null``,
+    or boolean is not a usable provider event, so the helper returns ``None``.
+    Critically this rejection must be SILENT: unlike a malformed line (which is
+    a transport fault worth warning about), a well-formed non-object is an
+    ordinary skip and must emit no log event. The final assertion that the
+    capture stream stays empty is the load-bearing gate - it would catch the
+    helper regressing into ``logger.warning(...)`` on every non-object chunk
+    and flooding provider logs.
+
+    Each payload is paired with the concrete JSON value it decodes to, so a
+    regression that accidentally accepted, say, a JSON array (returning the
+    list instead of ``None``) is caught precisely rather than lumped together.
+    """
     stream = io.StringIO()
     logger = _make_capture_logger(stream)
 
-    for payload in ("42", "[1, 2, 3]", '"hello"', "null", "true", "false"):
-        assert _safe_parse_stream_json(payload, logger=logger) is None
+    non_object_payloads: list[tuple[str, object]] = [
+        ("42", 42),
+        ("[1, 2, 3]", [1, 2, 3]),
+        ('"hello"', "hello"),
+        ("null", None),
+        ("true", True),
+        ("false", False),
+    ]
+    for payload, decoded in non_object_payloads:
+        assert json.loads(payload) == decoded, f"payload {payload!r} must decode to {decoded!r}"
+        assert _safe_parse_stream_json(payload, logger=logger) is None, f"{payload!r} must be rejected as a non-object"
 
     assert _read_events(stream) == []
+
+    # Control: prove the capture logger is wired correctly, so the empty-events
+    # assertion above is meaningful and not vacuously green from a dead logger.
+    # A malformed line on the SAME logger MUST surface exactly one warning.
+    assert _safe_parse_stream_json("{not json", logger=logger) is None
+    control_events = _read_events(stream)
+    assert len(control_events) == 1
+    assert control_events[0]["event"] == _DEFAULT_EVENT
+    assert control_events[0]["level"] == "warning"
 
 
 def test_parse_object_with_nested_arrays_preserved() -> None:

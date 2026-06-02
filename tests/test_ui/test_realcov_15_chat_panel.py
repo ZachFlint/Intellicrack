@@ -62,20 +62,61 @@ def _bubble_texts(panel: ChatPanel) -> list[str]:
 
 
 def test_send_button_emits_typed_text(qtbot: QtBot) -> None:
-    """Typing and clicking Send emits ``message_submitted`` with the real text.
+    """Clicking Send emits exactly one ``message_submitted`` carrying the text.
+
+    Drives the real Send button and captures every ``message_submitted``
+    payload to assert the full contract: exactly one emission with a single
+    ``str`` argument equal to the typed text, the input cleared afterwards,
+    no message bubble created by the submit path (re-emission only), and the
+    Send button left enabled.
 
     Args:
         qtbot: pytest-qt bot fixture.
     """
     panel = _make_panel(qtbot)
+    emitted: list[tuple[object, ...]] = []
+    panel.message_submitted.connect(lambda text: emitted.append((text,)))
+
     text_edit = panel._input._text_edit
     text_edit.setPlainText("disassemble the entry point")
+    assert panel._input._send_button.isEnabled()
 
     with qtbot.waitSignal(panel.message_submitted, timeout=2_000) as blocker:
         qtbot.mouseClick(panel._input._send_button, Qt.MouseButton.LeftButton)
 
+    assert emitted == [("disassemble the entry point",)]
     assert blocker.args == ["disassemble the entry point"]
+    assert len(blocker.args) == 1
+    assert isinstance(blocker.args[0], str)
     assert not text_edit.toPlainText()
+    assert panel.findChildren(MessageBubble) == []
+    assert panel.get_messages() == []
+    assert panel._input._send_button.isEnabled()
+
+
+def test_send_button_whitespace_only_does_not_emit(qtbot: QtBot) -> None:
+    """Clicking Send with only whitespace emits nothing and keeps the text.
+
+    Exercises the boundary where the input strips to empty: no
+    ``message_submitted`` signal must fire, the input is preserved, and no
+    bubble is rendered.
+
+    Args:
+        qtbot: pytest-qt bot fixture.
+    """
+    panel = _make_panel(qtbot)
+    emitted: list[str] = []
+    panel.message_submitted.connect(emitted.append)
+
+    text_edit = panel._input._text_edit
+    text_edit.setPlainText("   \n\t  ")
+
+    qtbot.mouseClick(panel._input._send_button, Qt.MouseButton.LeftButton)
+    qtbot.wait(50)
+
+    assert emitted == []
+    assert text_edit.toPlainText() == "   \n\t  "
+    assert panel.findChildren(MessageBubble) == []
 
 
 def test_enter_key_submits_message(qtbot: QtBot) -> None:

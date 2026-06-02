@@ -43,13 +43,48 @@ from intellicrack.providers.xpu_utils import (
 
 
 _5_GIB = 5 * 1024 * 1024 * 1024
-_1_GIB = 1 * 1024 * 1024 * 1024
 _3_GIB = 3 * 1024 * 1024 * 1024
 _10_GIB = 10 * 1024 * 1024 * 1024
-_15_GIB = 15 * 1024 * 1024 * 1024
 _TENSOR_SIZE = 100
 _MATRIX_SIZE = 100
 _INVALID_DEVICE_INDEX = 999
+
+# Independently-known facts used as memory-estimation oracles. These are NOT
+# imported from the implementation: they are public properties of the model
+# family and of IEEE/quantization storage, so a regression in the estimator
+# cannot move them.
+#
+# * "Mistral-7B" denotes a 7-billion-parameter transformer (model card fact).
+# * "Phi-3-mini" is a 3.8-billion-parameter transformer (model card fact).
+# * float16 (IEEE half precision) stores 2 bytes per weight; int8 stores 1
+#   byte; int4 stores 0.5 byte; float32 stores 4 bytes.
+# * The estimator adds a fixed 1.3x activation/runtime overhead by default and
+#   omits it when include_activations=False.
+_MISTRAL_7B_PARAMS = 7_000_000_000
+_PHI3_MINI_PARAMS = 3_800_000_000
+_FP16_BYTES_PER_PARAM = 2
+_INT8_BYTES_PER_PARAM = 1
+_FP32_BYTES_PER_PARAM = 4
+_ACTIVATION_OVERHEAD_NUM = 13
+_ACTIVATION_OVERHEAD_DEN = 10
+
+
+def _with_activation_overhead(weight_bytes: int) -> int:
+    """Apply the documented 1.3x activation overhead the way the estimator does.
+
+    The production estimator computes ``int(weight_bytes * 1.3)``. Expressing
+    the overhead as the exact rational ``13/10`` here reproduces that rounding
+    deterministically without importing or re-running production code.
+
+    Args:
+        weight_bytes: Raw weight-storage size in bytes.
+
+    Returns:
+        int: Weight bytes scaled by the 1.3x activation overhead, truncated to
+            an integer exactly as the estimator does.
+    """
+    return int(weight_bytes * _ACTIVATION_OVERHEAD_NUM / _ACTIVATION_OVERHEAD_DEN)
+
 
 _ATTR_FORMAT_PROMPT = "_format_prompt"
 _ATTR_PARSE_TOOL_CALLS = "_parse_tool_calls"
@@ -117,29 +152,46 @@ class TestXPUDetection:
     """Tests for XPU detection utilities."""
 
     @staticmethod
-    def test_is_xpu_available_returns_bool() -> None:
-        """XPU availability check should return a boolean."""
-        result = is_xpu_available()
-        assert isinstance(result, bool)
+    def test_availability_and_device_count_are_consistent() -> None:
+        """Availability must agree with device count via a cross-function invariant.
 
-    @staticmethod
-    def test_get_xpu_device_count_returns_int() -> None:
-        """Device count should return a non-negative integer."""
+        ``is_xpu_available()`` and ``get_xpu_device_count()`` are independent
+        code paths into the same torch.xpu runtime. The platform invariant they
+        must jointly satisfy is: XPU is available iff at least one device is
+        enumerable. Asserting that biconditional catches a regression in either
+        function without depending on whether the CI host actually has an XPU.
+        """
+        available = is_xpu_available()
         count = get_xpu_device_count()
+        assert isinstance(available, bool)
         assert isinstance(count, int)
         assert count >= 0
+        assert available == (count > 0)
 
     @staticmethod
     def test_get_xpu_device_info_returns_none_for_invalid_index() -> None:
-        """Device info should return None for invalid index."""
+        """Out-of-range device index yields None rather than a fabricated record.
+
+        Index 999 cannot exist on any current host; the lookup must surface
+        absence as ``None`` instead of returning a placeholder device.
+        """
         info = get_xpu_device_info(_INVALID_DEVICE_INDEX)
         assert info is None
 
     @staticmethod
-    def test_is_arc_b580_returns_bool() -> None:
-        """B580 detection should return a boolean."""
-        result = is_arc_b580()
-        assert isinstance(result, bool)
+    def test_b580_detection_implies_xpu_available() -> None:
+        """A detected Arc B580 must also report XPU as available.
+
+        ``is_arc_b580()`` is logically a refinement of ``is_xpu_available()``:
+        a B580 is an XPU device, so the implication ``b580 -> xpu_available``
+        must hold on every host. This is a real oracle (a logical invariant)
+        rather than a bare ``isinstance`` check.
+        """
+        b580 = is_arc_b580()
+        assert isinstance(b580, bool)
+        if b580:
+            assert is_xpu_available()
+            assert get_xpu_device_count() > 0
 
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU available")
     @staticmethod
@@ -155,47 +207,113 @@ class TestXPUDetection:
 
 
 class TestModelMemoryEstimation:
-    """Tests for model memory estimation."""
+    """Tests for model memory estimation against independently-known oracles."""
 
     @staticmethod
-    def test_estimate_memory_small_model() -> None:
-        """Small model memory estimate should be reasonable."""
-        memory = estimate_model_memory("TinyLlama/TinyLlama-1.1B-Chat-v1.0", "float16")
-        assert memory > 0
-        assert memory < _5_GIB
+    def test_estimate_phi3_mini_fp16_matches_known_param_size() -> None:
+        """Phi-3-mini fp16 estimate equals 3.8B params x 2 bytes x 1.3 overhead.
 
-    @staticmethod
-    def test_estimate_memory_medium_model() -> None:
-        """Medium model memory estimate should be reasonable."""
+        The expected value is derived from the model card parameter count
+        (3.8B) and IEEE half-precision storage (2 bytes/param), not from the
+        estimator's own output, so a broken estimator that returns a constant
+        or the wrong dtype factor fails this exactly.
+        """
+        weight_bytes = _PHI3_MINI_PARAMS * _FP16_BYTES_PER_PARAM
+        expected = _with_activation_overhead(weight_bytes)
         memory = estimate_model_memory("microsoft/Phi-3-mini-4k-instruct", "float16")
-        assert memory > _1_GIB
-        assert memory < _15_GIB
+        assert memory == expected
+        assert expected == 9_880_000_000
 
     @staticmethod
-    def test_estimate_memory_int8_smaller_than_fp16() -> None:
-        """INT8 should require less memory than FP16."""
-        fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+    def test_estimate_mistral_7b_fp16_matches_known_param_size() -> None:
+        """Mistral-7B fp16 estimate equals 7B params x 2 bytes x 1.3 overhead.
+
+        Independently anchored to the published 7B parameter count and the
+        2-byte float16 weight size.
+        """
+        weight_bytes = _MISTRAL_7B_PARAMS * _FP16_BYTES_PER_PARAM
+        expected = _with_activation_overhead(weight_bytes)
+        memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+        assert memory == expected
+        assert expected == 18_200_000_000
+
+    @staticmethod
+    def test_estimate_without_activation_overhead_drops_the_factor() -> None:
+        """Disabling activations yields exactly weight bytes with no 1.3x.
+
+        With ``include_activations=False`` the estimate must equal the raw
+        weight storage (7B x 2 bytes = 14 GB), proving the overhead factor is
+        actually conditional rather than always applied.
+        """
+        memory = estimate_model_memory(
+            "mistralai/Mistral-7B-Instruct-v0.3",
+            "float16",
+            include_activations=False,
+        )
+        assert memory == _MISTRAL_7B_PARAMS * _FP16_BYTES_PER_PARAM
+        assert memory == 14_000_000_000
+
+    @staticmethod
+    def test_estimate_int8_is_exactly_half_of_fp16() -> None:
+        """INT8 storage is 1 byte/param vs FP16's 2, so the ratio is exactly 2.
+
+        Rather than merely asserting ``int8 < fp16`` (which any shrink would
+        satisfy), this pins the absolute int8 value to the known param count
+        and verifies the precise 2:1 theoretical relationship between 1-byte
+        and 2-byte weight storage.
+        """
         int8_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "int8")
-        assert int8_memory < fp16_memory
+        fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+        expected_int8 = _with_activation_overhead(_MISTRAL_7B_PARAMS * _INT8_BYTES_PER_PARAM)
+        assert int8_memory == expected_int8
+        assert int8_memory == 9_100_000_000
+        assert int8_memory * 2 == fp16_memory
 
     @staticmethod
-    def test_estimate_memory_int4_smallest() -> None:
-        """INT4 should require least memory."""
-        fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+    def test_estimate_int4_is_a_quarter_of_fp16() -> None:
+        """INT4 stores 0.5 byte/param, exactly one quarter of FP16's 2 bytes.
+
+        Pins the int4 absolute value to the known param count and verifies the
+        4:1 ratio against fp16, catching a regression that mis-maps the int4
+        multiplier.
+        """
         int4_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "int4")
-        assert int4_memory < fp16_memory / 2
+        fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+        assert int4_memory == _with_activation_overhead(_MISTRAL_7B_PARAMS // 2)
+        assert int4_memory == 4_550_000_000
+        assert int4_memory * 4 == fp16_memory
+
+    @staticmethod
+    def test_estimate_fp32_is_double_fp16() -> None:
+        """FP32 stores 4 bytes/param, exactly double FP16's 2 bytes.
+
+        Confirms the default (non-float16/bfloat16/int) branch resolves to the
+        4-byte multiplier rather than silently collapsing to the fp16 path.
+        """
+        fp32_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float32")
+        fp16_memory = estimate_model_memory("mistralai/Mistral-7B-Instruct-v0.3", "float16")
+        assert fp32_memory == _with_activation_overhead(_MISTRAL_7B_PARAMS * _FP32_BYTES_PER_PARAM)
+        assert fp32_memory == 36_400_000_000
+        assert fp32_memory == fp16_memory * 2
 
     @staticmethod
     def test_select_dtype_for_memory_chooses_fitting_dtype() -> None:
-        """Should select dtype that fits in available memory."""
+        """Auto dtype selection must return a dtype whose estimate fits.
+
+        Phi-3-mini cannot fit a 3 GiB budget at fp16 (9.88 GB) but does fit at
+        int4 (~2.47 GB); the selector must therefore return ``int4`` and the
+        estimate for that dtype must be strictly below the budget.
+        """
         available_memory = _3_GIB
         dtype = select_dtype_for_memory(
             "microsoft/Phi-3-mini-4k-instruct",
             available_memory,
             "auto",
         )
+        assert dtype == "int4"
         estimated = estimate_model_memory("microsoft/Phi-3-mini-4k-instruct", dtype)
         assert estimated < available_memory
+        assert estimated == _with_activation_overhead(_PHI3_MINI_PARAMS // 2)
 
 
 class TestModelCache:

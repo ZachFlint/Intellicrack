@@ -91,13 +91,24 @@ class TestToolChoiceRequired:
         self,
         anthropic_provider: AnthropicProvider,
     ) -> None:
-        """Anthropic should return a tool call when tool_choice is REQUIRED.
+        """Anthropic REQUIRED must yield a structured call to the only tool.
+
+        Drives the real connected Anthropic provider with a single tool whose
+        schema declares one required ``path`` parameter and
+        ``tool_choice=REQUIRED``. Because exactly one tool is offered and a tool
+        call is mandatory, the provider's response translation must surface a
+        :class:`ToolCall` naming that exact function (``binary.get_file_size``)
+        with ``tool_name`` derived from the function-name prefix (``binary``) and
+        the required ``path`` argument present and non-empty. A regression in the
+        REQUIRED-mode mapping or the streaming/non-streaming tool-call assembler
+        (wrong function name, dropped arguments, or a free-text answer instead of
+        a tool call) fails these assertions.
 
         Args:
             anthropic_provider: Connected Anthropic provider fixture.
         """
         tools = _make_test_tool()
-        messages = _make_messages("What is the size of notepad.exe?")
+        messages = _make_messages("What is the size of notepad.exe at C:\\Windows\\notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
 
         _, tool_calls = await anthropic_provider.chat(
@@ -108,8 +119,16 @@ class TestToolChoiceRequired:
             max_tokens=1024,
         )
         assert tool_calls is not None
-        assert len(tool_calls) > 0
-        assert isinstance(tool_calls[0], ToolCall)
+        assert len(tool_calls) == 1
+        call = tool_calls[0]
+        assert isinstance(call, ToolCall)
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert len(call.id) > 0
+        assert "path" in call.arguments
+        path_arg = call.arguments["path"]
+        assert isinstance(path_arg, str)
+        assert len(path_arg) > 0
 
     async def test_openai_tool_choice_none_prevents_tool_call(
         self,

@@ -24,7 +24,13 @@ class TestWhileLoops:
     """Tests for while loop constructs in pattern programs."""
 
     def test_while_counter_loop_produces_fields(self, interp: HexPatInterpreter) -> None:
-        """While loop with a counter reads N fields, advancing offset.
+        """While loop with a counter reads exactly N fields at the right offsets and values.
+
+        The loop runs while ``i < count`` (count == 4), placing ``u8 byte @ i``
+        each iteration. With ``data == bytes(range(16))`` the field at offset
+        ``i`` must read raw byte value ``i``. The independently-known oracle is
+        the identity mapping offset -> value of ``bytes(range(16))``: offsets
+        0..3 carry values 0,1,2,3.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -33,9 +39,20 @@ class TestWhileLoops:
         source = "u8 count = 4;\nu8 i = 0;\nwhile (i < count) {\n    u8 byte @ i;\n    i = i + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 4
+        assert [r["name"] for r in results] == ["byte", "byte", "byte", "byte"]
+        assert [r["offset"] for r in results] == [0, 1, 2, 3]
+        assert [r["size"] for r in results] == [1, 1, 1, 1]
+        assert [r["raw_bytes"] for r in results] == [[0], [1], [2], [3]]
+        assert [r["display_value"] for r in results] == ["0x0", "0x1", "0x2", "0x3"]
 
     def test_while_sentinel_stops_at_zero(self, interp: HexPatInterpreter) -> None:
-        """While loop terminates when sentinel byte 0x00 is encountered.
+        """While loop terminates exactly at the 0x00 sentinel without parsing it or past it.
+
+        The condition ``read_unsigned(idx, 1) != 0`` must consume bytes
+        0x01, 0x02, 0x03 (offsets 0..2) and stop the moment it reaches the
+        0x00 at offset 3, never placing a field there nor for the trailing
+        0x05/0x06. The oracle is the input layout itself: three non-zero
+        leading bytes followed by a sentinel.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -44,9 +61,16 @@ class TestWhileLoops:
         source = "u8 idx = 0;\nwhile (read_unsigned(idx, 1) != 0) {\n    u8 byte @ idx;\n    idx = idx + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
+        assert [r["offset"] for r in results] == [0, 1, 2]
+        assert [r["raw_bytes"] for r in results] == [[1], [2], [3]]
+        assert [r["display_value"] for r in results] == ["0x1", "0x2", "0x3"]
+        parsed_offsets = {r["offset"] for r in results}
+        assert 3 not in parsed_offsets
+        assert 4 not in parsed_offsets
+        assert 5 not in parsed_offsets
 
-    def test_while_empty_body_terminates_immediately(self, interp: HexPatInterpreter) -> None:
-        """While loop with a false initial condition executes zero iterations.
+    def test_while_false_condition_executes_zero_iterations(self, interp: HexPatInterpreter) -> None:
+        """While loop with a false initial condition produces no fields at all.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -56,12 +80,37 @@ class TestWhileLoops:
         results = interp.execute_bytes(source, data)
         assert results == []
 
+    def test_while_true_condition_executes_body(self, interp: HexPatInterpreter) -> None:
+        """While loop with a true initial condition runs the body and places the field.
+
+        This is the positive counterpart to the false-condition case: the loop
+        enters with ``run == 1``, places ``u8 x @ 0`` (reading the known byte
+        0xAB), then clears ``run`` so it iterates exactly once. Proves the
+        guard is actually evaluated rather than always skipped.
+
+        Args:
+            interp: A fresh HexPatInterpreter fixture.
+        """
+        data = b"\xab\xcd\x00\x00"
+        source = "u8 run = 1;\nwhile (run != 0) {\n    u8 x @ 0;\n    run = 0;\n}"
+        results = interp.execute_bytes(source, data)
+        assert len(results) == 1
+        assert results[0]["name"] == "x"
+        assert results[0]["offset"] == 0
+        assert results[0]["raw_bytes"] == [0xAB]
+        assert results[0]["display_value"] == "0xAB"
+
 
 class TestForLoops:
     """Tests for for-loop constructs in pattern programs."""
 
     def test_for_loop_fixed_count(self, interp: HexPatInterpreter) -> None:
-        """For loop with fixed count produces exactly N fields.
+        """For loop with fixed count produces exactly N fields at correct offsets and values.
+
+        With ``data == bytes(range(8))`` and the loop ``i < 5`` placing
+        ``u8 elem @ i``, the oracle is the identity mapping of
+        ``bytes(range(8))``: offsets 0..4 read values 0,1,2,3,4. The loop must
+        stop at i == 5 and not read offsets 5..7.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -70,6 +119,10 @@ class TestForLoops:
         source = "for (u8 i = 0; i < 5; i = i + 1) {\n    u8 elem @ i;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 5
+        assert [r["name"] for r in results] == ["elem"] * 5
+        assert [r["offset"] for r in results] == [0, 1, 2, 3, 4]
+        assert [r["raw_bytes"] for r in results] == [[0], [1], [2], [3], [4]]
+        assert [r["display_value"] for r in results] == ["0x0", "0x1", "0x2", "0x3", "0x4"]
 
     def test_for_loop_field_values_correct(self, interp: HexPatInterpreter) -> None:
         """For loop reads correct byte values from data.
@@ -262,25 +315,59 @@ class TestNestedControl:
         assert zero_count == 3
 
     def test_while_loop_accumulates_variable(self, interp: HexPatInterpreter) -> None:
-        """While loop can accumulate a sum into a variable and place it.
+        """While loop accumulates a running sum and the value drives a field offset.
+
+        The loop sums the first five bytes (1+2+3+4+5 == 15) into ``total``,
+        then places ``u8 marker @ total``. The accumulated total is exposed
+        through the placement offset: the marker field must land at offset 15
+        and read the distinctive sentinel byte 0x7E planted there. The oracle
+        is the arithmetic sum 15 computed by hand and a marker byte that exists
+        at exactly that offset and nowhere else among the leading/zero bytes.
+        A wrong accumulation (14 or 16) would place the marker on a 0x00 byte,
+        flipping ``display_value`` to ``0x0``.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes([1, 2, 3, 4, 5, 0, 0, 0])
-        source = "u32 total = 0;\nu8 i = 0;\nwhile (i < 5) {\n    total = total + read_unsigned(i, 1);\n    i = i + 1;\n}"
-        interp.execute_bytes(source, data)
+        data = bytes([1, 2, 3, 4, 5, *([0] * 10), 0x7E])
+        assert len(data) == 16
+        source = (
+            "u32 total = 0;\nu8 i = 0;\nwhile (i < 5) {\n    total = total + read_unsigned(i, 1);\n    i = i + 1;\n}\nu8 marker @ total;"
+        )
+        results = interp.execute_bytes(source, data)
+        assert len(results) == 1
+        marker = results[0]
+        assert marker["name"] == "marker"
+        assert marker["offset"] == 15
+        assert marker["size"] == 1
+        assert marker["raw_bytes"] == [0x7E]
+        assert marker["display_value"] == "0x7E"
 
     def test_try_inside_for_loop_recovers_per_iteration(self, interp: HexPatInterpreter) -> None:
-        """try/catch inside a for loop recovers from each failed iteration independently.
+        """try/catch inside a for loop recovers per iteration with exactly one field each.
+
+        Over a 4-byte buffer the loop attempts ``u32 big @ i`` (needs 4 bytes)
+        for i in 0..3. Only i == 0 has 4 bytes available, so that iteration
+        succeeds and yields a 4-byte ``big`` field. For i == 1,2,3 the u32 read
+        runs off the end, the catch fires, and a 1-byte ``small`` field is read
+        instead. The oracle is the buffer geometry: success at offset 0,
+        recovery at offsets 1,2,3, giving exactly four fields with known
+        names, sizes, and bytes.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(4)
+        data = b"\xaa\xbb\xcc\xdd"
         source = "for (u8 i = 0; i < 4; i = i + 1) {\n    try {\n        u32 big @ i;\n    } catch {\n        u8 small @ i;\n    }\n}"
         results = interp.execute_bytes(source, data)
-        assert len(results) >= 1
+        assert len(results) == 4
+        assert [r["name"] for r in results] == ["big", "small", "small", "small"]
+        assert [r["offset"] for r in results] == [0, 1, 2, 3]
+        assert [r["size"] for r in results] == [4, 1, 1, 1]
+        assert results[0]["raw_bytes"] == [0xAA, 0xBB, 0xCC, 0xDD]
+        assert results[0]["display_value"] == "0xDDCCBBAA"
+        assert [r["raw_bytes"] for r in results[1:]] == [[0xBB], [0xCC], [0xDD]]
+        assert [r["display_value"] for r in results[1:]] == ["0xBB", "0xCC", "0xDD"]
 
     def test_match_inside_while_selects_branch_each_iteration(self, interp: HexPatInterpreter) -> None:
         """Match inside while loop selects the correct branch per iteration.

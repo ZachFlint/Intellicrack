@@ -5,16 +5,34 @@
 
 """Shared fixtures and helpers for sandbox subsystem tests.
 
-Provides in-memory sandbox implementations, stub managers, and
-pre-built sample data fixtures that other test modules depend on.
+Provides two distinct sandbox backends with clearly separated responsibilities:
+
+* :class:`InMemorySandbox` -- a fast in-memory backend used only by *unit*
+  tests of pure log/report helpers and bridge dictionary plumbing. It performs
+  no real I/O and must never be used to claim that a real sandbox executed a
+  binary; the data it returns is fixed and is never asserted on as if it were
+  observed behaviour.
+* :class:`LocalProcessSandbox` -- a real :class:`SandboxBase` subclass that
+  genuinely executes binaries as OS subprocesses inside a real temporary work
+  directory, captures their real exit code/stdout/stderr, and reports the
+  **actually observed** file-system changes by diffing the work directory
+  before and after execution. Integration tests use this backend so a
+  regression in real process execution or artefact capture is caught.
+
+It also supplies stub managers and pre-built sample data fixtures that other
+test modules depend on.
 """
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
+import shutil
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 from uuid import uuid4
 
 import pytest
@@ -40,11 +58,18 @@ from intellicrack.sandbox.base import (
 )
 
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from intellicrack.sandbox.manager import SandboxManager
+
+
 TS_BASE: Final[str] = "2026-03-15T10:00:"
 _VNC_PORT: Final[int] = 5900
 _DEFAULT_PCAP_ID: Final[str] = "cap-001"
 _SAMPLE_BINARY_SIZE: Final[int] = 4096
 _SAMPLE_DLL_SIZE: Final[int] = 65536
+_DLL_IMAGE_LOAD_EVENT_ID: Final[int] = 10
 _SAMPLE_CLIPBOARD_SIZE: Final[int] = 42
 _TMPDIR: Final[Path] = Path(tempfile.gettempdir())
 
@@ -444,6 +469,272 @@ class InMemoryQEMUSandbox(InMemorySandbox):
         self.agent = StubAgent()
 
 
+def _snapshot_tree(root: Path) -> dict[str, tuple[int, str]]:
+    """Capture every file under ``root`` as ``relpath -> (size, sha256)``.
+
+    Args:
+        root: Directory to scan recursively.
+
+    Returns:
+        dict[str, tuple[int, str]]: Mapping of POSIX-style relative path to the
+        file's byte size and hex SHA-256 digest.
+    """
+    snapshot: dict[str, tuple[int, str]] = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            data = path.read_bytes()
+            rel = path.relative_to(root).as_posix()
+            snapshot[rel] = (len(data), hashlib.sha256(data).hexdigest())
+    return snapshot
+
+
+def _diff_trees(
+    before: dict[str, tuple[int, str]],
+    after: dict[str, tuple[int, str]],
+    timestamp: str,
+) -> list[FileChange]:
+    """Compute the real file-system changes between two directory snapshots.
+
+    Args:
+        before: Snapshot taken before execution.
+        after: Snapshot taken after execution.
+        timestamp: ISO timestamp to stamp on every change.
+
+    Returns:
+        list[FileChange]: Created/modified/deleted entries, sorted by path.
+    """
+    changes: list[FileChange] = []
+    for rel, (size, digest) in sorted(after.items()):
+        prior = before.get(rel)
+        if prior is None:
+            changes.append(FileChange(path=rel, operation="created", old_path=None, timestamp=timestamp, size=size))
+        elif prior[1] != digest:
+            changes.append(FileChange(path=rel, operation="modified", old_path=None, timestamp=timestamp, size=size))
+    changes.extend(
+        FileChange(path=rel, operation="deleted", old_path=None, timestamp=timestamp, size=None)
+        for rel in sorted(before)
+        if rel not in after
+    )
+    return changes
+
+
+class LocalProcessSandbox(SandboxBase):
+    """A real sandbox that executes binaries as OS subprocesses.
+
+    Unlike :class:`InMemorySandbox`, this backend performs genuine work: it
+    owns a real temporary directory, launches real processes via
+    :func:`asyncio.create_subprocess_exec`, captures their real exit code and
+    output streams, and reports the file-system changes it actually observed by
+    diffing the work directory before and after the run. It is intended for
+    integration tests that must catch regressions in real process execution and
+    artefact capture rather than asserting on fabricated data.
+    """
+
+    def __init__(self, config: SandboxConfig | None = None) -> None:
+        """Initialise the local-process sandbox.
+
+        Args:
+            config: Optional sandbox configuration.
+        """
+        super().__init__(config)
+        self._workdir: Path | None = None
+        self._snapshots: dict[str, Path] = {}
+
+    @property
+    def workdir(self) -> Path:
+        """Return the sandbox work directory.
+
+        Returns:
+            Path: The active work directory.
+
+        Raises:
+            SandboxError: If the sandbox has not been started.
+        """
+        if self._workdir is None:
+            msg = "LocalProcessSandbox is not running"
+            raise SandboxError(msg)
+        return self._workdir
+
+    async def is_available(self) -> bool:
+        """Report availability of the local-process sandbox.
+
+        Returns:
+            bool: Always True; local subprocess execution is always available.
+        """
+        return True
+
+    async def start(self) -> None:
+        """Start the sandbox by creating a fresh temporary work directory."""
+        self._workdir = Path(tempfile.mkdtemp(prefix="ic_sandbox_"))
+        self._state.status = "running"
+        self._state.started_at = datetime.now(UTC)
+
+    async def stop(self) -> None:
+        """Stop the sandbox and remove the temporary work directory."""
+        if self._workdir is not None:
+            shutil.rmtree(self._workdir, ignore_errors=True)
+            self._workdir = None
+        for snap in self._snapshots.values():
+            shutil.rmtree(snap, ignore_errors=True)
+        self._snapshots.clear()
+        self._state.status = "stopped"
+
+    async def run_command(
+        self,
+        command: str,
+        time_limit: int | None = None,
+        working_directory: str | None = None,
+    ) -> tuple[int, str, str]:
+        """Execute a shell command for real and return its outcome.
+
+        Args:
+            command: Command line to execute via the OS shell.
+            time_limit: Optional timeout in seconds.
+            working_directory: Optional working directory (defaults to workdir).
+
+        Returns:
+            tuple[int, str, str]: Real (exit_code, stdout, stderr).
+
+        Raises:
+            SandboxError: If the command times out.
+        """
+        cwd = working_directory or str(self.workdir)
+        proc = await asyncio.create_subprocess_shell(
+            command,
+            cwd=cwd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=time_limit)
+        except TimeoutError as exc:
+            proc.kill()
+            await proc.wait()
+            msg = f"command timed out after {time_limit}s"
+            raise SandboxError(msg) from exc
+        return (proc.returncode or 0, out.decode(errors="replace"), err.decode(errors="replace"))
+
+    async def run_binary(
+        self,
+        binary_path: Path,
+        args: list[str] | None = None,
+        time_limit: int | None = None,
+        *,
+        monitor: bool = True,
+    ) -> ExecutionReport:
+        """Execute a real binary and report its genuinely observed behaviour.
+
+        The work directory is snapshotted before and after execution so the
+        returned ``file_changes`` reflect artefacts the process actually wrote,
+        not fabricated entries.
+
+        Args:
+            binary_path: Path to the binary to execute.
+            args: Optional command-line arguments.
+            time_limit: Optional timeout in seconds.
+            monitor: Whether to diff the work directory for file changes.
+
+        Returns:
+            ExecutionReport: Report with the real exit code, output, duration,
+            and observed file changes.
+
+        Raises:
+            SandboxError: If the binary times out.
+        """
+        before = _snapshot_tree(self.workdir) if monitor else {}
+        argv = [str(binary_path), *(args or [])]
+        started = time.monotonic()
+        proc = await asyncio.create_subprocess_exec(
+            *argv,
+            cwd=str(self.workdir),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=time_limit)
+        except TimeoutError as exc:
+            proc.kill()
+            await proc.wait()
+            msg = f"binary timed out after {time_limit}s"
+            raise SandboxError(msg) from exc
+        duration = time.monotonic() - started
+        timestamp = datetime.now(UTC).isoformat()
+        after = _snapshot_tree(self.workdir) if monitor else {}
+        exit_code = proc.returncode or 0
+        return ExecutionReport(
+            result="success" if exit_code == 0 else "error",
+            exit_code=exit_code,
+            stdout=out.decode(errors="replace"),
+            stderr=err.decode(errors="replace"),
+            duration_seconds=duration,
+            file_changes=_diff_trees(before, after, timestamp),
+        )
+
+    async def copy_to_sandbox(self, source: Path, dest: str) -> None:
+        """Copy a real file into the sandbox work directory.
+
+        Args:
+            source: Local source path.
+            dest: Destination path relative to the work directory.
+        """
+        target = self.workdir / dest
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+
+    async def copy_from_sandbox(self, source: str, dest: Path) -> None:
+        """Copy a real file out of the sandbox work directory.
+
+        Args:
+            source: Source path relative to the work directory.
+            dest: Local destination path.
+
+        Raises:
+            SandboxError: If the source file does not exist in the sandbox.
+        """
+        src = self.workdir / source
+        if not src.is_file():
+            msg = f"file not found in sandbox: {source}"
+            raise SandboxError(msg)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+
+    async def take_snapshot(self, name: str) -> str:
+        """Snapshot the work directory to a sibling directory.
+
+        Args:
+            name: Snapshot name.
+
+        Returns:
+            str: Snapshot identifier.
+        """
+        snap_dir = Path(tempfile.mkdtemp(prefix=f"ic_snap_{name}_"))
+        shutil.rmtree(snap_dir)
+        shutil.copytree(self.workdir, snap_dir)
+        snapshot_id = f"snap-{name}"
+        self._snapshots[snapshot_id] = snap_dir
+        return snapshot_id
+
+    async def restore_snapshot(self, snapshot_id: str) -> None:
+        """Restore the work directory from a previously taken snapshot.
+
+        Args:
+            snapshot_id: Snapshot identifier.
+
+        Raises:
+            SandboxError: If the snapshot does not exist.
+        """
+        snap = self._snapshots.get(snapshot_id)
+        if snap is None:
+            msg = f"Snapshot not found: {snapshot_id}"
+            raise SandboxError(msg)
+        if self._workdir is not None:
+            shutil.rmtree(self._workdir, ignore_errors=True)
+        new_work = Path(tempfile.mkdtemp(prefix="ic_sandbox_"))
+        shutil.rmtree(new_work)
+        shutil.copytree(snap, new_work)
+        self._workdir = new_work
+
+
 class StubInstance:
     """Minimal sandbox instance compatible with SandboxBridge expectations."""
 
@@ -706,7 +997,11 @@ def make_sample_report(
 
 @pytest.fixture
 def in_memory_sandbox() -> InMemorySandbox:
-    """Provide a started in-memory sandbox.
+    """Provide a started in-memory sandbox for pure-helper unit tests.
+
+    This backend performs no real I/O; use it only to unit-test report/log
+    plumbing. Integration tests that must exercise real execution should use the
+    :func:`local_process_sandbox` fixture instead.
 
     Returns:
         InMemorySandbox: A sandbox instance with status 'running'.
@@ -714,6 +1009,28 @@ def in_memory_sandbox() -> InMemorySandbox:
     sb = InMemorySandbox()
     sb.state.status = "running"
     return sb
+
+
+@pytest.fixture
+def local_process_sandbox() -> Iterator[LocalProcessSandbox]:
+    """Provide a started real local-process sandbox with teardown.
+
+    The sandbox owns a real temporary work directory and executes binaries as
+    genuine OS subprocesses. The directory is removed on teardown.
+
+    Yields:
+        LocalProcessSandbox: A started real sandbox.
+    """
+    sb = LocalProcessSandbox()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(sb.start())
+        yield sb
+    finally:
+        loop.run_until_complete(sb.stop())
+        asyncio.set_event_loop(None)
+        loop.close()
 
 
 @pytest.fixture
@@ -1040,6 +1357,8 @@ def sample_dll_loads() -> list[DllLoadEvent]:
             dll_path="C:\\Windows\\System32\\kernel32.dll",
             base_address="0x7FFE0000",
             size=_SAMPLE_DLL_SIZE,
+            event_id=_DLL_IMAGE_LOAD_EVENT_ID,
+            payload_schema="",
         ),
     ]
 
@@ -1200,7 +1519,7 @@ def sandbox_bridge() -> SandboxBridge:
         "qemu-test-001": qemu_inst,
     })
 
-    bridge._manager = manager  # type: ignore[assignment]
+    bridge.attach_manager(cast("SandboxManager", manager))
     return bridge
 
 
@@ -1226,5 +1545,5 @@ def bridge_no_reports() -> SandboxBridge:
         "qemu-noreport-001": qemu_inst,
     })
 
-    bridge._manager = manager  # type: ignore[assignment]
+    bridge.attach_manager(cast("SandboxManager", manager))
     return bridge

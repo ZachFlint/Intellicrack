@@ -319,11 +319,33 @@ class TestStringParsingBuiltins:
         assert results[0]["offset"] == 0xFF
 
     def test_parse_int_invalid_raises_runtime_error(self) -> None:
-        """parse_int rejects malformed input with HexPatRuntimeError."""
+        """parse_int rejects malformed input with a specific, chained error.
+
+        The error message must name the offending input and base so callers
+        can surface a useful diagnostic, and the original ``ValueError`` from
+        :func:`int` must be chained so the root cause is not lost. Asserting
+        only the exception type would let an unrelated failure (e.g. a base
+        out-of-range guard) masquerade as the malformed-input path.
+        """
         reader = DataReader.from_bytes(bytes(4))
         builtins = BuiltinFunctions(reader)
-        with pytest.raises(HexPatRuntimeError):
+        with pytest.raises(HexPatRuntimeError, match=r"cannot parse 'not-an-int' as base-10 integer") as exc_info:
             getattr(builtins, "_string_parse_int")("not-an-int", 10)
+        assert isinstance(exc_info.value.__cause__, ValueError)
+
+    def test_parse_int_unsupported_base_raises_with_base_in_message(self) -> None:
+        """parse_int rejects an out-of-range base distinctly from bad input.
+
+        Base 99 is outside the 2-36 range, so the guard must fire before any
+        ``int`` conversion is attempted. The message names the rejected base
+        and the failure is not chained to a ``ValueError`` (no parse occurred),
+        which distinguishes this boundary from the malformed-input path.
+        """
+        reader = DataReader.from_bytes(bytes(4))
+        builtins = BuiltinFunctions(reader)
+        with pytest.raises(HexPatRuntimeError, match=r"unsupported base 99") as exc_info:
+            getattr(builtins, "_string_parse_int")("10", 99)
+        assert exc_info.value.__cause__ is None
 
     def test_parse_float_round_trips_value(self) -> None:
         """parse_float decodes a decimal literal to the matching float."""

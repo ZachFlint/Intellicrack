@@ -28,6 +28,9 @@ from intellicrack.ui.panels.process_panel.system_tab import SystemTab
 
 if TYPE_CHECKING:
     from intellicrack.bridges.process import ProcessBridge
+    from tests.test_audit4.b6_system_tab.conftest import WarningRecorder
+
+_NOT_ATTACHED_MSG = "Not attached to any process"
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -681,3 +684,78 @@ class TestQueryErrorSurfacesToUser:
             getattr(tab, "_refresh_services")()
 
         assert errors_received, "on_error must have been wired and invoked"
+
+
+@pytest.mark.usefixtures("qapp")
+class TestUserVisibleWarningDialogIsShown:
+    """F-0022/F-0023: production code must display the real ``QMessageBox.warning`` modal.
+
+    These tests intentionally use no bridge double: every warning here is raised
+    entirely by production code in ``SystemTab`` and rendered by the genuine
+    static ``QMessageBox.warning`` method. The autouse ``warning_recorder``
+    fixture in this package's conftest captures the real modal dialog Qt creates,
+    records its actual ``windowTitle()`` and ``text()``, and dismisses it. Asserting
+    on the recorded title/text therefore proves the real warning mechanism fired
+    with the exact, independently-known content the production code specifies. If
+    the ``QMessageBox.warning`` call were removed, mis-titled, or its message
+    changed, these assertions go red.
+    """
+
+    def test_pid_gate_shows_real_not_attached_warning(self, warning_recorder: WarningRecorder) -> None:
+        """An unattached privileges query renders the genuine not-attached warning dialog.
+
+        Args:
+            warning_recorder: Autouse recorder capturing real ``QMessageBox.warning`` dialogs.
+        """
+        tab, _bridge = _make_tab_with_bridge(pid=None)
+        assert _attached_pid(tab) is None
+
+        calls: list[_CallRecord] = []
+        runner = _make_sync_runner(calls)
+
+        with patch(_MOD, runner):
+            getattr(tab, "_refresh_privileges")()
+
+        assert calls == [], "no bridge dispatch may occur when unattached"
+        assert warning_recorder.titles == ["Query Privileges"], (
+            f"expected exactly one warning titled 'Query Privileges', got {warning_recorder.titles}"
+        )
+        assert warning_recorder.messages == [_NOT_ATTACHED_MSG]
+        assert _raw_output_text(tab) == _NOT_ATTACHED_MSG
+
+    def test_read_teb_without_selection_shows_real_warning(self, warning_recorder: WarningRecorder) -> None:
+        """Reading TEB with no selected thread renders the genuine warning dialog.
+
+        Args:
+            warning_recorder: Autouse recorder capturing real ``QMessageBox.warning`` dialogs.
+        """
+        tab, _bridge = _make_tab_with_bridge()
+
+        calls: list[_CallRecord] = []
+        runner = _make_sync_runner(calls)
+
+        with patch(_MOD, runner):
+            getattr(tab, "_on_read_teb")()
+
+        assert calls == [], "no bridge dispatch may occur when no thread is selected"
+        assert warning_recorder.titles == ["Read TEB"]
+        assert warning_recorder.messages == ["No thread selected"]
+
+    def test_distinct_actions_record_distinct_real_dialogs_in_order(self, warning_recorder: WarningRecorder) -> None:
+        """Two distinct unattached actions each fire their own real, correctly-titled dialog.
+
+        Args:
+            warning_recorder: Autouse recorder capturing real ``QMessageBox.warning`` dialogs.
+        """
+        tab, _bridge = _make_tab_with_bridge(pid=None)
+
+        calls: list[_CallRecord] = []
+        runner = _make_sync_runner(calls)
+
+        with patch(_MOD, runner):
+            getattr(tab, "_refresh_privileges")()
+            getattr(tab, "_refresh_services")()
+
+        assert calls == [], "no bridge dispatch may occur when unattached"
+        assert warning_recorder.titles == ["Query Privileges", "Enumerate Services"]
+        assert warning_recorder.messages == [_NOT_ATTACHED_MSG, _NOT_ATTACHED_MSG]

@@ -16,23 +16,60 @@ class TestBookmarks:
     """Tests covering add, list, remove, and persistence of bookmarks."""
 
     def test_list_bookmarks_empty_on_fresh_doc(self, empty_doc: HexDocument) -> None:
-        """Verify that a freshly created document has no bookmarks.
+        """A fresh document yields a concrete empty ``list``, not any empty iterable.
+
+        Asserting the exact ``list`` type (not merely ``== []``) catches a
+        regression where ``list_bookmarks`` returns a lazy generator, a tuple,
+        or ``None`` - all of which could compare equal-ish to or be falsy like
+        an empty list yet break callers that index or re-iterate. Adding one
+        bookmark and re-listing proves the empty result was the genuine
+        "no bookmarks" state and that the same accessor transitions to a
+        populated 4-tuple list, not a permanently-empty stub.
 
         Args:
             empty_doc: Empty HexDocument fixture.
         """
         bookmarks = empty_doc.list_bookmarks()
-        assert bookmarks == []
+        assert type(bookmarks) is list, f"list_bookmarks must return a concrete list; got {type(bookmarks).__name__}"
+        assert bookmarks == [], f"a fresh document must have no bookmarks; got {bookmarks!r}"
+
+        empty_doc.add_bookmark(0, 1, "first", "#FF0000")
+        populated = empty_doc.list_bookmarks()
+        assert type(populated) is list, "list_bookmarks must still return a list after an add"
+        assert populated == [(0, 1, "first", "#FF0000")], f"the same accessor must surface the added bookmark; got {populated!r}"
 
     def test_add_bookmark_returns_index(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that add_bookmark() returns a non-negative integer index.
+        """Returned indices are distinct identifiers usable to remove the right bookmark.
+
+        A non-negative ``int`` alone is meaningless: a defect that returns ``0``
+        for every bookmark, or returns a list-length that no longer maps to a
+        stored entry, would pass a bare type/range check yet make the index
+        useless. This drives three distinct bookmarks in, asserts the three
+        returned indices are pairwise distinct, then removes the *middle*
+        bookmark by its returned index and proves exactly that bookmark - and
+        no other - disappeared. The independent oracle is the labels recorded
+        at insertion time, compared against the labels surviving the targeted
+        removal.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
-        idx = sample_doc_from_bytes.add_bookmark(0, 4, "header", "#FF0000")
-        assert isinstance(idx, int)
-        assert idx >= 0
+        idx_alpha = sample_doc_from_bytes.add_bookmark(0, 4, "alpha", "#FF0000")
+        idx_beta = sample_doc_from_bytes.add_bookmark(8, 2, "beta", "#00FF00")
+        idx_gamma = sample_doc_from_bytes.add_bookmark(16, 8, "gamma", "#0000FF")
+
+        for idx in (idx_alpha, idx_beta, idx_gamma):
+            assert type(idx) is int, f"add_bookmark must return an int index; got {type(idx).__name__}"
+            assert idx >= 0, f"index must be non-negative; got {idx}"
+        assert len({idx_alpha, idx_beta, idx_gamma}) == 3, (
+            f"each bookmark must receive a distinct index; got {idx_alpha}, {idx_beta}, {idx_gamma}"
+        )
+
+        assert sample_doc_from_bytes.remove_bookmark(idx_beta) is True, "removing the middle bookmark by its returned index must succeed"
+
+        surviving = sample_doc_from_bytes.list_bookmarks()
+        labels = [bm[2] for bm in surviving]
+        assert labels == ["alpha", "gamma"], f"only the targeted middle bookmark may be removed; surviving labels {labels!r}"
 
     def test_list_bookmarks_contains_added_bookmark(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that a freshly added bookmark appears in list_bookmarks().

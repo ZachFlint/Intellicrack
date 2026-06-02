@@ -73,12 +73,11 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        data = b"\xca\xfe" + b"\x00" * 20 + b"\xca\xfe"
+        pattern = b"\xca\xfe"
+        data = pattern + b"\x00" * 20 + pattern
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(b"\xca\xfe", 100)
-        assert len(results) == 2
-        assert results[0][0] == 0
-        assert results[1][0] == 22
+        results: list[tuple[int, int]] = doc.search_bytes(pattern, 100)
+        assert results == [(0, len(pattern)), (22, len(pattern))]
 
 
 class TestSearchHex:
@@ -440,7 +439,12 @@ class TestSearchNumericRange:
         struct.pack_into("<I", buf, 52, 45)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_range(
-            (40, 60), 4, signed=False, big_endian=False, alignment=1, max_results=100,
+            (40, 60),
+            4,
+            signed=False,
+            big_endian=False,
+            alignment=1,
+            max_results=100,
         )
         offsets = [r[0] for r in results]
         assert 8 in offsets
@@ -456,7 +460,12 @@ class TestSearchNumericRange:
         buf = bytearray(64)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_range(
-            (100, 200), 4, signed=False, big_endian=False, alignment=1, max_results=100,
+            (100, 200),
+            4,
+            signed=False,
+            big_endian=False,
+            alignment=1,
+            max_results=100,
         )
         assert not results
 
@@ -472,7 +481,12 @@ class TestSearchNumericRange:
         struct.pack_into("<i", buf, 70, 5)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_range(
-            (-100, -1), 4, signed=True, big_endian=False, alignment=1, max_results=100,
+            (-100, -1),
+            4,
+            signed=True,
+            big_endian=False,
+            alignment=1,
+            max_results=100,
         )
         offsets = [r[0] for r in results]
         assert 16 in offsets
@@ -490,7 +504,12 @@ class TestSearchNumericRange:
         struct.pack_into(">I", buf, 50, 200)
         doc = hexcore.HexDocument.open_bytes(bytes(buf))
         results: list[tuple[int, int]] = doc.search_numeric_range(
-            (70, 80), 4, signed=False, big_endian=True, alignment=1, max_results=100,
+            (70, 80),
+            4,
+            signed=False,
+            big_endian=True,
+            alignment=1,
+            max_results=100,
         )
         offsets = [r[0] for r in results]
         assert 20 in offsets

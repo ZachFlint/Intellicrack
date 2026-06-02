@@ -322,6 +322,13 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Optimize kernel monitor sweeps and stabilize async bridge workers (`6715edf`)
+Optimize the PowerShell kernel object monitor by shifting handle-table deduplication to compiled C# code, preventing interop overhead on steady-state sweeps. Stabilize the UI async bridge by retaining strong references to in-flight worker threads to prevent premature garbage collection crashes in unparented contexts. Additionally, resolve launcher blocking by passing child PIDs through temporary files instead of inherited pipes.
+- **Sandbox**: Shifted handle table delta tracking to native C# in `kernel_object_monitor.ps1` and decoupled launcher pipes in `start_monitors.cmd`.
+- **UI**: Implemented `_WorkerRegistry` in `async_bridge.py` to prevent premature `QThread` destruction.
+- **Hex Editor**: Added fallback identity region reads and corrected CRC calculation bit shifts.
+- **Audit**: Added comprehensive agent audit logs and test-writer documentation.
+
 - Resolve audit findings and add real-data test coverage (`a039360`)
 This change removes the static audit reports and addresses their findings by replacing mock-heavy unit tests with a comprehensive suite of real-data integration tests. The new tests execute genuine PE, ELF, and Mach-O binaries against the Rust hexcore, live Win32 process APIs, and local sandbox environments to guarantee operational correctness.
 - Audit: Removed all static audit criteria, master reports, and shard files.
@@ -776,12 +783,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Optimize kernel monitor sweeps and stabilize async bridge workers (``)
-Optimize the PowerShell kernel object monitor by shifting handle-table deduplication to compiled C# code, preventing interop overhead on steady-state sweeps. Stabilize the UI async bridge by retaining strong references to in-flight worker threads to prevent premature garbage collection crashes in unparented contexts. Additionally, resolve launcher blocking by passing child PIDs through temporary files instead of inherited pipes.
-- **Sandbox**: Shifted handle table delta tracking to native C# in `kernel_object_monitor.ps1` and decoupled launcher pipes in `start_monitors.cmd`.
-- **UI**: Implemented `_WorkerRegistry` in `async_bridge.py` to prevent premature `QThread` destruction.
-- **Hex Editor**: Added fallback identity region reads and corrected CRC calculation bit shifts.
-- **Audit**: Added comprehensive agent audit logs and test-writer documentation.
+- Harden test suite and resolve core integration bugs (``)
+Refactored the test suite to replace fragile mocks with real integration tests utilizing loopback servers, real subprocesses, and on-disk file-system diffing. Also resolved several core integration bugs, including PowerShell string escaping in the Windows sandbox, incorrect highlight rule removal arguments, and import fallbacks for the native hexcore extension.
+- **Core**: Fixed PowerShell escaping in `WindowsSandbox` and added a fallback import for the native `intellicrack_hexcore` extension.
+- **Providers**: Exposed HuggingFace model normalization as a public static method to enable direct unit testing.
+- **UI**: Refactored template and highlight operations to support non-interactive testing via user-notifier callbacks.
+- **Tests**: Replaced mocks with real subprocesses, loopback HTTP/TCP servers, and a real `LocalProcessSandbox` backend.
 
 
 ### Documentation

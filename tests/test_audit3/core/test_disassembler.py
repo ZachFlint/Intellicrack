@@ -83,15 +83,40 @@ def test_f0002_auto_detect_arch_unknown_logs_warning() -> None:
     assert warnings[0].get("log_level") == "warning"
 
 
-def test_f0002_auto_detect_arch_known_returns_capstone_pair() -> None:
-    """Known canonical archs must still resolve to ``(arch, mode)`` pairs."""
+def test_f0002_auto_detect_arch_known_resolves_to_real_x86_64_decoding() -> None:
+    """A canonical ``x86_64`` arch must resolve to a genuinely 64-bit capstone pair.
+
+    Independent oracle: rather than re-asserting the literal ``("x86", "64")``
+    pair stored in ``_CAPSTONE_ARCH_MODE_MAP`` (which would be tautological), the
+    ``(arch, mode)`` returned by :meth:`auto_detect_arch` is fed straight into a
+    live capstone disassembly of the byte sequence ``48 31 c0 48 89 e5 c3``.
+
+    That sequence is mode-sensitive by construction: in genuine 64-bit mode the
+    ``48`` REX.W prefix yields ``xor rax, rax`` / ``mov rbp, rsp`` / ``ret``,
+    whereas in 32-bit mode the very same bytes decode as ``dec eax`` / ``xor
+    eax, eax`` / ... The expected 64-bit mnemonics are fixed by the x86-64 ISA
+    encoding, not by Intellicrack's own mapping, so a corrupted map entry (for
+    example silently returning ``("x86", "32")``) changes the decoded mnemonics
+    and fails this test.
+    """
     fake_detection: tuple[str, str, bool] = ("ELF", "x86_64", True)
     with patch(
         "intellicrack.core.disassembler.detect_format_and_arch",
         return_value=fake_detection,
     ):
-        result = HexDisassembler.auto_detect_arch(b"\x7fELF" + b"\x00" * 16)
-    assert result == ("x86", "64")
+        arch, mode = HexDisassembler.auto_detect_arch(b"\x7fELF" + b"\x00" * 16)
+
+    disasm = get_disassembler()
+    if not disasm.available:
+        pytest.skip("capstone is not available in this environment")
+    rex_w_sequence = b"\x48\x31\xc0\x48\x89\xe5\xc3"
+    decoded = disasm.disassemble(rex_w_sequence, base_addr=0x1000, arch=arch, mode=mode, count=8)
+    rendered = [(insn.address, insn.mnemonic, insn.op_str) for insn in decoded]
+    assert rendered == [
+        (0x1000, "xor", "rax, rax"),
+        (0x1003, "mov", "rbp, rsp"),
+        (0x1006, "ret", ""),
+    ], f"expected 64-bit decoding, got {rendered}"
 
 
 def test_f0002_auto_detect_arch_no_silent_x86_64_fallback() -> None:

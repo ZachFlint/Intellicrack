@@ -58,6 +58,13 @@ _TOKENS_USED: Final[int] = 1500
 _TIMER_SLEEP: Final[float] = 0.01
 
 
+_DEFAULT_TIMESTAMP: Final[str] = "2026-03-07 12:00:00"
+_DEFAULT_EVENT: Final[str] = "test_event"
+_DEFAULT_LOCATION: Final[str] = "test_module:test_func:42"
+_RESET: Final[str] = "\033[0m"
+_LEVEL_FIELD_WIDTH: Final[int] = 8
+
+
 def _make_event_dict(**overrides: object) -> dict[str, Any]:
     """Create a base event dict for renderer tests.
 
@@ -68,10 +75,10 @@ def _make_event_dict(**overrides: object) -> dict[str, Any]:
         dict[str, Any]: Event dictionary with defaults merged with overrides.
     """
     base: dict[str, Any] = {
-        "timestamp": "2026-03-07 12:00:00",
+        "timestamp": _DEFAULT_TIMESTAMP,
         "level": "info",
         "logger": "test",
-        "event": "test_event",
+        "event": _DEFAULT_EVENT,
         "module": "test_module",
         "function": "test_func",
         "line_number": "42",
@@ -79,55 +86,118 @@ def _make_event_dict(**overrides: object) -> dict[str, Any]:
     return base
 
 
+def _expected_render(
+    level_label: str,
+    color: str,
+    *,
+    timestamp: str = _DEFAULT_TIMESTAMP,
+    location: str = _DEFAULT_LOCATION,
+    event: str = _DEFAULT_EVENT,
+    context: str = "",
+) -> str:
+    """Build the exact renderer output string from an independent format spec.
+
+    This mirrors the documented format
+    ``"{timestamp} | {color}{LEVEL.ljust(8)}{reset} | {location} | {event}{context}"``
+    without invoking any production rendering code, so it acts as a trusted
+    oracle for full-string equality assertions.
+
+    Args:
+        level_label: Upper-cased level name (e.g. ``"INFO"``) before padding.
+        color: ANSI color escape sequence prefixing the padded level, or an
+            empty string when the level is unknown.
+        timestamp: Timestamp text expected at the start of the line.
+        location: ``module:func:line`` (or fallback) location segment.
+        event: Event name segment.
+        context: Trailing bracketed extra-context segment, including its leading
+            space and surrounding brackets, or an empty string when absent.
+
+    Returns:
+        str: The complete expected rendered line.
+    """
+    padded_level = level_label.ljust(_LEVEL_FIELD_WIDTH)
+    return f"{timestamp} | {color}{padded_level}{_RESET} | {location} | {event}{context}"
+
+
 # --- ColoredConsoleRenderer ---
 
 
 def test_renderer_info_level() -> None:
-    """Verify renderer formats info level with green color code."""
+    """Verify renderer renders the full info line with the green color code.
+
+    Asserts the complete formatted string (timestamp, green-coloured padded
+    ``INFO`` label, reset code, location, event) against an independently
+    constructed oracle, so any structural regression - wrong colour, wrong
+    padding, missing reset, reordered fields - fails the test.
+    """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="info"))
-    assert "INFO" in result
-    assert "\033[32m" in result
-    assert "\033[0m" in result
+    assert result == _expected_render("INFO", "\033[32m")
 
 
 def test_renderer_debug_level() -> None:
-    """Verify renderer formats debug level with cyan color code."""
+    """Verify renderer renders the full debug line with the cyan color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="debug"))
-    assert "DEBUG" in result
-    assert "\033[36m" in result
+    assert result == _expected_render("DEBUG", "\033[36m")
 
 
 def test_renderer_warning_level() -> None:
-    """Verify renderer formats warning level with yellow color code."""
+    """Verify renderer renders the full warning line with the yellow color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="warning"))
-    assert "WARNING" in result
-    assert "\033[33m" in result
+    assert result == _expected_render("WARNING", "\033[33m")
 
 
 def test_renderer_error_level() -> None:
-    """Verify renderer formats error level with red color code."""
+    """Verify renderer renders the full error line with the red color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="error"))
-    assert "ERROR" in result
-    assert "\033[31m" in result
+    assert result == _expected_render("ERROR", "\033[31m")
 
 
 def test_renderer_critical_level() -> None:
-    """Verify renderer formats critical level with magenta color code."""
+    """Verify renderer renders the full critical line with the magenta color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="critical"))
-    assert "CRITICAL" in result
-    assert "\033[35m" in result
+    assert result == _expected_render("CRITICAL", "\033[35m")
+
+
+def test_renderer_level_codes_are_distinct_per_level() -> None:
+    """Verify each level renders with its own distinct ANSI color, not a shared one.
+
+    Guards against a regression where one level's colour code leaks into
+    another. Builds every level's full expected line with the documented
+    colour and asserts equality, and confirms the five colour codes are
+    mutually distinct.
+    """
+    renderer = ColoredConsoleRenderer()
+    level_colors: dict[str, str] = {
+        "debug": "\033[36m",
+        "info": "\033[32m",
+        "warning": "\033[33m",
+        "error": "\033[31m",
+        "critical": "\033[35m",
+    }
+    for level, color in level_colors.items():
+        result = renderer(None, "", _make_event_dict(level=level))
+        assert result == _expected_render(level.upper(), color)
+    assert len(set(level_colors.values())) == len(level_colors)
 
 
 def test_renderer_unknown_level() -> None:
-    """Verify renderer handles unknown level without color."""
+    """Verify renderer renders an unknown level uppercased with no color codes.
+
+    An unknown level has no entry in ``LEVEL_COLORS`` so the colour prefix must
+    be empty while the reset code is still emitted. The full-string oracle
+    proves the label is uppercased and padded, no stray ANSI colour sequence
+    is injected, and the rest of the line is intact.
+    """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="custom"))
-    assert "CUSTOM" in result
+    assert result == _expected_render("CUSTOM", "")
+    for color in ColoredConsoleRenderer.LEVEL_COLORS.values():
+        assert color not in result
 
 
 def test_renderer_includes_timestamp() -> None:
@@ -177,23 +247,45 @@ def test_renderer_location_fallback_to_logger() -> None:
     assert "my.logger" in result
 
 
-def test_renderer_extra_context() -> None:
-    """Verify renderer appends extra context fields in brackets."""
+def test_renderer_extra_context_single_field() -> None:
+    """Verify a single extra field renders as a trailing bracketed key=repr segment.
+
+    Asserts the full line equals the oracle whose context segment is
+    ``" [extra_key='extra_value']"`` - the leading space, brackets, ``key=``
+    delimiter and ``repr`` of the value are all checked, not mere substring
+    presence.
+    """
     renderer = ColoredConsoleRenderer()
-    result = renderer(
-        None,
-        "",
-        _make_event_dict(extra_key="extra_value"),
-    )
-    assert "extra_key=" in result
-    assert "extra_value" in result
+    result = renderer(None, "", _make_event_dict(extra_key="extra_value"))
+    assert result == _expected_render("INFO", "\033[32m", context=" [extra_key='extra_value']")
+
+
+def test_renderer_extra_context_multiple_fields_sorted() -> None:
+    """Verify multiple extra fields render sorted, comma-joined, inside one bracket.
+
+    The renderer sorts keys and joins with ``", "``. Passing keys out of order
+    and asserting the exact sorted, ``repr``-formatted segment proves ordering,
+    the separator, value reprs (int kept bare, str quoted) and single
+    enclosing bracket pair.
+    """
+    renderer = ColoredConsoleRenderer()
+    result = renderer(None, "", _make_event_dict(zeta="last", alpha=1))
+    assert result == _expected_render("INFO", "\033[32m", context=" [alpha=1, zeta='last']")
 
 
 def test_renderer_no_extra_context() -> None:
-    """Verify renderer omits bracket section with no extra fields."""
+    """Verify renderer emits no bracketed segment when there are no extra fields.
+
+    The full line must equal the oracle with an empty context segment, so the
+    output ends exactly at the event name with no trailing space, bracket, or
+    delimiter.
+    """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict())
-    assert "[" not in result.split("|")[-1] or "extra" not in result
+    assert result == _expected_render("INFO", "\033[32m")
+    event_segment = result.rsplit(" | ", 1)[-1]
+    assert event_segment == _DEFAULT_EVENT
+    assert "[" not in event_segment
 
 
 def test_renderer_skips_underscore_keys() -> None:
